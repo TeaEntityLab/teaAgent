@@ -23,3 +23,21 @@
 
 - Keep `SKILL.md` short and route details into `REFERENCE.md` or examples.
 - Treat skills as reviewed supply-chain assets, not casual prompt snippets.
+
+
+<claude-mem-context>
+# Memory Context
+
+# [teaagent] recent context, 2026-05-08 12:35am GMT+8
+
+Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
+Format: ID TIME TYPE TITLE
+Fetch details: get_observations([IDs]) | Search: mem-search skill
+
+Stats: 1 obs (728t read) | 11,169t work | 93% savings
+
+### May 8, 2026
+22 12:31a 🟣 TeaAgent P0 Agent Harness — Initial Implementation
+
+Access 11k tokens of past work via get_observations([IDs]) or mem-search skill.
+</claude-mem-context>

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -39,8 +40,12 @@ class AuditLogger:
     def __init__(self, path: Optional[Path] = None) -> None:
         self.path = path
         self.events: list[AuditEvent] = []
+        self._sinks: list[Callable[[AuditEvent], None]] = []
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def add_sink(self, sink: Callable[[AuditEvent], None]) -> None:
+        self._sinks.append(sink)
 
     def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
         event = AuditEvent(event_type=event_type, run_id=run_id, payload=payload)
@@ -48,4 +53,6 @@ class AuditLogger:
         if self.path is not None:
             with self.path.open("a", encoding="utf-8") as handle:
                 handle.write(event.to_json() + "\n")
+        for sink in self._sinks:
+            sink(event)
         return event
