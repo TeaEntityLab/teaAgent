@@ -58,6 +58,12 @@ class KnowledgeGraph:
     def documents_for(self, document_ids: tuple[str, ...]) -> list[Document]:
         return [self._documents[doc_id] for doc_id in document_ids if doc_id in self._documents]
 
+    def all_documents(self) -> list[Document]:
+        return list(self._documents.values())
+
+    def all_edges(self) -> list[GraphEdge]:
+        return [edge for edges in self._edges.values() for edge in edges]
+
 
 def dedupe(values: tuple[str, ...]) -> tuple[str, ...]:
     seen = set()

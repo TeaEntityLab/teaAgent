@@ -1,0 +1,2 @@
+graphqlite>=0.4.4
+pysqlite3>=0.6.0

@@ -3,7 +3,10 @@ name = "teaagent"
 version = "0.1.0"
 description = "Minimal P0 agent harness with governance-first defaults."
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "graphqlite>=0.4.4",
+    "pysqlite3>=0.6.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

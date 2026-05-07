@@ -28,16 +28,17 @@
 <claude-mem-context>
 # Memory Context
 
-# [teaagent] recent context, 2026-05-08 12:35am GMT+8
+# [teaagent] recent context, 2026-05-08 12:54am GMT+8
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 1 obs (728t read) | 11,169t work | 93% savings
+Stats: 2 obs (1,302t read) | 18,926t work | 93% savings
 
 ### May 8, 2026
 22 12:31a 🟣 TeaAgent P0 Agent Harness — Initial Implementation
+23 12:35a 🟣 teaagent P1 primitives: trace, context, eval, RAG, skill review, AI-BOM
 
-Access 11k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 19k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

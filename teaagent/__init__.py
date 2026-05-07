@@ -7,6 +7,14 @@ from teaagent.code_mode import CodeModeResult, UnsafeCodeError, execute_code_mod
 from teaagent.context import ContextCompactor
 from teaagent.eval import EvalCase, EvalReport, run_eval
 from teaagent.graph_rag import GraphEdge, KnowledgeGraph, graph_retrieve
+from teaagent.graphqlite_store import (
+    GraphQLiteConfig,
+    GraphQLiteGraphStore,
+    GraphQLiteRuntimeError,
+    GraphQLiteUnavailableError,
+    check_graphqlite_runtime,
+    ensure_sqlite_extension_loading,
+)
 from teaagent.policy import ApprovalPolicy
 from teaagent.portability import ProviderProfile, PortabilityResult, assess_provider_portability
 from teaagent.rag import Document, InMemoryRetriever, agentic_retrieve
@@ -30,6 +38,10 @@ __all__ = [
     "EvalReport",
     "FinalAnswer",
     "GraphEdge",
+    "GraphQLiteConfig",
+    "GraphQLiteGraphStore",
+    "GraphQLiteRuntimeError",
+    "GraphQLiteUnavailableError",
     "InMemoryRetriever",
     "KnowledgeGraph",
     "PortabilityResult",
@@ -48,7 +60,9 @@ __all__ = [
     "assess_managed_agent_readiness",
     "assess_provider_portability",
     "build_aibom",
+    "check_graphqlite_runtime",
     "execute_code_mode",
+    "ensure_sqlite_extension_loading",
     "graph_retrieve",
     "handle_stateless_tool_request",
     "review_skill",

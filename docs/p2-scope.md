@@ -10,7 +10,7 @@
 
 ## Still Deferred
 
-- Real graph database integration such as Neo4j.
+- Production GraphQLite deployment, migrations, and Cypher query tuning.
 - Production sandboxing for Code Mode using containers, V8 isolates, or a managed execution service.
 - Live MCP Streamable HTTP transport and OAuth 2.1 / DPoP enforcement.
 - Actual managed runtime integration with Anthropic, OpenAI, Google ADK, or Vertex Agent Engine.
@@ -18,7 +18,7 @@
 
 ## P2 Extension Rules
 
-- Keep Graph RAG storage replaceable; `KnowledgeGraph` is a contract sketch, not the production store.
+- Keep Graph RAG storage replaceable; `KnowledgeGraph` is a contract sketch and `GraphQLiteGraphStore` is the SQLite-backed implementation path.
 - Keep Code Mode limited to safe transformations and never expose filesystem, imports, attributes, or arbitrary function calls.
 - Route future stateless MCP transport through `handle_stateless_tool_request()` so schema validation remains centralized in `ToolRegistry`.
 - Run provider portability checks before adopting a new model/provider for production workflows.
