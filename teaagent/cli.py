@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from teaagent import __version__
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
+from teaagent.tui import run_tui
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -18,6 +19,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="teaagent", description="TeaAgent harness utilities.")
     parser.add_argument("--version", action="version", version=f"teaagent {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    tui = subparsers.add_parser(
+        "tui",
+        help="Start an interactive terminal UI.",
+        description="Start an interactive terminal UI.",
+    )
+    tui.add_argument("--database", default=":memory:", help="SQLite database path. Defaults to :memory:.")
+    tui.set_defaults(func=start_tui)
 
     doctor = subparsers.add_parser("doctor", help="Run environment checks.")
     doctor_subparsers = doctor.add_subparsers(dest="doctor_command", required=True)
@@ -43,6 +52,10 @@ def doctor_graphqlite(args: argparse.Namespace) -> int:
     ok, message = check_graphqlite_runtime(args.database)
     print(json.dumps({"ok": ok, "message": message}, sort_keys=True))
     return 0 if ok else 1
+
+
+def start_tui(args: argparse.Namespace) -> int:
+    return run_tui(database=args.database)
 
 
 def graphqlite_query(args: argparse.Namespace) -> int:

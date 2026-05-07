@@ -46,3 +46,34 @@ Use a persistent SQLite file:
 teaagent graphqlite smoke --database ./graph.db
 teaagent graphqlite query "MATCH (n) RETURN n" --database ./graph.db
 ```
+
+## Interactive TUI
+
+Start the interactive terminal UI:
+
+```bash
+teaagent tui
+```
+
+Or without installing the console script:
+
+```bash
+python3 -m teaagent.cli tui
+```
+
+Inside the TUI:
+
+```text
+help
+doctor
+smoke
+query MATCH (n:SmokeTest) RETURN n.name
+use ./graph.db
+exit
+```
+
+Start with a persistent database:
+
+```bash
+teaagent tui --database ./graph.db
+```
