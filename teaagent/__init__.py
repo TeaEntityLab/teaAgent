@@ -1,5 +1,7 @@
 """Governance-first agent harness."""
 
+__version__ = "0.1.0"
+
 from teaagent.aibom import AIBOMManifest, build_aibom
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
