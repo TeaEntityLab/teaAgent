@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+from typing import Any, Optional
+from uuid import uuid4
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+@dataclass(frozen=True)
+class AuditEvent:
+    event_type: str
+    run_id: str
+    payload: dict[str, Any]
+    event_id: str = field(default_factory=lambda: uuid4().hex)
+    created_at: str = field(default_factory=utc_now)
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "event_id": self.event_id,
+                "event_type": self.event_type,
+                "run_id": self.run_id,
+                "created_at": self.created_at,
+                "payload": self.payload,
+            },
+            sort_keys=True,
+        )
+
+
+class AuditLogger:
+    """Append-only audit logger with optional JSONL persistence."""
+
+    def __init__(self, path: Optional[Path] = None) -> None:
+        self.path = path
+        self.events: list[AuditEvent] = []
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
+        event = AuditEvent(event_type=event_type, run_id=run_id, payload=payload)
+        self.events.append(event)
+        if self.path is not None:
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(event.to_json() + "\n")
+        return event

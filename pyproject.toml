@@ -1,0 +1,10 @@
+[project]
+name = "teaagent"
+version = "0.1.0"
+description = "Minimal P0 agent harness with governance-first defaults."
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

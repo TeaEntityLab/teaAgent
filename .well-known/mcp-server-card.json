@@ -1,0 +1,11 @@
+{
+  "name": "teaagent-p0-tools",
+  "description": "P0 placeholder metadata for future MCP server discovery.",
+  "version": "0.1.0",
+  "transport": "not-yet-exposed",
+  "capabilities": {
+    "tools": true,
+    "stateless_ready": true,
+    "elicitation": false
+  }
+}
