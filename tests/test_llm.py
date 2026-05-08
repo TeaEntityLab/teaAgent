@@ -10,6 +10,7 @@ from unittest.mock import patch
 from teaagent import (
     LLMMessage,
     LLMRequest,
+    LLMResponseFormatError,
     available_providers,
     check_llm_configuration,
     create_llm_adapter,
@@ -221,6 +222,30 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertEqual(result.content, 'hello')
         self.assertEqual(result.input_tokens, 2)
         self.assertEqual(result.output_tokens, 3)
+
+    def test_openai_adapter_rejects_malformed_response(self) -> None:
+        transport = FakeTransport({'error': {'message': 'blocked'}})
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gpt', transport=transport, model='gpt-test')
+
+            with self.assertRaises(LLMResponseFormatError):
+                adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+    def test_claude_adapter_rejects_malformed_response(self) -> None:
+        transport = FakeTransport({'content': [{'type': 'tool_use'}]})
+        with patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('claude', transport=transport)
+
+            with self.assertRaises(LLMResponseFormatError):
+                adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+    def test_gemini_adapter_rejects_malformed_response(self) -> None:
+        transport = FakeTransport({'promptFeedback': {'blockReason': 'SAFETY'}})
+        with patch.dict(os.environ, {'GEMINI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gemini', transport=transport)
+
+            with self.assertRaises(LLMResponseFormatError):
+                adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
 
 
 if __name__ == '__main__':
