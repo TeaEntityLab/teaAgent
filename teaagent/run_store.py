@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from teaagent.audit import AuditLogger, secure_audit_dir, secure_audit_file, utc_now
 from teaagent.runner import RunResult
+from teaagent.storage import atomic_write_text
 
 
 @dataclass(frozen=True)
@@ -51,7 +52,7 @@ class RunStore:
         if audit.path is None or audit.path == self.run_path(result.run_id):
             return
         target = self.run_path(result.run_id)
-        target.write_text(audit.path.read_text(encoding='utf-8'), encoding='utf-8')
+        atomic_write_text(target, audit.path.read_text(encoding='utf-8'))
         secure_audit_file(target)
         audit.path.unlink(missing_ok=True)
 

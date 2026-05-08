@@ -154,7 +154,8 @@ audit log with:
 - Truncation of long strings at 20,000 characters
 
 Audit logs are append-only. TeaAgent does not rotate or expire audit files — set up
-external log rotation for long-running deployments.
+external log rotation for long-running deployments. The CLI provides manual lifecycle
+commands: `teaagent audit list`, `teaagent audit show`, and `teaagent audit prune`.
 
 ## Credential Handling
 

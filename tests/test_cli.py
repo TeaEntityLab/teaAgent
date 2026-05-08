@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 from conftest import FakeAdapter
@@ -210,6 +211,36 @@ class CLITests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(create.call_args.kwargs['model'], 'configured-model')
+
+    def test_audit_list_show_and_prune(self) -> None:
+        from teaagent.audit import AuditLogger
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / '.teaagent' / 'runs' / 'run-1.jsonl'
+            logger = AuditLogger(path=path)
+            logger.record('run_started', 'run-1', task='demo')
+
+            list_output = io.StringIO()
+            with redirect_stdout(list_output):
+                list_code = main(['audit', 'list', '--root', tmp])
+            listed = json.loads(list_output.getvalue())
+
+            show_output = io.StringIO()
+            with redirect_stdout(show_output):
+                show_code = main(['audit', 'show', 'run-1', '--root', tmp])
+            shown = json.loads(show_output.getvalue())
+
+            prune_output = io.StringIO()
+            with redirect_stdout(prune_output):
+                prune_code = main(['audit', 'prune', '--root', tmp, '--all'])
+            pruned = json.loads(prune_output.getvalue())
+
+        self.assertEqual(list_code, 0)
+        self.assertEqual(show_code, 0)
+        self.assertEqual(prune_code, 0)
+        self.assertEqual(listed[0]['run_id'], 'run-1')
+        self.assertEqual(shown[0]['event_type'], 'run_started')
+        self.assertEqual(pruned['count'], 1)
 
 
 if __name__ == '__main__':

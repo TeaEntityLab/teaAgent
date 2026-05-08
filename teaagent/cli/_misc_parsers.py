@@ -20,6 +20,12 @@ def register(
         handlers['doctor_all'],
     )
     _completion(subparsers, handlers['completion'])
+    _audit(
+        subparsers,
+        handlers['audit_list'],
+        handlers['audit_show'],
+        handlers['audit_prune'],
+    )
     _graphqlite(subparsers, handlers['graphqlite_query'], handlers['graphqlite_smoke'])
     _ultrawork(
         subparsers,
@@ -119,6 +125,33 @@ def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> No
         'shell', choices=['bash', 'zsh', 'fish'], help='Shell to generate for.'
     )
     p.set_defaults(func=handler)
+
+
+def _audit(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    list_handler: Callable,
+    show_handler: Callable,
+    prune_handler: Callable,
+) -> None:
+    audit = subparsers.add_parser('audit', help='Inspect and prune run audit logs.')
+    subs = audit.add_subparsers(dest='audit_command', required=True)
+
+    list_cmd = subs.add_parser('list', help='List persisted audit runs.')
+    list_cmd.add_argument('--root', default='.', help='Workspace root.')
+    list_cmd.add_argument('--limit', type=int, default=20, help='Maximum runs to list.')
+    list_cmd.set_defaults(func=list_handler)
+
+    show_cmd = subs.add_parser('show', help='Show one audit JSONL run.')
+    show_cmd.add_argument('run_id', help='Run id to show.')
+    show_cmd.add_argument('--root', default='.', help='Workspace root.')
+    show_cmd.set_defaults(func=show_handler)
+
+    prune_cmd = subs.add_parser('prune', help='Delete old audit JSONL runs.')
+    prune_cmd.add_argument('--root', default='.', help='Workspace root.')
+    prune_cmd.add_argument('--days', type=int, default=None, help='Delete runs older than N days.')
+    prune_cmd.add_argument('--keep', type=int, default=None, help='Always keep latest N runs.')
+    prune_cmd.add_argument('--all', action='store_true', help='Delete all audit runs not protected by --keep.')
+    prune_cmd.set_defaults(func=prune_handler)
 
 
 def _graphqlite(

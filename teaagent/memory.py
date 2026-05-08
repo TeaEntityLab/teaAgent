@@ -7,6 +7,7 @@ from typing import Any, List
 from uuid import uuid4
 
 from teaagent.audit import utc_now
+from teaagent.storage import append_jsonl_line
 
 
 @dataclass(frozen=True)
@@ -37,8 +38,7 @@ class MemoryCatalog:
         )
         if not entry.content:
             raise ValueError('memory content cannot be empty')
-        with self.path.open('a', encoding='utf-8') as handle:
-            handle.write(json.dumps(entry.to_dict(), sort_keys=True) + '\n')
+        append_jsonl_line(self.path, json.dumps(entry.to_dict(), sort_keys=True))
         return entry
 
     def list(self, *, limit: int = 20) -> List[MemoryEntry]:

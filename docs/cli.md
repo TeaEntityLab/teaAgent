@@ -30,6 +30,17 @@ teaagent completion zsh
 teaagent completion fish
 ```
 
+Inspect and prune audit logs:
+
+```bash
+teaagent audit list --limit 20
+teaagent audit show <run_id>
+teaagent audit prune --days 30 --keep 20
+teaagent audit prune --all
+```
+
+`audit prune` requires an explicit deletion selector: `--days`, `--keep`, or `--all`.
+
 You can also run without installing the console script:
 
 ```bash

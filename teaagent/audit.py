@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from teaagent.storage import append_jsonl_line
+
 AUDIT_REDACTED = '[redacted]'
 AUDIT_TRUNCATED = '[truncated]'
 MAX_AUDIT_STRING_LENGTH = 20_000
@@ -73,8 +75,7 @@ class AuditLogger:
         with self._lock:
             self.events.append(event)
             if self.path is not None:
-                with self.path.open('a', encoding='utf-8') as handle:
-                    handle.write(event.to_json() + '\n')
+                append_jsonl_line(self.path, event.to_json())
                 secure_audit_file(self.path)
             sinks = list(self._sinks)
         for sink in sinks:

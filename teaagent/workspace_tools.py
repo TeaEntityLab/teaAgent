@@ -526,20 +526,33 @@ def classify_shell_command_policy(command: str) -> str:
         return 'mutate'
     if not parts:
         return 'mutate'
-    executable = parts[0]
     if _has_unquoted_shell_operator(command):
         return 'mutate'
     if any(shell_arg_escapes_workspace(arg) for arg in parts[1:]):
         return 'mutate'
-    if executable in {'pwd', 'ls', 'find', 'rg', 'grep', 'cat', 'head', 'tail', 'wc'}:
-        return 'inspect'
-    if (
-        executable == 'git'
-        and len(parts) > 1
-        and parts[1] in {'status', 'diff', 'log', 'show', 'branch', 'grep'}
-    ):
+    if _is_allowed_inspect_argv(parts):
         return 'inspect'
     return 'mutate'
+
+
+_INSPECT_EXECUTABLES = frozenset({'pwd', 'ls', 'rg', 'grep', 'cat', 'head', 'tail', 'wc'})
+_INSPECT_GIT_SUBCOMMANDS = frozenset({'status', 'diff', 'log', 'show', 'branch', 'grep'})
+_DANGEROUS_FIND_FLAGS = frozenset(
+    {'-delete', '-exec', '-execdir', '-ok', '-okdir', '-fprint', '-fprint0', '-fprintf'}
+)
+
+
+def _is_allowed_inspect_argv(parts: list[str]) -> bool:
+    executable = parts[0]
+    if executable in _INSPECT_EXECUTABLES:
+        return True
+    if executable == 'find':
+        return not any(arg in _DANGEROUS_FIND_FLAGS for arg in parts[1:])
+    if executable == 'git' and len(parts) > 1:
+        if any(arg.startswith('-c') or arg.startswith('--config') for arg in parts[1:]):
+            return False
+        return parts[1] in _INSPECT_GIT_SUBCOMMANDS
+    return False
 
 
 def _has_unquoted_shell_operator(command: str) -> bool:

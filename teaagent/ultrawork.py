@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from teaagent.storage import atomic_write_text
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -78,9 +80,7 @@ class UltraworkStore:
             log_path=str(log_path),
             label=label,
         )
-        record_path.write_text(
-            json.dumps(record.to_dict(), sort_keys=True), encoding='utf-8'
-        )
+        atomic_write_text(record_path, json.dumps(record.to_dict(), sort_keys=True))
         _PROC_HANDLES[worker_id] = proc
         return record
 
@@ -125,9 +125,9 @@ class UltraworkStore:
         data['stop_signal'] = signal_name
         data['alive'] = False
         record_path = self.dir / f'{worker_id}.json'
-        record_path.write_text(
+        atomic_write_text(
+            record_path,
             json.dumps({k: v for k, v in data.items() if k != 'alive'}, sort_keys=True),
-            encoding='utf-8',
         )
         return data
 

@@ -531,6 +531,9 @@ class ShellClassifierPropertyTests(unittest.TestCase):
         'npm install',
         'pip install pkg',
         'curl http://example.com',
+        'find . -delete',
+        'find . -exec rm {} ;',
+        'git -c core.pager=sh log',
     ]
 
     def test_all_inspect_commands_classified_as_inspect(self) -> None:

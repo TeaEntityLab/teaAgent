@@ -119,6 +119,29 @@ class AuditLoggerTests(unittest.TestCase):
             self.assertEqual(e2['event_type'], 'e2')
             self.assertEqual(e2['payload'], {'b': 2})
 
+    def test_threaded_persistence_writes_complete_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'audit.jsonl'
+            logger = AuditLogger(path=path)
+
+            def write_events(start: int) -> None:
+                for i in range(start, start + 25):
+                    logger.record('e', 'r', index=i)
+
+            threads = [
+                threading.Thread(target=write_events, args=(i * 25,))
+                for i in range(4)
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            lines = path.read_text(encoding='utf-8').splitlines()
+            self.assertEqual(len(lines), 100)
+            for line in lines:
+                self.assertEqual(json.loads(line)['event_type'], 'e')
+
     def test_record_redacts_sensitive_payload_keys(self) -> None:
         logger = AuditLogger()
 
