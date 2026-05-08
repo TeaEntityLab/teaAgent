@@ -20,6 +20,7 @@ SENSITIVE_KEY_PARTS = (
     'secret',
     'token',
 )
+SENSITIVE_ARGUMENT_KEYS = frozenset({'command', 'content', 'new', 'old'})
 
 
 def utc_now() -> str:
@@ -77,7 +78,35 @@ class AuditLogger:
 
 
 def redact_audit_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    return {key: redact_audit_value(key, value) for key, value in payload.items()}
+    redacted: dict[str, Any] = {}
+    for key, value in payload.items():
+        if key == 'arguments' and isinstance(value, dict):
+            redacted[key] = redact_tool_arguments(value)
+        else:
+            redacted[key] = redact_audit_value(key, value)
+    return redacted
+
+
+def redact_tool_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
+    return {
+        str(key): redact_tool_argument_value(str(key), value)
+        for key, value in arguments.items()
+    }
+
+
+def redact_tool_argument_value(key: str, value: Any) -> Any:
+    if is_sensitive_key(key) or key in SENSITIVE_ARGUMENT_KEYS:
+        return AUDIT_REDACTED
+    if isinstance(value, dict):
+        return {
+            str(child_key): redact_tool_argument_value(str(child_key), child_value)
+            for child_key, child_value in value.items()
+        }
+    if isinstance(value, list):
+        return [redact_tool_argument_value('', item) for item in value]
+    if isinstance(value, tuple):
+        return [redact_tool_argument_value('', item) for item in value]
+    return redact_audit_value(key, value)
 
 
 def redact_audit_value(key: str, value: Any) -> Any:

@@ -131,6 +131,34 @@ class AuditLoggerTests(unittest.TestCase):
         )
         self.assertEqual(event.payload['arguments']['path'], 'file.txt')
 
+    def test_record_redacts_sensitive_tool_argument_values(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record(
+            'tool_call_started',
+            'run-1',
+            arguments={
+                'path': 'file.txt',
+                'content': 'secret file body',
+                'old': 'previous secret',
+                'new': 'new secret',
+                'command': 'export TOKEN=secret',
+            },
+        )
+
+        self.assertEqual(event.payload['arguments']['path'], 'file.txt')
+        self.assertEqual(event.payload['arguments']['content'], AUDIT_REDACTED)
+        self.assertEqual(event.payload['arguments']['old'], AUDIT_REDACTED)
+        self.assertEqual(event.payload['arguments']['new'], AUDIT_REDACTED)
+        self.assertEqual(event.payload['arguments']['command'], AUDIT_REDACTED)
+
+    def test_record_preserves_non_argument_content(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record('tool_call_completed', 'run-1', content='read result')
+
+        self.assertEqual(event.payload['content'], 'read result')
+
     def test_record_truncates_large_strings(self) -> None:
         logger = AuditLogger()
 
