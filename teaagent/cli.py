@@ -8,6 +8,7 @@ from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
 from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
+from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
 from teaagent.workspace_tools import build_workspace_tool_registry
 
@@ -42,6 +43,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Allow destructive tools such as write, patch, and shell.",
     )
     agent_run.set_defaults(func=agent_run_task)
+
+    agent_list = agent_subparsers.add_parser("runs", help="List persisted agent runs.")
+    agent_list.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    agent_list.add_argument("--limit", type=int, default=20, help="Maximum runs to list.")
+    agent_list.set_defaults(func=agent_runs_list)
+
+    agent_show = agent_subparsers.add_parser("show", help="Show one persisted run JSONL record.")
+    agent_show.add_argument("run_id", help="Run id to show.")
+    agent_show.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    agent_show.set_defaults(func=agent_run_show)
 
     tui = subparsers.add_parser(
         "tui",
@@ -110,6 +121,8 @@ def doctor_graphqlite(args: argparse.Namespace) -> int:
 
 def agent_run_task(args: argparse.Namespace) -> int:
     adapter = create_llm_adapter(args.provider, model=args.model)
+    store = RunStore(args.root)
+    audit = store.audit_logger()
     result = run_chat_agent(
         task=args.task,
         adapter=adapter,
@@ -120,7 +133,9 @@ def agent_run_task(args: argparse.Namespace) -> int:
             allow_destructive=args.allow_destructive,
             model=args.model,
         ),
+        audit=audit,
     )
+    store.logger_for_result(result, audit)
     print_json(
         {
             "run_id": result.run_id,
@@ -131,6 +146,18 @@ def agent_run_task(args: argparse.Namespace) -> int:
         }
     )
     return 0 if result.status == "completed" else 1
+
+
+def agent_runs_list(args: argparse.Namespace) -> int:
+    store = RunStore(args.root)
+    print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
+    return 0
+
+
+def agent_run_show(args: argparse.Namespace) -> int:
+    store = RunStore(args.root)
+    print_json(store.show_run(args.run_id))
+    return 0
 
 
 def doctor_model(args: argparse.Namespace) -> int:

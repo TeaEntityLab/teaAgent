@@ -202,3 +202,24 @@ The model must return JSON decisions internally:
 {"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"AGENTS.md"},"call_id":"read-agents"}
 {"type":"final","content":"Done"}
 ```
+
+Agent runs are persisted under `.teaagent/runs/*.jsonl` in the selected workspace root.
+
+List recent runs:
+
+```bash
+teaagent agent runs --root /path/to/repo
+```
+
+Show one run record:
+
+```bash
+teaagent agent show <run_id> --root /path/to/repo
+```
+
+Inside TUI:
+
+```text
+runs
+show <run_id>
+```

@@ -61,6 +61,7 @@ class TUITests(unittest.TestCase):
                 "provider gpt",
                 "model test-model",
                 "ask read note",
+                "runs",
                 "exit",
             ])
             output = []
@@ -83,8 +84,12 @@ class TUITests(unittest.TestCase):
             self.assertIn("provider: gpt", output)
             self.assertIn("model: test-model", output)
             agent_payload = json.loads(output[-2])
+            if isinstance(agent_payload, list):
+                agent_payload = json.loads(output[-3])
             self.assertEqual(agent_payload["status"], "completed")
             self.assertEqual(agent_payload["final_answer"], "note read")
+            runs_payload = json.loads(output[-2])
+            self.assertEqual(runs_payload[0]["status"], "completed")
 
     def test_tui_destructive_toggle(self) -> None:
         output = []

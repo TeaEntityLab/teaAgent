@@ -9,6 +9,7 @@ from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
 from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
+from teaagent.run_store import RunStore
 
 
 InputFn = Callable[[str], str]
@@ -24,6 +25,8 @@ HELP_TEXT = """Commands:
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
   ask <task>                Run a model-driven agent task with workspace tools.
+  runs                      List recent persisted agent runs.
+  show <run_id>             Show one persisted run record.
   use <database>            Switch database path. Use :memory: for in-memory.
   smoke                     Create a SmokeTest node and query it.
   query <cypher>            Execute a Cypher query.
@@ -126,6 +129,16 @@ class TeaAgentTUI:
                 return True
             self._run_agent_task(" ".join(args))
             return True
+        if action == "runs":
+            store = RunStore(self.root)
+            self._print_json([summary.to_dict() for summary in store.list_runs()])
+            return True
+        if action == "show":
+            if len(args) != 1:
+                self.output_fn("error: show requires a run id")
+                return True
+            self._print_json(RunStore(self.root).show_run(args[0]))
+            return True
         if action == "use":
             if len(args) != 1:
                 self.output_fn("error: use requires exactly one database path")
@@ -152,6 +165,8 @@ class TeaAgentTUI:
     def _run_agent_task(self, task: str) -> None:
         self.output_fn(f"agent: provider={self.provider} root={self.root}")
         adapter = self.adapter_factory(self.provider, self.model)
+        store = RunStore(self.root)
+        audit = store.audit_logger()
         result = run_chat_agent(
             task=task,
             adapter=adapter,
@@ -160,7 +175,9 @@ class TeaAgentTUI:
                 model=self.model,
                 allow_destructive=self.allow_destructive,
             ),
+            audit=audit,
         )
+        store.logger_for_result(result, audit)
         self._print_json(
             {
                 "run_id": result.run_id,
