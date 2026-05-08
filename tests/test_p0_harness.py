@@ -133,6 +133,43 @@ class P0HarnessTests(unittest.TestCase):
 
         self.assertEqual(result.status, "failed:model_logic")
 
+    def test_cost_budget_blocks_tool_after_decision_cost_update(self) -> None:
+        audit = AuditLogger()
+        runner = AgentRunner(
+            registry=build_registry(),
+            audit=audit,
+            budget=RunBudget(max_iterations=1, max_tool_calls=1, max_estimated_cost_cents=1),
+        )
+
+        def decide(context):
+            context["_cost_cents"] = 2.0
+            return ToolRequest(tool_name="pilot_echo", arguments={"value": "over"})
+
+        result = runner.run(task="cost overflow", decide=decide, run_id="run-cost-tool")
+
+        self.assertEqual(result.status, "failed:model_logic")
+        self.assertEqual(result.tool_calls, 0)
+        self.assertNotIn("tool_call_started", [event.event_type for event in audit.events])
+        self.assertEqual(audit.events[-1].payload["cost_cents"], 2.0)
+
+    def test_cost_budget_blocks_final_after_decision_cost_update(self) -> None:
+        audit = AuditLogger()
+        runner = AgentRunner(
+            registry=build_registry(),
+            audit=audit,
+            budget=RunBudget(max_iterations=1, max_tool_calls=1, max_estimated_cost_cents=1),
+        )
+
+        def decide(context):
+            context["_cost_cents"] = 2.0
+            return FinalAnswer(content="too expensive")
+
+        result = runner.run(task="cost overflow final", decide=decide, run_id="run-cost-final")
+
+        self.assertEqual(result.status, "failed:model_logic")
+        self.assertIsNone(result.final_answer)
+        self.assertNotIn("run_completed", [event.event_type for event in audit.events])
+
 
 if __name__ == "__main__":
     unittest.main()

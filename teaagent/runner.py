@@ -63,6 +63,10 @@ class AgentRunner:
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
 
+    def _assert_cost_budget(self, cost_cents: float) -> None:
+        if cost_cents > self.budget.max_estimated_cost_cents:
+            raise BudgetExceededError("cost budget exceeded")
+
     def run(self, *, task: str, decide: DecisionFn, run_id: Optional[str] = None) -> RunResult:
         current_run_id = run_id or uuid4().hex
         context: dict[str, Any] = {"task": task, "observations": []}
@@ -73,12 +77,12 @@ class AgentRunner:
 
         while iterations < self.budget.max_iterations:
             iterations += 1
-            if cost_cents > self.budget.max_estimated_cost_cents:
-                raise BudgetExceededError("cost budget exceeded")
             self.audit.record("iteration_started", current_run_id, iteration=iterations)
             try:
+                self._assert_cost_budget(cost_cents)
                 decision = decide(context)
                 cost_cents = context.get("_cost_cents", cost_cents)
+                self._assert_cost_budget(cost_cents)
                 if isinstance(decision, FinalAnswer):
                     self.audit.record(
                         "run_completed",
