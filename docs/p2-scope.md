@@ -3,20 +3,20 @@
 ## Included
 
 - In-memory Graph RAG primitives for entity/relation traversal and document retrieval.
-- Restricted Code Mode for deterministic local data manipulation with AST allow-list validation and child-process timeout/resource guardrails.
+- Restricted Code Mode with AST allow-list validation running in a child-process sandbox with CPU-time, wall-clock timeout, and best-effort memory limits (RLIMIT_AS/RLIMIT_CPU via `resource`). Container/VM-level isolation is still deferred.
 - Stateless MCP request/response envelopes that carry capabilities and shared state per request.
-- Streamable HTTP transport for the MCP server with `Mcp-Session-Id` sessions, bearer-token/OAuth guardrails for non-loopback binds, and Origin allowlist (POST/GET/DELETE on `/mcp`).
+- Streamable HTTP transport for the MCP server with `Mcp-Session-Id` sessions, bearer-token/OAuth guardrails for non-loopback binds enforced at both the CLI and library level (`build_mcp_http_server` raises `ValueError` when bound to a non-loopback host without auth), and Origin allowlist (POST/GET/DELETE on `/mcp`).
 - Managed-agent readiness checks for tool metadata, audit, budget, external state, and HITL gaps.
 - Provider portability checks for tool calling, structured output, system prompt support, prompt caching, and context limits.
-- Cross-provider live model conformance smoke checks with per-provider pass/fail/skip reporting.
+- Cross-provider live model conformance with layered `smoke` (non-empty response) and `contract` (exact content match, system-prompt adherence, token-budget reporting) tiers via `run_tiered_conformance`.
 
 ## Still Deferred
 
 - Production GraphQLite deployment, migrations, and Cypher query tuning.
-- Strong production sandboxing for Code Mode using containers, V8 isolates, or a managed execution service.
+- Strong production sandboxing for Code Mode beyond the current child-process guardrails: containers, seccomp profiles, V8 isolates, or a managed execution service.
 - Production hardening for OAuth 2.1 / DPoP deployments, including key rotation and external client storage.
 - Actual managed runtime integration with Anthropic, OpenAI, Google ADK, or Vertex Agent Engine.
-- Deeper cross-provider conformance for streaming, structured output, tool calling, and provider-specific safety blocks.
+- Extended cross-provider conformance tiers for streaming, structured output, tool calling, latency budgets, and provider-specific safety/block taxonomy.
 
 ## P2 Extension Rules
 

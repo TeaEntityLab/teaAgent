@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import secrets
 import threading
@@ -28,6 +29,17 @@ SESSION_HEADER = 'Mcp-Session-Id'
 DEFAULT_PORT = 7330
 
 _OAUTH_PATHS = frozenset({_AUTHORIZE_PATH, _TOKEN_PATH, _OAUTH_METADATA_PATH})
+
+
+def is_loopback_host(host: str) -> bool:
+    if host == 'localhost':
+        return True
+    if host in {'', '0.0.0.0', '::'}:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 class MCPSessionStore:
@@ -64,6 +76,11 @@ def build_mcp_http_server(
     allowed_origins: Optional[list[str]] = None,
     oauth_server: Optional[OAuth21AuthorizationServer] = None,
 ) -> tuple[ThreadingHTTPServer, MCPSessionStore]:
+    if not is_loopback_host(host) and auth_token is None and oauth_server is None:
+        raise ValueError(
+            f"Refusing to bind MCP HTTP to non-loopback host {host!r} without "
+            "auth_token or oauth_server. Pass auth_token=, oauth_server=, or bind to 127.0.0.1."
+        )
     sessions = MCPSessionStore()
     origins = frozenset(allowed_origins) if allowed_origins else None
     handler_cls = _make_handler(registry, sessions, auth_token, origins, oauth_server)
