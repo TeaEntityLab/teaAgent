@@ -157,7 +157,8 @@ class OpenAICompatibleAdapter:
         req = urllib_request.Request(url, data=body, headers=headers, method="POST")
         try:
             with urllib_request.urlopen(req, timeout=self.timeout) as response:
-                for line in response.read().decode("utf-8").splitlines():
+                for raw_line in response:
+                    line = raw_line.decode("utf-8", errors="replace").strip()
                     if not line.startswith("data: "):
                         continue
                     data = line[6:]
