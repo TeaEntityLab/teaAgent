@@ -9,6 +9,9 @@ class ErrorCategory(str, Enum):
     PERMISSION = 'permission'
     SYSTEM = 'system'
 
+    def __str__(self) -> str:
+        return self.value
+
 
 class AgentHarnessError(Exception):
     category = ErrorCategory.SYSTEM
