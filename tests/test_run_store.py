@@ -113,6 +113,79 @@ class RunStoreTests(unittest.TestCase):
             self.assertEqual(store.list_runs()[0].status, "pending_approval")
             self.assertEqual(store.heartbeat_for_run("run-paused")["status"], "pending_approval")
 
+    def test_observations_for_run_returns_completed_tool_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger()
+            audit.record("run_started", "run-obs", task="read")
+            audit.record(
+                "tool_call_completed",
+                "run-obs",
+                call_id="r1",
+                tool_name="workspace_read_file",
+                result={"path": "a.txt", "content": "hi", "truncated": False},
+            )
+            audit.record(
+                "tool_call_completed",
+                "run-obs",
+                call_id="r2",
+                tool_name="workspace_read_file",
+                result={"path": "b.txt", "content": "yo", "truncated": False},
+            )
+            store.logger_for_result(
+                RunResult(run_id="run-obs", final_answer=None, iterations=2, tool_calls=2, status="pending_approval"),
+                audit,
+            )
+
+            observations = store.observations_for_run("run-obs")
+
+            self.assertEqual([obs["call_id"] for obs in observations], ["r1", "r2"])
+            self.assertEqual(observations[0]["result"]["content"], "hi")
+
+    def test_pending_approval_for_run_returns_last_unresolved(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger()
+            audit.record("run_started", "run-pend", task="write")
+            audit.record(
+                "tool_call_pending_approval",
+                "run-pend",
+                call_id="write-1",
+                tool_name="workspace_write_file",
+                arguments={"path": "x.txt", "content": "x"},
+            )
+            store.logger_for_result(
+                RunResult(run_id="run-pend", final_answer=None, iterations=1, tool_calls=0, status="pending_approval"),
+                audit,
+            )
+
+            pending = store.pending_approval_for_run("run-pend")
+
+            self.assertIsNotNone(pending)
+            self.assertEqual(pending["call_id"], "write-1")
+            self.assertEqual(pending["tool_name"], "workspace_write_file")
+            self.assertEqual(pending["arguments"]["path"], "x.txt")
+
+    def test_pending_approval_for_run_clears_after_resolution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger()
+            audit.record("run_started", "run-resolved", task="write")
+            audit.record(
+                "tool_call_pending_approval",
+                "run-resolved",
+                call_id="write-1",
+                tool_name="workspace_write_file",
+                arguments={"path": "x.txt", "content": "x"},
+            )
+            audit.record("tool_call_approved", "run-resolved", call_id="write-1")
+            store.logger_for_result(
+                RunResult(run_id="run-resolved", final_answer=None, iterations=2, tool_calls=1, status="completed"),
+                audit,
+            )
+
+            self.assertIsNone(store.pending_approval_for_run("run-resolved"))
+
 
 if __name__ == "__main__":
     unittest.main()

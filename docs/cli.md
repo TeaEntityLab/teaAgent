@@ -452,6 +452,10 @@ Resume the original task from a persisted run id with optional new approval toke
 teaagent agent resume gpt <run_id> --root /path/to/repo --approve-call-id write-1
 ```
 
+By default, resume replays already-completed `tool_call_completed` observations into the new run's context so the model does not have to redo prior tool calls. If the original run paused with `pending_approval`, the pending `call_id` is auto-added to the approval list and reported back as `auto_approved_call_id` in the response payload.
+
+Pass `--fresh-restart` to skip replay and re-run the original task from scratch.
+
 Inside TUI:
 
 ```text

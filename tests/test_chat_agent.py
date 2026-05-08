@@ -289,6 +289,74 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(payload["task"], "summarize repo")
             self.assertEqual(payload["final_answer"], "second")
 
+    def test_cli_agent_resume_replays_observations_and_auto_approves_pending(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "note.txt").write_text("hello", encoding="utf-8")
+            first_adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"read-1"}',
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"out.txt","content":"hello!"},"call_id":"write-1"}',
+                ]
+            )
+            with (
+                patch("teaagent.cli.create_llm_adapter", return_value=first_adapter),
+                redirect_stdout(io.StringIO()) as first_out,
+            ):
+                first_code = main(["agent", "run", "gpt", "process notes", "--root", tmp])
+            first_payload = json.loads(first_out.getvalue())
+            self.assertEqual(first_code, 1)
+            self.assertEqual(first_payload["status"], "pending_approval")
+            self.assertEqual(first_payload["approval"]["call_id"], "write-1")
+            run_id = first_payload["run_id"]
+
+            resume_adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"out.txt","content":"hello!"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+            with (
+                patch("teaagent.cli.create_llm_adapter", return_value=resume_adapter),
+                redirect_stdout(io.StringIO()) as resume_out,
+            ):
+                resume_code = main(["agent", "resume", "gpt", run_id, "--root", tmp])
+            resume_payload = json.loads(resume_out.getvalue())
+
+            self.assertEqual(resume_code, 0)
+            self.assertEqual(resume_payload["status"], "completed")
+            self.assertEqual(resume_payload["resumed_from"], run_id)
+            self.assertEqual(resume_payload["replayed_observations"], 1)
+            self.assertEqual(resume_payload["auto_approved_call_id"], "write-1")
+            self.assertEqual((Path(tmp) / "out.txt").read_text(encoding="utf-8"), "hello!")
+
+    def test_cli_agent_resume_fresh_restart_skips_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "note.txt").write_text("hi", encoding="utf-8")
+            first_adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"read-1"}',
+                    '{"type":"final","content":"first"}',
+                ]
+            )
+            with (
+                patch("teaagent.cli.create_llm_adapter", return_value=first_adapter),
+                redirect_stdout(io.StringIO()) as first_out,
+            ):
+                main(["agent", "run", "gpt", "read note", "--root", tmp])
+            run_id = json.loads(first_out.getvalue())["run_id"]
+
+            resume_adapter = FakeAdapter(['{"type":"final","content":"fresh"}'])
+            with (
+                patch("teaagent.cli.create_llm_adapter", return_value=resume_adapter),
+                redirect_stdout(io.StringIO()) as resume_out,
+            ):
+                main(["agent", "resume", "gpt", run_id, "--root", tmp, "--fresh-restart"])
+            payload = json.loads(resume_out.getvalue())
+
+            self.assertEqual(payload["final_answer"], "fresh")
+            self.assertNotIn("replayed_observations", payload)
+            self.assertNotIn("auto_approved_call_id", payload)
+
     def test_cli_agent_resume_unknown_run_id_returns_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()

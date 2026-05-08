@@ -190,6 +190,57 @@ class P0HarnessTests(unittest.TestCase):
         self.assertNotIn("tool_call_started", [event.event_type for event in audit.events])
         self.assertEqual(audit.events[-1].payload["cost_cents"], 2.0)
 
+    def test_initial_observations_replayed_into_context(self) -> None:
+        audit = AuditLogger()
+        runner = AgentRunner(registry=build_registry(), audit=audit)
+        seen: list[list[dict]] = []
+
+        def decide(context):
+            seen.append(list(context["observations"]))
+            return FinalAnswer(content="ok")
+
+        replayed = [
+            {"call_id": "r1", "tool_name": "pilot_echo", "result": {"value": "earlier"}},
+            {"call_id": "r2", "tool_name": "pilot_echo", "result": {"value": "later"}},
+        ]
+        result = runner.run(
+            task="resume",
+            decide=decide,
+            run_id="run-replay",
+            initial_observations=replayed,
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.tool_calls, 2)
+        self.assertEqual(seen[0], replayed)
+        run_started = next(e for e in audit.events if e.event_type == "run_started")
+        self.assertEqual(run_started.payload["replayed_observations"], 2)
+
+    def test_initial_observations_count_against_tool_call_budget(self) -> None:
+        audit = AuditLogger()
+        runner = AgentRunner(
+            registry=build_registry(),
+            audit=audit,
+            budget=RunBudget(max_iterations=3, max_tool_calls=2),
+        )
+
+        def decide(_context):
+            return ToolRequest(tool_name="pilot_echo", arguments={"value": "next"})
+
+        replayed = [
+            {"call_id": "r1", "tool_name": "pilot_echo", "result": {"value": "a"}},
+            {"call_id": "r2", "tool_name": "pilot_echo", "result": {"value": "b"}},
+        ]
+        result = runner.run(
+            task="budget-replay",
+            decide=decide,
+            run_id="run-budget-replay",
+            initial_observations=replayed,
+        )
+
+        self.assertEqual(result.status, "failed:model_logic")
+        self.assertEqual(result.tool_calls, 2)
+
     def test_cost_budget_blocks_final_after_decision_cost_update(self) -> None:
         audit = AuditLogger()
         runner = AgentRunner(

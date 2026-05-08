@@ -28,13 +28,13 @@
 <claude-mem-context>
 # Memory Context
 
-# [teaagent] recent context, 2026-05-08 8:57am GMT+8
+# [teaagent] recent context, 2026-05-08 2:07pm GMT+8
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 18 obs (7,486t read) | 161,442t work | 95% savings
+Stats: 19 obs (8,027t read) | 170,927t work | 95% savings
 
 ### May 8, 2026
 22 12:31a 🟣 TeaAgent P0 Agent Harness — Initial Implementation
@@ -61,24 +61,7 @@ S7 Generate commit message for staged changes — TeaAgent intent clarification 
 38 8:39a 🟣 Deterministic task clarification system added to TeaAgent
 39 8:46a 🟣 Memory Catalog added to teaagent
 S8 Add workspace memory catalog to teaagent — new MemoryCatalog feature with CLI, TUI, and agent prompt injection (May 8 at 8:46 AM)
-**Investigated**: Staged git diff across all modified files in /Users/teee/dev/teaagent, covering the full scope of the memory catalog implementation.
+40 8:57a 🟣 Deterministic task-based model routing added to teaagent
 
-**Learned**: teaagent stores workspace memories as append-only JSONL at .teaagent/memory.jsonl. Search uses case-insensitive token intersection (all query tokens must appear in content+tags haystack). Agent runs automatically inject up to 5 matching memories into the model context dict under a "memories" key, which assemble_agent_prompt passes through alongside "observations" and "task_spec".
-
-**Completed**: - teaagent/memory.py created: MemoryEntry (frozen dataclass, uuid4 hex id, content, tags, created_at) and MemoryCatalog (add/list/search/show, JSONL persistence), plus normalize_tags, memory_matches, memory_entries_to_prompt helpers
-    - teaagent/chat_agent.py: ChatAgentConfig.memory_limit=5 added; run_chat_agent searches catalog at task start and wraps engine.decide with with_memories() injector
-    - teaagent/cli.py: memory subcommand with add/list/search/show sub-subcommands, --root and --tag/--limit flags
-    - teaagent/tui.py: memory command routed to _handle_memory(); HELP_TEXT updated
-    - teaagent/prompt.py: memories field threaded through assemble_agent_prompt context
-    - teaagent/__init__.py: MemoryCatalog and MemoryEntry exported in __all__
-    - tests/test_memory.py: new file with catalog unit test and CLI integration test
-    - tests/test_chat_agent.py: memory injection end-to-end test added
-    - tests/test_tui.py: TUI memory command test added
-    - docs/cli.md: Memory Catalog section with bash and TUI usage examples
-    - Commit message generated for all staged changes
-
-**Next Steps**: Session appears complete — commit message was the final deliverable. No further work indicated in the observed session.
-
-
-Access 161k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 171k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

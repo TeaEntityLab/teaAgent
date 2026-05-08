@@ -73,6 +73,39 @@ class RunStore:
                     return task
         raise ValueError(f"run '{run_id}' has no run_started task")
 
+    def observations_for_run(self, run_id: str) -> list[dict[str, Any]]:
+        observations: list[dict[str, Any]] = []
+        for event in self.show_run(run_id):
+            if event.get("event_type") != "tool_call_completed":
+                continue
+            payload = event.get("payload") or {}
+            call_id = payload.get("call_id")
+            tool_name = payload.get("tool_name")
+            result = payload.get("result")
+            if isinstance(call_id, str) and isinstance(tool_name, str) and isinstance(result, dict):
+                observations.append({"call_id": call_id, "tool_name": tool_name, "result": result})
+        return observations
+
+    def pending_approval_for_run(self, run_id: str) -> Optional[dict[str, Any]]:
+        pending: Optional[dict[str, Any]] = None
+        for event in self.show_run(run_id):
+            event_type = event.get("event_type")
+            payload = event.get("payload") or {}
+            if event_type == "tool_call_pending_approval":
+                call_id = payload.get("call_id")
+                tool_name = payload.get("tool_name")
+                arguments = payload.get("arguments")
+                if isinstance(call_id, str) and isinstance(tool_name, str):
+                    pending = {
+                        "call_id": call_id,
+                        "tool_name": tool_name,
+                        "arguments": arguments if isinstance(arguments, dict) else {},
+                    }
+            elif event_type in {"tool_call_approved", "tool_call_denied", "run_completed", "run_failed"}:
+                if pending and payload.get("call_id") == pending.get("call_id"):
+                    pending = None
+        return pending
+
     def heartbeat_for_run(self, run_id: str) -> dict[str, Any]:
         events = self.show_run(run_id)
         last_heartbeat: Optional[dict[str, Any]] = None

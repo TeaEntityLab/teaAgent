@@ -97,6 +97,7 @@ def run_chat_agent(
     registry: Optional[ToolRegistry] = None,
     task_spec: Optional[str] = None,
     depth: int = 0,
+    initial_observations: Optional[list[dict[str, Any]]] = None,
 ) -> RunResult:
     tool_registry = registry or build_workspace_tool_registry(config.root)
     if config.enable_subagent and depth < config.max_subagent_depth:
@@ -135,6 +136,7 @@ def run_chat_agent(
             task=task,
             decide=lambda context: engine.decide(with_memories(context, memories)),
             run_id=run_id,
+            initial_observations=initial_observations,
         )
     finally:
         if heartbeat is not None:

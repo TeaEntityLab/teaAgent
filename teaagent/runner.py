@@ -91,13 +91,26 @@ class AgentRunner:
         if cost_cents > self.budget.max_estimated_cost_cents:
             raise BudgetExceededError("cost budget exceeded")
 
-    def run(self, *, task: str, decide: DecisionFn, run_id: Optional[str] = None) -> RunResult:
+    def run(
+        self,
+        *,
+        task: str,
+        decide: DecisionFn,
+        run_id: Optional[str] = None,
+        initial_observations: Optional[list[dict[str, Any]]] = None,
+    ) -> RunResult:
         current_run_id = run_id or uuid4().hex
-        context: dict[str, Any] = {"task": task, "observations": []}
+        observations: list[dict[str, Any]] = list(initial_observations) if initial_observations else []
+        context: dict[str, Any] = {"task": task, "observations": observations}
         iterations = 0
-        tool_calls = 0
+        tool_calls = len(observations)
         cost_cents = 0.0
-        self.audit.record("run_started", current_run_id, task=task)
+        self.audit.record(
+            "run_started",
+            current_run_id,
+            task=task,
+            replayed_observations=len(observations),
+        )
 
         while iterations < self.budget.max_iterations:
             iterations += 1

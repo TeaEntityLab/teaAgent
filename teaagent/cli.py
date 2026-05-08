@@ -185,6 +185,11 @@ def build_parser() -> argparse.ArgumentParser:
     agent_resume.add_argument("--subagent", action="store_true", help="Expose the 'subagent' tool.")
     agent_resume.add_argument("--max-subagent-depth", type=int, default=1, help="Maximum nested subagent depth.")
     agent_resume.add_argument("--heartbeat", type=float, default=0.0, help="Heartbeat interval seconds. 0 disables.")
+    agent_resume.add_argument(
+        "--fresh-restart",
+        action="store_true",
+        help="Re-run the original task from scratch instead of replaying observations from the prior run.",
+    )
     agent_resume.set_defaults(func=agent_resume_command)
 
     agent_status = agent_subparsers.add_parser("status", help="Show liveness status of a persisted run.")
@@ -387,10 +392,33 @@ def agent_resume_command(args: argparse.Namespace) -> int:
     except (FileNotFoundError, ValueError) as exc:
         print_json({"status": "error", "message": str(exc)})
         return 1
-    return _execute_agent_task(args, original_task, resumed_from=args.run_id)
+
+    initial_observations: list[dict[str, Any]] = []
+    auto_approved: Optional[str] = None
+    if not args.fresh_restart:
+        initial_observations = store.observations_for_run(args.run_id)
+        pending = store.pending_approval_for_run(args.run_id)
+        if pending and pending["call_id"] not in args.approve_call_id:
+            args.approve_call_id = list(args.approve_call_id) + [pending["call_id"]]
+            auto_approved = pending["call_id"]
+
+    return _execute_agent_task(
+        args,
+        original_task,
+        resumed_from=args.run_id,
+        initial_observations=initial_observations,
+        auto_approved_call_id=auto_approved,
+    )
 
 
-def _execute_agent_task(args: argparse.Namespace, task: str, *, resumed_from: Optional[str] = None) -> int:
+def _execute_agent_task(
+    args: argparse.Namespace,
+    task: str,
+    *,
+    resumed_from: Optional[str] = None,
+    initial_observations: Optional[list[dict[str, Any]]] = None,
+    auto_approved_call_id: Optional[str] = None,
+) -> int:
     task_spec = None
     if args.clarify:
         clarification = clarify_task(task)
@@ -423,12 +451,17 @@ def _execute_agent_task(args: argparse.Namespace, task: str, *, resumed_from: Op
         ),
         audit=audit,
         task_spec=task_spec,
+        initial_observations=initial_observations,
     )
     store.logger_for_result(result, audit)
     payload = run_result_payload(result, routing=routing.to_dict() if routing else None)
     if resumed_from:
         payload["resumed_from"] = resumed_from
         payload["task"] = task
+        if initial_observations:
+            payload["replayed_observations"] = len(initial_observations)
+        if auto_approved_call_id is not None:
+            payload["auto_approved_call_id"] = auto_approved_call_id
     print_json(payload)
     return 0 if result.status == "completed" else 1
 
