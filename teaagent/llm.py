@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import random
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol
@@ -18,7 +20,9 @@ class LLMConfigurationError(LLMAdapterError):
 
 
 class LLMHTTPError(LLMAdapterError):
-    pass
+    def __init__(self, message: str, *, status_code: int = 0) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class LLMProviderError(LLMAdapterError):
@@ -123,9 +127,48 @@ class UrllibHTTPTransport:
                 return json.loads(response.read().decode('utf-8'))
         except HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')
-            raise LLMHTTPError(f'HTTP {exc.code}: {detail}') from exc
+            raise LLMHTTPError(f'HTTP {exc.code}: {detail}', status_code=exc.code) from exc
         except URLError as exc:
             raise LLMHTTPError(f'HTTP request failed: {exc.reason}') from exc
+
+
+@dataclass(frozen=True)
+class LLMRetryConfig:
+    max_retries: int = 3
+    base_delay_seconds: float = 1.0
+    max_delay_seconds: float = 30.0
+    retry_on_status: frozenset[int] = frozenset({429, 500, 502, 503, 504})
+
+    def delay(self, attempt: int) -> float:
+        delay = self.base_delay_seconds * (2 ** attempt)
+        jitter = random.uniform(0, delay * 0.5)
+        return min(delay + jitter, self.max_delay_seconds)
+
+
+DEFAULT_RETRY_CONFIG = LLMRetryConfig()
+
+
+def _call_with_retry(
+    provider: str,
+    transport_fn: Callable[[], dict[str, Any]],
+    retry_config: LLMRetryConfig,
+) -> dict[str, Any]:
+    last_exc: Optional[LLMHTTPError] = None
+    for attempt in range(retry_config.max_retries + 1):
+        try:
+            return transport_fn()
+        except LLMHTTPError as exc:
+            last_exc = exc
+            if attempt >= retry_config.max_retries:
+                raise
+            is_transient = exc.status_code in retry_config.retry_on_status
+            is_network = exc.status_code == 0
+            if is_transient or is_network:
+                time.sleep(retry_config.delay(attempt))
+                continue
+            raise
+    assert last_exc is not None
+    raise last_exc
 
 
 class LLMAdapter(Protocol):
@@ -141,11 +184,13 @@ class OpenAICompatibleAdapter:
         *,
         transport: Optional[HTTPTransport] = None,
         timeout: int = 60,
+        retry_config: Optional[LLMRetryConfig] = None,
     ) -> None:
         self.config = config
         self.provider = config.name
         self.transport = transport or UrllibHTTPTransport()
         self.timeout = timeout
+        self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self.config.resolved_model()
@@ -165,11 +210,15 @@ class OpenAICompatibleAdapter:
         if request.stream:
             payload['stream'] = True
             return self._complete_streaming(request, model, payload)
-        response = self.transport.post_json(
-            f'{self.config.resolved_base_url()}/chat/completions',
-            self._headers(),
-            payload,
-            timeout=self.timeout,
+        response = _call_with_retry(
+            self.provider,
+            lambda: self.transport.post_json(
+                f'{self.config.resolved_base_url()}/chat/completions',
+                self._headers(),
+                payload,
+                timeout=self.timeout,
+            ),
+            self.retry_config,
         )
         content = _extract_openai_content(self.provider, response)
         usage = response.get('usage', {})
@@ -216,7 +265,7 @@ class OpenAICompatibleAdapter:
                     chunks.append(chunk)
         except HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')
-            raise LLMHTTPError(f'HTTP {exc.code}: {detail}') from exc
+            raise LLMHTTPError(f'HTTP {exc.code}: {detail}', status_code=exc.code) from exc
         except URLError as exc:
             raise LLMHTTPError(f'HTTP request failed: {exc.reason}') from exc
         return LLMResponse(
@@ -247,10 +296,12 @@ class ClaudeAdapter:
         *,
         transport: Optional[HTTPTransport] = None,
         timeout: int = 60,
+        retry_config: Optional[LLMRetryConfig] = None,
     ) -> None:
         self.config = config
         self.transport = transport or UrllibHTTPTransport()
         self.timeout = timeout
+        self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self.config.resolved_model()
@@ -265,14 +316,18 @@ class ClaudeAdapter:
         }
         if request.system:
             payload['system'] = request.system
-        response = self.transport.post_json(
-            f'{self.config.resolved_base_url()}/messages',
-            {
-                'x-api-key': self.config.resolved_api_key(),
-                'anthropic-version': '2023-06-01',
-            },
-            payload,
-            timeout=self.timeout,
+        response = _call_with_retry(
+            self.provider,
+            lambda: self.transport.post_json(
+                f'{self.config.resolved_base_url()}/messages',
+                {
+                    'x-api-key': self.config.resolved_api_key(),
+                    'anthropic-version': '2023-06-01',
+                },
+                payload,
+                timeout=self.timeout,
+            ),
+            self.retry_config,
         )
         content = _extract_claude_content(response)
         usage = response.get('usage', {})
@@ -295,10 +350,12 @@ class GeminiAdapter:
         *,
         transport: Optional[HTTPTransport] = None,
         timeout: int = 60,
+        retry_config: Optional[LLMRetryConfig] = None,
     ) -> None:
         self.config = config
         self.transport = transport or UrllibHTTPTransport()
         self.timeout = timeout
+        self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self.config.resolved_model()
@@ -315,11 +372,15 @@ class GeminiAdapter:
         }
         if request.system:
             payload['systemInstruction'] = {'parts': [{'text': request.system}]}
-        response = self.transport.post_json(
-            f'{self.config.resolved_base_url()}/models/{model}:generateContent?key={self.config.resolved_api_key()}',
-            {},
-            payload,
-            timeout=self.timeout,
+        response = _call_with_retry(
+            self.provider,
+            lambda: self.transport.post_json(
+                f'{self.config.resolved_base_url()}/models/{model}:generateContent?key={self.config.resolved_api_key()}',
+                {},
+                payload,
+                timeout=self.timeout,
+            ),
+            self.retry_config,
         )
         content = _extract_gemini_content(response)
         metadata = response.get('usageMetadata', {})
@@ -521,4 +582,17 @@ def _estimate_cost(
     cost_1k_in = PROVIDER_COST_PER_1K_INPUT.get(provider, 0.001)
     cost_1k_out = PROVIDER_COST_PER_1K_OUTPUT.get(provider, 0.001)
     cost = (input_tokens * cost_1k_in + output_tokens * cost_1k_out) / 1000.0
+    return round(cost * 100, 4)
+
+
+def estimate_cost_preflight(
+    provider: str,
+    model: str,
+    approx_input_chars: int,
+    max_output_tokens: int,
+) -> float:
+    approx_input_tokens = max(1, approx_input_chars // 3)
+    cost_1k_in = PROVIDER_COST_PER_1K_INPUT.get(provider, 0.001)
+    cost_1k_out = PROVIDER_COST_PER_1K_OUTPUT.get(provider, 0.001)
+    cost = (approx_input_tokens * cost_1k_in + max_output_tokens * cost_1k_out) / 1000.0
     return round(cost * 100, 4)

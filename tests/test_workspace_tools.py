@@ -15,6 +15,7 @@ from teaagent import (
 )
 from teaagent.cli import main
 from teaagent.errors import ToolExecutionError
+from teaagent.workspace_tools import classify_shell_command_policy
 
 
 class WorkspaceToolTests(unittest.TestCase):
@@ -388,6 +389,145 @@ class WorkspaceToolTests(unittest.TestCase):
             with self.assertRaises(ToolExecutionError) as ctx:
                 registry.execute('workspace_search_text', {'pattern': 'x', 'limit': 0})
             self.assertIn('limit', str(ctx.exception))
+
+
+class ShellClassifierPropertyTests(unittest.TestCase):
+    INSPECT_COMMANDS = [
+        'pwd',
+        'ls',
+        'ls -la',
+        'find . -name "*.py"',
+        'rg pattern',
+        'rg --glob "*.py" pattern',
+        'grep pattern file.txt',
+        'grep -r pattern .',
+        "git log --grep='>'",
+        "git log --grep='|'",
+        "git log --grep='&& test'",
+        'git status',
+        'git diff',
+        'git diff --staged',
+        'git log',
+        'git log --oneline -5',
+        'git show HEAD',
+        'git branch',
+        'git grep pattern',
+        'git grep -n pattern -- "*.py"',
+        'cat file.txt',
+        'cat "file with spaces.txt"',
+        'head -20 file.txt',
+        'tail file.txt',
+        'wc -l file.txt',
+    ]
+
+    MUTATE_COMMANDS = [
+        'ls >output.txt',
+        'ls >>output.txt',
+        'cat file < input.txt',
+        'echo one | grep two',
+        'echo one && echo two',
+        'echo one; echo two',
+        'touch new.txt',
+        'rm file.txt',
+        'mkdir dir',
+        'mv a.txt b.txt',
+        'git checkout -b new-branch',
+        'git push',
+        'git commit -m "msg"',
+        'python3 script.py',
+        'npm install',
+        'pip install pkg',
+        'curl http://example.com',
+    ]
+
+    def test_all_inspect_commands_classified_as_inspect(self) -> None:
+        for cmd in self.INSPECT_COMMANDS:
+            result = classify_shell_command_policy(cmd)
+            self.assertEqual(
+                result,
+                'inspect',
+                f'expected {cmd!r} to be inspect, got {result!r}',
+            )
+
+    def test_all_mutate_commands_classified_as_mutate(self) -> None:
+        for cmd in self.MUTATE_COMMANDS:
+            result = classify_shell_command_policy(cmd)
+            self.assertEqual(
+                result,
+                'mutate',
+                f'expected {cmd!r} to be mutate, got {result!r}',
+            )
+
+    def test_quoted_operators_do_not_trigger_mutate(self) -> None:
+        inspect = [
+            "grep '>' file.txt",
+            "grep '|' file.txt",
+            "grep '&&' file.txt",
+            "rg ';' .",
+            "git log --grep='>'",
+            "git log --grep='&& git'",
+        ]
+        for cmd in inspect:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'inspect',
+                f'quoted operator in {cmd!r} should not trigger mutate',
+            )
+
+    def test_actual_redirect_operators_trigger_mutate(self) -> None:
+        mutate = [
+            'ls > out.txt',
+            'ls >> out.txt',
+            'cat < /dev/null',
+            'ls 2> err.txt',
+            'ls &> all.txt',
+        ]
+        for cmd in mutate:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'mutate',
+                f'actual redirect in {cmd!r} should trigger mutate',
+            )
+
+    def test_chained_commands_trigger_mutate(self) -> None:
+        mutate = [
+            'ls && pwd',
+            'ls || pwd',
+            'ls | wc',
+            'ls ; pwd',
+        ]
+        for cmd in mutate:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'mutate',
+                f'chain operator in {cmd!r} should trigger mutate',
+            )
+
+    def test_command_substitution_trigger_mutate(self) -> None:
+        mutate = [
+            'echo $(whoami)',
+            'echo `whoami`',
+        ]
+        for cmd in mutate:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'mutate',
+                f'substitution in {cmd!r} should trigger mutate',
+            )
+
+    def test_workspace_escape_paths_trigger_mutate(self) -> None:
+        mutate = [
+            'ls /etc/passwd',
+            'cat ~/.ssh/id_rsa',
+            'ls ../outside',
+            'ls subdir/../../outside',
+        ]
+        for cmd in mutate:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'mutate',
+                f'escape path in {cmd!r} should trigger mutate',
+            )
 
 
 if __name__ == '__main__':

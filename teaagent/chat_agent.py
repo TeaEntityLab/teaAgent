@@ -10,7 +10,11 @@ from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
 from teaagent.context import ContextCompactor
 from teaagent.heartbeat import Heartbeat
-from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
+from teaagent.llm import (
+    LLMAdapter,
+    LLMMessage,
+    LLMRequest,
+)
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.prompt import (
@@ -52,6 +56,7 @@ class ModelDecisionEngine:
         *,
         adapter: LLMAdapter,
         registry: ToolRegistry,
+        budget: Optional[RunBudget] = None,
         project_instructions: str = '',
         model: Optional[str] = None,
         task_spec: Optional[str] = None,
@@ -60,6 +65,7 @@ class ModelDecisionEngine:
     ) -> None:
         self.adapter = adapter
         self.registry = registry
+        self.budget = budget
         self.project_instructions = project_instructions
         self.model = model
         self.task_spec = task_spec
@@ -74,6 +80,17 @@ class ModelDecisionEngine:
             project_instructions=self.project_instructions,
             task_spec=self.task_spec,
         )
+
+        if self.budget is not None and self.model:
+            resolved_model = self.model
+            approx_input = len(prompt.system) + len(prompt.user)
+            self.budget.check_cost_preflight(
+                provider=self.adapter.provider,
+                model=resolved_model,
+                approx_input_chars=approx_input,
+                max_output_tokens=1024,
+            )
+
         response = self.adapter.complete(
             LLMRequest(
                 system=prompt.system,
@@ -108,9 +125,13 @@ def run_chat_agent(
     memories = memory_entries_to_prompt(
         MemoryCatalog(config.root).search(task, limit=config.memory_limit)
     )
+    runner_budget = RunBudget(
+        max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls
+    )
     engine = ModelDecisionEngine(
         adapter=adapter,
         registry=tool_registry,
+        budget=runner_budget,
         project_instructions=project_instructions,
         model=config.model,
         task_spec=task_spec,
@@ -121,9 +142,7 @@ def run_chat_agent(
     runner = AgentRunner(
         registry=tool_registry,
         audit=audit_logger,
-        budget=RunBudget(
-            max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls
-        ),
+        budget=runner_budget,
         approval_policy=ApprovalPolicy(
             approved_call_ids=config.approved_call_ids,
             allow_all_destructive=config.allow_destructive,

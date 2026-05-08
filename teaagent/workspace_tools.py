@@ -255,6 +255,11 @@ def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
     old = args['old']
     if old not in text:
         raise ValueError('old text not found')
+    if text.count(old) > 1:
+        raise ValueError(
+            'old text is not unique; provide more surrounding context '
+            'or use workspace_edit_at_hash for a line-anchored edit'
+        )
     updated = text.replace(old, args['new'], 1)
     assert_write_size_allowed(config, updated)
     path.write_text(updated, encoding='utf-8')
@@ -425,9 +430,6 @@ def non_negative_int_arg(args: dict[str, Any], name: str, *, default: int) -> in
 
 
 def classify_shell_command_policy(command: str) -> str:
-    blocked_tokens = ('>', '<', '|', '&&', ';', '`', '$(')
-    if any(token in command for token in blocked_tokens):
-        return 'mutate'
     try:
         parts = shlex.split(command.strip())
     except ValueError:
@@ -435,6 +437,8 @@ def classify_shell_command_policy(command: str) -> str:
     if not parts:
         return 'mutate'
     executable = parts[0]
+    if _has_unquoted_shell_operator(command):
+        return 'mutate'
     if any(shell_arg_escapes_workspace(arg) for arg in parts[1:]):
         return 'mutate'
     if executable in {'pwd', 'ls', 'find', 'rg', 'grep', 'cat', 'head', 'tail', 'wc'}:
@@ -442,12 +446,36 @@ def classify_shell_command_policy(command: str) -> str:
     if (
         executable == 'git'
         and len(parts) > 1
-        and parts[1] in {'status', 'diff', 'log', 'show', 'branch'}
+        and parts[1] in {'status', 'diff', 'log', 'show', 'branch', 'grep'}
     ):
         return 'inspect'
-    if executable == 'python3' and len(parts) > 2 and parts[1:3] == ['-m', 'unittest']:
-        return 'inspect'
     return 'mutate'
+
+
+def _has_unquoted_shell_operator(command: str) -> bool:
+    in_single = False
+    in_double = False
+    i = 0
+    n = len(command)
+    while i < n:
+        ch = command[i]
+        if in_single:
+            if ch == "'" and (i == 0 or command[i - 1] != '\\'):
+                in_single = False
+        elif in_double:
+            if ch == '"' and (i == 0 or command[i - 1] != '\\'):
+                in_double = False
+        else:
+            if ch == "'":
+                in_single = True
+            elif ch == '"':
+                in_double = True
+            elif ch in ('>', '<', '|', '&', ';', '`'):
+                return True
+            elif ch == '$' and i + 1 < n and command[i + 1] == '(':
+                return True
+        i += 1
+    return False
 
 
 def shell_arg_escapes_workspace(arg: str) -> bool:
