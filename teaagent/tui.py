@@ -31,6 +31,7 @@ HELP_TEXT = """Commands:
   route <task>              Preview model route for a task.
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
+  progress <on|off>         Stream brief audit-event progress lines during ask runs.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
   approve <call_id>         Approve one exact destructive tool call id.
   unapprove <call_id>       Remove one approved call id.
@@ -45,6 +46,7 @@ HELP_TEXT = """Commands:
   memory show <id>          Show one workspace memory.
   runs                      List recent persisted agent runs.
   show <run_id>             Show one persisted run record.
+  resume <run_id>           Re-run the original task from a persisted run id.
   use <database>            Switch database path. Use :memory: for in-memory.
   smoke                     Create a SmokeTest node and query it.
   query <cypher>            Execute a Cypher query.
@@ -73,6 +75,7 @@ class TeaAgentTUI:
         self.root = Path(root).resolve()
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
+        self.progress = False
         self.approved_call_ids: set[str] = set()
         self.input_fn = input_fn
         self.output_fn = output_fn
@@ -158,6 +161,13 @@ class TeaAgentTUI:
             self.allow_destructive = args[0] == "on"
             self.output_fn(f"destructive: {'on' if self.allow_destructive else 'off'}")
             return True
+        if action == "progress":
+            if len(args) != 1 or args[0] not in {"on", "off"}:
+                self.output_fn("error: progress requires 'on' or 'off'")
+                return True
+            self.progress = args[0] == "on"
+            self.output_fn(f"progress: {'on' if self.progress else 'off'}")
+            return True
         if action == "permission":
             if len(args) != 1:
                 self.output_fn("error: permission requires one mode")
@@ -230,6 +240,18 @@ class TeaAgentTUI:
                 return True
             self._print_json(RunStore(self.root).show_run(args[0]))
             return True
+        if action == "resume":
+            if len(args) != 1:
+                self.output_fn("error: resume requires a run id")
+                return True
+            try:
+                original_task = RunStore(self.root).task_for_run(args[0])
+            except (FileNotFoundError, ValueError) as exc:
+                self.output_fn(f"error: {exc}")
+                return True
+            self.output_fn(f"resume: {args[0]}")
+            self._run_agent_task(original_task)
+            return True
         if action == "use":
             if len(args) != 1:
                 self.output_fn("error: use requires exactly one database path")
@@ -297,6 +319,8 @@ class TeaAgentTUI:
         adapter = self.adapter_factory(self.provider, selected_model)
         store = RunStore(self.root)
         audit = store.audit_logger()
+        if self.progress:
+            audit.add_sink(self._progress_sink)
         result = run_chat_agent(
             task=task,
             adapter=adapter,
@@ -321,6 +345,17 @@ class TeaAgentTUI:
                 "final_answer": result.final_answer.content if result.final_answer else None,
             }
         )
+
+    def _progress_sink(self, event) -> None:
+        payload = event.payload or {}
+        if event.event_type == "iteration_started":
+            self.output_fn(f"  iter {payload.get('iteration')}")
+        elif event.event_type == "tool_call_started":
+            self.output_fn(f"  tool: {payload.get('tool_name')} ({payload.get('call_id')})")
+        elif event.event_type == "tool_call_completed":
+            self.output_fn(f"  tool ok: {payload.get('tool_name')}")
+        elif event.event_type == "run_failed":
+            self.output_fn(f"  failed: {payload.get('category')}: {payload.get('message')}")
 
     def _get_store(self) -> GraphQLiteGraphStore:
         if self._store is None:

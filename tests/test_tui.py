@@ -162,6 +162,56 @@ class TUITests(unittest.TestCase):
         self.assertTrue(payload["needs_clarification"])
         self.assertEqual(payload["question"], "What action do you want TeaAgent to take?")
 
+    def test_tui_progress_streams_audit_events(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "note.txt").write_text("hello", encoding="utf-8")
+            output = []
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"r1"}',
+                    '{"type":"final","content":"done"}',
+                ]
+            )
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: "exit",
+                output_fn=output.append,
+                adapter_factory=lambda _provider, _model: adapter,
+            )
+
+            self.assertTrue(tui.handle_command("progress on"))
+            self.assertTrue(tui.handle_command("ask read note"))
+
+            joined = "\n".join(output)
+            self.assertIn("iter 1", joined)
+            self.assertIn("tool: workspace_read_file", joined)
+            self.assertIn("tool ok: workspace_read_file", joined)
+
+    def test_tui_resume_replays_persisted_run_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            adapter = FakeAdapter(
+                [
+                    '{"type":"final","content":"first"}',
+                    '{"type":"final","content":"second"}',
+                ]
+            )
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: "exit",
+                output_fn=output.append,
+                adapter_factory=lambda _provider, _model: adapter,
+            )
+
+            self.assertTrue(tui.handle_command("ask read note"))
+            run_id = json.loads(output[-1])["run_id"]
+            self.assertTrue(tui.handle_command(f"resume {run_id}"))
+
+            resume_payload = json.loads(output[-1])
+            self.assertEqual(resume_payload["final_answer"], "second")
+            self.assertIn(f"resume: {run_id}", output)
+
     def test_tui_preflight_command_uses_current_settings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = []

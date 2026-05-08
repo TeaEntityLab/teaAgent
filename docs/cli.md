@@ -73,6 +73,7 @@ route-model on
 route review this patch
 root /path/to/repo
 destructive off
+progress on
 permission prompt
 approve write-file-1
 approvals
@@ -352,6 +353,12 @@ Show one run record:
 teaagent agent show <run_id> --root /path/to/repo
 ```
 
+Resume the original task from a persisted run id with optional new approval tokens or settings:
+
+```bash
+teaagent agent resume gpt <run_id> --root /path/to/repo --approve-call-id write-1
+```
+
 Inside TUI:
 
 ```text
@@ -360,4 +367,5 @@ approvals
 unapprove write-todo-1
 runs
 show <run_id>
+resume <run_id>
 ```

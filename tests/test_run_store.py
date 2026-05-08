@@ -37,6 +37,19 @@ class RunStoreTests(unittest.TestCase):
             self.assertEqual(events[0]["event_type"], "run_started")
             self.assertTrue((Path(tmp) / ".teaagent" / "runs" / "run-1.jsonl").exists())
 
+    def test_task_for_run_extracts_original_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger()
+            audit.record("run_started", "run-task", task="resume me")
+            audit.record("run_completed", "run-task", answer="ok", metadata={})
+            store.logger_for_result(
+                RunResult(run_id="run-task", final_answer=FinalAnswer("ok"), iterations=1, tool_calls=0, status="completed"),
+                audit,
+            )
+
+            self.assertEqual(store.task_for_run("run-task"), "resume me")
+
     def test_cli_lists_and_shows_runs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = RunStore(tmp)

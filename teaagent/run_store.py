@@ -64,6 +64,14 @@ class RunStore:
             raise FileNotFoundError(f"run '{run_id}' not found")
         return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
+    def task_for_run(self, run_id: str) -> str:
+        for event in self.show_run(run_id):
+            if event.get("event_type") == "run_started":
+                task = event.get("payload", {}).get("task")
+                if isinstance(task, str) and task:
+                    return task
+        raise ValueError(f"run '{run_id}' has no run_started task")
+
     def summarize(self, path: Path) -> Optional[RunSummary]:
         events = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
         if not events:

@@ -228,6 +228,33 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(payload["status"], "completed")
             self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
 
+    def test_cli_agent_resume_replays_original_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            first_adapter = FakeAdapter(['{"type":"final","content":"first"}'])
+            with patch("teaagent.cli.create_llm_adapter", return_value=first_adapter), redirect_stdout(io.StringIO()) as first_out:
+                self.assertEqual(main(["agent", "run", "gpt", "summarize repo", "--root", tmp]), 0)
+            run_id = json.loads(first_out.getvalue())["run_id"]
+
+            resume_adapter = FakeAdapter(['{"type":"final","content":"second"}'])
+            with patch("teaagent.cli.create_llm_adapter", return_value=resume_adapter), redirect_stdout(io.StringIO()) as resume_out:
+                exit_code = main(["agent", "resume", "gpt", run_id, "--root", tmp])
+
+            payload = json.loads(resume_out.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["resumed_from"], run_id)
+            self.assertEqual(payload["task"], "summarize repo")
+            self.assertEqual(payload["final_answer"], "second")
+
+    def test_cli_agent_resume_unknown_run_id_returns_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["agent", "resume", "gpt", "missing", "--root", tmp])
+
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(payload["status"], "error")
+
 
 if __name__ == "__main__":
     unittest.main()

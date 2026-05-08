@@ -118,6 +118,33 @@ def build_parser() -> argparse.ArgumentParser:
     agent_preflight.add_argument("--memory-limit", type=int, default=5, help="Maximum matched memories to include.")
     agent_preflight.set_defaults(func=agent_preflight_command)
 
+    agent_resume = agent_subparsers.add_parser(
+        "resume",
+        help="Re-run a persisted run's task using the original recorded task.",
+    )
+    agent_resume.add_argument("provider", choices=available_providers(), help="Model provider to use.")
+    agent_resume.add_argument("run_id", help="Run id to resume.")
+    agent_resume.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    agent_resume.add_argument("--model", default=None, help="Override model name.")
+    agent_resume.add_argument("--route-model", action="store_true", help="Apply task category routing.")
+    agent_resume.add_argument("--max-iterations", type=int, default=10, help="Maximum agent loop iterations.")
+    agent_resume.add_argument("--max-tool-calls", type=int, default=10, help="Maximum tool calls.")
+    agent_resume.add_argument("--clarify", action="store_true", help="Run deterministic ambiguity scoring before calling the model.")
+    agent_resume.add_argument("--allow-destructive", action="store_true", help="Allow destructive tools.")
+    agent_resume.add_argument(
+        "--approve-call-id",
+        action="append",
+        default=[],
+        help="Approve one exact destructive tool call id. Can be repeated.",
+    )
+    agent_resume.add_argument(
+        "--permission-mode",
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help="Permission mode for workspace tools.",
+    )
+    agent_resume.set_defaults(func=agent_resume_command)
+
     agent_list = agent_subparsers.add_parser("runs", help="List persisted agent runs.")
     agent_list.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
     agent_list.add_argument("--limit", type=int, default=20, help="Maximum runs to list.")
@@ -232,21 +259,35 @@ def memory_show_command(args: argparse.Namespace) -> int:
 
 
 def agent_run_task(args: argparse.Namespace) -> int:
+    return _execute_agent_task(args, args.task)
+
+
+def agent_resume_command(args: argparse.Namespace) -> int:
+    store = RunStore(args.root)
+    try:
+        original_task = store.task_for_run(args.run_id)
+    except (FileNotFoundError, ValueError) as exc:
+        print_json({"status": "error", "message": str(exc)})
+        return 1
+    return _execute_agent_task(args, original_task, resumed_from=args.run_id)
+
+
+def _execute_agent_task(args: argparse.Namespace, task: str, *, resumed_from: Optional[str] = None) -> int:
     task_spec = None
     if args.clarify:
-        clarification = clarify_task(args.task)
+        clarification = clarify_task(task)
         if clarification.needs_clarification:
             print_json({"status": "needs_clarification", "clarification": clarification.to_dict()})
             return 2
-        task_spec = build_task_spec(args.task, clarification)
+        task_spec = build_task_spec(task, clarification)
 
-    routing = route_model(args.task, provider=args.provider, model=args.model) if args.route_model else None
+    routing = route_model(task, provider=args.provider, model=args.model) if args.route_model else None
     selected_model = routing.model if routing else args.model
     adapter = create_llm_adapter(args.provider, model=selected_model)
     store = RunStore(args.root)
     audit = store.audit_logger()
     result = run_chat_agent(
-        task=args.task,
+        task=task,
         adapter=adapter,
         config=ChatAgentConfig.from_root(
             args.root,
@@ -261,16 +302,18 @@ def agent_run_task(args: argparse.Namespace) -> int:
         task_spec=task_spec,
     )
     store.logger_for_result(result, audit)
-    print_json(
-        {
-            "run_id": result.run_id,
-            "status": result.status,
-            "iterations": result.iterations,
-            "tool_calls": result.tool_calls,
-            "routing": routing.to_dict() if routing else None,
-            "final_answer": result.final_answer.content if result.final_answer else None,
-        }
-    )
+    payload: dict[str, Any] = {
+        "run_id": result.run_id,
+        "status": result.status,
+        "iterations": result.iterations,
+        "tool_calls": result.tool_calls,
+        "routing": routing.to_dict() if routing else None,
+        "final_answer": result.final_answer.content if result.final_answer else None,
+    }
+    if resumed_from:
+        payload["resumed_from"] = resumed_from
+        payload["task"] = task
+    print_json(payload)
     return 0 if result.status == "completed" else 1
 
 
