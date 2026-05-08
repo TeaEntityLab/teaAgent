@@ -7,7 +7,6 @@ from typing import Any
 from teaagent.errors import ToolExecutionError
 from teaagent.schema import validate_object_schema
 
-
 ToolHandler = Callable[[dict[str, Any]], dict[str, Any]]
 
 

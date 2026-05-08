@@ -4,7 +4,6 @@ from typing import Any
 
 from teaagent.errors import ToolValidationError
 
-
 TYPE_MAP = {
     "array": list,
     "boolean": bool,

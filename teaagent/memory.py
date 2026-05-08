@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from teaagent.audit import utc_now
@@ -64,7 +64,10 @@ class MemoryCatalog:
         for line in self.path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
-            payload = json.loads(line)
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
             entries.append(
                 MemoryEntry(
                     memory_id=payload["memory_id"],

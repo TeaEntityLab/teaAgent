@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
 import unittest
+from contextlib import redirect_stdout
 
 from teaagent.cli import main
 from teaagent.intent import build_task_spec, clarify_task

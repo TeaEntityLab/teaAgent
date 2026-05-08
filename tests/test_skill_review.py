@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path
 import unittest
+from pathlib import Path
 
-from teaagent.skill_review import SkillReviewResult, SkillReviewFinding, review_skill
+from teaagent.skill_review import review_skill
 
 
 class SkillReviewTests(unittest.TestCase):

@@ -1,18 +1,23 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Optional
-
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
+from teaagent.context import ContextCompactor
 from teaagent.heartbeat import Heartbeat
 from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
 from teaagent.policy import ApprovalPolicy, PermissionMode
-from teaagent.prompt import assemble_agent_prompt, load_project_instructions, parse_model_decision
+from teaagent.prompt import (
+    assemble_agent_prompt,
+    load_project_instructions,
+    parse_model_decision,
+)
 from teaagent.run_store import RunStore
 from teaagent.runner import AgentRunner, Decision, RunResult
 from teaagent.tools import ToolAnnotations, ToolRegistry
@@ -32,6 +37,8 @@ class ChatAgentConfig:
     enable_subagent: bool = False
     max_subagent_depth: int = 1
     heartbeat_seconds: float = 0.0
+    stream: bool = False
+    on_chunk: Optional[Callable[[str], None]] = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs) -> "ChatAgentConfig":
@@ -47,12 +54,16 @@ class ModelDecisionEngine:
         project_instructions: str = "",
         model: Optional[str] = None,
         task_spec: Optional[str] = None,
+        stream: bool = False,
+        on_chunk: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.adapter = adapter
         self.registry = registry
         self.project_instructions = project_instructions
         self.model = model
         self.task_spec = task_spec
+        self.stream = stream
+        self.on_chunk = on_chunk
 
     def decide(self, context: dict) -> Decision:
         prompt = assemble_agent_prompt(
@@ -67,8 +78,12 @@ class ModelDecisionEngine:
                 system=prompt.system,
                 messages=[LLMMessage(role="user", content=prompt.user)],
                 model=self.model,
+                stream=self.stream,
+                on_chunk=self.on_chunk,
             )
         )
+        previous_cost = context.get("_cost_cents", 0.0)
+        context["_cost_cents"] = previous_cost + response.estimated_cost_cents
         return parse_model_decision(response.content)
 
 
@@ -93,6 +108,8 @@ def run_chat_agent(
         project_instructions=project_instructions,
         model=config.model,
         task_spec=task_spec,
+        stream=config.stream,
+        on_chunk=config.on_chunk,
     )
     audit_logger = audit or AuditLogger()
     runner = AgentRunner(
@@ -104,6 +121,7 @@ def run_chat_agent(
             allow_all_destructive=config.allow_destructive,
             permission_mode=config.permission_mode,
         ),
+        compactor=ContextCompactor(memory_keys=("task_spec", "memories")),
     )
     run_id = uuid4().hex
     heartbeat: Optional[Heartbeat] = None

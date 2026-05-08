@@ -3,26 +3,14 @@ from __future__ import annotations
 import io
 import json
 import os
-from contextlib import redirect_stdout
 import tempfile
-from pathlib import Path
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
+from conftest import FakeAdapter
+
 from teaagent.cli import main
-from teaagent.llm import LLMResponse
-
-
-class FakeAdapter:
-    provider = "fake"
-
-    def __init__(self, outputs):
-        self.outputs = list(outputs)
-        self.requests = []
-
-    def complete(self, request):
-        self.requests.append(request)
-        return LLMResponse(provider="fake", model="fake-model", content=self.outputs.pop(0))
 
 
 class CLITests(unittest.TestCase):

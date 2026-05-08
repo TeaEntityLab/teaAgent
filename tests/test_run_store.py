@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
-from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 
-from teaagent import AuditLogger, FinalAnswer, RunStore
+from teaagent import FinalAnswer, RunStore
 from teaagent.cli import main
 from teaagent.runner import RunResult
 

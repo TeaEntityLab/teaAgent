@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from teaagent.audit import AuditEvent, AuditLogger, utc_now
+from teaagent.audit import AuditLogger, utc_now
 from teaagent.runner import RunResult
 
 

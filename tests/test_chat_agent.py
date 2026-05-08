@@ -2,39 +2,24 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
-from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
+
+from conftest import FakeAdapter
 
 from teaagent import (
     ApprovalPolicy,
-    AuditLogger,
     ChatAgentConfig,
-    LLMResponse,
     MemoryCatalog,
     PermissionMode,
-    ToolAnnotations,
-    ToolRegistry,
     parse_model_decision,
     run_chat_agent,
 )
 from teaagent.cli import main
 from teaagent.runner import ToolRequest
-from teaagent.workspace_tools import build_workspace_tool_registry
-
-
-class FakeAdapter:
-    provider = "fake"
-
-    def __init__(self, outputs):
-        self.outputs = list(outputs)
-        self.requests = []
-
-    def complete(self, request):
-        self.requests.append(request)
-        return LLMResponse(provider="fake", model="fake-model", content=self.outputs.pop(0))
 
 
 class ChatAgentTests(unittest.TestCase):

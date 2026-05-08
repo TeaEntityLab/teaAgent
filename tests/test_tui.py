@@ -2,24 +2,15 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
-from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 
-from teaagent import LLMResponse
+from conftest import FakeAdapter
+
 from teaagent.cli import main
 from teaagent.tui import TeaAgentTUI
-
-
-class FakeAdapter:
-    provider = "fake"
-
-    def __init__(self, outputs):
-        self.outputs = list(outputs)
-
-    def complete(self, _request):
-        return LLMResponse(provider="fake", model="fake", content=self.outputs.pop(0))
 
 
 class CapturingAdapterFactory:
@@ -669,7 +660,6 @@ class TUITests(unittest.TestCase):
             self.assertIn("failed:", joined)
 
     def test_run_tui_function(self) -> None:
-        from teaagent.tui import run_tui
 
         commands = iter(["exit"])
         tui = TeaAgentTUI(

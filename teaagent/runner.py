@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
+from teaagent.context import ContextCompactor
 from teaagent.errors import AgentHarnessError, BudgetExceededError, ErrorCategory
 from teaagent.policy import ApprovalPolicy
 from teaagent.tools import ToolRegistry
@@ -46,31 +47,40 @@ class AgentRunner:
         audit: AuditLogger,
         budget: Optional[RunBudget] = None,
         approval_policy: Optional[ApprovalPolicy] = None,
+        compactor: Optional[ContextCompactor] = None,
+        compact_after_observations: int = 20,
     ) -> None:
         self.registry = registry
         self.audit = audit
         self.budget = budget or RunBudget()
         self.budget.validate()
         self.approval_policy = approval_policy or ApprovalPolicy()
+        self.compactor = compactor
+        self.compact_after_observations = compact_after_observations
 
     def run(self, *, task: str, decide: DecisionFn, run_id: Optional[str] = None) -> RunResult:
         current_run_id = run_id or uuid4().hex
         context: dict[str, Any] = {"task": task, "observations": []}
         iterations = 0
         tool_calls = 0
+        cost_cents = 0.0
         self.audit.record("run_started", current_run_id, task=task)
 
         while iterations < self.budget.max_iterations:
             iterations += 1
+            if cost_cents > self.budget.max_estimated_cost_cents:
+                raise BudgetExceededError("cost budget exceeded")
             self.audit.record("iteration_started", current_run_id, iteration=iterations)
             try:
                 decision = decide(context)
+                cost_cents = context.get("_cost_cents", cost_cents)
                 if isinstance(decision, FinalAnswer):
                     self.audit.record(
                         "run_completed",
                         current_run_id,
                         answer=decision.content,
                         metadata=decision.metadata,
+                        cost_cents=cost_cents,
                     )
                     return RunResult(
                         run_id=current_run_id,
@@ -110,12 +120,19 @@ class AgentRunner:
                 }
                 context["observations"].append(observation)
                 self.audit.record("tool_call_completed", current_run_id, **observation)
+                if self.compactor and len(context["observations"]) > self.compact_after_observations:
+                    compacted = self.compactor.compact(context)
+                    context["observations"] = compacted.context["observations"]
+                    context["compacted_summary"] = compacted.summary
+                    context["memory_keys"] = compacted.pinned
+                    self.audit.record("context_compacted", current_run_id, summary=compacted.summary)
             except AgentHarnessError as exc:
                 self.audit.record(
                     "run_failed",
                     current_run_id,
                     category=exc.category,
                     message=str(exc),
+                    cost_cents=cost_cents,
                 )
                 return RunResult(
                     run_id=current_run_id,
@@ -130,6 +147,7 @@ class AgentRunner:
                     current_run_id,
                     category=ErrorCategory.SYSTEM,
                     message=str(exc),
+                    cost_cents=cost_cents,
                 )
                 return RunResult(
                     run_id=current_run_id,
@@ -144,6 +162,7 @@ class AgentRunner:
             current_run_id,
             category=ErrorCategory.MODEL_LOGIC,
             message="iteration budget exceeded",
+            cost_cents=cost_cents,
         )
         return RunResult(
             run_id=current_run_id,

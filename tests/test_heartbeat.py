@@ -2,27 +2,21 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
+from contextlib import redirect_stdout
 
-from teaagent import AuditLogger, ChatAgentConfig, Heartbeat, LLMResponse, RunStore, run_chat_agent
+from conftest import FakeAdapter
+
+from teaagent import (
+    AuditLogger,
+    ChatAgentConfig,
+    Heartbeat,
+    RunStore,
+    run_chat_agent,
+)
 from teaagent.cli import main
-
-
-class FakeAdapter:
-    provider = "fake"
-
-    def __init__(self, outputs, *, before_each=None):
-        self.outputs = list(outputs)
-        self.before_each = before_each
-
-    def complete(self, _request):
-        if self.before_each is not None:
-            self.before_each()
-        return LLMResponse(provider="fake", model="fake", content=self.outputs.pop(0))
 
 
 class HeartbeatTests(unittest.TestCase):

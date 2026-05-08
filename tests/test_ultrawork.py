@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import io
 import json
-import os
 import sys
-from contextlib import redirect_stdout
-from pathlib import Path
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from teaagent import UltraworkStore
 from teaagent.cli import main

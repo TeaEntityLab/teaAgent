@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-import re
-
 
 EXTERNAL_COMMAND_PATTERNS = (
     re.compile(r"\b(curl|wget|ssh|scp|nc)\b"),

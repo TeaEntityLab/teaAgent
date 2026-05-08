@@ -2,24 +2,15 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
-from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
-from teaagent import ChatAgentConfig, LLMResponse, run_chat_agent
+from conftest import FakeAdapter
+
+from teaagent import ChatAgentConfig, run_chat_agent
 from teaagent.cli import main
-
-
-class FakeAdapter:
-    provider = "fake"
-
-    def __init__(self, outputs):
-        self.outputs = list(outputs)
-
-    def complete(self, _request):
-        return LLMResponse(provider="fake", model="fake", content=self.outputs.pop(0))
 
 
 class SubagentTests(unittest.TestCase):

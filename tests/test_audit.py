@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import tempfile
 import threading
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 from teaagent.audit import AuditEvent, AuditLogger, utc_now
 

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import re
+import subprocess
+import zlib
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
-import re
-import subprocess
 from typing import Any
-import zlib
 
 from teaagent.tools import ToolAnnotations, ToolRegistry
 

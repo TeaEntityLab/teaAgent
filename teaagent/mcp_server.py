@@ -7,7 +7,6 @@ from typing import Any, Iterable, Optional, TextIO
 from teaagent.errors import AgentHarnessError
 from teaagent.tools import ToolRegistry
 
-
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_INFO = {"name": "teaagent", "version": "0.1.0"}
 

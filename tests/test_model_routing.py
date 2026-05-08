@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
 import unittest
+from contextlib import redirect_stdout
 
 from teaagent import classify_task, route_model
 from teaagent.cli import main

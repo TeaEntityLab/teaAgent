@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import shlex
+from pathlib import Path
 from typing import Callable, Optional
 
 from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
-from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
+from teaagent.graphqlite_store import (
+    GraphQLiteConfig,
+    GraphQLiteGraphStore,
+    check_graphqlite_runtime,
+)
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
 from teaagent.memory import MemoryCatalog
@@ -16,9 +20,8 @@ from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
 
-
 InputFn = Callable[[str], str]
-OutputFn = Callable[[str], None]
+OutputFn = Callable[..., None]
 AdapterFactory = Callable[[str, Optional[str]], LLMAdapter]
 
 
@@ -32,6 +35,7 @@ HELP_TEXT = """Commands:
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
   progress <on|off>         Stream brief audit-event progress lines during ask runs.
+  stream <on|off>           Stream model output token-by-token during ask runs.
   subagent <on|off>         Expose the 'subagent' tool so the model can delegate sub-tasks.
   heartbeat <seconds>       Set heartbeat interval for ask runs. 0 disables.
   status <run_id>           Show heartbeat liveness for a persisted run.
@@ -79,6 +83,7 @@ class TeaAgentTUI:
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
         self.progress = False
+        self.stream = False
         self.subagent = False
         self.heartbeat_seconds = 0.0
         self.approved_call_ids: set[str] = set()
@@ -172,6 +177,13 @@ class TeaAgentTUI:
                 return True
             self.progress = args[0] == "on"
             self.output_fn(f"progress: {'on' if self.progress else 'off'}")
+            return True
+        if action == "stream":
+            if len(args) != 1 or args[0] not in {"on", "off"}:
+                self.output_fn("error: stream requires 'on' or 'off'")
+                return True
+            self.stream = args[0] == "on"
+            self.output_fn(f"stream: {'on' if self.stream else 'off'}")
             return True
         if action == "subagent":
             if len(args) != 1 or args[0] not in {"on", "off"}:
@@ -365,6 +377,8 @@ class TeaAgentTUI:
                 approved_call_ids=frozenset(self.approved_call_ids),
                 enable_subagent=self.subagent,
                 heartbeat_seconds=self.heartbeat_seconds,
+                stream=self.stream,
+                on_chunk=self._stream_chunk if self.stream else None,
             ),
             audit=audit,
             task_spec=task_spec,
@@ -391,6 +405,9 @@ class TeaAgentTUI:
             self.output_fn(f"  tool ok: {payload.get('tool_name')}")
         elif event.event_type == "run_failed":
             self.output_fn(f"  failed: {payload.get('category')}: {payload.get('message')}")
+
+    def _stream_chunk(self, chunk: str) -> None:
+        self.output_fn(chunk, end="")
 
     def _get_store(self) -> GraphQLiteGraphStore:
         if self._store is None:

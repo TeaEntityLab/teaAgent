@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import io
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from teaagent import handle_mcp_request, serve_mcp_stdio
 from teaagent.workspace_tools import build_workspace_tool_registry

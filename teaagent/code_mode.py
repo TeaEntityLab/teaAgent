@@ -4,7 +4,6 @@ import ast
 from dataclasses import dataclass
 from typing import Any
 
-
 ALLOWED_NODES = {
     ast.Add,
     ast.Assign,

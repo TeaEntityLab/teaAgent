@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-import re
 from typing import Optional
-
 
 TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
 

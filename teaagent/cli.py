@@ -6,17 +6,27 @@ from typing import Any, Optional
 
 from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
-from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
+from teaagent.graphqlite_store import (
+    GraphQLiteConfig,
+    GraphQLiteGraphStore,
+    check_graphqlite_runtime,
+)
 from teaagent.intent import build_task_spec, clarify_task
-from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
+from teaagent.llm import (
+    LLMMessage,
+    LLMRequest,
+    available_providers,
+    check_llm_configuration,
+    create_llm_adapter,
+)
+from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
-from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.preflight import preflight
-from teaagent.ultrawork import UltraworkStore
 from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
+from teaagent.ultrawork import UltraworkStore
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 

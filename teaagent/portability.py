@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-
 REQUIRED_PROVIDER_CAPABILITIES = {
     "tool_calling",
     "structured_output",

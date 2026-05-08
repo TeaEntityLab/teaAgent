@@ -1,0 +1,28 @@
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long
+    "SIM108", # use ternary operator instead of if-else
+]
+exclude = [
+    ".git",
+    ".teaagent",
+    "__pycache__",
+    ".pytest_cache",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

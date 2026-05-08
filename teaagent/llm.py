@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
 import os
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
@@ -33,6 +34,8 @@ class LLMRequest:
     system: Optional[str] = None
     max_tokens: int = 1024
     temperature: float = 0.2
+    stream: bool = False
+    on_chunk: Optional[Callable[[str], None]] = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,12 @@ class LLMResponse:
     model: str
     content: str
     raw: dict[str, Any] = field(default_factory=dict)
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+    @property
+    def estimated_cost_cents(self) -> float:
+        return _estimate_cost(self.provider, self.model, self.input_tokens, self.output_tokens)
 
 
 @dataclass(frozen=True)
@@ -112,12 +121,15 @@ class OpenAICompatibleAdapter:
         if request.system:
             messages.append({"role": "system", "content": request.system})
         messages.extend({"role": message.role, "content": message.content} for message in request.messages)
-        payload = {
+        payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
             "max_tokens": request.max_tokens,
             "temperature": request.temperature,
         }
+        if request.stream:
+            payload["stream"] = True
+            return self._complete_streaming(request, model, payload)
         response = self.transport.post_json(
             f"{self.config.resolved_base_url()}/chat/completions",
             self._headers(),
@@ -125,7 +137,58 @@ class OpenAICompatibleAdapter:
             timeout=self.timeout,
         )
         content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
-        return LLMResponse(provider=self.provider, model=model, content=content, raw=response)
+        usage = response.get("usage", {})
+        return LLMResponse(
+            provider=self.provider,
+            model=model,
+            content=content,
+            raw=response,
+            input_tokens=usage.get("prompt_tokens", 0),
+            output_tokens=usage.get("completion_tokens", 0),
+        )
+
+    def _complete_streaming(self, request: LLMRequest, model: str, payload: dict[str, Any]) -> LLMResponse:
+        body = json.dumps(payload).encode("utf-8")
+        url = f"{self.config.resolved_base_url()}/chat/completions"
+        headers = {"content-type": "application/json", **self._headers()}
+        chunks: list[str] = []
+        input_tokens = 0
+        output_tokens = 0
+        req = urllib_request.Request(url, data=body, headers=headers, method="POST")
+        try:
+            with urllib_request.urlopen(req, timeout=self.timeout) as response:
+                for line in response.read().decode("utf-8").splitlines():
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
+                    try:
+                        parsed = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    usage = parsed.get("usage")
+                    if usage:
+                        input_tokens = usage.get("prompt_tokens", 0)
+                        output_tokens = usage.get("completion_tokens", 0)
+                    delta = parsed.get("choices", [{}])[0].get("delta", {})
+                    chunk = delta.get("content", "")
+                    if chunk and request.on_chunk:
+                        request.on_chunk(chunk)
+                    chunks.append(chunk)
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise LLMHTTPError(f"HTTP {exc.code}: {detail}") from exc
+        except URLError as exc:
+            raise LLMHTTPError(f"HTTP request failed: {exc.reason}") from exc
+        return LLMResponse(
+            provider=self.provider,
+            model=model,
+            content="".join(chunks),
+            raw={},
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
 
     def _headers(self) -> dict[str, str]:
         headers = {"authorization": f"Bearer {self.config.resolved_api_key()}"}
@@ -166,7 +229,15 @@ class ClaudeAdapter:
         )
         content_blocks = response.get("content", [])
         content = "".join(block.get("text", "") for block in content_blocks if block.get("type") == "text")
-        return LLMResponse(provider=self.provider, model=model, content=content, raw=response)
+        usage = response.get("usage", {})
+        return LLMResponse(
+            provider=self.provider,
+            model=model,
+            content=content,
+            raw=response,
+            input_tokens=usage.get("input_tokens", 0),
+            output_tokens=usage.get("output_tokens", 0),
+        )
 
 
 class GeminiAdapter:
@@ -200,7 +271,15 @@ class GeminiAdapter:
         )
         parts = response.get("candidates", [{}])[0].get("content", {}).get("parts", [])
         content = "".join(part.get("text", "") for part in parts)
-        return LLMResponse(provider=self.provider, model=model, content=content, raw=response)
+        metadata = response.get("usageMetadata", {})
+        return LLMResponse(
+            provider=self.provider,
+            model=model,
+            content=content,
+            raw=response,
+            input_tokens=metadata.get("promptTokenCount", 0),
+            output_tokens=metadata.get("candidatesTokenCount", 0),
+        )
 
 
 PROVIDER_CONFIGS = {
@@ -275,3 +354,27 @@ def check_llm_configuration(provider: str) -> tuple[bool, str]:
     except LLMConfigurationError as exc:
         return False, str(exc)
     return True, f"{provider} configuration is available"
+
+
+PROVIDER_COST_PER_1K_INPUT = {
+    "claude": 0.003,
+    "gpt": 0.00015,
+    "gemini": 0.000075,
+    "openrouter": 0.0005,
+    "opencodezen-go": 0.0005,
+}
+
+PROVIDER_COST_PER_1K_OUTPUT = {
+    "claude": 0.015,
+    "gpt": 0.0006,
+    "gemini": 0.0003,
+    "openrouter": 0.002,
+    "opencodezen-go": 0.002,
+}
+
+
+def _estimate_cost(provider: str, model: str, input_tokens: int, output_tokens: int) -> float:
+    cost_1k_in = PROVIDER_COST_PER_1K_INPUT.get(provider, 0.001)
+    cost_1k_out = PROVIDER_COST_PER_1K_OUTPUT.get(provider, 0.001)
+    cost = (input_tokens * cost_1k_in + output_tokens * cost_1k_out) / 1000.0
+    return round(cost * 100, 4)

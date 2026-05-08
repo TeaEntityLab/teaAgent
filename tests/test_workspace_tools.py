@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import io
 import json
-from contextlib import redirect_stdout
-from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from teaagent import build_workspace_tool_registry
 from teaagent.cli import main

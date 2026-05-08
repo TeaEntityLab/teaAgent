@@ -3,11 +3,17 @@ from __future__ import annotations
 import io
 import json
 import os
-from contextlib import redirect_stdout
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
-from teaagent import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
+from teaagent import (
+    LLMMessage,
+    LLMRequest,
+    available_providers,
+    check_llm_configuration,
+    create_llm_adapter,
+)
 from teaagent.cli import main
 from teaagent.llm import LLMConfigurationError
 

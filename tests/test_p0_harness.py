@@ -13,7 +13,6 @@ from teaagent import (
     ToolRequest,
 )
 
-
 INPUT_SCHEMA = {
     "type": "object",
     "properties": {"value": {"type": "string"}},

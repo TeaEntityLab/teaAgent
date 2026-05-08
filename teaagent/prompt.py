@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
-from pathlib import Path
 import re
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.errors import ToolValidationError
 from teaagent.runner import FinalAnswer, ToolRequest
 from teaagent.tools import ToolRegistry
-
 
 DECISION_INSTRUCTIONS = """You are TeaAgent, a coding-agent harness.
 You must respond with exactly one JSON object and no prose.
