@@ -10,6 +10,7 @@ from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
+from teaagent.memory import MemoryCatalog
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
 
@@ -30,6 +31,10 @@ HELP_TEXT = """Commands:
   clarify <task>            Score task ambiguity without calling a model.
   ask <task>                Run a model-driven agent task with workspace tools.
   ask --clarify <task>      Clarify first; stop if key details are missing.
+  memory add <text>         Add a workspace memory entry.
+  memory list               List recent workspace memories.
+  memory search <query>     Search workspace memories.
+  memory show <id>          Show one workspace memory.
   runs                      List recent persisted agent runs.
   show <run_id>             Show one persisted run record.
   use <database>            Switch database path. Use :memory: for in-memory.
@@ -158,6 +163,9 @@ class TeaAgentTUI:
                 return True
             self._print_json(clarify_task(" ".join(args)).to_dict())
             return True
+        if action == "memory":
+            self._handle_memory(args)
+            return True
         if action == "runs":
             store = RunStore(self.root)
             self._print_json([summary.to_dict() for summary in store.list_runs()])
@@ -190,6 +198,36 @@ class TeaAgentTUI:
 
         self.output_fn(f"error: unknown command '{action}'. Type 'help'.")
         return True
+
+    def _handle_memory(self, args: list[str]) -> None:
+        if not args:
+            self.output_fn("error: memory requires add, list, search, or show")
+            return
+        catalog = MemoryCatalog(self.root)
+        action = args[0]
+        rest = args[1:]
+        if action == "add":
+            if not rest:
+                self.output_fn("error: memory add requires text")
+                return
+            self._print_json(catalog.add(" ".join(rest)).to_dict())
+            return
+        if action == "list":
+            self._print_json([entry.to_dict() for entry in catalog.list()])
+            return
+        if action == "search":
+            if not rest:
+                self.output_fn("error: memory search requires a query")
+                return
+            self._print_json([entry.to_dict() for entry in catalog.search(" ".join(rest))])
+            return
+        if action == "show":
+            if len(rest) != 1:
+                self.output_fn("error: memory show requires one id")
+                return
+            self._print_json(catalog.show(rest[0]).to_dict())
+            return
+        self.output_fn(f"error: unknown memory command '{action}'")
 
     def _run_agent_task(self, task: str, *, clarify_first: bool = False) -> None:
         task_spec = None

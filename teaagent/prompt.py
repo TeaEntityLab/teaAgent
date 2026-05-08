@@ -50,6 +50,7 @@ def assemble_agent_prompt(
             {
                 "task": task,
                 "task_spec": task_spec,
+                "memories": context.get("memories", []),
                 "observations": context.get("observations", []),
             },
             indent=2,

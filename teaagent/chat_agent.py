@@ -7,6 +7,7 @@ from typing import Optional
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
 from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
+from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.prompt import assemble_agent_prompt, load_project_instructions, parse_model_decision
 from teaagent.runner import AgentRunner, Decision, RunResult
@@ -22,6 +23,7 @@ class ChatAgentConfig:
     allow_destructive: bool = False
     model: Optional[str] = None
     permission_mode: PermissionMode = PermissionMode.PROMPT
+    memory_limit: int = 5
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs) -> "ChatAgentConfig":
@@ -73,6 +75,7 @@ def run_chat_agent(
 ) -> RunResult:
     tool_registry = registry or build_workspace_tool_registry(config.root)
     project_instructions = load_project_instructions(config.root)
+    memories = memory_entries_to_prompt(MemoryCatalog(config.root).search(task, limit=config.memory_limit))
     engine = ModelDecisionEngine(
         adapter=adapter,
         registry=tool_registry,
@@ -89,4 +92,12 @@ def run_chat_agent(
             permission_mode=config.permission_mode,
         ),
     )
-    return runner.run(task=task, decide=engine.decide)
+    return runner.run(task=task, decide=lambda context: engine.decide(with_memories(context, memories)))
+
+
+def with_memories(context: dict, memories: list[dict]) -> dict:
+    if not memories:
+        return context
+    updated = dict(context)
+    updated["memories"] = memories
+    return updated

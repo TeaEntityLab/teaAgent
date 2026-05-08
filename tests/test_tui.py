@@ -120,6 +120,19 @@ class TUITests(unittest.TestCase):
         self.assertTrue(payload["needs_clarification"])
         self.assertEqual(payload["question"], "What action do you want TeaAgent to take?")
 
+    def test_tui_memory_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(root=tmp, input_fn=lambda _prompt: "exit", output_fn=output.append)
+
+            self.assertTrue(tui.handle_command("memory add Prefer read-only mode for audits"))
+            memory_id = json.loads(output[0])["memory_id"]
+            self.assertTrue(tui.handle_command("memory search audits"))
+            self.assertTrue(tui.handle_command(f"memory show {memory_id}"))
+
+            self.assertEqual(json.loads(output[1])[0]["memory_id"], memory_id)
+            self.assertEqual(json.loads(output[2])["content"], "Prefer read-only mode for audits")
+
     def test_tui_ask_clarify_stops_before_adapter_when_ambiguous(self) -> None:
         output = []
 

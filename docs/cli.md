@@ -74,6 +74,8 @@ destructive off
 permission prompt
 ask Inspect this repo and summarize the test suite
 ask --clarify Update docs/cli.md to document clarify and verify tests pass
+memory add Prefer read-only mode for audit tasks
+memory search audit tasks
 smoke
 query MATCH (n:SmokeTest) RETURN n.name
 use ./graph.db
@@ -207,6 +209,34 @@ Inside TUI:
 ```text
 clarify Improve this project
 ask --clarify Update docs/cli.md to document clarify and verify tests pass
+```
+
+## Memory Catalog
+
+Store reusable workspace observations under `.teaagent/memory.jsonl`:
+
+```bash
+teaagent memory add "Prefer read-only mode for audit tasks" --tag policy
+teaagent memory list
+teaagent memory search "audit tasks"
+teaagent memory show <memory_id>
+```
+
+Use another workspace root:
+
+```bash
+teaagent memory add "GraphQLite requires pysqlite3 on macOS" --tag graphqlite --root /path/to/repo
+```
+
+Agent runs search the catalog with the task text and inject matching memories into the model prompt.
+
+Inside TUI:
+
+```text
+memory add Prefer read-only mode for audit tasks
+memory list
+memory search audit tasks
+memory show <memory_id>
 ```
 
 ## Agent Run

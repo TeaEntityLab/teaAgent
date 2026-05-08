@@ -30,6 +30,7 @@ from teaagent.llm import (
     check_llm_configuration,
     create_llm_adapter,
 )
+from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.policy import ApprovalPolicy, PermissionMode, parse_permission_mode
 from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_decision
 from teaagent.portability import ProviderProfile, PortabilityResult, assess_provider_portability
@@ -70,6 +71,8 @@ __all__ = [
     "LLMMessage",
     "LLMRequest",
     "LLMResponse",
+    "MemoryCatalog",
+    "MemoryEntry",
     "ModelDecisionEngine",
     "PermissionMode",
     "PortabilityResult",

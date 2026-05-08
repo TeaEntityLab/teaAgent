@@ -12,6 +12,7 @@ from teaagent import (
     AuditLogger,
     ChatAgentConfig,
     LLMResponse,
+    MemoryCatalog,
     PermissionMode,
     ToolAnnotations,
     ToolRegistry,
@@ -79,6 +80,20 @@ class ChatAgentTests(unittest.TestCase):
 
             self.assertEqual(result.status, "completed")
             self.assertIn("Clarified task specification", adapter.requests[0].messages[0].content)
+
+    def test_chat_agent_injects_matching_memories_into_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            MemoryCatalog(tmp).add("docs cli clarify command should mention ambiguity gate")
+            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
+
+            result = run_chat_agent(
+                task="docs cli clarify",
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp),
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertIn("ambiguity gate", adapter.requests[0].messages[0].content)
 
     def test_destructive_decision_is_blocked_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

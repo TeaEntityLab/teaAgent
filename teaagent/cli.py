@@ -9,6 +9,7 @@ from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
+from teaagent.memory import MemoryCatalog
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
@@ -29,6 +30,31 @@ def build_parser() -> argparse.ArgumentParser:
     clarify = subparsers.add_parser("clarify", help="Score a task for ambiguity before running an agent.")
     clarify.add_argument("task", help="Task to clarify.")
     clarify.set_defaults(func=clarify_command)
+
+    memory = subparsers.add_parser("memory", help="Manage local workspace memory.")
+    memory_subparsers = memory.add_subparsers(dest="memory_command", required=True)
+
+    memory_add = memory_subparsers.add_parser("add", help="Add one memory entry.")
+    memory_add.add_argument("content", help="Memory content to store.")
+    memory_add.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    memory_add.add_argument("--tag", action="append", default=[], help="Tag to attach. Can be repeated.")
+    memory_add.set_defaults(func=memory_add_command)
+
+    memory_list = memory_subparsers.add_parser("list", help="List recent memory entries.")
+    memory_list.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    memory_list.add_argument("--limit", type=int, default=20, help="Maximum memories to list.")
+    memory_list.set_defaults(func=memory_list_command)
+
+    memory_search = memory_subparsers.add_parser("search", help="Search memory entries.")
+    memory_search.add_argument("query", help="Search query.")
+    memory_search.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    memory_search.add_argument("--limit", type=int, default=10, help="Maximum memories to return.")
+    memory_search.set_defaults(func=memory_search_command)
+
+    memory_show = memory_subparsers.add_parser("show", help="Show one memory entry.")
+    memory_show.add_argument("memory_id", help="Memory id to show.")
+    memory_show.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    memory_show.set_defaults(func=memory_show_command)
 
     agent = subparsers.add_parser("agent", help="Run model-driven agent tasks.")
     agent_subparsers = agent.add_subparsers(dest="agent_command", required=True)
@@ -144,6 +170,27 @@ def doctor_graphqlite(args: argparse.Namespace) -> int:
 
 def clarify_command(args: argparse.Namespace) -> int:
     print_json(clarify_task(args.task).to_dict())
+    return 0
+
+
+def memory_add_command(args: argparse.Namespace) -> int:
+    entry = MemoryCatalog(args.root).add(args.content, tags=tuple(args.tag))
+    print_json(entry.to_dict())
+    return 0
+
+
+def memory_list_command(args: argparse.Namespace) -> int:
+    print_json([entry.to_dict() for entry in MemoryCatalog(args.root).list(limit=args.limit)])
+    return 0
+
+
+def memory_search_command(args: argparse.Namespace) -> int:
+    print_json([entry.to_dict() for entry in MemoryCatalog(args.root).search(args.query, limit=args.limit)])
+    return 0
+
+
+def memory_show_command(args: argparse.Namespace) -> int:
+    print_json(MemoryCatalog(args.root).show(args.memory_id).to_dict())
     return 0
 
 
