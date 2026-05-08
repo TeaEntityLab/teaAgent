@@ -14,6 +14,7 @@ from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.preflight import preflight
+from teaagent.ultrawork import UltraworkStore
 from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
 from teaagent.workspace_tools import build_workspace_tool_registry
@@ -244,6 +245,41 @@ def build_parser() -> argparse.ArgumentParser:
     smoke.add_argument("--database", default=":memory:", help="SQLite database path. Defaults to :memory:.")
     smoke.set_defaults(func=graphqlite_smoke)
 
+    ultrawork = subparsers.add_parser("ultrawork", help="Manage detached background agent workers.")
+    ultrawork_subparsers = ultrawork.add_subparsers(dest="ultrawork_command", required=True)
+
+    ultrawork_start = ultrawork_subparsers.add_parser(
+        "start",
+        help="Start one detached background agent run.",
+    )
+    ultrawork_start.add_argument("provider", choices=available_providers(), help="Model provider to use.")
+    ultrawork_start.add_argument("task", help="Task for the agent to perform.")
+    ultrawork_start.add_argument("--root", default=".", help="Workspace root.")
+    ultrawork_start.add_argument("--model", default=None, help="Override model name.")
+    ultrawork_start.add_argument("--heartbeat", type=float, default=10.0, help="Heartbeat interval seconds for the worker.")
+    ultrawork_start.add_argument(
+        "--permission-mode",
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help="Permission mode for workspace tools.",
+    )
+    ultrawork_start.add_argument("--label", default=None, help="Optional human label for this worker.")
+    ultrawork_start.set_defaults(func=ultrawork_start_command)
+
+    ultrawork_list = ultrawork_subparsers.add_parser("list", help="List background workers.")
+    ultrawork_list.add_argument("--root", default=".", help="Workspace root.")
+    ultrawork_list.set_defaults(func=ultrawork_list_command)
+
+    ultrawork_show = ultrawork_subparsers.add_parser("show", help="Show one worker record.")
+    ultrawork_show.add_argument("worker_id", help="Worker id to inspect.")
+    ultrawork_show.add_argument("--root", default=".", help="Workspace root.")
+    ultrawork_show.set_defaults(func=ultrawork_show_command)
+
+    ultrawork_stop = ultrawork_subparsers.add_parser("stop", help="Stop a running worker.")
+    ultrawork_stop.add_argument("worker_id", help="Worker id to stop.")
+    ultrawork_stop.add_argument("--root", default=".", help="Workspace root.")
+    ultrawork_stop.set_defaults(func=ultrawork_stop_command)
+
     mcp = subparsers.add_parser("mcp", help="Run a local MCP-compatible server.")
     mcp_subparsers = mcp.add_subparsers(dest="mcp_command", required=True)
     mcp_serve = mcp_subparsers.add_parser("serve", help="Serve workspace tools over stdio JSON-RPC.")
@@ -444,6 +480,54 @@ def graphqlite_smoke(args: argparse.Namespace) -> int:
     store.graph.upsert_node("teaagent", {"name": "TeaAgent"}, label="SmokeTest")
     result = store.query("MATCH (n:SmokeTest) RETURN n.name")
     print_json(result)
+    return 0
+
+
+def ultrawork_start_command(args: argparse.Namespace) -> int:
+    import sys
+
+    command = [
+        sys.executable,
+        "-m",
+        "teaagent.cli",
+        "agent",
+        "run",
+        args.provider,
+        args.task,
+        "--root",
+        args.root,
+        "--heartbeat",
+        str(args.heartbeat),
+        "--permission-mode",
+        args.permission_mode,
+    ]
+    if args.model:
+        command.extend(["--model", args.model])
+    record = UltraworkStore(args.root).start(command, label=args.label)
+    print_json(record.to_dict())
+    return 0
+
+
+def ultrawork_list_command(args: argparse.Namespace) -> int:
+    print_json(UltraworkStore(args.root).list())
+    return 0
+
+
+def ultrawork_show_command(args: argparse.Namespace) -> int:
+    try:
+        print_json(UltraworkStore(args.root).show(args.worker_id))
+    except FileNotFoundError as exc:
+        print_json({"status": "error", "message": str(exc)})
+        return 1
+    return 0
+
+
+def ultrawork_stop_command(args: argparse.Namespace) -> int:
+    try:
+        print_json(UltraworkStore(args.root).stop(args.worker_id))
+    except FileNotFoundError as exc:
+        print_json({"status": "error", "message": str(exc)})
+        return 1
     return 0
 
 

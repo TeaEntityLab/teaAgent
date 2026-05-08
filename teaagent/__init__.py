@@ -46,6 +46,7 @@ from teaagent.skill_review import SkillReviewResult, review_skill
 from teaagent.stateless_mcp import StatelessMCPRequest, StatelessMCPResponse, handle_stateless_tool_request
 from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.trace import TraceRecorder
+from teaagent.ultrawork import UltraworkStore, WorkerRecord
 from teaagent.workspace_tools import WorkspaceToolConfig, build_workspace_tool_registry, register_workspace_tools
 
 __all__ = [
@@ -97,7 +98,9 @@ __all__ = [
     "ToolRegistry",
     "ToolRequest",
     "TraceRecorder",
+    "UltraworkStore",
     "UnsafeCodeError",
+    "WorkerRecord",
     "WorkspaceToolConfig",
     "agentic_retrieve",
     "assess_managed_agent_readiness",

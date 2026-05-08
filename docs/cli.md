@@ -253,6 +253,24 @@ memory search audit tasks
 memory show <memory_id>
 ```
 
+## Ultrawork (background workers)
+
+Run an agent task as a detached background worker that survives the parent shell:
+
+```bash
+teaagent ultrawork start gpt "Long-running task" --root /path/to/repo --heartbeat 5 --label nightly
+```
+
+The store under `.teaagent/ultrawork/` keeps a JSON record per worker plus a per-worker log file. Inspect or stop workers:
+
+```bash
+teaagent ultrawork list --root /path/to/repo
+teaagent ultrawork show <worker_id> --root /path/to/repo
+teaagent ultrawork stop <worker_id> --root /path/to/repo
+```
+
+`list` reports `alive` based on a PID liveness check; `stop` sends SIGTERM (then SIGKILL if it does not exit within the timeout).
+
 ## Heartbeat
 
 Emit a periodic `heartbeat` audit event while a run is in progress so observers can confirm liveness:
