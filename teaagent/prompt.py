@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -88,14 +87,14 @@ def parse_model_decision(text: str) -> ToolRequest | FinalAnswer:
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
-    stripped = text.strip()
-    if stripped.startswith("{") and stripped.endswith("}"):
-        return json.loads(stripped)
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
-    if fenced:
-        return json.loads(fenced.group(1))
-    start = text.find("{")
-    end = text.rfind("}")
-    if start >= 0 and end > start:
-        return json.loads(text[start : end + 1])
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(text):
+        if char != "{":
+            continue
+        try:
+            payload, _end = decoder.raw_decode(text, index)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
     raise ToolValidationError("model response did not contain a JSON object")

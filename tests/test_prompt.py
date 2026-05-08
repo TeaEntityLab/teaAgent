@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -35,9 +34,13 @@ class ExtractJSONObjectTests(unittest.TestCase):
         result = extract_json_object('some text {"type":"tool"} trailing')
         self.assertEqual(result, {"type": "tool"})
 
-    def test_embedded_json_with_multiple_json_objects_fails_with_decode_error(self) -> None:
-        with self.assertRaises(json.JSONDecodeError):
-            extract_json_object('prefix {"x":1} suffix {"y":2}')
+    def test_embedded_json_with_multiple_json_objects_returns_first_object(self) -> None:
+        result = extract_json_object('prefix {"x":1} suffix {"y":2}')
+        self.assertEqual(result, {"x": 1})
+
+    def test_ignores_invalid_brace_before_valid_object(self) -> None:
+        result = extract_json_object('thinking {not json} then {"type":"final","content":"ok"}')
+        self.assertEqual(result, {"type": "final", "content": "ok"})
 
     def test_parses_nested_braces_correctly(self) -> None:
         result = extract_json_object('prefix {"a":{"b":3}}')
@@ -49,12 +52,16 @@ class ExtractJSONObjectTests(unittest.TestCase):
         self.assertIn("JSON object", str(ctx.exception))
 
     def test_raises_on_bare_braces_with_invalid_json(self) -> None:
-        with self.assertRaises(json.JSONDecodeError):
+        with self.assertRaises(ToolValidationError):
             extract_json_object("{invalid json}")
 
     def test_raises_on_fenced_block_with_invalid_json(self) -> None:
-        with self.assertRaises(json.JSONDecodeError):
+        with self.assertRaises(ToolValidationError):
             extract_json_object("```json\n{not valid}\n```")
+
+    def test_parses_json_when_prior_text_contains_braces(self) -> None:
+        result = extract_json_object('thinking "literal { brace" then {"ok": true}')
+        self.assertEqual(result, {"ok": True})
 
 
 class LoadProjectInstructionsTests(unittest.TestCase):
