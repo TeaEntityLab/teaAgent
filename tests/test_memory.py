@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 
 from teaagent import MemoryCatalog
 from teaagent.cli import main
@@ -21,6 +22,20 @@ class MemoryCatalogTests(unittest.TestCase):
             self.assertEqual(catalog.search("sqlite extension")[0].memory_id, entry.memory_id)
             self.assertEqual(catalog.search("graph")[0].tags, ("graph", "sqlite"))
             self.assertEqual(catalog.show(entry.memory_id).content, "GraphQLite uses a SQLite extension")
+
+    def test_memory_catalog_skips_malformed_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = MemoryCatalog(tmp)
+            good = catalog.add("Keep this memory", tags=("valid",))
+            path = Path(tmp) / ".teaagent" / "memory.jsonl"
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write("not json\n")
+                handle.write(json.dumps({"content": "missing id"}) + "\n")
+                handle.write(json.dumps({"memory_id": "bad-tags", "content": "x", "tags": [1]}) + "\n")
+
+            entries = catalog.list()
+
+            self.assertEqual([entry.memory_id for entry in entries], [good.memory_id])
 
     def test_cli_memory_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

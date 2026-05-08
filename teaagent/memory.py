@@ -68,15 +68,28 @@ class MemoryCatalog:
                 payload = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            entries.append(
-                MemoryEntry(
-                    memory_id=payload["memory_id"],
-                    content=payload["content"],
-                    tags=tuple(payload.get("tags", [])),
-                    created_at=payload.get("created_at", utc_now()),
-                )
-            )
+            entry = memory_entry_from_payload(payload)
+            if entry is not None:
+                entries.append(entry)
         return entries
+
+
+def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
+    if not isinstance(payload, dict):
+        return None
+    memory_id = payload.get("memory_id")
+    content = payload.get("content")
+    tags = payload.get("tags", [])
+    created_at = payload.get("created_at", utc_now())
+    if not isinstance(memory_id, str) or not memory_id:
+        return None
+    if not isinstance(content, str) or not content:
+        return None
+    if not isinstance(created_at, str) or not created_at:
+        return None
+    if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+        return None
+    return MemoryEntry(memory_id=memory_id, content=content, tags=tuple(tags), created_at=created_at)
 
 
 def normalize_tags(tags: tuple[str, ...]) -> tuple[str, ...]:
