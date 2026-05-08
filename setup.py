@@ -3,7 +3,21 @@ from __future__ import annotations
 from setuptools import find_packages, setup
 
 GRAPHQLITE_DEPS = ['graphqlite>=0.4.4', 'pysqlite3>=0.6.0']
-DEV_DEPS = [*GRAPHQLITE_DEPS, 'pytest>=7', 'pytest-cov>=4', 'ruff>=0.4', 'mypy>=1']
+OAUTH_DEPS = ['cryptography>=3.4']
+TELEMETRY_DEPS = [
+    'opentelemetry-api>=1.20',
+    'opentelemetry-sdk>=1.20',
+    'opentelemetry-exporter-otlp-proto-http>=1.20',
+]
+DEV_DEPS = [
+    *GRAPHQLITE_DEPS,
+    *OAUTH_DEPS,
+    *TELEMETRY_DEPS,
+    'pytest>=7',
+    'pytest-cov>=4',
+    'ruff>=0.4',
+    'mypy>=1',
+]
 
 
 setup(
@@ -13,6 +27,11 @@ setup(
     packages=find_packages(),
     python_requires='>=3.9',
     install_requires=[],
-    extras_require={'graphqlite': GRAPHQLITE_DEPS, 'dev': DEV_DEPS},
+    extras_require={
+        'graphqlite': GRAPHQLITE_DEPS,
+        'oauth': OAUTH_DEPS,
+        'telemetry': TELEMETRY_DEPS,
+        'dev': DEV_DEPS,
+    },
     entry_points={'console_scripts': ['teaagent=teaagent.cli:main']},
 )

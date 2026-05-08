@@ -44,6 +44,20 @@ class LLMConformanceTests(unittest.TestCase):
         self.assertEqual(payload['results'][1]['status'], 'skipped')
         self.assertEqual(payload['results'][2]['status'], 'failed')
 
+    def test_run_model_conformance_fails_unexpected_content(self) -> None:
+        def factory(provider: str, *, model: str | None = None) -> object:
+            return FakeAdapter(['not ok'])
+
+        report = run_model_conformance(
+            ['gpt'],
+            adapter_factory=factory,
+            configuration_checker=lambda provider: (True, 'configured'),
+        )
+
+        self.assertFalse(report.ok)
+        self.assertEqual(report.failed, 1)
+        self.assertIn('expected', report.results[0].error or '')
+
     def test_cli_model_conformance_outputs_report(self) -> None:
         output = io.StringIO()
 
@@ -65,7 +79,11 @@ class LLMConformanceTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertTrue(payload['ok'])
         run_model_conformance.assert_called_once_with(
-            ['gpt'], prompt='Reply with exactly: ok', max_tokens=32, model=None
+            ['gpt'],
+            prompt='Reply with exactly: ok',
+            expected_content='ok',
+            max_tokens=32,
+            model=None,
         )
 
 

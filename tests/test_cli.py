@@ -5,7 +5,7 @@ import json
 import os
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
 from conftest import FakeAdapter
@@ -134,6 +134,39 @@ class CLITests(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             payload = json.loads(output.getvalue())
             self.assertEqual(payload['status'], 'error')
+
+    def test_mcp_http_rejects_remote_bind_without_auth(self) -> None:
+        stderr = io.StringIO()
+
+        with tempfile.TemporaryDirectory() as tmp, redirect_stderr(stderr):
+            exit_code = main(
+                ['mcp', 'serve', '--http', '--host', '0.0.0.0', '--root', tmp]
+            )
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn('non-loopback host without --auth-token', stderr.getvalue())
+
+    def test_mcp_http_allows_remote_bind_with_auth(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch('teaagent.cli.serve_mcp_http', return_value=0) as serve_mcp_http,
+        ):
+            exit_code = main(
+                [
+                    'mcp',
+                    'serve',
+                    '--http',
+                    '--host',
+                    '0.0.0.0',
+                    '--auth-token',
+                    'token',
+                    '--root',
+                    tmp,
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(serve_mcp_http.call_args.kwargs['auth_token'], 'token')
 
 
 if __name__ == '__main__':

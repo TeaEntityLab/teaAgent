@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import multiprocessing
 import traceback
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
@@ -168,18 +169,16 @@ def _apply_resource_limits(sandbox: CodeModeSandbox) -> None:
         soft = sandbox.memory_bytes
         if hard != resource.RLIM_INFINITY:
             soft = min(soft, hard)
-        try:
+        # macOS reports RLIMIT_AS but rejects lowering it; wall/CPU limits still
+        # keep Code Mode isolated from the parent process.
+        with suppress(ValueError):
             resource.setrlimit(resource.RLIMIT_AS, (soft, hard))
-        except ValueError:
-            # macOS reports RLIMIT_AS but rejects lowering it; wall/CPU limits still
-            # keep Code Mode isolated from the parent process.
-            pass
 
 
 def _validate_plain_data(value: Any, label: str) -> None:
     if value is None or isinstance(value, (bool, int, float, str)):
         return
-    if isinstance(value, list) or isinstance(value, tuple):
+    if isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
             _validate_plain_data(item, f'{label}[{index}]')
         return

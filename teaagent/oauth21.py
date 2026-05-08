@@ -634,9 +634,7 @@ class OAuth21AuthorizationServer:
             ],
             'code_challenge_methods_supported': ['S256'],
             'dpop_signing_alg_values_supported': (
-                ['ES256', 'ES384', 'ES512', 'RS256']
-                if HAS_CRYPTOGRAPHY
-                else []
+                ['ES256', 'ES384', 'ES512', 'RS256'] if HAS_CRYPTOGRAPHY else []
             ),
             'grant_types_supported': ['authorization_code'],
             'response_types_supported': ['code'],
@@ -652,16 +650,14 @@ class OAuth21AuthorizationServer:
             raise InvalidGrantError('Authorization code expired')
         return auth_code
 
-    def _validate_pkce(
-        self, auth_code: _AuthorizationCode, code_verifier: str
-    ) -> None:
+    def _validate_pkce(self, auth_code: _AuthorizationCode, code_verifier: str) -> None:
         challenge = compute_s256_challenge(code_verifier)
-        if not hmac.compare_digest(challenge.encode(), auth_code.code_challenge.encode()):
+        if not hmac.compare_digest(
+            challenge.encode(), auth_code.code_challenge.encode()
+        ):
             raise InvalidGrantError('Invalid code_verifier: PKCE challenge mismatch')
 
-    def _validate_client(
-        self, client_id: str, client_secret: Optional[str]
-    ) -> None:
+    def _validate_client(self, client_id: str, client_secret: Optional[str]) -> None:
         client = self.get_client(client_id)
         if client_secret is not None and not hmac.compare_digest(
             client_secret.encode('utf-8'), client.client_secret.encode('utf-8')
@@ -673,9 +669,7 @@ class OAuth21AuthorizationServer:
         header, payload = decode_jwt_unsafe(proof_jwt)
 
         if header.get('typ') != _DPOP_PROOF_TYP:
-            raise InvalidDPoPError(
-                f"DPoP proof typ must be '{_DPOP_PROOF_TYP}'"
-            )
+            raise InvalidDPoPError(f"DPoP proof typ must be '{_DPOP_PROOF_TYP}'")
         jwk = header.get('jwk')
         if not isinstance(jwk, dict):
             raise InvalidDPoPError('DPoP proof header must include a jwk')
@@ -698,9 +692,7 @@ class OAuth21AuthorizationServer:
     def _prune_nonces(self) -> None:
         now = time.time()
         expired = [
-            n
-            for n, created in self._nonces.items()
-            if now - created > self._nonce_ttl
+            n for n, created in self._nonces.items() if now - created > self._nonce_ttl
         ]
         for n in expired:
             del self._nonces[n]
@@ -769,9 +761,7 @@ class OAuth21ResourceServer:
                     'DPoP token validation requires the cryptography library. '
                     'Install with: pip install teaagent[oauth]'
                 )
-            self._validate_dpop_binding(
-                claims, dpop_header, method, url, token
-            )
+            self._validate_dpop_binding(claims, dpop_header, method, url, token)
 
         return OAuth21TokenClaims(
             iss=claims['iss'],
@@ -811,8 +801,7 @@ class OAuth21ResourceServer:
             )
         if payload.get('htu', '') != url:
             raise InvalidDPoPError(
-                f"DPoP htu mismatch: expected '{url}', "
-                f"got '{payload.get('htu', '')}'"
+                f"DPoP htu mismatch: expected '{url}', got '{payload.get('htu', '')}'"
             )
         # Check freshness
         iat = payload.get('iat', 0)
@@ -825,9 +814,7 @@ class OAuth21ResourceServer:
 
         _verify_dpop_signature(dpop_header, jwk)
         proof_jkt = compute_jwk_thumbprint(jwk)
-        if not hmac.compare_digest(
-            proof_jkt.encode(), token_jkt.encode()
-        ):
+        if not hmac.compare_digest(proof_jkt.encode(), token_jkt.encode()):
             raise InvalidDPoPError(
                 'DPoP proof key does not match token confirmation key'
             )
@@ -862,4 +849,3 @@ __all__ = [
     '_DPOP_HEADER',
     '_AUTHORIZATION_HEADER',
 ]
-

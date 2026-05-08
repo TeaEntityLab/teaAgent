@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import FrozenInstanceError
 
 from teaagent.audit import AuditEvent
 from teaagent.telemetry import (
@@ -53,7 +54,7 @@ class TelemetryConfigTests(unittest.TestCase):
 
     def test_frozen(self) -> None:
         cfg = TelemetryConfig()
-        with self.assertRaises(Exception):
+        with self.assertRaises(FrozenInstanceError):
             cfg.service_name = 'changed'  # type: ignore[misc]
 
 
@@ -71,7 +72,9 @@ class OTelAuditSinkTests(unittest.TestCase):
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
         self._exporter = _InMemorySpanExporter()
-        self._provider = TracerProvider(resource=Resource.create({'service.name': 'test'}))
+        self._provider = TracerProvider(
+            resource=Resource.create({'service.name': 'test'})
+        )
         self._provider.add_span_processor(SimpleSpanProcessor(self._exporter))
         self._sink = OTelAuditSink(self._provider, service_name='test')
 
@@ -207,7 +210,9 @@ class TracingHTTPTransportTests(unittest.TestCase):
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
         self._exporter = _InMemorySpanExporter()
-        self._provider = TracerProvider(resource=Resource.create({'service.name': 'test'}))
+        self._provider = TracerProvider(
+            resource=Resource.create({'service.name': 'test'})
+        )
         self._provider.add_span_processor(SimpleSpanProcessor(self._exporter))
         self._tracer = self._provider.get_tracer('test')
 
@@ -262,9 +267,7 @@ class ConfigureTelemetryTests(unittest.TestCase):
         sink.force_flush()
 
     def test_missing_otlp_endpoint_ok(self) -> None:
-        sink, tracer = configure_telemetry(
-            TelemetryConfig(service_name='test')
-        )
+        sink, tracer = configure_telemetry(TelemetryConfig(service_name='test'))
         self.assertIsNotNone(sink)
         sink.force_flush()
 

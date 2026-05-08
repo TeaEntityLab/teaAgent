@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import json
 import time
 import unittest
 
 from teaagent.oauth21 import (
     HAS_CRYPTOGRAPHY,
-    OAuth21AuthorizationServer,
-    OAuth21ResourceServer,
-    OAuth21TokenClaims,
     InvalidClientError,
-    InvalidGrantError,
     InvalidDPoPError,
+    InvalidGrantError,
     JWTError,
+    OAuth21AuthorizationServer,
     OAuth21Error,
+    OAuth21ResourceServer,
     compute_jwk_thumbprint,
     compute_s256_challenge,
     create_jwt,
@@ -113,7 +111,10 @@ class PKCETests(unittest.TestCase):
 
 class JWKThumbprintTests(unittest.TestCase):
     def test_oct_key_thumbprint(self) -> None:
-        jwk = {'kty': 'oct', 'k': 'AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow'}
+        jwk = {
+            'kty': 'oct',
+            'k': 'AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow',
+        }
         thumb = compute_jwk_thumbprint(jwk)
         self.assertTrue(len(thumb) > 0)
         # RFC 7638 example for oct key (different key, but check format)
@@ -139,9 +140,7 @@ class AuthorizationServerTests(unittest.TestCase):
         self.as_ = OAuth21AuthorizationServer(
             signing_key=SIGNING_KEY, issuer='https://mcp.test'
         )
-        self.as_.register_client(
-            'client-1', 'secret-1', ['https://app.test/callback']
-        )
+        self.as_.register_client('client-1', 'secret-1', ['https://app.test/callback'])
 
     def test_register_client(self) -> None:
         client = self.as_.get_client('client-1')
@@ -243,9 +242,7 @@ class AuthorizationServerTests(unittest.TestCase):
         )
 
         code = redirect_url.split('code=')[1].split('&')[0]
-        self.as_.exchange_code(
-            code=code, code_verifier=verifier, client_id='client-1'
-        )
+        self.as_.exchange_code(code=code, code_verifier=verifier, client_id='client-1')
         with self.assertRaises(InvalidGrantError):
             self.as_.exchange_code(
                 code=code, code_verifier=verifier, client_id='client-1'
@@ -311,9 +308,7 @@ class ResourceServerTests(unittest.TestCase):
         self, client_id: str = 'client-1', scope: str = 'mcp'
     ) -> str:
         """Helper: issue a bearer token via the AS."""
-        self.as_.register_client(
-            client_id, 'secret', ['https://app.test/cb']
-        )
+        self.as_.register_client(client_id, 'secret', ['https://app.test/cb'])
         verifier = generate_code_verifier()
         challenge = compute_s256_challenge(verifier)
         redirect_url, _ = self.as_.create_authorization_code(
@@ -376,9 +371,7 @@ class DPoPIntegrationTests(unittest.TestCase):
         as_ = OAuth21AuthorizationServer(
             signing_key=SIGNING_KEY, issuer='https://mcp.test'
         )
-        rs = OAuth21ResourceServer(
-            signing_key=SIGNING_KEY, issuer='https://mcp.test'
-        )
+        rs = OAuth21ResourceServer(signing_key=SIGNING_KEY, issuer='https://mcp.test')
         as_.register_client('dpoptest', 'secret', ['https://app.test/cb'])
 
         # Generate DPoP key pair
@@ -404,8 +397,9 @@ class DPoPIntegrationTests(unittest.TestCase):
         jkt = compute_jwk_thumbprint(jwk)
 
         # Create DPoP proof for token endpoint
-        from teaagent.oauth21 import _b64url_encode, _b64url_decode
         import json
+
+        from teaagent.oauth21 import _b64url_encode
 
         dpop_header = {
             'typ': 'dpop+jwt',
@@ -427,16 +421,11 @@ class DPoPIntegrationTests(unittest.TestCase):
         signing_input = f'{header_b64}.{payload_b64}'.encode('ascii')
 
         from cryptography.hazmat.primitives import hashes
-        from cryptography.hazmat.primitives.asymmetric.utils import (
-            encode_dss_signature,
-        )
 
-        der_sig = private_key.sign(
-            signing_input, ec.ECDSA(hashes.SHA256())
-        )
+        der_sig = private_key.sign(signing_input, ec.ECDSA(hashes.SHA256()))
         (r_int, s_int) = _parse_dss_signature(der_sig, curve_size)
-        sig_bytes = (
-            r_int.to_bytes(curve_size, 'big') + s_int.to_bytes(curve_size, 'big')
+        sig_bytes = r_int.to_bytes(curve_size, 'big') + s_int.to_bytes(
+            curve_size, 'big'
         )
         dpop_proof_jwt = f'{header_b64}.{payload_b64}.{_b64url_encode(sig_bytes)}'
 
@@ -471,13 +460,9 @@ class DPoPIntegrationTests(unittest.TestCase):
             json.dumps(dpop_payload2, separators=(',', ':')).encode()
         )
         signing_input2 = f'{header_b64}.{payload2_b64}'.encode('ascii')
-        der_sig2 = private_key.sign(
-            signing_input2, ec.ECDSA(hashes.SHA256())
-        )
+        der_sig2 = private_key.sign(signing_input2, ec.ECDSA(hashes.SHA256()))
         (r2, s2) = _parse_dss_signature(der_sig2, curve_size)
-        sig2_bytes = (
-            r2.to_bytes(curve_size, 'big') + s2.to_bytes(curve_size, 'big')
-        )
+        sig2_bytes = r2.to_bytes(curve_size, 'big') + s2.to_bytes(curve_size, 'big')
         dpop_proof2 = f'{header_b64}.{payload2_b64}.{_b64url_encode(sig2_bytes)}'
 
         validated = rs.validate_request(
@@ -494,9 +479,6 @@ class DPoPIntegrationTests(unittest.TestCase):
         as_ = OAuth21AuthorizationServer(
             signing_key=SIGNING_KEY, issuer='https://mcp.test'
         )
-        rs = OAuth21ResourceServer(
-            signing_key=SIGNING_KEY, issuer='https://mcp.test'
-        )
         as_.register_client('bad', 'secret', ['https://app.test/cb'])
 
         pk = ec.generate_private_key(ec.SECP256R1())
@@ -504,31 +486,44 @@ class DPoPIntegrationTests(unittest.TestCase):
         pn = pub.public_numbers()
 
         import base64
+
         def _b64url(data: bytes) -> str:
             return base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
 
         cs = 256 // 8
         jwk = {
-            'kty': 'EC', 'crv': 'P-256',
+            'kty': 'EC',
+            'crv': 'P-256',
             'x': _b64url(pn.x.to_bytes(cs, 'big')),
             'y': _b64url(pn.y.to_bytes(cs, 'big')),
         }
 
-        from teaagent.oauth21 import _b64url_encode
         import json
 
-        header_b64 = _b64url_encode(json.dumps(
-            {'typ': 'dpop+jwt', 'alg': 'ES256', 'jwk': jwk},
-            separators=(',', ':'),
-        ).encode())
-        payload_b64 = _b64url_encode(json.dumps(
-            {'jti': 'p', 'htm': 'POST', 'htu': 'https://mcp.test/token', 'iat': int(time.time())},
-            separators=(',', ':'),
-        ).encode())
+        from teaagent.oauth21 import _b64url_encode
+
+        header_b64 = _b64url_encode(
+            json.dumps(
+                {'typ': 'dpop+jwt', 'alg': 'ES256', 'jwk': jwk},
+                separators=(',', ':'),
+            ).encode()
+        )
+        payload_b64 = _b64url_encode(
+            json.dumps(
+                {
+                    'jti': 'p',
+                    'htm': 'POST',
+                    'htu': 'https://mcp.test/token',
+                    'iat': int(time.time()),
+                },
+                separators=(',', ':'),
+            ).encode()
+        )
         # Sign with a different key
         pk2 = ec.generate_private_key(ec.SECP256R1())
         signing_input = f'{header_b64}.{payload_b64}'.encode('ascii')
         from cryptography.hazmat.primitives import hashes
+
         der_sig = pk2.sign(signing_input, ec.ECDSA(hashes.SHA256()))
         (r_int, s_int) = _parse_dss_signature(der_sig, cs)
         sig_bytes = r_int.to_bytes(cs, 'big') + s_int.to_bytes(cs, 'big')
@@ -537,14 +532,17 @@ class DPoPIntegrationTests(unittest.TestCase):
         verifier = generate_code_verifier()
         challenge = compute_s256_challenge(verifier)
         redirect_url, _ = as_.create_authorization_code(
-            client_id='bad', redirect_uri='https://app.test/cb',
+            client_id='bad',
+            redirect_uri='https://app.test/cb',
             code_challenge=challenge,
         )
         code = redirect_url.split('code=')[1].split('&')[0]
 
         with self.assertRaises(InvalidDPoPError):
             as_.exchange_code(
-                code=code, code_verifier=verifier, client_id='bad',
+                code=code,
+                code_verifier=verifier,
+                client_id='bad',
                 dpop_proof_jwt=bad_proof,
             )
 
@@ -554,6 +552,7 @@ def _parse_dss_signature(der: bytes, key_size: int) -> tuple:
     from cryptography.hazmat.primitives.asymmetric.utils import (
         decode_dss_signature,
     )
+
     return decode_dss_signature(der)
 
 

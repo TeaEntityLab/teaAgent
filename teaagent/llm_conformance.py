@@ -79,6 +79,7 @@ def run_model_conformance(
     providers: Iterable[str] | None = None,
     *,
     prompt: str = 'Reply with exactly: ok',
+    expected_content: str | None = 'ok',
     max_tokens: int = 32,
     model: str | None = None,
     adapter_factory: AdapterFactory = create_llm_adapter,
@@ -89,6 +90,7 @@ def run_model_conformance(
         _run_provider_conformance(
             provider,
             prompt=prompt,
+            expected_content=expected_content,
             max_tokens=max_tokens,
             model=model,
             adapter_factory=adapter_factory,
@@ -103,6 +105,7 @@ def _run_provider_conformance(
     provider: str,
     *,
     prompt: str,
+    expected_content: str | None,
     max_tokens: int,
     model: str | None,
     adapter_factory: AdapterFactory,
@@ -136,6 +139,14 @@ def _run_provider_conformance(
             status='failed',
             model=response.model,
             error='provider returned empty content',
+        )
+    if expected_content is not None and content != expected_content:
+        return ModelConformanceResult(
+            provider=provider,
+            status='failed',
+            model=response.model,
+            content=content,
+            error=f'provider returned {content!r}; expected {expected_content!r}',
         )
     return ModelConformanceResult(
         provider=provider,

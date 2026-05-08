@@ -66,9 +66,7 @@ def build_mcp_http_server(
 ) -> tuple[ThreadingHTTPServer, MCPSessionStore]:
     sessions = MCPSessionStore()
     origins = frozenset(allowed_origins) if allowed_origins else None
-    handler_cls = _make_handler(
-        registry, sessions, auth_token, origins, oauth_server
-    )
+    handler_cls = _make_handler(registry, sessions, auth_token, origins, oauth_server)
     server = ThreadingHTTPServer((host, port), handler_cls)
     return server, sessions
 
@@ -128,17 +126,13 @@ def _make_handler(
                 header = self.headers.get(_AUTHORIZATION_HEADER, '')
                 if not header.startswith('Bearer '):
                     return False
-                return secrets.compare_digest(
-                    header[len('Bearer '):], auth_token
-                )
+                return secrets.compare_digest(header[len('Bearer ') :], auth_token)
 
             # OAuth 2.1 / DPoP token validation.
             if resource_server is not None:
                 try:
                     claims = resource_server.validate_request(
-                        authorization_header=self.headers.get(
-                            _AUTHORIZATION_HEADER
-                        ),
+                        authorization_header=self.headers.get(_AUTHORIZATION_HEADER),
                         dpop_header=self.headers.get(_DPOP_HEADER),
                         method=self.command,
                         url=self._request_url(),
@@ -189,9 +183,7 @@ def _make_handler(
             self.end_headers()
             self.wfile.write(body)
 
-        def _send_status(
-            self, status: int, message: Optional[str] = None
-        ) -> None:
+        def _send_status(self, status: int, message: Optional[str] = None) -> None:
             body = (message or '').encode('utf-8')
             self.send_response(status)
             self.send_header('Content-Type', 'text/plain')
@@ -235,8 +227,10 @@ def _make_handler(
             auth_header = self.headers.get(_AUTHORIZATION_HEADER, '')
             dpop_header = self.headers.get(_DPOP_HEADER)
             # Issue a nonce if a DPoP token is presented or DPoP header exists.
-            if (_TOKEN_TYPE_DPOP in auth_header or dpop_header is not None) and oauth_server is not None:
-                    return oauth_server.generate_dpop_nonce()
+            if (
+                _TOKEN_TYPE_DPOP in auth_header or dpop_header is not None
+            ) and oauth_server is not None:
+                return oauth_server.generate_dpop_nonce()
             return None
 
         def _read_body(self) -> tuple[Optional[Any], Optional[str]]:
@@ -276,7 +270,9 @@ def _make_handler(
             client_id = _first_param(params, 'client_id')
             redirect_uri = _first_param(params, 'redirect_uri')
             code_challenge = _first_param(params, 'code_challenge')
-            code_challenge_method = _first_param(params, 'code_challenge_method') or 'S256'
+            code_challenge_method = (
+                _first_param(params, 'code_challenge_method') or 'S256'
+            )
             scope = _first_param(params, 'scope') or 'mcp'
             state = _first_param(params, 'state')
 
@@ -330,7 +326,10 @@ def _make_handler(
             except UnicodeDecodeError:
                 self._send_json(
                     400,
-                    {'error': 'invalid_request', 'error_description': 'invalid encoding'},
+                    {
+                        'error': 'invalid_request',
+                        'error_description': 'invalid encoding',
+                    },
                 )
                 return
             params = parse_qs(body)
@@ -354,7 +353,10 @@ def _make_handler(
             if not code:
                 self._send_json(
                     400,
-                    {'error': 'invalid_request', 'error_description': 'code is required'},
+                    {
+                        'error': 'invalid_request',
+                        'error_description': 'code is required',
+                    },
                 )
                 return
             if not code_verifier:
@@ -526,9 +528,7 @@ def _make_handler(
 
         def _add_dpop_nonce_to_response(self) -> None:
             if oauth_server is not None:
-                self.send_header(
-                    _DPOP_NONCE_HEADER, oauth_server.generate_dpop_nonce()
-                )
+                self.send_header(_DPOP_NONCE_HEADER, oauth_server.generate_dpop_nonce())
 
     return MCPHandler
 

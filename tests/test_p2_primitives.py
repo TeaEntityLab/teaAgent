@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from teaagent import (
+    CodeModeSandbox,
     Document,
     GraphEdge,
     KnowledgeGraph,
@@ -10,7 +11,6 @@ from teaagent import (
     StatelessMCPRequest,
     ToolAnnotations,
     ToolRegistry,
-    CodeModeSandbox,
     UnsafeCodeError,
     assess_managed_agent_readiness,
     assess_provider_portability,

@@ -184,9 +184,7 @@ class OTelAuditSink:
                 else:
                     run_span.set_status(Status(StatusCode.OK))
                 run_span.set_attribute('agent.outcome', etype)
-                run_span.set_attribute(
-                    'agent.iterations', payload.get('iterations', 0)
-                )
+                run_span.set_attribute('agent.iterations', payload.get('iterations', 0))
                 run_span.end()
 
     def shutdown(self) -> None:
@@ -299,15 +297,11 @@ def configure_telemetry(
         provider.add_span_processor(processor)
 
     if config.console:
-        provider.add_span_processor(
-            SimpleSpanProcessor(ConsoleSpanExporter())
-        )
+        provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 
     _otel_trace.set_tracer_provider(provider)
 
-    sink = OTelAuditSink(
-        provider, service_name=config.service_name
-    )
+    sink = OTelAuditSink(provider, service_name=config.service_name)
     tracer = provider.get_tracer(config.service_name)
 
     return sink, tracer

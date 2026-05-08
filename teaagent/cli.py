@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import sys
 from typing import Any, Optional
@@ -33,6 +34,17 @@ from teaagent.runner import ApprovalRequest, RunResult
 from teaagent.tui import run_tui
 from teaagent.ultrawork import UltraworkStore
 from teaagent.workspace_tools import build_workspace_tool_registry
+
+
+def is_loopback_host(host: str) -> bool:
+    if host == 'localhost':
+        return True
+    if host in {'', '0.0.0.0', '::'}:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -406,6 +418,11 @@ def build_parser() -> argparse.ArgumentParser:
         '--prompt', default='Reply with exactly: ok', help='Prompt to send.'
     )
     conformance_model.add_argument(
+        '--expect',
+        default='ok',
+        help='Exact response content required for pass. Use an empty string to only require non-empty output.',
+    )
+    conformance_model.add_argument(
         '--max-tokens', type=int, default=32, help='Maximum output tokens.'
     )
     conformance_model.set_defaults(func=model_conformance)
@@ -681,7 +698,9 @@ def _execute_agent_task(
 
     # --- OpenTelemetry wiring ---
     _telemetry_sink = None
-    if getattr(args, 'telemetry_otlp_endpoint', None) or getattr(args, 'telemetry_console', False):
+    if getattr(args, 'telemetry_otlp_endpoint', None) or getattr(
+        args, 'telemetry_console', False
+    ):
         try:
             from teaagent.telemetry import (
                 TelemetryConfig,
@@ -730,6 +749,7 @@ def _execute_agent_task(
     # Shut down OTel to flush any pending spans.
     if _telemetry_sink is not None:
         from contextlib import suppress
+
         with suppress(Exception):
             _telemetry_sink.force_flush()
     payload = run_result_payload(result, routing=routing.to_dict() if routing else None)
@@ -850,6 +870,7 @@ def model_conformance(args: argparse.Namespace) -> int:
     report = run_model_conformance(
         args.provider,
         prompt=args.prompt,
+        expected_content=args.expect if args.expect else None,
         max_tokens=args.max_tokens,
         model=args.model,
     )
@@ -961,6 +982,16 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
         elif args.oauth_issuer or args.oauth_signing_key:
             print(
                 'Both --oauth-issuer and --oauth-signing-key must be provided to enable OAuth.',
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            not is_loopback_host(args.host)
+            and not args.auth_token
+            and oauth_server is None
+        ):
+            print(
+                'Refusing to serve MCP HTTP on a non-loopback host without --auth-token or OAuth.',
                 file=sys.stderr,
             )
             return 1

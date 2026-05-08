@@ -318,9 +318,7 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
                 port=0,
                 oauth_server=oauth_server,
             )
-            thread = threading.Thread(
-                target=server.serve_forever, daemon=True
-            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             host, port = server.server_address[:2]
             try:
@@ -349,7 +347,13 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
             conn.close()
 
     def test_oauth_metadata_endpoint(self) -> None:
-        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+        for (
+            _oauth_server,
+            _server,
+            _sessions,
+            host,
+            port,
+        ) in self._build_oauth_fixture():
             status, headers, data = self._request(
                 host, port, 'GET', path='/.well-known/oauth-authorization-server'
             )
@@ -359,7 +363,7 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
             self.assertIn('S256', meta['code_challenge_methods_supported'])
 
     def test_authorization_code_flow(self) -> None:
-        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+        for oauth_server, _server, _sessions, host, port in self._build_oauth_fixture():
             oauth_server.register_client(
                 'test-client', 'test-secret', ['http://localhost/callback']
             )
@@ -369,11 +373,14 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
                 compute_s256_challenge,
                 generate_code_verifier,
             )
+
             verifier = generate_code_verifier()
             challenge = compute_s256_challenge(verifier)
 
             status, headers, data = self._request(
-                host, port, 'GET',
+                host,
+                port,
+                'GET',
                 path=(
                     '/authorize'
                     '?client_id=test-client'
@@ -391,12 +398,12 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
             # 2. Exchange code for token
             code = location.split('code=')[1].split('&')[0]
             body = (
-                f'grant_type=authorization_code'
-                f'&code={code}'
-                f'&code_verifier={verifier}'
+                f'grant_type=authorization_code&code={code}&code_verifier={verifier}'
             ).encode('utf-8')
             status, _, data = self._request(
-                host, port, 'POST',
+                host,
+                port,
+                'POST',
                 path='/token',
                 body=body,
                 headers={
@@ -415,7 +422,9 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
                 {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'}
             ).encode('utf-8')
             status, headers, data = self._request(
-                host, port, 'POST',
+                host,
+                port,
+                'POST',
                 path=MCP_PATH,
                 body=body,
                 headers={
@@ -435,7 +444,9 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
                 {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'}
             ).encode('utf-8')
             status2, _, data2 = self._request(
-                host, port, 'POST',
+                host,
+                port,
+                'POST',
                 path=MCP_PATH,
                 body=body2,
                 headers={
@@ -448,12 +459,20 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
             self.assertEqual(status2, 200)
 
     def test_unauthorized_without_token_when_oauth_enabled(self) -> None:
-        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+        for (
+            _oauth_server,
+            _server,
+            _sessions,
+            host,
+            port,
+        ) in self._build_oauth_fixture():
             body = json.dumps(
                 {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'}
             ).encode('utf-8')
             status, _, _ = self._request(
-                host, port, 'POST',
+                host,
+                port,
+                'POST',
                 path=MCP_PATH,
                 body=body,
                 headers={
@@ -464,12 +483,20 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
             self.assertEqual(status, 401)
 
     def test_invalid_token_rejected(self) -> None:
-        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+        for (
+            _oauth_server,
+            _server,
+            _sessions,
+            host,
+            port,
+        ) in self._build_oauth_fixture():
             body = json.dumps(
                 {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'}
             ).encode('utf-8')
             status, _, _ = self._request(
-                host, port, 'POST',
+                host,
+                port,
+                'POST',
                 path=MCP_PATH,
                 body=body,
                 headers={
@@ -481,17 +508,17 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
             self.assertEqual(status, 401)
 
     def test_token_endpoint_bad_code(self) -> None:
-        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
-            oauth_server.register_client(
-                'c', 's', ['http://localhost/cb']
-            )
+        for oauth_server, _server, _sessions, host, port in self._build_oauth_fixture():
+            oauth_server.register_client('c', 's', ['http://localhost/cb'])
             body = (
                 'grant_type=authorization_code'
                 '&code=fake-code'
                 '&code_verifier=fake-verifier'
             ).encode('utf-8')
             status, _, data = self._request(
-                host, port, 'POST',
+                host,
+                port,
+                'POST',
                 path='/token',
                 body=body,
                 headers={
