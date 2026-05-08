@@ -499,6 +499,30 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help='Permit this Origin header. Can be repeated. Default: allow all origins.',
     )
+    mcp_serve.add_argument(
+        '--oauth-issuer',
+        default=None,
+        help='Enable OAuth 2.1 / DPoP. Issuer URL (e.g. https://mcp.example.com).',
+    )
+    mcp_serve.add_argument(
+        '--oauth-signing-key',
+        default=None,
+        help='HMAC signing key for JWT access tokens (min 16 chars).',
+    )
+    mcp_serve.add_argument(
+        '--oauth-client',
+        action='append',
+        default=[],
+        metavar='ID:SECRET:REDIRECT_URI',
+        help='Pre-register an OAuth client. Format: client_id:client_secret:redirect_uri. '
+        'Can be repeated.',
+    )
+    mcp_serve.add_argument(
+        '--oauth-token-ttl',
+        type=int,
+        default=3600,
+        help='Access token TTL in seconds. Default 3600.',
+    )
     mcp_serve.set_defaults(func=mcp_serve_command)
 
     workspace = subparsers.add_parser('workspace', help='Inspect workspace tool pack.')
@@ -831,14 +855,39 @@ def ultrawork_stop_command(args: argparse.Namespace) -> int:
 
 
 def mcp_serve_command(args: argparse.Namespace) -> int:
+    from teaagent.oauth21 import OAuth21AuthorizationServer
+
     registry = build_workspace_tool_registry(args.root)
     if args.http:
+        oauth_server = None
+        if args.oauth_issuer and args.oauth_signing_key:
+            oauth_server = OAuth21AuthorizationServer(
+                signing_key=args.oauth_signing_key,
+                issuer=args.oauth_issuer,
+                token_ttl=args.oauth_token_ttl,
+            )
+            for spec in args.oauth_client or []:
+                parts = spec.split(':', 2)
+                if len(parts) != 3:
+                    print(
+                        f'Invalid --oauth-client format: {spec} (expected ID:SECRET:REDIRECT_URI)',
+                        file=sys.stderr,
+                    )
+                    return 1
+                oauth_server.register_client(*parts)
+        elif args.oauth_issuer or args.oauth_signing_key:
+            print(
+                'Both --oauth-issuer and --oauth-signing-key must be provided to enable OAuth.',
+                file=sys.stderr,
+            )
+            return 1
         return serve_mcp_http(
             registry,
             host=args.host,
             port=args.port,
             auth_token=args.auth_token,
             allowed_origins=args.allowed_origin or None,
+            oauth_server=oauth_server,
         )
     return serve_mcp_stdio(registry)
 

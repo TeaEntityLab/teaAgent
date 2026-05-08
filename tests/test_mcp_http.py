@@ -296,5 +296,213 @@ class MCPHTTPTransportTests(unittest.TestCase):
             self.assertEqual(status, 404)
 
 
+class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
+    """Integration tests for OAuth 2.1 on the MCP HTTP transport."""
+
+    @staticmethod
+    def _build_oauth_fixture(**oauth_kwargs):
+        """Create a server fixture with OAuth enabled."""
+        from teaagent.oauth21 import OAuth21AuthorizationServer
+
+        oauth_server = OAuth21AuthorizationServer(
+            signing_key='super-secret-key-16chars',
+            issuer='http://127.0.0.1:0',
+            **oauth_kwargs,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry = build_workspace_tool_registry(root)
+            server, sessions = build_mcp_http_server(
+                registry,
+                host='127.0.0.1',
+                port=0,
+                oauth_server=oauth_server,
+            )
+            thread = threading.Thread(
+                target=server.serve_forever, daemon=True
+            )
+            thread.start()
+            host, port = server.server_address[:2]
+            try:
+                yield oauth_server, server, sessions, host, port
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=2)
+
+    def _request(
+        self,
+        host: str,
+        port: int,
+        method: str,
+        path: str = MCP_PATH,
+        body: bytes | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> tuple[int, dict[str, str], bytes]:
+        conn = http.client.HTTPConnection(host, port, timeout=5)
+        try:
+            conn.request(method, path, body=body, headers=headers or {})
+            resp = conn.getresponse()
+            data = resp.read()
+            return resp.status, dict(resp.getheaders()), data
+        finally:
+            conn.close()
+
+    def test_oauth_metadata_endpoint(self) -> None:
+        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+            status, headers, data = self._request(
+                host, port, 'GET', path='/.well-known/oauth-authorization-server'
+            )
+            self.assertEqual(status, 200)
+            meta = json.loads(data)
+            self.assertIn('token_endpoint', meta)
+            self.assertIn('S256', meta['code_challenge_methods_supported'])
+
+    def test_authorization_code_flow(self) -> None:
+        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+            oauth_server.register_client(
+                'test-client', 'test-secret', ['http://localhost/callback']
+            )
+
+            # 1. Request authorization code
+            from teaagent.oauth21 import (
+                compute_s256_challenge,
+                generate_code_verifier,
+            )
+            verifier = generate_code_verifier()
+            challenge = compute_s256_challenge(verifier)
+
+            status, headers, data = self._request(
+                host, port, 'GET',
+                path=(
+                    '/authorize'
+                    '?client_id=test-client'
+                    '&redirect_uri=http://localhost/callback'
+                    f'&code_challenge={challenge}'
+                    '&scope=mcp'
+                    '&state=abc'
+                ),
+            )
+            self.assertEqual(status, 302)
+            location = headers.get('Location', '')
+            self.assertIn('code=', location)
+            self.assertIn('state=abc', location)
+
+            # 2. Exchange code for token
+            code = location.split('code=')[1].split('&')[0]
+            body = (
+                f'grant_type=authorization_code'
+                f'&code={code}'
+                f'&code_verifier={verifier}'
+            ).encode('utf-8')
+            status, _, data = self._request(
+                host, port, 'POST',
+                path='/token',
+                body=body,
+                headers={
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Length': str(len(body)),
+                },
+            )
+            self.assertEqual(status, 200)
+            token_resp = json.loads(data)
+            self.assertIn('access_token', token_resp)
+            self.assertEqual(token_resp['token_type'], 'Bearer')
+
+            # 3. Use token to access MCP endpoint
+            access_token = token_resp['access_token']
+            body = json.dumps(
+                {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'}
+            ).encode('utf-8')
+            status, headers, data = self._request(
+                host, port, 'POST',
+                path=MCP_PATH,
+                body=body,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body)),
+                    'Authorization': f'Bearer {access_token}',
+                },
+            )
+            self.assertEqual(status, 200)
+            payload = json.loads(data)
+            self.assertEqual(payload['result']['serverInfo']['name'], 'teaagent')
+            session_id = headers.get(SESSION_HEADER)
+            self.assertTrue(session_id)
+
+            # 4. Subsequent request with session + token
+            body2 = json.dumps(
+                {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'}
+            ).encode('utf-8')
+            status2, _, data2 = self._request(
+                host, port, 'POST',
+                path=MCP_PATH,
+                body=body2,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body2)),
+                    'Authorization': f'Bearer {access_token}',
+                    SESSION_HEADER: session_id,
+                },
+            )
+            self.assertEqual(status2, 200)
+
+    def test_unauthorized_without_token_when_oauth_enabled(self) -> None:
+        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+            body = json.dumps(
+                {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'}
+            ).encode('utf-8')
+            status, _, _ = self._request(
+                host, port, 'POST',
+                path=MCP_PATH,
+                body=body,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body)),
+                },
+            )
+            self.assertEqual(status, 401)
+
+    def test_invalid_token_rejected(self) -> None:
+        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+            body = json.dumps(
+                {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'}
+            ).encode('utf-8')
+            status, _, _ = self._request(
+                host, port, 'POST',
+                path=MCP_PATH,
+                body=body,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body)),
+                    'Authorization': 'Bearer invalid.token.here',
+                },
+            )
+            self.assertEqual(status, 401)
+
+    def test_token_endpoint_bad_code(self) -> None:
+        for oauth_server, server, sessions, host, port in self._build_oauth_fixture():
+            oauth_server.register_client(
+                'c', 's', ['http://localhost/cb']
+            )
+            body = (
+                'grant_type=authorization_code'
+                '&code=fake-code'
+                '&code_verifier=fake-verifier'
+            ).encode('utf-8')
+            status, _, data = self._request(
+                host, port, 'POST',
+                path='/token',
+                body=body,
+                headers={
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Length': str(len(body)),
+                },
+            )
+            self.assertEqual(status, 400)
+            err = json.loads(data)
+            self.assertEqual(err['error'], 'invalid_grant')
+
+
 if __name__ == '__main__':
     unittest.main()
