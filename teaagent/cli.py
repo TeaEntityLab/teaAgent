@@ -7,6 +7,7 @@ from typing import Any, Optional
 from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
+from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
@@ -25,6 +26,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"teaagent {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    clarify = subparsers.add_parser("clarify", help="Score a task for ambiguity before running an agent.")
+    clarify.add_argument("task", help="Task to clarify.")
+    clarify.set_defaults(func=clarify_command)
+
     agent = subparsers.add_parser("agent", help="Run model-driven agent tasks.")
     agent_subparsers = agent.add_subparsers(dest="agent_command", required=True)
     agent_run = agent_subparsers.add_parser(
@@ -38,6 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
     agent_run.add_argument("--model", default=None, help="Override model name.")
     agent_run.add_argument("--max-iterations", type=int, default=10, help="Maximum agent loop iterations.")
     agent_run.add_argument("--max-tool-calls", type=int, default=10, help="Maximum tool calls.")
+    agent_run.add_argument(
+        "--clarify",
+        action="store_true",
+        help="Run deterministic ambiguity scoring before calling the model.",
+    )
     agent_run.add_argument(
         "--allow-destructive",
         action="store_true",
@@ -132,7 +142,20 @@ def doctor_graphqlite(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def clarify_command(args: argparse.Namespace) -> int:
+    print_json(clarify_task(args.task).to_dict())
+    return 0
+
+
 def agent_run_task(args: argparse.Namespace) -> int:
+    task_spec = None
+    if args.clarify:
+        clarification = clarify_task(args.task)
+        if clarification.needs_clarification:
+            print_json({"status": "needs_clarification", "clarification": clarification.to_dict()})
+            return 2
+        task_spec = build_task_spec(args.task, clarification)
+
     adapter = create_llm_adapter(args.provider, model=args.model)
     store = RunStore(args.root)
     audit = store.audit_logger()
@@ -148,6 +171,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
             permission_mode=parse_permission_mode(args.permission_mode),
         ),
         audit=audit,
+        task_spec=task_spec,
     )
     store.logger_for_result(result, audit)
     print_json(

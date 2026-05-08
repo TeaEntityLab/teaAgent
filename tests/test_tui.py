@@ -110,6 +110,30 @@ class TUITests(unittest.TestCase):
         self.assertEqual(tui.permission_mode.value, "read-only")
         self.assertEqual(output, ["permission: read-only"])
 
+    def test_tui_clarify_command(self) -> None:
+        output = []
+        tui = TeaAgentTUI(input_fn=lambda _prompt: "exit", output_fn=output.append)
+
+        self.assertTrue(tui.handle_command("clarify improve stuff"))
+
+        payload = json.loads(output[0])
+        self.assertTrue(payload["needs_clarification"])
+        self.assertEqual(payload["question"], "What action do you want TeaAgent to take?")
+
+    def test_tui_ask_clarify_stops_before_adapter_when_ambiguous(self) -> None:
+        output = []
+
+        def fail_factory(_provider, _model):
+            raise AssertionError("adapter should not be created")
+
+        tui = TeaAgentTUI(input_fn=lambda _prompt: "exit", output_fn=output.append, adapter_factory=fail_factory)
+
+        self.assertTrue(tui.handle_command("ask --clarify improve stuff"))
+
+        payload = json.loads(output[0])
+        self.assertEqual(payload["status"], "needs_clarification")
+        self.assertTrue(payload["clarification"]["needs_clarification"])
+
     def test_cli_tui_help_in_parser(self) -> None:
         output = io.StringIO()
 

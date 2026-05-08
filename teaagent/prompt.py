@@ -38,6 +38,7 @@ def assemble_agent_prompt(
     context: dict[str, Any],
     registry: ToolRegistry,
     project_instructions: Optional[str] = None,
+    task_spec: Optional[str] = None,
 ) -> PromptBundle:
     system_parts = [DECISION_INSTRUCTIONS, "Available tools:", json.dumps(registry.mcp_metadata(), indent=2, sort_keys=True)]
     if project_instructions:
@@ -48,6 +49,7 @@ def assemble_agent_prompt(
         user=json.dumps(
             {
                 "task": task,
+                "task_spec": task_spec,
                 "observations": context.get("observations", []),
             },
             indent=2,

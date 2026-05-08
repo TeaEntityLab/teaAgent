@@ -66,6 +66,20 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(result.final_answer.content, "read hello.txt")
             self.assertIn("workspace_read_file", adapter.requests[0].system)
 
+    def test_chat_agent_injects_task_spec_into_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
+
+            result = run_chat_agent(
+                task="Update docs",
+                task_spec="Clarified task specification:\nTASK: Update docs",
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp),
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertIn("Clarified task specification", adapter.requests[0].messages[0].content)
+
     def test_destructive_decision_is_blocked_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             adapter = FakeAdapter(

@@ -36,11 +36,13 @@ class ModelDecisionEngine:
         registry: ToolRegistry,
         project_instructions: str = "",
         model: Optional[str] = None,
+        task_spec: Optional[str] = None,
     ) -> None:
         self.adapter = adapter
         self.registry = registry
         self.project_instructions = project_instructions
         self.model = model
+        self.task_spec = task_spec
 
     def decide(self, context: dict) -> Decision:
         prompt = assemble_agent_prompt(
@@ -48,6 +50,7 @@ class ModelDecisionEngine:
             context=context,
             registry=self.registry,
             project_instructions=self.project_instructions,
+            task_spec=self.task_spec,
         )
         response = self.adapter.complete(
             LLMRequest(
@@ -66,6 +69,7 @@ def run_chat_agent(
     config: ChatAgentConfig,
     audit: Optional[AuditLogger] = None,
     registry: Optional[ToolRegistry] = None,
+    task_spec: Optional[str] = None,
 ) -> RunResult:
     tool_registry = registry or build_workspace_tool_registry(config.root)
     project_instructions = load_project_instructions(config.root)
@@ -74,6 +78,7 @@ def run_chat_agent(
         registry=tool_registry,
         project_instructions=project_instructions,
         model=config.model,
+        task_spec=task_spec,
     )
     runner = AgentRunner(
         registry=tool_registry,

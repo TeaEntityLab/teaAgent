@@ -66,12 +66,14 @@ Inside the TUI:
 ```text
 help
 doctor
+clarify Improve the CLI
 provider gpt
 model gpt-4o-mini
 root /path/to/repo
 destructive off
 permission prompt
 ask Inspect this repo and summarize the test suite
+ask --clarify Update docs/cli.md to document clarify and verify tests pass
 smoke
 query MATCH (n:SmokeTest) RETURN n.name
 use ./graph.db
@@ -181,6 +183,31 @@ Registered tools:
 - `workspace_run_shell`: compatibility alias for `workspace_run_shell_mutate`; destructive.
 
 All path-based tools reject paths that escape the configured workspace root.
+
+## Clarification
+
+Score a task for ambiguity before invoking a model:
+
+```bash
+teaagent clarify "Improve this project"
+```
+
+The result includes an ambiguity score, missing fields, and at most one next question.
+
+Use the same gate before an autonomous run:
+
+```bash
+teaagent agent run gpt "Improve this project" --clarify
+```
+
+If key details are missing, TeaAgent returns `status: needs_clarification` and does not call the model. If the task is concrete enough, TeaAgent injects a structured task specification into the agent prompt.
+
+Inside TUI:
+
+```text
+clarify Improve this project
+ask --clarify Update docs/cli.md to document clarify and verify tests pass
+```
 
 ## Agent Run
 

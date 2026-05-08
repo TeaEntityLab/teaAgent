@@ -8,6 +8,7 @@ from typing import Callable, Optional
 from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
+from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
@@ -26,7 +27,9 @@ HELP_TEXT = """Commands:
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
+  clarify <task>            Score task ambiguity without calling a model.
   ask <task>                Run a model-driven agent task with workspace tools.
+  ask --clarify <task>      Clarify first; stop if key details are missing.
   runs                      List recent persisted agent runs.
   show <run_id>             Show one persisted run record.
   use <database>            Switch database path. Use :memory: for in-memory.
@@ -142,7 +145,18 @@ class TeaAgentTUI:
             if not args:
                 self.output_fn("error: ask requires a task")
                 return True
-            self._run_agent_task(" ".join(args))
+            clarify_first = args[0] == "--clarify"
+            task_args = args[1:] if clarify_first else args
+            if not task_args:
+                self.output_fn("error: ask --clarify requires a task")
+                return True
+            self._run_agent_task(" ".join(task_args), clarify_first=clarify_first)
+            return True
+        if action == "clarify":
+            if not args:
+                self.output_fn("error: clarify requires a task")
+                return True
+            self._print_json(clarify_task(" ".join(args)).to_dict())
             return True
         if action == "runs":
             store = RunStore(self.root)
@@ -177,7 +191,14 @@ class TeaAgentTUI:
         self.output_fn(f"error: unknown command '{action}'. Type 'help'.")
         return True
 
-    def _run_agent_task(self, task: str) -> None:
+    def _run_agent_task(self, task: str, *, clarify_first: bool = False) -> None:
+        task_spec = None
+        if clarify_first:
+            clarification = clarify_task(task)
+            if clarification.needs_clarification:
+                self._print_json({"status": "needs_clarification", "clarification": clarification.to_dict()})
+                return
+            task_spec = build_task_spec(task, clarification)
         self.output_fn(f"agent: provider={self.provider} root={self.root}")
         adapter = self.adapter_factory(self.provider, self.model)
         store = RunStore(self.root)
@@ -192,6 +213,7 @@ class TeaAgentTUI:
                 permission_mode=self.permission_mode,
             ),
             audit=audit,
+            task_spec=task_spec,
         )
         store.logger_for_result(result, audit)
         self._print_json(

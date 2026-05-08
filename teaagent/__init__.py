@@ -18,6 +18,7 @@ from teaagent.graphqlite_store import (
     check_graphqlite_runtime,
     ensure_sqlite_extension_loading,
 )
+from teaagent.intent import ClarificationResult, IntentScore, build_task_spec, clarify_task
 from teaagent.llm import (
     LLMConfigurationError,
     LLMHTTPError,
@@ -48,6 +49,7 @@ __all__ = [
     "ApprovalPolicy",
     "AuditLogger",
     "ChatAgentConfig",
+    "ClarificationResult",
     "CodeModeResult",
     "ContextCompactor",
     "Decision",
@@ -61,6 +63,7 @@ __all__ = [
     "GraphQLiteRuntimeError",
     "GraphQLiteUnavailableError",
     "InMemoryRetriever",
+    "IntentScore",
     "KnowledgeGraph",
     "LLMConfigurationError",
     "LLMHTTPError",
@@ -92,9 +95,11 @@ __all__ = [
     "available_providers",
     "assemble_agent_prompt",
     "build_aibom",
+    "build_task_spec",
     "build_workspace_tool_registry",
     "check_graphqlite_runtime",
     "check_llm_configuration",
+    "clarify_task",
     "create_llm_adapter",
     "execute_code_mode",
     "ensure_sqlite_extension_loading",
