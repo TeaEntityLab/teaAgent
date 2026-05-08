@@ -8,7 +8,12 @@ from uuid import uuid4
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
 from teaagent.context import ContextCompactor
-from teaagent.errors import AgentHarnessError, BudgetExceededError, ErrorCategory
+from teaagent.errors import (
+    AgentHarnessError,
+    BudgetExceededError,
+    ErrorCategory,
+    ToolPermissionError,
+)
 from teaagent.policy import ApprovalPolicy
 from teaagent.tools import ToolRegistry
 
@@ -94,11 +99,27 @@ class AgentRunner:
                     raise BudgetExceededError("tool-call budget exceeded")
 
                 tool = self.registry.get(decision.tool_name)
-                self.approval_policy.assert_allowed(
-                    tool_name=decision.tool_name,
-                    call_id=decision.call_id,
-                    destructive=tool.annotations.destructive,
-                )
+                try:
+                    self.approval_policy.assert_allowed(
+                        tool_name=decision.tool_name,
+                        call_id=decision.call_id,
+                        destructive=tool.annotations.destructive,
+                    )
+                except ToolPermissionError as exc:
+                    self.audit.record(
+                        "tool_call_blocked",
+                        current_run_id,
+                        call_id=decision.call_id,
+                        tool_name=decision.tool_name,
+                        arguments=decision.arguments,
+                        reason=str(exc),
+                        annotations={
+                            "read_only": tool.annotations.read_only,
+                            "destructive": tool.annotations.destructive,
+                            "idempotent": tool.annotations.idempotent,
+                        },
+                    )
+                    raise
                 self.audit.record(
                     "tool_call_started",
                     current_run_id,

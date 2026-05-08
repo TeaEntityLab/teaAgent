@@ -73,6 +73,12 @@ class P0HarnessTests(unittest.TestCase):
         result = runner.run(task="destructive action", decide=decide, run_id="run-2")
 
         self.assertEqual(result.status, "failed:permission")
+        blocked = [event for event in audit.events if event.event_type == "tool_call_blocked"]
+        self.assertEqual(len(blocked), 1)
+        self.assertEqual(blocked[0].payload["call_id"], "call-1")
+        self.assertEqual(blocked[0].payload["tool_name"], "pilot_echo")
+        self.assertEqual(blocked[0].payload["annotations"]["destructive"], True)
+        self.assertIn("explicit approval", blocked[0].payload["reason"])
         self.assertEqual(audit.events[-1].payload["category"], "permission")
 
     def test_approved_destructive_tool_can_run(self) -> None:
