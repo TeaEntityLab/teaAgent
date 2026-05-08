@@ -82,7 +82,7 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(result.status, "completed")
             self.assertIn("ambiguity gate", adapter.requests[0].messages[0].content)
 
-    def test_destructive_decision_is_blocked_by_default(self) -> None:
+    def test_destructive_decision_returns_pending_approval_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             adapter = FakeAdapter(
                 [
