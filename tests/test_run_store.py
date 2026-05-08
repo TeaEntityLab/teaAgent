@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from teaagent import FinalAnswer, RunStore
+from teaagent.audit import AUDIT_REDACTED
 from teaagent.cli import main
 from teaagent.runner import RunResult
 
@@ -213,6 +214,7 @@ class RunStoreTests(unittest.TestCase):
             self.assertEqual(pending['call_id'], 'write-1')
             self.assertEqual(pending['tool_name'], 'workspace_write_file')
             self.assertEqual(pending['arguments']['path'], 'x.txt')
+            self.assertEqual(pending['arguments']['content'], AUDIT_REDACTED)
 
     def test_pending_approval_for_run_clears_after_resolution(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

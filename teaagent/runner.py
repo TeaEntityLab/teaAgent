@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, Union
 from uuid import uuid4
 
-from teaagent.audit import AuditLogger
+from teaagent.audit import AuditLogger, redact_tool_arguments
 from teaagent.budget import RunBudget
 from teaagent.context import ContextCompactor
 from teaagent.errors import (
@@ -47,7 +47,7 @@ class ApprovalRequest:
         return {
             'call_id': self.call_id,
             'tool_name': self.tool_name,
-            'arguments': self.arguments,
+            'arguments': redact_tool_arguments(self.arguments),
             'reason': self.reason,
             'annotations': self.annotations,
         }

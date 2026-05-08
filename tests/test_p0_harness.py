@@ -76,6 +76,7 @@ class P0HarnessTests(unittest.TestCase):
 
         self.assertEqual(result.status, 'pending_approval')
         self.assertEqual(result.metadata['approval']['call_id'], 'call-1')
+        self.assertEqual(result.metadata['approval']['arguments']['value'], 'delete')
         pending = [
             event
             for event in audit.events

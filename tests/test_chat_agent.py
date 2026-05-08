@@ -18,6 +18,7 @@ from teaagent import (
     parse_model_decision,
     run_chat_agent,
 )
+from teaagent.audit import AUDIT_REDACTED
 from teaagent.cli import main
 from teaagent.errors import ToolPermissionError
 from teaagent.runner import ToolRequest
@@ -299,6 +300,10 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             self.assertEqual(payload['status'], 'pending_approval')
             self.assertEqual(payload['approval']['call_id'], 'write-1')
+            self.assertEqual(payload['approval']['arguments']['path'], 'x.txt')
+            self.assertEqual(
+                payload['approval']['arguments']['content'], AUDIT_REDACTED
+            )
 
     def test_cli_agent_run_hitl_approval_continues_same_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
