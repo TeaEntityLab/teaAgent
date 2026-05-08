@@ -7,7 +7,8 @@ Accepted for P1 hardening.
 ## Decision
 
 Introduce `OAuthStore` and `OAuthKeyRing` abstractions for the OAuth 2.1 / DPoP
-implementation while preserving the current in-memory default behavior.
+implementation while preserving the current in-memory default behavior. Provide
+`SQLiteOAuthStore` as the first durable implementation for single-host deployments.
 
 ## Rationale
 
@@ -29,16 +30,22 @@ signing keys.
 - mapping of key IDs to HMAC keys
 - lookup by `kid` for future token verification paths
 
+`SQLiteOAuthStore` stores clients, one-time authorization codes, and DPoP nonces
+in a local SQLite database. It uses one transaction per operation, `BEGIN IMMEDIATE`
+for authorization-code consume/delete, WAL journal mode, and SQLite's busy timeout
+for local concurrent access.
+
 ## Consequences
 
 - Existing callers keep using `OAuth21AuthorizationServer(signing_key=..., issuer=...)`.
-- Production deployments can implement a SQL/Redis-backed `OAuthStore` without
-  changing the MCP HTTP handler.
-- Key rotation is not fully automated yet; the key ring is the interface needed
-  before adding multi-key resource-server verification.
+- Single-host deployments can use `SQLiteOAuthStore` without changing MCP HTTP
+  handlers or authorization-server call sites.
+- Production deployments that need cross-host or horizontally scaled OAuth state
+  should still implement a PostgreSQL/Redis-backed `OAuthStore`.
+- Key rotation verification uses `OAuthKeyRing` and JWT `kid` lookup, but key-ring
+  distribution and rotation-window management remain deployment responsibilities.
 
 ## Deferred
 
-- Persistent SQLite/PostgreSQL implementation of `OAuthStore`.
-- Full resource-server multi-key verification by JWT `kid`.
+- PostgreSQL/Redis implementation of `OAuthStore` for cross-host deployments.
 - CLI support for key-ring files and rotation windows.
