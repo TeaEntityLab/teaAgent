@@ -229,7 +229,7 @@ def _verify_dpop_signature(proof_jwt: str, jwk: dict[str, Any]) -> None:
     """Verify the signature of a DPoP proof JWT using the embedded JWK."""
     parts = proof_jwt.split('.')
     if len(parts) != 3:
-        raise JWTError('Invalid DPoP proof format')
+        raise InvalidDPoPError('Invalid DPoP proof format')
     signing_input = f'{parts[0]}.{parts[1]}'.encode('ascii')
     signature_bytes = _b64url_decode(parts[2])
 
@@ -241,7 +241,7 @@ def _verify_dpop_signature(proof_jwt: str, jwk: dict[str, Any]) -> None:
     elif kty == 'RSA' and alg in ('RS256', 'RS384', 'RS512'):
         _verify_dpop_rsa(signing_input, signature_bytes, jwk, alg)
     else:
-        raise JWTError(
+        raise InvalidDPoPError(
             f'Unsupported DPoP key type / algorithm: kty={kty} alg={alg}'
         )
 
@@ -267,7 +267,7 @@ def _verify_dpop_ec(
     # key_size is in bits; each component is ceil(key_size/8) bytes
     byte_len = (key_size + 7) // 8
     if len(signature) != byte_len * 2:
-        raise JWTError(
+        raise InvalidDPoPError(
             f'Invalid DPoP EC signature length: {len(signature)} '
             f'(expected {byte_len * 2})'
         )
@@ -277,7 +277,7 @@ def _verify_dpop_ec(
     try:
         pub_key.verify(der_sig, signing_input, _crypto_ec.ECDSA(_ec_alg_to_hash(alg)))
     except InvalidSignature:
-        raise JWTError('Invalid DPoP proof signature') from None
+        raise InvalidDPoPError('Invalid DPoP proof signature') from None
 
 
 def _verify_dpop_rsa(
@@ -310,7 +310,7 @@ def _verify_dpop_rsa(
             Prehashed(hash_alg),
         )
     except InvalidSignature:
-        raise JWTError('Invalid DPoP proof signature') from None
+        raise InvalidDPoPError('Invalid DPoP proof signature') from None
 
 
 def _encode_dpop_proof_payload(method: str, url: str, nonce: str) -> bool:
