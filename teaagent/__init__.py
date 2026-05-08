@@ -5,7 +5,7 @@ __version__ = "0.1.0"
 from teaagent.aibom import AIBOMManifest, build_aibom
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
-from teaagent.chat_agent import ChatAgentConfig, ModelDecisionEngine, run_chat_agent
+from teaagent.chat_agent import ChatAgentConfig, ModelDecisionEngine, register_subagent_tool, run_chat_agent
 from teaagent.code_mode import CodeModeResult, UnsafeCodeError, execute_code_mode
 from teaagent.context import ContextCompactor
 from teaagent.eval import EvalCase, EvalReport, run_eval
@@ -118,6 +118,7 @@ __all__ = [
     "preflight",
     "review_skill",
     "route_model",
+    "register_subagent_tool",
     "register_workspace_tools",
     "run_chat_agent",
     "run_eval",

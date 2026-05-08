@@ -253,6 +253,23 @@ memory search audit tasks
 memory show <memory_id>
 ```
 
+## Subagent Delegation
+
+Expose a `subagent` tool so the model can delegate one focused sub-task to a fresh agent run that shares the same workspace tools, ApprovalPolicy, RunBudget, and permission mode:
+
+```bash
+teaagent agent run gpt "Plan and execute the cleanup" --subagent --max-subagent-depth 1
+```
+
+Each sub-run is persisted under `.teaagent/runs/*.jsonl` with its own `run_id` so it can be inspected or resumed.
+
+Inside TUI:
+
+```text
+subagent on
+ask Plan and execute the cleanup
+```
+
 ## Preflight
 
 Summarize clarification, routing, matching memories, permission state, and tool count without calling a model:

@@ -32,6 +32,7 @@ HELP_TEXT = """Commands:
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
   progress <on|off>         Stream brief audit-event progress lines during ask runs.
+  subagent <on|off>         Expose the 'subagent' tool so the model can delegate sub-tasks.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
   approve <call_id>         Approve one exact destructive tool call id.
   unapprove <call_id>       Remove one approved call id.
@@ -76,6 +77,7 @@ class TeaAgentTUI:
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
         self.progress = False
+        self.subagent = False
         self.approved_call_ids: set[str] = set()
         self.input_fn = input_fn
         self.output_fn = output_fn
@@ -167,6 +169,13 @@ class TeaAgentTUI:
                 return True
             self.progress = args[0] == "on"
             self.output_fn(f"progress: {'on' if self.progress else 'off'}")
+            return True
+        if action == "subagent":
+            if len(args) != 1 or args[0] not in {"on", "off"}:
+                self.output_fn("error: subagent requires 'on' or 'off'")
+                return True
+            self.subagent = args[0] == "on"
+            self.output_fn(f"subagent: {'on' if self.subagent else 'off'}")
             return True
         if action == "permission":
             if len(args) != 1:
@@ -330,6 +339,7 @@ class TeaAgentTUI:
                 allow_destructive=self.allow_destructive,
                 permission_mode=self.permission_mode,
                 approved_call_ids=frozenset(self.approved_call_ids),
+                enable_subagent=self.subagent,
             ),
             audit=audit,
             task_spec=task_spec,

@@ -98,6 +98,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=PermissionMode.PROMPT.value,
         help="Permission mode for workspace tools.",
     )
+    agent_run.add_argument(
+        "--subagent",
+        action="store_true",
+        help="Expose the 'subagent' tool so the model can delegate sub-tasks.",
+    )
+    agent_run.add_argument(
+        "--max-subagent-depth",
+        type=int,
+        default=1,
+        help="Maximum nested subagent depth.",
+    )
     agent_run.set_defaults(func=agent_run_task)
 
     agent_preflight = agent_subparsers.add_parser(
@@ -143,6 +154,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=PermissionMode.PROMPT.value,
         help="Permission mode for workspace tools.",
     )
+    agent_resume.add_argument("--subagent", action="store_true", help="Expose the 'subagent' tool.")
+    agent_resume.add_argument("--max-subagent-depth", type=int, default=1, help="Maximum nested subagent depth.")
     agent_resume.set_defaults(func=agent_resume_command)
 
     agent_list = agent_subparsers.add_parser("runs", help="List persisted agent runs.")
@@ -297,6 +310,8 @@ def _execute_agent_task(args: argparse.Namespace, task: str, *, resumed_from: Op
             model=selected_model,
             permission_mode=parse_permission_mode(args.permission_mode),
             approved_call_ids=frozenset(args.approve_call_id),
+            enable_subagent=args.subagent,
+            max_subagent_depth=args.max_subagent_depth,
         ),
         audit=audit,
         task_spec=task_spec,

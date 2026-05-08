@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
@@ -10,8 +10,9 @@ from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.prompt import assemble_agent_prompt, load_project_instructions, parse_model_decision
+from teaagent.run_store import RunStore
 from teaagent.runner import AgentRunner, Decision, RunResult
-from teaagent.tools import ToolRegistry
+from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 
@@ -25,6 +26,8 @@ class ChatAgentConfig:
     permission_mode: PermissionMode = PermissionMode.PROMPT
     memory_limit: int = 5
     approved_call_ids: frozenset[str] = frozenset()
+    enable_subagent: bool = False
+    max_subagent_depth: int = 1
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs) -> "ChatAgentConfig":
@@ -73,8 +76,11 @@ def run_chat_agent(
     audit: Optional[AuditLogger] = None,
     registry: Optional[ToolRegistry] = None,
     task_spec: Optional[str] = None,
+    depth: int = 0,
 ) -> RunResult:
     tool_registry = registry or build_workspace_tool_registry(config.root)
+    if config.enable_subagent and depth < config.max_subagent_depth:
+        register_subagent_tool(tool_registry, adapter=adapter, config=config, depth=depth)
     project_instructions = load_project_instructions(config.root)
     memories = memory_entries_to_prompt(MemoryCatalog(config.root).search(task, limit=config.memory_limit))
     engine = ModelDecisionEngine(
@@ -103,3 +109,80 @@ def with_memories(context: dict, memories: list[dict]) -> dict:
     updated = dict(context)
     updated["memories"] = memories
     return updated
+
+
+def register_subagent_tool(
+    registry: ToolRegistry,
+    *,
+    adapter: LLMAdapter,
+    config: ChatAgentConfig,
+    depth: int,
+) -> None:
+    def execute(args: dict[str, Any]) -> dict[str, Any]:
+        if depth >= config.max_subagent_depth:
+            return _subagent_error(f"subagent depth {config.max_subagent_depth} reached")
+        task = args.get("task")
+        if not isinstance(task, str) or not task.strip():
+            return _subagent_error("subagent requires non-empty 'task'")
+        sub_config = replace(
+            config,
+            max_iterations=int(args.get("max_iterations", 5)),
+            max_tool_calls=int(args.get("max_tool_calls", 5)),
+        )
+        store = RunStore(config.root)
+        sub_audit = store.audit_logger()
+        sub_result = run_chat_agent(
+            task=task,
+            adapter=adapter,
+            config=sub_config,
+            audit=sub_audit,
+            depth=depth + 1,
+        )
+        store.logger_for_result(sub_result, sub_audit)
+        return {
+            "run_id": sub_result.run_id,
+            "status": sub_result.status,
+            "iterations": sub_result.iterations,
+            "tool_calls": sub_result.tool_calls,
+            "final_answer": sub_result.final_answer.content if sub_result.final_answer else "",
+            "message": "",
+        }
+
+    registry.register(
+        name="subagent",
+        description="Delegate one focused sub-task to a fresh agent run sharing tools and policy.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "task": {"type": "string"},
+                "max_iterations": {"type": "integer"},
+                "max_tool_calls": {"type": "integer"},
+            },
+            "required": ["task"],
+        },
+        output_schema={
+            "type": "object",
+            "properties": {
+                "run_id": {"type": "string"},
+                "status": {"type": "string"},
+                "iterations": {"type": "integer"},
+                "tool_calls": {"type": "integer"},
+                "final_answer": {"type": "string"},
+                "message": {"type": "string"},
+            },
+            "required": ["status"],
+        },
+        annotations=ToolAnnotations(read_only=False, destructive=False, idempotent=False),
+        handler=execute,
+    )
+
+
+def _subagent_error(message: str) -> dict[str, Any]:
+    return {
+        "run_id": "",
+        "status": "error",
+        "iterations": 0,
+        "tool_calls": 0,
+        "final_answer": "",
+        "message": message,
+    }
