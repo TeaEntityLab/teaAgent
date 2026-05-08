@@ -88,6 +88,14 @@ from teaagent.stateless_mcp import (
     StatelessMCPResponse,
     handle_stateless_tool_request,
 )
+from teaagent.telemetry import (
+    HAS_OTEL,
+    OTelAuditSink,
+    TelemetryConfig,
+    TelemetryNotAvailable,
+    TracingHTTPTransport,
+    configure_telemetry,
+)
 from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.trace import TraceRecorder
 from teaagent.ultrawork import UltraworkStore, WorkerRecord
@@ -151,6 +159,12 @@ __all__ = [
     'UnsafeCodeError',
     'WorkerRecord',
     'WorkspaceToolConfig',
+    'HAS_OTEL',
+    'OTelAuditSink',
+    'TelemetryConfig',
+    'TelemetryNotAvailable',
+    'TracingHTTPTransport',
+    'configure_telemetry',
     'agentic_retrieve',
     'assess_managed_agent_readiness',
     'assess_provider_portability',

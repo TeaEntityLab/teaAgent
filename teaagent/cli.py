@@ -168,6 +168,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help='Emit a heartbeat audit event every N seconds while running. 0 disables.',
     )
+    agent_run.add_argument(
+        '--telemetry-otlp-endpoint',
+        default=None,
+        metavar='URL',
+        help='Export OpenTelemetry traces to this OTLP HTTP endpoint (e.g. http://localhost:4318/v1/traces).',
+    )
+    agent_run.add_argument(
+        '--telemetry-service-name',
+        default='teaagent',
+        help='OTel service.name resource attribute. Default: teaagent.',
+    )
+    agent_run.add_argument(
+        '--telemetry-console',
+        action='store_true',
+        help='Also print OpenTelemetry spans to stderr (debug).',
+    )
     agent_run.set_defaults(func=agent_run_task)
 
     agent_preflight = agent_subparsers.add_parser(
@@ -638,6 +654,33 @@ def _execute_agent_task(
     adapter = create_llm_adapter(args.provider, model=selected_model)
     store = RunStore(args.root)
     audit = store.audit_logger()
+
+    # --- OpenTelemetry wiring ---
+    _telemetry_sink = None
+    if getattr(args, 'telemetry_otlp_endpoint', None) or getattr(args, 'telemetry_console', False):
+        try:
+            from teaagent.telemetry import (
+                TelemetryConfig,
+                TracingHTTPTransport,
+                configure_telemetry,
+            )
+
+            cfg = TelemetryConfig(
+                service_name=getattr(args, 'telemetry_service_name', 'teaagent'),
+                otlp_endpoint=getattr(args, 'telemetry_otlp_endpoint', None),
+                console=getattr(args, 'telemetry_console', False),
+            )
+            _telemetry_sink, tracer = configure_telemetry(cfg)
+            audit.add_sink(_telemetry_sink.handle_event)
+            adapter = create_llm_adapter(
+                args.provider,
+                model=selected_model,
+                transport=TracingHTTPTransport(adapter.transport, tracer),  # type: ignore[attr-defined]
+            )
+        except Exception as exc:
+            print(f'Telemetry setup failed: {exc}', file=sys.stderr)
+    # --- end telemetry wiring ---
+
     approval_handler = cli_approval_handler if args.hitl_approval else None
     result = run_chat_agent(
         task=task,
@@ -660,6 +703,11 @@ def _execute_agent_task(
         initial_observations=initial_observations,
     )
     store.logger_for_result(result, audit)
+    # Shut down OTel to flush any pending spans.
+    if _telemetry_sink is not None:
+        from contextlib import suppress
+        with suppress(Exception):
+            _telemetry_sink.force_flush()
     payload = run_result_payload(result, routing=routing.to_dict() if routing else None)
     if resumed_from:
         payload['resumed_from'] = resumed_from
