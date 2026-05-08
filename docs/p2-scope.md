@@ -5,6 +5,7 @@
 - In-memory Graph RAG primitives for entity/relation traversal and document retrieval.
 - Restricted Code Mode for deterministic local data manipulation with AST allow-list validation.
 - Stateless MCP request/response envelopes that carry capabilities and shared state per request.
+- Streamable HTTP transport for the MCP server with `Mcp-Session-Id` sessions, optional bearer-token auth, and Origin allowlist (POST/GET/DELETE on `/mcp`).
 - Managed-agent readiness checks for tool metadata, audit, budget, external state, and HITL gaps.
 - Provider portability checks for tool calling, structured output, system prompt support, prompt caching, and context limits.
 
@@ -12,7 +13,7 @@
 
 - Production GraphQLite deployment, migrations, and Cypher query tuning.
 - Production sandboxing for Code Mode using containers, V8 isolates, or a managed execution service.
-- Live MCP Streamable HTTP transport and OAuth 2.1 / DPoP enforcement.
+- OAuth 2.1 / DPoP enforcement on top of the Streamable HTTP transport.
 - Actual managed runtime integration with Anthropic, OpenAI, Google ADK, or Vertex Agent Engine.
 - Cross-provider live conformance tests.
 

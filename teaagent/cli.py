@@ -20,6 +20,8 @@ from teaagent.llm import (
     check_llm_configuration,
     create_llm_adapter,
 )
+from teaagent.mcp_http import DEFAULT_PORT as MCP_HTTP_DEFAULT_PORT
+from teaagent.mcp_http import serve_mcp_http
 from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
@@ -300,8 +302,38 @@ def build_parser() -> argparse.ArgumentParser:
 
     mcp = subparsers.add_parser("mcp", help="Run a local MCP-compatible server.")
     mcp_subparsers = mcp.add_subparsers(dest="mcp_command", required=True)
-    mcp_serve = mcp_subparsers.add_parser("serve", help="Serve workspace tools over stdio JSON-RPC.")
+    mcp_serve = mcp_subparsers.add_parser(
+        "serve",
+        help="Serve workspace tools over stdio JSON-RPC or Streamable HTTP.",
+    )
     mcp_serve.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    mcp_serve.add_argument(
+        "--http",
+        action="store_true",
+        help="Serve over Streamable HTTP transport instead of stdio JSON-RPC.",
+    )
+    mcp_serve.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="HTTP bind host. Defaults to 127.0.0.1 (loopback only).",
+    )
+    mcp_serve.add_argument(
+        "--port",
+        type=int,
+        default=MCP_HTTP_DEFAULT_PORT,
+        help=f"HTTP port. Defaults to {MCP_HTTP_DEFAULT_PORT}.",
+    )
+    mcp_serve.add_argument(
+        "--auth-token",
+        default=None,
+        help="Require this bearer token on every HTTP request.",
+    )
+    mcp_serve.add_argument(
+        "--allowed-origin",
+        action="append",
+        default=[],
+        help="Permit this Origin header. Can be repeated. Default: allow all origins.",
+    )
     mcp_serve.set_defaults(func=mcp_serve_command)
 
     workspace = subparsers.add_parser("workspace", help="Inspect workspace tool pack.")
@@ -569,7 +601,16 @@ def ultrawork_stop_command(args: argparse.Namespace) -> int:
 
 
 def mcp_serve_command(args: argparse.Namespace) -> int:
-    return serve_mcp_stdio(build_workspace_tool_registry(args.root))
+    registry = build_workspace_tool_registry(args.root)
+    if args.http:
+        return serve_mcp_http(
+            registry,
+            host=args.host,
+            port=args.port,
+            auth_token=args.auth_token,
+            allowed_origins=args.allowed_origin or None,
+        )
+    return serve_mcp_stdio(registry)
 
 
 def workspace_tools_metadata(args: argparse.Namespace) -> int:

@@ -41,6 +41,7 @@ from teaagent.llm import (
     check_llm_configuration,
     create_llm_adapter,
 )
+from teaagent.mcp_http import build_mcp_http_server, serve_mcp_http
 from teaagent.mcp_server import handle_mcp_request, serve_mcp_stdio
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, classify_task, route_model
@@ -137,6 +138,7 @@ __all__ = [
     "available_providers",
     "assemble_agent_prompt",
     "build_aibom",
+    "build_mcp_http_server",
     "build_task_spec",
     "build_workspace_tool_registry",
     "check_graphqlite_runtime",
@@ -156,6 +158,7 @@ __all__ = [
     "route_model",
     "register_subagent_tool",
     "register_workspace_tools",
+    "serve_mcp_http",
     "serve_mcp_stdio",
     "run_chat_agent",
     "run_eval",

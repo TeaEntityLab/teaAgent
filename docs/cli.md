@@ -303,6 +303,22 @@ Serve the workspace tool pack to other MCP clients over stdio JSON-RPC:
 teaagent mcp serve --root /path/to/repo
 ```
 
+Or over Streamable HTTP transport on loopback:
+
+```bash
+teaagent mcp serve --http --root /path/to/repo --port 7330
+```
+
+Streamable HTTP details:
+
+- POST `/mcp`: send one JSON-RPC request or a batch. Server responds with `application/json`.
+- GET `/mcp`: open a `text/event-stream` keep-alive (no server-initiated notifications yet).
+- DELETE `/mcp`: terminate the session.
+- `initialize` returns a fresh `Mcp-Session-Id` response header. Every later request must echo it.
+- Default bind is `127.0.0.1` only. Use `--host 0.0.0.0` deliberately and pair it with auth.
+- `--auth-token TOKEN` requires `Authorization: Bearer TOKEN` on every request.
+- `--allowed-origin URL` may be repeated to whitelist browser Origin headers. Default: allow all.
+
 Supported methods: `initialize`, `tools/list`, `tools/call`. Each tool is exposed with its `inputSchema` and read-only / destructive / idempotent annotations. Tool errors are returned as `result.isError = true` rather than JSON-RPC errors so the client can recover.
 
 ## Subagent Delegation
