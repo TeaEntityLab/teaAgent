@@ -100,6 +100,20 @@ class WorkspaceToolTests(unittest.TestCase):
             self.assertIn(tmp, shell["stdout"])
             self.assertIsInstance(status["exit_code"], int)
 
+    def test_shell_inspect_uses_quoted_arguments_without_shell_expansion(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "literal $HOME.txt"
+            path.write_text("ok", encoding="utf-8")
+            registry = build_workspace_tool_registry(tmp)
+
+            result = registry.execute(
+                "workspace_run_shell_inspect",
+                {"command": "cat 'literal $HOME.txt'", "timeout_seconds": 5},
+            )
+
+            self.assertEqual(result["exit_code"], 0)
+            self.assertEqual(result["stdout"], "ok")
+
     def test_shell_inspect_rejects_mutating_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             registry = build_workspace_tool_registry(tmp)
@@ -116,6 +130,13 @@ class WorkspaceToolTests(unittest.TestCase):
 
             with self.assertRaises(ToolExecutionError):
                 registry.execute("workspace_run_shell_inspect", {"command": "cat ../outside.txt"})
+
+    def test_shell_inspect_rejects_unbalanced_quotes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(ToolExecutionError):
+                registry.execute("workspace_run_shell_inspect", {"command": "cat 'unterminated"})
 
     def test_cli_workspace_tools_outputs_metadata(self) -> None:
         output = io.StringIO()

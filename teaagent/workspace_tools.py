@@ -299,11 +299,28 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
     }
 
 
+def run_shell_argv(config: WorkspaceToolConfig, argv: list[str], *, timeout_seconds: int) -> dict[str, Any]:
+    result = subprocess.run(
+        argv,
+        cwd=str(config.root),
+        shell=False,
+        text=True,
+        capture_output=True,
+        timeout=timeout_seconds,
+    )
+    return {
+        "stdout": truncate_output(result.stdout, config.max_shell_output_bytes),
+        "stderr": truncate_output(result.stderr, config.max_shell_output_bytes),
+        "exit_code": result.returncode,
+    }
+
+
 def run_shell_inspect(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     policy = classify_shell_command_policy(args["command"])
     if policy != "inspect":
         raise ValueError("command is not inspect-safe; retry with workspace_run_shell_mutate")
-    return run_shell(config, args)
+    timeout = args.get("timeout_seconds", config.command_timeout_seconds)
+    return run_shell_argv(config, shlex.split(args["command"]), timeout_seconds=timeout)
 
 
 def classify_shell_command_policy(command: str) -> str:
