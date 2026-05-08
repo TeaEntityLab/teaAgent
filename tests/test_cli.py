@@ -98,6 +98,46 @@ class CLITests(unittest.TestCase):
         self.assertEqual(context.exception.code, 0)
         self.assertIn("teaagent", output.getvalue())
 
+    def test_graphqlite_query_executes_cypher(self) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            exit_code = main(["graphqlite", "query", "MATCH (n:SmokeTest) RETURN n.name"])
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertIsInstance(payload, list)
+
+    def test_ultrawork_show_unknown_via_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["ultrawork", "show", "unknown-id", "--root", tmp])
+
+            self.assertEqual(exit_code, 1)
+            payload = json.loads(output.getvalue())
+            self.assertEqual(payload["status"], "error")
+
+    def test_ultrawork_stop_unknown_via_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["ultrawork", "stop", "unknown-id", "--root", tmp])
+
+            self.assertEqual(exit_code, 1)
+            payload = json.loads(output.getvalue())
+            self.assertEqual(payload["status"], "error")
+
+    def test_agent_status_unknown_run_id_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["agent", "status", "no-such-run", "--root", tmp])
+
+            self.assertEqual(exit_code, 1)
+            payload = json.loads(output.getvalue())
+            self.assertEqual(payload["status"], "error")
+
 
 if __name__ == "__main__":
     unittest.main()

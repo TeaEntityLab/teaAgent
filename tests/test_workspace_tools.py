@@ -116,6 +116,48 @@ class WorkspaceToolTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn("workspace_read_file", {tool["name"] for tool in payload})
 
+    def test_apply_patch_rejects_missing_old_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "file.txt").write_text("content", encoding="utf-8")
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(Exception):
+                registry.execute(
+                    "workspace_apply_patch",
+                    {"path": "file.txt", "old": "nonexistent", "new": "x"},
+                )
+
+    def test_edit_at_hash_rejects_line_out_of_range(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "file.txt").write_text("line1\n", encoding="utf-8")
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(Exception):
+                registry.execute(
+                    "workspace_edit_at_hash",
+                    {"path": "file.txt", "line": 99, "hash": "abc", "old": "line1", "new": "x"},
+                )
+
+    def test_list_files_truncates_when_limit_exceeded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for i in range(5):
+                (Path(tmp) / f"file_{i}.txt").write_text("x", encoding="utf-8")
+            registry = build_workspace_tool_registry(tmp)
+
+            result = registry.execute("workspace_list_files", {"pattern": "*.txt", "limit": 2})
+            self.assertEqual(len(result["files"]), 2)
+            self.assertTrue(result["truncated"])
+
+    def test_search_text_truncates_when_limit_exceeded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for i in range(5):
+                (Path(tmp) / f"f_{i}.txt").write_text("searchable\n" * 3, encoding="utf-8")
+            registry = build_workspace_tool_registry(tmp)
+
+            result = registry.execute("workspace_search_text", {"pattern": "searchable", "limit": 5})
+            self.assertEqual(len(result["matches"]), 5)
+            self.assertTrue(result["truncated"])
+
 
 if __name__ == "__main__":
     unittest.main()

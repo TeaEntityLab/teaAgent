@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from teaagent import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
 from teaagent.cli import main
+from teaagent.llm import LLMConfigurationError
 
 
 class FakeTransport:
@@ -98,6 +99,32 @@ class LLMAdapterTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertIn("claude", json.loads(output.getvalue()))
+
+    def test_unknown_provider_raises_configuration_error(self) -> None:
+        with self.assertRaises(LLMConfigurationError) as ctx:
+            create_llm_adapter("nonexistent-provider")
+
+        self.assertIn("unknown provider", str(ctx.exception))
+        self.assertIn("Available:", str(ctx.exception))
+
+    def test_gemini_adapter_sends_system_instruction(self) -> None:
+        transport = FakeTransport({"candidates": [{"content": {"parts": [{"text": "ok"}]}}]})
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "key"}, clear=True):
+            adapter = create_llm_adapter("gemini", transport=transport, model="gemini-test")
+            response = adapter.complete(LLMRequest(system="You are helpful", messages=[LLMMessage("user", "hi")]))
+
+        self.assertEqual(response.content, "ok")
+        call = transport.calls[0]
+        self.assertIn("systemInstruction", call["payload"])
+        self.assertEqual(call["payload"]["systemInstruction"]["parts"][0]["text"], "You are helpful")
+
+    def test_openrouter_with_referrer_header(self) -> None:
+        transport = FakeTransport({"choices": [{"message": {"content": "ok"}}]})
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key", "OPENROUTER_HTTP_REFERER": "https://myapp.com"}, clear=True):
+            adapter = create_llm_adapter("openrouter", transport=transport)
+            adapter.complete(LLMRequest(messages=[LLMMessage("user", "hi")]))
+
+        self.assertEqual(transport.calls[0]["headers"]["HTTP-Referer"], "https://myapp.com")
 
 
 if __name__ == "__main__":
