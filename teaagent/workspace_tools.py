@@ -182,7 +182,7 @@ def object_schema(properties: dict[str, Union[str, dict[str, Any]]], *, required
 
 def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args["path"])
-    max_bytes = args.get("max_bytes", config.max_read_bytes)
+    max_bytes = non_negative_int_arg(args, "max_bytes", default=config.max_read_bytes)
     data = path.read_bytes()
     truncated = len(data) > max_bytes
     return {
@@ -241,7 +241,7 @@ def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str,
 
 def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     pattern = args["pattern"]
-    limit = args.get("limit", 200)
+    limit = positive_int_arg(args, "limit", default=200)
     files = []
     for path in sorted(config.root.rglob("*")):
         if path.is_file() and ".git" not in path.parts and fnmatch(relative_path(config, path), pattern):
@@ -254,7 +254,7 @@ def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
 def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     regex = re.compile(args["pattern"])
     include = args.get("include", "*")
-    limit = args.get("limit", 200)
+    limit = positive_int_arg(args, "limit", default=200)
     matches = []
     for path in sorted(config.root.rglob("*")):
         if not path.is_file() or ".git" in path.parts or not fnmatch(relative_path(config, path), include):
@@ -283,7 +283,7 @@ def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:
 
 
 def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    timeout = args.get("timeout_seconds", config.command_timeout_seconds)
+    timeout = positive_int_arg(args, "timeout_seconds", default=config.command_timeout_seconds)
     result = subprocess.run(
         args["command"],
         cwd=str(config.root),
@@ -319,8 +319,22 @@ def run_shell_inspect(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict
     policy = classify_shell_command_policy(args["command"])
     if policy != "inspect":
         raise ValueError("command is not inspect-safe; retry with workspace_run_shell_mutate")
-    timeout = args.get("timeout_seconds", config.command_timeout_seconds)
+    timeout = positive_int_arg(args, "timeout_seconds", default=config.command_timeout_seconds)
     return run_shell_argv(config, shlex.split(args["command"]), timeout_seconds=timeout)
+
+
+def positive_int_arg(args: dict[str, Any], name: str, *, default: int) -> int:
+    value = args.get(name, default)
+    if value < 1:
+        raise ValueError(f"{name} must be >= 1")
+    return value
+
+
+def non_negative_int_arg(args: dict[str, Any], name: str, *, default: int) -> int:
+    value = args.get(name, default)
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0")
+    return value
 
 
 def classify_shell_command_policy(command: str) -> str:

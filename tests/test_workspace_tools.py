@@ -89,6 +89,15 @@ class WorkspaceToolTests(unittest.TestCase):
             with self.assertRaises(ToolExecutionError):
                 registry.execute("workspace_read_file", {"path": "../outside.txt"})
 
+    def test_read_file_rejects_negative_max_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "file.txt").write_text("content", encoding="utf-8")
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute("workspace_read_file", {"path": "file.txt", "max_bytes": -1})
+            self.assertIn("max_bytes", str(ctx.exception))
+
     def test_shell_and_git_status_tools(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             registry = build_workspace_tool_registry(tmp)
@@ -138,6 +147,14 @@ class WorkspaceToolTests(unittest.TestCase):
             with self.assertRaises(ToolExecutionError):
                 registry.execute("workspace_run_shell_inspect", {"command": "cat 'unterminated"})
 
+    def test_shell_inspect_rejects_non_positive_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute("workspace_run_shell_inspect", {"command": "pwd", "timeout_seconds": 0})
+            self.assertIn("timeout_seconds", str(ctx.exception))
+
     def test_cli_workspace_tools_outputs_metadata(self) -> None:
         output = io.StringIO()
 
@@ -180,6 +197,14 @@ class WorkspaceToolTests(unittest.TestCase):
             self.assertEqual(len(result["files"]), 2)
             self.assertTrue(result["truncated"])
 
+    def test_list_files_rejects_non_positive_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute("workspace_list_files", {"pattern": "*.txt", "limit": 0})
+            self.assertIn("limit", str(ctx.exception))
+
     def test_search_text_truncates_when_limit_exceeded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             for i in range(5):
@@ -189,6 +214,14 @@ class WorkspaceToolTests(unittest.TestCase):
             result = registry.execute("workspace_search_text", {"pattern": "searchable", "limit": 5})
             self.assertEqual(len(result["matches"]), 5)
             self.assertTrue(result["truncated"])
+
+    def test_search_text_rejects_non_positive_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute("workspace_search_text", {"pattern": "x", "limit": 0})
+            self.assertIn("limit", str(ctx.exception))
 
 
 if __name__ == "__main__":
