@@ -7,7 +7,14 @@ import unittest
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
-from teaagent.audit import AuditEvent, AuditLogger, utc_now
+from teaagent.audit import (
+    AUDIT_REDACTED,
+    AUDIT_TRUNCATED,
+    MAX_AUDIT_STRING_LENGTH,
+    AuditEvent,
+    AuditLogger,
+    utc_now,
+)
 
 
 class AuditEventTests(unittest.TestCase):
@@ -102,6 +109,27 @@ class AuditLoggerTests(unittest.TestCase):
             self.assertEqual(e1["payload"], {"a": 1})
             self.assertEqual(e2["event_type"], "e2")
             self.assertEqual(e2["payload"], {"b": 2})
+
+    def test_record_redacts_sensitive_payload_keys(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record(
+            "tool_call_started",
+            "run-1",
+            arguments={"api_key": "sk-secret", "nested": {"Authorization": "Bearer secret"}, "path": "file.txt"},
+        )
+
+        self.assertEqual(event.payload["arguments"]["api_key"], AUDIT_REDACTED)
+        self.assertEqual(event.payload["arguments"]["nested"]["Authorization"], AUDIT_REDACTED)
+        self.assertEqual(event.payload["arguments"]["path"], "file.txt")
+
+    def test_record_truncates_large_strings(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record("tool_call_completed", "run-1", stdout="x" * (MAX_AUDIT_STRING_LENGTH + 1))
+
+        self.assertEqual(len(event.payload["stdout"]), MAX_AUDIT_STRING_LENGTH + len(AUDIT_TRUNCATED))
+        self.assertTrue(event.payload["stdout"].endswith(AUDIT_TRUNCATED))
 
     def test_path_parent_dirs_are_created(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

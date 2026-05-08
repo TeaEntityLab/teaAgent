@@ -9,6 +9,11 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+AUDIT_REDACTED = "[redacted]"
+AUDIT_TRUNCATED = "[truncated]"
+MAX_AUDIT_STRING_LENGTH = 20_000
+SENSITIVE_KEY_PARTS = ("api_key", "authorization", "credential", "password", "secret", "token")
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -50,7 +55,7 @@ class AuditLogger:
         self._sinks.append(sink)
 
     def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
-        event = AuditEvent(event_type=event_type, run_id=run_id, payload=payload)
+        event = AuditEvent(event_type=event_type, run_id=run_id, payload=redact_audit_payload(payload))
         with self._lock:
             self.events.append(event)
             if self.path is not None:
@@ -60,3 +65,26 @@ class AuditLogger:
         for sink in sinks:
             sink(event)
         return event
+
+
+def redact_audit_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: redact_audit_value(key, value) for key, value in payload.items()}
+
+
+def redact_audit_value(key: str, value: Any) -> Any:
+    if is_sensitive_key(key):
+        return AUDIT_REDACTED
+    if isinstance(value, dict):
+        return {str(child_key): redact_audit_value(str(child_key), child_value) for child_key, child_value in value.items()}
+    if isinstance(value, list):
+        return [redact_audit_value("", item) for item in value]
+    if isinstance(value, tuple):
+        return [redact_audit_value("", item) for item in value]
+    if isinstance(value, str) and len(value) > MAX_AUDIT_STRING_LENGTH:
+        return value[:MAX_AUDIT_STRING_LENGTH] + AUDIT_TRUNCATED
+    return value
+
+
+def is_sensitive_key(key: str) -> bool:
+    normalized = key.lower().replace("-", "_")
+    return any(part in normalized for part in SENSITIVE_KEY_PARTS)
