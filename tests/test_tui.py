@@ -250,6 +250,37 @@ class TUITests(unittest.TestCase):
             self.assertEqual(resume_payload["final_answer"], "second")
             self.assertIn(f"resume: {run_id}", output)
 
+    def test_tui_resume_replays_observations_for_non_destructive_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "note.txt").write_text("hello", encoding="utf-8")
+            output = []
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"read-1"}',
+                    '{"type":"final","content":"first-done"}',
+                    '{"type":"final","content":"second-done"}',
+                ]
+            )
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: "exit",
+                output_fn=output.append,
+                adapter_factory=lambda _provider, _model: adapter,
+            )
+
+            self.assertTrue(tui.handle_command("ask read note"))
+            first_payload = json.loads(output[-1])
+            run_id = first_payload["run_id"]
+
+            self.assertTrue(tui.handle_command(f"resume {run_id}"))
+            resume_payload = json.loads(output[-1])
+
+            self.assertEqual(resume_payload["status"], "completed")
+            self.assertEqual(resume_payload["final_answer"], "second-done")
+            self.assertEqual(resume_payload["replayed_observations"], 1)
+            self.assertIn(f"resume: {run_id}", output)
+
     def test_tui_preflight_command_uses_current_settings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = []

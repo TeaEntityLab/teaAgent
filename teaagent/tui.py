@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import shlex
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
@@ -294,13 +294,22 @@ class TeaAgentTUI:
             if len(args) != 1:
                 self.output_fn("error: resume requires a run id")
                 return True
+            store = RunStore(self.root)
             try:
-                original_task = RunStore(self.root).task_for_run(args[0])
+                original_task = store.task_for_run(args[0])
+                observations = store.observations_for_run(args[0])
+                pending = store.pending_approval_for_run(args[0])
             except (FileNotFoundError, ValueError) as exc:
                 self.output_fn(f"error: {exc}")
                 return True
+            if pending:
+                self.approved_call_ids.add(pending["call_id"])
+                self.output_fn(f"auto-approved pending call: {pending['call_id']}")
             self.output_fn(f"resume: {args[0]}")
-            self._run_agent_task(original_task)
+            self._run_agent_task(
+                original_task,
+                initial_observations=observations if observations else None,
+            )
             return True
         if action == "use":
             if len(args) != 1:
@@ -355,7 +364,7 @@ class TeaAgentTUI:
             return
         self.output_fn(f"error: unknown memory command '{action}'")
 
-    def _run_agent_task(self, task: str, *, clarify_first: bool = False) -> None:
+    def _run_agent_task(self, task: str, *, clarify_first: bool = False, initial_observations: Optional[list[dict[str, Any]]] = None) -> None:
         task_spec = None
         if clarify_first:
             clarification = clarify_task(task)
@@ -388,9 +397,13 @@ class TeaAgentTUI:
             ),
             audit=audit,
             task_spec=task_spec,
+            initial_observations=initial_observations,
         )
         store.logger_for_result(result, audit)
-        self._print_json(self._run_result_payload(result, routing=routing.to_dict() if routing else None))
+        payload = self._run_result_payload(result, routing=routing.to_dict() if routing else None)
+        if initial_observations:
+            payload["replayed_observations"] = len(initial_observations)
+        self._print_json(payload)
 
     def _approval_handler(self, request: ApprovalRequest) -> bool:
         self._print_json({"status": "approval_required", "approval": request.to_dict()})
