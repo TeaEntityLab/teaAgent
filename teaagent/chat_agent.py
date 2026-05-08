@@ -46,7 +46,7 @@ class ChatAgentConfig:
     approval_handler: Optional[ApprovalHandler] = None
 
     @classmethod
-    def from_root(cls, root: str | Path, **kwargs) -> 'ChatAgentConfig':
+    def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
         return cls(root=Path(root).resolve(), **kwargs)
 
 

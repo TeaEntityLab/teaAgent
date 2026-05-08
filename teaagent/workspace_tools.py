@@ -7,7 +7,7 @@ import zlib
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Callable, Union
 
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
@@ -25,6 +25,61 @@ class WorkspaceToolConfig:
     @classmethod
     def from_root(cls, root: str | Path) -> 'WorkspaceToolConfig':
         return cls(root=Path(root).resolve())
+
+
+_GITIGNORE_BASENAMES = frozenset({'.gitignore', '.agignore'})
+
+
+def _load_gitignore_matcher(root: Path) -> Callable[[str], bool]:
+    patterns: list[tuple[str, bool]] = []
+    for name in _GITIGNORE_BASENAMES:
+        ignore_file = root / name
+        if not ignore_file.is_file():
+            continue
+        try:
+            lines = ignore_file.read_text(encoding='utf-8').splitlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for raw in lines:
+            line = raw.strip()
+            if not line or line.startswith('#'):
+                continue
+            negate = line.startswith('!')
+            pattern = line[1:].strip() if negate else line
+            if not pattern:
+                continue
+            dir_only = pattern.endswith('/')
+            if dir_only:
+                pattern = pattern[:-1]
+            if pattern.startswith('/'):
+                pattern = pattern[1:]
+            patterns.append((pattern, negate))
+    if not patterns:
+        return _always_allow_matcher
+    return _build_gitignore_matcher(patterns)
+
+
+def _always_allow_matcher(_rel: str) -> bool:
+    return False
+
+
+def _build_gitignore_matcher(
+    patterns: list[tuple[str, bool]],
+) -> Callable[[str], bool]:
+    def matcher(rel_path: str) -> bool:
+        ignored = False
+        for pattern, negate in patterns:
+            if _gitignore_match(rel_path, pattern):
+                ignored = not negate
+        return ignored
+
+    return matcher
+
+
+def _gitignore_match(rel_path: str, pattern: str) -> bool:
+    if '/' not in pattern and '**' not in pattern:
+        return fnmatch(Path(rel_path).name, pattern)
+    return fnmatch(rel_path, pattern)
 
 
 def build_workspace_tool_registry(root: str | Path = '.') -> ToolRegistry:
@@ -116,12 +171,14 @@ def register_workspace_tools(
         name='workspace_list_files',
         description='List files matching a glob pattern inside the workspace root.',
         input_schema=object_schema(
-            {'pattern': 'string', 'limit': 'integer'}, required=['pattern']
+            {'pattern': 'string', 'limit': 'integer', 'offset': 'integer'},
+            required=['pattern'],
         ),
         output_schema=object_schema(
             {
                 'files': {'type': 'array', 'items': {'type': 'string'}},
                 'truncated': 'boolean',
+                'offset': 'integer',
             },
             required=['files', 'truncated'],
         ),
@@ -132,13 +189,14 @@ def register_workspace_tools(
         name='workspace_search_text',
         description='Search text files with a regular expression inside the workspace root.',
         input_schema=object_schema(
-            {'pattern': 'string', 'include': 'string', 'limit': 'integer'},
+            {'pattern': 'string', 'include': 'string', 'limit': 'integer', 'offset': 'integer'},
             required=['pattern'],
         ),
         output_schema=object_schema(
             {
                 'matches': {'type': 'array', 'items': {'type': 'object'}},
                 'truncated': 'boolean',
+                'offset': 'integer',
             },
             required=['matches', 'truncated'],
         ),
@@ -291,30 +349,42 @@ def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str,
 def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     pattern = args['pattern']
     limit = positive_int_arg(args, 'limit', default=200)
+    offset = non_negative_int_arg(args, 'offset', default=0)
+    skipped = 0
+    is_ignored = _load_gitignore_matcher(config.root)
     files = []
     for path in sorted(config.root.rglob('*')):
-        if (
-            path.is_file()
-            and '.git' not in path.parts
-            and fnmatch(relative_path(config, path), pattern)
-        ):
-            files.append(relative_path(config, path))
-            if len(files) >= limit:
-                return {'files': files, 'truncated': True}
-    return {'files': files, 'truncated': False}
+        if not path.is_file():
+            continue
+        rel = relative_path(config, path)
+        if '.git' in path.parts or is_ignored(rel):
+            continue
+        if not fnmatch(rel, pattern):
+            continue
+        if skipped < offset:
+            skipped += 1
+            continue
+        files.append(rel)
+        if len(files) >= limit:
+            return {'files': files, 'truncated': True, 'offset': offset + skipped + len(files)}
+    return {'files': files, 'truncated': False, 'offset': offset + skipped + len(files)}
 
 
 def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     regex = re.compile(args['pattern'])
     include = args.get('include', '*')
     limit = positive_int_arg(args, 'limit', default=200)
+    offset = non_negative_int_arg(args, 'offset', default=0)
+    skipped = 0
+    is_ignored = _load_gitignore_matcher(config.root)
     matches = []
     for path in sorted(config.root.rglob('*')):
-        if (
-            not path.is_file()
-            or '.git' in path.parts
-            or not fnmatch(relative_path(config, path), include)
-        ):
+        if not path.is_file():
+            continue
+        rel = relative_path(config, path)
+        if '.git' in path.parts or is_ignored(rel):
+            continue
+        if not fnmatch(rel, include):
             continue
         try:
             lines = path.read_text(encoding='utf-8').splitlines()
@@ -322,16 +392,19 @@ def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
             continue
         for line_number, line in enumerate(lines, start=1):
             if regex.search(line):
+                if skipped < offset:
+                    skipped += 1
+                    continue
                 matches.append(
                     {
-                        'path': relative_path(config, path),
+                        'path': rel,
                         'line': line_number,
                         'text': line,
                     }
                 )
                 if len(matches) >= limit:
-                    return {'matches': matches, 'truncated': True}
-    return {'matches': matches, 'truncated': False}
+                    return {'matches': matches, 'truncated': True, 'offset': offset + skipped + len(matches)}
+    return {'matches': matches, 'truncated': False, 'offset': offset + skipped + len(matches)}
 
 
 def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from typing import Optional
 
 from teaagent.audit import AuditLogger
 
 
 class Heartbeat:
-    """Periodic 'heartbeat' audit events for long-running runs."""
 
     def __init__(
         self,
@@ -16,7 +16,7 @@ class Heartbeat:
         run_id: str,
         *,
         interval_seconds: float,
-        sleep=time.sleep,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if interval_seconds <= 0:
             raise ValueError('interval_seconds must be positive')
@@ -32,7 +32,7 @@ class Heartbeat:
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         self.stop()
 
     def tick(self) -> None:

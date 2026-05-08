@@ -43,12 +43,31 @@ pythonpath = ["."]
 python_version = "3.9"
 ignore_missing_imports = true
 exclude = ["tests/"]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 check_untyped_defs = true
 warn_unused_ignores = false
 warn_redundant_casts = true
 no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = [
+    "teaagent.cli._agent_parsers",
+    "teaagent.cli._memory_parsers",
+    "teaagent.cli._mcp_parsers",
+    "teaagent.cli._misc_parsers",
+    "teaagent.cli._model_parsers",
+    "teaagent.code_mode",
+    "teaagent.llm",
+    "teaagent.llm_conformance",
+    "teaagent.mcp_http",
+    "teaagent.oauth21.*",
+    "teaagent.telemetry",
+    "teaagent.tui",
+    "teaagent.workspace_tools",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 
 [tool.ruff]
 extend-exclude = [".git", ".teaagent", "__pycache__", ".pytest_cache", ".venv", "build", "dist"]

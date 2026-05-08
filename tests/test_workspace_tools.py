@@ -391,6 +391,99 @@ class WorkspaceToolTests(unittest.TestCase):
             self.assertIn('limit', str(ctx.exception))
 
 
+class GitignoreAndPaginationTests(unittest.TestCase):
+    def test_list_files_respects_gitignore(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'src').mkdir()
+            (root / 'src' / 'keep.py').write_text('', encoding='utf-8')
+            (root / 'src' / 'ignore.js').write_text('', encoding='utf-8')
+            (root / 'src' / 'ignore.min.js').write_text('', encoding='utf-8')
+            (root / '.gitignore').write_text('*.js\n', encoding='utf-8')
+            registry = build_workspace_tool_registry(root)
+
+            result = registry.execute('workspace_list_files', {'pattern': 'src/*'})
+            files = result['files']
+
+            self.assertIn('src/keep.py', files)
+            self.assertNotIn('src/ignore.js', files)
+            self.assertNotIn('src/ignore.min.js', files)
+
+    def test_search_text_respects_gitignore(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'src').mkdir()
+            (root / 'src' / 'keep.py').write_text('hello', encoding='utf-8')
+            (root / 'src' / 'ignore.log').write_text('hello', encoding='utf-8')
+            (root / '.gitignore').write_text('*.log\n', encoding='utf-8')
+            registry = build_workspace_tool_registry(root)
+
+            result = registry.execute(
+                'workspace_search_text', {'pattern': 'hello', 'include': 'src/*'}
+            )
+            paths = {m['path'] for m in result['matches']}
+
+            self.assertIn('src/keep.py', paths)
+            self.assertNotIn('src/ignore.log', paths)
+
+    def test_list_files_offset_pagination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for i in range(5):
+                (root / f'file_{i}.txt').write_text('', encoding='utf-8')
+            registry = build_workspace_tool_registry(root)
+
+            page1 = registry.execute(
+                'workspace_list_files', {'pattern': '*.txt', 'limit': 2, 'offset': 0}
+            )
+            page2 = registry.execute(
+                'workspace_list_files', {'pattern': '*.txt', 'limit': 2, 'offset': 2}
+            )
+            page3 = registry.execute(
+                'workspace_list_files', {'pattern': '*.txt', 'limit': 2, 'offset': 4}
+            )
+
+            self.assertEqual(len(page1['files']), 2)
+            self.assertEqual(len(page2['files']), 2)
+            self.assertEqual(len(page3['files']), 1)
+            self.assertTrue(page1['truncated'])
+            self.assertTrue(page2['truncated'])
+            self.assertFalse(page3['truncated'])
+
+    def test_search_text_offset_pagination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            content = 'match\n' * 5
+            (root / 'data.txt').write_text(content, encoding='utf-8')
+            registry = build_workspace_tool_registry(root)
+
+            page1 = registry.execute(
+                'workspace_search_text', {'pattern': 'match', 'limit': 2, 'offset': 0}
+            )
+            page2 = registry.execute(
+                'workspace_search_text', {'pattern': 'match', 'limit': 2, 'offset': 2}
+            )
+
+            self.assertEqual(len(page1['matches']), 2)
+            self.assertEqual(len(page2['matches']), 2)
+            self.assertTrue(page1['truncated'])
+            self.assertTrue(page2['truncated'])
+
+    def test_agignore_also_respected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'keep.py').write_text('', encoding='utf-8')
+            (root / 'skip.secret').write_text('', encoding='utf-8')
+            (root / '.agignore').write_text('*.secret\n', encoding='utf-8')
+            registry = build_workspace_tool_registry(root)
+
+            result = registry.execute('workspace_list_files', {'pattern': '*'})
+            files = result['files']
+
+            self.assertIn('keep.py', files)
+            self.assertNotIn('skip.secret', files)
+
+
 class ShellClassifierPropertyTests(unittest.TestCase):
     INSPECT_COMMANDS = [
         'pwd',
