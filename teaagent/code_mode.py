@@ -73,6 +73,7 @@ class CodeModeSandbox:
     timeout_seconds: float = 2.0
     cpu_seconds: int = 2
     memory_bytes: int = 64 * 1024 * 1024
+    max_output_bytes: int = 1 * 1024 * 1024
 
 
 class CodeModeBackend(Protocol):
@@ -123,6 +124,17 @@ class ContainerCodeModeBackend:
     runtime: str = 'docker'
     python_executable: str = 'python3'
     network: str = 'none'
+    cpus: float = 1.0
+    user: str = '65534:65534'
+    tmpfs_size_mb: int = 16
+
+    def __post_init__(self) -> None:
+        if not self.image:
+            raise UnsafeCodeError('Code Mode container image must be configured')
+        if self.cpus <= 0:
+            raise UnsafeCodeError('Code Mode container cpus must be positive')
+        if self.tmpfs_size_mb <= 0:
+            raise UnsafeCodeError('Code Mode container tmpfs size must be positive')
 
     def execute(
         self,
@@ -130,27 +142,33 @@ class ContainerCodeModeBackend:
         inputs: dict[str, Any],
         sandbox: CodeModeSandbox,
     ) -> CodeModeResult:
-        if not self.image:
-            raise UnsafeCodeError('Code Mode container image must be configured')
         payload = json.dumps({'code': code, 'inputs': inputs})
         try:
-            completed = subprocess.run(
+            process = subprocess.Popen(
                 self._build_command(sandbox),
-                input=payload,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                capture_output=True,
-                timeout=sandbox.timeout_seconds,
-                check=False,
             )
-        except subprocess.TimeoutExpired as exc:
-            raise UnsafeCodeError('Code Mode timed out') from exc
         except OSError as exc:
             raise UnsafeCodeError(f'Code Mode container runtime failed: {exc}') from exc
-        if completed.returncode != 0:
-            detail = completed.stderr.strip() or completed.stdout.strip()
+        try:
+            stdout, stderr = process.communicate(
+                payload, timeout=sandbox.timeout_seconds
+            )
+        except subprocess.TimeoutExpired as exc:
+            process.kill()
+            with suppress(Exception):
+                process.communicate()
+            raise UnsafeCodeError('Code Mode timed out') from exc
+        if len(stdout) > sandbox.max_output_bytes:
+            raise UnsafeCodeError('Code Mode container exceeded output limit')
+        if process.returncode != 0:
+            detail = (stderr or stdout).strip()
             raise UnsafeCodeError(f'Code Mode container failed: {detail}')
         try:
-            message = json.loads(completed.stdout)
+            message = json.loads(stdout)
         except json.JSONDecodeError as exc:
             raise UnsafeCodeError('Code Mode container returned invalid JSON') from exc
         if message.get('status') == 'error':
@@ -167,10 +185,19 @@ class ContainerCodeModeBackend:
             '--rm',
             '--network',
             self.network,
+            '--read-only',
+            '--cap-drop=ALL',
+            '--security-opt=no-new-privileges',
+            f'--user={self.user}',
+            f'--tmpfs=/tmp:rw,size={self.tmpfs_size_mb}m',
             '--memory',
             f'{memory_mb}m',
+            '--memory-swap',
+            f'{memory_mb}m',
             '--cpus',
-            str(max(1, sandbox.cpu_seconds)),
+            f'{self.cpus}',
+            '--ulimit',
+            f'cpu={sandbox.cpu_seconds}:{sandbox.cpu_seconds}',
             '--pids-limit',
             '64',
             '-i',

@@ -177,11 +177,17 @@ commands: `teaagent audit list`, `teaagent audit show`, and `teaagent audit prun
 
 ## Concurrent Access
 
-`RunStore`, `UltraworkStore`, and `MemoryCatalog` use plain JSONL file append
-without file locking. Concurrent agent runs on the same workspace root may produce
-interleaved log lines. For production multi-worker scenarios:
-- Use separate workspace roots per worker
-- Or replace the JSONL backend with a transactional store (SQLite, PostgreSQL)
+`AuditLogger` and `MemoryCatalog` write JSONL through `teaagent.storage.append_jsonl_line()`,
+which acquires an `fcntl.LOCK_EX` advisory lock and `fsync()`s after every append. On
+platforms without `fcntl` (Windows), the lock is a best-effort no-op but the append
+and `fsync` still run. `RunStore` final-state writes and `UltraworkStore` worker
+records use `teaagent.storage.atomic_write_text()` (lock + temp file + `os.replace`).
+
+Remaining concurrency limitations:
+- The lock is per-file advisory; non-cooperating writers can still corrupt the file.
+- Cross-host concurrency (NFS, SMB) is not supported — the `fcntl` lock is local.
+- For multi-worker production, use separate workspace roots per worker or replace the
+  JSONL backend with a transactional store (SQLite, PostgreSQL).
 
 ## Reporting a Vulnerability
 

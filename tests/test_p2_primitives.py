@@ -129,12 +129,26 @@ class P2PrimitiveTests(unittest.TestCase):
     def test_container_code_mode_backend_builds_isolated_command(self) -> None:
         backend = ContainerCodeModeBackend(image='python:3.12-alpine', runtime='podman')
 
-        command = backend._build_command(CodeModeSandbox(memory_bytes=32 * 1024 * 1024))
+        command = backend._build_command(
+            CodeModeSandbox(memory_bytes=32 * 1024 * 1024, cpu_seconds=3)
+        )
 
         self.assertEqual(command[:5], ['podman', 'run', '--rm', '--network', 'none'])
+        self.assertIn('--read-only', command)
+        self.assertIn('--cap-drop=ALL', command)
+        self.assertIn('--security-opt=no-new-privileges', command)
+        self.assertIn('--user=65534:65534', command)
+        self.assertIn('--tmpfs=/tmp:rw,size=16m', command)
         self.assertIn('--memory', command)
         self.assertIn('32m', command)
+        self.assertIn('--memory-swap', command)
+        self.assertIn('--ulimit', command)
+        self.assertIn('cpu=3:3', command)
         self.assertIn('--pids-limit', command)
+
+    def test_container_code_mode_backend_rejects_empty_image(self) -> None:
+        with self.assertRaises(UnsafeCodeError):
+            ContainerCodeModeBackend(image='')
 
     def test_stateless_mcp_request_executes_via_registry(self) -> None:
         request = StatelessMCPRequest.create(
