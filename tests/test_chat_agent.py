@@ -92,7 +92,26 @@ class ChatAgentTests(unittest.TestCase):
 
             result = run_chat_agent(task="write", adapter=adapter, config=ChatAgentConfig.from_root(tmp))
 
-            self.assertEqual(result.status, "failed:permission")
+            self.assertEqual(result.status, "pending_approval")
+            self.assertEqual(result.metadata["approval"]["call_id"], "write-1")
+
+    def test_destructive_decision_can_be_approved_by_hitl_handler(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+
+            result = run_chat_agent(
+                task="write",
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp, approval_handler=lambda _request: True),
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
 
     def test_destructive_decision_can_be_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -208,6 +227,45 @@ class ChatAgentTests(unittest.TestCase):
 
             with patch("teaagent.cli.create_llm_adapter", return_value=adapter), redirect_stdout(output):
                 exit_code = main(["agent", "run", "gpt", "write", "--root", tmp, "--approve-call-id", "write-1"])
+
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
+
+    def test_cli_agent_run_returns_pending_approval_for_unapproved_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}'
+                ]
+            )
+
+            with patch("teaagent.cli.create_llm_adapter", return_value=adapter), redirect_stdout(output):
+                exit_code = main(["agent", "run", "gpt", "write", "--root", tmp])
+
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(payload["status"], "pending_approval")
+            self.assertEqual(payload["approval"]["call_id"], "write-1")
+
+    def test_cli_agent_run_hitl_approval_continues_same_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+
+            with (
+                patch("teaagent.cli.create_llm_adapter", return_value=adapter),
+                patch("builtins.input", return_value="yes"),
+                redirect_stdout(output),
+            ):
+                exit_code = main(["agent", "run", "gpt", "write", "--root", tmp, "--hitl-approval"])
 
             payload = json.loads(output.getvalue())
             self.assertEqual(exit_code, 0)

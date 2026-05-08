@@ -70,7 +70,7 @@ export OPENCODEZEN_API_KEY=...
 |------|----------|
 | `read-only` | Blocks all destructive tools |
 | `workspace-write` | Allows file writes; blocks shell mutation |
-| `prompt` | Destructive tools require approval token |
+| `prompt` | Destructive tools pause for HITL approval or require an approval token |
 | `allow` | Allows destructive tools for the session |
 | `danger-full-access` | Full access; reserve for trusted automation |
 

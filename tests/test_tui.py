@@ -143,6 +143,53 @@ class TUITests(unittest.TestCase):
             self.assertEqual(payload["status"], "completed")
             self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
 
+    def test_tui_hitl_approval_prompt_allows_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            replies = iter(["yes"])
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: next(replies),
+                output_fn=output.append,
+                adapter_factory=lambda _provider, _model: adapter,
+            )
+
+            self.assertTrue(tui.handle_command("ask write file"))
+
+            self.assertEqual(json.loads(output[1])["status"], "approval_required")
+            self.assertIn("approval: approved write-1", output)
+            payload = json.loads(output[-1])
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
+
+    def test_tui_hitl_approval_denial_blocks_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            replies = iter(["no"])
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}'
+                ]
+            )
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: next(replies),
+                output_fn=output.append,
+                adapter_factory=lambda _provider, _model: adapter,
+            )
+
+            self.assertTrue(tui.handle_command("ask write file"))
+
+            payload = json.loads(output[-1])
+            self.assertEqual(payload["status"], "failed:permission")
+            self.assertFalse((Path(tmp) / "x.txt").exists())
+
     def test_tui_clarify_command(self) -> None:
         output = []
         tui = TeaAgentTUI(input_fn=lambda _prompt: "exit", output_fn=output.append)

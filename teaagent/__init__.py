@@ -55,7 +55,13 @@ from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_dec
 from teaagent.rag import Document, InMemoryRetriever, agentic_retrieve
 from teaagent.readiness import ReadinessReport, assess_managed_agent_readiness
 from teaagent.run_store import RunStore, RunSummary
-from teaagent.runner import AgentRunner, Decision, FinalAnswer, ToolRequest
+from teaagent.runner import (
+    AgentRunner,
+    ApprovalRequest,
+    Decision,
+    FinalAnswer,
+    ToolRequest,
+)
 from teaagent.skill_review import SkillReviewResult, review_skill
 from teaagent.stateless_mcp import (
     StatelessMCPRequest,
@@ -75,6 +81,7 @@ __all__ = [
     "AIBOMManifest",
     "AgentRunner",
     "ApprovalPolicy",
+    "ApprovalRequest",
     "AuditLogger",
     "ChatAgentConfig",
     "ClarificationResult",

@@ -83,6 +83,8 @@ class RunStore:
                 last_heartbeat = event
             elif event_type in {"run_completed", "run_failed"}:
                 terminal_status = "completed" if event_type == "run_completed" else f"failed:{event.get('payload', {}).get('category', 'unknown')}"
+            elif event_type == "run_paused":
+                terminal_status = event.get("payload", {}).get("status", "paused")
         return {
             "run_id": run_id,
             "status": terminal_status or "running",
@@ -118,6 +120,8 @@ class RunStore:
                 final_answer = payload.get("answer")
             elif event_type == "run_failed":
                 status = f"failed:{payload.get('category', 'unknown')}"
+            elif event_type == "run_paused":
+                status = payload.get("status", "paused")
         return RunSummary(
             run_id=run_id,
             task=task,

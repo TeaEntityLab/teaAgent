@@ -19,6 +19,7 @@ from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
+from teaagent.runner import ApprovalRequest, RunResult
 
 InputFn = Callable[[str], str]
 OutputFn = Callable[..., None]
@@ -383,21 +384,35 @@ class TeaAgentTUI:
                 heartbeat_seconds=self.heartbeat_seconds,
                 stream=self.stream,
                 on_chunk=self._stream_chunk if self.stream else None,
+                approval_handler=self._approval_handler,
             ),
             audit=audit,
             task_spec=task_spec,
         )
         store.logger_for_result(result, audit)
-        self._print_json(
-            {
-                "run_id": result.run_id,
-                "status": result.status,
-                "iterations": result.iterations,
-                "tool_calls": result.tool_calls,
-                "routing": routing.to_dict() if routing else None,
-                "final_answer": result.final_answer.content if result.final_answer else None,
-            }
-        )
+        self._print_json(self._run_result_payload(result, routing=routing.to_dict() if routing else None))
+
+    def _approval_handler(self, request: ApprovalRequest) -> bool:
+        self._print_json({"status": "approval_required", "approval": request.to_dict()})
+        answer = self.input_fn(f"approve {request.call_id} ({request.tool_name})? [y/N] ")
+        approved = answer.strip().lower() in {"y", "yes"}
+        self.output_fn(f"approval: {'approved' if approved else 'denied'} {request.call_id}")
+        if approved:
+            self.approved_call_ids.add(request.call_id)
+        return approved
+
+    def _run_result_payload(self, result: RunResult, *, routing: Optional[dict]) -> dict:
+        payload = {
+            "run_id": result.run_id,
+            "status": result.status,
+            "iterations": result.iterations,
+            "tool_calls": result.tool_calls,
+            "routing": routing,
+            "final_answer": result.final_answer.content if result.final_answer else None,
+        }
+        if "approval" in result.metadata:
+            payload["approval"] = result.metadata["approval"]
+        return payload
 
     def _progress_sink(self, event) -> None:
         payload = event.payload or {}

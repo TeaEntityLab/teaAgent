@@ -14,7 +14,7 @@ from teaagent.errors import (
     ErrorCategory,
     ToolPermissionError,
 )
-from teaagent.policy import ApprovalPolicy
+from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.tools import ToolRegistry
 
 
@@ -36,12 +36,34 @@ DecisionFn = Callable[[dict[str, Any]], Decision]
 
 
 @dataclass(frozen=True)
+class ApprovalRequest:
+    call_id: str
+    tool_name: str
+    arguments: dict[str, Any]
+    reason: str
+    annotations: dict[str, bool]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "call_id": self.call_id,
+            "tool_name": self.tool_name,
+            "arguments": self.arguments,
+            "reason": self.reason,
+            "annotations": self.annotations,
+        }
+
+
+ApprovalHandler = Callable[[ApprovalRequest], bool]
+
+
+@dataclass(frozen=True)
 class RunResult:
     run_id: str
     final_answer: Optional[FinalAnswer]
     iterations: int
     tool_calls: int
     status: str
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class AgentRunner:
@@ -52,6 +74,7 @@ class AgentRunner:
         audit: AuditLogger,
         budget: Optional[RunBudget] = None,
         approval_policy: Optional[ApprovalPolicy] = None,
+        approval_handler: Optional[ApprovalHandler] = None,
         compactor: Optional[ContextCompactor] = None,
         compact_after_observations: int = 20,
     ) -> None:
@@ -60,6 +83,7 @@ class AgentRunner:
         self.budget = budget or RunBudget()
         self.budget.validate()
         self.approval_policy = approval_policy or ApprovalPolicy()
+        self.approval_handler = approval_handler
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
 
@@ -103,6 +127,11 @@ class AgentRunner:
                     raise BudgetExceededError("tool-call budget exceeded")
 
                 tool = self.registry.get(decision.tool_name)
+                annotations = {
+                    "read_only": tool.annotations.read_only,
+                    "destructive": tool.annotations.destructive,
+                    "idempotent": tool.annotations.idempotent,
+                }
                 try:
                     self.approval_policy.assert_allowed(
                         tool_name=decision.tool_name,
@@ -110,31 +139,64 @@ class AgentRunner:
                         destructive=tool.annotations.destructive,
                     )
                 except ToolPermissionError as exc:
-                    self.audit.record(
-                        "tool_call_blocked",
-                        current_run_id,
+                    approval_request = ApprovalRequest(
                         call_id=decision.call_id,
                         tool_name=decision.tool_name,
                         arguments=decision.arguments,
                         reason=str(exc),
-                        annotations={
-                            "read_only": tool.annotations.read_only,
-                            "destructive": tool.annotations.destructive,
-                            "idempotent": tool.annotations.idempotent,
-                        },
+                        annotations=annotations,
                     )
-                    raise
+                    if self._can_request_approval(tool.annotations.destructive):
+                        self.audit.record(
+                            "tool_call_pending_approval",
+                            current_run_id,
+                            **approval_request.to_dict(),
+                        )
+                        if self.approval_handler is None:
+                            self.audit.record(
+                                "run_paused",
+                                current_run_id,
+                                status="pending_approval",
+                                approval=approval_request.to_dict(),
+                                cost_cents=cost_cents,
+                            )
+                            return RunResult(
+                                run_id=current_run_id,
+                                final_answer=None,
+                                iterations=iterations,
+                                tool_calls=tool_calls,
+                                status="pending_approval",
+                                metadata={"approval": approval_request.to_dict()},
+                            )
+                        if self.approval_handler(approval_request):
+                            self.audit.record(
+                                "tool_call_approved",
+                                current_run_id,
+                                call_id=decision.call_id,
+                                tool_name=decision.tool_name,
+                            )
+                        else:
+                            self.audit.record(
+                                "tool_call_denied",
+                                current_run_id,
+                                call_id=decision.call_id,
+                                tool_name=decision.tool_name,
+                            )
+                            raise
+                    else:
+                        self.audit.record(
+                            "tool_call_blocked",
+                            current_run_id,
+                            **approval_request.to_dict(),
+                        )
+                        raise
                 self.audit.record(
                     "tool_call_started",
                     current_run_id,
                     call_id=decision.call_id,
                     tool_name=decision.tool_name,
                     arguments=decision.arguments,
-                    annotations={
-                        "read_only": tool.annotations.read_only,
-                        "destructive": tool.annotations.destructive,
-                        "idempotent": tool.annotations.idempotent,
-                    },
+                    annotations=annotations,
                 )
                 result = self.registry.execute(decision.tool_name, decision.arguments)
                 tool_calls += 1
@@ -196,3 +258,6 @@ class AgentRunner:
             tool_calls=tool_calls,
             status=f"failed:{ErrorCategory.MODEL_LOGIC}",
         )
+
+    def _can_request_approval(self, destructive: bool) -> bool:
+        return destructive and self.approval_policy.permission_mode == PermissionMode.PROMPT

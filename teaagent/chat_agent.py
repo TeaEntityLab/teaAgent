@@ -19,7 +19,7 @@ from teaagent.prompt import (
     parse_model_decision,
 )
 from teaagent.run_store import RunStore
-from teaagent.runner import AgentRunner, Decision, RunResult
+from teaagent.runner import AgentRunner, ApprovalHandler, Decision, RunResult
 from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.workspace_tools import build_workspace_tool_registry
 
@@ -39,6 +39,7 @@ class ChatAgentConfig:
     heartbeat_seconds: float = 0.0
     stream: bool = False
     on_chunk: Optional[Callable[[str], None]] = None
+    approval_handler: Optional[ApprovalHandler] = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs) -> "ChatAgentConfig":
@@ -121,6 +122,7 @@ def run_chat_agent(
             allow_all_destructive=config.allow_destructive,
             permission_mode=config.permission_mode,
         ),
+        approval_handler=config.approval_handler,
         compactor=ContextCompactor(memory_keys=("task_spec", "memories")),
     )
     run_id = uuid4().hex

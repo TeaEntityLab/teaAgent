@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from typing import Any, Optional
 
 from teaagent import __version__
@@ -25,6 +26,7 @@ from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
+from teaagent.runner import ApprovalRequest, RunResult
 from teaagent.tui import run_tui
 from teaagent.ultrawork import UltraworkStore
 from teaagent.workspace_tools import build_workspace_tool_registry
@@ -105,6 +107,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Approve one exact destructive tool call id. Can be repeated.",
     )
     agent_run.add_argument(
+        "--hitl-approval",
+        action="store_true",
+        help="Prompt before executing unapproved destructive tool calls in prompt permission mode.",
+    )
+    agent_run.add_argument(
         "--permission-mode",
         choices=[mode.value for mode in PermissionMode],
         default=PermissionMode.PROMPT.value,
@@ -166,6 +173,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Approve one exact destructive tool call id. Can be repeated.",
     )
+    agent_resume.add_argument("--hitl-approval", action="store_true", help="Prompt before unapproved destructive tool calls.")
     agent_resume.add_argument(
         "--permission-mode",
         choices=[mode.value for mode in PermissionMode],
@@ -364,6 +372,7 @@ def _execute_agent_task(args: argparse.Namespace, task: str, *, resumed_from: Op
     adapter = create_llm_adapter(args.provider, model=selected_model)
     store = RunStore(args.root)
     audit = store.audit_logger()
+    approval_handler = cli_approval_handler if args.hitl_approval else None
     result = run_chat_agent(
         task=task,
         adapter=adapter,
@@ -378,24 +387,42 @@ def _execute_agent_task(args: argparse.Namespace, task: str, *, resumed_from: Op
             enable_subagent=args.subagent,
             max_subagent_depth=args.max_subagent_depth,
             heartbeat_seconds=args.heartbeat,
+            approval_handler=approval_handler,
         ),
         audit=audit,
         task_spec=task_spec,
     )
     store.logger_for_result(result, audit)
-    payload: dict[str, Any] = {
-        "run_id": result.run_id,
-        "status": result.status,
-        "iterations": result.iterations,
-        "tool_calls": result.tool_calls,
-        "routing": routing.to_dict() if routing else None,
-        "final_answer": result.final_answer.content if result.final_answer else None,
-    }
+    payload = run_result_payload(result, routing=routing.to_dict() if routing else None)
     if resumed_from:
         payload["resumed_from"] = resumed_from
         payload["task"] = task
     print_json(payload)
     return 0 if result.status == "completed" else 1
+
+
+def run_result_payload(result: RunResult, *, routing: Optional[dict[str, Any]]) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "run_id": result.run_id,
+        "status": result.status,
+        "iterations": result.iterations,
+        "tool_calls": result.tool_calls,
+        "routing": routing,
+        "final_answer": result.final_answer.content if result.final_answer else None,
+    }
+    if "approval" in result.metadata:
+        payload["approval"] = result.metadata["approval"]
+    return payload
+
+
+def cli_approval_handler(request: ApprovalRequest) -> bool:
+    print(
+        json.dumps({"status": "approval_required", "approval": request.to_dict()}, sort_keys=True),
+        file=sys.stderr,
+    )
+    print(f"Approve destructive tool call {request.call_id} ({request.tool_name})? [y/N] ", end="", file=sys.stderr)
+    answer = input()
+    return answer.strip().lower() in {"y", "yes"}
 
 
 def agent_preflight_command(args: argparse.Namespace) -> int:

@@ -384,6 +384,14 @@ teaagent agent run gpt "Create a TODO.md summary" --approve-call-id write-todo-1
 
 The model decision must use the approved `call_id` for that exact destructive tool call. Other destructive calls remain blocked.
 
+For interactive HITL approval during a CLI run, use:
+
+```bash
+teaagent agent run gpt "Create a TODO.md summary" --hitl-approval
+```
+
+Without `--hitl-approval`, an unapproved destructive tool in `prompt` mode returns `pending_approval` with the required `call_id`. Re-run with `--approve-call-id <call_id>` or use `agent resume` with the same approval token.
+
 Prefer explicit permission modes for regular use:
 
 ```bash
@@ -397,7 +405,7 @@ Permission modes:
 
 - `read-only`: blocks every destructive tool.
 - `workspace-write`: allows file write/patch/hash-edit tools, blocks shell mutation.
-- `prompt`: destructive tools require an approval token.
+- `prompt`: destructive tools pause for HITL approval or require an approval token.
 - `allow`: allows destructive tools for the session.
 - `danger-full-access`: allows destructive tools; reserve for trusted automation.
 
@@ -431,6 +439,7 @@ teaagent agent resume gpt <run_id> --root /path/to/repo --approve-call-id write-
 Inside TUI:
 
 ```text
+ask write TODO.md       # prompts y/N when a destructive call is proposed
 approve write-todo-1
 approvals
 unapprove write-todo-1

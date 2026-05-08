@@ -99,6 +99,20 @@ class RunStoreTests(unittest.TestCase):
 
             self.assertEqual(store.list_runs(), [])
 
+    def test_run_paused_summarizes_as_pending_approval(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger()
+            audit.record("run_started", "run-paused", task="write")
+            audit.record("run_paused", "run-paused", status="pending_approval", approval={"call_id": "write-1"})
+            store.logger_for_result(
+                RunResult(run_id="run-paused", final_answer=None, iterations=1, tool_calls=0, status="pending_approval"),
+                audit,
+            )
+
+            self.assertEqual(store.list_runs()[0].status, "pending_approval")
+            self.assertEqual(store.heartbeat_for_run("run-paused")["status"], "pending_approval")
+
 
 if __name__ == "__main__":
     unittest.main()
