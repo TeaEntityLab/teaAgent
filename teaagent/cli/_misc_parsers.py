@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import Callable
+from typing import Callable, Optional
 
 from teaagent.llm import available_providers
 from teaagent.policy import PermissionMode
@@ -13,7 +13,13 @@ def register(
 ) -> None:
     _clarify(subparsers, handlers['clarify'])
     _tui(subparsers, handlers['tui'])
-    _doctor(subparsers, handlers['doctor_graphqlite'], handlers['doctor_model'])
+    _doctor(
+        subparsers,
+        handlers['doctor_graphqlite'],
+        handlers['doctor_model'],
+        handlers['doctor_all'],
+    )
+    _completion(subparsers, handlers['completion'])
     _graphqlite(subparsers, handlers['graphqlite_query'], handlers['graphqlite_smoke'])
     _ultrawork(
         subparsers,
@@ -66,6 +72,7 @@ def _doctor(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
     graphqlite_handler: Callable,
     model_handler: Callable,
+    all_handler: Optional[Callable] = None,
 ) -> None:
     doctor = subparsers.add_parser('doctor', help='Run environment checks.')
     subs = doctor.add_subparsers(dest='doctor_command', required=True)
@@ -79,6 +86,25 @@ def _doctor(
     mdl = subs.add_parser('model', help='Check model provider configuration.')
     mdl.add_argument('provider', choices=available_providers(), help='Model provider to check.')
     mdl.set_defaults(func=model_handler)
+
+    all_checks = subs.add_parser('all', help='Run all environment checks.')
+    all_checks.add_argument(
+        '--database', default=':memory:', help='SQLite database path. Defaults to :memory:.'
+    )
+    all_checks.add_argument(
+        '--provider',
+        action='append',
+        choices=available_providers(),
+        default=None,
+        help='Provider to check. Can be repeated. Defaults to all providers.',
+    )
+    all_checks.set_defaults(func=all_handler or graphqlite_handler)
+
+
+def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+    p = subparsers.add_parser('completion', help='Print a shell completion snippet.')
+    p.add_argument('shell', choices=['bash', 'zsh', 'fish'], help='Shell to generate for.')
+    p.set_defaults(func=handler)
 
 
 def _graphqlite(

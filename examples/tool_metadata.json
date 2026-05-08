@@ -1,0 +1,5 @@
+{
+  "description": "Example output shape from `teaagent workspace tools`.",
+  "command": "teaagent workspace tools",
+  "expected_fields": ["name", "description", "inputSchema", "outputSchema", "annotations"]
+}

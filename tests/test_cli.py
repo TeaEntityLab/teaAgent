@@ -168,6 +168,47 @@ class CLITests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(serve_mcp_http.call_args.kwargs['auth_token'], 'token')
 
+    def test_completion_outputs_shell_snippet(self) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            exit_code = main(['completion', 'bash'])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn('complete -W', output.getvalue())
+
+    def test_doctor_all_outputs_aggregate_report(self) -> None:
+        output = io.StringIO()
+
+        with (
+            patch('teaagent.cli.check_graphqlite_runtime', return_value=(True, 'ok')),
+            patch('teaagent.cli.check_llm_configuration', return_value=(True, 'ok')),
+            redirect_stdout(output),
+        ):
+            exit_code = main(['doctor', 'all', '--provider', 'gpt'])
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['checks']['providers'][0]['provider'], 'gpt')
+
+    def test_config_defaults_apply_to_optional_flags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = os.path.join(tmp, 'config.json')
+            with open(config, 'w', encoding='utf-8') as handle:
+                json.dump({'model': 'configured-model'}, handle)
+            adapter = FakeAdapter(['hello'])
+            output = io.StringIO()
+
+            with (
+                patch('teaagent.cli.create_llm_adapter', return_value=adapter) as create,
+                redirect_stdout(output),
+            ):
+                exit_code = main(['--config', config, 'model', 'smoke', 'gpt'])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(create.call_args.kwargs['model'], 'configured-model')
+
 
 if __name__ == '__main__':
     unittest.main()

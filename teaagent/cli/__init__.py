@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Any, Optional
 
 from teaagent import __version__
@@ -21,7 +22,6 @@ from teaagent.llm import (
     create_llm_adapter,
 )
 from teaagent.llm_conformance import run_model_conformance
-from teaagent.mcp_http import DEFAULT_PORT as MCP_HTTP_DEFAULT_PORT
 from teaagent.mcp_http import is_loopback_host, serve_mcp_http
 from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.memory import MemoryCatalog
@@ -38,13 +38,14 @@ from teaagent.workspace_tools import build_workspace_tool_registry
 def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    apply_config_defaults(args)
     return args.func(args)
 
 
 def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._agent_parsers import register as register_agent
-    from teaagent.cli._memory_parsers import register as register_memory
     from teaagent.cli._mcp_parsers import register as register_mcp
+    from teaagent.cli._memory_parsers import register as register_memory
     from teaagent.cli._misc_parsers import register as register_misc
     from teaagent.cli._model_parsers import register as register_model
 
@@ -52,6 +53,11 @@ def build_parser() -> argparse.ArgumentParser:
         prog='teaagent', description='TeaAgent harness utilities.'
     )
     parser.add_argument('--version', action='version', version=f'teaagent {__version__}')
+    parser.add_argument(
+        '--config',
+        default=None,
+        help='JSON config file with defaults such as root, model, provider, permission_mode.',
+    )
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     register_misc(subparsers, {
@@ -59,6 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
         'tui': start_tui,
         'doctor_graphqlite': doctor_graphqlite,
         'doctor_model': doctor_model,
+        'doctor_all': doctor_all,
         'graphqlite_query': graphqlite_query,
         'graphqlite_smoke': graphqlite_smoke,
         'ultrawork_start': ultrawork_start_command,
@@ -66,6 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
         'ultrawork_show': ultrawork_show_command,
         'ultrawork_stop': ultrawork_stop_command,
         'workspace_tools': workspace_tools_metadata,
+        'completion': completion_command,
     })
     register_memory(subparsers, {
         'add': memory_add_command,
@@ -94,6 +102,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def apply_config_defaults(args: argparse.Namespace) -> None:
+    config_path = getattr(args, 'config', None)
+    if not config_path:
+        return
+    data = json.loads(Path(config_path).read_text(encoding='utf-8'))
+    if not isinstance(data, dict):
+        raise SystemExit('--config must contain a JSON object')
+    defaults = {
+        'root': '.',
+        'model': None,
+        'provider': 'gpt',
+        'permission_mode': PermissionMode.PROMPT.value,
+    }
+    for key, value in data.items():
+        if not hasattr(args, key):
+            continue
+        if getattr(args, key) == defaults.get(key):
+            setattr(args, key, value)
+
+
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
@@ -101,6 +129,20 @@ def build_parser() -> argparse.ArgumentParser:
 def doctor_graphqlite(args: argparse.Namespace) -> int:
     ok, message = check_graphqlite_runtime(args.database)
     print(json.dumps({'ok': ok, 'message': message}, sort_keys=True))
+    return 0 if ok else 1
+
+
+def doctor_all(args: argparse.Namespace) -> int:
+    checks: dict[str, Any] = {}
+    gql_ok, gql_message = check_graphqlite_runtime(args.database)
+    checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
+    provider_results = []
+    for provider in args.provider or available_providers():
+        ok, message = check_llm_configuration(provider)
+        provider_results.append({'provider': provider, 'ok': ok, 'message': message})
+    checks['providers'] = provider_results
+    ok = gql_ok and all(item['ok'] for item in provider_results)
+    print_json({'ok': ok, 'checks': checks})
     return 0 if ok else 1
 
 
@@ -508,6 +550,16 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
 def workspace_tools_metadata(args: argparse.Namespace) -> int:
     registry = build_workspace_tool_registry(args.root)
     print_json(registry.mcp_metadata())
+    return 0
+
+
+def completion_command(args: argparse.Namespace) -> int:
+    if args.shell == 'bash':
+        print('complete -W "agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace" teaagent')
+    elif args.shell == 'zsh':
+        print('#compdef teaagent\n_arguments "1: :((agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace))"')
+    else:
+        print('complete -c teaagent -f -a "agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace"')
     return 0
 
 

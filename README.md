@@ -133,3 +133,11 @@ mypy teaagent/
 ```
 
 See [docs/cli.md](docs/cli.md) for full CLI reference, scope docs for P0/P1/P2 feature delineation, and ADRs for architecture decisions.
+
+Additional references:
+
+- [Audit event reference](docs/audit-events.md)
+- [Tool authoring guide](docs/tool-authoring.md)
+- [Provider authoring guide](docs/provider-authoring.md)
+- [Security model](SECURITY.md)
+- [Examples](examples/README.md)

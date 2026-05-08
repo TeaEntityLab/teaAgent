@@ -7,11 +7,11 @@ from typing import Any, Optional
 from teaagent.oauth21._dpop import _verify_dpop_signature
 from teaagent.oauth21._jwt import compute_jwk_thumbprint, decode_jwt_unsafe, verify_jwt
 from teaagent.oauth21._types import (
-    HAS_CRYPTOGRAPHY,
     _DPOP_PROOF_TYP,
     _PROOF_MAX_AGE_SECONDS,
     _TOKEN_TYPE_BEARER,
     _TOKEN_TYPE_DPOP,
+    HAS_CRYPTOGRAPHY,
     InvalidDPoPError,
     OAuth21Error,
     OAuth21TokenClaims,

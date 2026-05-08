@@ -543,9 +543,7 @@ def _has_unquoted_shell_operator(command: str) -> bool:
                 in_single = True
             elif ch == '"':
                 in_double = True
-            elif ch in ('>', '<', '|', '&', ';', '`'):
-                return True
-            elif ch == '$' and i + 1 < n and command[i + 1] == '(':
+            elif ch in ('>', '<', '|', '&', ';', '`') or ch == '$' and i + 1 < n and command[i + 1] == '(':
                 return True
         i += 1
     return False

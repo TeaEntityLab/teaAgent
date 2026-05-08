@@ -14,6 +14,22 @@ Then run:
 teaagent --help
 ```
 
+Use a JSON config file for common optional defaults:
+
+```bash
+teaagent --config .teaagent/config.json model smoke gpt
+```
+
+Supported keys include `root`, `model`, `provider`, and `permission_mode`. Positional arguments such as `agent run <provider>` remain explicit.
+
+Print shell completion snippets:
+
+```bash
+teaagent completion bash
+teaagent completion zsh
+teaagent completion fish
+```
+
 You can also run without installing the console script:
 
 ```bash
@@ -21,6 +37,12 @@ python3 -m teaagent.cli --help
 ```
 
 ## GraphQLite
+
+Run all environment checks:
+
+```bash
+teaagent doctor all --provider gpt
+```
 
 Check the GraphQLite runtime:
 

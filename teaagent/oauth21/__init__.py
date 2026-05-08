@@ -11,7 +11,6 @@ from teaagent.oauth21._pkce import compute_s256_challenge, generate_code_verifie
 from teaagent.oauth21._resource import OAuth21ResourceServer
 from teaagent.oauth21._server import OAuth21AuthorizationServer
 from teaagent.oauth21._types import (
-    HAS_CRYPTOGRAPHY,
     _AUTHORIZATION_HEADER,
     _AUTHORIZE_PATH,
     _DPOP_HEADER,
@@ -19,6 +18,7 @@ from teaagent.oauth21._types import (
     _OAUTH_METADATA_PATH,
     _TOKEN_PATH,
     _TOKEN_TYPE_DPOP,
+    HAS_CRYPTOGRAPHY,
     DPoPValidationResult,
     InvalidClientError,
     InvalidDPoPError,

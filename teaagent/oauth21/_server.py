@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import hmac
 import secrets
 import time
@@ -13,8 +12,8 @@ from teaagent.oauth21._jwt import (
     decode_jwt_unsafe,
     verify_jwt,
 )
+from teaagent.oauth21._pkce import compute_s256_challenge
 from teaagent.oauth21._types import (
-    HAS_CRYPTOGRAPHY,
     _CODE_TTL_SECONDS,
     _DEFAULT_ACCESS_TOKEN_TTL,
     _DPOP_PROOF_TYP,
@@ -22,6 +21,7 @@ from teaagent.oauth21._types import (
     _PROOF_MAX_AGE_SECONDS,
     _TOKEN_TYPE_BEARER,
     _TOKEN_TYPE_DPOP,
+    HAS_CRYPTOGRAPHY,
     InvalidClientError,
     InvalidDPoPError,
     InvalidGrantError,
@@ -31,7 +31,6 @@ from teaagent.oauth21._types import (
     OAuth21TokenResponse,
     _AuthorizationCode,
 )
-from teaagent.oauth21._pkce import compute_s256_challenge
 
 
 class OAuth21AuthorizationServer:
