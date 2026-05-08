@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from teaagent.errors import ToolValidationError
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
 
@@ -88,6 +89,22 @@ class ToolRegistryRegistrationTests(unittest.TestCase):
 
         result = registry.execute("echo", {"message": "hello"})
         self.assertEqual(result, {"reply": "hello"})
+
+    def test_execute_validates_array_output_items(self) -> None:
+        registry = self._valid_instance()
+        registry.register(**self._valid_kwargs(
+            name="bad_array",
+            output_schema={
+                "type": "object",
+                "properties": {"items": {"type": "array", "items": {"type": "string"}}},
+                "required": ["items"],
+            },
+            handler=lambda args: {"items": ["ok", 1]},
+        ))
+
+        with self.assertRaises(ToolValidationError) as ctx:
+            registry.execute("bad_array", {})
+        self.assertIn("tool.bad_array.output.items[1]", str(ctx.exception))
 
     def test_execute_unknown_tool_raises_key_error(self) -> None:
         registry = self._valid_instance()

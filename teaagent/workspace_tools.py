@@ -7,7 +7,7 @@ import zlib
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
@@ -96,7 +96,10 @@ def register_workspace_tools(registry: ToolRegistry, config: WorkspaceToolConfig
         name="workspace_list_files",
         description="List files matching a glob pattern inside the workspace root.",
         input_schema=object_schema({"pattern": "string", "limit": "integer"}, required=["pattern"]),
-        output_schema=object_schema({"files": "array", "truncated": "boolean"}, required=["files", "truncated"]),
+        output_schema=object_schema(
+            {"files": {"type": "array", "items": {"type": "string"}}, "truncated": "boolean"},
+            required=["files", "truncated"],
+        ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda args: list_files(config, args),
     )
@@ -107,7 +110,10 @@ def register_workspace_tools(registry: ToolRegistry, config: WorkspaceToolConfig
             {"pattern": "string", "include": "string", "limit": "integer"},
             required=["pattern"],
         ),
-        output_schema=object_schema({"matches": "array", "truncated": "boolean"}, required=["matches", "truncated"]),
+        output_schema=object_schema(
+            {"matches": {"type": "array", "items": {"type": "object"}}, "truncated": "boolean"},
+            required=["matches", "truncated"],
+        ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda args: search_text(config, args),
     )
@@ -163,10 +169,13 @@ def register_workspace_tools(registry: ToolRegistry, config: WorkspaceToolConfig
     )
 
 
-def object_schema(properties: dict[str, str], *, required: list[str]) -> dict[str, Any]:
+def object_schema(properties: dict[str, Union[str, dict[str, Any]]], *, required: list[str]) -> dict[str, Any]:
     return {
         "type": "object",
-        "properties": {name: {"type": type_name} for name, type_name in properties.items()},
+        "properties": {
+            name: type_name if isinstance(type_name, dict) else {"type": type_name}
+            for name, type_name in properties.items()
+        },
         "required": required,
     }
 

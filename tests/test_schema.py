@@ -103,6 +103,39 @@ class SchemaValidationTests(unittest.TestCase):
         }
         validate_object_schema(schema, {"items": [1, 2, 3]}, label="input")
 
+    def test_validates_array_item_type_when_items_schema_is_present(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {"items": {"type": "array", "items": {"type": "string"}}},
+            "required": ["items"],
+        }
+
+        validate_object_schema(schema, {"items": ["a", "b"]}, label="input")
+
+        with self.assertRaises(ToolValidationError) as ctx:
+            validate_object_schema(schema, {"items": ["a", 2]}, label="input")
+        self.assertIn("input.items[1]", str(ctx.exception))
+        self.assertIn("string", str(ctx.exception))
+
+    def test_validates_nested_object_fields(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                }
+            },
+            "required": ["item"],
+        }
+
+        validate_object_schema(schema, {"item": {"name": "ok"}}, label="input")
+
+        with self.assertRaises(ToolValidationError) as ctx:
+            validate_object_schema(schema, {"item": {"name": 1}}, label="input")
+        self.assertIn("input.item.name", str(ctx.exception))
+
     def test_accepts_boolean_field(self) -> None:
         schema = {
             "type": "object",

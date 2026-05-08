@@ -19,6 +19,33 @@ def validate_object_schema(schema: dict[str, Any], value: Any, *, label: str) ->
 
     if schema.get("type") != "object":
         raise ToolValidationError(f"{label} schema must be an object schema.")
+    validate_schema_value(schema, value, label=label)
+
+
+def validate_schema_value(schema: dict[str, Any], value: Any, *, label: str) -> None:
+    expected_type = schema.get("type")
+    if expected_type is None:
+        return
+    python_type = TYPE_MAP.get(expected_type)
+    if python_type is None:
+        raise ToolValidationError(f"Unsupported schema type '{expected_type}'.")
+    if expected_type == "integer" and isinstance(value, bool):
+        raise ToolValidationError(f"{label} must be an integer.")
+    if not isinstance(value, python_type):
+        article = "an " if expected_type == "object" else ""
+        raise ToolValidationError(f"{label} must be {article}{expected_type}.")
+
+    if expected_type == "array" and "items" in schema:
+        item_schema = schema["items"]
+        if not isinstance(item_schema, dict):
+            raise ToolValidationError(f"{label}.items must be a schema object.")
+        for index, item in enumerate(value):
+            validate_schema_value(item_schema, item, label=f"{label}[{index}]")
+    if expected_type == "object" and ("properties" in schema or "required" in schema):
+        validate_object_fields(schema, value, label=label)
+
+
+def validate_object_fields(schema: dict[str, Any], value: Any, *, label: str) -> None:
     if not isinstance(value, dict):
         raise ToolValidationError(f"{label} must be an object.")
 
@@ -32,13 +59,4 @@ def validate_object_schema(schema: dict[str, Any], value: Any, *, label: str) ->
     for field_name, field_value in value.items():
         if field_name not in properties:
             raise ToolValidationError(f"{label}.{field_name} is not allowed.")
-        expected_type = properties[field_name].get("type")
-        if expected_type is None:
-            continue
-        python_type = TYPE_MAP.get(expected_type)
-        if python_type is None:
-            raise ToolValidationError(f"Unsupported schema type '{expected_type}'.")
-        if expected_type == "integer" and isinstance(field_value, bool):
-            raise ToolValidationError(f"{label}.{field_name} must be an integer.")
-        if not isinstance(field_value, python_type):
-            raise ToolValidationError(f"{label}.{field_name} must be {expected_type}.")
+        validate_schema_value(properties[field_name], field_value, label=f"{label}.{field_name}")
