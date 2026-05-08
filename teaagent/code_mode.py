@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import multiprocessing
-import queue
 import traceback
 from dataclasses import dataclass
 from typing import Any
@@ -96,11 +95,10 @@ def execute_code_mode(
     if active_sandbox.memory_bytes <= 0:
         raise UnsafeCodeError('Code Mode memory limit must be positive')
 
-    context = multiprocessing.get_context('spawn')
-    result_queue: multiprocessing.Queue[dict[str, Any]] = context.Queue(maxsize=1)
-    process = context.Process(
+    parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
+    process = multiprocessing.Process(
         target=_execute_code_mode_child,
-        args=(code, safe_inputs, active_sandbox, result_queue),
+        args=(code, safe_inputs, active_sandbox, child_conn),
     )
     process.start()
     process.join(active_sandbox.timeout_seconds)
@@ -109,10 +107,10 @@ def execute_code_mode(
         process.join()
         raise UnsafeCodeError('Code Mode timed out')
 
-    try:
-        message = result_queue.get_nowait()
-    except queue.Empty as exc:
-        raise UnsafeCodeError('Code Mode sandbox exited without a result') from exc
+    if parent_conn.poll():
+        message = parent_conn.recv()
+    else:
+        raise UnsafeCodeError('Code Mode sandbox exited without a result')
 
     if message['status'] == 'error':
         raise UnsafeCodeError(message['error'])
@@ -135,7 +133,7 @@ def _execute_code_mode_child(
     code: str,
     inputs: dict[str, Any],
     sandbox: CodeModeSandbox,
-    result_queue: multiprocessing.Queue[dict[str, Any]],
+    result_pipe: multiprocessing.connection.Connection,
 ) -> None:
     try:
         _apply_resource_limits(sandbox)
@@ -149,7 +147,7 @@ def _execute_code_mode_child(
         }
         _validate_plain_data(variables, 'variables')
     except Exception as exc:  # pragma: no cover - exercised through parent process.
-        result_queue.put(
+        result_pipe.send(
             {
                 'status': 'error',
                 'error': f'{type(exc).__name__}: {exc}',
@@ -157,7 +155,7 @@ def _execute_code_mode_child(
             }
         )
     else:
-        result_queue.put({'status': 'ok', 'variables': variables})
+        result_pipe.send({'status': 'ok', 'variables': variables})
 
 
 def _apply_resource_limits(sandbox: CodeModeSandbox) -> None:
