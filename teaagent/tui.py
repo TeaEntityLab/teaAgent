@@ -25,6 +25,10 @@ OutputFn = Callable[..., None]
 AdapterFactory = Callable[[str, Optional[str]], LLMAdapter]
 
 
+def default_adapter_factory(provider: str, model: Optional[str]) -> LLMAdapter:
+    return create_llm_adapter(provider, model=model)
+
+
 HELP_TEXT = """Commands:
   help                      Show this help.
   doctor                    Check GraphQLite runtime.
@@ -73,7 +77,7 @@ class TeaAgentTUI:
         permission_mode: PermissionMode = PermissionMode.PROMPT,
         input_fn: InputFn = input,
         output_fn: OutputFn = print,
-        adapter_factory: AdapterFactory = create_llm_adapter,
+        adapter_factory: AdapterFactory = default_adapter_factory,
     ) -> None:
         self.database = database
         self.provider = provider
@@ -306,9 +310,9 @@ class TeaAgentTUI:
             self.output_fn(f"database: {self.database}")
             return True
         if action == "smoke":
-            store = self._get_store()
-            store.graph.upsert_node("teaagent", {"name": "TeaAgent"}, label="SmokeTest")
-            self._print_json(store.query("MATCH (n:SmokeTest) RETURN n.name"))
+            graph_store = self._get_store()
+            graph_store.graph.upsert_node("teaagent", {"name": "TeaAgent"}, label="SmokeTest")
+            self._print_json(graph_store.query("MATCH (n:SmokeTest) RETURN n.name"))
             return True
         if action == "query":
             if not args:

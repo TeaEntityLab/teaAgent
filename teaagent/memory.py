@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 from uuid import uuid4
 
 from teaagent.audit import utc_now
@@ -39,11 +39,11 @@ class MemoryCatalog:
             handle.write(json.dumps(entry.to_dict(), sort_keys=True) + "\n")
         return entry
 
-    def list(self, *, limit: int = 20) -> list[MemoryEntry]:
+    def list(self, *, limit: int = 20) -> List[MemoryEntry]:
         entries = self._read_entries()
         return list(reversed(entries))[:limit]
 
-    def search(self, query: str, *, limit: int = 10) -> list[MemoryEntry]:
+    def search(self, query: str, *, limit: int = 10) -> List[MemoryEntry]:
         normalized = query.strip().lower()
         if not normalized:
             return []
@@ -57,10 +57,10 @@ class MemoryCatalog:
                 return entry
         raise FileNotFoundError(f"memory '{memory_id}' not found")
 
-    def _read_entries(self) -> list[MemoryEntry]:
+    def _read_entries(self) -> List[MemoryEntry]:
         if not self.path.exists():
             return []
-        entries = []
+        entries: List[MemoryEntry] = []
         for line in self.path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue

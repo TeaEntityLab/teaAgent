@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 from teaagent.audit import AuditLogger, utc_now
 from teaagent.runner import RunResult
@@ -39,7 +40,7 @@ class RunStore:
 
     def audit_logger(self, run_id: Optional[str] = None) -> AuditLogger:
         if run_id is None:
-            path = self.store_dir / "pending.jsonl"
+            path = self.store_dir / f"pending-{uuid4().hex}.jsonl"
         else:
             path = self.run_path(run_id)
         return AuditLogger(path=path)

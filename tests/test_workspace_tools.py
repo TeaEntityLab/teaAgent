@@ -107,6 +107,16 @@ class WorkspaceToolTests(unittest.TestCase):
             with self.assertRaises(ToolExecutionError):
                 registry.execute("workspace_run_shell_inspect", {"command": "touch x.txt"})
 
+    def test_shell_inspect_rejects_workspace_escape_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(ToolExecutionError):
+                registry.execute("workspace_run_shell_inspect", {"command": "cat /etc/passwd"})
+
+            with self.assertRaises(ToolExecutionError):
+                registry.execute("workspace_run_shell_inspect", {"command": "cat ../outside.txt"})
+
     def test_cli_workspace_tools_outputs_metadata(self) -> None:
         output = io.StringIO()
 

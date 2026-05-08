@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 import subprocess
 import zlib
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ class WorkspaceToolConfig:
     root: Path
     command_timeout_seconds: int = 30
     max_read_bytes: int = 200_000
+    max_shell_output_bytes: int = 200_000
 
     @classmethod
     def from_root(cls, root: str | Path) -> "WorkspaceToolConfig":
@@ -281,7 +283,11 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
         capture_output=True,
         timeout=timeout,
     )
-    return {"stdout": result.stdout, "stderr": result.stderr, "exit_code": result.returncode}
+    return {
+        "stdout": truncate_output(result.stdout, config.max_shell_output_bytes),
+        "stderr": truncate_output(result.stderr, config.max_shell_output_bytes),
+        "exit_code": result.returncode,
+    }
 
 
 def run_shell_inspect(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
@@ -295,10 +301,15 @@ def classify_shell_command_policy(command: str) -> str:
     blocked_tokens = (">", "<", "|", "&&", ";", "`", "$(")
     if any(token in command for token in blocked_tokens):
         return "mutate"
-    parts = command.strip().split()
+    try:
+        parts = shlex.split(command.strip())
+    except ValueError:
+        return "mutate"
     if not parts:
         return "mutate"
     executable = parts[0]
+    if any(shell_arg_escapes_workspace(arg) for arg in parts[1:]):
+        return "mutate"
     if executable in {"pwd", "ls", "find", "rg", "grep", "cat", "head", "tail", "wc"}:
         return "inspect"
     if executable == "git" and len(parts) > 1 and parts[1] in {"status", "diff", "log", "show", "branch"}:
@@ -306,6 +317,19 @@ def classify_shell_command_policy(command: str) -> str:
     if executable == "python3" and len(parts) > 2 and parts[1:3] == ["-m", "unittest"]:
         return "inspect"
     return "mutate"
+
+
+def shell_arg_escapes_workspace(arg: str) -> bool:
+    return arg.startswith(("/", "~")) or arg == ".." or arg.startswith("../") or "/../" in arg
+
+
+def truncate_output(value: str, max_bytes: int) -> str:
+    data = value.encode("utf-8")
+    if len(data) <= max_bytes:
+        return value
+    marker = b"\n[truncated]"
+    keep = max(0, max_bytes - len(marker))
+    return (data[:keep] + marker).decode("utf-8", errors="replace")
 
 
 def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:

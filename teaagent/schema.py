@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Union
 
 from teaagent.errors import ToolValidationError
 
-TYPE_MAP = {
+TYPE_MAP: dict[str, Union[type[Any], tuple[type[Any], ...]]] = {
     "array": list,
     "boolean": bool,
     "integer": int,

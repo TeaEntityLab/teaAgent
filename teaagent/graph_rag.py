@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from typing import Deque
 
 from teaagent.rag import Document, RetrievalResult, tokenize
 
@@ -37,7 +38,9 @@ class KnowledgeGraph:
 
     def traverse(self, start: str, *, max_depth: int = 2) -> list[GraphPath]:
         paths: list[GraphPath] = []
-        queue = deque([(start, (start,), tuple(), tuple(), 0)])
+        queue: Deque[tuple[str, tuple[str, ...], tuple[str, ...], tuple[str, ...], int]] = deque(
+            [(start, (start,), tuple(), tuple(), 0)]
+        )
         while queue:
             node, nodes, relations, doc_ids, depth = queue.popleft()
             if depth >= max_depth:
