@@ -13,6 +13,7 @@ from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
+from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
 
 
@@ -31,7 +32,11 @@ HELP_TEXT = """Commands:
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
+  approve <call_id>         Approve one exact destructive tool call id.
+  unapprove <call_id>       Remove one approved call id.
+  approvals                 List approved call ids for this session.
   clarify <task>            Score task ambiguity without calling a model.
+  preflight <task>          Show clarify, routing, memory, and tool plan without calling a model.
   ask <task>                Run a model-driven agent task with workspace tools.
   ask --clarify <task>      Clarify first; stop if key details are missing.
   memory add <text>         Add a workspace memory entry.
@@ -68,6 +73,7 @@ class TeaAgentTUI:
         self.root = Path(root).resolve()
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
+        self.approved_call_ids: set[str] = set()
         self.input_fn = input_fn
         self.output_fn = output_fn
         self.adapter_factory = adapter_factory
@@ -163,6 +169,23 @@ class TeaAgentTUI:
                 return True
             self.output_fn(f"permission: {self.permission_mode.value}")
             return True
+        if action == "approve":
+            if len(args) != 1:
+                self.output_fn("error: approve requires one call id")
+                return True
+            self.approved_call_ids.add(args[0])
+            self.output_fn(f"approved: {args[0]}")
+            return True
+        if action == "unapprove":
+            if len(args) != 1:
+                self.output_fn("error: unapprove requires one call id")
+                return True
+            self.approved_call_ids.discard(args[0])
+            self.output_fn(f"unapproved: {args[0]}")
+            return True
+        if action == "approvals":
+            self._print_json(sorted(self.approved_call_ids))
+            return True
         if action == "ask":
             if not args:
                 self.output_fn("error: ask requires a task")
@@ -179,6 +202,20 @@ class TeaAgentTUI:
                 self.output_fn("error: clarify requires a task")
                 return True
             self._print_json(clarify_task(" ".join(args)).to_dict())
+            return True
+        if action == "preflight":
+            if not args:
+                self.output_fn("error: preflight requires a task")
+                return True
+            report = preflight(
+                " ".join(args),
+                root=self.root,
+                provider=self.provider,
+                model=self.model,
+                permission_mode=self.permission_mode,
+                route=self.route_model,
+            )
+            self._print_json(report.to_dict())
             return True
         if action == "memory":
             self._handle_memory(args)
@@ -268,6 +305,7 @@ class TeaAgentTUI:
                 model=selected_model,
                 allow_destructive=self.allow_destructive,
                 permission_mode=self.permission_mode,
+                approved_call_ids=frozenset(self.approved_call_ids),
             ),
             audit=audit,
             task_spec=task_spec,

@@ -120,6 +120,38 @@ class TUITests(unittest.TestCase):
         self.assertEqual(tui.permission_mode.value, "read-only")
         self.assertEqual(output, ["permission: read-only"])
 
+    def test_tui_approval_commands(self) -> None:
+        output = []
+        tui = TeaAgentTUI(input_fn=lambda _prompt: "exit", output_fn=output.append)
+
+        self.assertTrue(tui.handle_command("approve write-1"))
+        self.assertTrue(tui.handle_command("approvals"))
+        self.assertTrue(tui.handle_command("unapprove write-1"))
+        self.assertTrue(tui.handle_command("approvals"))
+
+        self.assertEqual(output[0], "approved: write-1")
+        self.assertEqual(json.loads(output[1]), ["write-1"])
+        self.assertEqual(output[2], "unapproved: write-1")
+        self.assertEqual(json.loads(output[3]), [])
+
+    def test_tui_approved_call_id_allows_exact_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+            tui = TeaAgentTUI(root=tmp, input_fn=lambda _prompt: "exit", output_fn=output.append, adapter_factory=lambda _provider, _model: adapter)
+
+            self.assertTrue(tui.handle_command("approve write-1"))
+            self.assertTrue(tui.handle_command("ask write file"))
+
+            payload = json.loads(output[-1])
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
+
     def test_tui_clarify_command(self) -> None:
         output = []
         tui = TeaAgentTUI(input_fn=lambda _prompt: "exit", output_fn=output.append)
@@ -129,6 +161,18 @@ class TUITests(unittest.TestCase):
         payload = json.loads(output[0])
         self.assertTrue(payload["needs_clarification"])
         self.assertEqual(payload["question"], "What action do you want TeaAgent to take?")
+
+    def test_tui_preflight_command_uses_current_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(root=tmp, input_fn=lambda _prompt: "exit", output_fn=output.append)
+            self.assertTrue(tui.handle_command("route-model on"))
+            self.assertTrue(tui.handle_command("preflight review this patch for regressions in the test suite"))
+
+            payload = json.loads(output[-1])
+            self.assertTrue(payload["ready"])
+            self.assertEqual(payload["routing"]["category"], "review")
+            self.assertEqual(payload["model"], "gpt-4o")
 
     def test_tui_memory_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

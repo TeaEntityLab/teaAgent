@@ -12,6 +12,7 @@ from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
+from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
 from teaagent.workspace_tools import build_workspace_tool_registry
@@ -86,12 +87,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Allow destructive tools such as write, patch, and shell.",
     )
     agent_run.add_argument(
+        "--approve-call-id",
+        action="append",
+        default=[],
+        help="Approve one exact destructive tool call id. Can be repeated.",
+    )
+    agent_run.add_argument(
         "--permission-mode",
         choices=[mode.value for mode in PermissionMode],
         default=PermissionMode.PROMPT.value,
         help="Permission mode for workspace tools.",
     )
     agent_run.set_defaults(func=agent_run_task)
+
+    agent_preflight = agent_subparsers.add_parser(
+        "preflight",
+        help="Summarize clarify, routing, memory, and tool state without calling a model.",
+    )
+    agent_preflight.add_argument("provider", choices=available_providers(), help="Model provider to plan for.")
+    agent_preflight.add_argument("task", help="Task to evaluate.")
+    agent_preflight.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    agent_preflight.add_argument("--model", default=None, help="Override model name.")
+    agent_preflight.add_argument("--route-model", action="store_true", help="Apply task category routing.")
+    agent_preflight.add_argument(
+        "--permission-mode",
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help="Permission mode to report.",
+    )
+    agent_preflight.add_argument("--memory-limit", type=int, default=5, help="Maximum matched memories to include.")
+    agent_preflight.set_defaults(func=agent_preflight_command)
 
     agent_list = agent_subparsers.add_parser("runs", help="List persisted agent runs.")
     agent_list.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
@@ -230,6 +255,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
             allow_destructive=args.allow_destructive,
             model=selected_model,
             permission_mode=parse_permission_mode(args.permission_mode),
+            approved_call_ids=frozenset(args.approve_call_id),
         ),
         audit=audit,
         task_spec=task_spec,
@@ -246,6 +272,20 @@ def agent_run_task(args: argparse.Namespace) -> int:
         }
     )
     return 0 if result.status == "completed" else 1
+
+
+def agent_preflight_command(args: argparse.Namespace) -> int:
+    report = preflight(
+        args.task,
+        root=args.root,
+        provider=args.provider,
+        model=args.model,
+        permission_mode=parse_permission_mode(args.permission_mode),
+        route=args.route_model,
+        memory_limit=args.memory_limit,
+    )
+    print_json(report.to_dict())
+    return 0 if report.to_dict()["ready"] else 2
 
 
 def agent_runs_list(args: argparse.Namespace) -> int:

@@ -33,6 +33,7 @@ from teaagent.llm import (
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, classify_task, route_model
 from teaagent.policy import ApprovalPolicy, PermissionMode, parse_permission_mode
+from teaagent.preflight import PreflightReport, preflight
 from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_decision
 from teaagent.portability import ProviderProfile, PortabilityResult, assess_provider_portability
 from teaagent.rag import Document, InMemoryRetriever, agentic_retrieve
@@ -78,6 +79,7 @@ __all__ = [
     "ModelDecisionEngine",
     "PermissionMode",
     "PortabilityResult",
+    "PreflightReport",
     "PromptBundle",
     "ProviderProfile",
     "ProviderConfig",
@@ -113,6 +115,7 @@ __all__ = [
     "handle_stateless_tool_request",
     "parse_model_decision",
     "parse_permission_mode",
+    "preflight",
     "review_skill",
     "route_model",
     "register_workspace_tools",

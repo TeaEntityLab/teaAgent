@@ -74,6 +74,8 @@ route review this patch
 root /path/to/repo
 destructive off
 permission prompt
+approve write-file-1
+approvals
 ask Inspect this repo and summarize the test suite
 ask --clarify Update docs/cli.md to document clarify and verify tests pass
 memory add Prefer read-only mode for audit tasks
@@ -250,6 +252,23 @@ memory search audit tasks
 memory show <memory_id>
 ```
 
+## Preflight
+
+Summarize clarification, routing, matching memories, permission state, and tool count without calling a model:
+
+```bash
+teaagent agent preflight gpt "review this patch for regressions in the test suite" --route-model
+```
+
+Exit code is `0` when the task is concrete enough and `2` when it still needs clarification. Pair with `--permission-mode workspace-write` or `--memory-limit 10` as needed.
+
+Inside TUI:
+
+```text
+route-model on
+preflight review this patch for regressions in the test suite
+```
+
 ## Agent Run
 
 Run one model-driven task with the workspace tool pack:
@@ -286,6 +305,14 @@ By default, destructive tools are blocked. To allow file writes, patching, or sh
 ```bash
 teaagent agent run gpt "Create a TODO.md summary" --allow-destructive
 ```
+
+Approve one exact destructive tool call id while staying in `prompt` mode:
+
+```bash
+teaagent agent run gpt "Create a TODO.md summary" --approve-call-id write-todo-1
+```
+
+The model decision must use the approved `call_id` for that exact destructive tool call. Other destructive calls remain blocked.
 
 Prefer explicit permission modes for regular use:
 
@@ -328,6 +355,9 @@ teaagent agent show <run_id> --root /path/to/repo
 Inside TUI:
 
 ```text
+approve write-todo-1
+approvals
+unapprove write-todo-1
 runs
 show <run_id>
 ```

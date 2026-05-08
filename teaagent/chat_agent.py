@@ -24,6 +24,7 @@ class ChatAgentConfig:
     model: Optional[str] = None
     permission_mode: PermissionMode = PermissionMode.PROMPT
     memory_limit: int = 5
+    approved_call_ids: frozenset[str] = frozenset()
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs) -> "ChatAgentConfig":
@@ -88,6 +89,7 @@ def run_chat_agent(
         audit=audit or AuditLogger(),
         budget=RunBudget(max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls),
         approval_policy=ApprovalPolicy(
+            approved_call_ids=config.approved_call_ids,
             allow_all_destructive=config.allow_destructive,
             permission_mode=config.permission_mode,
         ),

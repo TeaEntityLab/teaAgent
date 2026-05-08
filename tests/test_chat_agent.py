@@ -126,6 +126,24 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(result.status, "completed")
             self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
 
+    def test_destructive_decision_can_be_approved_by_call_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+
+            result = run_chat_agent(
+                task="write",
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp, approved_call_ids=frozenset({"write-1"})),
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
+
     def test_workspace_write_permission_allows_file_write_not_shell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             write_adapter = FakeAdapter(
@@ -191,6 +209,24 @@ class ChatAgentTests(unittest.TestCase):
             create_adapter.assert_called_once_with("gpt", model="gpt-4o")
             self.assertEqual(payload["routing"]["category"], "review")
             self.assertEqual(payload["final_answer"], "reviewed")
+
+    def test_cli_agent_run_approve_call_id_allows_exact_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+
+            with patch("teaagent.cli.create_llm_adapter", return_value=adapter), redirect_stdout(output):
+                exit_code = main(["agent", "run", "gpt", "write", "--root", tmp, "--approve-call-id", "write-1"])
+
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
 
 
 if __name__ == "__main__":
