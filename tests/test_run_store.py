@@ -73,6 +73,32 @@ class RunStoreTests(unittest.TestCase):
             self.assertEqual(json.loads(list_output.getvalue())[0]["run_id"], "run-2")
             self.assertEqual(json.loads(show_output.getvalue())[1]["event_type"], "run_failed")
 
+    def test_list_runs_skips_corrupt_jsonl_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger()
+            audit.record("run_started", "run-ok", task="demo")
+            audit.record("run_completed", "run-ok", answer="ok", metadata={})
+            store.logger_for_result(
+                RunResult(run_id="run-ok", final_answer=FinalAnswer("ok"), iterations=1, tool_calls=0, status="completed"),
+                audit,
+            )
+            (Path(tmp) / ".teaagent" / "runs" / "broken.jsonl").write_text("not json\n", encoding="utf-8")
+
+            summaries = store.list_runs()
+
+            self.assertEqual([summary.run_id for summary in summaries], ["run-ok"])
+
+    def test_list_runs_skips_records_without_run_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            (Path(tmp) / ".teaagent" / "runs" / "missing-id.jsonl").write_text(
+                json.dumps({"event_type": "run_started", "payload": {"task": "x"}}) + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(store.list_runs(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

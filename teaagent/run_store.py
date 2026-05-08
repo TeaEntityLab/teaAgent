@@ -91,10 +91,17 @@ class RunStore:
         }
 
     def summarize(self, path: Path) -> Optional[RunSummary]:
-        events = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        try:
+            events = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        except (OSError, json.JSONDecodeError):
+            return None
         if not events:
             return None
-        run_id = events[0]["run_id"]
+        if not all(isinstance(event, dict) for event in events):
+            return None
+        run_id = events[0].get("run_id")
+        if not isinstance(run_id, str) or not run_id:
+            return None
         task = ""
         status = "unknown"
         final_answer = None
