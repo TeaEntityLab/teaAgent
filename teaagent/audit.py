@@ -12,6 +12,8 @@ from uuid import uuid4
 AUDIT_REDACTED = '[redacted]'
 AUDIT_TRUNCATED = '[truncated]'
 MAX_AUDIT_STRING_LENGTH = 20_000
+AUDIT_DIR_MODE = 0o700
+AUDIT_FILE_MODE = 0o600
 SENSITIVE_KEY_PARTS = (
     'api_key',
     'authorization',
@@ -21,6 +23,7 @@ SENSITIVE_KEY_PARTS = (
     'token',
 )
 SENSITIVE_ARGUMENT_KEYS = frozenset({'command', 'content', 'new', 'old'})
+SENSITIVE_RESULT_KEYS = frozenset({'content', 'stderr', 'stdout', 'text'})
 
 
 def utc_now() -> str:
@@ -58,6 +61,7 @@ class AuditLogger:
         self._lock = threading.Lock()
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
+            secure_audit_dir(self.path.parent)
 
     def add_sink(self, sink: Callable[[AuditEvent], None]) -> None:
         self._sinks.append(sink)
@@ -71,6 +75,7 @@ class AuditLogger:
             if self.path is not None:
                 with self.path.open('a', encoding='utf-8') as handle:
                     handle.write(event.to_json() + '\n')
+                secure_audit_file(self.path)
             sinks = list(self._sinks)
         for sink in sinks:
             sink(event)
@@ -82,9 +87,19 @@ def redact_audit_payload(payload: dict[str, Any]) -> dict[str, Any]:
     for key, value in payload.items():
         if key == 'arguments' and isinstance(value, dict):
             redacted[key] = redact_tool_arguments(value)
+        elif key == 'result' and isinstance(value, dict):
+            redacted[key] = redact_tool_result(value)
         else:
             redacted[key] = redact_audit_value(key, value)
     return redacted
+
+
+def secure_audit_dir(path: Path) -> None:
+    path.chmod(AUDIT_DIR_MODE)
+
+
+def secure_audit_file(path: Path) -> None:
+    path.chmod(AUDIT_FILE_MODE)
 
 
 def redact_tool_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -106,6 +121,28 @@ def redact_tool_argument_value(key: str, value: Any) -> Any:
         return [redact_tool_argument_value('', item) for item in value]
     if isinstance(value, tuple):
         return [redact_tool_argument_value('', item) for item in value]
+    return redact_audit_value(key, value)
+
+
+def redact_tool_result(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        str(key): redact_tool_result_value(str(key), value)
+        for key, value in result.items()
+    }
+
+
+def redact_tool_result_value(key: str, value: Any) -> Any:
+    if is_sensitive_key(key) or key in SENSITIVE_RESULT_KEYS:
+        return AUDIT_REDACTED
+    if isinstance(value, dict):
+        return {
+            str(child_key): redact_tool_result_value(str(child_key), child_value)
+            for child_key, child_value in value.items()
+        }
+    if isinstance(value, list):
+        return [redact_tool_result_value('', item) for item in value]
+    if isinstance(value, tuple):
+        return [redact_tool_result_value('', item) for item in value]
     return redact_audit_value(key, value)
 
 

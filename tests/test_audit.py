@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import stat
 import tempfile
 import threading
 import unittest
@@ -8,6 +9,8 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 from teaagent.audit import (
+    AUDIT_DIR_MODE,
+    AUDIT_FILE_MODE,
     AUDIT_REDACTED,
     AUDIT_TRUNCATED,
     MAX_AUDIT_STRING_LENGTH,
@@ -15,6 +18,10 @@ from teaagent.audit import (
     AuditLogger,
     utc_now,
 )
+
+
+def file_mode(path: Path) -> int:
+    return stat.S_IMODE(path.stat().st_mode)
 
 
 class AuditEventTests(unittest.TestCase):
@@ -159,6 +166,32 @@ class AuditLoggerTests(unittest.TestCase):
 
         self.assertEqual(event.payload['content'], 'read result')
 
+    def test_record_redacts_sensitive_tool_result_values(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record(
+            'tool_call_completed',
+            'run-1',
+            tool_name='workspace_read_file',
+            result={
+                'path': 'file.txt',
+                'content': 'secret file body',
+                'truncated': False,
+                'matches': [{'line': 1, 'text': 'secret match'}],
+                'stdout': 'secret stdout',
+                'stderr': 'secret stderr',
+            },
+        )
+
+        result = event.payload['result']
+        self.assertEqual(result['path'], 'file.txt')
+        self.assertFalse(result['truncated'])
+        self.assertEqual(result['content'], AUDIT_REDACTED)
+        self.assertEqual(result['matches'][0]['line'], 1)
+        self.assertEqual(result['matches'][0]['text'], AUDIT_REDACTED)
+        self.assertEqual(result['stdout'], AUDIT_REDACTED)
+        self.assertEqual(result['stderr'], AUDIT_REDACTED)
+
     def test_record_truncates_large_strings(self) -> None:
         logger = AuditLogger()
 
@@ -178,6 +211,8 @@ class AuditLoggerTests(unittest.TestCase):
             logger.record('e', 'r')
 
             self.assertTrue(path.exists())
+            self.assertEqual(file_mode(path.parent), AUDIT_DIR_MODE)
+            self.assertEqual(file_mode(path), AUDIT_FILE_MODE)
 
     def test_in_memory_only_when_no_path(self) -> None:
         logger = AuditLogger()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import stat
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -11,6 +12,10 @@ from teaagent import FinalAnswer, RunStore
 from teaagent.audit import AUDIT_REDACTED
 from teaagent.cli import main
 from teaagent.runner import RunResult
+
+
+def file_mode(path: Path) -> int:
+    return stat.S_IMODE(path.stat().st_mode)
 
 
 class RunStoreTests(unittest.TestCase):
@@ -37,6 +42,29 @@ class RunStoreTests(unittest.TestCase):
             self.assertEqual(summaries[0].final_answer, 'done')
             self.assertEqual(events[0]['event_type'], 'run_started')
             self.assertTrue((Path(tmp) / '.teaagent' / 'runs' / 'run-1.jsonl').exists())
+
+    def test_run_store_uses_owner_only_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger()
+            audit.record('run_started', 'secure-run', task='demo')
+            store.logger_for_result(
+                RunResult(
+                    run_id='secure-run',
+                    final_answer=None,
+                    iterations=1,
+                    tool_calls=0,
+                    status='completed',
+                ),
+                audit,
+            )
+
+            root = Path(tmp)
+            self.assertEqual(file_mode(root / '.teaagent'), 0o700)
+            self.assertEqual(file_mode(root / '.teaagent' / 'runs'), 0o700)
+            self.assertEqual(
+                file_mode(root / '.teaagent' / 'runs' / 'secure-run.jsonl'), 0o600
+            )
 
     def test_task_for_run_extracts_original_task(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -183,7 +211,8 @@ class RunStoreTests(unittest.TestCase):
             observations = store.observations_for_run('run-obs')
 
             self.assertEqual([obs['call_id'] for obs in observations], ['r1', 'r2'])
-            self.assertEqual(observations[0]['result']['content'], 'hi')
+            self.assertEqual(observations[0]['result']['path'], 'a.txt')
+            self.assertEqual(observations[0]['result']['content'], AUDIT_REDACTED)
 
     def test_pending_approval_for_run_returns_last_unresolved(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

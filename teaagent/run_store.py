@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
-from teaagent.audit import AuditLogger, utc_now
+from teaagent.audit import AuditLogger, secure_audit_dir, secure_audit_file, utc_now
 from teaagent.runner import RunResult
 
 
@@ -37,6 +37,8 @@ class RunStore:
         self.root = Path(root).resolve()
         self.store_dir = self.root / '.teaagent' / 'runs'
         self.store_dir.mkdir(parents=True, exist_ok=True)
+        secure_audit_dir(self.root / '.teaagent')
+        secure_audit_dir(self.store_dir)
 
     def audit_logger(self, run_id: Optional[str] = None) -> AuditLogger:
         if run_id is None:
@@ -50,6 +52,7 @@ class RunStore:
             return
         target = self.run_path(result.run_id)
         target.write_text(audit.path.read_text(encoding='utf-8'), encoding='utf-8')
+        secure_audit_file(target)
         audit.path.unlink(missing_ok=True)
 
     def run_path(self, run_id: str) -> Path:
