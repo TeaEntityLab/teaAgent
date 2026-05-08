@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from teaagent import (
     LLMMessage,
+    LLMProviderError,
     LLMRequest,
     LLMResponseFormatError,
     available_providers,
@@ -223,8 +224,16 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertEqual(result.input_tokens, 2)
         self.assertEqual(result.output_tokens, 3)
 
-    def test_openai_adapter_rejects_malformed_response(self) -> None:
+    def test_openai_adapter_reports_provider_error_payload(self) -> None:
         transport = FakeTransport({'error': {'message': 'blocked'}})
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gpt', transport=transport, model='gpt-test')
+
+            with self.assertRaises(LLMProviderError):
+                adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+    def test_openai_adapter_rejects_malformed_response(self) -> None:
+        transport = FakeTransport({'choices': []})
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
             adapter = create_llm_adapter('gpt', transport=transport, model='gpt-test')
 
@@ -240,11 +249,19 @@ class LLMAdapterTests(unittest.TestCase):
                 adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
 
     def test_gemini_adapter_rejects_malformed_response(self) -> None:
-        transport = FakeTransport({'promptFeedback': {'blockReason': 'SAFETY'}})
+        transport = FakeTransport({'candidates': [{'content': {'parts': []}}]})
         with patch.dict(os.environ, {'GEMINI_API_KEY': 'key'}, clear=True):
             adapter = create_llm_adapter('gemini', transport=transport)
 
             with self.assertRaises(LLMResponseFormatError):
+                adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+    def test_gemini_adapter_reports_safety_block(self) -> None:
+        transport = FakeTransport({'promptFeedback': {'blockReason': 'SAFETY'}})
+        with patch.dict(os.environ, {'GEMINI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gemini', transport=transport)
+
+            with self.assertRaises(LLMProviderError):
                 adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
 
 

@@ -21,6 +21,10 @@ class LLMHTTPError(LLMAdapterError):
     pass
 
 
+class LLMProviderError(LLMAdapterError):
+    pass
+
+
 class LLMResponseFormatError(LLMAdapterError):
     pass
 
@@ -330,6 +334,7 @@ class GeminiAdapter:
 
 
 def _extract_openai_content(provider: str, response: dict[str, Any]) -> str:
+    _raise_provider_error(provider, response)
     choices = response.get('choices')
     if not isinstance(choices, list) or not choices:
         raise LLMResponseFormatError(f'{provider} response missing choices')
@@ -359,6 +364,7 @@ def _first_choice_delta(provider: str, response: dict[str, Any]) -> dict[str, An
 
 
 def _extract_claude_content(response: dict[str, Any]) -> str:
+    _raise_provider_error('claude', response)
     content_blocks = response.get('content')
     if not isinstance(content_blocks, list):
         raise LLMResponseFormatError('claude response missing content blocks')
@@ -374,6 +380,7 @@ def _extract_claude_content(response: dict[str, Any]) -> str:
 
 
 def _extract_gemini_content(response: dict[str, Any]) -> str:
+    _raise_provider_error('gemini', response)
     candidates = response.get('candidates')
     if not isinstance(candidates, list) or not candidates:
         raise LLMResponseFormatError('gemini response missing candidates')
@@ -394,6 +401,20 @@ def _extract_gemini_content(response: dict[str, Any]) -> str:
     if not text:
         raise LLMResponseFormatError('gemini response missing text content')
     return text
+
+
+def _raise_provider_error(provider: str, response: dict[str, Any]) -> None:
+    error = response.get('error')
+    if isinstance(error, dict):
+        message = error.get('message') or error.get('status') or error
+        raise LLMProviderError(f'{provider} provider error: {message}')
+    if isinstance(error, str):
+        raise LLMProviderError(f'{provider} provider error: {error}')
+    prompt_feedback = response.get('promptFeedback')
+    if isinstance(prompt_feedback, dict) and prompt_feedback.get('blockReason'):
+        raise LLMProviderError(
+            f'{provider} provider blocked prompt: {prompt_feedback["blockReason"]}'
+        )
 
 
 PROVIDER_CONFIGS = {
