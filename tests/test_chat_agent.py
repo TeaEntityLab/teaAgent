@@ -12,6 +12,7 @@ from teaagent import (
     AuditLogger,
     ChatAgentConfig,
     LLMResponse,
+    PermissionMode,
     ToolAnnotations,
     ToolRegistry,
     parse_model_decision,
@@ -95,12 +96,48 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(result.status, "completed")
             self.assertEqual((Path(tmp) / "x.txt").read_text(encoding="utf-8"), "x")
 
+    def test_workspace_write_permission_allows_file_write_not_shell(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            write_adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+                    '{"type":"final","content":"wrote"}',
+                ]
+            )
+            shell_adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"workspace_run_shell_mutate","arguments":{"command":"touch y.txt"},"call_id":"shell-1"}'
+                ]
+            )
+
+            write_result = run_chat_agent(
+                task="write",
+                adapter=write_adapter,
+                config=ChatAgentConfig.from_root(tmp, permission_mode=PermissionMode.WORKSPACE_WRITE),
+            )
+            shell_result = run_chat_agent(
+                task="shell",
+                adapter=shell_adapter,
+                config=ChatAgentConfig.from_root(tmp, permission_mode=PermissionMode.WORKSPACE_WRITE),
+            )
+
+            self.assertEqual(write_result.status, "completed")
+            self.assertEqual(shell_result.status, "failed:permission")
+
     def test_approval_policy_allow_all_destructive(self) -> None:
         ApprovalPolicy(allow_all_destructive=True).assert_allowed(
             tool_name="workspace_write_file",
             call_id="any",
             destructive=True,
         )
+
+    def test_read_only_permission_blocks_destructive(self) -> None:
+        with self.assertRaises(Exception):
+            ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY).assert_allowed(
+                tool_name="workspace_write_file",
+                call_id="any",
+                destructive=True,
+            )
 
     def test_cli_agent_help(self) -> None:
         output = io.StringIO()

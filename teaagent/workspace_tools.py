@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 from typing import Any
+import zlib
 
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
@@ -54,6 +55,31 @@ def register_workspace_tools(registry: ToolRegistry, config: WorkspaceToolConfig
         handler=lambda args: write_file(config, args),
     )
     registry.register(
+        name="workspace_read_file_hashed",
+        description="Read a UTF-8 text file with stable LINE#HASH anchors for safer edits.",
+        input_schema=object_schema(
+            {"path": "string", "max_bytes": "integer"},
+            required=["path"],
+        ),
+        output_schema=object_schema(
+            {"path": "string", "content": "string", "truncated": "boolean"},
+            required=["path", "content", "truncated"],
+        ),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda args: read_file_hashed(config, args),
+    )
+    registry.register(
+        name="workspace_edit_at_hash",
+        description="Edit one line only if its LINE#HASH anchor and old text still match.",
+        input_schema=object_schema(
+            {"path": "string", "line": "integer", "hash": "string", "old": "string", "new": "string"},
+            required=["path", "line", "hash", "old", "new"],
+        ),
+        output_schema=object_schema({"path": "string", "line": "integer", "hash": "string"}, required=["path", "line", "hash"]),
+        annotations=ToolAnnotations(destructive=True, idempotent=False),
+        handler=lambda args: edit_at_hash(config, args),
+    )
+    registry.register(
         name="workspace_apply_patch",
         description="Replace one exact text span in a UTF-8 file inside the workspace root.",
         input_schema=object_schema(
@@ -92,8 +118,36 @@ def register_workspace_tools(registry: ToolRegistry, config: WorkspaceToolConfig
         handler=lambda _args: git_status(config),
     )
     registry.register(
+        name="workspace_run_shell_inspect",
+        description="Run a bounded read-oriented shell command inside the workspace root.",
+        input_schema=object_schema(
+            {"command": "string", "timeout_seconds": "integer"},
+            required=["command"],
+        ),
+        output_schema=object_schema(
+            {"stdout": "string", "stderr": "string", "exit_code": "integer"},
+            required=["stdout", "stderr", "exit_code"],
+        ),
+        annotations=ToolAnnotations(read_only=True, idempotent=False),
+        handler=lambda args: run_shell_inspect(config, args),
+    )
+    registry.register(
+        name="workspace_run_shell_mutate",
+        description="Run an approval-gated shell command inside the workspace root.",
+        input_schema=object_schema(
+            {"command": "string", "timeout_seconds": "integer"},
+            required=["command"],
+        ),
+        output_schema=object_schema(
+            {"stdout": "string", "stderr": "string", "exit_code": "integer"},
+            required=["stdout", "stderr", "exit_code"],
+        ),
+        annotations=ToolAnnotations(destructive=True, idempotent=False),
+        handler=lambda args: run_shell(config, args),
+    )
+    registry.register(
         name="workspace_run_shell",
-        description="Run a shell command inside the workspace root with a timeout. Requires approval in agent runs.",
+        description="Compatibility alias for workspace_run_shell_mutate. Requires approval in agent runs.",
         input_schema=object_schema(
             {"command": "string", "timeout_seconds": "integer"},
             required=["command"],
@@ -127,6 +181,13 @@ def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
     }
 
 
+def read_file_hashed(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    raw = read_file(config, args)
+    lines = raw["content"].splitlines(keepends=True)
+    raw["content"] = "".join(format_hash_line(index, line) for index, line in enumerate(lines, start=1))
+    return raw
+
+
 def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args["path"])
     if args.get("create_dirs", False):
@@ -145,6 +206,26 @@ def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
     updated = text.replace(old, args["new"], 1)
     path.write_text(updated, encoding="utf-8")
     return {"path": relative_path(config, path), "replacements": 1}
+
+
+def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    path = resolve_workspace_path(config, args["path"])
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    line_number = args["line"]
+    if line_number < 1 or line_number > len(lines):
+        raise ValueError("line is outside file range")
+    current = lines[line_number - 1]
+    expected_hash = compute_line_hash(line_number, current)
+    if expected_hash != args["hash"]:
+        raise ValueError("line hash mismatch")
+    current_text = current.rstrip("\n").rstrip("\r")
+    if current_text != args["old"]:
+        raise ValueError("old text mismatch")
+    newline = "\n" if current.endswith("\n") else ""
+    lines[line_number - 1] = args["new"] + newline
+    path.write_text("".join(lines), encoding="utf-8")
+    new_hash = compute_line_hash(line_number, lines[line_number - 1])
+    return {"path": relative_path(config, path), "line": line_number, "hash": new_hash}
 
 
 def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
@@ -203,6 +284,30 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
     return {"stdout": result.stdout, "stderr": result.stderr, "exit_code": result.returncode}
 
 
+def run_shell_inspect(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    policy = classify_shell_command_policy(args["command"])
+    if policy != "inspect":
+        raise ValueError("command is not inspect-safe; retry with workspace_run_shell_mutate")
+    return run_shell(config, args)
+
+
+def classify_shell_command_policy(command: str) -> str:
+    blocked_tokens = (">", "<", "|", "&&", ";", "`", "$(")
+    if any(token in command for token in blocked_tokens):
+        return "mutate"
+    parts = command.strip().split()
+    if not parts:
+        return "mutate"
+    executable = parts[0]
+    if executable in {"pwd", "ls", "find", "rg", "grep", "cat", "head", "tail", "wc"}:
+        return "inspect"
+    if executable == "git" and len(parts) > 1 and parts[1] in {"status", "diff", "log", "show", "branch"}:
+        return "inspect"
+    if executable == "python3" and len(parts) > 2 and parts[1:3] == ["-m", "unittest"]:
+        return "inspect"
+    return "mutate"
+
+
 def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:
     resolved = (config.root / path).resolve()
     try:
@@ -214,3 +319,14 @@ def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:
 
 def relative_path(config: WorkspaceToolConfig, path: Path) -> str:
     return str(path.resolve().relative_to(config.root))
+
+
+def compute_line_hash(line_number: int, content: str) -> str:
+    normalized = f"{line_number}:{content.replace(chr(13), '').rstrip()}".encode("utf-8")
+    return f"{zlib.crc32(normalized) & 0xFF:02X}"
+
+
+def format_hash_line(line_number: int, content: str) -> str:
+    stripped_newline = content.rstrip("\n").rstrip("\r")
+    newline = "\n" if content.endswith("\n") else ""
+    return f"{line_number}#{compute_line_hash(line_number, content)}|{stripped_newline}{newline}"

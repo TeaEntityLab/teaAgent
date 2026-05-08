@@ -8,6 +8,7 @@ from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
 from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
+from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
 from teaagent.workspace_tools import build_workspace_tool_registry
@@ -42,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow destructive tools such as write, patch, and shell.",
     )
+    agent_run.add_argument(
+        "--permission-mode",
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help="Permission mode for workspace tools.",
+    )
     agent_run.set_defaults(func=agent_run_task)
 
     agent_list = agent_subparsers.add_parser("runs", help="List persisted agent runs.")
@@ -67,6 +74,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-destructive",
         action="store_true",
         help="Allow destructive tools for ask commands.",
+    )
+    tui.add_argument(
+        "--permission-mode",
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help="Permission mode for ask commands.",
     )
     tui.set_defaults(func=start_tui)
 
@@ -132,6 +145,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
             max_tool_calls=args.max_tool_calls,
             allow_destructive=args.allow_destructive,
             model=args.model,
+            permission_mode=parse_permission_mode(args.permission_mode),
         ),
         audit=audit,
     )
@@ -196,6 +210,7 @@ def start_tui(args: argparse.Namespace) -> int:
         model=args.model,
         root=args.root,
         allow_destructive=args.allow_destructive,
+        permission_mode=parse_permission_mode(args.permission_mode),
     )
 
 

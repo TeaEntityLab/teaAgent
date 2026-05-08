@@ -29,7 +29,7 @@ from teaagent.llm import (
     check_llm_configuration,
     create_llm_adapter,
 )
-from teaagent.policy import ApprovalPolicy
+from teaagent.policy import ApprovalPolicy, PermissionMode, parse_permission_mode
 from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_decision
 from teaagent.portability import ProviderProfile, PortabilityResult, assess_provider_portability
 from teaagent.rag import Document, InMemoryRetriever, agentic_retrieve
@@ -68,6 +68,7 @@ __all__ = [
     "LLMRequest",
     "LLMResponse",
     "ModelDecisionEngine",
+    "PermissionMode",
     "PortabilityResult",
     "PromptBundle",
     "ProviderProfile",
@@ -100,6 +101,7 @@ __all__ = [
     "graph_retrieve",
     "handle_stateless_tool_request",
     "parse_model_decision",
+    "parse_permission_mode",
     "review_skill",
     "register_workspace_tools",
     "run_chat_agent",

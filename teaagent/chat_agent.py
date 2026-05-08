@@ -7,7 +7,7 @@ from typing import Optional
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
 from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
-from teaagent.policy import ApprovalPolicy
+from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.prompt import assemble_agent_prompt, load_project_instructions, parse_model_decision
 from teaagent.runner import AgentRunner, Decision, RunResult
 from teaagent.tools import ToolRegistry
@@ -21,6 +21,7 @@ class ChatAgentConfig:
     max_tool_calls: int = 10
     allow_destructive: bool = False
     model: Optional[str] = None
+    permission_mode: PermissionMode = PermissionMode.PROMPT
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs) -> "ChatAgentConfig":
@@ -78,6 +79,9 @@ def run_chat_agent(
         registry=tool_registry,
         audit=audit or AuditLogger(),
         budget=RunBudget(max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls),
-        approval_policy=ApprovalPolicy(allow_all_destructive=config.allow_destructive),
+        approval_policy=ApprovalPolicy(
+            allow_all_destructive=config.allow_destructive,
+            permission_mode=config.permission_mode,
+        ),
     )
     return runner.run(task=task, decide=engine.decide)

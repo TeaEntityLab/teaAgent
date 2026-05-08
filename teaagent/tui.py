@@ -9,6 +9,7 @@ from teaagent import __version__
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
 from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
+from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
 
 
@@ -24,6 +25,7 @@ HELP_TEXT = """Commands:
   model <name|default>      Set or clear model override.
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
+  permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
   ask <task>                Run a model-driven agent task with workspace tools.
   runs                      List recent persisted agent runs.
   show <run_id>             Show one persisted run record.
@@ -43,6 +45,7 @@ class TeaAgentTUI:
         model: Optional[str] = None,
         root: str | Path = ".",
         allow_destructive: bool = False,
+        permission_mode: PermissionMode = PermissionMode.PROMPT,
         input_fn: InputFn = input,
         output_fn: OutputFn = print,
         adapter_factory: AdapterFactory = create_llm_adapter,
@@ -52,6 +55,7 @@ class TeaAgentTUI:
         self.model = model
         self.root = Path(root).resolve()
         self.allow_destructive = allow_destructive
+        self.permission_mode = permission_mode
         self.input_fn = input_fn
         self.output_fn = output_fn
         self.adapter_factory = adapter_factory
@@ -123,6 +127,17 @@ class TeaAgentTUI:
             self.allow_destructive = args[0] == "on"
             self.output_fn(f"destructive: {'on' if self.allow_destructive else 'off'}")
             return True
+        if action == "permission":
+            if len(args) != 1:
+                self.output_fn("error: permission requires one mode")
+                return True
+            try:
+                self.permission_mode = parse_permission_mode(args[0])
+            except ValueError as exc:
+                self.output_fn(f"error: {exc}")
+                return True
+            self.output_fn(f"permission: {self.permission_mode.value}")
+            return True
         if action == "ask":
             if not args:
                 self.output_fn("error: ask requires a task")
@@ -174,6 +189,7 @@ class TeaAgentTUI:
                 self.root,
                 model=self.model,
                 allow_destructive=self.allow_destructive,
+                permission_mode=self.permission_mode,
             ),
             audit=audit,
         )
@@ -200,7 +216,7 @@ class TeaAgentTUI:
     def _prompt(self) -> str:
         destructive = "!" if self.allow_destructive else ""
         model = self.model or "default"
-        return f"teaagent[{self.provider}:{model}{destructive}]> "
+        return f"teaagent[{self.provider}:{model}:{self.permission_mode.value}{destructive}]> "
 
     def _print_json(self, value) -> None:
         self.output_fn(json.dumps(value, ensure_ascii=False, sort_keys=True))
@@ -213,6 +229,7 @@ def run_tui(
     model: Optional[str] = None,
     root: str | Path = ".",
     allow_destructive: bool = False,
+    permission_mode: PermissionMode = PermissionMode.PROMPT,
 ) -> int:
     return TeaAgentTUI(
         database=database,
@@ -220,4 +237,5 @@ def run_tui(
         model=model,
         root=root,
         allow_destructive=allow_destructive,
+        permission_mode=permission_mode,
     ).run()

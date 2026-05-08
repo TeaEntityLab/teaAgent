@@ -60,6 +60,7 @@ class TUITests(unittest.TestCase):
                 f"root {root}",
                 "provider gpt",
                 "model test-model",
+                "permission workspace-write",
                 "ask read note",
                 "runs",
                 "exit",
@@ -83,6 +84,7 @@ class TUITests(unittest.TestCase):
             self.assertIn(f"root: {root.resolve()}", output)
             self.assertIn("provider: gpt", output)
             self.assertIn("model: test-model", output)
+            self.assertIn("permission: workspace-write", output)
             agent_payload = json.loads(output[-2])
             if isinstance(agent_payload, list):
                 agent_payload = json.loads(output[-3])
@@ -98,6 +100,15 @@ class TUITests(unittest.TestCase):
         self.assertTrue(tui.handle_command("destructive on"))
         self.assertTrue(tui.allow_destructive)
         self.assertEqual(output, ["destructive: on"])
+
+    def test_tui_permission_mode(self) -> None:
+        output = []
+        tui = TeaAgentTUI(input_fn=lambda _prompt: "exit", output_fn=output.append)
+
+        self.assertTrue(tui.handle_command("permission read-only"))
+
+        self.assertEqual(tui.permission_mode.value, "read-only")
+        self.assertEqual(output, ["permission: read-only"])
 
     def test_cli_tui_help_in_parser(self) -> None:
         output = io.StringIO()

@@ -70,6 +70,7 @@ provider gpt
 model gpt-4o-mini
 root /path/to/repo
 destructive off
+permission prompt
 ask Inspect this repo and summarize the test suite
 smoke
 query MATCH (n:SmokeTest) RETURN n.name
@@ -93,6 +94,16 @@ Allow destructive tools inside `ask` commands:
 
 ```bash
 teaagent tui --allow-destructive
+```
+
+Use a permission mode for `ask` commands:
+
+```bash
+teaagent tui --permission-mode read-only
+teaagent tui --permission-mode workspace-write
+teaagent tui --permission-mode prompt
+teaagent tui --permission-mode allow
+teaagent tui --permission-mode danger-full-access
 ```
 
 ## Model Adapters
@@ -158,12 +169,16 @@ teaagent workspace tools --root /path/to/repo
 Registered tools:
 
 - `workspace_read_file`: read UTF-8 files under the root.
+- `workspace_read_file_hashed`: read UTF-8 files with `LINE#HASH|content` anchors.
 - `workspace_write_file`: write UTF-8 files under the root; destructive.
 - `workspace_apply_patch`: replace one exact text span; destructive.
+- `workspace_edit_at_hash`: edit one line only if its hash anchor still matches; destructive.
 - `workspace_list_files`: list files by glob.
 - `workspace_search_text`: regex search text files.
 - `workspace_git_status`: run `git status --short`.
-- `workspace_run_shell`: run a shell command in the workspace; destructive.
+- `workspace_run_shell_inspect`: run inspect-safe shell commands without destructive permission.
+- `workspace_run_shell_mutate`: run arbitrary shell commands; destructive.
+- `workspace_run_shell`: compatibility alias for `workspace_run_shell_mutate`; destructive.
 
 All path-based tools reject paths that escape the configured workspace root.
 
@@ -195,6 +210,23 @@ By default, destructive tools are blocked. To allow file writes, patching, or sh
 ```bash
 teaagent agent run gpt "Create a TODO.md summary" --allow-destructive
 ```
+
+Prefer explicit permission modes for regular use:
+
+```bash
+teaagent agent run gpt "Inspect this repo" --permission-mode read-only
+teaagent agent run gpt "Update one markdown file" --permission-mode workspace-write
+teaagent agent run gpt "Run tests and patch failures" --permission-mode prompt
+teaagent agent run gpt "Run approved automation" --permission-mode allow
+```
+
+Permission modes:
+
+- `read-only`: blocks every destructive tool.
+- `workspace-write`: allows file write/patch/hash-edit tools, blocks shell mutation.
+- `prompt`: destructive tools require an approval token.
+- `allow`: allows destructive tools for the session.
+- `danger-full-access`: allows destructive tools; reserve for trusted automation.
 
 The model must return JSON decisions internally:
 

@@ -33,6 +33,42 @@ class WorkspaceToolTests(unittest.TestCase):
             self.assertEqual(patched["replacements"], 1)
             self.assertEqual((root / "src" / "hello.txt").read_text(encoding="utf-8"), "hi world\n")
 
+    def test_hash_anchored_read_and_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "note.txt").write_text("alpha\nbeta\n", encoding="utf-8")
+            registry = build_workspace_tool_registry(root)
+
+            hashed = registry.execute("workspace_read_file_hashed", {"path": "note.txt"})
+            first_line = hashed["content"].splitlines()[0]
+            line_anchor, text = first_line.split("|", 1)
+            line_number, hash_value = line_anchor.split("#", 1)
+            edited = registry.execute(
+                "workspace_edit_at_hash",
+                {
+                    "path": "note.txt",
+                    "line": int(line_number),
+                    "hash": hash_value,
+                    "old": text,
+                    "new": "ALPHA",
+                },
+            )
+
+            self.assertEqual(edited["line"], 1)
+            self.assertEqual((root / "note.txt").read_text(encoding="utf-8"), "ALPHA\nbeta\n")
+
+    def test_hash_edit_rejects_stale_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "note.txt").write_text("alpha\n", encoding="utf-8")
+            registry = build_workspace_tool_registry(root)
+
+            with self.assertRaises(Exception):
+                registry.execute(
+                    "workspace_edit_at_hash",
+                    {"path": "note.txt", "line": 1, "hash": "00", "old": "alpha", "new": "x"},
+                )
+
     def test_write_file_can_create_directories(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             registry = build_workspace_tool_registry(tmp)
@@ -56,12 +92,19 @@ class WorkspaceToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             registry = build_workspace_tool_registry(tmp)
 
-            shell = registry.execute("workspace_run_shell", {"command": "pwd", "timeout_seconds": 5})
+            shell = registry.execute("workspace_run_shell_inspect", {"command": "pwd", "timeout_seconds": 5})
             status = registry.execute("workspace_git_status", {})
 
             self.assertEqual(shell["exit_code"], 0)
             self.assertIn(tmp, shell["stdout"])
             self.assertIsInstance(status["exit_code"], int)
+
+    def test_shell_inspect_rejects_mutating_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            with self.assertRaises(Exception):
+                registry.execute("workspace_run_shell_inspect", {"command": "touch x.txt"})
 
     def test_cli_workspace_tools_outputs_metadata(self) -> None:
         output = io.StringIO()
