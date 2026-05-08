@@ -12,8 +12,10 @@ from teaagent.chat_agent import (
     run_chat_agent,
 )
 from teaagent.code_mode import (
+    ChildProcessCodeModeBackend,
     CodeModeResult,
     CodeModeSandbox,
+    ContainerCodeModeBackend,
     UnsafeCodeError,
     execute_code_mode,
 )
@@ -102,7 +104,10 @@ from teaagent.stateless_mcp import (
 )
 from teaagent.telemetry import (
     HAS_OTEL,
+    InMemoryMetricsSink,
+    MetricSnapshot,
     OTelAuditSink,
+    OTelMetricsSink,
     TelemetryConfig,
     TelemetryNotAvailable,
     TracingHTTPTransport,
@@ -124,9 +129,11 @@ __all__ = [
     'ApprovalRequest',
     'AuditLogger',
     'ChatAgentConfig',
+    'ChildProcessCodeModeBackend',
     'ClarificationResult',
     'CodeModeResult',
     'CodeModeSandbox',
+    'ContainerCodeModeBackend',
     'ContextCompactor',
     'Decision',
     'Document',
@@ -151,6 +158,7 @@ __all__ = [
     'LLMResponseFormatError',
     'MemoryCatalog',
     'MemoryEntry',
+    'MetricSnapshot',
     'ModelConformanceReport',
     'ModelConformanceResult',
     'ModelRoute',
@@ -177,7 +185,9 @@ __all__ = [
     'WorkerRecord',
     'WorkspaceToolConfig',
     'HAS_OTEL',
+    'InMemoryMetricsSink',
     'OTelAuditSink',
+    'OTelMetricsSink',
     'TelemetryConfig',
     'TelemetryNotAvailable',
     'TracingHTTPTransport',

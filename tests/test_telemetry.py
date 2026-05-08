@@ -6,6 +6,7 @@ from dataclasses import FrozenInstanceError
 from teaagent.audit import AuditEvent
 from teaagent.telemetry import (
     HAS_OTEL,
+    InMemoryMetricsSink,
     OTelAuditSink,
     TelemetryConfig,
     TelemetryNotAvailable,
@@ -62,6 +63,42 @@ class TelemetryNotAvailableTests(unittest.TestCase):
     def test_error_message_is_helpful(self) -> None:
         exc = TelemetryNotAvailable('OPTL not installed')
         self.assertIn('OPTL not installed', str(exc))
+
+
+class InMemoryMetricsSinkTests(unittest.TestCase):
+    def test_counts_run_and_tool_events(self) -> None:
+        sink = InMemoryMetricsSink()
+
+        sink.handle_event(AuditEvent(event_type='run_started', run_id='r1', payload={}))
+        sink.handle_event(
+            AuditEvent(
+                event_type='tool_call_started',
+                run_id='r1',
+                payload={'tool_name': 'workspace_read_file'},
+            )
+        )
+        sink.handle_event(
+            AuditEvent(
+                event_type='tool_call_completed',
+                run_id='r1',
+                payload={'tool_name': 'workspace_read_file'},
+            )
+        )
+        sink.handle_event(
+            AuditEvent(
+                event_type='run_completed',
+                run_id='r1',
+                payload={'iterations': 2, 'cost_cents': 0.3},
+            )
+        )
+
+        snapshot = sink.snapshot()
+
+        self.assertEqual(snapshot.counters['agent.runs.started'], 1)
+        self.assertEqual(snapshot.counters['agent.runs.completed'], 1)
+        self.assertEqual(snapshot.counters['agent.tool_calls.completed'], 1)
+        self.assertEqual(snapshot.histograms['agent.run.iterations'], [2.0])
+        self.assertEqual(snapshot.histograms['agent.run.cost_cents'], [0.3])
 
 
 @unittest.skipUnless(HAS_OTEL, 'opentelemetry packages not installed')

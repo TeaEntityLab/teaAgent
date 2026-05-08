@@ -20,6 +20,8 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Memory Catalog**: Append-only JSONL store for workspace observations injected into agent prompts.
 - **Intent Clarification**: Deterministic ambiguity scoring before model invocation.
 - **Run Store**: Persistent JSONL run history with resumable task replay.
+- **Code Mode**: Restricted Python execution with AST validation and pluggable child-process or container backends.
+- **Telemetry**: OpenTelemetry spans plus audit-driven metrics sinks for run and tool lifecycle events.
 
 ## Install
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import ast
+import json
 import multiprocessing
+import subprocess
 import traceback
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 try:
     import resource
@@ -73,6 +75,112 @@ class CodeModeSandbox:
     memory_bytes: int = 64 * 1024 * 1024
 
 
+class CodeModeBackend(Protocol):
+    def execute(
+        self,
+        code: str,
+        inputs: dict[str, Any],
+        sandbox: CodeModeSandbox,
+    ) -> CodeModeResult:
+        ...
+
+
+@dataclass(frozen=True)
+class ChildProcessCodeModeBackend:
+    def execute(
+        self,
+        code: str,
+        inputs: dict[str, Any],
+        sandbox: CodeModeSandbox,
+    ) -> CodeModeResult:
+        parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
+        process = multiprocessing.Process(
+            target=_execute_code_mode_child,
+            args=(code, inputs, sandbox, child_conn),
+        )
+        process.start()
+        process.join(sandbox.timeout_seconds)
+        if process.is_alive():
+            process.terminate()
+            process.join()
+            raise UnsafeCodeError('Code Mode timed out')
+
+        if parent_conn.poll():
+            message = parent_conn.recv()
+        else:
+            raise UnsafeCodeError('Code Mode sandbox exited without a result')
+
+        if message['status'] == 'error':
+            raise UnsafeCodeError(message['error'])
+        variables = message['variables']
+        _validate_plain_data(variables, 'variables')
+        return CodeModeResult(variables=variables)
+
+
+@dataclass(frozen=True)
+class ContainerCodeModeBackend:
+    image: str
+    runtime: str = 'docker'
+    python_executable: str = 'python3'
+    network: str = 'none'
+
+    def execute(
+        self,
+        code: str,
+        inputs: dict[str, Any],
+        sandbox: CodeModeSandbox,
+    ) -> CodeModeResult:
+        if not self.image:
+            raise UnsafeCodeError('Code Mode container image must be configured')
+        payload = json.dumps({'code': code, 'inputs': inputs})
+        try:
+            completed = subprocess.run(
+                self._build_command(sandbox),
+                input=payload,
+                text=True,
+                capture_output=True,
+                timeout=sandbox.timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise UnsafeCodeError('Code Mode timed out') from exc
+        except OSError as exc:
+            raise UnsafeCodeError(f'Code Mode container runtime failed: {exc}') from exc
+        if completed.returncode != 0:
+            detail = completed.stderr.strip() or completed.stdout.strip()
+            raise UnsafeCodeError(f'Code Mode container failed: {detail}')
+        try:
+            message = json.loads(completed.stdout)
+        except json.JSONDecodeError as exc:
+            raise UnsafeCodeError('Code Mode container returned invalid JSON') from exc
+        if message.get('status') == 'error':
+            raise UnsafeCodeError(str(message.get('error', 'unknown error')))
+        variables = message.get('variables')
+        _validate_plain_data(variables, 'variables')
+        return CodeModeResult(variables=variables)
+
+    def _build_command(self, sandbox: CodeModeSandbox) -> list[str]:
+        memory_mb = max(1, sandbox.memory_bytes // (1024 * 1024))
+        return [
+            self.runtime,
+            'run',
+            '--rm',
+            '--network',
+            self.network,
+            '--memory',
+            f'{memory_mb}m',
+            '--cpus',
+            str(max(1, sandbox.cpu_seconds)),
+            '--pids-limit',
+            '64',
+            '-i',
+            self.image,
+            self.python_executable,
+            '-c',
+            CONTAINER_CODE_MODE_SCRIPT,
+        ]
+
+
 class UnsafeCodeError(ValueError):
     pass
 
@@ -82,6 +190,7 @@ def execute_code_mode(
     *,
     inputs: dict[str, Any] | None = None,
     sandbox: CodeModeSandbox | None = None,
+    backend: CodeModeBackend | None = None,
 ) -> CodeModeResult:
     tree = ast.parse(code, mode='exec')
     _validate_tree(tree)
@@ -96,28 +205,62 @@ def execute_code_mode(
     if active_sandbox.memory_bytes <= 0:
         raise UnsafeCodeError('Code Mode memory limit must be positive')
 
-    parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
-    process = multiprocessing.Process(
-        target=_execute_code_mode_child,
-        args=(code, safe_inputs, active_sandbox, child_conn),
+    return (backend or ChildProcessCodeModeBackend()).execute(
+        code, safe_inputs, active_sandbox
     )
-    process.start()
-    process.join(active_sandbox.timeout_seconds)
-    if process.is_alive():
-        process.terminate()
-        process.join()
-        raise UnsafeCodeError('Code Mode timed out')
 
-    if parent_conn.poll():
-        message = parent_conn.recv()
-    else:
-        raise UnsafeCodeError('Code Mode sandbox exited without a result')
 
-    if message['status'] == 'error':
-        raise UnsafeCodeError(message['error'])
-    variables = message['variables']
-    _validate_plain_data(variables, 'variables')
-    return CodeModeResult(variables=variables)
+CONTAINER_CODE_MODE_SCRIPT = r'''
+import json
+import sys
+import traceback
+
+SAFE_BUILTINS = {
+    'abs': abs,
+    'dict': dict,
+    'enumerate': enumerate,
+    'len': len,
+    'list': list,
+    'max': max,
+    'min': min,
+    'range': range,
+    'round': round,
+    'sorted': sorted,
+    'str': str,
+    'sum': sum,
+}
+
+def validate(value, label):
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return
+    if isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            validate(item, f'{label}[{index}]')
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise ValueError(f'{label} contains a non-string key')
+            validate(item, f'{label}.{key}')
+        return
+    raise ValueError(f'{label} contains unsupported value type: {type(value).__name__}')
+
+try:
+    payload = json.loads(sys.stdin.read())
+    namespace = {'__builtins__': SAFE_BUILTINS}
+    namespace.update(payload['inputs'])
+    exec(compile(payload['code'], '<teaagent-code-mode>', 'exec'), namespace, namespace)
+    variables = {
+        key: value
+        for key, value in namespace.items()
+        if key != '__builtins__' and not key.startswith('_')
+    }
+    validate(variables, 'variables')
+except Exception as exc:
+    print(json.dumps({'status': 'error', 'error': f'{type(exc).__name__}: {exc}', 'traceback': traceback.format_exc()}))
+else:
+    print(json.dumps({'status': 'ok', 'variables': variables}))
+'''
 
 
 def _validate_tree(tree: ast.AST) -> None:

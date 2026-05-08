@@ -3,7 +3,9 @@ from __future__ import annotations
 import unittest
 
 from teaagent import (
+    CodeModeResult,
     CodeModeSandbox,
+    ContainerCodeModeBackend,
     Document,
     GraphEdge,
     KnowledgeGraph,
@@ -97,6 +99,42 @@ class P2PrimitiveTests(unittest.TestCase):
                 'for index in range(100000000):\n    value = index',
                 sandbox=CodeModeSandbox(timeout_seconds=0.01),
             )
+
+    def test_code_mode_accepts_backend_interface(self) -> None:
+        class _Backend:
+            def execute(
+                self,
+                code: str,
+                inputs: dict[str, object],
+                sandbox: CodeModeSandbox,
+            ) -> CodeModeResult:
+                return CodeModeResult(
+                    variables={
+                        'code': code,
+                        'value': inputs['value'],
+                        'timeout': sandbox.timeout_seconds,
+                    }
+                )
+
+        result = execute_code_mode(
+            'value = value + 1',
+            inputs={'value': 4},
+            sandbox=CodeModeSandbox(timeout_seconds=1.5),
+            backend=_Backend(),
+        )
+
+        self.assertEqual(result.variables['value'], 4)
+        self.assertEqual(result.variables['timeout'], 1.5)
+
+    def test_container_code_mode_backend_builds_isolated_command(self) -> None:
+        backend = ContainerCodeModeBackend(image='python:3.12-alpine', runtime='podman')
+
+        command = backend._build_command(CodeModeSandbox(memory_bytes=32 * 1024 * 1024))
+
+        self.assertEqual(command[:5], ['podman', 'run', '--rm', '--network', 'none'])
+        self.assertIn('--memory', command)
+        self.assertIn('32m', command)
+        self.assertIn('--pids-limit', command)
 
     def test_stateless_mcp_request_executes_via_registry(self) -> None:
         request = StatelessMCPRequest.create(
