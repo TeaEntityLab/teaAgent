@@ -39,7 +39,10 @@ class TieredConformanceResult:
             'provider': self.provider,
             'tier': self.tier,
             'status': self.status,
-            'checks': [{'name': c.name, 'status': c.status, 'detail': c.detail} for c in self.checks],
+            'checks': [
+                {'name': c.name, 'status': c.status, 'detail': c.detail}
+                for c in self.checks
+            ],
         }
         if self.model is not None:
             payload['model'] = self.model
@@ -281,10 +284,17 @@ def _run_tiered_provider(
         if smoke_content:
             checks.append(CheckResult(name='non_empty_response', status='passed'))
         else:
-            checks.append(CheckResult(name='non_empty_response', status='failed', detail='empty content'))
+            checks.append(
+                CheckResult(
+                    name='non_empty_response', status='failed', detail='empty content'
+                )
+            )
             return TieredConformanceResult(
-                provider=provider, tier=tier.value, status='failed',
-                checks=checks, model=resolved_model,
+                provider=provider,
+                tier=tier.value,
+                status='failed',
+                checks=checks,
+                model=resolved_model,
                 error='provider returned empty content',
             )
 
@@ -293,10 +303,13 @@ def _run_tiered_provider(
             if smoke_content == 'ok':
                 checks.append(CheckResult(name='exact_content_match', status='passed'))
             else:
-                checks.append(CheckResult(
-                    name='exact_content_match', status='failed',
-                    detail=f'got {smoke_content!r}; expected "ok"',
-                ))
+                checks.append(
+                    CheckResult(
+                        name='exact_content_match',
+                        status='failed',
+                        detail=f'got {smoke_content!r}; expected "ok"',
+                    )
+                )
 
             # --- contract: system prompt adherence ---
             sys_response = adapter.complete(  # type: ignore[attr-defined]
@@ -308,25 +321,37 @@ def _run_tiered_provider(
             )
             sys_content = sys_response.content.strip()
             if sys_content.startswith('CONTRACT-OK:'):
-                checks.append(CheckResult(name='system_prompt_adherence', status='passed'))
+                checks.append(
+                    CheckResult(name='system_prompt_adherence', status='passed')
+                )
             else:
-                checks.append(CheckResult(
-                    name='system_prompt_adherence', status='failed',
-                    detail=f'response did not start with "CONTRACT-OK:": {sys_content[:80]!r}',
-                ))
+                checks.append(
+                    CheckResult(
+                        name='system_prompt_adherence',
+                        status='failed',
+                        detail=f'response did not start with "CONTRACT-OK:": {sys_content[:80]!r}',
+                    )
+                )
 
             # --- contract: token budget reported ---
             if smoke_response.input_tokens > 0 and smoke_response.output_tokens > 0:
-                checks.append(CheckResult(name='token_budget_reported', status='passed'))
+                checks.append(
+                    CheckResult(name='token_budget_reported', status='passed')
+                )
             else:
-                checks.append(CheckResult(
-                    name='token_budget_reported', status='failed',
-                    detail=f'input_tokens={smoke_response.input_tokens} output_tokens={smoke_response.output_tokens}',
-                ))
+                checks.append(
+                    CheckResult(
+                        name='token_budget_reported',
+                        status='failed',
+                        detail=f'input_tokens={smoke_response.input_tokens} output_tokens={smoke_response.output_tokens}',
+                    )
+                )
 
     except Exception as exc:
         return TieredConformanceResult(
-            provider=provider, tier=tier.value, status='failed',
+            provider=provider,
+            tier=tier.value,
+            status='failed',
             checks=checks if 'checks' in dir() else [],
             model=resolved_model if 'resolved_model' in dir() else None,
             error=f'{type(exc).__name__}: {exc}',
@@ -334,6 +359,9 @@ def _run_tiered_provider(
 
     overall = 'passed' if all(c.status == 'passed' for c in checks) else 'failed'
     return TieredConformanceResult(
-        provider=provider, tier=tier.value, status=overall,
-        checks=checks, model=resolved_model,
+        provider=provider,
+        tier=tier.value,
+        status=overall,
+        checks=checks,
+        model=resolved_model,
     )

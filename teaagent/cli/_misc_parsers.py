@@ -32,7 +32,9 @@ def register(
 
 
 def _clarify(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
-    p = subparsers.add_parser('clarify', help='Score a task for ambiguity before running an agent.')
+    p = subparsers.add_parser(
+        'clarify', help='Score a task for ambiguity before running an agent.'
+    )
     p.add_argument('task', help='Task to clarify.')
     p.set_defaults(func=handler)
 
@@ -44,7 +46,9 @@ def _tui(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # 
         description='Start an interactive terminal UI.',
     )
     p.add_argument(
-        '--database', default=':memory:', help='SQLite database path. Defaults to :memory:.'
+        '--database',
+        default=':memory:',
+        help='SQLite database path. Defaults to :memory:.',
     )
     p.add_argument(
         '--provider',
@@ -52,7 +56,9 @@ def _tui(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # 
         choices=available_providers(),
         help='Default model provider for ask commands.',
     )
-    p.add_argument('--model', default=None, help='Default model override for ask commands.')
+    p.add_argument(
+        '--model', default=None, help='Default model override for ask commands.'
+    )
     p.add_argument('--root', default='.', help='Workspace root for ask commands.')
     p.add_argument(
         '--allow-destructive',
@@ -79,17 +85,23 @@ def _doctor(
 
     gql = subs.add_parser('graphqlite', help='Check GraphQLite runtime availability.')
     gql.add_argument(
-        '--database', default=':memory:', help='SQLite database path. Defaults to :memory:.'
+        '--database',
+        default=':memory:',
+        help='SQLite database path. Defaults to :memory:.',
     )
     gql.set_defaults(func=graphqlite_handler)
 
     mdl = subs.add_parser('model', help='Check model provider configuration.')
-    mdl.add_argument('provider', choices=available_providers(), help='Model provider to check.')
+    mdl.add_argument(
+        'provider', choices=available_providers(), help='Model provider to check.'
+    )
     mdl.set_defaults(func=model_handler)
 
     all_checks = subs.add_parser('all', help='Run all environment checks.')
     all_checks.add_argument(
-        '--database', default=':memory:', help='SQLite database path. Defaults to :memory:.'
+        '--database',
+        default=':memory:',
+        help='SQLite database path. Defaults to :memory:.',
     )
     all_checks.add_argument(
         '--provider',
@@ -103,7 +115,9 @@ def _doctor(
 
 def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subparsers.add_parser('completion', help='Print a shell completion snippet.')
-    p.add_argument('shell', choices=['bash', 'zsh', 'fish'], help='Shell to generate for.')
+    p.add_argument(
+        'shell', choices=['bash', 'zsh', 'fish'], help='Shell to generate for.'
+    )
     p.set_defaults(func=handler)
 
 
@@ -118,13 +132,19 @@ def _graphqlite(
     query = subs.add_parser('query', help='Execute a Cypher query against GraphQLite.')
     query.add_argument('cypher', help='Cypher query to execute.')
     query.add_argument(
-        '--database', default=':memory:', help='SQLite database path. Defaults to :memory:.'
+        '--database',
+        default=':memory:',
+        help='SQLite database path. Defaults to :memory:.',
     )
     query.set_defaults(func=query_handler)
 
-    smoke = subs.add_parser('smoke', help='Create a node and run a real GraphQLite query.')
+    smoke = subs.add_parser(
+        'smoke', help='Create a node and run a real GraphQLite query.'
+    )
     smoke.add_argument(
-        '--database', default=':memory:', help='SQLite database path. Defaults to :memory:.'
+        '--database',
+        default=':memory:',
+        help='SQLite database path. Defaults to :memory:.',
     )
     smoke.set_defaults(func=smoke_handler)
 
@@ -142,12 +162,17 @@ def _ultrawork(
     subs = ultrawork.add_subparsers(dest='ultrawork_command', required=True)
 
     start = subs.add_parser('start', help='Start one detached background agent run.')
-    start.add_argument('provider', choices=available_providers(), help='Model provider to use.')
+    start.add_argument(
+        'provider', choices=available_providers(), help='Model provider to use.'
+    )
     start.add_argument('task', help='Task for the agent to perform.')
     start.add_argument('--root', default='.', help='Workspace root.')
     start.add_argument('--model', default=None, help='Override model name.')
     start.add_argument(
-        '--heartbeat', type=float, default=10.0, help='Heartbeat interval seconds for the worker.'
+        '--heartbeat',
+        type=float,
+        default=10.0,
+        help='Heartbeat interval seconds for the worker.',
     )
     start.add_argument(
         '--permission-mode',
@@ -155,7 +180,9 @@ def _ultrawork(
         default=PermissionMode.PROMPT.value,
         help='Permission mode for workspace tools.',
     )
-    start.add_argument('--label', default=None, help='Optional human label for this worker.')
+    start.add_argument(
+        '--label', default=None, help='Optional human label for this worker.'
+    )
     start.set_defaults(func=start_handler)
 
     lst = subs.add_parser('list', help='List background workers.')
@@ -178,5 +205,7 @@ def _workspace(subparsers: argparse._SubParsersAction, handler: Callable) -> Non
     subs = workspace.add_subparsers(dest='workspace_command', required=True)
 
     tools = subs.add_parser('tools', help='List workspace tool metadata.')
-    tools.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    tools.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     tools.set_defaults(func=handler)

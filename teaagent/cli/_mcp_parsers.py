@@ -17,7 +17,9 @@ def register(
         'serve',
         help='Serve workspace tools over stdio JSON-RPC or Streamable HTTP.',
     )
-    serve.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    serve.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     serve.add_argument(
         '--http',
         action='store_true',

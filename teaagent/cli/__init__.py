@@ -52,7 +52,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='teaagent', description='TeaAgent harness utilities.'
     )
-    parser.add_argument('--version', action='version', version=f'teaagent {__version__}')
+    parser.add_argument(
+        '--version', action='version', version=f'teaagent {__version__}'
+    )
     parser.add_argument(
         '--config',
         default=None,
@@ -60,44 +62,59 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest='command', required=True)
 
-    register_misc(subparsers, {
-        'clarify': clarify_command,
-        'tui': start_tui,
-        'doctor_graphqlite': doctor_graphqlite,
-        'doctor_model': doctor_model,
-        'doctor_all': doctor_all,
-        'graphqlite_query': graphqlite_query,
-        'graphqlite_smoke': graphqlite_smoke,
-        'ultrawork_start': ultrawork_start_command,
-        'ultrawork_list': ultrawork_list_command,
-        'ultrawork_show': ultrawork_show_command,
-        'ultrawork_stop': ultrawork_stop_command,
-        'workspace_tools': workspace_tools_metadata,
-        'completion': completion_command,
-    })
-    register_memory(subparsers, {
-        'add': memory_add_command,
-        'list': memory_list_command,
-        'search': memory_search_command,
-        'show': memory_show_command,
-    })
-    register_agent(subparsers, {
-        'run': agent_run_task,
-        'preflight': agent_preflight_command,
-        'resume': agent_resume_command,
-        'status': agent_status_command,
-        'runs': agent_runs_list,
-        'show': agent_run_show,
-    })
-    register_model(subparsers, {
-        'providers': model_providers,
-        'smoke': model_smoke,
-        'conformance': model_conformance,
-        'route': model_route,
-    })
-    register_mcp(subparsers, {
-        'serve': mcp_serve_command,
-    })
+    register_misc(
+        subparsers,
+        {
+            'clarify': clarify_command,
+            'tui': start_tui,
+            'doctor_graphqlite': doctor_graphqlite,
+            'doctor_model': doctor_model,
+            'doctor_all': doctor_all,
+            'graphqlite_query': graphqlite_query,
+            'graphqlite_smoke': graphqlite_smoke,
+            'ultrawork_start': ultrawork_start_command,
+            'ultrawork_list': ultrawork_list_command,
+            'ultrawork_show': ultrawork_show_command,
+            'ultrawork_stop': ultrawork_stop_command,
+            'workspace_tools': workspace_tools_metadata,
+            'completion': completion_command,
+        },
+    )
+    register_memory(
+        subparsers,
+        {
+            'add': memory_add_command,
+            'list': memory_list_command,
+            'search': memory_search_command,
+            'show': memory_show_command,
+        },
+    )
+    register_agent(
+        subparsers,
+        {
+            'run': agent_run_task,
+            'preflight': agent_preflight_command,
+            'resume': agent_resume_command,
+            'status': agent_status_command,
+            'runs': agent_runs_list,
+            'show': agent_run_show,
+        },
+    )
+    register_model(
+        subparsers,
+        {
+            'providers': model_providers,
+            'smoke': model_smoke,
+            'conformance': model_conformance,
+            'route': model_route,
+        },
+    )
+    register_mcp(
+        subparsers,
+        {
+            'serve': mcp_serve_command,
+        },
+    )
 
     return parser
 
@@ -125,6 +142,7 @@ def apply_config_defaults(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
+
 
 def doctor_graphqlite(args: argparse.Namespace) -> int:
     ok, message = check_graphqlite_runtime(args.database)
@@ -555,11 +573,17 @@ def workspace_tools_metadata(args: argparse.Namespace) -> int:
 
 def completion_command(args: argparse.Namespace) -> int:
     if args.shell == 'bash':
-        print('complete -W "agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace" teaagent')
+        print(
+            'complete -W "agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace" teaagent'
+        )
     elif args.shell == 'zsh':
-        print('#compdef teaagent\n_arguments "1: :((agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace))"')
+        print(
+            '#compdef teaagent\n_arguments "1: :((agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace))"'
+        )
     else:
-        print('complete -c teaagent -f -a "agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace"')
+        print(
+            'complete -c teaagent -f -a "agent clarify completion doctor graphqlite mcp memory model tui ultrawork workspace"'
+        )
     return 0
 
 

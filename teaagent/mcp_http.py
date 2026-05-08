@@ -78,8 +78,8 @@ def build_mcp_http_server(
 ) -> tuple[ThreadingHTTPServer, MCPSessionStore]:
     if not is_loopback_host(host) and auth_token is None and oauth_server is None:
         raise ValueError(
-            f"Refusing to bind MCP HTTP to non-loopback host {host!r} without "
-            "auth_token or oauth_server. Pass auth_token=, oauth_server=, or bind to 127.0.0.1."
+            f'Refusing to bind MCP HTTP to non-loopback host {host!r} without '
+            'auth_token or oauth_server. Pass auth_token=, oauth_server=, or bind to 127.0.0.1.'
         )
     sessions = MCPSessionStore()
     origins = frozenset(allowed_origins) if allowed_origins else None

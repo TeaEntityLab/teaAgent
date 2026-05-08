@@ -27,16 +27,22 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         help='Run one autonomous task with workspace tools.',
         description='Run one autonomous task with workspace tools.',
     )
-    p.add_argument('provider', choices=available_providers(), help='Model provider to use.')
+    p.add_argument(
+        'provider', choices=available_providers(), help='Model provider to use.'
+    )
     p.add_argument('task', help='Task for the agent to perform.')
-    p.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     p.add_argument('--model', default=None, help='Override model name.')
     p.add_argument(
         '--route-model',
         action='store_true',
         help='Choose a provider-specific model from the task category when --model is not set.',
     )
-    p.add_argument('--max-iterations', type=int, default=10, help='Maximum agent loop iterations.')
+    p.add_argument(
+        '--max-iterations', type=int, default=10, help='Maximum agent loop iterations.'
+    )
     p.add_argument('--max-tool-calls', type=int, default=10, help='Maximum tool calls.')
     p.add_argument(
         '--clarify',
@@ -70,7 +76,12 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         action='store_true',
         help="Expose the 'subagent' tool so the model can delegate sub-tasks.",
     )
-    p.add_argument('--max-subagent-depth', type=int, default=1, help='Maximum nested subagent depth.')
+    p.add_argument(
+        '--max-subagent-depth',
+        type=int,
+        default=1,
+        help='Maximum nested subagent depth.',
+    )
     p.add_argument(
         '--heartbeat',
         type=float,
@@ -101,18 +112,29 @@ def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # 
         'preflight',
         help='Summarize clarify, routing, memory, and tool state without calling a model.',
     )
-    p.add_argument('provider', choices=available_providers(), help='Model provider to plan for.')
+    p.add_argument(
+        'provider', choices=available_providers(), help='Model provider to plan for.'
+    )
     p.add_argument('task', help='Task to evaluate.')
-    p.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     p.add_argument('--model', default=None, help='Override model name.')
-    p.add_argument('--route-model', action='store_true', help='Apply task category routing.')
+    p.add_argument(
+        '--route-model', action='store_true', help='Apply task category routing.'
+    )
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],
         default=PermissionMode.PROMPT.value,
         help='Permission mode to report.',
     )
-    p.add_argument('--memory-limit', type=int, default=5, help='Maximum matched memories to include.')
+    p.add_argument(
+        '--memory-limit',
+        type=int,
+        default=5,
+        help='Maximum matched memories to include.',
+    )
     p.set_defaults(func=handler)
 
 
@@ -121,19 +143,29 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         'resume',
         help="Re-run a persisted run's task using the original recorded task.",
     )
-    p.add_argument('provider', choices=available_providers(), help='Model provider to use.')
+    p.add_argument(
+        'provider', choices=available_providers(), help='Model provider to use.'
+    )
     p.add_argument('run_id', help='Run id to resume.')
-    p.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     p.add_argument('--model', default=None, help='Override model name.')
-    p.add_argument('--route-model', action='store_true', help='Apply task category routing.')
-    p.add_argument('--max-iterations', type=int, default=10, help='Maximum agent loop iterations.')
+    p.add_argument(
+        '--route-model', action='store_true', help='Apply task category routing.'
+    )
+    p.add_argument(
+        '--max-iterations', type=int, default=10, help='Maximum agent loop iterations.'
+    )
     p.add_argument('--max-tool-calls', type=int, default=10, help='Maximum tool calls.')
     p.add_argument(
         '--clarify',
         action='store_true',
         help='Run deterministic ambiguity scoring before calling the model.',
     )
-    p.add_argument('--allow-destructive', action='store_true', help='Allow destructive tools.')
+    p.add_argument(
+        '--allow-destructive', action='store_true', help='Allow destructive tools.'
+    )
     p.add_argument(
         '--approve-call-id',
         action='append',
@@ -151,8 +183,15 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         default=PermissionMode.PROMPT.value,
         help='Permission mode for workspace tools.',
     )
-    p.add_argument('--subagent', action='store_true', help="Expose the 'subagent' tool.")
-    p.add_argument('--max-subagent-depth', type=int, default=1, help='Maximum nested subagent depth.')
+    p.add_argument(
+        '--subagent', action='store_true', help="Expose the 'subagent' tool."
+    )
+    p.add_argument(
+        '--max-subagent-depth',
+        type=int,
+        default=1,
+        help='Maximum nested subagent depth.',
+    )
     p.add_argument(
         '--heartbeat',
         type=float,
@@ -170,13 +209,17 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
 def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subs.add_parser('status', help='Show liveness status of a persisted run.')
     p.add_argument('run_id', help='Run id to inspect.')
-    p.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     p.set_defaults(func=handler)
 
 
 def _runs(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subs.add_parser('runs', help='List persisted agent runs.')
-    p.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     p.add_argument('--limit', type=int, default=20, help='Maximum runs to list.')
     p.set_defaults(func=handler)
 
@@ -184,5 +227,7 @@ def _runs(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type:
 def _show(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subs.add_parser('show', help='Show one persisted run JSONL record.')
     p.add_argument('run_id', help='Run id to show.')
-    p.add_argument('--root', default='.', help='Workspace root. Defaults to current directory.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
     p.set_defaults(func=handler)

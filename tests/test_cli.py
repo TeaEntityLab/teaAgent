@@ -201,7 +201,9 @@ class CLITests(unittest.TestCase):
             output = io.StringIO()
 
             with (
-                patch('teaagent.cli.create_llm_adapter', return_value=adapter) as create,
+                patch(
+                    'teaagent.cli.create_llm_adapter', return_value=adapter
+                ) as create,
                 redirect_stdout(output),
             ):
                 exit_code = main(['--config', config, 'model', 'smoke', 'gpt'])

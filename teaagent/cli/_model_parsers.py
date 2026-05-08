@@ -17,10 +17,16 @@ def register(
     providers.set_defaults(func=handlers['providers'])
 
     smoke = subs.add_parser('smoke', help='Run a minimal prompt against a provider.')
-    smoke.add_argument('provider', choices=available_providers(), help='Model provider to call.')
+    smoke.add_argument(
+        'provider', choices=available_providers(), help='Model provider to call.'
+    )
     smoke.add_argument('--model', default=None, help='Override model name.')
-    smoke.add_argument('--prompt', default='Reply with exactly: ok', help='Prompt to send.')
-    smoke.add_argument('--max-tokens', type=int, default=32, help='Maximum output tokens.')
+    smoke.add_argument(
+        '--prompt', default='Reply with exactly: ok', help='Prompt to send.'
+    )
+    smoke.add_argument(
+        '--max-tokens', type=int, default=32, help='Maximum output tokens.'
+    )
     smoke.set_defaults(func=handlers['smoke'])
 
     conformance = subs.add_parser(
@@ -46,7 +52,9 @@ def register(
         default='ok',
         help='Exact response content required for pass. Use an empty string to only require non-empty output.',
     )
-    conformance.add_argument('--max-tokens', type=int, default=32, help='Maximum output tokens.')
+    conformance.add_argument(
+        '--max-tokens', type=int, default=32, help='Maximum output tokens.'
+    )
     conformance.set_defaults(func=handlers['conformance'])
 
     route = subs.add_parser(

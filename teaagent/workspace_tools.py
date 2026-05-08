@@ -189,7 +189,12 @@ def register_workspace_tools(
         name='workspace_search_text',
         description='Search text files with a regular expression inside the workspace root.',
         input_schema=object_schema(
-            {'pattern': 'string', 'include': 'string', 'limit': 'integer', 'offset': 'integer'},
+            {
+                'pattern': 'string',
+                'include': 'string',
+                'limit': 'integer',
+                'offset': 'integer',
+            },
             required=['pattern'],
         ),
         output_schema=object_schema(
@@ -366,7 +371,11 @@ def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
             continue
         files.append(rel)
         if len(files) >= limit:
-            return {'files': files, 'truncated': True, 'offset': offset + skipped + len(files)}
+            return {
+                'files': files,
+                'truncated': True,
+                'offset': offset + skipped + len(files),
+            }
     return {'files': files, 'truncated': False, 'offset': offset + skipped + len(files)}
 
 
@@ -403,8 +412,16 @@ def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
                     }
                 )
                 if len(matches) >= limit:
-                    return {'matches': matches, 'truncated': True, 'offset': offset + skipped + len(matches)}
-    return {'matches': matches, 'truncated': False, 'offset': offset + skipped + len(matches)}
+                    return {
+                        'matches': matches,
+                        'truncated': True,
+                        'offset': offset + skipped + len(matches),
+                    }
+    return {
+        'matches': matches,
+        'truncated': False,
+        'offset': offset + skipped + len(matches),
+    }
 
 
 def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:
@@ -543,7 +560,12 @@ def _has_unquoted_shell_operator(command: str) -> bool:
                 in_single = True
             elif ch == '"':
                 in_double = True
-            elif ch in ('>', '<', '|', '&', ';', '`') or ch == '$' and i + 1 < n and command[i + 1] == '(':
+            elif (
+                ch in ('>', '<', '|', '&', ';', '`')
+                or ch == '$'
+                and i + 1 < n
+                and command[i + 1] == '('
+            ):
                 return True
         i += 1
     return False

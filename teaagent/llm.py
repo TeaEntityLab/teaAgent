@@ -127,7 +127,9 @@ class UrllibHTTPTransport:
                 return json.loads(response.read().decode('utf-8'))
         except HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')
-            raise LLMHTTPError(f'HTTP {exc.code}: {detail}', status_code=exc.code) from exc
+            raise LLMHTTPError(
+                f'HTTP {exc.code}: {detail}', status_code=exc.code
+            ) from exc
         except URLError as exc:
             raise LLMHTTPError(f'HTTP request failed: {exc.reason}') from exc
 
@@ -140,7 +142,7 @@ class LLMRetryConfig:
     retry_on_status: frozenset[int] = frozenset({429, 500, 502, 503, 504})
 
     def delay(self, attempt: int) -> float:
-        delay = self.base_delay_seconds * (2 ** attempt)
+        delay = self.base_delay_seconds * (2**attempt)
         jitter = random.uniform(0, delay * 0.5)
         return min(delay + jitter, self.max_delay_seconds)
 
@@ -265,7 +267,9 @@ class OpenAICompatibleAdapter:
                     chunks.append(chunk)
         except HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')
-            raise LLMHTTPError(f'HTTP {exc.code}: {detail}', status_code=exc.code) from exc
+            raise LLMHTTPError(
+                f'HTTP {exc.code}: {detail}', status_code=exc.code
+            ) from exc
         except URLError as exc:
             raise LLMHTTPError(f'HTTP request failed: {exc.reason}') from exc
         return LLMResponse(

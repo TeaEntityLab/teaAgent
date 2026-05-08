@@ -9,7 +9,6 @@ from teaagent.audit import AuditLogger
 
 
 class Heartbeat:
-
     def __init__(
         self,
         audit: AuditLogger,
