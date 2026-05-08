@@ -1,15 +1,22 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "teaagent"
 version = "0.1.0"
 description = "Minimal P0 agent harness with governance-first defaults."
 requires-python = ">=3.9"
-dependencies = [
+dependencies = []
+
+[project.optional-dependencies]
+graphqlite = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
 ]
-
-[project.optional-dependencies]
 dev = [
+    "graphqlite>=0.4.4",
+    "pysqlite3>=0.6.0",
     "pytest>=7",
     "pytest-cov>=4",
     "ruff>=0.4",

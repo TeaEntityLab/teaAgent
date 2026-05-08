@@ -35,6 +35,10 @@ python3 -m teaagent.cli --help
 
 Requires Python >= 3.9. The `graphqlite` dependency is optional — GraphQL RAG features need it.
 
+```bash
+pip install -e ".[graphqlite]"
+```
+
 ## Quick Start
 
 ```bash
