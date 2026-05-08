@@ -4,6 +4,7 @@ import json
 import tempfile
 import threading
 import unittest
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 from teaagent.audit import AuditEvent, AuditLogger, utc_now
@@ -36,7 +37,7 @@ class AuditEventTests(unittest.TestCase):
 
     def test_event_is_frozen(self) -> None:
         event = AuditEvent(event_type="e", run_id="r", payload={})
-        with self.assertRaises(Exception):
+        with self.assertRaises(FrozenInstanceError):
             event.run_id = "other"  # type: ignore[misc]
 
 
@@ -53,8 +54,8 @@ class AuditLoggerTests(unittest.TestCase):
 
     def test_record_multiple_events_in_order(self) -> None:
         logger = AuditLogger()
-        e1 = logger.record("start", "r1")
-        e2 = logger.record("end", "r1")
+        logger.record("start", "r1")
+        logger.record("end", "r1")
 
         self.assertEqual(len(logger.events), 2)
         self.assertEqual(logger.events[0].event_type, "start")

@@ -640,7 +640,6 @@ class TUITests(unittest.TestCase):
 
     def test_tui_progress_sink_handles_run_failed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
             output = []
             adapter = FakeAdapter(
                 [

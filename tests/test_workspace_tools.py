@@ -9,6 +9,7 @@ from pathlib import Path
 
 from teaagent import build_workspace_tool_registry
 from teaagent.cli import main
+from teaagent.errors import ToolExecutionError
 
 
 class WorkspaceToolTests(unittest.TestCase):
@@ -63,7 +64,7 @@ class WorkspaceToolTests(unittest.TestCase):
             (root / "note.txt").write_text("alpha\n", encoding="utf-8")
             registry = build_workspace_tool_registry(root)
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(ToolExecutionError):
                 registry.execute(
                     "workspace_edit_at_hash",
                     {"path": "note.txt", "line": 1, "hash": "00", "old": "alpha", "new": "x"},
@@ -85,7 +86,7 @@ class WorkspaceToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             registry = build_workspace_tool_registry(tmp)
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(ToolExecutionError):
                 registry.execute("workspace_read_file", {"path": "../outside.txt"})
 
     def test_shell_and_git_status_tools(self) -> None:
@@ -103,7 +104,7 @@ class WorkspaceToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             registry = build_workspace_tool_registry(tmp)
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(ToolExecutionError):
                 registry.execute("workspace_run_shell_inspect", {"command": "touch x.txt"})
 
     def test_cli_workspace_tools_outputs_metadata(self) -> None:
@@ -121,7 +122,7 @@ class WorkspaceToolTests(unittest.TestCase):
             (Path(tmp) / "file.txt").write_text("content", encoding="utf-8")
             registry = build_workspace_tool_registry(tmp)
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(ToolExecutionError):
                 registry.execute(
                     "workspace_apply_patch",
                     {"path": "file.txt", "old": "nonexistent", "new": "x"},
@@ -132,7 +133,7 @@ class WorkspaceToolTests(unittest.TestCase):
             (Path(tmp) / "file.txt").write_text("line1\n", encoding="utf-8")
             registry = build_workspace_tool_registry(tmp)
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(ToolExecutionError):
                 registry.execute(
                     "workspace_edit_at_hash",
                     {"path": "file.txt", "line": 99, "hash": "abc", "old": "line1", "new": "x"},

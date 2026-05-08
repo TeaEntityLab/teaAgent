@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import FrozenInstanceError
 
 from teaagent.errors import ToolPermissionError
-from teaagent.policy import ApprovalPolicy, PermissionMode, parse_permission_mode
+from teaagent.policy import (
+    ApprovalPolicy,
+    PermissionMode,
+    parse_permission_mode,
+)
 
 
 class PermissionModeTests(unittest.TestCase):
@@ -77,7 +82,7 @@ class ApprovalPolicyTests(unittest.TestCase):
 
     def test_policy_is_frozen(self) -> None:
         policy = ApprovalPolicy()
-        with self.assertRaises(Exception):
+        with self.assertRaises(FrozenInstanceError):
             policy.allow_all_destructive = True  # type: ignore[misc]
 
 

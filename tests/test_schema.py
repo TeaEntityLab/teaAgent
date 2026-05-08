@@ -120,11 +120,6 @@ class SchemaValidationTests(unittest.TestCase):
         validate_object_schema(schema, {"x": 1, "y": 2.5}, label="input")
 
     def test_label_appears_in_error_message(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {},
-            "required": [],
-        }
         with self.assertRaises(ToolValidationError) as ctx:
             validate_object_schema(SchemaValidationTests._non_object_schema(), {}, label="my_tool.input")
         self.assertIn("my_tool.input", str(ctx.exception))

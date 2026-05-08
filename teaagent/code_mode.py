@@ -77,6 +77,5 @@ def _validate_tree(tree: ast.AST) -> None:
     for node in ast.walk(tree):
         if type(node) not in ALLOWED_NODES:
             raise UnsafeCodeError(f"Disallowed syntax: {type(node).__name__}")
-        if isinstance(node, ast.Call):
-            if not isinstance(node.func, ast.Name) or node.func.id not in SAFE_BUILTINS:
-                raise UnsafeCodeError("Only approved builtin calls are allowed")
+        if isinstance(node, ast.Call) and (not isinstance(node.func, ast.Name) or node.func.id not in SAFE_BUILTINS):
+            raise UnsafeCodeError("Only approved builtin calls are allowed")

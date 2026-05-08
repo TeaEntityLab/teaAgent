@@ -35,15 +35,14 @@ class CLITests(unittest.TestCase):
         self.assertEqual(payload, [{"n.name": "TeaAgent"}])
 
     def test_doctor_model_reports_missing_key(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            with patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=True):
-                output = io.StringIO()
-                with redirect_stdout(output):
-                    exit_code = main(["doctor", "model", "gpt"])
-                payload = json.loads(output.getvalue())
-                self.assertEqual(exit_code, 1)
-                self.assertFalse(payload["ok"])
-                self.assertEqual(payload["provider"], "gpt")
+        with tempfile.TemporaryDirectory() as _tmp, patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=True):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["doctor", "model", "gpt"])
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["provider"], "gpt")
 
     def test_doctor_model_ok_when_key_set(self) -> None:
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}, clear=True):

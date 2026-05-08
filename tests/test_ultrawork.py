@@ -58,9 +58,8 @@ class UltraworkStoreTests(unittest.TestCase):
             self.assertFalse(UltraworkStore._is_alive(record.pid))
 
     def test_show_unknown_worker_raises(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaises(FileNotFoundError):
-                UltraworkStore(tmp).show("missing")
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(FileNotFoundError):
+            UltraworkStore(tmp).show("missing")
 
     def test_cli_ultrawork_list_returns_persisted_record(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import FrozenInstanceError
 
 from teaagent.budget import RunBudget
 
@@ -40,7 +41,7 @@ class RunBudgetTests(unittest.TestCase):
 
     def test_budget_is_frozen(self) -> None:
         budget = RunBudget()
-        with self.assertRaises(Exception):
+        with self.assertRaises(FrozenInstanceError):
             budget.max_iterations = 99  # type: ignore[misc]
 
     def test_custom_valid_budget(self) -> None:

@@ -5,6 +5,7 @@ import os
 import signal
 import subprocess
 import time
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -103,24 +104,18 @@ class UltraworkStore:
         signal_name = "SIGTERM"
         proc = _PROC_HANDLES.get(worker_id)
         if self._is_alive(pid):
-            try:
+            with suppress(ProcessLookupError):
                 os.kill(pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
             deadline = time.time() + max(0.0, timeout_seconds)
             while time.time() < deadline and self._is_alive(pid):
                 time.sleep(0.05)
             if self._is_alive(pid):
-                try:
+                with suppress(ProcessLookupError):
                     os.kill(pid, signal.SIGKILL)
                     signal_name = "SIGKILL"
-                except ProcessLookupError:
-                    pass
         if proc is not None:
-            try:
+            with suppress(subprocess.TimeoutExpired):
                 proc.wait(timeout=max(0.1, timeout_seconds))
-            except subprocess.TimeoutExpired:
-                pass
             _PROC_HANDLES.pop(worker_id, None)
         data["stopped_at"] = _utc_now()
         data["stop_signal"] = signal_name

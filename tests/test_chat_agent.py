@@ -19,6 +19,7 @@ from teaagent import (
     run_chat_agent,
 )
 from teaagent.cli import main
+from teaagent.errors import ToolPermissionError
 from teaagent.runner import ToolRequest
 
 
@@ -165,7 +166,7 @@ class ChatAgentTests(unittest.TestCase):
         )
 
     def test_read_only_permission_blocks_destructive(self) -> None:
-        with self.assertRaises(Exception):
+        with self.assertRaises(ToolPermissionError):
             ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY).assert_allowed(
                 tool_name="workspace_write_file",
                 call_id="any",
