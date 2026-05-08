@@ -110,6 +110,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Maximum nested subagent depth.",
     )
+    agent_run.add_argument(
+        "--heartbeat",
+        type=float,
+        default=0.0,
+        help="Emit a heartbeat audit event every N seconds while running. 0 disables.",
+    )
     agent_run.set_defaults(func=agent_run_task)
 
     agent_preflight = agent_subparsers.add_parser(
@@ -157,7 +163,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     agent_resume.add_argument("--subagent", action="store_true", help="Expose the 'subagent' tool.")
     agent_resume.add_argument("--max-subagent-depth", type=int, default=1, help="Maximum nested subagent depth.")
+    agent_resume.add_argument("--heartbeat", type=float, default=0.0, help="Heartbeat interval seconds. 0 disables.")
     agent_resume.set_defaults(func=agent_resume_command)
+
+    agent_status = agent_subparsers.add_parser("status", help="Show liveness status of a persisted run.")
+    agent_status.add_argument("run_id", help="Run id to inspect.")
+    agent_status.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    agent_status.set_defaults(func=agent_status_command)
 
     agent_list = agent_subparsers.add_parser("runs", help="List persisted agent runs.")
     agent_list.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
@@ -319,6 +331,7 @@ def _execute_agent_task(args: argparse.Namespace, task: str, *, resumed_from: Op
             approved_call_ids=frozenset(args.approve_call_id),
             enable_subagent=args.subagent,
             max_subagent_depth=args.max_subagent_depth,
+            heartbeat_seconds=args.heartbeat,
         ),
         audit=audit,
         task_spec=task_spec,
@@ -351,6 +364,16 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
     )
     print_json(report.to_dict())
     return 0 if report.to_dict()["ready"] else 2
+
+
+def agent_status_command(args: argparse.Namespace) -> int:
+    store = RunStore(args.root)
+    try:
+        print_json(store.heartbeat_for_run(args.run_id))
+    except FileNotFoundError as exc:
+        print_json({"status": "error", "message": str(exc)})
+        return 1
+    return 0
 
 
 def agent_runs_list(args: argparse.Namespace) -> int:

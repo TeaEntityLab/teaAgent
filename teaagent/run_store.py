@@ -72,6 +72,23 @@ class RunStore:
                     return task
         raise ValueError(f"run '{run_id}' has no run_started task")
 
+    def heartbeat_for_run(self, run_id: str) -> dict[str, Any]:
+        events = self.show_run(run_id)
+        last_heartbeat: Optional[dict[str, Any]] = None
+        terminal_status: Optional[str] = None
+        for event in events:
+            event_type = event.get("event_type")
+            if event_type == "heartbeat":
+                last_heartbeat = event
+            elif event_type in {"run_completed", "run_failed"}:
+                terminal_status = "completed" if event_type == "run_completed" else f"failed:{event.get('payload', {}).get('category', 'unknown')}"
+        return {
+            "run_id": run_id,
+            "status": terminal_status or "running",
+            "last_heartbeat_at": last_heartbeat.get("created_at") if last_heartbeat else None,
+            "last_heartbeat_tick": last_heartbeat.get("payload", {}).get("tick") if last_heartbeat else None,
+        }
+
     def summarize(self, path: Path) -> Optional[RunSummary]:
         events = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
         if not events:

@@ -33,6 +33,8 @@ HELP_TEXT = """Commands:
   destructive <on|off>      Allow or block destructive workspace tools.
   progress <on|off>         Stream brief audit-event progress lines during ask runs.
   subagent <on|off>         Expose the 'subagent' tool so the model can delegate sub-tasks.
+  heartbeat <seconds>       Set heartbeat interval for ask runs. 0 disables.
+  status <run_id>           Show heartbeat liveness for a persisted run.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
   approve <call_id>         Approve one exact destructive tool call id.
   unapprove <call_id>       Remove one approved call id.
@@ -78,6 +80,7 @@ class TeaAgentTUI:
         self.permission_mode = permission_mode
         self.progress = False
         self.subagent = False
+        self.heartbeat_seconds = 0.0
         self.approved_call_ids: set[str] = set()
         self.input_fn = input_fn
         self.output_fn = output_fn
@@ -176,6 +179,27 @@ class TeaAgentTUI:
                 return True
             self.subagent = args[0] == "on"
             self.output_fn(f"subagent: {'on' if self.subagent else 'off'}")
+            return True
+        if action == "heartbeat":
+            if len(args) != 1:
+                self.output_fn("error: heartbeat requires a seconds value (0 disables)")
+                return True
+            try:
+                seconds = float(args[0])
+            except ValueError:
+                self.output_fn("error: heartbeat seconds must be a number")
+                return True
+            self.heartbeat_seconds = max(0.0, seconds)
+            self.output_fn(f"heartbeat: {self.heartbeat_seconds}")
+            return True
+        if action == "status":
+            if len(args) != 1:
+                self.output_fn("error: status requires a run id")
+                return True
+            try:
+                self._print_json(RunStore(self.root).heartbeat_for_run(args[0]))
+            except FileNotFoundError as exc:
+                self.output_fn(f"error: {exc}")
             return True
         if action == "permission":
             if len(args) != 1:
@@ -340,6 +364,7 @@ class TeaAgentTUI:
                 permission_mode=self.permission_mode,
                 approved_call_ids=frozenset(self.approved_call_ids),
                 enable_subagent=self.subagent,
+                heartbeat_seconds=self.heartbeat_seconds,
             ),
             audit=audit,
             task_spec=task_spec,

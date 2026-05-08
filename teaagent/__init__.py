@@ -10,6 +10,7 @@ from teaagent.code_mode import CodeModeResult, UnsafeCodeError, execute_code_mod
 from teaagent.context import ContextCompactor
 from teaagent.eval import EvalCase, EvalReport, run_eval
 from teaagent.graph_rag import GraphEdge, KnowledgeGraph, graph_retrieve
+from teaagent.heartbeat import Heartbeat
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
@@ -66,6 +67,7 @@ __all__ = [
     "GraphQLiteGraphStore",
     "GraphQLiteRuntimeError",
     "GraphQLiteUnavailableError",
+    "Heartbeat",
     "InMemoryRetriever",
     "IntentScore",
     "KnowledgeGraph",

@@ -4,8 +4,11 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Optional
 
+from uuid import uuid4
+
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
+from teaagent.heartbeat import Heartbeat
 from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
 from teaagent.policy import ApprovalPolicy, PermissionMode
@@ -28,6 +31,7 @@ class ChatAgentConfig:
     approved_call_ids: frozenset[str] = frozenset()
     enable_subagent: bool = False
     max_subagent_depth: int = 1
+    heartbeat_seconds: float = 0.0
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs) -> "ChatAgentConfig":
@@ -90,9 +94,10 @@ def run_chat_agent(
         model=config.model,
         task_spec=task_spec,
     )
+    audit_logger = audit or AuditLogger()
     runner = AgentRunner(
         registry=tool_registry,
-        audit=audit or AuditLogger(),
+        audit=audit_logger,
         budget=RunBudget(max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls),
         approval_policy=ApprovalPolicy(
             approved_call_ids=config.approved_call_ids,
@@ -100,7 +105,20 @@ def run_chat_agent(
             permission_mode=config.permission_mode,
         ),
     )
-    return runner.run(task=task, decide=lambda context: engine.decide(with_memories(context, memories)))
+    run_id = uuid4().hex
+    heartbeat: Optional[Heartbeat] = None
+    if config.heartbeat_seconds > 0:
+        heartbeat = Heartbeat(audit_logger, run_id, interval_seconds=config.heartbeat_seconds)
+        heartbeat.start()
+    try:
+        return runner.run(
+            task=task,
+            decide=lambda context: engine.decide(with_memories(context, memories)),
+            run_id=run_id,
+        )
+    finally:
+        if heartbeat is not None:
+            heartbeat.stop()
 
 
 def with_memories(context: dict, memories: list[dict]) -> dict:

@@ -253,6 +253,30 @@ memory search audit tasks
 memory show <memory_id>
 ```
 
+## Heartbeat
+
+Emit a periodic `heartbeat` audit event while a run is in progress so observers can confirm liveness:
+
+```bash
+teaagent agent run gpt "Long-running task" --heartbeat 5
+```
+
+Inspect liveness for a persisted run id:
+
+```bash
+teaagent agent status <run_id> --root /path/to/repo
+```
+
+The status payload reports `status` (`running` / `completed` / `failed:*`) and the most recent heartbeat tick and timestamp.
+
+Inside TUI:
+
+```text
+heartbeat 5
+ask Long-running task
+status <run_id>
+```
+
 ## MCP Server
 
 Serve the workspace tool pack to other MCP clients over stdio JSON-RPC:
