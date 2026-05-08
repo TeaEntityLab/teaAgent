@@ -5,8 +5,11 @@ import json
 from typing import Any, Optional
 
 from teaagent import __version__
+from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, check_graphqlite_runtime
+from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
 from teaagent.tui import run_tui
+from teaagent.workspace_tools import build_workspace_tool_registry
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -20,12 +23,40 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"teaagent {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    agent = subparsers.add_parser("agent", help="Run model-driven agent tasks.")
+    agent_subparsers = agent.add_subparsers(dest="agent_command", required=True)
+    agent_run = agent_subparsers.add_parser(
+        "run",
+        help="Run one autonomous task with workspace tools.",
+        description="Run one autonomous task with workspace tools.",
+    )
+    agent_run.add_argument("provider", choices=available_providers(), help="Model provider to use.")
+    agent_run.add_argument("task", help="Task for the agent to perform.")
+    agent_run.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    agent_run.add_argument("--model", default=None, help="Override model name.")
+    agent_run.add_argument("--max-iterations", type=int, default=10, help="Maximum agent loop iterations.")
+    agent_run.add_argument("--max-tool-calls", type=int, default=10, help="Maximum tool calls.")
+    agent_run.add_argument(
+        "--allow-destructive",
+        action="store_true",
+        help="Allow destructive tools such as write, patch, and shell.",
+    )
+    agent_run.set_defaults(func=agent_run_task)
+
     tui = subparsers.add_parser(
         "tui",
         help="Start an interactive terminal UI.",
         description="Start an interactive terminal UI.",
     )
     tui.add_argument("--database", default=":memory:", help="SQLite database path. Defaults to :memory:.")
+    tui.add_argument("--provider", default="gpt", choices=available_providers(), help="Default model provider for ask commands.")
+    tui.add_argument("--model", default=None, help="Default model override for ask commands.")
+    tui.add_argument("--root", default=".", help="Workspace root for ask commands.")
+    tui.add_argument(
+        "--allow-destructive",
+        action="store_true",
+        help="Allow destructive tools for ask commands.",
+    )
     tui.set_defaults(func=start_tui)
 
     doctor = subparsers.add_parser("doctor", help="Run environment checks.")
@@ -33,6 +64,23 @@ def build_parser() -> argparse.ArgumentParser:
     graphqlite_doctor = doctor_subparsers.add_parser("graphqlite", help="Check GraphQLite runtime availability.")
     graphqlite_doctor.add_argument("--database", default=":memory:", help="SQLite database path. Defaults to :memory:.")
     graphqlite_doctor.set_defaults(func=doctor_graphqlite)
+
+    model_doctor = doctor_subparsers.add_parser("model", help="Check model provider configuration.")
+    model_doctor.add_argument("provider", choices=available_providers(), help="Model provider to check.")
+    model_doctor.set_defaults(func=doctor_model)
+
+    model = subparsers.add_parser("model", help="Run model adapter operations.")
+    model_subparsers = model.add_subparsers(dest="model_command", required=True)
+
+    providers = model_subparsers.add_parser("providers", help="List configured provider names.")
+    providers.set_defaults(func=model_providers)
+
+    smoke_model = model_subparsers.add_parser("smoke", help="Run a minimal prompt against a provider.")
+    smoke_model.add_argument("provider", choices=available_providers(), help="Model provider to call.")
+    smoke_model.add_argument("--model", default=None, help="Override model name.")
+    smoke_model.add_argument("--prompt", default="Reply with exactly: ok", help="Prompt to send.")
+    smoke_model.add_argument("--max-tokens", type=int, default=32, help="Maximum output tokens.")
+    smoke_model.set_defaults(func=model_smoke)
 
     graphqlite = subparsers.add_parser("graphqlite", help="Run GraphQLite operations.")
     graphqlite_subparsers = graphqlite.add_subparsers(dest="graphqlite_command", required=True)
@@ -45,6 +93,12 @@ def build_parser() -> argparse.ArgumentParser:
     smoke = graphqlite_subparsers.add_parser("smoke", help="Create a node and run a real GraphQLite query.")
     smoke.add_argument("--database", default=":memory:", help="SQLite database path. Defaults to :memory:.")
     smoke.set_defaults(func=graphqlite_smoke)
+
+    workspace = subparsers.add_parser("workspace", help="Inspect workspace tool pack.")
+    workspace_subparsers = workspace.add_subparsers(dest="workspace_command", required=True)
+    workspace_tools = workspace_subparsers.add_parser("tools", help="List workspace tool metadata.")
+    workspace_tools.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    workspace_tools.set_defaults(func=workspace_tools_metadata)
     return parser
 
 
@@ -54,8 +108,68 @@ def doctor_graphqlite(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def agent_run_task(args: argparse.Namespace) -> int:
+    adapter = create_llm_adapter(args.provider, model=args.model)
+    result = run_chat_agent(
+        task=args.task,
+        adapter=adapter,
+        config=ChatAgentConfig.from_root(
+            args.root,
+            max_iterations=args.max_iterations,
+            max_tool_calls=args.max_tool_calls,
+            allow_destructive=args.allow_destructive,
+            model=args.model,
+        ),
+    )
+    print_json(
+        {
+            "run_id": result.run_id,
+            "status": result.status,
+            "iterations": result.iterations,
+            "tool_calls": result.tool_calls,
+            "final_answer": result.final_answer.content if result.final_answer else None,
+        }
+    )
+    return 0 if result.status == "completed" else 1
+
+
+def doctor_model(args: argparse.Namespace) -> int:
+    ok, message = check_llm_configuration(args.provider)
+    print(json.dumps({"ok": ok, "message": message, "provider": args.provider}, sort_keys=True))
+    return 0 if ok else 1
+
+
+def model_providers(_args: argparse.Namespace) -> int:
+    print_json(available_providers())
+    return 0
+
+
+def model_smoke(args: argparse.Namespace) -> int:
+    adapter = create_llm_adapter(args.provider, model=args.model)
+    response = adapter.complete(
+        LLMRequest(
+            messages=[LLMMessage(role="user", content=args.prompt)],
+            max_tokens=args.max_tokens,
+        )
+    )
+    print_json(
+        {
+            "provider": response.provider,
+            "model": response.model,
+            "content": response.content,
+        }
+    )
+    return 0
+
+
 def start_tui(args: argparse.Namespace) -> int:
-    return run_tui(database=args.database)
+    return run_tui(
+        database=args.database,
+        provider=args.provider,
+        model=args.model,
+        root=args.root,
+        allow_destructive=args.allow_destructive,
+    )
 
 
 def graphqlite_query(args: argparse.Namespace) -> int:
@@ -69,6 +183,12 @@ def graphqlite_smoke(args: argparse.Namespace) -> int:
     store.graph.upsert_node("teaagent", {"name": "TeaAgent"}, label="SmokeTest")
     result = store.query("MATCH (n:SmokeTest) RETURN n.name")
     print_json(result)
+    return 0
+
+
+def workspace_tools_metadata(args: argparse.Namespace) -> int:
+    registry = build_workspace_tool_registry(args.root)
+    print_json(registry.mcp_metadata())
     return 0
 
 

@@ -1,0 +1,216 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from fnmatch import fnmatch
+from pathlib import Path
+import re
+import subprocess
+from typing import Any
+
+from teaagent.tools import ToolAnnotations, ToolRegistry
+
+
+@dataclass(frozen=True)
+class WorkspaceToolConfig:
+    root: Path
+    command_timeout_seconds: int = 30
+    max_read_bytes: int = 200_000
+
+    @classmethod
+    def from_root(cls, root: str | Path) -> "WorkspaceToolConfig":
+        return cls(root=Path(root).resolve())
+
+
+def build_workspace_tool_registry(root: str | Path = ".") -> ToolRegistry:
+    registry = ToolRegistry()
+    register_workspace_tools(registry, WorkspaceToolConfig.from_root(root))
+    return registry
+
+
+def register_workspace_tools(registry: ToolRegistry, config: WorkspaceToolConfig) -> None:
+    registry.register(
+        name="workspace_read_file",
+        description="Read a UTF-8 text file inside the workspace root.",
+        input_schema=object_schema(
+            {"path": "string", "max_bytes": "integer"},
+            required=["path"],
+        ),
+        output_schema=object_schema(
+            {"path": "string", "content": "string", "truncated": "boolean"},
+            required=["path", "content", "truncated"],
+        ),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda args: read_file(config, args),
+    )
+    registry.register(
+        name="workspace_write_file",
+        description="Write a UTF-8 text file inside the workspace root.",
+        input_schema=object_schema(
+            {"path": "string", "content": "string", "create_dirs": "boolean"},
+            required=["path", "content"],
+        ),
+        output_schema=object_schema({"path": "string", "bytes_written": "integer"}, required=["path", "bytes_written"]),
+        annotations=ToolAnnotations(destructive=True, idempotent=True),
+        handler=lambda args: write_file(config, args),
+    )
+    registry.register(
+        name="workspace_apply_patch",
+        description="Replace one exact text span in a UTF-8 file inside the workspace root.",
+        input_schema=object_schema(
+            {"path": "string", "old": "string", "new": "string"},
+            required=["path", "old", "new"],
+        ),
+        output_schema=object_schema({"path": "string", "replacements": "integer"}, required=["path", "replacements"]),
+        annotations=ToolAnnotations(destructive=True, idempotent=False),
+        handler=lambda args: apply_patch(config, args),
+    )
+    registry.register(
+        name="workspace_list_files",
+        description="List files matching a glob pattern inside the workspace root.",
+        input_schema=object_schema({"pattern": "string", "limit": "integer"}, required=["pattern"]),
+        output_schema=object_schema({"files": "array", "truncated": "boolean"}, required=["files", "truncated"]),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda args: list_files(config, args),
+    )
+    registry.register(
+        name="workspace_search_text",
+        description="Search text files with a regular expression inside the workspace root.",
+        input_schema=object_schema(
+            {"pattern": "string", "include": "string", "limit": "integer"},
+            required=["pattern"],
+        ),
+        output_schema=object_schema({"matches": "array", "truncated": "boolean"}, required=["matches", "truncated"]),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda args: search_text(config, args),
+    )
+    registry.register(
+        name="workspace_git_status",
+        description="Run git status --short inside the workspace root.",
+        input_schema=object_schema({}, required=[]),
+        output_schema=object_schema({"status": "string", "exit_code": "integer"}, required=["status", "exit_code"]),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda _args: git_status(config),
+    )
+    registry.register(
+        name="workspace_run_shell",
+        description="Run a shell command inside the workspace root with a timeout. Requires approval in agent runs.",
+        input_schema=object_schema(
+            {"command": "string", "timeout_seconds": "integer"},
+            required=["command"],
+        ),
+        output_schema=object_schema(
+            {"stdout": "string", "stderr": "string", "exit_code": "integer"},
+            required=["stdout", "stderr", "exit_code"],
+        ),
+        annotations=ToolAnnotations(destructive=True, idempotent=False),
+        handler=lambda args: run_shell(config, args),
+    )
+
+
+def object_schema(properties: dict[str, str], *, required: list[str]) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {name: {"type": type_name} for name, type_name in properties.items()},
+        "required": required,
+    }
+
+
+def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    path = resolve_workspace_path(config, args["path"])
+    max_bytes = args.get("max_bytes", config.max_read_bytes)
+    data = path.read_bytes()
+    truncated = len(data) > max_bytes
+    return {
+        "path": relative_path(config, path),
+        "content": data[:max_bytes].decode("utf-8", errors="replace"),
+        "truncated": truncated,
+    }
+
+
+def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    path = resolve_workspace_path(config, args["path"])
+    if args.get("create_dirs", False):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    content = args["content"]
+    path.write_text(content, encoding="utf-8")
+    return {"path": relative_path(config, path), "bytes_written": len(content.encode("utf-8"))}
+
+
+def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    path = resolve_workspace_path(config, args["path"])
+    text = path.read_text(encoding="utf-8")
+    old = args["old"]
+    if old not in text:
+        raise ValueError("old text not found")
+    updated = text.replace(old, args["new"], 1)
+    path.write_text(updated, encoding="utf-8")
+    return {"path": relative_path(config, path), "replacements": 1}
+
+
+def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    pattern = args["pattern"]
+    limit = args.get("limit", 200)
+    files = []
+    for path in sorted(config.root.rglob("*")):
+        if path.is_file() and ".git" not in path.parts and fnmatch(relative_path(config, path), pattern):
+            files.append(relative_path(config, path))
+            if len(files) >= limit:
+                return {"files": files, "truncated": True}
+    return {"files": files, "truncated": False}
+
+
+def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    regex = re.compile(args["pattern"])
+    include = args.get("include", "*")
+    limit = args.get("limit", 200)
+    matches = []
+    for path in sorted(config.root.rglob("*")):
+        if not path.is_file() or ".git" in path.parts or not fnmatch(relative_path(config, path), include):
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            continue
+        for line_number, line in enumerate(lines, start=1):
+            if regex.search(line):
+                matches.append({"path": relative_path(config, path), "line": line_number, "text": line})
+                if len(matches) >= limit:
+                    return {"matches": matches, "truncated": True}
+    return {"matches": matches, "truncated": False}
+
+
+def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:
+    result = subprocess.run(
+        ["git", "status", "--short"],
+        cwd=str(config.root),
+        text=True,
+        capture_output=True,
+        timeout=config.command_timeout_seconds,
+    )
+    return {"status": result.stdout + result.stderr, "exit_code": result.returncode}
+
+
+def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    timeout = args.get("timeout_seconds", config.command_timeout_seconds)
+    result = subprocess.run(
+        args["command"],
+        cwd=str(config.root),
+        shell=True,
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+    )
+    return {"stdout": result.stdout, "stderr": result.stderr, "exit_code": result.returncode}
+
+
+def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:
+    resolved = (config.root / path).resolve()
+    try:
+        resolved.relative_to(config.root)
+    except ValueError as exc:
+        raise ValueError("path escapes workspace root") from exc
+    return resolved
+
+
+def relative_path(config: WorkspaceToolConfig, path: Path) -> str:
+    return str(path.resolve().relative_to(config.root))
