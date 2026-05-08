@@ -4,6 +4,11 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added `configure_metrics()` and a new `metrics_otlp_endpoint` field on `TelemetryConfig` so OpenTelemetry counters and histograms have a real `MeterProvider` with OTLP/console exporters; previously only an in-memory metrics path existed.
+- Fixed the `TracingHTTPTransport` docstring example to match the actual two-argument constructor.
+- Hardened OAuth resource-server verification: `OAuth21ResourceServer` and `OAuth21AuthorizationServer.introspect_token` now resolve the verification key by JWT `kid` via `OAuthKeyRing`, so rotated signing keys keep verifying without losing trust in older tokens.
+- Added Dependabot configuration (`pip` + `github-actions`, weekly) and a Security workflow that runs `pip-audit` and CodeQL on every push, pull request, and weekly schedule.
+- Restricted the release workflow to least-privilege permissions (`contents: read`).
 - Re-licensed the project under the MIT License and added the matching PyPI classifier.
 - Marked the package as typed by shipping `teaagent/py.typed` and configuring setuptools `package-data`.
 - Hardened `ContainerCodeModeBackend`: rejects empty images at construction, enforces `--read-only`, `--cap-drop=ALL`, `--security-opt=no-new-privileges`, non-root `--user`, `--tmpfs /tmp`, `--memory-swap`, and a separate `--ulimit cpu` for CPU time. The `--cpus` flag now reflects an explicit CPU-share field instead of reusing the CPU-time budget.

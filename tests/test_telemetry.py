@@ -309,5 +309,40 @@ class ConfigureTelemetryTests(unittest.TestCase):
         sink.force_flush()
 
 
+@unittest.skipUnless(HAS_OTEL, 'opentelemetry packages not installed')
+class ConfigureMetricsTests(unittest.TestCase):
+    def test_metrics_provider_records_run_lifecycle(self) -> None:
+        from teaagent.telemetry import configure_metrics
+
+        sink, provider = configure_metrics(TelemetryConfig(service_name='test'))
+        try:
+            sink.handle_event(
+                AuditEvent(event_type='run_started', run_id='r1', payload={})
+            )
+            sink.handle_event(
+                AuditEvent(
+                    event_type='run_completed',
+                    run_id='r1',
+                    payload={'iterations': 2, 'cost_cents': 0.4},
+                )
+            )
+            self.assertTrue(provider.force_flush(timeout_millis=100))
+        finally:
+            provider.shutdown()
+
+    def test_metrics_provider_uses_console_reader_when_requested(self) -> None:
+        from teaagent.telemetry import configure_metrics
+
+        sink, provider = configure_metrics(
+            TelemetryConfig(service_name='test', console=True)
+        )
+        try:
+            self.assertIsNotNone(sink)
+            self.assertIsNotNone(provider)
+            provider.force_flush(timeout_millis=100)
+        finally:
+            provider.shutdown()
+
+
 if __name__ == '__main__':
     unittest.main()

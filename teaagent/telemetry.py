@@ -10,11 +10,11 @@ Integration point — wire as an audit sink::
     from teaagent.telemetry import configure_telemetry, HAS_OTEL
 
     if HAS_OTEL:
-        sink = configure_telemetry(TelemetryConfig(
+        audit_sink, tracer = configure_telemetry(TelemetryConfig(
             service_name='my-agent',
             otlp_endpoint='http://localhost:4318/v1/traces',
         ))
-        audit.add_sink(sink.handle_event)
+        audit.add_sink(audit_sink.handle_event)
 
 Span hierarchy produced::
 
@@ -41,10 +41,17 @@ from typing import Any, Optional
 
 try:
     from opentelemetry import trace as _otel_trace
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
+        OTLPMetricExporter,
+    )
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
         OTLPSpanExporter,
     )
     from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import (
+        ConsoleMetricExporter,
+        PeriodicExportingMetricReader,
+    )
     from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import (
@@ -83,6 +90,7 @@ class TelemetryConfig:
     service_name: str = 'teaagent'
     service_version: str = '0.1.0'
     otlp_endpoint: Optional[str] = None
+    metrics_otlp_endpoint: Optional[str] = None
     otlp_headers: dict[str, str] = field(default_factory=dict)
     console: bool = False
     sample_rate: float = 1.0
@@ -312,7 +320,7 @@ class TracingHTTPTransport:
 
         from teaagent.llm import UrllibHTTPTransport, create_llm_adapter
 
-        wrapped = TracingHTTPTransport(UrllibHTTPTransport(), tracer, 'my-agent')
+        wrapped = TracingHTTPTransport(UrllibHTTPTransport(), tracer)
         adapter = create_llm_adapter('openai', transport=wrapped)
     """
 
@@ -402,6 +410,48 @@ def configure_telemetry(
     return sink, tracer
 
 
+def configure_metrics(
+    config: TelemetryConfig,
+) -> tuple[OTelMetricsSink, 'MeterProvider']:
+    """Set up an OpenTelemetry ``MeterProvider`` and return a wired metrics sink.
+
+    Use ``sink.handle_event`` as an :class:`~teaagent.audit.AuditLogger` sink to
+    convert run/tool lifecycle events into counters and histograms. The provider
+    exports metrics to ``config.metrics_otlp_endpoint`` (when set) and to the
+    console (when ``config.console`` is true). When neither is set, the provider
+    holds no readers and metrics are recorded in-process only.
+    """
+    if not HAS_OTEL:
+        raise TelemetryNotAvailable(
+            'OpenTelemetry packages are not installed. '
+            'Install with: pip install teaagent[telemetry]'
+        )
+
+    resource_attrs: dict[str, Any] = {SERVICE_NAME: config.service_name}
+    if config.service_version:
+        resource_attrs[SERVICE_VERSION] = config.service_version
+
+    readers: list[Any] = []
+    if config.metrics_otlp_endpoint:
+        readers.append(
+            PeriodicExportingMetricReader(
+                OTLPMetricExporter(
+                    endpoint=config.metrics_otlp_endpoint,
+                    headers=config.otlp_headers,
+                )
+            )
+        )
+    if config.console:
+        readers.append(PeriodicExportingMetricReader(ConsoleMetricExporter()))
+
+    provider = MeterProvider(
+        resource=Resource(resource_attrs),
+        metric_readers=readers,
+    )
+    sink = OTelMetricsSink(provider, service_name=config.service_name)
+    return sink, provider
+
+
 __all__ = [
     'HAS_OTEL',
     'InMemoryMetricsSink',
@@ -411,5 +461,6 @@ __all__ = [
     'TracingHTTPTransport',
     'TelemetryConfig',
     'TelemetryNotAvailable',
+    'configure_metrics',
     'configure_telemetry',
 ]

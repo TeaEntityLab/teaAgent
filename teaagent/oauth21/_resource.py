@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from teaagent.oauth21._dpop import _verify_dpop_signature
 from teaagent.oauth21._jwt import compute_jwk_thumbprint, decode_jwt_unsafe, verify_jwt
+from teaagent.oauth21._store import OAuthKeyRing
 from teaagent.oauth21._types import (
     _DPOP_PROOF_TYP,
     _PROOF_MAX_AGE_SECONDS,
@@ -23,10 +24,13 @@ class OAuth21ResourceServer:
         self,
         signing_key: str,
         issuer: str,
+        *,
+        key_ring: Optional[OAuthKeyRing] = None,
     ) -> None:
         if not signing_key or len(signing_key) < 16:
             raise ValueError('signing_key must be at least 16 characters')
         self._key = signing_key.encode('utf-8')
+        self._key_ring = key_ring or OAuthKeyRing.single(self._key)
         self._issuer = issuer
 
     def validate_request(
@@ -44,7 +48,10 @@ class OAuth21ResourceServer:
         scheme, token = parts[0], parts[1]
         if scheme not in (_TOKEN_TYPE_DPOP, _TOKEN_TYPE_BEARER):
             raise OAuth21Error(f"Unsupported auth scheme: '{scheme}'")
-        claims = verify_jwt(token, self._key, iss=self._issuer)
+        header, _ = decode_jwt_unsafe(token)
+        kid = header.get('kid')
+        key = self._key_ring.key_for(kid if isinstance(kid, str) else None)
+        claims = verify_jwt(token, key, iss=self._issuer)
         if scheme == _TOKEN_TYPE_DPOP or claims.get('cnf', {}).get('jkt'):
             if not HAS_CRYPTOGRAPHY:
                 raise InvalidDPoPError(

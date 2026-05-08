@@ -80,8 +80,11 @@ def decode_jwt_unsafe(token: str) -> tuple[dict[str, Any], dict[str, Any]]:
     parts = token.split('.')
     if len(parts) < 2:
         raise JWTError('Invalid JWT format')
-    header: dict[str, Any] = json.loads(_b64url_decode(parts[0]))
-    payload: dict[str, Any] = json.loads(_b64url_decode(parts[1]))
+    try:
+        header: dict[str, Any] = json.loads(_b64url_decode(parts[0]))
+        payload: dict[str, Any] = json.loads(_b64url_decode(parts[1]))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise JWTError(f'Invalid JWT encoding: {exc}') from exc
     return header, payload
 
 
