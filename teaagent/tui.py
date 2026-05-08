@@ -11,6 +11,7 @@ from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, ch
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
 from teaagent.memory import MemoryCatalog
+from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
 
@@ -25,6 +26,8 @@ HELP_TEXT = """Commands:
   doctor                    Check GraphQLite runtime.
   provider <name>           Set model provider: claude, gpt, gemini, openrouter, opencodezen-go.
   model <name|default>      Set or clear model override.
+  route-model <on|off>      Enable or disable task-based model routing.
+  route <task>              Preview model route for a task.
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
@@ -61,6 +64,7 @@ class TeaAgentTUI:
         self.database = database
         self.provider = provider
         self.model = model
+        self.route_model = False
         self.root = Path(root).resolve()
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
@@ -120,6 +124,19 @@ class TeaAgentTUI:
                 return True
             self.model = None if args[0] == "default" else args[0]
             self.output_fn(f"model: {self.model or 'default'}")
+            return True
+        if action == "route-model":
+            if len(args) != 1 or args[0] not in {"on", "off"}:
+                self.output_fn("error: route-model requires 'on' or 'off'")
+                return True
+            self.route_model = args[0] == "on"
+            self.output_fn(f"route-model: {'on' if self.route_model else 'off'}")
+            return True
+        if action == "route":
+            if not args:
+                self.output_fn("error: route requires a task")
+                return True
+            self._print_json(route_model(" ".join(args), provider=self.provider, model=self.model).to_dict())
             return True
         if action == "root":
             if len(args) != 1:
@@ -237,8 +254,10 @@ class TeaAgentTUI:
                 self._print_json({"status": "needs_clarification", "clarification": clarification.to_dict()})
                 return
             task_spec = build_task_spec(task, clarification)
+        routing = route_model(task, provider=self.provider, model=self.model) if self.route_model else None
+        selected_model = routing.model if routing else self.model
         self.output_fn(f"agent: provider={self.provider} root={self.root}")
-        adapter = self.adapter_factory(self.provider, self.model)
+        adapter = self.adapter_factory(self.provider, selected_model)
         store = RunStore(self.root)
         audit = store.audit_logger()
         result = run_chat_agent(
@@ -246,7 +265,7 @@ class TeaAgentTUI:
             adapter=adapter,
             config=ChatAgentConfig.from_root(
                 self.root,
-                model=self.model,
+                model=selected_model,
                 allow_destructive=self.allow_destructive,
                 permission_mode=self.permission_mode,
             ),
@@ -260,6 +279,7 @@ class TeaAgentTUI:
                 "status": result.status,
                 "iterations": result.iterations,
                 "tool_calls": result.tool_calls,
+                "routing": routing.to_dict() if routing else None,
                 "final_answer": result.final_answer.content if result.final_answer else None,
             }
         )
@@ -276,7 +296,8 @@ class TeaAgentTUI:
     def _prompt(self) -> str:
         destructive = "!" if self.allow_destructive else ""
         model = self.model or "default"
-        return f"teaagent[{self.provider}:{model}:{self.permission_mode.value}{destructive}]> "
+        routed = ":route" if self.route_model else ""
+        return f"teaagent[{self.provider}:{model}{routed}:{self.permission_mode.value}{destructive}]> "
 
     def _print_json(self, value) -> None:
         self.output_fn(json.dumps(value, ensure_ascii=False, sort_keys=True))

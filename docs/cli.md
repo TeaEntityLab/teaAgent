@@ -69,6 +69,8 @@ doctor
 clarify Improve the CLI
 provider gpt
 model gpt-4o-mini
+route-model on
+route review this patch
 root /path/to/repo
 destructive off
 permission prompt
@@ -135,6 +137,15 @@ teaagent model smoke gpt --prompt "Reply with exactly: ok"
 teaagent model smoke claude --prompt "Reply with exactly: ok"
 teaagent model smoke gemini --prompt "Reply with exactly: ok"
 ```
+
+Preview deterministic task routing for a provider:
+
+```bash
+teaagent model route "review this patch for regressions" --provider gpt
+teaagent model route "update docs/cli.md" --provider claude
+```
+
+Routing classifies tasks into `review`, `test`, `code`, `docs`, `search`, or `general`, then chooses a provider-specific model. Explicit `--model` still wins.
 
 Environment variables:
 
@@ -261,6 +272,14 @@ Use a specific workspace root:
 ```bash
 teaagent agent run gpt "Read AGENTS.md" --root /path/to/repo
 ```
+
+Enable task-based model routing for one run:
+
+```bash
+teaagent agent run gpt "review this patch for regressions" --route-model
+```
+
+Inside TUI, use `route-model on` to apply routing to later `ask` commands. Use `route <task>` to preview the selected category and model.
 
 By default, destructive tools are blocked. To allow file writes, patching, or shell commands:
 

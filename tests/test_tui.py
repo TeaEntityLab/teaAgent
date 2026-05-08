@@ -22,6 +22,16 @@ class FakeAdapter:
         return LLMResponse(provider="fake", model="fake", content=self.outputs.pop(0))
 
 
+class CapturingAdapterFactory:
+    def __init__(self, adapter):
+        self.adapter = adapter
+        self.calls = []
+
+    def __call__(self, provider, model):
+        self.calls.append((provider, model))
+        return self.adapter
+
+
 class TUITests(unittest.TestCase):
     def test_tui_handles_doctor_smoke_query_and_exit(self) -> None:
         commands = iter([
@@ -132,6 +142,23 @@ class TUITests(unittest.TestCase):
 
             self.assertEqual(json.loads(output[1])[0]["memory_id"], memory_id)
             self.assertEqual(json.loads(output[2])["content"], "Prefer read-only mode for audits")
+
+    def test_tui_route_model_preview_and_ask(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            adapter = FakeAdapter(['{"type":"final","content":"reviewed"}'])
+            factory = CapturingAdapterFactory(adapter)
+            tui = TeaAgentTUI(root=tmp, input_fn=lambda _prompt: "exit", output_fn=output.append, adapter_factory=factory)
+
+            self.assertTrue(tui.handle_command("route-model on"))
+            self.assertTrue(tui.handle_command("route review this patch"))
+            self.assertTrue(tui.handle_command("ask review this patch"))
+
+            route_payload = json.loads(output[1])
+            ask_payload = json.loads(output[-1])
+            self.assertEqual(route_payload["model"], "gpt-4o")
+            self.assertEqual(factory.calls[0], ("gpt", "gpt-4o"))
+            self.assertEqual(ask_payload["routing"]["category"], "review")
 
     def test_tui_ask_clarify_stops_before_adapter_when_ambiguous(self) -> None:
         output = []

@@ -31,6 +31,7 @@ from teaagent.llm import (
     create_llm_adapter,
 )
 from teaagent.memory import MemoryCatalog, MemoryEntry
+from teaagent.model_routing import ModelRoute, classify_task, route_model
 from teaagent.policy import ApprovalPolicy, PermissionMode, parse_permission_mode
 from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_decision
 from teaagent.portability import ProviderProfile, PortabilityResult, assess_provider_portability
@@ -73,6 +74,7 @@ __all__ = [
     "LLMResponse",
     "MemoryCatalog",
     "MemoryEntry",
+    "ModelRoute",
     "ModelDecisionEngine",
     "PermissionMode",
     "PortabilityResult",
@@ -103,6 +105,7 @@ __all__ = [
     "check_graphqlite_runtime",
     "check_llm_configuration",
     "clarify_task",
+    "classify_task",
     "create_llm_adapter",
     "execute_code_mode",
     "ensure_sqlite_extension_loading",
@@ -111,6 +114,7 @@ __all__ = [
     "parse_model_decision",
     "parse_permission_mode",
     "review_skill",
+    "route_model",
     "register_workspace_tools",
     "run_chat_agent",
     "run_eval",

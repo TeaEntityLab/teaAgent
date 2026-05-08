@@ -6,6 +6,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from teaagent import (
     ApprovalPolicy,
@@ -176,6 +177,20 @@ class ChatAgentTests(unittest.TestCase):
 
         self.assertEqual(context.exception.code, 0)
         self.assertIn("Run one autonomous task", output.getvalue())
+
+    def test_cli_agent_run_route_model_uses_routed_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            adapter = FakeAdapter(['{"type":"final","content":"reviewed"}'])
+
+            with patch("teaagent.cli.create_llm_adapter", return_value=adapter) as create_adapter, redirect_stdout(output):
+                exit_code = main(["agent", "run", "gpt", "review this patch", "--route-model", "--root", tmp])
+
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            create_adapter.assert_called_once_with("gpt", model="gpt-4o")
+            self.assertEqual(payload["routing"]["category"], "review")
+            self.assertEqual(payload["final_answer"], "reviewed")
 
 
 if __name__ == "__main__":

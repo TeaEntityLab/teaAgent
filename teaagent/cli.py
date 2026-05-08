@@ -10,6 +10,7 @@ from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore, ch
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_configuration, create_llm_adapter
 from teaagent.memory import MemoryCatalog
+from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
@@ -67,6 +68,11 @@ def build_parser() -> argparse.ArgumentParser:
     agent_run.add_argument("task", help="Task for the agent to perform.")
     agent_run.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
     agent_run.add_argument("--model", default=None, help="Override model name.")
+    agent_run.add_argument(
+        "--route-model",
+        action="store_true",
+        help="Choose a provider-specific model from the task category when --model is not set.",
+    )
     agent_run.add_argument("--max-iterations", type=int, default=10, help="Maximum agent loop iterations.")
     agent_run.add_argument("--max-tool-calls", type=int, default=10, help="Maximum tool calls.")
     agent_run.add_argument(
@@ -142,6 +148,12 @@ def build_parser() -> argparse.ArgumentParser:
     smoke_model.add_argument("--max-tokens", type=int, default=32, help="Maximum output tokens.")
     smoke_model.set_defaults(func=model_smoke)
 
+    route = model_subparsers.add_parser("route", help="Classify a task and choose a provider-specific model.")
+    route.add_argument("task", help="Task to route.")
+    route.add_argument("--provider", default="gpt", choices=available_providers(), help="Provider to route within.")
+    route.add_argument("--model", default=None, help="Explicit model override.")
+    route.set_defaults(func=model_route)
+
     graphqlite = subparsers.add_parser("graphqlite", help="Run GraphQLite operations.")
     graphqlite_subparsers = graphqlite.add_subparsers(dest="graphqlite_command", required=True)
 
@@ -203,7 +215,9 @@ def agent_run_task(args: argparse.Namespace) -> int:
             return 2
         task_spec = build_task_spec(args.task, clarification)
 
-    adapter = create_llm_adapter(args.provider, model=args.model)
+    routing = route_model(args.task, provider=args.provider, model=args.model) if args.route_model else None
+    selected_model = routing.model if routing else args.model
+    adapter = create_llm_adapter(args.provider, model=selected_model)
     store = RunStore(args.root)
     audit = store.audit_logger()
     result = run_chat_agent(
@@ -214,7 +228,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
             max_iterations=args.max_iterations,
             max_tool_calls=args.max_tool_calls,
             allow_destructive=args.allow_destructive,
-            model=args.model,
+            model=selected_model,
             permission_mode=parse_permission_mode(args.permission_mode),
         ),
         audit=audit,
@@ -227,6 +241,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
             "status": result.status,
             "iterations": result.iterations,
             "tool_calls": result.tool_calls,
+            "routing": routing.to_dict() if routing else None,
             "final_answer": result.final_answer.content if result.final_answer else None,
         }
     )
@@ -271,6 +286,11 @@ def model_smoke(args: argparse.Namespace) -> int:
             "content": response.content,
         }
     )
+    return 0
+
+
+def model_route(args: argparse.Namespace) -> int:
+    print_json(route_model(args.task, provider=args.provider, model=args.model).to_dict())
     return 0
 
 
