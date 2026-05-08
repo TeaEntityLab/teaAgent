@@ -32,6 +32,7 @@ from teaagent.llm import (
 )
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, classify_task, route_model
+from teaagent.mcp_server import handle_mcp_request, serve_mcp_stdio
 from teaagent.policy import ApprovalPolicy, PermissionMode, parse_permission_mode
 from teaagent.preflight import PreflightReport, preflight
 from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_decision
@@ -112,6 +113,7 @@ __all__ = [
     "execute_code_mode",
     "ensure_sqlite_extension_loading",
     "graph_retrieve",
+    "handle_mcp_request",
     "handle_stateless_tool_request",
     "parse_model_decision",
     "parse_permission_mode",
@@ -120,6 +122,7 @@ __all__ = [
     "route_model",
     "register_subagent_tool",
     "register_workspace_tools",
+    "serve_mcp_stdio",
     "run_chat_agent",
     "run_eval",
 ]

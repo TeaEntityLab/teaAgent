@@ -253,6 +253,16 @@ memory search audit tasks
 memory show <memory_id>
 ```
 
+## MCP Server
+
+Serve the workspace tool pack to other MCP clients over stdio JSON-RPC:
+
+```bash
+teaagent mcp serve --root /path/to/repo
+```
+
+Supported methods: `initialize`, `tools/list`, `tools/call`. Each tool is exposed with its `inputSchema` and read-only / destructive / idempotent annotations. Tool errors are returned as `result.isError = true` rather than JSON-RPC errors so the client can recover.
+
 ## Subagent Delegation
 
 Expose a `subagent` tool so the model can delegate one focused sub-task to a fresh agent run that shares the same workspace tools, ApprovalPolicy, RunBudget, and permission mode:

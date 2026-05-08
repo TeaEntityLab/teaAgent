@@ -12,6 +12,7 @@ from teaagent.llm import LLMMessage, LLMRequest, available_providers, check_llm_
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode, parse_permission_mode
+from teaagent.mcp_server import serve_mcp_stdio
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
 from teaagent.tui import run_tui
@@ -231,6 +232,12 @@ def build_parser() -> argparse.ArgumentParser:
     smoke.add_argument("--database", default=":memory:", help="SQLite database path. Defaults to :memory:.")
     smoke.set_defaults(func=graphqlite_smoke)
 
+    mcp = subparsers.add_parser("mcp", help="Run a local MCP-compatible server.")
+    mcp_subparsers = mcp.add_subparsers(dest="mcp_command", required=True)
+    mcp_serve = mcp_subparsers.add_parser("serve", help="Serve workspace tools over stdio JSON-RPC.")
+    mcp_serve.add_argument("--root", default=".", help="Workspace root. Defaults to current directory.")
+    mcp_serve.set_defaults(func=mcp_serve_command)
+
     workspace = subparsers.add_parser("workspace", help="Inspect workspace tool pack.")
     workspace_subparsers = workspace.add_subparsers(dest="workspace_command", required=True)
     workspace_tools = workspace_subparsers.add_parser("tools", help="List workspace tool metadata.")
@@ -415,6 +422,10 @@ def graphqlite_smoke(args: argparse.Namespace) -> int:
     result = store.query("MATCH (n:SmokeTest) RETURN n.name")
     print_json(result)
     return 0
+
+
+def mcp_serve_command(args: argparse.Namespace) -> int:
+    return serve_mcp_stdio(build_workspace_tool_registry(args.root))
 
 
 def workspace_tools_metadata(args: argparse.Namespace) -> int:
