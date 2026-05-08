@@ -20,6 +20,7 @@ from teaagent.llm import (
     check_llm_configuration,
     create_llm_adapter,
 )
+from teaagent.llm_conformance import run_model_conformance
 from teaagent.mcp_http import DEFAULT_PORT as MCP_HTTP_DEFAULT_PORT
 from teaagent.mcp_http import serve_mcp_http
 from teaagent.mcp_server import serve_mcp_stdio
@@ -385,6 +386,29 @@ def build_parser() -> argparse.ArgumentParser:
         '--max-tokens', type=int, default=32, help='Maximum output tokens.'
     )
     smoke_model.set_defaults(func=model_smoke)
+
+    conformance_model = model_subparsers.add_parser(
+        'conformance', help='Run live conformance checks across providers.'
+    )
+    conformance_model.add_argument(
+        '--provider',
+        action='append',
+        choices=available_providers(),
+        default=None,
+        help='Provider to check. Can be repeated. Defaults to all providers.',
+    )
+    conformance_model.add_argument(
+        '--model',
+        default=None,
+        help='Override model name for all selected providers.',
+    )
+    conformance_model.add_argument(
+        '--prompt', default='Reply with exactly: ok', help='Prompt to send.'
+    )
+    conformance_model.add_argument(
+        '--max-tokens', type=int, default=32, help='Maximum output tokens.'
+    )
+    conformance_model.set_defaults(func=model_conformance)
 
     route = model_subparsers.add_parser(
         'route', help='Classify a task and choose a provider-specific model.'
@@ -820,6 +844,17 @@ def model_smoke(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def model_conformance(args: argparse.Namespace) -> int:
+    report = run_model_conformance(
+        args.provider,
+        prompt=args.prompt,
+        max_tokens=args.max_tokens,
+        model=args.model,
+    )
+    print_json(report.as_dict())
+    return 0 if report.ok else 1
 
 
 def model_route(args: argparse.Namespace) -> int:

@@ -46,6 +46,11 @@ from teaagent.llm import (
     check_llm_configuration,
     create_llm_adapter,
 )
+from teaagent.llm_conformance import (
+    ModelConformanceReport,
+    ModelConformanceResult,
+    run_model_conformance,
+)
 from teaagent.mcp_http import build_mcp_http_server, serve_mcp_http
 from teaagent.mcp_server import handle_mcp_request, serve_mcp_stdio
 from teaagent.memory import MemoryCatalog, MemoryEntry
@@ -142,6 +147,8 @@ __all__ = [
     'LLMResponse',
     'MemoryCatalog',
     'MemoryEntry',
+    'ModelConformanceReport',
+    'ModelConformanceResult',
     'ModelRoute',
     'ModelDecisionEngine',
     'PermissionMode',
@@ -218,4 +225,5 @@ __all__ = [
     'serve_mcp_stdio',
     'run_chat_agent',
     'run_eval',
+    'run_model_conformance',
 ]
