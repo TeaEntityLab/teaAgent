@@ -59,7 +59,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--config',
         default=None,
-        help='JSON config file with defaults such as root, model, provider, permission_mode.',
+        help='JSON config file. Defaults to .teaagent/config.json when present.',
+    )
+    parser.add_argument(
+        '--profile',
+        default=None,
+        help='Profile name under the config file profiles object.',
     )
     subparsers = parser.add_subparsers(dest='command', required=True)
 
@@ -124,12 +129,23 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def apply_config_defaults(args: argparse.Namespace) -> None:
-    config_path = getattr(args, 'config', None)
-    if not config_path:
+    config_path = resolve_config_path(getattr(args, 'config', None))
+    if config_path is None:
         return
-    data = json.loads(Path(config_path).read_text(encoding='utf-8'))
+    data = json.loads(config_path.read_text(encoding='utf-8'))
     if not isinstance(data, dict):
         raise SystemExit('--config must contain a JSON object')
+    profile = getattr(args, 'profile', None)
+    if profile:
+        profiles = data.get('profiles')
+        if not isinstance(profiles, dict) or profile not in profiles:
+            raise SystemExit(f"profile '{profile}' not found in {config_path}")
+        selected = profiles[profile]
+        if not isinstance(selected, dict):
+            raise SystemExit(f"profile '{profile}' must be a JSON object")
+        merged = {k: v for k, v in data.items() if k != 'profiles'}
+        merged.update(selected)
+        data = merged
     defaults = {
         'root': '.',
         'model': None,
@@ -141,6 +157,13 @@ def apply_config_defaults(args: argparse.Namespace) -> None:
             continue
         if getattr(args, key) == defaults.get(key):
             setattr(args, key, value)
+
+
+def resolve_config_path(explicit: Optional[str]) -> Optional[Path]:
+    if explicit:
+        return Path(explicit)
+    candidate = Path('.teaagent') / 'config.json'
+    return candidate if candidate.is_file() else None
 
 
 # ---------------------------------------------------------------------------

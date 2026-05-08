@@ -212,6 +212,35 @@ class CLITests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(create.call_args.kwargs['model'], 'configured-model')
 
+    def test_config_auto_discovery_and_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = os.path.join(tmp, '.teaagent')
+            os.makedirs(config_dir)
+            with open(os.path.join(config_dir, 'config.json'), 'w', encoding='utf-8') as handle:
+                json.dump(
+                    {
+                        'model': 'base-model',
+                        'profiles': {'ci': {'model': 'profile-model'}},
+                    },
+                    handle,
+                )
+            adapter = FakeAdapter(['hello'])
+            output = io.StringIO()
+
+            cwd = os.getcwd()
+            try:
+                os.chdir(tmp)
+                with (
+                    patch('teaagent.cli.create_llm_adapter', return_value=adapter) as create,
+                    redirect_stdout(output),
+                ):
+                    exit_code = main(['--profile', 'ci', 'model', 'smoke', 'gpt'])
+            finally:
+                os.chdir(cwd)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(create.call_args.kwargs['model'], 'profile-model')
+
     def test_audit_list_show_and_prune(self) -> None:
         from teaagent.audit import AuditLogger
 

@@ -20,7 +20,24 @@ Use a JSON config file for common optional defaults:
 teaagent --config .teaagent/config.json model smoke gpt
 ```
 
+If `--config` is omitted and `.teaagent/config.json` exists, it is loaded automatically.
+
 Supported keys include `root`, `model`, `provider`, and `permission_mode`. Positional arguments such as `agent run <provider>` remain explicit.
+
+Profiles can override top-level defaults:
+
+```json
+{
+  "model": "gpt-4o-mini",
+  "profiles": {
+    "ci": {"model": "gpt-4o-mini", "permission_mode": "read-only"}
+  }
+}
+```
+
+```bash
+teaagent --profile ci model smoke gpt
+```
 
 Print shell completion snippets:
 

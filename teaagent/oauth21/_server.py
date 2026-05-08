@@ -13,6 +13,7 @@ from teaagent.oauth21._jwt import (
     verify_jwt,
 )
 from teaagent.oauth21._pkce import compute_s256_challenge
+from teaagent.oauth21._store import InMemoryOAuthStore, OAuthKeyRing, OAuthStore
 from teaagent.oauth21._types import (
     _CODE_TTL_SECONDS,
     _DEFAULT_ACCESS_TOKEN_TTL,
@@ -41,16 +42,17 @@ class OAuth21AuthorizationServer:
         *,
         token_ttl: int = _DEFAULT_ACCESS_TOKEN_TTL,
         nonce_ttl: int = _NONCE_TTL_SECONDS,
+        store: Optional[OAuthStore] = None,
+        key_ring: Optional[OAuthKeyRing] = None,
     ) -> None:
         if not signing_key or len(signing_key) < 16:
             raise ValueError('signing_key must be at least 16 characters')
         self._key = signing_key.encode('utf-8')
+        self._key_ring = key_ring or OAuthKeyRing.single(self._key)
         self._issuer = issuer
         self._token_ttl = token_ttl
         self._nonce_ttl = nonce_ttl
-        self._clients: dict[str, OAuth21Client] = {}
-        self._codes: dict[str, _AuthorizationCode] = {}
-        self._nonces: dict[str, float] = {}
+        self._store = store or InMemoryOAuthStore()
 
     def register_client(
         self,
@@ -60,7 +62,7 @@ class OAuth21AuthorizationServer:
         *,
         scope: str = 'mcp',
     ) -> OAuth21Client:
-        if client_id in self._clients:
+        if self._store.get_client(client_id) is not None:
             raise InvalidClientError(f"Client '{client_id}' already registered")
         client = OAuth21Client(
             client_id=client_id,
@@ -68,14 +70,17 @@ class OAuth21AuthorizationServer:
             redirect_uris=frozenset(redirect_uris),
             scope=scope,
         )
-        self._clients[client_id] = client
+        self._store.register_client(client)
         return client
 
     def get_client(self, client_id: str) -> OAuth21Client:
         try:
-            return self._clients[client_id]
-        except KeyError as exc:
+            client = self._store.get_client(client_id)
+            if client is not None:
+                return client
+        except Exception as exc:
             raise InvalidClientError(f"Unknown client '{client_id}'") from exc
+        raise InvalidClientError(f"Unknown client '{client_id}'")
 
     @property
     def issuer(self) -> str:
@@ -103,7 +108,7 @@ class OAuth21AuthorizationServer:
             )
 
         code = secrets.token_urlsafe(32)
-        self._codes[code] = _AuthorizationCode(
+        self._store.save_code(_AuthorizationCode(
             code=code,
             client_id=client_id,
             redirect_uri=redirect_uri,
@@ -111,7 +116,7 @@ class OAuth21AuthorizationServer:
             code_challenge_method=code_challenge_method,
             expires_at=time.time() + _CODE_TTL_SECONDS,
             scope=scope,
-        )
+        ))
         self._prune_expired_codes()
 
         redirect_url = redirect_uri
@@ -158,7 +163,9 @@ class OAuth21AuthorizationServer:
             payload['cnf'] = {'jkt': cnf_jkt}
 
         token_type = _TOKEN_TYPE_DPOP if cnf_jkt else _TOKEN_TYPE_BEARER
-        access_token = create_jwt(payload, self._key)
+        access_token = create_jwt(
+            payload, self._key_ring.active_key, header_extra={'kid': self._key_ring.active_kid}
+        )
 
         return OAuth21TokenResponse(
             access_token=access_token,
@@ -183,16 +190,16 @@ class OAuth21AuthorizationServer:
 
     def generate_dpop_nonce(self) -> str:
         nonce = secrets.token_urlsafe(24)
-        self._nonces[nonce] = time.time()
+        self._store.save_nonce(nonce, time.time())
         self._prune_nonces()
         return nonce
 
     def validate_dpop_nonce(self, nonce: str) -> bool:
-        created = self._nonces.get(nonce)
+        created = self._store.get_nonce(nonce)
         if created is None:
             return False
         if time.time() - created > self._nonce_ttl:
-            del self._nonces[nonce]
+            self._store.delete_nonce(nonce)
             return False
         return True
 
@@ -214,7 +221,7 @@ class OAuth21AuthorizationServer:
         }
 
     def _consume_code(self, code: str) -> _AuthorizationCode:
-        auth_code = self._codes.pop(code, None)
+        auth_code = self._store.consume_code(code)
         if auth_code is None:
             raise InvalidGrantError('Unknown or already-used authorization code')
         if auth_code.expires_at < time.time():
@@ -250,14 +257,8 @@ class OAuth21AuthorizationServer:
 
     def _prune_expired_codes(self) -> None:
         now = time.time()
-        expired = [c for c, ac in self._codes.items() if ac.expires_at < now]
-        for c in expired:
-            del self._codes[c]
+        self._store.prune(now=now, code_ttl_cutoff=now, nonce_ttl=self._nonce_ttl)
 
     def _prune_nonces(self) -> None:
         now = time.time()
-        expired = [
-            n for n, created in self._nonces.items() if now - created > self._nonce_ttl
-        ]
-        for n in expired:
-            del self._nonces[n]
+        self._store.prune(now=now, code_ttl_cutoff=now, nonce_ttl=self._nonce_ttl)

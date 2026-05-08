@@ -10,6 +10,7 @@ from teaagent.oauth21._jwt import (
 from teaagent.oauth21._pkce import compute_s256_challenge, generate_code_verifier
 from teaagent.oauth21._resource import OAuth21ResourceServer
 from teaagent.oauth21._server import OAuth21AuthorizationServer
+from teaagent.oauth21._store import InMemoryOAuthStore, OAuthKeyRing, OAuthStore
 from teaagent.oauth21._types import (
     _AUTHORIZATION_HEADER,
     _AUTHORIZE_PATH,
@@ -43,6 +44,9 @@ __all__ = [
     'OAuth21TokenClaims',
     'DPoPValidationResult',
     'OAuth21Error',
+    'OAuthStore',
+    'InMemoryOAuthStore',
+    'OAuthKeyRing',
     'create_jwt',
     'verify_jwt',
     'decode_jwt_unsafe',
