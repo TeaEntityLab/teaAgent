@@ -7,7 +7,12 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from teaagent import build_workspace_tool_registry
+from teaagent import (
+    ToolRegistry,
+    WorkspaceToolConfig,
+    build_workspace_tool_registry,
+    register_workspace_tools,
+)
 from teaagent.cli import main
 from teaagent.errors import ToolExecutionError
 
@@ -98,6 +103,71 @@ class WorkspaceToolTests(unittest.TestCase):
                 (Path(tmp) / 'nested' / 'file.txt').read_text(encoding='utf-8'), 'ok'
             )
 
+    def test_write_file_rejects_oversized_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = ToolRegistry()
+            register_workspace_tools(
+                registry,
+                WorkspaceToolConfig(root=Path(tmp).resolve(), max_write_bytes=3),
+            )
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute(
+                    'workspace_write_file', {'path': 'big.txt', 'content': 'abcd'}
+                )
+
+            self.assertIn('max_write_bytes', str(ctx.exception))
+            self.assertFalse((Path(tmp) / 'big.txt').exists())
+
+    def test_apply_patch_rejects_oversized_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'file.txt').write_text('a', encoding='utf-8')
+            registry = ToolRegistry()
+            register_workspace_tools(
+                registry,
+                WorkspaceToolConfig(root=root.resolve(), max_write_bytes=3),
+            )
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute(
+                    'workspace_apply_patch',
+                    {'path': 'file.txt', 'old': 'a', 'new': 'abcd'},
+                )
+
+            self.assertIn('max_write_bytes', str(ctx.exception))
+            self.assertEqual((root / 'file.txt').read_text(encoding='utf-8'), 'a')
+
+    def test_edit_at_hash_rejects_oversized_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'file.txt').write_text('a\n', encoding='utf-8')
+            registry = ToolRegistry()
+            register_workspace_tools(
+                registry,
+                WorkspaceToolConfig(root=root.resolve(), max_write_bytes=3),
+            )
+            hashed = registry.execute(
+                'workspace_read_file_hashed', {'path': 'file.txt'}
+            )
+            line_anchor, text = hashed['content'].splitlines()[0].split('|', 1)
+            line_number, hash_value = line_anchor.split('#', 1)
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute(
+                    'workspace_edit_at_hash',
+                    {
+                        'path': 'file.txt',
+                        'line': int(line_number),
+                        'hash': hash_value,
+                        'old': text,
+                        'new': 'abcd',
+                    },
+                )
+
+            self.assertIn('max_write_bytes', str(ctx.exception))
+            self.assertEqual((root / 'file.txt').read_text(encoding='utf-8'), 'a\n')
+
     def test_path_escape_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             registry = build_workspace_tool_registry(tmp)
@@ -184,6 +254,57 @@ class WorkspaceToolTests(unittest.TestCase):
                     'workspace_run_shell_inspect',
                     {'command': 'pwd', 'timeout_seconds': 0},
                 )
+            self.assertIn('timeout_seconds', str(ctx.exception))
+
+    def test_shell_inspect_rejects_timeout_above_ceiling(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = ToolRegistry()
+            register_workspace_tools(
+                registry,
+                WorkspaceToolConfig(
+                    root=Path(tmp).resolve(), max_shell_timeout_seconds=2
+                ),
+            )
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute(
+                    'workspace_run_shell_inspect',
+                    {'command': 'pwd', 'timeout_seconds': 3},
+                )
+
+            self.assertIn('timeout_seconds', str(ctx.exception))
+
+    def test_shell_inspect_rejects_oversized_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = ToolRegistry()
+            register_workspace_tools(
+                registry,
+                WorkspaceToolConfig(
+                    root=Path(tmp).resolve(), max_shell_command_bytes=3
+                ),
+            )
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute('workspace_run_shell_inspect', {'command': 'pwd pwd'})
+
+            self.assertIn('max_shell_command_bytes', str(ctx.exception))
+
+    def test_shell_mutate_rejects_timeout_above_ceiling(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = ToolRegistry()
+            register_workspace_tools(
+                registry,
+                WorkspaceToolConfig(
+                    root=Path(tmp).resolve(), max_shell_timeout_seconds=2
+                ),
+            )
+
+            with self.assertRaises(ToolExecutionError) as ctx:
+                registry.execute(
+                    'workspace_run_shell_mutate',
+                    {'command': 'pwd', 'timeout_seconds': 3},
+                )
+
             self.assertIn('timeout_seconds', str(ctx.exception))
 
     def test_cli_workspace_tools_outputs_metadata(self) -> None:

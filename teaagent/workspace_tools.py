@@ -17,7 +17,10 @@ class WorkspaceToolConfig:
     root: Path
     command_timeout_seconds: int = 30
     max_read_bytes: int = 200_000
+    max_write_bytes: int = 200_000
+    max_shell_command_bytes: int = 4_096
     max_shell_output_bytes: int = 200_000
+    max_shell_timeout_seconds: int = 30
 
     @classmethod
     def from_root(cls, root: str | Path) -> 'WorkspaceToolConfig':
@@ -238,6 +241,7 @@ def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
     if args.get('create_dirs', False):
         path.parent.mkdir(parents=True, exist_ok=True)
     content = args['content']
+    assert_write_size_allowed(config, content)
     path.write_text(content, encoding='utf-8')
     return {
         'path': relative_path(config, path),
@@ -252,6 +256,7 @@ def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
     if old not in text:
         raise ValueError('old text not found')
     updated = text.replace(old, args['new'], 1)
+    assert_write_size_allowed(config, updated)
     path.write_text(updated, encoding='utf-8')
     return {'path': relative_path(config, path), 'replacements': 1}
 
@@ -271,7 +276,9 @@ def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str,
         raise ValueError('old text mismatch')
     newline = '\n' if current.endswith('\n') else ''
     lines[line_number - 1] = args['new'] + newline
-    path.write_text(''.join(lines), encoding='utf-8')
+    updated = ''.join(lines)
+    assert_write_size_allowed(config, updated)
+    path.write_text(updated, encoding='utf-8')
     new_hash = compute_line_hash(line_number, lines[line_number - 1])
     return {'path': relative_path(config, path), 'line': line_number, 'hash': new_hash}
 
@@ -334,11 +341,16 @@ def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:
 
 
 def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    timeout = positive_int_arg(
-        args, 'timeout_seconds', default=config.command_timeout_seconds
+    command = args['command']
+    assert_shell_command_size_allowed(config, command)
+    timeout = bounded_positive_int_arg(
+        args,
+        'timeout_seconds',
+        default=config.command_timeout_seconds,
+        maximum=config.max_shell_timeout_seconds,
     )
     result = subprocess.run(
-        args['command'],
+        command,
         cwd=str(config.root),
         shell=True,
         text=True,
@@ -373,21 +385,35 @@ def run_shell_argv(
 def run_shell_inspect(
     config: WorkspaceToolConfig, args: dict[str, Any]
 ) -> dict[str, Any]:
-    policy = classify_shell_command_policy(args['command'])
+    command = args['command']
+    assert_shell_command_size_allowed(config, command)
+    policy = classify_shell_command_policy(command)
     if policy != 'inspect':
         raise ValueError(
             'command is not inspect-safe; retry with workspace_run_shell_mutate'
         )
-    timeout = positive_int_arg(
-        args, 'timeout_seconds', default=config.command_timeout_seconds
+    timeout = bounded_positive_int_arg(
+        args,
+        'timeout_seconds',
+        default=config.command_timeout_seconds,
+        maximum=config.max_shell_timeout_seconds,
     )
-    return run_shell_argv(config, shlex.split(args['command']), timeout_seconds=timeout)
+    return run_shell_argv(config, shlex.split(command), timeout_seconds=timeout)
 
 
 def positive_int_arg(args: dict[str, Any], name: str, *, default: int) -> int:
     value = args.get(name, default)
     if value < 1:
         raise ValueError(f'{name} must be >= 1')
+    return value
+
+
+def bounded_positive_int_arg(
+    args: dict[str, Any], name: str, *, default: int, maximum: int
+) -> int:
+    value = positive_int_arg(args, name, default=default)
+    if value > maximum:
+        raise ValueError(f'{name} must be <= {maximum}')
     return value
 
 
@@ -440,6 +466,25 @@ def truncate_output(value: str, max_bytes: int) -> str:
     marker = b'\n[truncated]'
     keep = max(0, max_bytes - len(marker))
     return (data[:keep] + marker).decode('utf-8', errors='replace')
+
+
+def assert_write_size_allowed(config: WorkspaceToolConfig, content: str) -> None:
+    byte_count = len(content.encode('utf-8'))
+    if byte_count > config.max_write_bytes:
+        raise ValueError(
+            f'write would exceed max_write_bytes ({byte_count} > {config.max_write_bytes})'
+        )
+
+
+def assert_shell_command_size_allowed(
+    config: WorkspaceToolConfig, command: str
+) -> None:
+    byte_count = len(command.encode('utf-8'))
+    if byte_count > config.max_shell_command_bytes:
+        raise ValueError(
+            'shell command exceeds max_shell_command_bytes '
+            f'({byte_count} > {config.max_shell_command_bytes})'
+        )
 
 
 def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:
