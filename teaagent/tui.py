@@ -70,10 +70,10 @@ class TeaAgentTUI:
     def __init__(
         self,
         *,
-        database: str = ":memory:",
-        provider: str = "gpt",
+        database: str = ':memory:',
+        provider: str = 'gpt',
         model: Optional[str] = None,
-        root: str | Path = ".",
+        root: str | Path = '.',
         allow_destructive: bool = False,
         permission_mode: PermissionMode = PermissionMode.PROMPT,
         input_fn: InputFn = input,
@@ -103,7 +103,7 @@ class TeaAgentTUI:
             try:
                 raw_command = self.input_fn(self._prompt())
             except EOFError:
-                self.output_fn("bye")
+                self.output_fn('bye')
                 return 0
 
             should_continue = self.handle_command(raw_command)
@@ -117,158 +117,162 @@ class TeaAgentTUI:
         try:
             parts = shlex.split(command)
         except ValueError as exc:
-            self.output_fn(f"error: {exc}")
+            self.output_fn(f'error: {exc}')
             return True
 
         action = parts[0].lower()
         args = parts[1:]
-        if action in {"exit", "quit"}:
-            self.output_fn("bye")
+        if action in {'exit', 'quit'}:
+            self.output_fn('bye')
             return False
-        if action == "help":
+        if action == 'help':
             self.output_fn(HELP_TEXT.rstrip())
             return True
-        if action == "doctor":
+        if action == 'doctor':
             ok, message = check_graphqlite_runtime(self.database)
-            self._print_json({"ok": ok, "message": message})
+            self._print_json({'ok': ok, 'message': message})
             return True
-        if action == "provider":
+        if action == 'provider':
             if len(args) != 1:
-                self.output_fn("error: provider requires exactly one provider name")
+                self.output_fn('error: provider requires exactly one provider name')
                 return True
             if args[0] not in available_providers():
                 self.output_fn(f"error: unknown provider '{args[0]}'")
                 return True
             self.provider = args[0]
-            self.output_fn(f"provider: {self.provider}")
+            self.output_fn(f'provider: {self.provider}')
             return True
-        if action == "model":
+        if action == 'model':
             if len(args) != 1:
                 self.output_fn("error: model requires a model name or 'default'")
                 return True
-            self.model = None if args[0] == "default" else args[0]
-            self.output_fn(f"model: {self.model or 'default'}")
+            self.model = None if args[0] == 'default' else args[0]
+            self.output_fn(f'model: {self.model or "default"}')
             return True
-        if action == "route-model":
-            if len(args) != 1 or args[0] not in {"on", "off"}:
+        if action == 'route-model':
+            if len(args) != 1 or args[0] not in {'on', 'off'}:
                 self.output_fn("error: route-model requires 'on' or 'off'")
                 return True
-            self.route_model = args[0] == "on"
-            self.output_fn(f"route-model: {'on' if self.route_model else 'off'}")
+            self.route_model = args[0] == 'on'
+            self.output_fn(f'route-model: {"on" if self.route_model else "off"}')
             return True
-        if action == "route":
+        if action == 'route':
             if not args:
-                self.output_fn("error: route requires a task")
+                self.output_fn('error: route requires a task')
                 return True
-            self._print_json(route_model(" ".join(args), provider=self.provider, model=self.model).to_dict())
+            self._print_json(
+                route_model(
+                    ' '.join(args), provider=self.provider, model=self.model
+                ).to_dict()
+            )
             return True
-        if action == "root":
+        if action == 'root':
             if len(args) != 1:
-                self.output_fn("error: root requires exactly one path")
+                self.output_fn('error: root requires exactly one path')
                 return True
             self.root = Path(args[0]).resolve()
-            self.output_fn(f"root: {self.root}")
+            self.output_fn(f'root: {self.root}')
             return True
-        if action == "destructive":
-            if len(args) != 1 or args[0] not in {"on", "off"}:
+        if action == 'destructive':
+            if len(args) != 1 or args[0] not in {'on', 'off'}:
                 self.output_fn("error: destructive requires 'on' or 'off'")
                 return True
-            self.allow_destructive = args[0] == "on"
-            self.output_fn(f"destructive: {'on' if self.allow_destructive else 'off'}")
+            self.allow_destructive = args[0] == 'on'
+            self.output_fn(f'destructive: {"on" if self.allow_destructive else "off"}')
             return True
-        if action == "progress":
-            if len(args) != 1 or args[0] not in {"on", "off"}:
+        if action == 'progress':
+            if len(args) != 1 or args[0] not in {'on', 'off'}:
                 self.output_fn("error: progress requires 'on' or 'off'")
                 return True
-            self.progress = args[0] == "on"
-            self.output_fn(f"progress: {'on' if self.progress else 'off'}")
+            self.progress = args[0] == 'on'
+            self.output_fn(f'progress: {"on" if self.progress else "off"}')
             return True
-        if action == "stream":
-            if len(args) != 1 or args[0] not in {"on", "off"}:
+        if action == 'stream':
+            if len(args) != 1 or args[0] not in {'on', 'off'}:
                 self.output_fn("error: stream requires 'on' or 'off'")
                 return True
-            self.stream = args[0] == "on"
-            self.output_fn(f"stream: {'on' if self.stream else 'off'}")
+            self.stream = args[0] == 'on'
+            self.output_fn(f'stream: {"on" if self.stream else "off"}')
             return True
-        if action == "subagent":
-            if len(args) != 1 or args[0] not in {"on", "off"}:
+        if action == 'subagent':
+            if len(args) != 1 or args[0] not in {'on', 'off'}:
                 self.output_fn("error: subagent requires 'on' or 'off'")
                 return True
-            self.subagent = args[0] == "on"
-            self.output_fn(f"subagent: {'on' if self.subagent else 'off'}")
+            self.subagent = args[0] == 'on'
+            self.output_fn(f'subagent: {"on" if self.subagent else "off"}')
             return True
-        if action == "heartbeat":
+        if action == 'heartbeat':
             if len(args) != 1:
-                self.output_fn("error: heartbeat requires a seconds value (0 disables)")
+                self.output_fn('error: heartbeat requires a seconds value (0 disables)')
                 return True
             try:
                 seconds = float(args[0])
             except ValueError:
-                self.output_fn("error: heartbeat seconds must be a number")
+                self.output_fn('error: heartbeat seconds must be a number')
                 return True
             self.heartbeat_seconds = max(0.0, seconds)
-            self.output_fn(f"heartbeat: {self.heartbeat_seconds}")
+            self.output_fn(f'heartbeat: {self.heartbeat_seconds}')
             return True
-        if action == "status":
+        if action == 'status':
             if len(args) != 1:
-                self.output_fn("error: status requires a run id")
+                self.output_fn('error: status requires a run id')
                 return True
             try:
                 self._print_json(RunStore(self.root).heartbeat_for_run(args[0]))
             except FileNotFoundError as exc:
-                self.output_fn(f"error: {exc}")
+                self.output_fn(f'error: {exc}')
             return True
-        if action == "permission":
+        if action == 'permission':
             if len(args) != 1:
-                self.output_fn("error: permission requires one mode")
+                self.output_fn('error: permission requires one mode')
                 return True
             try:
                 self.permission_mode = parse_permission_mode(args[0])
             except ValueError as exc:
-                self.output_fn(f"error: {exc}")
+                self.output_fn(f'error: {exc}')
                 return True
-            self.output_fn(f"permission: {self.permission_mode.value}")
+            self.output_fn(f'permission: {self.permission_mode.value}')
             return True
-        if action == "approve":
+        if action == 'approve':
             if len(args) != 1:
-                self.output_fn("error: approve requires one call id")
+                self.output_fn('error: approve requires one call id')
                 return True
             self.approved_call_ids.add(args[0])
-            self.output_fn(f"approved: {args[0]}")
+            self.output_fn(f'approved: {args[0]}')
             return True
-        if action == "unapprove":
+        if action == 'unapprove':
             if len(args) != 1:
-                self.output_fn("error: unapprove requires one call id")
+                self.output_fn('error: unapprove requires one call id')
                 return True
             self.approved_call_ids.discard(args[0])
-            self.output_fn(f"unapproved: {args[0]}")
+            self.output_fn(f'unapproved: {args[0]}')
             return True
-        if action == "approvals":
+        if action == 'approvals':
             self._print_json(sorted(self.approved_call_ids))
             return True
-        if action == "ask":
+        if action == 'ask':
             if not args:
-                self.output_fn("error: ask requires a task")
+                self.output_fn('error: ask requires a task')
                 return True
-            clarify_first = args[0] == "--clarify"
+            clarify_first = args[0] == '--clarify'
             task_args = args[1:] if clarify_first else args
             if not task_args:
-                self.output_fn("error: ask --clarify requires a task")
+                self.output_fn('error: ask --clarify requires a task')
                 return True
-            self._run_agent_task(" ".join(task_args), clarify_first=clarify_first)
+            self._run_agent_task(' '.join(task_args), clarify_first=clarify_first)
             return True
-        if action == "clarify":
+        if action == 'clarify':
             if not args:
-                self.output_fn("error: clarify requires a task")
+                self.output_fn('error: clarify requires a task')
                 return True
-            self._print_json(clarify_task(" ".join(args)).to_dict())
+            self._print_json(clarify_task(' '.join(args)).to_dict())
             return True
-        if action == "preflight":
+        if action == 'preflight':
             if not args:
-                self.output_fn("error: preflight requires a task")
+                self.output_fn('error: preflight requires a task')
                 return True
             report = preflight(
-                " ".join(args),
+                ' '.join(args),
                 root=self.root,
                 provider=self.provider,
                 model=self.model,
@@ -277,22 +281,22 @@ class TeaAgentTUI:
             )
             self._print_json(report.to_dict())
             return True
-        if action == "memory":
+        if action == 'memory':
             self._handle_memory(args)
             return True
-        if action == "runs":
+        if action == 'runs':
             store = RunStore(self.root)
             self._print_json([summary.to_dict() for summary in store.list_runs()])
             return True
-        if action == "show":
+        if action == 'show':
             if len(args) != 1:
-                self.output_fn("error: show requires a run id")
+                self.output_fn('error: show requires a run id')
                 return True
             self._print_json(RunStore(self.root).show_run(args[0]))
             return True
-        if action == "resume":
+        if action == 'resume':
             if len(args) != 1:
-                self.output_fn("error: resume requires a run id")
+                self.output_fn('error: resume requires a run id')
                 return True
             store = RunStore(self.root)
             try:
@@ -300,35 +304,37 @@ class TeaAgentTUI:
                 observations = store.observations_for_run(args[0])
                 pending = store.pending_approval_for_run(args[0])
             except (FileNotFoundError, ValueError) as exc:
-                self.output_fn(f"error: {exc}")
+                self.output_fn(f'error: {exc}')
                 return True
             if pending:
-                self.approved_call_ids.add(pending["call_id"])
-                self.output_fn(f"auto-approved pending call: {pending['call_id']}")
-            self.output_fn(f"resume: {args[0]}")
+                self.approved_call_ids.add(pending['call_id'])
+                self.output_fn(f'auto-approved pending call: {pending["call_id"]}')
+            self.output_fn(f'resume: {args[0]}')
             self._run_agent_task(
                 original_task,
                 initial_observations=observations if observations else None,
             )
             return True
-        if action == "use":
+        if action == 'use':
             if len(args) != 1:
-                self.output_fn("error: use requires exactly one database path")
+                self.output_fn('error: use requires exactly one database path')
                 return True
             self.database = args[0]
             self._store = None
-            self.output_fn(f"database: {self.database}")
+            self.output_fn(f'database: {self.database}')
             return True
-        if action == "smoke":
+        if action == 'smoke':
             graph_store = self._get_store()
-            graph_store.graph.upsert_node("teaagent", {"name": "TeaAgent"}, label="SmokeTest")
-            self._print_json(graph_store.query("MATCH (n:SmokeTest) RETURN n.name"))
+            graph_store.graph.upsert_node(
+                'teaagent', {'name': 'TeaAgent'}, label='SmokeTest'
+            )
+            self._print_json(graph_store.query('MATCH (n:SmokeTest) RETURN n.name'))
             return True
-        if action == "query":
+        if action == 'query':
             if not args:
-                self.output_fn("error: query requires a Cypher string")
+                self.output_fn('error: query requires a Cypher string')
                 return True
-            self._print_json(self._get_store().query(" ".join(args)))
+            self._print_json(self._get_store().query(' '.join(args)))
             return True
 
         self.output_fn(f"error: unknown command '{action}'. Type 'help'.")
@@ -336,45 +342,62 @@ class TeaAgentTUI:
 
     def _handle_memory(self, args: list[str]) -> None:
         if not args:
-            self.output_fn("error: memory requires add, list, search, or show")
+            self.output_fn('error: memory requires add, list, search, or show')
             return
         catalog = MemoryCatalog(self.root)
         action = args[0]
         rest = args[1:]
-        if action == "add":
+        if action == 'add':
             if not rest:
-                self.output_fn("error: memory add requires text")
+                self.output_fn('error: memory add requires text')
                 return
-            self._print_json(catalog.add(" ".join(rest)).to_dict())
+            self._print_json(catalog.add(' '.join(rest)).to_dict())
             return
-        if action == "list":
+        if action == 'list':
             self._print_json([entry.to_dict() for entry in catalog.list()])
             return
-        if action == "search":
+        if action == 'search':
             if not rest:
-                self.output_fn("error: memory search requires a query")
+                self.output_fn('error: memory search requires a query')
                 return
-            self._print_json([entry.to_dict() for entry in catalog.search(" ".join(rest))])
+            self._print_json(
+                [entry.to_dict() for entry in catalog.search(' '.join(rest))]
+            )
             return
-        if action == "show":
+        if action == 'show':
             if len(rest) != 1:
-                self.output_fn("error: memory show requires one id")
+                self.output_fn('error: memory show requires one id')
                 return
             self._print_json(catalog.show(rest[0]).to_dict())
             return
         self.output_fn(f"error: unknown memory command '{action}'")
 
-    def _run_agent_task(self, task: str, *, clarify_first: bool = False, initial_observations: Optional[list[dict[str, Any]]] = None) -> None:
+    def _run_agent_task(
+        self,
+        task: str,
+        *,
+        clarify_first: bool = False,
+        initial_observations: Optional[list[dict[str, Any]]] = None,
+    ) -> None:
         task_spec = None
         if clarify_first:
             clarification = clarify_task(task)
             if clarification.needs_clarification:
-                self._print_json({"status": "needs_clarification", "clarification": clarification.to_dict()})
+                self._print_json(
+                    {
+                        'status': 'needs_clarification',
+                        'clarification': clarification.to_dict(),
+                    }
+                )
                 return
             task_spec = build_task_spec(task, clarification)
-        routing = route_model(task, provider=self.provider, model=self.model) if self.route_model else None
+        routing = (
+            route_model(task, provider=self.provider, model=self.model)
+            if self.route_model
+            else None
+        )
         selected_model = routing.model if routing else self.model
-        self.output_fn(f"agent: provider={self.provider} root={self.root}")
+        self.output_fn(f'agent: provider={self.provider} root={self.root}')
         adapter = self.adapter_factory(self.provider, selected_model)
         store = RunStore(self.root)
         audit = store.audit_logger()
@@ -400,46 +423,60 @@ class TeaAgentTUI:
             initial_observations=initial_observations,
         )
         store.logger_for_result(result, audit)
-        payload = self._run_result_payload(result, routing=routing.to_dict() if routing else None)
+        payload = self._run_result_payload(
+            result, routing=routing.to_dict() if routing else None
+        )
         if initial_observations:
-            payload["replayed_observations"] = len(initial_observations)
+            payload['replayed_observations'] = len(initial_observations)
         self._print_json(payload)
 
     def _approval_handler(self, request: ApprovalRequest) -> bool:
-        self._print_json({"status": "approval_required", "approval": request.to_dict()})
-        answer = self.input_fn(f"approve {request.call_id} ({request.tool_name})? [y/N] ")
-        approved = answer.strip().lower() in {"y", "yes"}
-        self.output_fn(f"approval: {'approved' if approved else 'denied'} {request.call_id}")
+        self._print_json({'status': 'approval_required', 'approval': request.to_dict()})
+        answer = self.input_fn(
+            f'approve {request.call_id} ({request.tool_name})? [y/N] '
+        )
+        approved = answer.strip().lower() in {'y', 'yes'}
+        self.output_fn(
+            f'approval: {"approved" if approved else "denied"} {request.call_id}'
+        )
         if approved:
             self.approved_call_ids.add(request.call_id)
         return approved
 
-    def _run_result_payload(self, result: RunResult, *, routing: Optional[dict]) -> dict:
+    def _run_result_payload(
+        self, result: RunResult, *, routing: Optional[dict]
+    ) -> dict:
         payload = {
-            "run_id": result.run_id,
-            "status": result.status,
-            "iterations": result.iterations,
-            "tool_calls": result.tool_calls,
-            "routing": routing,
-            "final_answer": result.final_answer.content if result.final_answer else None,
+            'run_id': result.run_id,
+            'status': result.status,
+            'iterations': result.iterations,
+            'tool_calls': result.tool_calls,
+            'routing': routing,
+            'final_answer': result.final_answer.content
+            if result.final_answer
+            else None,
         }
-        if "approval" in result.metadata:
-            payload["approval"] = result.metadata["approval"]
+        if 'approval' in result.metadata:
+            payload['approval'] = result.metadata['approval']
         return payload
 
     def _progress_sink(self, event) -> None:
         payload = event.payload or {}
-        if event.event_type == "iteration_started":
-            self.output_fn(f"  iter {payload.get('iteration')}")
-        elif event.event_type == "tool_call_started":
-            self.output_fn(f"  tool: {payload.get('tool_name')} ({payload.get('call_id')})")
-        elif event.event_type == "tool_call_completed":
-            self.output_fn(f"  tool ok: {payload.get('tool_name')}")
-        elif event.event_type == "run_failed":
-            self.output_fn(f"  failed: {payload.get('category')}: {payload.get('message')}")
+        if event.event_type == 'iteration_started':
+            self.output_fn(f'  iter {payload.get("iteration")}')
+        elif event.event_type == 'tool_call_started':
+            self.output_fn(
+                f'  tool: {payload.get("tool_name")} ({payload.get("call_id")})'
+            )
+        elif event.event_type == 'tool_call_completed':
+            self.output_fn(f'  tool ok: {payload.get("tool_name")}')
+        elif event.event_type == 'run_failed':
+            self.output_fn(
+                f'  failed: {payload.get("category")}: {payload.get("message")}'
+            )
 
     def _stream_chunk(self, chunk: str) -> None:
-        self.output_fn(chunk, end="")
+        self.output_fn(chunk, end='')
 
     def _get_store(self) -> GraphQLiteGraphStore:
         if self._store is None:
@@ -447,14 +484,14 @@ class TeaAgentTUI:
         return self._store
 
     def _print_header(self) -> None:
-        self.output_fn(f"TeaAgent TUI {__version__}")
+        self.output_fn(f'TeaAgent TUI {__version__}')
         self.output_fn("Type 'help' for commands. Type 'exit' to quit.")
 
     def _prompt(self) -> str:
-        destructive = "!" if self.allow_destructive else ""
-        model = self.model or "default"
-        routed = ":route" if self.route_model else ""
-        return f"teaagent[{self.provider}:{model}{routed}:{self.permission_mode.value}{destructive}]> "
+        destructive = '!' if self.allow_destructive else ''
+        model = self.model or 'default'
+        routed = ':route' if self.route_model else ''
+        return f'teaagent[{self.provider}:{model}{routed}:{self.permission_mode.value}{destructive}]> '
 
     def _print_json(self, value) -> None:
         self.output_fn(json.dumps(value, ensure_ascii=False, sort_keys=True))
@@ -462,10 +499,10 @@ class TeaAgentTUI:
 
 def run_tui(
     *,
-    database: str = ":memory:",
-    provider: str = "gpt",
+    database: str = ':memory:',
+    provider: str = 'gpt',
     model: Optional[str] = None,
-    root: str | Path = ".",
+    root: str | Path = '.',
     allow_destructive: bool = False,
     permission_mode: PermissionMode = PermissionMode.PROMPT,
 ) -> int:

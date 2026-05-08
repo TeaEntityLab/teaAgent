@@ -38,9 +38,9 @@ class KnowledgeGraph:
 
     def traverse(self, start: str, *, max_depth: int = 2) -> list[GraphPath]:
         paths: list[GraphPath] = []
-        queue: Deque[tuple[str, tuple[str, ...], tuple[str, ...], tuple[str, ...], int]] = deque(
-            [(start, (start,), tuple(), tuple(), 0)]
-        )
+        queue: Deque[
+            tuple[str, tuple[str, ...], tuple[str, ...], tuple[str, ...], int]
+        ] = deque([(start, (start,), tuple(), tuple(), 0)])
         while queue:
             node, nodes, relations, doc_ids, depth = queue.popleft()
             if depth >= max_depth:
@@ -55,11 +55,17 @@ class KnowledgeGraph:
                     document_ids=dedupe(next_doc_ids),
                 )
                 paths.append(path)
-                queue.append((edge.target, next_nodes, next_relations, next_doc_ids, depth + 1))
+                queue.append(
+                    (edge.target, next_nodes, next_relations, next_doc_ids, depth + 1)
+                )
         return paths
 
     def documents_for(self, document_ids: tuple[str, ...]) -> list[Document]:
-        return [self._documents[doc_id] for doc_id in document_ids if doc_id in self._documents]
+        return [
+            self._documents[doc_id]
+            for doc_id in document_ids
+            if doc_id in self._documents
+        ]
 
     def all_documents(self) -> list[Document]:
         return list(self._documents.values())
@@ -78,15 +84,21 @@ def dedupe(values: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(result)
 
 
-def graph_retrieve(query: str, graph: KnowledgeGraph, *, max_depth: int = 2, limit: int = 5) -> list[RetrievalResult]:
+def graph_retrieve(
+    query: str, graph: KnowledgeGraph, *, max_depth: int = 2, limit: int = 5
+) -> list[RetrievalResult]:
     query_terms = set(tokenize(query))
     scored: dict[str, RetrievalResult] = {}
     for term in query_terms:
         for path in graph.traverse(term, max_depth=max_depth):
-            path_terms = set(tokenize(" ".join(path.nodes + path.relations)))
+            path_terms = set(tokenize(' '.join(path.nodes + path.relations)))
             score = len(query_terms & path_terms) / max(len(query_terms), 1)
             for document in graph.documents_for(path.document_ids):
                 existing = scored.get(document.doc_id)
                 if existing is None or score > existing.score:
-                    scored[document.doc_id] = RetrievalResult(document=document, score=score, query=query)
-    return sorted(scored.values(), key=lambda result: result.score, reverse=True)[:limit]
+                    scored[document.doc_id] = RetrievalResult(
+                        document=document, score=score, query=query
+                    )
+    return sorted(scored.values(), key=lambda result: result.score, reverse=True)[
+        :limit
+    ]

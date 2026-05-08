@@ -5,14 +5,14 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional
 
-TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
+TOKEN_RE = re.compile(r'[A-Za-z0-9_]+')
 
 
 @dataclass(frozen=True)
 class Document:
     doc_id: str
     text: str
-    source: str = "default"
+    source: str = 'default'
     metadata: dict[str, str] = field(default_factory=dict)
 
 
@@ -27,7 +27,9 @@ class InMemoryRetriever:
     def __init__(self, documents: list[Document]) -> None:
         self.documents = documents
 
-    def search(self, query: str, *, source: Optional[str] = None, limit: int = 5) -> list[RetrievalResult]:
+    def search(
+        self, query: str, *, source: Optional[str] = None, limit: int = 5
+    ) -> list[RetrievalResult]:
         query_terms = set(tokenize(query))
         scored: list[RetrievalResult] = []
         for document in self.documents:
@@ -51,20 +53,27 @@ def tokenize(text: str) -> list[str]:
 
 
 def decompose_query(query: str) -> list[str]:
-    parts = [part.strip() for part in re.split(r"\b(?:and|vs|versus|compare|then)\b|[;。；]", query, flags=re.I)]
+    parts = [
+        part.strip()
+        for part in re.split(
+            r'\b(?:and|vs|versus|compare|then)\b|[;。；]', query, flags=re.I
+        )
+    ]
     return [part for part in parts if part] or [query]
 
 
 def route_source(query: str) -> str:
     lowered = query.lower()
-    if any(word in lowered for word in ("sql", "table", "database", "revenue", "cost")):
-        return "structured"
-    if any(word in lowered for word in ("latest", "today", "current", "news")):
-        return "web"
-    return "semantic"
+    if any(word in lowered for word in ('sql', 'table', 'database', 'revenue', 'cost')):
+        return 'structured'
+    if any(word in lowered for word in ('latest', 'today', 'current', 'news')):
+        return 'web'
+    return 'semantic'
 
 
-def reciprocal_rank_fusion(result_sets: list[list[RetrievalResult]], *, k: int = 60) -> list[RetrievalResult]:
+def reciprocal_rank_fusion(
+    result_sets: list[list[RetrievalResult]], *, k: int = 60
+) -> list[RetrievalResult]:
     scores: dict[str, float] = defaultdict(float)
     documents: dict[str, RetrievalResult] = {}
     for results in result_sets:
@@ -82,7 +91,9 @@ def reciprocal_rank_fusion(result_sets: list[list[RetrievalResult]], *, k: int =
     return sorted(fused, key=lambda result: result.score, reverse=True)
 
 
-def agentic_retrieve(query: str, retriever: InMemoryRetriever, *, limit: int = 5) -> list[RetrievalResult]:
+def agentic_retrieve(
+    query: str, retriever: InMemoryRetriever, *, limit: int = 5
+) -> list[RetrievalResult]:
     result_sets = []
     for subquery in decompose_query(query):
         source = route_source(subquery)

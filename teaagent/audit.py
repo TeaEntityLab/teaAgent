@@ -9,10 +9,17 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
-AUDIT_REDACTED = "[redacted]"
-AUDIT_TRUNCATED = "[truncated]"
+AUDIT_REDACTED = '[redacted]'
+AUDIT_TRUNCATED = '[truncated]'
 MAX_AUDIT_STRING_LENGTH = 20_000
-SENSITIVE_KEY_PARTS = ("api_key", "authorization", "credential", "password", "secret", "token")
+SENSITIVE_KEY_PARTS = (
+    'api_key',
+    'authorization',
+    'credential',
+    'password',
+    'secret',
+    'token',
+)
 
 
 def utc_now() -> str:
@@ -30,11 +37,11 @@ class AuditEvent:
     def to_json(self) -> str:
         return json.dumps(
             {
-                "event_id": self.event_id,
-                "event_type": self.event_type,
-                "run_id": self.run_id,
-                "created_at": self.created_at,
-                "payload": self.payload,
+                'event_id': self.event_id,
+                'event_type': self.event_type,
+                'run_id': self.run_id,
+                'created_at': self.created_at,
+                'payload': self.payload,
             },
             sort_keys=True,
         )
@@ -55,12 +62,14 @@ class AuditLogger:
         self._sinks.append(sink)
 
     def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
-        event = AuditEvent(event_type=event_type, run_id=run_id, payload=redact_audit_payload(payload))
+        event = AuditEvent(
+            event_type=event_type, run_id=run_id, payload=redact_audit_payload(payload)
+        )
         with self._lock:
             self.events.append(event)
             if self.path is not None:
-                with self.path.open("a", encoding="utf-8") as handle:
-                    handle.write(event.to_json() + "\n")
+                with self.path.open('a', encoding='utf-8') as handle:
+                    handle.write(event.to_json() + '\n')
             sinks = list(self._sinks)
         for sink in sinks:
             sink(event)
@@ -75,16 +84,19 @@ def redact_audit_value(key: str, value: Any) -> Any:
     if is_sensitive_key(key):
         return AUDIT_REDACTED
     if isinstance(value, dict):
-        return {str(child_key): redact_audit_value(str(child_key), child_value) for child_key, child_value in value.items()}
+        return {
+            str(child_key): redact_audit_value(str(child_key), child_value)
+            for child_key, child_value in value.items()
+        }
     if isinstance(value, list):
-        return [redact_audit_value("", item) for item in value]
+        return [redact_audit_value('', item) for item in value]
     if isinstance(value, tuple):
-        return [redact_audit_value("", item) for item in value]
+        return [redact_audit_value('', item) for item in value]
     if isinstance(value, str) and len(value) > MAX_AUDIT_STRING_LENGTH:
         return value[:MAX_AUDIT_STRING_LENGTH] + AUDIT_TRUNCATED
     return value
 
 
 def is_sensitive_key(key: str) -> bool:
-    normalized = key.lower().replace("-", "_")
+    normalized = key.lower().replace('-', '_')
     return any(part in normalized for part in SENSITIVE_KEY_PARTS)

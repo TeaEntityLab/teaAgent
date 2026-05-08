@@ -28,54 +28,93 @@ class ClarificationResult:
 
     def to_dict(self) -> dict:
         return {
-            "task": self.task,
-            "ambiguity": self.ambiguity,
-            "scores": {
-                "intent": round(self.scores.intent, 3),
-                "outcome": round(self.scores.outcome, 3),
-                "scope": round(self.scores.scope, 3),
-                "constraints": round(self.scores.constraints, 3),
-                "success": round(self.scores.success, 3),
+            'task': self.task,
+            'ambiguity': self.ambiguity,
+            'scores': {
+                'intent': round(self.scores.intent, 3),
+                'outcome': round(self.scores.outcome, 3),
+                'scope': round(self.scores.scope, 3),
+                'constraints': round(self.scores.constraints, 3),
+                'success': round(self.scores.success, 3),
             },
-            "missing": list(self.missing),
-            "needs_clarification": self.needs_clarification,
-            "question": self.question,
+            'missing': list(self.missing),
+            'needs_clarification': self.needs_clarification,
+            'question': self.question,
         }
 
 
 ACTION_WORDS = {
-    "add",
-    "build",
-    "change",
-    "check",
-    "create",
-    "debug",
-    "explain",
-    "fix",
-    "implement",
-    "inspect",
-    "list",
-    "refactor",
-    "review",
-    "run",
-    "search",
-    "summarize",
-    "test",
-    "update",
+    'add',
+    'build',
+    'change',
+    'check',
+    'create',
+    'debug',
+    'explain',
+    'fix',
+    'implement',
+    'inspect',
+    'list',
+    'refactor',
+    'review',
+    'run',
+    'search',
+    'summarize',
+    'test',
+    'update',
 }
 
-VAGUE_WORDS = {"better", "improve", "optimize", "stuff", "thing", "whatever", "etc"}
+VAGUE_WORDS = {'better', 'improve', 'optimize', 'stuff', 'thing', 'whatever', 'etc'}
 
 
 def clarify_task(task: str) -> ClarificationResult:
     normalized = task.strip()
     lower = normalized.lower()
-    tokens = set(re.findall(r"[a-zA-Z0-9_./-]+", lower))
+    tokens = set(re.findall(r'[a-zA-Z0-9_./-]+', lower))
     has_action = bool(tokens & ACTION_WORDS)
-    has_object = len(tokens) >= 4 or any(marker in lower for marker in ("file", "repo", "test", "cli", "tui", "api", ".py", ".md"))
-    has_scope = any(marker in lower for marker in (" in ", " under ", "src/", "tests/", ".py", ".md", "repo", "project", "workspace"))
-    has_constraints = any(marker in lower for marker in ("without", "only", "must", "do not", "don't", "avoid", "keep", "no "))
-    has_success = any(marker in lower for marker in ("pass", "done", "success", "verify", "test", "expected", "should"))
+    has_object = len(tokens) >= 4 or any(
+        marker in lower
+        for marker in ('file', 'repo', 'test', 'cli', 'tui', 'api', '.py', '.md')
+    )
+    has_scope = any(
+        marker in lower
+        for marker in (
+            ' in ',
+            ' under ',
+            'src/',
+            'tests/',
+            '.py',
+            '.md',
+            'repo',
+            'project',
+            'workspace',
+        )
+    )
+    has_constraints = any(
+        marker in lower
+        for marker in (
+            'without',
+            'only',
+            'must',
+            'do not',
+            "don't",
+            'avoid',
+            'keep',
+            'no ',
+        )
+    )
+    has_success = any(
+        marker in lower
+        for marker in (
+            'pass',
+            'done',
+            'success',
+            'verify',
+            'test',
+            'expected',
+            'should',
+        )
+    )
     vague_penalty = 0.25 if tokens & VAGUE_WORDS else 0.0
 
     scores = IntentScore(
@@ -99,11 +138,11 @@ def clarify_task(task: str) -> ClarificationResult:
     missing = tuple(
         name
         for name, present in (
-            ("intent", has_action),
-            ("outcome", has_object),
-            ("scope", has_scope),
-            ("constraints", has_constraints),
-            ("success", has_success),
+            ('intent', has_action),
+            ('outcome', has_object),
+            ('scope', has_scope),
+            ('constraints', has_constraints),
+            ('success', has_success),
         )
         if not present
     )
@@ -117,13 +156,13 @@ def clarify_task(task: str) -> ClarificationResult:
 
 
 def build_task_spec(task: str, clarification: ClarificationResult) -> str:
-    return "\n".join(
+    return '\n'.join(
         [
-            "Clarified task specification:",
-            f"TASK: {task}",
-            f"AMBIGUITY: {clarification.ambiguity}",
-            f"MISSING: {', '.join(clarification.missing) if clarification.missing else 'none'}",
-            "Proceed conservatively and ask for final clarification if required details are still missing.",
+            'Clarified task specification:',
+            f'TASK: {task}',
+            f'AMBIGUITY: {clarification.ambiguity}',
+            f'MISSING: {", ".join(clarification.missing) if clarification.missing else "none"}',
+            'Proceed conservatively and ask for final clarification if required details are still missing.',
         ]
     )
 
@@ -133,11 +172,11 @@ def next_question(missing: tuple[str, ...]) -> Optional[str]:
         return None
     first = missing[0]
     questions = {
-        "intent": "What action do you want TeaAgent to take?",
-        "outcome": "What concrete output or change should exist when this is done?",
-        "scope": "Which files, directory, or project area should this apply to?",
-        "constraints": "Are there constraints TeaAgent must follow, such as no destructive changes or preserving APIs?",
-        "success": "How should TeaAgent verify that the task succeeded?",
+        'intent': 'What action do you want TeaAgent to take?',
+        'outcome': 'What concrete output or change should exist when this is done?',
+        'scope': 'Which files, directory, or project area should this apply to?',
+        'constraints': 'Are there constraints TeaAgent must follow, such as no destructive changes or preserving APIs?',
+        'success': 'How should TeaAgent verify that the task succeeded?',
     }
     return questions[first]
 

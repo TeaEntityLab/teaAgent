@@ -38,18 +38,18 @@ ALLOWED_NODES = {
 }
 
 SAFE_BUILTINS = {
-    "abs": abs,
-    "dict": dict,
-    "enumerate": enumerate,
-    "len": len,
-    "list": list,
-    "max": max,
-    "min": min,
-    "range": range,
-    "round": round,
-    "sorted": sorted,
-    "str": str,
-    "sum": sum,
+    'abs': abs,
+    'dict': dict,
+    'enumerate': enumerate,
+    'len': len,
+    'list': list,
+    'max': max,
+    'min': min,
+    'range': range,
+    'round': round,
+    'sorted': sorted,
+    'str': str,
+    'sum': sum,
 }
 
 
@@ -62,20 +62,28 @@ class UnsafeCodeError(ValueError):
     pass
 
 
-def execute_code_mode(code: str, *, inputs: dict[str, Any] | None = None) -> CodeModeResult:
-    tree = ast.parse(code, mode="exec")
+def execute_code_mode(
+    code: str, *, inputs: dict[str, Any] | None = None
+) -> CodeModeResult:
+    tree = ast.parse(code, mode='exec')
     _validate_tree(tree)
-    namespace: dict[str, Any] = {"__builtins__": SAFE_BUILTINS}
+    namespace: dict[str, Any] = {'__builtins__': SAFE_BUILTINS}
     if inputs:
         namespace.update(inputs)
-    exec(compile(tree, "<teaagent-code-mode>", "exec"), namespace, namespace)
-    variables = {key: value for key, value in namespace.items() if key != "__builtins__" and not key.startswith("_")}
+    exec(compile(tree, '<teaagent-code-mode>', 'exec'), namespace, namespace)
+    variables = {
+        key: value
+        for key, value in namespace.items()
+        if key != '__builtins__' and not key.startswith('_')
+    }
     return CodeModeResult(variables=variables)
 
 
 def _validate_tree(tree: ast.AST) -> None:
     for node in ast.walk(tree):
         if type(node) not in ALLOWED_NODES:
-            raise UnsafeCodeError(f"Disallowed syntax: {type(node).__name__}")
-        if isinstance(node, ast.Call) and (not isinstance(node.func, ast.Name) or node.func.id not in SAFE_BUILTINS):
-            raise UnsafeCodeError("Only approved builtin calls are allowed")
+            raise UnsafeCodeError(f'Disallowed syntax: {type(node).__name__}')
+        if isinstance(node, ast.Call) and (
+            not isinstance(node.func, ast.Name) or node.func.id not in SAFE_BUILTINS
+        ):
+            raise UnsafeCodeError('Only approved builtin calls are allowed')

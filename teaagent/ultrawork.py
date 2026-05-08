@@ -17,7 +17,7 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-_PROC_HANDLES: dict[str, "subprocess.Popen[bytes]"] = {}
+_PROC_HANDLES: dict[str, 'subprocess.Popen[bytes]'] = {}
 
 
 def _reap(pid: int) -> bool:
@@ -48,18 +48,18 @@ class WorkerRecord:
 class UltraworkStore:
     """Detached background workers persisted under .teaagent/ultrawork/."""
 
-    def __init__(self, root: str | Path = ".") -> None:
+    def __init__(self, root: str | Path = '.') -> None:
         self.root = Path(root).resolve()
-        self.dir = self.root / ".teaagent" / "ultrawork"
+        self.dir = self.root / '.teaagent' / 'ultrawork'
         self.dir.mkdir(parents=True, exist_ok=True)
 
     def start(self, command: list[str], *, label: Optional[str] = None) -> WorkerRecord:
         if not command:
-            raise ValueError("ultrawork command must not be empty")
+            raise ValueError('ultrawork command must not be empty')
         worker_id = uuid4().hex
-        log_path = self.dir / f"{worker_id}.log"
-        record_path = self.dir / f"{worker_id}.json"
-        log_handle = log_path.open("w", encoding="utf-8")
+        log_path = self.dir / f'{worker_id}.log'
+        record_path = self.dir / f'{worker_id}.json'
+        log_handle = log_path.open('w', encoding='utf-8')
         try:
             proc = subprocess.Popen(
                 command,
@@ -78,30 +78,34 @@ class UltraworkStore:
             log_path=str(log_path),
             label=label,
         )
-        record_path.write_text(json.dumps(record.to_dict(), sort_keys=True), encoding="utf-8")
+        record_path.write_text(
+            json.dumps(record.to_dict(), sort_keys=True), encoding='utf-8'
+        )
         _PROC_HANDLES[worker_id] = proc
         return record
 
     def list(self) -> list[dict[str, Any]]:
         records = []
-        for path in sorted(self.dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["alive"] = self._is_alive(int(data["pid"]))
+        for path in sorted(
+            self.dir.glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True
+        ):
+            data = json.loads(path.read_text(encoding='utf-8'))
+            data['alive'] = self._is_alive(int(data['pid']))
             records.append(data)
         return records
 
     def show(self, worker_id: str) -> dict[str, Any]:
-        record_path = self.dir / f"{worker_id}.json"
+        record_path = self.dir / f'{worker_id}.json'
         if not record_path.exists():
             raise FileNotFoundError(f"ultrawork worker '{worker_id}' not found")
-        data = json.loads(record_path.read_text(encoding="utf-8"))
-        data["alive"] = self._is_alive(int(data["pid"]))
+        data = json.loads(record_path.read_text(encoding='utf-8'))
+        data['alive'] = self._is_alive(int(data['pid']))
         return data
 
     def stop(self, worker_id: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
         data = self.show(worker_id)
-        pid = int(data["pid"])
-        signal_name = "SIGTERM"
+        pid = int(data['pid'])
+        signal_name = 'SIGTERM'
         proc = _PROC_HANDLES.get(worker_id)
         if self._is_alive(pid):
             with suppress(ProcessLookupError):
@@ -112,16 +116,19 @@ class UltraworkStore:
             if self._is_alive(pid):
                 with suppress(ProcessLookupError):
                     os.kill(pid, signal.SIGKILL)
-                    signal_name = "SIGKILL"
+                    signal_name = 'SIGKILL'
         if proc is not None:
             with suppress(subprocess.TimeoutExpired):
                 proc.wait(timeout=max(0.1, timeout_seconds))
             _PROC_HANDLES.pop(worker_id, None)
-        data["stopped_at"] = _utc_now()
-        data["stop_signal"] = signal_name
-        data["alive"] = False
-        record_path = self.dir / f"{worker_id}.json"
-        record_path.write_text(json.dumps({k: v for k, v in data.items() if k != "alive"}, sort_keys=True), encoding="utf-8")
+        data['stopped_at'] = _utc_now()
+        data['stop_signal'] = signal_name
+        data['alive'] = False
+        record_path = self.dir / f'{worker_id}.json'
+        record_path.write_text(
+            json.dumps({k: v for k, v in data.items() if k != 'alive'}, sort_keys=True),
+            encoding='utf-8',
+        )
         return data
 
     @staticmethod

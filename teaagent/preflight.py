@@ -24,22 +24,22 @@ class PreflightReport:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "task": self.task,
-            "provider": self.provider,
-            "model": self.model,
-            "permission_mode": self.permission_mode.value,
-            "clarification": self.clarification.to_dict(),
-            "routing": self.routing.to_dict() if self.routing else None,
-            "memories": [entry.to_dict() for entry in self.memories],
-            "tool_count": self.tool_count,
-            "ready": not self.clarification.needs_clarification,
+            'task': self.task,
+            'provider': self.provider,
+            'model': self.model,
+            'permission_mode': self.permission_mode.value,
+            'clarification': self.clarification.to_dict(),
+            'routing': self.routing.to_dict() if self.routing else None,
+            'memories': [entry.to_dict() for entry in self.memories],
+            'tool_count': self.tool_count,
+            'ready': not self.clarification.needs_clarification,
         }
 
 
 def preflight(
     task: str,
     *,
-    root: str | Path = ".",
+    root: str | Path = '.',
     provider: str,
     model: Optional[str] = None,
     permission_mode: PermissionMode = PermissionMode.PROMPT,

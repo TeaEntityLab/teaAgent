@@ -17,15 +17,23 @@ class ContextCompactor:
     memory_keys: tuple[str, ...] = field(default_factory=tuple)
 
     def compact(self, context: dict[str, Any]) -> CompactionResult:
-        observations = list(context.get("observations", []))
-        old_observations = observations[:-self.recent_observations] if self.recent_observations else observations
-        recent = observations[-self.recent_observations :] if self.recent_observations else []
+        observations = list(context.get('observations', []))
+        old_observations = (
+            observations[: -self.recent_observations]
+            if self.recent_observations
+            else observations
+        )
+        recent = (
+            observations[-self.recent_observations :]
+            if self.recent_observations
+            else []
+        )
         pinned = self._collect_pinned(context)
         summary = self._summarize(old_observations)
         compacted = dict(context)
-        compacted["observations"] = recent
-        compacted["compacted_summary"] = summary
-        compacted["memory_keys"] = pinned
+        compacted['observations'] = recent
+        compacted['compacted_summary'] = summary
+        compacted['memory_keys'] = pinned
         return CompactionResult(context=compacted, summary=summary, pinned=pinned)
 
     def _collect_pinned(self, value: Any) -> dict[str, Any]:
@@ -46,11 +54,15 @@ class ContextCompactor:
 
     def _summarize(self, observations: list[dict[str, Any]]) -> str:
         if not observations:
-            return ""
+            return ''
         parts = []
         for observation in observations:
-            tool_name = observation.get("tool_name", "unknown_tool")
-            result = observation.get("result", {})
-            keys = ",".join(sorted(result.keys())) if isinstance(result, dict) else "non_object"
-            parts.append(f"{tool_name} returned {keys}")
-        return "; ".join(parts)
+            tool_name = observation.get('tool_name', 'unknown_tool')
+            result = observation.get('result', {})
+            keys = (
+                ','.join(sorted(result.keys()))
+                if isinstance(result, dict)
+                else 'non_object'
+            )
+            parts.append(f'{tool_name} returned {keys}')
+        return '; '.join(parts)

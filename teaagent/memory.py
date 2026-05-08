@@ -18,25 +18,27 @@ class MemoryEntry:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "memory_id": self.memory_id,
-            "content": self.content,
-            "tags": list(self.tags),
-            "created_at": self.created_at,
+            'memory_id': self.memory_id,
+            'content': self.content,
+            'tags': list(self.tags),
+            'created_at': self.created_at,
         }
 
 
 class MemoryCatalog:
-    def __init__(self, root: str | Path = ".") -> None:
+    def __init__(self, root: str | Path = '.') -> None:
         self.root = Path(root).resolve()
-        self.path = self.root / ".teaagent" / "memory.jsonl"
+        self.path = self.root / '.teaagent' / 'memory.jsonl'
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def add(self, content: str, *, tags: tuple[str, ...] = ()) -> MemoryEntry:
-        entry = MemoryEntry(memory_id=uuid4().hex, content=content.strip(), tags=normalize_tags(tags))
+        entry = MemoryEntry(
+            memory_id=uuid4().hex, content=content.strip(), tags=normalize_tags(tags)
+        )
         if not entry.content:
-            raise ValueError("memory content cannot be empty")
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry.to_dict(), sort_keys=True) + "\n")
+            raise ValueError('memory content cannot be empty')
+        with self.path.open('a', encoding='utf-8') as handle:
+            handle.write(json.dumps(entry.to_dict(), sort_keys=True) + '\n')
         return entry
 
     def list(self, *, limit: int = 20) -> List[MemoryEntry]:
@@ -47,7 +49,11 @@ class MemoryCatalog:
         normalized = query.strip().lower()
         if not normalized:
             return []
-        matches = [entry for entry in reversed(self._read_entries()) if memory_matches(entry, normalized)]
+        matches = [
+            entry
+            for entry in reversed(self._read_entries())
+            if memory_matches(entry, normalized)
+        ]
         return matches[:limit]
 
     def show(self, memory_id: str) -> MemoryEntry:
@@ -61,7 +67,7 @@ class MemoryCatalog:
         if not self.path.exists():
             return []
         entries: List[MemoryEntry] = []
-        for line in self.path.read_text(encoding="utf-8").splitlines():
+        for line in self.path.read_text(encoding='utf-8').splitlines():
             if not line.strip():
                 continue
             try:
@@ -77,10 +83,10 @@ class MemoryCatalog:
 def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
     if not isinstance(payload, dict):
         return None
-    memory_id = payload.get("memory_id")
-    content = payload.get("content")
-    tags = payload.get("tags", [])
-    created_at = payload.get("created_at", utc_now())
+    memory_id = payload.get('memory_id')
+    content = payload.get('content')
+    tags = payload.get('tags', [])
+    created_at = payload.get('created_at', utc_now())
     if not isinstance(memory_id, str) or not memory_id:
         return None
     if not isinstance(content, str) or not content:
@@ -89,7 +95,9 @@ def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
         return None
     if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
         return None
-    return MemoryEntry(memory_id=memory_id, content=content, tags=tuple(tags), created_at=created_at)
+    return MemoryEntry(
+        memory_id=memory_id, content=content, tags=tuple(tags), created_at=created_at
+    )
 
 
 def normalize_tags(tags: tuple[str, ...]) -> tuple[str, ...]:
@@ -97,7 +105,7 @@ def normalize_tags(tags: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def memory_matches(entry: MemoryEntry, query: str) -> bool:
-    haystack = " ".join((entry.content.lower(), " ".join(entry.tags).lower()))
+    haystack = ' '.join((entry.content.lower(), ' '.join(entry.tags).lower()))
     return all(token in haystack for token in query.split())
 
 

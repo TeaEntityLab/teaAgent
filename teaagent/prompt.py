@@ -38,18 +38,22 @@ def assemble_agent_prompt(
     project_instructions: Optional[str] = None,
     task_spec: Optional[str] = None,
 ) -> PromptBundle:
-    system_parts = [DECISION_INSTRUCTIONS, "Available tools:", json.dumps(registry.mcp_metadata(), indent=2, sort_keys=True)]
+    system_parts = [
+        DECISION_INSTRUCTIONS,
+        'Available tools:',
+        json.dumps(registry.mcp_metadata(), indent=2, sort_keys=True),
+    ]
     if project_instructions:
-        system_parts.append("Project instructions:")
+        system_parts.append('Project instructions:')
         system_parts.append(project_instructions)
     return PromptBundle(
-        system="\n\n".join(system_parts),
+        system='\n\n'.join(system_parts),
         user=json.dumps(
             {
-                "task": task,
-                "task_spec": task_spec,
-                "memories": context.get("memories", []),
-                "observations": context.get("observations", []),
+                'task': task,
+                'task_spec': task_spec,
+                'memories': context.get('memories', []),
+                'observations': context.get('observations', []),
             },
             indent=2,
             sort_keys=True,
@@ -58,38 +62,42 @@ def assemble_agent_prompt(
 
 
 def load_project_instructions(root: str | Path) -> str:
-    path = Path(root) / "AGENTS.md"
+    path = Path(root) / 'AGENTS.md'
     if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8")
+        return ''
+    return path.read_text(encoding='utf-8')
 
 
 def parse_model_decision(text: str) -> ToolRequest | FinalAnswer:
     payload = extract_json_object(text)
-    decision_type = payload.get("type")
-    if decision_type == "final":
-        content = payload.get("content")
+    decision_type = payload.get('type')
+    if decision_type == 'final':
+        content = payload.get('content')
         if not isinstance(content, str):
-            raise ToolValidationError("final decision requires string content")
+            raise ToolValidationError('final decision requires string content')
         return FinalAnswer(content=content)
-    if decision_type == "tool":
-        tool_name = payload.get("tool_name")
-        arguments = payload.get("arguments")
-        call_id = payload.get("call_id")
+    if decision_type == 'tool':
+        tool_name = payload.get('tool_name')
+        arguments = payload.get('arguments')
+        call_id = payload.get('call_id')
         if not isinstance(tool_name, str):
-            raise ToolValidationError("tool decision requires string tool_name")
+            raise ToolValidationError('tool decision requires string tool_name')
         if not isinstance(arguments, dict):
-            raise ToolValidationError("tool decision requires object arguments")
+            raise ToolValidationError('tool decision requires object arguments')
         if call_id is not None and not isinstance(call_id, str):
-            raise ToolValidationError("tool decision call_id must be string")
-        return ToolRequest(tool_name=tool_name, arguments=arguments, call_id=call_id or f"model-{tool_name}")
+            raise ToolValidationError('tool decision call_id must be string')
+        return ToolRequest(
+            tool_name=tool_name,
+            arguments=arguments,
+            call_id=call_id or f'model-{tool_name}',
+        )
     raise ToolValidationError("decision type must be 'tool' or 'final'")
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
     decoder = json.JSONDecoder()
     for index, char in enumerate(text):
-        if char != "{":
+        if char != '{':
             continue
         try:
             payload, _end = decoder.raw_decode(text, index)
@@ -97,4 +105,4 @@ def extract_json_object(text: str) -> dict[str, Any]:
             continue
         if isinstance(payload, dict):
             return payload
-    raise ToolValidationError("model response did not contain a JSON object")
+    raise ToolValidationError('model response did not contain a JSON object')

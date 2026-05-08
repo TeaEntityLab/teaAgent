@@ -45,11 +45,11 @@ class ApprovalRequest:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "call_id": self.call_id,
-            "tool_name": self.tool_name,
-            "arguments": self.arguments,
-            "reason": self.reason,
-            "annotations": self.annotations,
+            'call_id': self.call_id,
+            'tool_name': self.tool_name,
+            'arguments': self.arguments,
+            'reason': self.reason,
+            'annotations': self.annotations,
         }
 
 
@@ -89,7 +89,7 @@ class AgentRunner:
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
-            raise BudgetExceededError("cost budget exceeded")
+            raise BudgetExceededError('cost budget exceeded')
 
     def run(
         self,
@@ -100,13 +100,15 @@ class AgentRunner:
         initial_observations: Optional[list[dict[str, Any]]] = None,
     ) -> RunResult:
         current_run_id = run_id or uuid4().hex
-        observations: list[dict[str, Any]] = list(initial_observations) if initial_observations else []
-        context: dict[str, Any] = {"task": task, "observations": observations}
+        observations: list[dict[str, Any]] = (
+            list(initial_observations) if initial_observations else []
+        )
+        context: dict[str, Any] = {'task': task, 'observations': observations}
         iterations = 0
         tool_calls = len(observations)
         cost_cents = 0.0
         self.audit.record(
-            "run_started",
+            'run_started',
             current_run_id,
             task=task,
             replayed_observations=len(observations),
@@ -114,15 +116,15 @@ class AgentRunner:
 
         while iterations < self.budget.max_iterations:
             iterations += 1
-            self.audit.record("iteration_started", current_run_id, iteration=iterations)
+            self.audit.record('iteration_started', current_run_id, iteration=iterations)
             try:
                 self._assert_cost_budget(cost_cents)
                 decision = decide(context)
-                cost_cents = context.get("_cost_cents", cost_cents)
+                cost_cents = context.get('_cost_cents', cost_cents)
                 self._assert_cost_budget(cost_cents)
                 if isinstance(decision, FinalAnswer):
                     self.audit.record(
-                        "run_completed",
+                        'run_completed',
                         current_run_id,
                         answer=decision.content,
                         metadata=decision.metadata,
@@ -133,17 +135,17 @@ class AgentRunner:
                         final_answer=decision,
                         iterations=iterations,
                         tool_calls=tool_calls,
-                        status="completed",
+                        status='completed',
                     )
 
                 if tool_calls >= self.budget.max_tool_calls:
-                    raise BudgetExceededError("tool-call budget exceeded")
+                    raise BudgetExceededError('tool-call budget exceeded')
 
                 tool = self.registry.get(decision.tool_name)
                 annotations = {
-                    "read_only": tool.annotations.read_only,
-                    "destructive": tool.annotations.destructive,
-                    "idempotent": tool.annotations.idempotent,
+                    'read_only': tool.annotations.read_only,
+                    'destructive': tool.annotations.destructive,
+                    'idempotent': tool.annotations.idempotent,
                 }
                 try:
                     self.approval_policy.assert_allowed(
@@ -161,15 +163,15 @@ class AgentRunner:
                     )
                     if self._can_request_approval(tool.annotations.destructive):
                         self.audit.record(
-                            "tool_call_pending_approval",
+                            'tool_call_pending_approval',
                             current_run_id,
                             **approval_request.to_dict(),
                         )
                         if self.approval_handler is None:
                             self.audit.record(
-                                "run_paused",
+                                'run_paused',
                                 current_run_id,
-                                status="pending_approval",
+                                status='pending_approval',
                                 approval=approval_request.to_dict(),
                                 cost_cents=cost_cents,
                             )
@@ -178,19 +180,19 @@ class AgentRunner:
                                 final_answer=None,
                                 iterations=iterations,
                                 tool_calls=tool_calls,
-                                status="pending_approval",
-                                metadata={"approval": approval_request.to_dict()},
+                                status='pending_approval',
+                                metadata={'approval': approval_request.to_dict()},
                             )
                         if self.approval_handler(approval_request):
                             self.audit.record(
-                                "tool_call_approved",
+                                'tool_call_approved',
                                 current_run_id,
                                 call_id=decision.call_id,
                                 tool_name=decision.tool_name,
                             )
                         else:
                             self.audit.record(
-                                "tool_call_denied",
+                                'tool_call_denied',
                                 current_run_id,
                                 call_id=decision.call_id,
                                 tool_name=decision.tool_name,
@@ -198,13 +200,13 @@ class AgentRunner:
                             raise
                     else:
                         self.audit.record(
-                            "tool_call_blocked",
+                            'tool_call_blocked',
                             current_run_id,
                             **approval_request.to_dict(),
                         )
                         raise
                 self.audit.record(
-                    "tool_call_started",
+                    'tool_call_started',
                     current_run_id,
                     call_id=decision.call_id,
                     tool_name=decision.tool_name,
@@ -214,21 +216,26 @@ class AgentRunner:
                 result = self.registry.execute(decision.tool_name, decision.arguments)
                 tool_calls += 1
                 observation = {
-                    "call_id": decision.call_id,
-                    "tool_name": decision.tool_name,
-                    "result": result,
+                    'call_id': decision.call_id,
+                    'tool_name': decision.tool_name,
+                    'result': result,
                 }
-                context["observations"].append(observation)
-                self.audit.record("tool_call_completed", current_run_id, **observation)
-                if self.compactor and len(context["observations"]) > self.compact_after_observations:
+                context['observations'].append(observation)
+                self.audit.record('tool_call_completed', current_run_id, **observation)
+                if (
+                    self.compactor
+                    and len(context['observations']) > self.compact_after_observations
+                ):
                     compacted = self.compactor.compact(context)
-                    context["observations"] = compacted.context["observations"]
-                    context["compacted_summary"] = compacted.summary
-                    context["memory_keys"] = compacted.pinned
-                    self.audit.record("context_compacted", current_run_id, summary=compacted.summary)
+                    context['observations'] = compacted.context['observations']
+                    context['compacted_summary'] = compacted.summary
+                    context['memory_keys'] = compacted.pinned
+                    self.audit.record(
+                        'context_compacted', current_run_id, summary=compacted.summary
+                    )
             except AgentHarnessError as exc:
                 self.audit.record(
-                    "run_failed",
+                    'run_failed',
                     current_run_id,
                     category=exc.category,
                     message=str(exc),
@@ -239,11 +246,11 @@ class AgentRunner:
                     final_answer=None,
                     iterations=iterations,
                     tool_calls=tool_calls,
-                    status=f"failed:{exc.category}",
+                    status=f'failed:{exc.category}',
                 )
             except Exception as exc:  # pragma: no cover - defensive boundary
                 self.audit.record(
-                    "run_failed",
+                    'run_failed',
                     current_run_id,
                     category=ErrorCategory.SYSTEM,
                     message=str(exc),
@@ -254,14 +261,14 @@ class AgentRunner:
                     final_answer=None,
                     iterations=iterations,
                     tool_calls=tool_calls,
-                    status=f"failed:{ErrorCategory.SYSTEM}",
+                    status=f'failed:{ErrorCategory.SYSTEM}',
                 )
 
         self.audit.record(
-            "run_failed",
+            'run_failed',
             current_run_id,
             category=ErrorCategory.MODEL_LOGIC,
-            message="iteration budget exceeded",
+            message='iteration budget exceeded',
             cost_cents=cost_cents,
         )
         return RunResult(
@@ -269,8 +276,11 @@ class AgentRunner:
             final_answer=None,
             iterations=iterations,
             tool_calls=tool_calls,
-            status=f"failed:{ErrorCategory.MODEL_LOGIC}",
+            status=f'failed:{ErrorCategory.MODEL_LOGIC}',
         )
 
     def _can_request_approval(self, destructive: bool) -> bool:
-        return destructive and self.approval_policy.permission_mode == PermissionMode.PROMPT
+        return (
+            destructive
+            and self.approval_policy.permission_mode == PermissionMode.PROMPT
+        )

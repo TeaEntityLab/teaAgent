@@ -24,42 +24,42 @@ class TraceRecorder:
         self._open_tool_spans: dict[str, TraceSpan] = {}
 
     def handle_event(self, event: AuditEvent) -> None:
-        if event.event_type == "run_started":
+        if event.event_type == 'run_started':
             self.spans.append(
                 TraceSpan(
-                    name="agent.run",
+                    name='agent.run',
                     run_id=event.run_id,
                     span_id=event.event_id,
                     started_at=event.created_at,
-                    attributes={"task": event.payload.get("task")},
+                    attributes={'task': event.payload.get('task')},
                 )
             )
             return
 
-        if event.event_type == "tool_call_started":
-            call_id = event.payload["call_id"]
+        if event.event_type == 'tool_call_started':
+            call_id = event.payload['call_id']
             span = TraceSpan(
-                name="tool.call",
+                name='tool.call',
                 run_id=event.run_id,
                 span_id=call_id,
                 started_at=event.created_at,
                 attributes={
-                    "tool_name": event.payload.get("tool_name"),
-                    "annotations": event.payload.get("annotations", {}),
+                    'tool_name': event.payload.get('tool_name'),
+                    'annotations': event.payload.get('annotations', {}),
                 },
             )
             self._open_tool_spans[call_id] = span
             self.spans.append(span)
             return
 
-        if event.event_type == "tool_call_completed":
-            call_id = event.payload["call_id"]
+        if event.event_type == 'tool_call_completed':
+            call_id = event.payload['call_id']
             open_span = self._open_tool_spans.pop(call_id, None)
             if open_span is not None:
                 self._replace_span(open_span, ended_at=event.created_at)
             return
 
-        if event.event_type in {"run_completed", "run_failed"}:
+        if event.event_type in {'run_completed', 'run_failed'}:
             self.spans.append(
                 TraceSpan(
                     name=event.event_type,

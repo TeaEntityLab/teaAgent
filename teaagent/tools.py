@@ -41,12 +41,12 @@ class ToolRegistry:
         annotations: ToolAnnotations,
         handler: ToolHandler,
     ) -> None:
-        if not name or " " in name:
-            raise ValueError("tool name must be non-empty and contain no spaces")
+        if not name or ' ' in name:
+            raise ValueError('tool name must be non-empty and contain no spaces')
         if name in self._tools:
             raise ValueError(f"tool '{name}' is already registered")
         if not description:
-            raise ValueError("tool description is required")
+            raise ValueError('tool description is required')
         self._tools[name] = ToolDefinition(
             name=name,
             description=description,
@@ -64,25 +64,27 @@ class ToolRegistry:
 
     def execute(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         tool = self.get(name)
-        validate_object_schema(tool.input_schema, arguments, label=f"tool.{name}.input")
+        validate_object_schema(tool.input_schema, arguments, label=f'tool.{name}.input')
         try:
             result = tool.handler(arguments)
-        except Exception as exc:  # pragma: no cover - preserves original detail in message
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - preserves original detail in message
             raise ToolExecutionError(f"tool '{name}' failed: {exc}") from exc
-        validate_object_schema(tool.output_schema, result, label=f"tool.{name}.output")
+        validate_object_schema(tool.output_schema, result, label=f'tool.{name}.output')
         return result
 
     def mcp_metadata(self) -> list[dict[str, Any]]:
         return [
             {
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": tool.input_schema,
-                "output_schema": tool.output_schema,
-                "annotations": {
-                    "readOnlyHint": tool.annotations.read_only,
-                    "destructiveHint": tool.annotations.destructive,
-                    "idempotentHint": tool.annotations.idempotent,
+                'name': tool.name,
+                'description': tool.description,
+                'input_schema': tool.input_schema,
+                'output_schema': tool.output_schema,
+                'annotations': {
+                    'readOnlyHint': tool.annotations.read_only,
+                    'destructiveHint': tool.annotations.destructive,
+                    'idempotentHint': tool.annotations.idempotent,
                 },
             }
             for tool in self._tools.values()

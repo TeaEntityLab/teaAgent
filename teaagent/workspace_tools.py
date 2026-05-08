@@ -20,272 +20,325 @@ class WorkspaceToolConfig:
     max_shell_output_bytes: int = 200_000
 
     @classmethod
-    def from_root(cls, root: str | Path) -> "WorkspaceToolConfig":
+    def from_root(cls, root: str | Path) -> 'WorkspaceToolConfig':
         return cls(root=Path(root).resolve())
 
 
-def build_workspace_tool_registry(root: str | Path = ".") -> ToolRegistry:
+def build_workspace_tool_registry(root: str | Path = '.') -> ToolRegistry:
     registry = ToolRegistry()
     register_workspace_tools(registry, WorkspaceToolConfig.from_root(root))
     return registry
 
 
-def register_workspace_tools(registry: ToolRegistry, config: WorkspaceToolConfig) -> None:
+def register_workspace_tools(
+    registry: ToolRegistry, config: WorkspaceToolConfig
+) -> None:
     registry.register(
-        name="workspace_read_file",
-        description="Read a UTF-8 text file inside the workspace root.",
+        name='workspace_read_file',
+        description='Read a UTF-8 text file inside the workspace root.',
         input_schema=object_schema(
-            {"path": "string", "max_bytes": "integer"},
-            required=["path"],
+            {'path': 'string', 'max_bytes': 'integer'},
+            required=['path'],
         ),
         output_schema=object_schema(
-            {"path": "string", "content": "string", "truncated": "boolean"},
-            required=["path", "content", "truncated"],
+            {'path': 'string', 'content': 'string', 'truncated': 'boolean'},
+            required=['path', 'content', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda args: read_file(config, args),
     )
     registry.register(
-        name="workspace_write_file",
-        description="Write a UTF-8 text file inside the workspace root.",
+        name='workspace_write_file',
+        description='Write a UTF-8 text file inside the workspace root.',
         input_schema=object_schema(
-            {"path": "string", "content": "string", "create_dirs": "boolean"},
-            required=["path", "content"],
+            {'path': 'string', 'content': 'string', 'create_dirs': 'boolean'},
+            required=['path', 'content'],
         ),
-        output_schema=object_schema({"path": "string", "bytes_written": "integer"}, required=["path", "bytes_written"]),
+        output_schema=object_schema(
+            {'path': 'string', 'bytes_written': 'integer'},
+            required=['path', 'bytes_written'],
+        ),
         annotations=ToolAnnotations(destructive=True, idempotent=True),
         handler=lambda args: write_file(config, args),
     )
     registry.register(
-        name="workspace_read_file_hashed",
-        description="Read a UTF-8 text file with stable LINE#HASH anchors for safer edits.",
+        name='workspace_read_file_hashed',
+        description='Read a UTF-8 text file with stable LINE#HASH anchors for safer edits.',
         input_schema=object_schema(
-            {"path": "string", "max_bytes": "integer"},
-            required=["path"],
+            {'path': 'string', 'max_bytes': 'integer'},
+            required=['path'],
         ),
         output_schema=object_schema(
-            {"path": "string", "content": "string", "truncated": "boolean"},
-            required=["path", "content", "truncated"],
+            {'path': 'string', 'content': 'string', 'truncated': 'boolean'},
+            required=['path', 'content', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda args: read_file_hashed(config, args),
     )
     registry.register(
-        name="workspace_edit_at_hash",
-        description="Edit one line only if its LINE#HASH anchor and old text still match.",
+        name='workspace_edit_at_hash',
+        description='Edit one line only if its LINE#HASH anchor and old text still match.',
         input_schema=object_schema(
-            {"path": "string", "line": "integer", "hash": "string", "old": "string", "new": "string"},
-            required=["path", "line", "hash", "old", "new"],
+            {
+                'path': 'string',
+                'line': 'integer',
+                'hash': 'string',
+                'old': 'string',
+                'new': 'string',
+            },
+            required=['path', 'line', 'hash', 'old', 'new'],
         ),
-        output_schema=object_schema({"path": "string", "line": "integer", "hash": "string"}, required=["path", "line", "hash"]),
+        output_schema=object_schema(
+            {'path': 'string', 'line': 'integer', 'hash': 'string'},
+            required=['path', 'line', 'hash'],
+        ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
         handler=lambda args: edit_at_hash(config, args),
     )
     registry.register(
-        name="workspace_apply_patch",
-        description="Replace one exact text span in a UTF-8 file inside the workspace root.",
+        name='workspace_apply_patch',
+        description='Replace one exact text span in a UTF-8 file inside the workspace root.',
         input_schema=object_schema(
-            {"path": "string", "old": "string", "new": "string"},
-            required=["path", "old", "new"],
+            {'path': 'string', 'old': 'string', 'new': 'string'},
+            required=['path', 'old', 'new'],
         ),
-        output_schema=object_schema({"path": "string", "replacements": "integer"}, required=["path", "replacements"]),
+        output_schema=object_schema(
+            {'path': 'string', 'replacements': 'integer'},
+            required=['path', 'replacements'],
+        ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
         handler=lambda args: apply_patch(config, args),
     )
     registry.register(
-        name="workspace_list_files",
-        description="List files matching a glob pattern inside the workspace root.",
-        input_schema=object_schema({"pattern": "string", "limit": "integer"}, required=["pattern"]),
+        name='workspace_list_files',
+        description='List files matching a glob pattern inside the workspace root.',
+        input_schema=object_schema(
+            {'pattern': 'string', 'limit': 'integer'}, required=['pattern']
+        ),
         output_schema=object_schema(
-            {"files": {"type": "array", "items": {"type": "string"}}, "truncated": "boolean"},
-            required=["files", "truncated"],
+            {
+                'files': {'type': 'array', 'items': {'type': 'string'}},
+                'truncated': 'boolean',
+            },
+            required=['files', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda args: list_files(config, args),
     )
     registry.register(
-        name="workspace_search_text",
-        description="Search text files with a regular expression inside the workspace root.",
+        name='workspace_search_text',
+        description='Search text files with a regular expression inside the workspace root.',
         input_schema=object_schema(
-            {"pattern": "string", "include": "string", "limit": "integer"},
-            required=["pattern"],
+            {'pattern': 'string', 'include': 'string', 'limit': 'integer'},
+            required=['pattern'],
         ),
         output_schema=object_schema(
-            {"matches": {"type": "array", "items": {"type": "object"}}, "truncated": "boolean"},
-            required=["matches", "truncated"],
+            {
+                'matches': {'type': 'array', 'items': {'type': 'object'}},
+                'truncated': 'boolean',
+            },
+            required=['matches', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda args: search_text(config, args),
     )
     registry.register(
-        name="workspace_git_status",
-        description="Run git status --short inside the workspace root.",
+        name='workspace_git_status',
+        description='Run git status --short inside the workspace root.',
         input_schema=object_schema({}, required=[]),
-        output_schema=object_schema({"status": "string", "exit_code": "integer"}, required=["status", "exit_code"]),
+        output_schema=object_schema(
+            {'status': 'string', 'exit_code': 'integer'},
+            required=['status', 'exit_code'],
+        ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda _args: git_status(config),
     )
     registry.register(
-        name="workspace_run_shell_inspect",
-        description="Run a bounded read-oriented shell command inside the workspace root.",
+        name='workspace_run_shell_inspect',
+        description='Run a bounded read-oriented shell command inside the workspace root.',
         input_schema=object_schema(
-            {"command": "string", "timeout_seconds": "integer"},
-            required=["command"],
+            {'command': 'string', 'timeout_seconds': 'integer'},
+            required=['command'],
         ),
         output_schema=object_schema(
-            {"stdout": "string", "stderr": "string", "exit_code": "integer"},
-            required=["stdout", "stderr", "exit_code"],
+            {'stdout': 'string', 'stderr': 'string', 'exit_code': 'integer'},
+            required=['stdout', 'stderr', 'exit_code'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=False),
         handler=lambda args: run_shell_inspect(config, args),
     )
     registry.register(
-        name="workspace_run_shell_mutate",
-        description="Run an approval-gated shell command inside the workspace root.",
+        name='workspace_run_shell_mutate',
+        description='Run an approval-gated shell command inside the workspace root.',
         input_schema=object_schema(
-            {"command": "string", "timeout_seconds": "integer"},
-            required=["command"],
+            {'command': 'string', 'timeout_seconds': 'integer'},
+            required=['command'],
         ),
         output_schema=object_schema(
-            {"stdout": "string", "stderr": "string", "exit_code": "integer"},
-            required=["stdout", "stderr", "exit_code"],
+            {'stdout': 'string', 'stderr': 'string', 'exit_code': 'integer'},
+            required=['stdout', 'stderr', 'exit_code'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
         handler=lambda args: run_shell(config, args),
     )
     registry.register(
-        name="workspace_run_shell",
-        description="Compatibility alias for workspace_run_shell_mutate. Requires approval in agent runs.",
+        name='workspace_run_shell',
+        description='Compatibility alias for workspace_run_shell_mutate. Requires approval in agent runs.',
         input_schema=object_schema(
-            {"command": "string", "timeout_seconds": "integer"},
-            required=["command"],
+            {'command': 'string', 'timeout_seconds': 'integer'},
+            required=['command'],
         ),
         output_schema=object_schema(
-            {"stdout": "string", "stderr": "string", "exit_code": "integer"},
-            required=["stdout", "stderr", "exit_code"],
+            {'stdout': 'string', 'stderr': 'string', 'exit_code': 'integer'},
+            required=['stdout', 'stderr', 'exit_code'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
         handler=lambda args: run_shell(config, args),
     )
 
 
-def object_schema(properties: dict[str, Union[str, dict[str, Any]]], *, required: list[str]) -> dict[str, Any]:
+def object_schema(
+    properties: dict[str, Union[str, dict[str, Any]]], *, required: list[str]
+) -> dict[str, Any]:
     return {
-        "type": "object",
-        "properties": {
-            name: type_name if isinstance(type_name, dict) else {"type": type_name}
+        'type': 'object',
+        'properties': {
+            name: type_name if isinstance(type_name, dict) else {'type': type_name}
             for name, type_name in properties.items()
         },
-        "required": required,
+        'required': required,
     }
 
 
 def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    path = resolve_workspace_path(config, args["path"])
-    max_bytes = non_negative_int_arg(args, "max_bytes", default=config.max_read_bytes)
+    path = resolve_workspace_path(config, args['path'])
+    max_bytes = non_negative_int_arg(args, 'max_bytes', default=config.max_read_bytes)
     data = path.read_bytes()
     truncated = len(data) > max_bytes
     return {
-        "path": relative_path(config, path),
-        "content": data[:max_bytes].decode("utf-8", errors="replace"),
-        "truncated": truncated,
+        'path': relative_path(config, path),
+        'content': data[:max_bytes].decode('utf-8', errors='replace'),
+        'truncated': truncated,
     }
 
 
-def read_file_hashed(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+def read_file_hashed(
+    config: WorkspaceToolConfig, args: dict[str, Any]
+) -> dict[str, Any]:
     raw = read_file(config, args)
-    lines = raw["content"].splitlines(keepends=True)
-    raw["content"] = "".join(format_hash_line(index, line) for index, line in enumerate(lines, start=1))
+    lines = raw['content'].splitlines(keepends=True)
+    raw['content'] = ''.join(
+        format_hash_line(index, line) for index, line in enumerate(lines, start=1)
+    )
     return raw
 
 
 def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    path = resolve_workspace_path(config, args["path"])
-    if args.get("create_dirs", False):
+    path = resolve_workspace_path(config, args['path'])
+    if args.get('create_dirs', False):
         path.parent.mkdir(parents=True, exist_ok=True)
-    content = args["content"]
-    path.write_text(content, encoding="utf-8")
-    return {"path": relative_path(config, path), "bytes_written": len(content.encode("utf-8"))}
+    content = args['content']
+    path.write_text(content, encoding='utf-8')
+    return {
+        'path': relative_path(config, path),
+        'bytes_written': len(content.encode('utf-8')),
+    }
 
 
 def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    path = resolve_workspace_path(config, args["path"])
-    text = path.read_text(encoding="utf-8")
-    old = args["old"]
+    path = resolve_workspace_path(config, args['path'])
+    text = path.read_text(encoding='utf-8')
+    old = args['old']
     if old not in text:
-        raise ValueError("old text not found")
-    updated = text.replace(old, args["new"], 1)
-    path.write_text(updated, encoding="utf-8")
-    return {"path": relative_path(config, path), "replacements": 1}
+        raise ValueError('old text not found')
+    updated = text.replace(old, args['new'], 1)
+    path.write_text(updated, encoding='utf-8')
+    return {'path': relative_path(config, path), 'replacements': 1}
 
 
 def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    path = resolve_workspace_path(config, args["path"])
-    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
-    line_number = args["line"]
+    path = resolve_workspace_path(config, args['path'])
+    lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+    line_number = args['line']
     if line_number < 1 or line_number > len(lines):
-        raise ValueError("line is outside file range")
+        raise ValueError('line is outside file range')
     current = lines[line_number - 1]
     expected_hash = compute_line_hash(line_number, current)
-    if expected_hash != args["hash"]:
-        raise ValueError("line hash mismatch")
-    current_text = current.rstrip("\n").rstrip("\r")
-    if current_text != args["old"]:
-        raise ValueError("old text mismatch")
-    newline = "\n" if current.endswith("\n") else ""
-    lines[line_number - 1] = args["new"] + newline
-    path.write_text("".join(lines), encoding="utf-8")
+    if expected_hash != args['hash']:
+        raise ValueError('line hash mismatch')
+    current_text = current.rstrip('\n').rstrip('\r')
+    if current_text != args['old']:
+        raise ValueError('old text mismatch')
+    newline = '\n' if current.endswith('\n') else ''
+    lines[line_number - 1] = args['new'] + newline
+    path.write_text(''.join(lines), encoding='utf-8')
     new_hash = compute_line_hash(line_number, lines[line_number - 1])
-    return {"path": relative_path(config, path), "line": line_number, "hash": new_hash}
+    return {'path': relative_path(config, path), 'line': line_number, 'hash': new_hash}
 
 
 def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    pattern = args["pattern"]
-    limit = positive_int_arg(args, "limit", default=200)
+    pattern = args['pattern']
+    limit = positive_int_arg(args, 'limit', default=200)
     files = []
-    for path in sorted(config.root.rglob("*")):
-        if path.is_file() and ".git" not in path.parts and fnmatch(relative_path(config, path), pattern):
+    for path in sorted(config.root.rglob('*')):
+        if (
+            path.is_file()
+            and '.git' not in path.parts
+            and fnmatch(relative_path(config, path), pattern)
+        ):
             files.append(relative_path(config, path))
             if len(files) >= limit:
-                return {"files": files, "truncated": True}
-    return {"files": files, "truncated": False}
+                return {'files': files, 'truncated': True}
+    return {'files': files, 'truncated': False}
 
 
 def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    regex = re.compile(args["pattern"])
-    include = args.get("include", "*")
-    limit = positive_int_arg(args, "limit", default=200)
+    regex = re.compile(args['pattern'])
+    include = args.get('include', '*')
+    limit = positive_int_arg(args, 'limit', default=200)
     matches = []
-    for path in sorted(config.root.rglob("*")):
-        if not path.is_file() or ".git" in path.parts or not fnmatch(relative_path(config, path), include):
+    for path in sorted(config.root.rglob('*')):
+        if (
+            not path.is_file()
+            or '.git' in path.parts
+            or not fnmatch(relative_path(config, path), include)
+        ):
             continue
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
+            lines = path.read_text(encoding='utf-8').splitlines()
         except UnicodeDecodeError:
             continue
         for line_number, line in enumerate(lines, start=1):
             if regex.search(line):
-                matches.append({"path": relative_path(config, path), "line": line_number, "text": line})
+                matches.append(
+                    {
+                        'path': relative_path(config, path),
+                        'line': line_number,
+                        'text': line,
+                    }
+                )
                 if len(matches) >= limit:
-                    return {"matches": matches, "truncated": True}
-    return {"matches": matches, "truncated": False}
+                    return {'matches': matches, 'truncated': True}
+    return {'matches': matches, 'truncated': False}
 
 
 def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:
     result = subprocess.run(
-        ["git", "status", "--short"],
+        ['git', 'status', '--short'],
         cwd=str(config.root),
         text=True,
         capture_output=True,
         timeout=config.command_timeout_seconds,
     )
-    return {"status": result.stdout + result.stderr, "exit_code": result.returncode}
+    return {'status': result.stdout + result.stderr, 'exit_code': result.returncode}
 
 
 def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    timeout = positive_int_arg(args, "timeout_seconds", default=config.command_timeout_seconds)
+    timeout = positive_int_arg(
+        args, 'timeout_seconds', default=config.command_timeout_seconds
+    )
     result = subprocess.run(
-        args["command"],
+        args['command'],
         cwd=str(config.root),
         shell=True,
         text=True,
@@ -293,13 +346,15 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
         timeout=timeout,
     )
     return {
-        "stdout": truncate_output(result.stdout, config.max_shell_output_bytes),
-        "stderr": truncate_output(result.stderr, config.max_shell_output_bytes),
-        "exit_code": result.returncode,
+        'stdout': truncate_output(result.stdout, config.max_shell_output_bytes),
+        'stderr': truncate_output(result.stderr, config.max_shell_output_bytes),
+        'exit_code': result.returncode,
     }
 
 
-def run_shell_argv(config: WorkspaceToolConfig, argv: list[str], *, timeout_seconds: int) -> dict[str, Any]:
+def run_shell_argv(
+    config: WorkspaceToolConfig, argv: list[str], *, timeout_seconds: int
+) -> dict[str, Any]:
     result = subprocess.run(
         argv,
         cwd=str(config.root),
@@ -309,67 +364,82 @@ def run_shell_argv(config: WorkspaceToolConfig, argv: list[str], *, timeout_seco
         timeout=timeout_seconds,
     )
     return {
-        "stdout": truncate_output(result.stdout, config.max_shell_output_bytes),
-        "stderr": truncate_output(result.stderr, config.max_shell_output_bytes),
-        "exit_code": result.returncode,
+        'stdout': truncate_output(result.stdout, config.max_shell_output_bytes),
+        'stderr': truncate_output(result.stderr, config.max_shell_output_bytes),
+        'exit_code': result.returncode,
     }
 
 
-def run_shell_inspect(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    policy = classify_shell_command_policy(args["command"])
-    if policy != "inspect":
-        raise ValueError("command is not inspect-safe; retry with workspace_run_shell_mutate")
-    timeout = positive_int_arg(args, "timeout_seconds", default=config.command_timeout_seconds)
-    return run_shell_argv(config, shlex.split(args["command"]), timeout_seconds=timeout)
+def run_shell_inspect(
+    config: WorkspaceToolConfig, args: dict[str, Any]
+) -> dict[str, Any]:
+    policy = classify_shell_command_policy(args['command'])
+    if policy != 'inspect':
+        raise ValueError(
+            'command is not inspect-safe; retry with workspace_run_shell_mutate'
+        )
+    timeout = positive_int_arg(
+        args, 'timeout_seconds', default=config.command_timeout_seconds
+    )
+    return run_shell_argv(config, shlex.split(args['command']), timeout_seconds=timeout)
 
 
 def positive_int_arg(args: dict[str, Any], name: str, *, default: int) -> int:
     value = args.get(name, default)
     if value < 1:
-        raise ValueError(f"{name} must be >= 1")
+        raise ValueError(f'{name} must be >= 1')
     return value
 
 
 def non_negative_int_arg(args: dict[str, Any], name: str, *, default: int) -> int:
     value = args.get(name, default)
     if value < 0:
-        raise ValueError(f"{name} must be >= 0")
+        raise ValueError(f'{name} must be >= 0')
     return value
 
 
 def classify_shell_command_policy(command: str) -> str:
-    blocked_tokens = (">", "<", "|", "&&", ";", "`", "$(")
+    blocked_tokens = ('>', '<', '|', '&&', ';', '`', '$(')
     if any(token in command for token in blocked_tokens):
-        return "mutate"
+        return 'mutate'
     try:
         parts = shlex.split(command.strip())
     except ValueError:
-        return "mutate"
+        return 'mutate'
     if not parts:
-        return "mutate"
+        return 'mutate'
     executable = parts[0]
     if any(shell_arg_escapes_workspace(arg) for arg in parts[1:]):
-        return "mutate"
-    if executable in {"pwd", "ls", "find", "rg", "grep", "cat", "head", "tail", "wc"}:
-        return "inspect"
-    if executable == "git" and len(parts) > 1 and parts[1] in {"status", "diff", "log", "show", "branch"}:
-        return "inspect"
-    if executable == "python3" and len(parts) > 2 and parts[1:3] == ["-m", "unittest"]:
-        return "inspect"
-    return "mutate"
+        return 'mutate'
+    if executable in {'pwd', 'ls', 'find', 'rg', 'grep', 'cat', 'head', 'tail', 'wc'}:
+        return 'inspect'
+    if (
+        executable == 'git'
+        and len(parts) > 1
+        and parts[1] in {'status', 'diff', 'log', 'show', 'branch'}
+    ):
+        return 'inspect'
+    if executable == 'python3' and len(parts) > 2 and parts[1:3] == ['-m', 'unittest']:
+        return 'inspect'
+    return 'mutate'
 
 
 def shell_arg_escapes_workspace(arg: str) -> bool:
-    return arg.startswith(("/", "~")) or arg == ".." or arg.startswith("../") or "/../" in arg
+    return (
+        arg.startswith(('/', '~'))
+        or arg == '..'
+        or arg.startswith('../')
+        or '/../' in arg
+    )
 
 
 def truncate_output(value: str, max_bytes: int) -> str:
-    data = value.encode("utf-8")
+    data = value.encode('utf-8')
     if len(data) <= max_bytes:
         return value
-    marker = b"\n[truncated]"
+    marker = b'\n[truncated]'
     keep = max(0, max_bytes - len(marker))
-    return (data[:keep] + marker).decode("utf-8", errors="replace")
+    return (data[:keep] + marker).decode('utf-8', errors='replace')
 
 
 def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:
@@ -377,7 +447,7 @@ def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:
     try:
         resolved.relative_to(config.root)
     except ValueError as exc:
-        raise ValueError("path escapes workspace root") from exc
+        raise ValueError('path escapes workspace root') from exc
     return resolved
 
 
@@ -386,11 +456,13 @@ def relative_path(config: WorkspaceToolConfig, path: Path) -> str:
 
 
 def compute_line_hash(line_number: int, content: str) -> str:
-    normalized = f"{line_number}:{content.replace(chr(13), '').rstrip()}".encode("utf-8")
-    return f"{zlib.crc32(normalized) & 0xFF:02X}"
+    normalized = f'{line_number}:{content.replace(chr(13), "").rstrip()}'.encode(
+        'utf-8'
+    )
+    return f'{zlib.crc32(normalized) & 0xFF:02X}'
 
 
 def format_hash_line(line_number: int, content: str) -> str:
-    stripped_newline = content.rstrip("\n").rstrip("\r")
-    newline = "\n" if content.endswith("\n") else ""
-    return f"{line_number}#{compute_line_hash(line_number, content)}|{stripped_newline}{newline}"
+    stripped_newline = content.rstrip('\n').rstrip('\r')
+    newline = '\n' if content.endswith('\n') else ''
+    return f'{line_number}#{compute_line_hash(line_number, content)}|{stripped_newline}{newline}'

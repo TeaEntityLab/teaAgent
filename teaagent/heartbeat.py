@@ -19,7 +19,7 @@ class Heartbeat:
         sleep=time.sleep,
     ) -> None:
         if interval_seconds <= 0:
-            raise ValueError("interval_seconds must be positive")
+            raise ValueError('interval_seconds must be positive')
         self.audit = audit
         self.run_id = run_id
         self.interval_seconds = interval_seconds
@@ -28,7 +28,7 @@ class Heartbeat:
         self._thread: Optional[threading.Thread] = None
         self.tick_count = 0
 
-    def __enter__(self) -> "Heartbeat":
+    def __enter__(self) -> 'Heartbeat':
         self.start()
         return self
 
@@ -38,7 +38,7 @@ class Heartbeat:
     def tick(self) -> None:
         self.tick_count += 1
         self.audit.record(
-            "heartbeat",
+            'heartbeat',
             self.run_id,
             tick=self.tick_count,
             interval_seconds=self.interval_seconds,
@@ -48,7 +48,9 @@ class Heartbeat:
         if self._thread is not None:
             return
         self._stop_event.clear()
-        self._thread = threading.Thread(target=self._loop, name=f"heartbeat-{self.run_id}", daemon=True)
+        self._thread = threading.Thread(
+            target=self._loop, name=f'heartbeat-{self.run_id}', daemon=True
+        )
         self._thread.start()
 
     def stop(self) -> None:

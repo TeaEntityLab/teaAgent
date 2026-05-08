@@ -24,10 +24,10 @@ class StatelessMCPRequest:
         arguments: dict[str, Any],
         client_capabilities: dict[str, Any] | None = None,
         shared_state: dict[str, Any] | None = None,
-    ) -> "StatelessMCPRequest":
+    ) -> 'StatelessMCPRequest':
         return cls(
             request_id=uuid4().hex,
-            protocol_version="mcp-stateless-draft-2026-06",
+            protocol_version='mcp-stateless-draft-2026-06',
             tool_name=tool_name,
             arguments=arguments,
             client_capabilities=client_capabilities or {},
@@ -53,6 +53,6 @@ def handle_stateless_tool_request(
     return StatelessMCPResponse(
         request_id=request.request_id,
         result=result,
-        server_capabilities=server_capabilities or {"tools": True, "stateless": True},
+        server_capabilities=server_capabilities or {'tools': True, 'stateless': True},
         shared_state=request.shared_state,
     )

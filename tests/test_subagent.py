@@ -25,13 +25,13 @@ class SubagentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task="parent task",
+                task='parent task',
                 adapter=adapter,
                 config=ChatAgentConfig.from_root(tmp, enable_subagent=True),
             )
 
-            self.assertEqual(result.status, "completed")
-            self.assertEqual(result.final_answer.content, "parent done")
+            self.assertEqual(result.status, 'completed')
+            self.assertEqual(result.final_answer.content, 'parent done')
 
     def test_subagent_depth_limit_blocks_second_level(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -45,12 +45,14 @@ class SubagentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task="parent",
+                task='parent',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp, enable_subagent=True, max_subagent_depth=1),
+                config=ChatAgentConfig.from_root(
+                    tmp, enable_subagent=True, max_subagent_depth=1
+                ),
             )
 
-            self.assertEqual(result.status, "completed")
+            self.assertEqual(result.status, 'completed')
 
     def test_subagent_tool_absent_when_disabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -61,12 +63,12 @@ class SubagentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task="parent",
+                task='parent',
                 adapter=adapter,
                 config=ChatAgentConfig.from_root(tmp),
             )
 
-            self.assertNotEqual(result.status, "completed")
+            self.assertNotEqual(result.status, 'completed')
 
     def test_cli_agent_run_subagent_flag_exposes_tool(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -79,13 +81,26 @@ class SubagentTests(unittest.TestCase):
                 ]
             )
 
-            with patch("teaagent.cli.create_llm_adapter", return_value=adapter), redirect_stdout(output):
-                exit_code = main(["agent", "run", "gpt", "delegate work", "--subagent", "--root", tmp])
+            with (
+                patch('teaagent.cli.create_llm_adapter', return_value=adapter),
+                redirect_stdout(output),
+            ):
+                exit_code = main(
+                    [
+                        'agent',
+                        'run',
+                        'gpt',
+                        'delegate work',
+                        '--subagent',
+                        '--root',
+                        tmp,
+                    ]
+                )
 
             payload = json.loads(output.getvalue())
             self.assertEqual(exit_code, 0)
-            self.assertEqual(payload["status"], "completed")
+            self.assertEqual(payload['status'], 'completed')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

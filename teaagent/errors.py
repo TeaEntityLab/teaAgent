@@ -4,10 +4,10 @@ from enum import Enum
 
 
 class ErrorCategory(str, Enum):
-    TRANSIENT = "transient"
-    MODEL_LOGIC = "model_logic"
-    PERMISSION = "permission"
-    SYSTEM = "system"
+    TRANSIENT = 'transient'
+    MODEL_LOGIC = 'model_logic'
+    PERMISSION = 'permission'
+    SYSTEM = 'system'
 
 
 class AgentHarnessError(Exception):

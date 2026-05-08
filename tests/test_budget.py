@@ -15,19 +15,19 @@ class RunBudgetTests(unittest.TestCase):
         budget = RunBudget(max_iterations=0)
         with self.assertRaises(ValueError) as ctx:
             budget.validate()
-        self.assertIn("max_iterations", str(ctx.exception))
+        self.assertIn('max_iterations', str(ctx.exception))
 
     def test_negative_iterations_raises(self) -> None:
         budget = RunBudget(max_iterations=-1)
         with self.assertRaises(ValueError) as ctx:
             budget.validate()
-        self.assertIn("max_iterations", str(ctx.exception))
+        self.assertIn('max_iterations', str(ctx.exception))
 
     def test_negative_tool_calls_raises(self) -> None:
         budget = RunBudget(max_tool_calls=-1)
         with self.assertRaises(ValueError) as ctx:
             budget.validate()
-        self.assertIn("max_tool_calls", str(ctx.exception))
+        self.assertIn('max_tool_calls', str(ctx.exception))
 
     def test_zero_tool_calls_is_valid(self) -> None:
         budget = RunBudget(max_tool_calls=0)
@@ -37,7 +37,7 @@ class RunBudgetTests(unittest.TestCase):
         budget = RunBudget(max_estimated_cost_cents=-1)
         with self.assertRaises(ValueError) as ctx:
             budget.validate()
-        self.assertIn("cost_cents", str(ctx.exception))
+        self.assertIn('cost_cents', str(ctx.exception))
 
     def test_budget_is_frozen(self) -> None:
         budget = RunBudget()
@@ -45,9 +45,11 @@ class RunBudgetTests(unittest.TestCase):
             budget.max_iterations = 99  # type: ignore[misc]
 
     def test_custom_valid_budget(self) -> None:
-        budget = RunBudget(max_iterations=5, max_tool_calls=3, max_estimated_cost_cents=50)
+        budget = RunBudget(
+            max_iterations=5, max_tool_calls=3, max_estimated_cost_cents=50
+        )
         budget.validate()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
