@@ -11,7 +11,12 @@ from teaagent.chat_agent import (
     register_subagent_tool,
     run_chat_agent,
 )
-from teaagent.code_mode import CodeModeResult, UnsafeCodeError, execute_code_mode
+from teaagent.code_mode import (
+    CodeModeResult,
+    CodeModeSandbox,
+    UnsafeCodeError,
+    execute_code_mode,
+)
 from teaagent.context import ContextCompactor
 from teaagent.eval import EvalCase, EvalReport, run_eval
 from teaagent.graph_rag import GraphEdge, KnowledgeGraph, graph_retrieve
@@ -114,6 +119,7 @@ __all__ = [
     'ChatAgentConfig',
     'ClarificationResult',
     'CodeModeResult',
+    'CodeModeSandbox',
     'ContextCompactor',
     'Decision',
     'Document',

@@ -10,6 +10,7 @@ from teaagent import (
     StatelessMCPRequest,
     ToolAnnotations,
     ToolRegistry,
+    CodeModeSandbox,
     UnsafeCodeError,
     assess_managed_agent_readiness,
     assess_provider_portability,
@@ -83,6 +84,19 @@ class P2PrimitiveTests(unittest.TestCase):
             execute_code_mode('import os\nvalue = 1')
         with self.assertRaises(UnsafeCodeError):
             execute_code_mode("value = open('x')")
+
+    def test_code_mode_rejects_non_plain_inputs_and_outputs(self) -> None:
+        with self.assertRaises(UnsafeCodeError):
+            execute_code_mode('value = len(items)', inputs={'items': object()})
+        with self.assertRaises(UnsafeCodeError):
+            execute_code_mode('value = range(3)')
+
+    def test_code_mode_times_out_in_sandbox(self) -> None:
+        with self.assertRaises(UnsafeCodeError):
+            execute_code_mode(
+                'for index in range(100000000):\n    value = index',
+                sandbox=CodeModeSandbox(timeout_seconds=0.01),
+            )
 
     def test_stateless_mcp_request_executes_via_registry(self) -> None:
         request = StatelessMCPRequest.create(
