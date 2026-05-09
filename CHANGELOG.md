@@ -4,6 +4,10 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Cleaned repo agent instructions by removing embedded session-memory context from `AGENTS.md`.
+- Added a dedicated telemetry CI job that installs `.[dev,telemetry]` and runs telemetry tests without relying on skipped optional imports.
+- Extended release automation with PyPI Trusted Publishing and GitHub artifact provenance attestation for tagged releases.
+- Added `release` and `security` optional dependency groups for local build/twine and `pip-audit` workflows.
 - Removed the remaining package-level mypy strictness overrides; all `teaagent/` modules now run with `disallow_untyped_defs` and `disallow_incomplete_defs` enabled.
 - Added packaging and contribution hygiene: `MANIFEST.in`, `CONTRIBUTING.md`, and a pull request template with validation/governance checklist.
 - Added audit redaction for secret-like patterns inside otherwise non-sensitive strings (Bearer tokens, `sk-...` keys, and URL/query-style `token=...`/`api_key=...` values).

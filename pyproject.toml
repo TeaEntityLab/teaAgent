@@ -44,6 +44,13 @@ telemetry = [
     "opentelemetry-sdk>=1.20",
     "opentelemetry-exporter-otlp-proto-http>=1.20",
 ]
+release = [
+    "build>=1",
+    "twine>=5",
+]
+security = [
+    "pip-audit>=2",
+]
 dev = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
