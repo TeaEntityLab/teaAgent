@@ -4,6 +4,7 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added a package CI job that builds sdist/wheel artifacts, runs `twine check`, installs the wheel in a clean venv, and verifies `teaagent/py.typed` ships in the package.
 - Wired OAuth key rings through the MCP HTTP resource-server boundary so tokens signed with rotated authorization-server keys validate at the actual HTTP endpoint.
 - Added short-lived DPoP proof `jti` replay caches to the authorization and resource servers so replaying the same proof within the freshness window fails.
 - Made OAuth DPoP nonce validation one-time by adding `OAuthStore.consume_nonce()` and using atomic consume/delete semantics in `SQLiteOAuthStore`.
