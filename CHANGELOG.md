@@ -4,6 +4,8 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Split `teaagent/llm.py` into a `teaagent/llm/` package with focused modules: `_types.py`, `_transport.py`, `_retry.py`, `_extract.py`, `_adapters.py`, `_config.py`. Backward-compatible public imports preserved via `__init__.py` re-exports.
+- Refactored `OpenAICompatibleAdapter` streaming path to support an injectable `streaming_lines` parameter, removing the last urllib patch dependency in LLM tests.
 - Added a 5-minute walkthrough section to the README that walks through the end-to-end example step by step.
 - Added deeper MCP HTTP transport tests covering empty batches, mixed-type batches, initialize with no id, and DELETE lifecycle (reuse after delete, non-existent session).
 - Added community health files: `CODE_OF_CONDUCT.md`, `SUPPORT.md`, and GitHub issue templates for bugs and feature requests.

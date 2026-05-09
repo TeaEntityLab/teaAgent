@@ -32,20 +32,6 @@ class FakeTransport:
         return self.response
 
 
-class FakeStreamingResponse:
-    def __init__(self, lines: list[bytes]) -> None:
-        self.lines = lines
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def __iter__(self):
-        return iter(self.lines)
-
-
 class LLMAdapterTests(unittest.TestCase):
     def test_available_providers_include_requested_adapters(self) -> None:
         self.assertEqual(
@@ -198,19 +184,15 @@ class LLMAdapterTests(unittest.TestCase):
 
     def test_openai_streaming_reads_sse_lines_incrementally(self) -> None:
         chunks: list[str] = []
-        response = FakeStreamingResponse(
-            [
-                b'data: {"choices":[{"delta":{"content":"he"}}]}\n',
-                b'data: {"choices":[{"delta":{"content":"llo"}}],"usage":{"prompt_tokens":2,"completion_tokens":3}}\n',
-                b'data: [DONE]\n',
-            ]
-        )
+        streaming_lines = [
+            b'data: {"choices":[{"delta":{"content":"he"}}]}\n',
+            b'data: {"choices":[{"delta":{"content":"llo"}}],"usage":{"prompt_tokens":2,"completion_tokens":3}}\n',
+            b'data: [DONE]\n',
+        ]
 
-        with (
-            patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True),
-            patch('teaagent.llm.urllib_request.urlopen', return_value=response),
-        ):
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
             adapter = create_llm_adapter('gpt', model='gpt-test')
+            adapter._streaming_lines = streaming_lines  # type: ignore[attr-defined]
             result = adapter.complete(
                 LLMRequest(
                     messages=[LLMMessage('user', 'hi')],
