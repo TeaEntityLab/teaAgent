@@ -6,7 +6,6 @@ import secrets
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Optional
-from urllib.parse import parse_qs, urlparse
 
 from teaagent.mcp_server import handle_mcp_request
 from teaagent.oauth21 import (
@@ -278,175 +277,20 @@ def _make_handler(
                 return None, 'invalid JSON'
 
         # -- OAuth 2.1 endpoints --
-
         def _handle_oauth_metadata(self) -> None:
-            if oauth_server is None:
-                self._send_status(404, 'not found')
-                return
-            metadata = oauth_server.metadata()
+            from teaagent.mcp_http._oauth import _handle_oauth_metadata as _impl
 
-            # When DPoP is requested, include a nonce.
-            dpop_header = self.headers.get(_DPOP_HEADER)
-            extra: dict[str, str] = {}
-            if dpop_header:
-                extra[_DPOP_NONCE_HEADER] = oauth_server.generate_dpop_nonce()
-
-            self._send_json(200, metadata, extra_headers=extra or None)
+            return _impl(self, oauth_server)
 
         def _handle_oauth_authorize(self) -> None:
-            if oauth_server is None:
-                self._send_status(404, 'not found')
-                return
+            from teaagent.mcp_http._oauth import _handle_oauth_authorize as _impl
 
-            parsed = urlparse(self.path)
-            params = parse_qs(parsed.query)
-
-            client_id = _first_param(params, 'client_id')
-            redirect_uri = _first_param(params, 'redirect_uri')
-            code_challenge = _first_param(params, 'code_challenge')
-            code_challenge_method = (
-                _first_param(params, 'code_challenge_method') or 'S256'
-            )
-            scope = _first_param(params, 'scope') or 'mcp'
-            state = _first_param(params, 'state')
-
-            if not client_id or not redirect_uri or not code_challenge:
-                self._send_json(
-                    400,
-                    {
-                        'error': 'invalid_request',
-                        'error_description': (
-                            'client_id, redirect_uri, and code_challenge are required'
-                        ),
-                    },
-                )
-                return
-
-            try:
-                redirect_url, _ = oauth_server.create_authorization_code(
-                    client_id=client_id,
-                    redirect_uri=redirect_uri,
-                    code_challenge=code_challenge,
-                    code_challenge_method=code_challenge_method,
-                    scope=scope,
-                    state=state,
-                )
-                self.send_response(302)
-                self.send_header('Location', redirect_url)
-                self.send_header('Content-Length', '0')
-                self.end_headers()
-            except OAuth21Error as exc:
-                self._send_json(
-                    400,
-                    {'error': 'invalid_request', 'error_description': str(exc)},
-                )
+            return _impl(self, oauth_server)
 
         def _handle_oauth_token(self) -> None:
-            if oauth_server is None:
-                self._send_status(404, 'not found')
-                return
+            from teaagent.mcp_http._oauth import _handle_oauth_token as _impl
 
-            # Read form body (application/x-www-form-urlencoded)
-            length, length_error = self._content_length()
-            if length_error is not None:
-                status = 413 if length_error == 'body too large' else 400
-                self._send_json(
-                    status,
-                    {'error': 'invalid_request', 'error_description': length_error},
-                )
-                return
-            assert length is not None
-            raw = self.rfile.read(length)
-            try:
-                body = raw.decode('utf-8')
-            except UnicodeDecodeError:
-                self._send_json(
-                    400,
-                    {
-                        'error': 'invalid_request',
-                        'error_description': 'invalid encoding',
-                    },
-                )
-                return
-            params = parse_qs(body)
-
-            grant_type = _first_param(params, 'grant_type')
-            code = _first_param(params, 'code')
-            code_verifier = _first_param(params, 'code_verifier')
-            client_id = _first_param(params, 'client_id')
-            client_secret = _first_param(params, 'client_secret')
-            dpop_proof = self.headers.get(_DPOP_HEADER)
-
-            if grant_type != 'authorization_code':
-                self._send_json(
-                    400,
-                    {
-                        'error': 'unsupported_grant_type',
-                        'error_description': 'Only authorization_code is supported',
-                    },
-                )
-                return
-            if not code:
-                self._send_json(
-                    400,
-                    {
-                        'error': 'invalid_request',
-                        'error_description': 'code is required',
-                    },
-                )
-                return
-            if not code_verifier:
-                self._send_json(
-                    400,
-                    {
-                        'error': 'invalid_request',
-                        'error_description': 'code_verifier is required',
-                    },
-                )
-                return
-
-            extra_headers: dict[str, str] = {}
-
-            # Always issue a fresh DPoP nonce
-            dpop_nonce = oauth_server.generate_dpop_nonce()
-            extra_headers[_DPOP_NONCE_HEADER] = dpop_nonce
-
-            try:
-                response = oauth_server.exchange_code(
-                    code=code,
-                    code_verifier=code_verifier,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    dpop_proof_jwt=dpop_proof,
-                )
-            except OAuth21Error as exc:
-                status = 400
-                error_code = 'invalid_grant'
-                if 'DPoP' in str(exc) or 'dpop' in str(exc).lower():
-                    status = 401
-                    error_code = 'invalid_dpop_proof'
-                    extra_headers[_DPOP_NONCE_HEADER] = dpop_nonce
-                elif 'client' in str(exc).lower():
-                    status = 401
-                    error_code = 'invalid_client'
-                self._send_json(
-                    status,
-                    {'error': error_code, 'error_description': str(exc)},
-                    extra_headers=extra_headers,
-                )
-                return
-
-            self._send_json(
-                200,
-                {
-                    'access_token': response.access_token,
-                    'token_type': response.token_type,
-                    'expires_in': response.expires_in,
-                    'scope': response.scope,
-                    'refresh_token': response.refresh_token,
-                },
-                extra_headers=extra_headers,
-            )
+            return _impl(self, oauth_server)
 
         def _is_oauth_path(self) -> bool:
             path = self.path.split('?')[0]

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import shlex
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -11,14 +10,12 @@ from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
-    check_graphqlite_runtime,
 )
 from teaagent.intent import build_task_spec, clarify_task
-from teaagent.llm import LLMAdapter, available_providers, create_llm_adapter
+from teaagent.llm import LLMAdapter, create_llm_adapter
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
-from teaagent.policy import PermissionMode, parse_permission_mode
-from teaagent.preflight import preflight
+from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore
 from teaagent.runner import ApprovalRequest, RunResult
 
@@ -84,7 +81,7 @@ class TeaAgentTUI:
         self.database = database
         self.provider = provider
         self.model = model
-        self.route_model = False
+        self.route_model_enabled = False
         self.root = Path(root).resolve()
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
@@ -111,235 +108,22 @@ class TeaAgentTUI:
             if not should_continue:
                 return 0
 
+    @property
+    def help_text(self) -> str:
+        return HELP_TEXT
+
+    @property
+    def route_model(self) -> bool:
+        return self.route_model_enabled
+
+    @route_model.setter
+    def route_model(self, value: bool) -> None:
+        self.route_model_enabled = value
+
     def handle_command(self, raw_command: str) -> bool:
-        command = raw_command.strip()
-        if not command:
-            return True
-        try:
-            parts = shlex.split(command)
-        except ValueError as exc:
-            self.output_fn(f'error: {exc}')
-            return True
+        from teaagent.tui._commands import _handle_tui_command
 
-        action = parts[0].lower()
-        args = parts[1:]
-        if action in {'exit', 'quit'}:
-            self.output_fn('bye')
-            return False
-        if action == 'help':
-            self.output_fn(HELP_TEXT.rstrip())
-            return True
-        if action == 'doctor':
-            ok, message = check_graphqlite_runtime(self.database)
-            self._print_json({'ok': ok, 'message': message})
-            return True
-        if action == 'provider':
-            if len(args) != 1:
-                self.output_fn('error: provider requires exactly one provider name')
-                return True
-            if args[0] not in available_providers():
-                self.output_fn(f"error: unknown provider '{args[0]}'")
-                return True
-            self.provider = args[0]
-            self.output_fn(f'provider: {self.provider}')
-            return True
-        if action == 'model':
-            if len(args) != 1:
-                self.output_fn("error: model requires a model name or 'default'")
-                return True
-            self.model = None if args[0] == 'default' else args[0]
-            self.output_fn(f'model: {self.model or "default"}')
-            return True
-        if action == 'route-model':
-            if len(args) != 1 or args[0] not in {'on', 'off'}:
-                self.output_fn("error: route-model requires 'on' or 'off'")
-                return True
-            self.route_model = args[0] == 'on'
-            self.output_fn(f'route-model: {"on" if self.route_model else "off"}')
-            return True
-        if action == 'route':
-            if not args:
-                self.output_fn('error: route requires a task')
-                return True
-            self._print_json(
-                route_model(
-                    ' '.join(args), provider=self.provider, model=self.model
-                ).to_dict()
-            )
-            return True
-        if action == 'root':
-            if len(args) != 1:
-                self.output_fn('error: root requires exactly one path')
-                return True
-            self.root = Path(args[0]).resolve()
-            self.output_fn(f'root: {self.root}')
-            return True
-        if action == 'destructive':
-            if len(args) != 1 or args[0] not in {'on', 'off'}:
-                self.output_fn("error: destructive requires 'on' or 'off'")
-                return True
-            self.allow_destructive = args[0] == 'on'
-            self.output_fn(f'destructive: {"on" if self.allow_destructive else "off"}')
-            return True
-        if action == 'progress':
-            if len(args) != 1 or args[0] not in {'on', 'off'}:
-                self.output_fn("error: progress requires 'on' or 'off'")
-                return True
-            self.progress = args[0] == 'on'
-            self.output_fn(f'progress: {"on" if self.progress else "off"}')
-            return True
-        if action == 'stream':
-            if len(args) != 1 or args[0] not in {'on', 'off'}:
-                self.output_fn("error: stream requires 'on' or 'off'")
-                return True
-            self.stream = args[0] == 'on'
-            self.output_fn(f'stream: {"on" if self.stream else "off"}')
-            return True
-        if action == 'subagent':
-            if len(args) != 1 or args[0] not in {'on', 'off'}:
-                self.output_fn("error: subagent requires 'on' or 'off'")
-                return True
-            self.subagent = args[0] == 'on'
-            self.output_fn(f'subagent: {"on" if self.subagent else "off"}')
-            return True
-        if action == 'heartbeat':
-            if len(args) != 1:
-                self.output_fn('error: heartbeat requires a seconds value (0 disables)')
-                return True
-            try:
-                seconds = float(args[0])
-            except ValueError:
-                self.output_fn('error: heartbeat seconds must be a number')
-                return True
-            self.heartbeat_seconds = max(0.0, seconds)
-            self.output_fn(f'heartbeat: {self.heartbeat_seconds}')
-            return True
-        if action == 'status':
-            if len(args) != 1:
-                self.output_fn('error: status requires a run id')
-                return True
-            try:
-                self._print_json(RunStore(self.root).heartbeat_for_run(args[0]))
-            except FileNotFoundError as exc:
-                self.output_fn(f'error: {exc}')
-            return True
-        if action == 'permission':
-            if len(args) != 1:
-                self.output_fn('error: permission requires one mode')
-                return True
-            try:
-                self.permission_mode = parse_permission_mode(args[0])
-            except ValueError as exc:
-                self.output_fn(f'error: {exc}')
-                return True
-            self.output_fn(f'permission: {self.permission_mode.value}')
-            return True
-        if action == 'approve':
-            if len(args) != 1:
-                self.output_fn('error: approve requires one call id')
-                return True
-            self.approved_call_ids.add(args[0])
-            self.output_fn(f'approved: {args[0]}')
-            return True
-        if action == 'unapprove':
-            if len(args) != 1:
-                self.output_fn('error: unapprove requires one call id')
-                return True
-            self.approved_call_ids.discard(args[0])
-            self.output_fn(f'unapproved: {args[0]}')
-            return True
-        if action == 'approvals':
-            self._print_json(sorted(self.approved_call_ids))
-            return True
-        if action == 'ask':
-            if not args:
-                self.output_fn('error: ask requires a task')
-                return True
-            clarify_first = args[0] == '--clarify'
-            task_args = args[1:] if clarify_first else args
-            if not task_args:
-                self.output_fn('error: ask --clarify requires a task')
-                return True
-            self._run_agent_task(' '.join(task_args), clarify_first=clarify_first)
-            return True
-        if action == 'clarify':
-            if not args:
-                self.output_fn('error: clarify requires a task')
-                return True
-            self._print_json(clarify_task(' '.join(args)).to_dict())
-            return True
-        if action == 'preflight':
-            if not args:
-                self.output_fn('error: preflight requires a task')
-                return True
-            report = preflight(
-                ' '.join(args),
-                root=self.root,
-                provider=self.provider,
-                model=self.model,
-                permission_mode=self.permission_mode,
-                route=self.route_model,
-            )
-            self._print_json(report.to_dict())
-            return True
-        if action == 'memory':
-            self._handle_memory(args)
-            return True
-        if action == 'runs':
-            store = RunStore(self.root)
-            self._print_json([summary.to_dict() for summary in store.list_runs()])
-            return True
-        if action == 'show':
-            if len(args) != 1:
-                self.output_fn('error: show requires a run id')
-                return True
-            self._print_json(RunStore(self.root).show_run(args[0]))
-            return True
-        if action == 'resume':
-            if len(args) != 1:
-                self.output_fn('error: resume requires a run id')
-                return True
-            store = RunStore(self.root)
-            try:
-                original_task = store.task_for_run(args[0])
-                observations = store.observations_for_run(args[0])
-                pending = store.pending_approval_for_run(args[0])
-            except (FileNotFoundError, ValueError) as exc:
-                self.output_fn(f'error: {exc}')
-                return True
-            if pending:
-                self.approved_call_ids.add(pending['call_id'])
-                self.output_fn(f'auto-approved pending call: {pending["call_id"]}')
-            self.output_fn(f'resume: {args[0]}')
-            self._run_agent_task(
-                original_task,
-                initial_observations=observations if observations else None,
-            )
-            return True
-        if action == 'use':
-            if len(args) != 1:
-                self.output_fn('error: use requires exactly one database path')
-                return True
-            self.database = args[0]
-            self._store = None
-            self.output_fn(f'database: {self.database}')
-            return True
-        if action == 'smoke':
-            graph_store = self._get_store()
-            graph_store.graph.upsert_node(
-                'teaagent', {'name': 'TeaAgent'}, label='SmokeTest'
-            )
-            self._print_json(graph_store.query('MATCH (n:SmokeTest) RETURN n.name'))
-            return True
-        if action == 'query':
-            if not args:
-                self.output_fn('error: query requires a Cypher string')
-                return True
-            self._print_json(self._get_store().query(' '.join(args)))
-            return True
-
-        self.output_fn(f"error: unknown command '{action}'. Type 'help'.")
-        return True
+        return _handle_tui_command(self, raw_command)
 
     def _handle_memory(self, args: list[str]) -> None:
         if not args:
@@ -394,7 +178,7 @@ class TeaAgentTUI:
             task_spec = build_task_spec(task, clarification)
         routing = (
             route_model(task, provider=self.provider, model=self.model)
-            if self.route_model
+            if self.route_model_enabled
             else None
         )
         selected_model = routing.model if routing else self.model
@@ -491,7 +275,7 @@ class TeaAgentTUI:
     def _prompt(self) -> str:
         destructive = '!' if self.allow_destructive else ''
         model = self.model or 'default'
-        routed = ':route' if self.route_model else ''
+        routed = ':route' if self.route_model_enabled else ''
         return f'teaagent[{self.provider}:{model}{routed}:{self.permission_mode.value}{destructive}]> '
 
     def _print_json(self, value: Any) -> None:
