@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from teaagent import __version__
+from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
@@ -460,7 +461,7 @@ class TeaAgentTUI:
             payload['approval'] = result.metadata['approval']
         return payload
 
-    def _progress_sink(self, event) -> None:
+    def _progress_sink(self, event: AuditEvent) -> None:
         payload = event.payload or {}
         if event.event_type == 'iteration_started':
             self.output_fn(f'  iter {payload.get("iteration")}')
@@ -493,7 +494,7 @@ class TeaAgentTUI:
         routed = ':route' if self.route_model else ''
         return f'teaagent[{self.provider}:{model}{routed}:{self.permission_mode.value}{destructive}]> '
 
-    def _print_json(self, value) -> None:
+    def _print_json(self, value: Any) -> None:
         self.output_fn(json.dumps(value, ensure_ascii=False, sort_keys=True))
 
 

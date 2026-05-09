@@ -1,0 +1,17 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+include SECURITY.md
+include pyproject.toml
+include requirements.txt
+recursive-include docs *.md *.json
+recursive-include examples *.md *.py *.json
+recursive-include teaagent py.typed
+prune .github
+prune .teaagent
+prune .pytest_cache
+prune .mypy_cache
+prune .ruff_cache
+prune build
+prune dist
+global-exclude __pycache__ *.py[cod] .DS_Store

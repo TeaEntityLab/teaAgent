@@ -214,6 +214,24 @@ class AuditLoggerTests(unittest.TestCase):
         self.assertEqual(result['stdout'], AUDIT_REDACTED)
         self.assertEqual(result['stderr'], AUDIT_REDACTED)
 
+    def test_record_redacts_secret_patterns_inside_non_sensitive_strings(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record(
+            'model_response',
+            'run-1',
+            message='Authorization: Bearer abcdefghijklmnop and key sk-abcdef1234567890',
+            url='https://api.example?token=abcdef123456&debug=true',
+        )
+
+        self.assertNotIn('abcdefghijklmnop', event.payload['message'])
+        self.assertNotIn('sk-abcdef1234567890', event.payload['message'])
+        self.assertIn('Bearer [redacted]', event.payload['message'])
+        self.assertEqual(
+            event.payload['url'],
+            'https://api.example?token=[redacted]&debug=true',
+        )
+
     def test_record_truncates_large_strings(self) -> None:
         logger = AuditLogger()
 

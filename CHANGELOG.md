@@ -4,6 +4,9 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Removed the remaining package-level mypy strictness overrides; all `teaagent/` modules now run with `disallow_untyped_defs` and `disallow_incomplete_defs` enabled.
+- Added packaging and contribution hygiene: `MANIFEST.in`, `CONTRIBUTING.md`, and a pull request template with validation/governance checklist.
+- Added audit redaction for secret-like patterns inside otherwise non-sensitive strings (Bearer tokens, `sk-...` keys, and URL/query-style `token=...`/`api_key=...` values).
 - Added `SQLiteOAuthStore`, a durable OAuth 2.1 store for clients, one-time authorization codes, and DPoP nonces. It uses SQLite WAL mode and an immediate transaction for consume-and-delete authorization-code semantics.
 - Added `configure_metrics()` and a new `metrics_otlp_endpoint` field on `TelemetryConfig` so OpenTelemetry counters and histograms have a real `MeterProvider` with OTLP/console exporters; previously only an in-memory metrics path existed.
 - Fixed the `TracingHTTPTransport` docstring example to match the actual two-argument constructor.

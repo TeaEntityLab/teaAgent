@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -26,6 +27,14 @@ SENSITIVE_KEY_PARTS = (
 )
 SENSITIVE_ARGUMENT_KEYS = frozenset({'command', 'content', 'new', 'old'})
 SENSITIVE_RESULT_KEYS = frozenset({'content', 'stderr', 'stdout', 'text'})
+SENSITIVE_STRING_PATTERNS = (
+    (re.compile(r'\bBearer\s+[A-Za-z0-9._~+/=-]{8,}'), 'Bearer [redacted]'),
+    (re.compile(r'\bsk-[A-Za-z0-9][A-Za-z0-9_-]{8,}\b'), AUDIT_REDACTED),
+    (
+        re.compile(r'(?i)\b(api[_-]?key|token|secret|password)=([^\s&;]{4,})'),
+        r'\1=[redacted]',
+    ),
+)
 
 
 def utc_now() -> str:
@@ -159,9 +168,19 @@ def redact_audit_value(key: str, value: Any) -> Any:
         return [redact_audit_value('', item) for item in value]
     if isinstance(value, tuple):
         return [redact_audit_value('', item) for item in value]
-    if isinstance(value, str) and len(value) > MAX_AUDIT_STRING_LENGTH:
-        return value[:MAX_AUDIT_STRING_LENGTH] + AUDIT_TRUNCATED
+    if isinstance(value, str):
+        redacted = redact_sensitive_string(value)
+        if len(redacted) > MAX_AUDIT_STRING_LENGTH:
+            return redacted[:MAX_AUDIT_STRING_LENGTH] + AUDIT_TRUNCATED
+        return redacted
     return value
+
+
+def redact_sensitive_string(value: str) -> str:
+    redacted = value
+    for pattern, replacement in SENSITIVE_STRING_PATTERNS:
+        redacted = pattern.sub(replacement, redacted)
+    return redacted
 
 
 def is_sensitive_key(key: str) -> bool:
