@@ -148,9 +148,17 @@ def _audit(
 
     prune_cmd = subs.add_parser('prune', help='Delete old audit JSONL runs.')
     prune_cmd.add_argument('--root', default='.', help='Workspace root.')
-    prune_cmd.add_argument('--days', type=int, default=None, help='Delete runs older than N days.')
-    prune_cmd.add_argument('--keep', type=int, default=None, help='Always keep latest N runs.')
-    prune_cmd.add_argument('--all', action='store_true', help='Delete all audit runs not protected by --keep.')
+    prune_cmd.add_argument(
+        '--days', type=int, default=None, help='Delete runs older than N days.'
+    )
+    prune_cmd.add_argument(
+        '--keep', type=int, default=None, help='Always keep latest N runs.'
+    )
+    prune_cmd.add_argument(
+        '--all',
+        action='store_true',
+        help='Delete all audit runs not protected by --keep.',
+    )
     prune_cmd.set_defaults(func=prune_handler)
 
 

@@ -48,6 +48,7 @@ dev = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
     "cryptography>=3.4",
+    "pre-commit>=3",
     "pytest>=7",
     "pytest-cov>=4",
     "ruff>=0.4",

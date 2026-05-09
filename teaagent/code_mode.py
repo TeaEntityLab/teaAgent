@@ -82,8 +82,7 @@ class CodeModeBackend(Protocol):
         code: str,
         inputs: dict[str, Any],
         sandbox: CodeModeSandbox,
-    ) -> CodeModeResult:
-        ...
+    ) -> CodeModeResult: ...
 
 
 @dataclass(frozen=True)
@@ -237,7 +236,7 @@ def execute_code_mode(
     )
 
 
-CONTAINER_CODE_MODE_SCRIPT = r'''
+CONTAINER_CODE_MODE_SCRIPT = r"""
 import json
 import sys
 import traceback
@@ -287,7 +286,7 @@ except Exception as exc:
     print(json.dumps({'status': 'error', 'error': f'{type(exc).__name__}: {exc}', 'traceback': traceback.format_exc()}))
 else:
     print(json.dumps({'status': 'ok', 'variables': variables}))
-'''
+"""
 
 
 def _validate_tree(tree: ast.AST) -> None:

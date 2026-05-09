@@ -216,7 +216,9 @@ class CLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             config_dir = os.path.join(tmp, '.teaagent')
             os.makedirs(config_dir)
-            with open(os.path.join(config_dir, 'config.json'), 'w', encoding='utf-8') as handle:
+            with open(
+                os.path.join(config_dir, 'config.json'), 'w', encoding='utf-8'
+            ) as handle:
                 json.dump(
                     {
                         'model': 'base-model',
@@ -231,7 +233,9 @@ class CLITests(unittest.TestCase):
             try:
                 os.chdir(tmp)
                 with (
-                    patch('teaagent.cli.create_llm_adapter', return_value=adapter) as create,
+                    patch(
+                        'teaagent.cli.create_llm_adapter', return_value=adapter
+                    ) as create,
                     redirect_stdout(output),
                 ):
                     exit_code = main(['--profile', 'ci', 'model', 'smoke', 'gpt'])

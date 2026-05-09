@@ -108,15 +108,17 @@ class OAuth21AuthorizationServer:
             )
 
         code = secrets.token_urlsafe(32)
-        self._store.save_code(_AuthorizationCode(
-            code=code,
-            client_id=client_id,
-            redirect_uri=redirect_uri,
-            code_challenge=code_challenge,
-            code_challenge_method=code_challenge_method,
-            expires_at=time.time() + _CODE_TTL_SECONDS,
-            scope=scope,
-        ))
+        self._store.save_code(
+            _AuthorizationCode(
+                code=code,
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                code_challenge=code_challenge,
+                code_challenge_method=code_challenge_method,
+                expires_at=time.time() + _CODE_TTL_SECONDS,
+                scope=scope,
+            )
+        )
         self._prune_expired_codes()
 
         redirect_url = redirect_uri
@@ -164,7 +166,9 @@ class OAuth21AuthorizationServer:
 
         token_type = _TOKEN_TYPE_DPOP if cnf_jkt else _TOKEN_TYPE_BEARER
         access_token = create_jwt(
-            payload, self._key_ring.active_key, header_extra={'kid': self._key_ring.active_kid}
+            payload,
+            self._key_ring.active_key,
+            header_extra={'kid': self._key_ring.active_kid},
         )
 
         return OAuth21TokenResponse(

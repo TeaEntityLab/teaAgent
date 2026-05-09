@@ -32,7 +32,9 @@ class EndToEndTests(unittest.TestCase):
             result = run_chat_agent(
                 task='read hello',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(root, max_iterations=3, max_tool_calls=2),
+                config=ChatAgentConfig.from_root(
+                    root, max_iterations=3, max_tool_calls=2
+                ),
                 audit=audit,
             )
             store.logger_for_result(result, audit)
@@ -57,7 +59,9 @@ class EndToEndTests(unittest.TestCase):
             result = run_chat_agent(
                 task='write file',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(root, max_iterations=2, max_tool_calls=1),
+                config=ChatAgentConfig.from_root(
+                    root, max_iterations=2, max_tool_calls=1
+                ),
                 audit=audit,
             )
             store.logger_for_result(result, audit)

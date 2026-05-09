@@ -129,8 +129,7 @@ class AuditLoggerTests(unittest.TestCase):
                     logger.record('e', 'r', index=i)
 
             threads = [
-                threading.Thread(target=write_events, args=(i * 25,))
-                for i in range(4)
+                threading.Thread(target=write_events, args=(i * 25,)) for i in range(4)
             ]
             for thread in threads:
                 thread.start()

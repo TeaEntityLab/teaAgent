@@ -26,7 +26,9 @@ class OAuthStore(Protocol):
 
     def delete_nonce(self, nonce: str) -> None: ...
 
-    def prune(self, *, now: float, code_ttl_cutoff: float, nonce_ttl: float) -> None: ...
+    def prune(
+        self, *, now: float, code_ttl_cutoff: float, nonce_ttl: float
+    ) -> None: ...
 
 
 class InMemoryOAuthStore:
@@ -77,11 +79,11 @@ class SQLiteOAuthStore:
     def register_client(self, client: OAuth21Client) -> None:
         with self._connect() as conn:
             conn.execute(
-                '''
+                """
                 INSERT OR REPLACE INTO oauth_clients
                     (client_id, client_secret, redirect_uris_json, scope)
                 VALUES (?, ?, ?, ?)
-                ''',
+                """,
                 (
                     client.client_id,
                     client.client_secret,
@@ -93,11 +95,11 @@ class SQLiteOAuthStore:
     def get_client(self, client_id: str) -> Optional[OAuth21Client]:
         with self._connect() as conn:
             row = conn.execute(
-                '''
+                """
                 SELECT client_id, client_secret, redirect_uris_json, scope
                 FROM oauth_clients
                 WHERE client_id = ?
-                ''',
+                """,
                 (client_id,),
             ).fetchone()
         if row is None:
@@ -113,12 +115,12 @@ class SQLiteOAuthStore:
     def save_code(self, code: _AuthorizationCode) -> None:
         with self._connect() as conn:
             conn.execute(
-                '''
+                """
                 INSERT OR REPLACE INTO oauth_codes
                     (code, client_id, redirect_uri, code_challenge,
                      code_challenge_method, expires_at, scope)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''',
+                """,
                 (
                     code.code,
                     code.client_id,
@@ -134,12 +136,12 @@ class SQLiteOAuthStore:
         with self._lock, self._connect() as conn:
             conn.execute('BEGIN IMMEDIATE')
             row = conn.execute(
-                '''
+                """
                 SELECT code, client_id, redirect_uri, code_challenge,
                        code_challenge_method, expires_at, scope
                 FROM oauth_codes
                 WHERE code = ?
-                ''',
+                """,
                 (code,),
             ).fetchone()
             if row is None:
@@ -158,10 +160,10 @@ class SQLiteOAuthStore:
     def save_nonce(self, nonce: str, created_at: float) -> None:
         with self._connect() as conn:
             conn.execute(
-                '''
+                """
                 INSERT OR REPLACE INTO oauth_nonces (nonce, created_at)
                 VALUES (?, ?)
-                ''',
+                """,
                 (nonce, created_at),
             )
 
@@ -193,7 +195,7 @@ class SQLiteOAuthStore:
     def _initialize(self) -> None:
         with self._connect() as conn:
             conn.executescript(
-                '''
+                """
                 PRAGMA journal_mode = WAL;
                 CREATE TABLE IF NOT EXISTS oauth_clients (
                     client_id TEXT PRIMARY KEY,
@@ -218,7 +220,7 @@ class SQLiteOAuthStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_oauth_nonces_created_at
                     ON oauth_nonces(created_at);
-                '''
+                """
             )
 
     def _connect(self) -> sqlite3.Connection:

@@ -535,8 +535,12 @@ def classify_shell_command_policy(command: str) -> str:
     return 'mutate'
 
 
-_INSPECT_EXECUTABLES = frozenset({'pwd', 'ls', 'rg', 'grep', 'cat', 'head', 'tail', 'wc'})
-_INSPECT_GIT_SUBCOMMANDS = frozenset({'status', 'diff', 'log', 'show', 'branch', 'grep'})
+_INSPECT_EXECUTABLES = frozenset(
+    {'pwd', 'ls', 'rg', 'grep', 'cat', 'head', 'tail', 'wc'}
+)
+_INSPECT_GIT_SUBCOMMANDS = frozenset(
+    {'status', 'diff', 'log', 'show', 'branch', 'grep'}
+)
 _DANGEROUS_FIND_FLAGS = frozenset(
     {'-delete', '-exec', '-execdir', '-ok', '-okdir', '-fprint', '-fprint0', '-fprintf'}
 )

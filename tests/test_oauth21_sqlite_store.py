@@ -76,7 +76,9 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
             )
             code = _code_from_redirect(redirect_url)
 
-            server.exchange_code(code, verifier, client_id='client-1', client_secret='secret-1')
+            server.exchange_code(
+                code, verifier, client_id='client-1', client_secret='secret-1'
+            )
 
             with self.assertRaises(InvalidGrantError):
                 server.exchange_code(

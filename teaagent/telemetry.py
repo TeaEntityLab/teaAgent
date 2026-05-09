@@ -192,7 +192,9 @@ class OTelMetricsSink:
                 },
             )
 
-    def _record_number(self, instrument: Any, payload: dict[str, Any], key: str) -> None:
+    def _record_number(
+        self, instrument: Any, payload: dict[str, Any], key: str
+    ) -> None:
         value = payload.get(key)
         if isinstance(value, (int, float)):
             instrument.record(float(value))

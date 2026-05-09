@@ -632,7 +632,12 @@ def audit_show_command(args: argparse.Namespace) -> int:
 
 def audit_prune_command(args: argparse.Namespace) -> int:
     if args.days is None and args.keep is None and not args.all:
-        print_json({'status': 'error', 'message': 'audit prune requires --days, --keep, or --all'})
+        print_json(
+            {
+                'status': 'error',
+                'message': 'audit prune requires --days, --keep, or --all',
+            }
+        )
         return 1
     store = RunStore(args.root)
     cutoff = time.time() - (args.days * 86400) if args.days is not None else None
