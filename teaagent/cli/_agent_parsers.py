@@ -104,6 +104,12 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         action='store_true',
         help='Also print OpenTelemetry spans to stderr (debug).',
     )
+    p.add_argument(
+        '--checkpoint-store',
+        default=None,
+        metavar='PATH',
+        help='SQLite path for run checkpoint storage. Saves context after each tool call.',
+    )
     p.set_defaults(func=handler)
 
 
@@ -202,6 +208,12 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         '--fresh-restart',
         action='store_true',
         help='Re-run the original task from scratch instead of replaying observations from the prior run.',
+    )
+    p.add_argument(
+        '--checkpoint-store',
+        default=None,
+        metavar='PATH',
+        help='SQLite path for checkpoint storage. Used to restore compacted context on resume.',
     )
     p.set_defaults(func=handler)
 

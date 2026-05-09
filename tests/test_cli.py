@@ -169,6 +169,124 @@ class CLITests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(serve_mcp_http.call_args.kwargs['auth_token'], 'token')
 
+    def test_mcp_http_oauth_key_ring_file_loads(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch('teaagent.cli.serve_mcp_http', return_value=0),
+        ):
+            key_ring_path = Path(tmp) / 'keyring.json'
+            key_ring_path.write_text(
+                json.dumps(
+                    {
+                        'active_kid': 'v2',
+                        'keys': {
+                            'v1': 'legacy-signing-secret-0001',
+                            'v2': 'active-signing-secret-0002',
+                        },
+                    }
+                ),
+                encoding='utf-8',
+            )
+            exit_code = main(
+                [
+                    'mcp',
+                    'serve',
+                    '--http',
+                    '--root',
+                    tmp,
+                    '--oauth-issuer',
+                    'https://issuer.test',
+                    '--oauth-signing-key',
+                    'fallback-signing-key-1234',
+                    '--oauth-key-ring-file',
+                    str(key_ring_path),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+
+    def test_mcp_http_oauth_active_kid_requires_file(self) -> None:
+        stderr = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stderr(stderr):
+            exit_code = main(
+                [
+                    'mcp',
+                    'serve',
+                    '--http',
+                    '--root',
+                    tmp,
+                    '--oauth-issuer',
+                    'https://issuer.test',
+                    '--oauth-signing-key',
+                    'fallback-signing-key-1234',
+                    '--oauth-active-kid',
+                    'v2',
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            '--oauth-active-kid requires --oauth-key-ring-file', stderr.getvalue()
+        )
+
+    def test_mcp_http_oauth_key_ring_rejects_unknown_active_kid(self) -> None:
+        stderr = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stderr(stderr):
+            key_ring_path = Path(tmp) / 'keyring.json'
+            key_ring_path.write_text(
+                json.dumps(
+                    {
+                        'active_kid': 'v1',
+                        'keys': {
+                            'v1': 'legacy-signing-secret-0001',
+                        },
+                    }
+                ),
+                encoding='utf-8',
+            )
+            exit_code = main(
+                [
+                    'mcp',
+                    'serve',
+                    '--http',
+                    '--root',
+                    tmp,
+                    '--oauth-issuer',
+                    'https://issuer.test',
+                    '--oauth-signing-key',
+                    'fallback-signing-key-1234',
+                    '--oauth-key-ring-file',
+                    str(key_ring_path),
+                    '--oauth-active-kid',
+                    'v2',
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("OAuth active kid 'v2' not found", stderr.getvalue())
+
+    def test_mcp_http_oauth_dpop_replay_ttl_accepted(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch('teaagent.cli.serve_mcp_http', return_value=0),
+        ):
+            exit_code = main(
+                [
+                    'mcp',
+                    'serve',
+                    '--http',
+                    '--root',
+                    tmp,
+                    '--oauth-issuer',
+                    'https://issuer.test',
+                    '--oauth-signing-key',
+                    'signing-secret-key-12345',
+                    '--oauth-dpop-replay-ttl',
+                    '120',
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+
     def test_completion_outputs_shell_snippet(self) -> None:
         output = io.StringIO()
 

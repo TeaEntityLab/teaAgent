@@ -27,9 +27,23 @@ def agent_resume_command(args: argparse.Namespace) -> int:
         return 1
 
     initial_observations: list[dict[str, Any]] = []
+    initial_context_extra: Optional[dict[str, Any]] = None
     auto_approved: Optional[str] = None
+
     if not args.fresh_restart:
-        initial_observations = store.observations_for_run(args.run_id)
+        checkpoint_path = getattr(args, 'checkpoint_store', None)
+        checkpoint = None
+        if checkpoint_path:
+            from teaagent.checkpoint import SQLiteCheckpointStore
+
+            checkpoint = SQLiteCheckpointStore(checkpoint_path).load(args.run_id)
+        if checkpoint is not None:
+            initial_observations = checkpoint.get('observations', [])
+            initial_context_extra = {
+                k: v for k, v in checkpoint.items() if k not in ('task', 'observations')
+            }
+        else:
+            initial_observations = store.observations_for_run(args.run_id)
         pending = store.pending_approval_for_run(args.run_id)
         if pending and pending['call_id'] not in args.approve_call_id:
             args.approve_call_id = list(args.approve_call_id) + [pending['call_id']]
@@ -40,6 +54,7 @@ def agent_resume_command(args: argparse.Namespace) -> int:
         original_task,
         resumed_from=args.run_id,
         initial_observations=initial_observations,
+        initial_context_extra=initial_context_extra,
         auto_approved_call_id=auto_approved,
     )
 
@@ -50,6 +65,7 @@ def _execute_agent_task(
     *,
     resumed_from: Optional[str] = None,
     initial_observations: Optional[list[dict[str, Any]]] = None,
+    initial_context_extra: Optional[dict[str, Any]] = None,
     auto_approved_call_id: Optional[str] = None,
 ) -> int:
     task_spec = None
@@ -102,6 +118,12 @@ def _execute_agent_task(
             print(f'Telemetry setup failed: {exc}', file=sys.stderr)
 
     approval_handler = cli_approval_handler if args.hitl_approval else None
+    checkpoint_store = None
+    checkpoint_path = getattr(args, 'checkpoint_store', None)
+    if checkpoint_path:
+        from teaagent.checkpoint import SQLiteCheckpointStore
+
+        checkpoint_store = SQLiteCheckpointStore(checkpoint_path)
     result = run_chat_agent(
         task=task,
         adapter=adapter,
@@ -117,10 +139,12 @@ def _execute_agent_task(
             max_subagent_depth=args.max_subagent_depth,
             heartbeat_seconds=args.heartbeat,
             approval_handler=approval_handler,
+            checkpoint_store=checkpoint_store,
         ),
         audit=audit,
         task_spec=task_spec,
         initial_observations=initial_observations,
+        initial_context_extra=initial_context_extra,
     )
     store.logger_for_result(result, audit)
     if _telemetry_sink is not None:

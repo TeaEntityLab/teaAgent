@@ -44,6 +44,7 @@ class ChatAgentConfig:
     stream: bool = False
     on_chunk: Optional[Callable[[str], None]] = None
     approval_handler: Optional[ApprovalHandler] = None
+    checkpoint_store: Any = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
@@ -115,6 +116,7 @@ def run_chat_agent(
     task_spec: Optional[str] = None,
     depth: int = 0,
     initial_observations: Optional[list[dict[str, Any]]] = None,
+    initial_context_extra: Optional[dict[str, Any]] = None,
 ) -> RunResult:
     tool_registry = registry or build_workspace_tool_registry(config.root)
     if config.enable_subagent and depth < config.max_subagent_depth:
@@ -150,6 +152,7 @@ def run_chat_agent(
         ),
         approval_handler=config.approval_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),
+        checkpoint_store=config.checkpoint_store,
     )
     run_id = uuid4().hex
     heartbeat: Optional[Heartbeat] = None
@@ -164,6 +167,7 @@ def run_chat_agent(
             decide=lambda context: engine.decide(with_memories(context, memories)),
             run_id=run_id,
             initial_observations=initial_observations,
+            initial_context_extra=initial_context_extra,
         )
     finally:
         if heartbeat is not None:

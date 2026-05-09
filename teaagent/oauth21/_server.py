@@ -43,6 +43,7 @@ class OAuth21AuthorizationServer:
         *,
         token_ttl: int = _DEFAULT_ACCESS_TOKEN_TTL,
         nonce_ttl: int = _NONCE_TTL_SECONDS,
+        dpop_replay_ttl: int = _PROOF_MAX_AGE_SECONDS,
         store: Optional[OAuthStore] = None,
         key_ring: Optional[OAuthKeyRing] = None,
     ) -> None:
@@ -53,6 +54,7 @@ class OAuth21AuthorizationServer:
         self._issuer = issuer
         self._token_ttl = token_ttl
         self._nonce_ttl = nonce_ttl
+        self._dpop_replay_ttl = dpop_replay_ttl
         self._store = store or InMemoryOAuthStore()
         self._dpop_replay_cache = DPoPReplayCache()
 
@@ -269,10 +271,10 @@ class OAuth21AuthorizationServer:
         _verify_dpop_signature(proof_jwt, jwk)
         iat = payload.get('iat', 0)
         now = time.time()
-        if abs(now - iat) > _PROOF_MAX_AGE_SECONDS:
+        if abs(now - iat) > self._dpop_replay_ttl:
             raise InvalidDPoPError('DPoP proof is too old')
         self._dpop_replay_cache.remember_once(
-            payload.get('jti'), iat=float(iat), now=now, ttl=_PROOF_MAX_AGE_SECONDS
+            payload.get('jti'), iat=float(iat), now=now, ttl=self._dpop_replay_ttl
         )
         return compute_jwk_thumbprint(jwk)
 

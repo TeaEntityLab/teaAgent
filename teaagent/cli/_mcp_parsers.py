@@ -58,6 +58,16 @@ def register(
         help='HMAC signing key for JWT access tokens (min 16 chars).',
     )
     serve.add_argument(
+        '--oauth-key-ring-file',
+        default=None,
+        help='Path to JSON key ring file: {"active_kid":"...","keys":{"kid":"secret"}}.',
+    )
+    serve.add_argument(
+        '--oauth-active-kid',
+        default=None,
+        help='Override active key id (kid) from the key ring file.',
+    )
+    serve.add_argument(
         '--oauth-client',
         action='append',
         default=[],
@@ -70,5 +80,11 @@ def register(
         type=int,
         default=3600,
         help='Access token TTL in seconds. Default 3600.',
+    )
+    serve.add_argument(
+        '--oauth-dpop-replay-ttl',
+        type=int,
+        default=60,
+        help='DPoP proof replay-cache TTL in seconds. Default 60.',
     )
     serve.set_defaults(func=handlers['serve'])

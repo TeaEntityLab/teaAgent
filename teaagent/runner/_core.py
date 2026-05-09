@@ -29,6 +29,7 @@ class AgentRunner:
         approval_handler: Optional[ApprovalHandler] = None,
         compactor: Optional[ContextCompactor] = None,
         compact_after_observations: int = 20,
+        checkpoint_store: Any = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -38,6 +39,7 @@ class AgentRunner:
         self.approval_handler = approval_handler
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
+        self.checkpoint_store = checkpoint_store
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
@@ -50,12 +52,17 @@ class AgentRunner:
         decide: DecisionFn,
         run_id: Optional[str] = None,
         initial_observations: Optional[list[dict[str, Any]]] = None,
+        initial_context_extra: Optional[dict[str, Any]] = None,
     ) -> RunResult:
         current_run_id = run_id or uuid4().hex
         observations: list[dict[str, Any]] = (
             list(initial_observations) if initial_observations else []
         )
         context: dict[str, Any] = {'task': task, 'observations': observations}
+        if initial_context_extra:
+            context.update(
+                {k: v for k, v in initial_context_extra.items() if k != 'task'}
+            )
         iterations = 0
         tool_calls = len(observations)
         cost_cents = 0.0
@@ -127,6 +134,8 @@ class AgentRunner:
                                 approval=approval_request.to_dict(),
                                 cost_cents=cost_cents,
                             )
+                            if self.checkpoint_store is not None:
+                                self.checkpoint_store.save(current_run_id, context)
                             return RunResult(
                                 run_id=current_run_id,
                                 final_answer=None,
@@ -174,6 +183,8 @@ class AgentRunner:
                 }
                 context['observations'].append(observation)
                 self.audit.record('tool_call_completed', current_run_id, **observation)
+                if self.checkpoint_store is not None:
+                    self.checkpoint_store.save(current_run_id, context)
                 if (
                     self.compactor
                     and len(context['observations']) > self.compact_after_observations
