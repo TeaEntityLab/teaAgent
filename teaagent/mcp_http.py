@@ -127,6 +127,7 @@ def _make_handler(
         resource_server = OAuth21ResourceServer(
             signing_key=oauth_server._key.decode('utf-8'),
             issuer=oauth_server.issuer,
+            key_ring=oauth_server.key_ring,
         )
 
     class MCPHandler(BaseHTTPRequestHandler):

@@ -88,6 +88,10 @@ class OAuth21AuthorizationServer:
     def issuer(self) -> str:
         return self._issuer
 
+    @property
+    def key_ring(self) -> OAuthKeyRing:
+        return self._key_ring
+
     def create_authorization_code(
         self,
         client_id: str,

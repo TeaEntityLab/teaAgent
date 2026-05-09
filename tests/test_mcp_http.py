@@ -509,6 +509,58 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
             )
             self.assertEqual(status2, 200)
 
+    def test_oauth_resource_server_uses_authorization_server_key_ring(self) -> None:
+        from teaagent.oauth21 import (
+            OAuthKeyRing,
+            compute_s256_challenge,
+            generate_code_verifier,
+        )
+
+        key_ring = OAuthKeyRing(
+            active_kid='rotated',
+            keys={
+                'legacy': b'mcp-http-secret-key-at-least-16',
+                'rotated': b'rotated-secret-key-at-least-16',
+            },
+        )
+        for oauth_server, _server, _sessions, host, port in self._build_oauth_fixture(
+            key_ring=key_ring
+        ):
+            oauth_server.register_client(
+                'rotated-client', 'secret', ['http://localhost/callback']
+            )
+            verifier = generate_code_verifier()
+            challenge = compute_s256_challenge(verifier)
+            redirect_url, _ = oauth_server.create_authorization_code(
+                client_id='rotated-client',
+                redirect_uri='http://localhost/callback',
+                code_challenge=challenge,
+            )
+            token = oauth_server.exchange_code(
+                code=redirect_url.split('code=')[1].split('&')[0],
+                code_verifier=verifier,
+                client_id='rotated-client',
+            )
+            body = json.dumps(
+                {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'}
+            ).encode('utf-8')
+
+            status, headers, data = self._request(
+                host,
+                port,
+                'POST',
+                path=MCP_PATH,
+                body=body,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body)),
+                    'Authorization': f'Bearer {token.access_token}',
+                },
+            )
+
+            self.assertEqual(status, 200, data)
+            self.assertIn(SESSION_HEADER, headers)
+
     def test_unauthorized_without_token_when_oauth_enabled(self) -> None:
         for (
             _oauth_server,
