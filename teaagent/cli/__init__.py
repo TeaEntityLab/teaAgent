@@ -36,9 +36,20 @@ from teaagent.ultrawork import UltraworkStore
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(
+    argv: Optional[list[str]] = None,
+    *,
+    _adapter_factory: Any = None,
+    _serve_mcp_http: Any = None,
+    _check_graphqlite: Any = None,
+    _check_llm: Any = None,
+) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    args._adapter_factory = _adapter_factory or create_llm_adapter  # type: ignore[attr-defined]
+    args._serve_mcp_http = _serve_mcp_http or serve_mcp_http  # type: ignore[attr-defined]
+    args._check_graphqlite = _check_graphqlite or check_graphqlite_runtime  # type: ignore[attr-defined]
+    args._check_llm = _check_llm or check_llm_configuration  # type: ignore[attr-defined]
     apply_config_defaults(args)
     return args.func(args)
 
@@ -172,18 +183,18 @@ def resolve_config_path(explicit: Optional[str]) -> Optional[Path]:
 
 
 def doctor_graphqlite(args: argparse.Namespace) -> int:
-    ok, message = check_graphqlite_runtime(args.database)
+    ok, message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
     print(json.dumps({'ok': ok, 'message': message}, sort_keys=True))
     return 0 if ok else 1
 
 
 def doctor_all(args: argparse.Namespace) -> int:
     checks: dict[str, Any] = {}
-    gql_ok, gql_message = check_graphqlite_runtime(args.database)
+    gql_ok, gql_message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
     checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
     provider_results = []
     for provider in args.provider or available_providers():
-        ok, message = check_llm_configuration(provider)
+        ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
         provider_results.append({'provider': provider, 'ok': ok, 'message': message})
     checks['providers'] = provider_results
     ok = gql_ok and all(item['ok'] for item in provider_results)
@@ -281,7 +292,7 @@ def _execute_agent_task(
         else None
     )
     selected_model = routing.model if routing else args.model
-    adapter = create_llm_adapter(args.provider, model=selected_model)
+    adapter = args._adapter_factory(args.provider, model=selected_model)  # type: ignore[attr-defined]
     store = RunStore(args.root)
     audit = store.audit_logger()
 
@@ -422,7 +433,7 @@ def agent_run_show(args: argparse.Namespace) -> int:
 
 
 def doctor_model(args: argparse.Namespace) -> int:
-    ok, message = check_llm_configuration(args.provider)
+    ok, message = args._check_llm(args.provider)  # type: ignore[attr-defined]
     print(
         json.dumps(
             {'ok': ok, 'message': message, 'provider': args.provider}, sort_keys=True
@@ -581,7 +592,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        return serve_mcp_http(
+        return args._serve_mcp_http(  # type: ignore[attr-defined]
             registry,
             host=args.host,
             port=args.port,
