@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import secrets
 import sqlite3
 import threading
 from collections.abc import Mapping
@@ -9,6 +12,11 @@ from pathlib import Path
 from typing import Optional, Protocol
 
 from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode
+
+_SQLITE_SCHEMA_VERSION = 2
+_CLIENT_SECRET_KDF = 'pbkdf2_sha256'
+_CLIENT_SECRET_ITERATIONS = 210_000
+_CLIENT_SECRET_SALT_BYTES = 16
 
 
 class OAuthStore(Protocol):
@@ -77,16 +85,21 @@ class SQLiteOAuthStore:
         self._initialize()
 
     def register_client(self, client: OAuth21Client) -> None:
+        secret_hash, salt = _hash_client_secret(client.client_secret)
         with self._connect() as conn:
             conn.execute(
                 """
                 INSERT OR REPLACE INTO oauth_clients
-                    (client_id, client_secret, redirect_uris_json, scope)
-                VALUES (?, ?, ?, ?)
+                    (client_id, client_secret, client_secret_hash,
+                     client_secret_salt, client_secret_kdf,
+                     redirect_uris_json, scope)
+                VALUES (?, '', ?, ?, ?, ?, ?)
                 """,
                 (
                     client.client_id,
-                    client.client_secret,
+                    secret_hash,
+                    salt,
+                    _CLIENT_SECRET_KDF,
                     json.dumps(sorted(client.redirect_uris), separators=(',', ':')),
                     client.scope,
                 ),
@@ -96,7 +109,7 @@ class SQLiteOAuthStore:
         with self._connect() as conn:
             row = conn.execute(
                 """
-                SELECT client_id, client_secret, redirect_uris_json, scope
+                SELECT client_id, redirect_uris_json, scope
                 FROM oauth_clients
                 WHERE client_id = ?
                 """,
@@ -104,13 +117,30 @@ class SQLiteOAuthStore:
             ).fetchone()
         if row is None:
             return None
-        redirect_uris = frozenset(str(uri) for uri in json.loads(row[2]))
+        redirect_uris = frozenset(str(uri) for uri in json.loads(row[1]))
         return OAuth21Client(
             client_id=str(row[0]),
-            client_secret=str(row[1]),
+            client_secret='',
             redirect_uris=redirect_uris,
-            scope=str(row[3]),
+            scope=str(row[2]),
         )
+
+    def validate_client_secret(self, client_id: str, client_secret: str) -> bool:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT client_secret_hash, client_secret_salt, client_secret_kdf
+                FROM oauth_clients
+                WHERE client_id = ?
+                """,
+                (client_id,),
+            ).fetchone()
+        if row is None or row[2] != _CLIENT_SECRET_KDF:
+            return False
+        expected = bytes(row[0])
+        salt = bytes(row[1])
+        actual = _hash_client_secret_with_salt(client_secret, salt)
+        return hmac.compare_digest(actual, expected)
 
     def save_code(self, code: _AuthorizationCode) -> None:
         with self._connect() as conn:
@@ -197,9 +227,16 @@ class SQLiteOAuthStore:
             conn.executescript(
                 """
                 PRAGMA journal_mode = WAL;
+                CREATE TABLE IF NOT EXISTS oauth_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS oauth_clients (
                     client_id TEXT PRIMARY KEY,
-                    client_secret TEXT NOT NULL,
+                    client_secret TEXT NOT NULL DEFAULT '',
+                    client_secret_hash BLOB,
+                    client_secret_salt BLOB,
+                    client_secret_kdf TEXT,
                     redirect_uris_json TEXT NOT NULL,
                     scope TEXT NOT NULL
                 );
@@ -222,12 +259,65 @@ class SQLiteOAuthStore:
                     ON oauth_nonces(created_at);
                 """
             )
+            self._migrate_clients(conn)
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO oauth_metadata (key, value)
+                VALUES ('schema_version', ?)
+                """,
+                (str(_SQLITE_SCHEMA_VERSION),),
+            )
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=30, isolation_level=None)
         conn.execute('PRAGMA foreign_keys = ON')
         conn.execute('PRAGMA busy_timeout = 30000')
         return conn
+
+    def _migrate_clients(self, conn: sqlite3.Connection) -> None:
+        columns = {
+            str(row[1])
+            for row in conn.execute('PRAGMA table_info(oauth_clients)').fetchall()
+        }
+        if 'client_secret_hash' not in columns:
+            conn.execute('ALTER TABLE oauth_clients ADD COLUMN client_secret_hash BLOB')
+        if 'client_secret_salt' not in columns:
+            conn.execute('ALTER TABLE oauth_clients ADD COLUMN client_secret_salt BLOB')
+        if 'client_secret_kdf' not in columns:
+            conn.execute('ALTER TABLE oauth_clients ADD COLUMN client_secret_kdf TEXT')
+        for row in conn.execute(
+            """
+            SELECT client_id, client_secret
+            FROM oauth_clients
+            WHERE client_secret_hash IS NULL AND client_secret != ''
+            """
+        ).fetchall():
+            secret_hash, salt = _hash_client_secret(str(row[1]))
+            conn.execute(
+                """
+                UPDATE oauth_clients
+                SET client_secret = '',
+                    client_secret_hash = ?,
+                    client_secret_salt = ?,
+                    client_secret_kdf = ?
+                WHERE client_id = ?
+                """,
+                (secret_hash, salt, _CLIENT_SECRET_KDF, str(row[0])),
+            )
+
+
+def _hash_client_secret(secret: str) -> tuple[bytes, bytes]:
+    salt = secrets.token_bytes(_CLIENT_SECRET_SALT_BYTES)
+    return _hash_client_secret_with_salt(secret, salt), salt
+
+
+def _hash_client_secret_with_salt(secret: str, salt: bytes) -> bytes:
+    return hashlib.pbkdf2_hmac(
+        'sha256',
+        secret.encode('utf-8'),
+        salt,
+        _CLIENT_SECRET_ITERATIONS,
+    )
 
 
 @dataclass(frozen=True)

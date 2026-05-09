@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 import time
 import unittest
@@ -7,6 +8,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from teaagent.oauth21 import (
+    InvalidClientError,
     InvalidGrantError,
     OAuth21AuthorizationServer,
     SQLiteOAuthStore,
@@ -59,6 +61,61 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
 
             self.assertEqual(token.token_type, 'Bearer')
             self.assertEqual(token.scope, 'mcp')
+
+    def test_client_secret_is_hashed_at_rest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store_path = Path(tmp) / 'oauth.sqlite3'
+            store = SQLiteOAuthStore(store_path)
+
+            server = OAuth21AuthorizationServer(
+                signing_key=SIGNING_KEY,
+                issuer=ISSUER,
+                store=store,
+            )
+            server.register_client('client-1', 'secret-1', ['https://client/cb'])
+
+            with sqlite3.connect(store_path) as conn:
+                row = conn.execute(
+                    """
+                    SELECT client_secret, client_secret_hash,
+                           client_secret_salt, client_secret_kdf
+                    FROM oauth_clients
+                    WHERE client_id = 'client-1'
+                    """
+                ).fetchone()
+                schema_version = conn.execute(
+                    "SELECT value FROM oauth_metadata WHERE key = 'schema_version'"
+                ).fetchone()[0]
+
+            self.assertEqual(row[0], '')
+            self.assertIsInstance(row[1], bytes)
+            self.assertIsInstance(row[2], bytes)
+            self.assertEqual(row[3], 'pbkdf2_sha256')
+            self.assertNotEqual(row[1], b'secret-1')
+            self.assertEqual(schema_version, '2')
+
+    def test_hashed_client_secret_rejects_wrong_secret(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store_path = Path(tmp) / 'oauth.sqlite3'
+            verifier = generate_code_verifier()
+            challenge = compute_s256_challenge(verifier)
+            server = OAuth21AuthorizationServer(
+                signing_key=SIGNING_KEY,
+                issuer=ISSUER,
+                store=SQLiteOAuthStore(store_path),
+            )
+            server.register_client('client-1', 'secret-1', ['https://client/cb'])
+            redirect_url, _ = server.create_authorization_code(
+                'client-1', 'https://client/cb', challenge
+            )
+
+            with self.assertRaises(InvalidClientError):
+                server.exchange_code(
+                    _code_from_redirect(redirect_url),
+                    verifier,
+                    client_id='client-1',
+                    client_secret='wrong-secret',
+                )
 
     def test_authorization_code_is_consumed_once(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

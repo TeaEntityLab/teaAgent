@@ -4,6 +4,7 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Hardened `SQLiteOAuthStore` client-secret storage with PBKDF2-SHA256 hashes, per-client random salts, schema-version metadata, and server-side validation through the store instead of plaintext retrieval.
 - Cleaned repo agent instructions by removing embedded session-memory context from `AGENTS.md`.
 - Added a dedicated telemetry CI job that installs `.[dev,telemetry]` and runs telemetry tests without relying on skipped optional imports.
 - Extended release automation with PyPI Trusted Publishing and GitHub artifact provenance attestation for tagged releases.

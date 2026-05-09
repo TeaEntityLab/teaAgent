@@ -244,7 +244,14 @@ class OAuth21AuthorizationServer:
 
     def _validate_client(self, client_id: str, client_secret: Optional[str]) -> None:
         client = self.get_client(client_id)
-        if client_secret is not None and not hmac.compare_digest(
+        if client_secret is None:
+            return
+        validator = getattr(self._store, 'validate_client_secret', None)
+        if callable(validator):
+            if not validator(client_id, client_secret):
+                raise InvalidClientError('Invalid client_secret')
+            return
+        if not hmac.compare_digest(
             client_secret.encode('utf-8'), client.client_secret.encode('utf-8')
         ):
             raise InvalidClientError('Invalid client_secret')

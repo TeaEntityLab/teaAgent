@@ -163,6 +163,8 @@ commands: `teaagent audit list`, `teaagent audit show`, and `teaagent audit prun
   command-line arguments
 - MCP `--auth-token` and `--oauth-signing-key` are command-line arguments (visible
   in `ps`). Prefer environment variables or a secrets manager for production
+- `SQLiteOAuthStore` stores OAuth client secrets as PBKDF2-SHA256 hashes with
+  per-client salts; the in-memory store keeps secrets in process memory only.
 - Audit logs redact keys matching `api_key`, `authorization`, `credential`,
   `password`, `secret`, `token` in any casing
 
