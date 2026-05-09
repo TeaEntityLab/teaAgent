@@ -111,20 +111,29 @@ in front of the server.
 
 ## Code Mode
 
-Code Mode executes LLM-generated Python code in a **child process** sandbox with:
+Code Mode executes LLM-generated Python code only after AST allow-list validation
+(limited node types, restricted builtins, no imports, no attributes, no arbitrary
+function calls). It has two backends:
 
-- AST allow-list validation (limited node types, restricted builtins)
-- `RLIMIT_CPU` (CPU time limit)
-- Wall-clock timeout (process termination)
-- Best-effort `RLIMIT_AS` (memory limit; silently no-op on macOS)
+- **Child process backend** (default): runs `exec()` in a child Python process with
+  wall-clock timeout, `RLIMIT_CPU`, and best-effort `RLIMIT_AS` memory limits.
+- **Container backend** (`ContainerCodeModeBackend`): delegates execution to a
+  Docker/Podman-style runtime with `--network none`, `--read-only`,
+  `--cap-drop=ALL`, `--security-opt=no-new-privileges`, non-root `--user`, tmpfs
+  `/tmp`, memory/swap limits, CPU ulimit, and PID limit.
 
-Code Mode is **not** a production sandbox:
-- No seccomp, cgroups, namespaces, or VM-level isolation
-- `exec()` runs inside the same Python interpreter
-- Memory limits are advisory on macOS
+Code Mode is still **not** a complete production sandbox:
 
-For production use, defer Code Mode code execution to a container, V8 isolate, or
-managed execution service.
+- The default backend runs inside the same Python interpreter family; isolate it
+  from untrusted workloads.
+- The container backend does not install a project-specific seccomp/AppArmor/SELinux
+  profile, does not enforce image digest pinning, and checks stdout size after the
+  child exits rather than streaming with a hard read cap.
+- Memory limits are advisory on macOS for the child-process backend.
+
+For high-risk production use, prefer a hardened external execution service, VM
+sandbox, V8 isolate, or container runtime with pinned images and mandatory security
+profiles.
 
 ## File System Access
 

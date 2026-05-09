@@ -35,11 +35,23 @@ Or without the console script:
 python3 -m teaagent.cli --help
 ```
 
-Requires Python >= 3.9. The `graphqlite` dependency is optional — GraphQL RAG features need it.
+Requires Python >= 3.9. Optional dependency groups enable non-core integrations:
 
 ```bash
 pip install -e ".[graphqlite]"
+pip install -e ".[oauth]"
+pip install -e ".[telemetry]"
+pip install -e ".[dev]"
+pip install -e ".[release]"
+pip install -e ".[security]"
 ```
+
+- `graphqlite`: GraphQL RAG persistence features.
+- `oauth`: OAuth 2.1 / DPoP cryptographic proof validation.
+- `telemetry`: OpenTelemetry tracing and metrics exporters.
+- `dev`: tests, linting, type checking, and pre-commit.
+- `release`: local build and distribution checks.
+- `security`: local dependency auditing with `pip-audit`.
 
 ## Quick Start
 
