@@ -175,6 +175,8 @@ commands: `teaagent audit list`, `teaagent audit show`, and `teaagent audit prun
 - `SQLiteOAuthStore` stores OAuth client secrets as PBKDF2-SHA256 hashes with
   per-client salts; the in-memory store keeps secrets in process memory only.
 - OAuth DPoP nonces are consumed on validation; replaying the same nonce fails.
+- OAuth DPoP proof `jti` values are cached for the proof freshness window; replaying
+  the same proof against the authorization or resource server fails.
 - Audit logs redact keys matching `api_key`, `authorization`, `credential`,
   `password`, `secret`, `token` in any casing
 

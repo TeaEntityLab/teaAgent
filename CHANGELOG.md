@@ -4,6 +4,7 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added short-lived DPoP proof `jti` replay caches to the authorization and resource servers so replaying the same proof within the freshness window fails.
 - Made OAuth DPoP nonce validation one-time by adding `OAuthStore.consume_nonce()` and using atomic consume/delete semantics in `SQLiteOAuthStore`.
 - Added optional container image digest pinning and image allowlist enforcement to `ContainerCodeModeBackend`.
 - Changed `ContainerCodeModeBackend` to enforce `CodeModeSandbox.max_output_bytes` while streaming stdout/stderr and kill the child process immediately when the combined output limit is exceeded.

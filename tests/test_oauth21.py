@@ -447,6 +447,22 @@ class DPoPIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(token_resp.token_type, 'DPoP')
 
+        verifier_replay = generate_code_verifier()
+        challenge_replay = compute_s256_challenge(verifier_replay)
+        redirect_url_replay, _ = as_.create_authorization_code(
+            client_id='dpoptest',
+            redirect_uri='https://app.test/cb',
+            code_challenge=challenge_replay,
+        )
+        code_replay = redirect_url_replay.split('code=')[1].split('&')[0]
+        with self.assertRaises(InvalidDPoPError):
+            as_.exchange_code(
+                code=code_replay,
+                code_verifier=verifier_replay,
+                client_id='dpoptest',
+                dpop_proof_jwt=dpop_proof_jwt,
+            )
+
         claims = as_.introspect_token(token_resp.access_token)
         self.assertEqual(claims.cnf_jkt, jkt)
 
@@ -473,6 +489,13 @@ class DPoPIntegrationTests(unittest.TestCase):
             url='https://mcp.test/mcp',
         )
         self.assertEqual(validated.sub, 'dpoptest')
+        with self.assertRaises(InvalidDPoPError):
+            rs.validate_request(
+                authorization_header=f'DPoP {token_resp.access_token}',
+                dpop_header=dpop_proof2,
+                method='POST',
+                url='https://mcp.test/mcp',
+            )
 
     def test_dpop_bad_signature_rejected(self) -> None:
         from cryptography.hazmat.primitives.asymmetric import ec

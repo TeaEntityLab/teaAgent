@@ -36,7 +36,9 @@ for authorization-code consume/delete, WAL journal mode, SQLite's busy timeout
 for local concurrent access, and a schema-version metadata row for future migrations.
 Client secrets are stored as PBKDF2-SHA256 hashes with per-client random salts rather
 than plaintext. DPoP nonces are consumed through a store-level read/delete operation
-so nonce validation has one-time replay semantics.
+so nonce validation has one-time replay semantics. DPoP proof `jti` values are
+cached in memory by the authorization and resource servers for the proof freshness
+window to reject repeated proofs.
 
 ## Consequences
 

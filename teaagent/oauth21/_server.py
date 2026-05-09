@@ -13,6 +13,7 @@ from teaagent.oauth21._jwt import (
     verify_jwt,
 )
 from teaagent.oauth21._pkce import compute_s256_challenge
+from teaagent.oauth21._replay import DPoPReplayCache
 from teaagent.oauth21._store import InMemoryOAuthStore, OAuthKeyRing, OAuthStore
 from teaagent.oauth21._types import (
     _CODE_TTL_SECONDS,
@@ -53,6 +54,7 @@ class OAuth21AuthorizationServer:
         self._token_ttl = token_ttl
         self._nonce_ttl = nonce_ttl
         self._store = store or InMemoryOAuthStore()
+        self._dpop_replay_cache = DPoPReplayCache()
 
     def register_client(
         self,
@@ -262,8 +264,12 @@ class OAuth21AuthorizationServer:
             raise InvalidDPoPError('DPoP proof header must include a jwk')
         _verify_dpop_signature(proof_jwt, jwk)
         iat = payload.get('iat', 0)
-        if abs(time.time() - iat) > _PROOF_MAX_AGE_SECONDS:
+        now = time.time()
+        if abs(now - iat) > _PROOF_MAX_AGE_SECONDS:
             raise InvalidDPoPError('DPoP proof is too old')
+        self._dpop_replay_cache.remember_once(
+            payload.get('jti'), iat=float(iat), now=now, ttl=_PROOF_MAX_AGE_SECONDS
+        )
         return compute_jwk_thumbprint(jwk)
 
     def _prune_expired_codes(self) -> None:

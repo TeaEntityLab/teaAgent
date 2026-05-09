@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from teaagent.oauth21._dpop import _verify_dpop_signature
 from teaagent.oauth21._jwt import compute_jwk_thumbprint, decode_jwt_unsafe, verify_jwt
+from teaagent.oauth21._replay import DPoPReplayCache
 from teaagent.oauth21._store import OAuthKeyRing
 from teaagent.oauth21._types import (
     _DPOP_PROOF_TYP,
@@ -32,6 +33,7 @@ class OAuth21ResourceServer:
         self._key = signing_key.encode('utf-8')
         self._key_ring = key_ring or OAuthKeyRing.single(self._key)
         self._issuer = issuer
+        self._dpop_replay_cache = DPoPReplayCache()
 
     def validate_request(
         self,
@@ -97,8 +99,12 @@ class OAuth21ResourceServer:
                 f"DPoP htu mismatch: expected '{url}', got '{payload.get('htu', '')}'"
             )
         iat = payload.get('iat', 0)
-        if abs(time.time() - iat) > _PROOF_MAX_AGE_SECONDS:
+        now = time.time()
+        if abs(now - iat) > _PROOF_MAX_AGE_SECONDS:
             raise InvalidDPoPError('DPoP proof is too old')
+        self._dpop_replay_cache.remember_once(
+            payload.get('jti'), iat=float(iat), now=now, ttl=_PROOF_MAX_AGE_SECONDS
+        )
         jwk = header.get('jwk')
         if not isinstance(jwk, dict):
             raise InvalidDPoPError('DPoP proof header missing jwk')
