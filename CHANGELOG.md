@@ -11,6 +11,7 @@ All notable changes to TeaAgent are tracked here.
 - Split `teaagent/cli/_handlers.py` into a `teaagent/cli/_handlers/` package and extracted agent-run lifecycle logic into `_agent.py` while preserving command handler imports.
 - Continued splitting `teaagent/cli/_handlers/` by moving doctor, memory, model, MCP, misc, and audit handlers into dedicated modules and keeping stable re-exports in `__init__.py`.
 - Split `teaagent/llm_conformance.py` into a `teaagent/llm_conformance/` package with `_types.py` and `_runner.py`, preserving existing imports.
+- Split `teaagent/runner.py` into a `teaagent/runner/` package with `_types.py` and `_core.py`, preserving existing `teaagent.runner` imports.
 - Made `teaagent.cli.main()` accept injectable `_adapter_factory`, `_serve_mcp_http`, `_check_graphqlite`, `_check_llm`, and `_run_model_conformance` keyword arguments, enabling handler extraction without breaking existing tests.
 - Split `teaagent/workspace_tools.py` into a `teaagent/workspace_tools/` package with four focused modules: `_config.py`, `_helpers.py`, `_shell.py`, `_files.py`. Backward-compatible public imports preserved via `__init__.py` re-exports.
 - Expanded audit string redaction with patterns for JWT tokens, AWS access keys (`AKIA...`), and GitHub personal access tokens (`ghp_...`, `github_pat_...`).
