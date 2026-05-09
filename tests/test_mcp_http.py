@@ -226,6 +226,40 @@ class MCPHTTPTransportTests(unittest.TestCase):
                     self.assertEqual(status, 400)
                     self.assertIn(b'JSON-RPC payload must be object or array', data)
 
+    def test_empty_batch_returns_202(self) -> None:
+        with server_fixture() as fixture:
+            session_id, _ = _initialize(fixture)
+            status, _, data = _post(fixture, [], session_id=session_id)
+            self.assertEqual(status, 202)
+            self.assertEqual(data, b'')
+
+    def test_batch_skips_non_dict_items(self) -> None:
+        with server_fixture() as fixture:
+            session_id, _ = _initialize(fixture)
+            status, _, data = _post(
+                fixture,
+                [
+                    {'jsonrpc': '2.0', 'id': 10, 'method': 'tools/list'},
+                    'not a dict',
+                    42,
+                    {'jsonrpc': '2.0', 'id': 11, 'method': 'tools/list'},
+                ],
+                session_id=session_id,
+            )
+            self.assertEqual(status, 200)
+            payload = json.loads(data)
+            self.assertIsInstance(payload, list)
+            self.assertEqual({entry['id'] for entry in payload}, {10, 11})
+
+    def test_initialize_without_id_returns_400(self) -> None:
+        with server_fixture() as fixture:
+            status, _, data = _post(
+                fixture,
+                {'jsonrpc': '2.0', 'method': 'initialize'},
+            )
+            self.assertEqual(status, 400)
+            self.assertIn(b'initialize requires an id', data)
+
     def test_unknown_method_returns_jsonrpc_error_inside_200(self) -> None:
         with server_fixture() as fixture:
             session_id, _ = _initialize(fixture)
@@ -327,19 +361,26 @@ class MCPHTTPTransportTests(unittest.TestCase):
     def test_delete_removes_session(self) -> None:
         with server_fixture() as fixture:
             session_id, _ = _initialize(fixture)
-
             status, _, _ = fixture.request(
-                'DELETE', headers={SESSION_HEADER: session_id}
+                'DELETE',
+                headers={SESSION_HEADER: session_id},
             )
             self.assertEqual(status, 204)
-            self.assertFalse(fixture.sessions.has(session_id))
-
-            status, _, _ = _post(
+            # Subsequent request with same session should fail
+            status2, _, _ = _post(
                 fixture,
-                {'jsonrpc': '2.0', 'id': 99, 'method': 'tools/list'},
+                {'jsonrpc': '2.0', 'id': 5, 'method': 'tools/list'},
                 session_id=session_id,
             )
-            self.assertEqual(status, 400)
+            self.assertEqual(status2, 400)
+
+    def test_delete_nonexistent_session_returns_404(self) -> None:
+        with server_fixture() as fixture:
+            status, _, _ = fixture.request(
+                'DELETE',
+                headers={SESSION_HEADER: 'nonexistent-session'},
+            )
+            self.assertEqual(status, 404)
 
     def test_unknown_path_returns_404(self) -> None:
         with server_fixture() as fixture:
