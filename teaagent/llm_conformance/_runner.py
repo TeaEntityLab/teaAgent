@@ -173,7 +173,73 @@ def _run_tiered_provider(
                 error='provider returned empty content',
             )
 
-        if tier == ConformanceTier.CONTRACT:
+        if tier == ConformanceTier.STREAMING:
+            chunks: list[str] = []
+            adapter.complete(  # type: ignore[attr-defined]
+                LLMRequest(
+                    messages=[LLMMessage(role='user', content='Count to 3 briefly.')],
+                    max_tokens=64,
+                    stream=True,
+                    on_chunk=chunks.append,
+                )
+            )
+            if chunks:
+                checks.append(
+                    CheckResult(
+                        name='streaming_chunks_received',
+                        status='passed',
+                        detail=f'{len(chunks)} chunk(s) received',
+                    )
+                )
+            else:
+                checks.append(
+                    CheckResult(
+                        name='streaming_chunks_received',
+                        status='failed',
+                        detail='stream=True produced no on_chunk calls',
+                    )
+                )
+
+        elif tier == ConformanceTier.STRUCTURED_OUTPUT:
+            import json as _json
+
+            json_response = adapter.complete(  # type: ignore[attr-defined]
+                LLMRequest(
+                    system='You must respond with valid JSON only. No prose.',
+                    messages=[
+                        LLMMessage(
+                            role='user',
+                            content='Return a JSON object with key "status" set to "ok".',
+                        )
+                    ],
+                    max_tokens=64,
+                )
+            )
+            raw = json_response.content.strip()
+            try:
+                parsed = _json.loads(raw)
+                if isinstance(parsed, dict):
+                    checks.append(
+                        CheckResult(name='structured_json_output', status='passed')
+                    )
+                else:
+                    checks.append(
+                        CheckResult(
+                            name='structured_json_output',
+                            status='failed',
+                            detail=f'parsed value is not a dict: {raw[:80]}',
+                        )
+                    )
+            except _json.JSONDecodeError:
+                checks.append(
+                    CheckResult(
+                        name='structured_json_output',
+                        status='failed',
+                        detail=f'response is not valid JSON: {raw[:80]}',
+                    )
+                )
+
+        elif tier == ConformanceTier.CONTRACT:
             if smoke_content == 'ok':
                 checks.append(CheckResult(name='exact_content_match', status='passed'))
             else:

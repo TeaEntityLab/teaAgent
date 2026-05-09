@@ -34,7 +34,7 @@ def register(
         handlers['ultrawork_show'],
         handlers['ultrawork_stop'],
     )
-    _workspace(subparsers, handlers['workspace_tools'])
+    _workspace(subparsers, handlers['workspace_tools'], handlers['workspace_openapi'])
 
 
 def _clarify(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -241,7 +241,11 @@ def _ultrawork(
     stop.set_defaults(func=stop_handler)
 
 
-def _workspace(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _workspace(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    openapi_handler: Callable,
+) -> None:
     workspace = subparsers.add_parser('workspace', help='Inspect workspace tool pack.')
     subs = workspace.add_subparsers(dest='workspace_command', required=True)
 
@@ -250,3 +254,28 @@ def _workspace(subparsers: argparse._SubParsersAction, handler: Callable) -> Non
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
     tools.set_defaults(func=handler)
+
+    openapi = subs.add_parser(
+        'openapi',
+        help='Generate an OpenAPI 3.1 schema for all registered workspace tools.',
+    )
+    openapi.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    openapi.add_argument(
+        '--title',
+        default='TeaAgent Tools API',
+        help='API title in the OpenAPI info object.',
+    )
+    openapi.add_argument(
+        '--api-version',
+        default='1.0.0',
+        help='API version in the OpenAPI info object.',
+    )
+    openapi.add_argument(
+        '--server-url',
+        default=None,
+        metavar='URL',
+        help='Server URL to embed in the OpenAPI servers list (optional).',
+    )
+    openapi.set_defaults(func=openapi_handler)

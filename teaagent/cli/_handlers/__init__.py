@@ -26,6 +26,7 @@ from ._misc import (
     ultrawork_show_command,
     ultrawork_start_command,
     ultrawork_stop_command,
+    workspace_openapi_command,
     workspace_tools_metadata,
 )
 from ._model import model_conformance, model_providers, model_route, model_smoke
@@ -62,5 +63,6 @@ __all__ = [
     'ultrawork_show_command',
     'ultrawork_start_command',
     'ultrawork_stop_command',
+    'workspace_openapi_command',
     'workspace_tools_metadata',
 ]

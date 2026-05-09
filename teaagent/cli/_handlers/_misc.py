@@ -95,6 +95,20 @@ def workspace_tools_metadata(args: argparse.Namespace) -> int:
     return 0
 
 
+def workspace_openapi_command(args: argparse.Namespace) -> int:
+    from teaagent.openapi import generate_openapi_schema
+
+    registry = build_workspace_tool_registry(args.root)
+    schema = generate_openapi_schema(
+        registry,
+        title=args.title,
+        version=args.api_version,
+        server_url=getattr(args, 'server_url', None) or None,
+    )
+    print_json(schema)
+    return 0
+
+
 def completion_command(args: argparse.Namespace) -> int:
     if args.shell == 'bash':
         print(

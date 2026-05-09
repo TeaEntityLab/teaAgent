@@ -38,6 +38,7 @@ from teaagent.cli._handlers import (
     ultrawork_show_command,
     ultrawork_start_command,
     ultrawork_stop_command,
+    workspace_openapi_command,
     workspace_tools_metadata,
 )
 from teaagent.graphqlite_store import (
@@ -114,6 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
             'ultrawork_show': ultrawork_show_command,
             'ultrawork_stop': ultrawork_stop_command,
             'workspace_tools': workspace_tools_metadata,
+            'workspace_openapi': workspace_openapi_command,
             'completion': completion_command,
             'audit_list': audit_list_command,
             'audit_show': audit_show_command,

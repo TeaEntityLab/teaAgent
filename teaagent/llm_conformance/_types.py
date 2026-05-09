@@ -7,6 +7,8 @@ from enum import Enum
 class ConformanceTier(str, Enum):
     SMOKE = 'smoke'
     CONTRACT = 'contract'
+    STREAMING = 'streaming'
+    STRUCTURED_OUTPUT = 'structured_output'
 
 
 @dataclass(frozen=True)
