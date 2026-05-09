@@ -135,6 +135,29 @@ teaagent mcp serve --http --port 7330 --auth-token "$MCP_TOKEN"
 
 `initialize` issues a fresh `Mcp-Session-Id` header; every later request must echo it. Pass `--allowed-origin` (repeatable) to restrict browser callers. See [docs/cli.md](docs/cli.md#mcp-server) for full transport details.
 
+### 5-Minute Walkthrough
+
+Run the self-contained end-to-end example (no API keys needed):
+
+```bash
+python3 examples/full_agent_run.py
+```
+
+It demonstrates the full lifecycle:
+1. **Workspace tools** — registers `read_file`, `write_file`, `apply_patch`, etc.
+2. **Audit + metrics** — writes per-run JSONL audit log, collects counters/histograms.
+3. **Memory catalog** — adds a workspace memory entry.
+4. **Budget + approval** — caps iterations/tool-calls, enforces write-only permission mode.
+5. **Agent runner** — a deterministic `decide` function emits two tool calls then finishes.
+6. **Run store** — persists the completed run and lists it.
+7. **Audit replay** — reads back every recorded event from the run log.
+8. **Metrics snapshot** — prints final counter values.
+
+For a real LLM-driven run:
+```bash
+teaagent agent run gpt "Summarize the tests" --permission-mode read-only
+```
+
 ## Development
 
 ```bash

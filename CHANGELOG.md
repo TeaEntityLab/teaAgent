@@ -4,6 +4,7 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added a 5-minute walkthrough section to the README that walks through the end-to-end example step by step.
 - Added deeper MCP HTTP transport tests covering empty batches, mixed-type batches, initialize with no id, and DELETE lifecycle (reuse after delete, non-existent session).
 - Added community health files: `CODE_OF_CONDUCT.md`, `SUPPORT.md`, and GitHub issue templates for bugs and feature requests.
 - Added `.editorconfig` with consistent encoding, EOL, and indentation settings for Python, Markdown, YAML, TOML, JSON, and Makefiles.
