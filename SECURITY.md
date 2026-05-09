@@ -120,19 +120,20 @@ function calls). It has two backends:
 - **Container backend** (`ContainerCodeModeBackend`): delegates execution to a
   Docker/Podman-style runtime with `--network none`, `--read-only`,
   `--cap-drop=ALL`, `--security-opt=no-new-privileges`, non-root `--user`, tmpfs
-  `/tmp`, memory/swap limits, CPU ulimit, and PID limit.
+  `/tmp`, memory/swap limits, CPU ulimit, PID limit, optional image digest pinning,
+  and optional image allowlist enforcement.
 
 Code Mode is still **not** a complete production sandbox:
 
 - The default backend runs inside the same Python interpreter family; isolate it
   from untrusted workloads.
 - The container backend does not install a project-specific seccomp/AppArmor/SELinux
-  profile and does not enforce image digest pinning.
+  profile. Production callers should enable `require_image_digest` and
+  `allowed_images`.
 - Memory limits are advisory on macOS for the child-process backend.
 
 For high-risk production use, prefer a hardened external execution service, VM
-sandbox, V8 isolate, or container runtime with pinned images and mandatory security
-profiles.
+sandbox, V8 isolate, or container runtime with mandatory security profiles.
 
 ## File System Access
 

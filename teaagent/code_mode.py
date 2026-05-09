@@ -8,7 +8,7 @@ import threading
 import traceback
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Optional, Protocol
 
 try:
     import resource
@@ -127,10 +127,16 @@ class ContainerCodeModeBackend:
     cpus: float = 1.0
     user: str = '65534:65534'
     tmpfs_size_mb: int = 16
+    require_image_digest: bool = False
+    allowed_images: Optional[frozenset[str]] = None
 
     def __post_init__(self) -> None:
         if not self.image:
             raise UnsafeCodeError('Code Mode container image must be configured')
+        if self.require_image_digest and '@sha256:' not in self.image:
+            raise UnsafeCodeError('Code Mode container image must be pinned by digest')
+        if self.allowed_images is not None and self.image not in self.allowed_images:
+            raise UnsafeCodeError('Code Mode container image is not in the allowlist')
         if self.cpus <= 0:
             raise UnsafeCodeError('Code Mode container cpus must be positive')
         if self.tmpfs_size_mb <= 0:

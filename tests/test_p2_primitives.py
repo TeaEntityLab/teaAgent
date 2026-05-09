@@ -151,6 +151,34 @@ class P2PrimitiveTests(unittest.TestCase):
         with self.assertRaises(UnsafeCodeError):
             ContainerCodeModeBackend(image='')
 
+    def test_container_code_mode_backend_can_require_image_digest(self) -> None:
+        with self.assertRaisesRegex(UnsafeCodeError, 'pinned by digest'):
+            ContainerCodeModeBackend(
+                image='python:3.12-alpine', require_image_digest=True
+            )
+
+        backend = ContainerCodeModeBackend(
+            image='python@sha256:' + 'a' * 64,
+            require_image_digest=True,
+        )
+
+        self.assertEqual(backend.image, 'python@sha256:' + 'a' * 64)
+
+    def test_container_code_mode_backend_can_restrict_allowed_images(self) -> None:
+        with self.assertRaisesRegex(UnsafeCodeError, 'allowlist'):
+            ContainerCodeModeBackend(
+                image='python:3.12-alpine',
+                allowed_images=frozenset({'python@sha256:' + 'a' * 64}),
+            )
+
+        image = 'python@sha256:' + 'a' * 64
+        backend = ContainerCodeModeBackend(
+            image=image,
+            allowed_images=frozenset({image}),
+        )
+
+        self.assertEqual(backend.image, image)
+
     def test_container_code_mode_backend_enforces_streaming_output_limit(self) -> None:
         class _LocalBackend(ContainerCodeModeBackend):
             def _build_command(self, sandbox: CodeModeSandbox) -> list[str]:
