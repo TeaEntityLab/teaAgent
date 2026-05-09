@@ -4,6 +4,7 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Expanded audit string redaction with patterns for JWT tokens, AWS access keys (`AKIA...`), and GitHub personal access tokens (`ghp_...`, `github_pat_...`).
 - Split `teaagent/llm.py` into a `teaagent/llm/` package with focused modules: `_types.py`, `_transport.py`, `_retry.py`, `_extract.py`, `_adapters.py`, `_config.py`. Backward-compatible public imports preserved via `__init__.py` re-exports.
 - Refactored `OpenAICompatibleAdapter` streaming path to support an injectable `streaming_lines` parameter, removing the last urllib patch dependency in LLM tests.
 - Added a 5-minute walkthrough section to the README that walks through the end-to-end example step by step.

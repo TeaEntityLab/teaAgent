@@ -232,6 +232,42 @@ class AuditLoggerTests(unittest.TestCase):
             'https://api.example?token=[redacted]&debug=true',
         )
 
+    def test_record_redacts_jwt_tokens_in_arbitrary_strings(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record(
+            'model_response',
+            'run-1',
+            error='token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c is invalid',
+        )
+
+        self.assertNotIn('eyJhbGci', event.payload['error'])
+        self.assertIn('[redacted-JWT]', event.payload['error'])
+
+    def test_record_redacts_aws_access_keys_in_arbitrary_strings(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record(
+            'model_response',
+            'run-1',
+            config='AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE',
+        )
+
+        self.assertNotIn('AKIAIOS', event.payload['config'])
+        self.assertIn(AUDIT_REDACTED, event.payload['config'])
+
+    def test_record_redacts_github_pat_in_arbitrary_strings(self) -> None:
+        logger = AuditLogger()
+
+        event = logger.record(
+            'model_response',
+            'run-1',
+            env='GITHUB_TOKEN=github_pat_11ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+        )
+
+        self.assertNotIn('github_pat_', event.payload['env'])
+        self.assertIn(AUDIT_REDACTED, event.payload['env'])
+
     def test_record_truncates_large_strings(self) -> None:
         logger = AuditLogger()
 

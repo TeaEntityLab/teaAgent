@@ -34,6 +34,18 @@ SENSITIVE_STRING_PATTERNS = (
         re.compile(r'(?i)\b(api[_-]?key|token|secret|password)=([^\s&;]{4,})'),
         r'\1=[redacted]',
     ),
+    (
+        re.compile(r'\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b'),
+        '[redacted-JWT]',
+    ),
+    (
+        re.compile(r'\bAKIA[0-9A-Z]{16}\b'),
+        AUDIT_REDACTED,
+    ),
+    (
+        re.compile(r'\b(ghp_|github_pat_)[A-Za-z0-9_]{20,}\b'),
+        AUDIT_REDACTED,
+    ),
 )
 
 
