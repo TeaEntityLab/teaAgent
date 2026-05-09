@@ -233,5 +233,21 @@ def agent_run_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def agent_card_command(args: argparse.Namespace) -> int:
+    from teaagent import __version__
+    from teaagent.agentcard import build_self_card
+    from teaagent.workspace_tools import build_workspace_tool_registry
+
+    registry = build_workspace_tool_registry(args.root)
+    card = build_self_card(
+        name=getattr(args, 'agent_name', 'teaagent'),
+        version=__version__,
+        registry=registry,
+        endpoint=getattr(args, 'endpoint', None),
+    )
+    print_json(card.to_dict())
+    return 0
+
+
 def print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))

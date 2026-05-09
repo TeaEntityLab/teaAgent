@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from teaagent import __version__
 from teaagent.cli._handlers import (
+    agent_card_command,
     agent_preflight_command,
     agent_resume_command,
     agent_run_show,
@@ -137,6 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
             'status': agent_status_command,
             'runs': agent_runs_list,
             'show': agent_run_show,
+            'card': agent_card_command,
         },
     )
     register_model(

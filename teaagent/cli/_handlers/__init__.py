@@ -1,4 +1,5 @@
 from ._agent import (
+    agent_card_command,
     agent_preflight_command,
     agent_resume_command,
     agent_run_show,
@@ -30,6 +31,7 @@ from ._misc import (
 from ._model import model_conformance, model_providers, model_route, model_smoke
 
 __all__ = [
+    'agent_card_command',
     'agent_preflight_command',
     'agent_resume_command',
     'agent_run_show',

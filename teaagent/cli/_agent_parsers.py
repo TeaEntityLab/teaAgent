@@ -19,6 +19,7 @@ def register(
     _status(subs, handlers['status'])
     _runs(subs, handlers['runs'])
     _show(subs, handlers['show'])
+    _card(subs, handlers['card'])
 
 
 def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -241,5 +242,26 @@ def _show(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type:
     p.add_argument('run_id', help='Run id to show.')
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.set_defaults(func=handler)
+
+
+def _card(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+    p = subs.add_parser(
+        'card',
+        help='Print an AgentCard describing this agent and its registered tools.',
+    )
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument(
+        '--agent-name',
+        default='teaagent',
+        help='Agent name to embed in the card. Default: teaagent.',
+    )
+    p.add_argument(
+        '--endpoint',
+        default=None,
+        help='Public endpoint URL to embed in the card (optional).',
     )
     p.set_defaults(func=handler)
