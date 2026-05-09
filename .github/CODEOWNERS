@@ -1,0 +1,5 @@
+# TeaAgent CODEOWNERS
+# Default owners for everything in the repository.
+# GitHub syncs this file to branch protection rules.
+
+* @johnteee

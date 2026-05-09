@@ -4,6 +4,8 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added `.editorconfig` with consistent encoding, EOL, and indentation settings for Python, Markdown, YAML, TOML, JSON, and Makefiles.
+- Added `.github/CODEOWNERS` for automated PR review routing.
 - Added `docs/architecture.md` covering the system overview, component layers, data flow, state boundaries, and extension points for all major subsystems.
 - Added `examples/full_agent_run.py`, a self-contained end-to-end example that walks through workspace tools, audit, memory, budget, agent loop, run-store persistence, and metrics without requiring LLM API keys.
 - Added a package CI job that builds sdist/wheel artifacts, runs `twine check`, installs the wheel in a clean venv, and verifies `teaagent/py.typed` ships in the package.
