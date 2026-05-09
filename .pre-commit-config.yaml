@@ -1,14 +1,23 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.12
-    hooks:
-      - id: ruff-format
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
   - repo: local
     hooks:
+      - id: ruff-format
+        name: ruff-format
+        entry: .venv/bin/ruff format
+        language: system
+        pass_filenames: false
+      - id: ruff
+        name: ruff
+        entry: .venv/bin/ruff check --fix --exit-non-zero-on-fix .
+        language: system
+        pass_filenames: false
       - id: mypy
         name: mypy
-        entry: python3 -m mypy teaagent/
+        entry: .venv/bin/mypy teaagent/
+        language: system
+        pass_filenames: false
+      - id: pytest
+        name: pytest
+        entry: .venv/bin/pytest -q
         language: system
         pass_filenames: false
