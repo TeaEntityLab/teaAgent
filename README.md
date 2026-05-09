@@ -23,6 +23,8 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Code Mode**: Restricted Python execution with AST validation and pluggable child-process or container backends.
 - **Telemetry**: OpenTelemetry spans plus audit-driven metrics sinks for run and tool lifecycle events.
 
+See [docs/architecture.md](docs/architecture.md) for component details, data flow, and extension points.
+
 ## Install
 
 ```bash
