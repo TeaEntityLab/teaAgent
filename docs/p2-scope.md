@@ -13,7 +13,7 @@
 ## Still Deferred
 
 - Production GraphQLite deployment, migrations, and Cypher query tuning.
-- Strong production sandboxing for Code Mode beyond the current container command boundary: image digest pinning, seccomp/AppArmor/SELinux profiles, V8 isolates, VM sandboxes, streaming output hard caps, or a managed execution service.
+- Strong production sandboxing for Code Mode beyond the current container command boundary: image digest pinning, seccomp/AppArmor/SELinux profiles, V8 isolates, VM sandboxes, or a managed execution service.
 - Production hardening for OAuth 2.1 / DPoP deployments, including key rotation and external client storage.
 - Actual managed runtime integration with Anthropic, OpenAI, Google ADK, or Vertex Agent Engine.
 - Extended cross-provider conformance tiers for streaming, structured output, tool calling, latency budgets, and provider-specific safety/block taxonomy.

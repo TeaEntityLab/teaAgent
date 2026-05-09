@@ -127,8 +127,7 @@ Code Mode is still **not** a complete production sandbox:
 - The default backend runs inside the same Python interpreter family; isolate it
   from untrusted workloads.
 - The container backend does not install a project-specific seccomp/AppArmor/SELinux
-  profile, does not enforce image digest pinning, and checks stdout size after the
-  child exits rather than streaming with a hard read cap.
+  profile and does not enforce image digest pinning.
 - Memory limits are advisory on macOS for the child-process backend.
 
 For high-risk production use, prefer a hardened external execution service, VM

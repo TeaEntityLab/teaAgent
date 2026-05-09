@@ -4,6 +4,7 @@ import ast
 import json
 import multiprocessing
 import subprocess
+import threading
 import traceback
 from contextlib import suppress
 from dataclasses import dataclass
@@ -148,21 +149,15 @@ class ContainerCodeModeBackend:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
             )
         except OSError as exc:
             raise UnsafeCodeError(f'Code Mode container runtime failed: {exc}') from exc
-        try:
-            stdout, stderr = process.communicate(
-                payload, timeout=sandbox.timeout_seconds
-            )
-        except subprocess.TimeoutExpired as exc:
-            process.kill()
-            with suppress(Exception):
-                process.communicate()
-            raise UnsafeCodeError('Code Mode timed out') from exc
-        if len(stdout) > sandbox.max_output_bytes:
-            raise UnsafeCodeError('Code Mode container exceeded output limit')
+        stdout, stderr = _communicate_with_output_limit(
+            process,
+            payload.encode('utf-8'),
+            timeout_seconds=sandbox.timeout_seconds,
+            max_output_bytes=sandbox.max_output_bytes,
+        )
         if process.returncode != 0:
             detail = (stderr or stdout).strip()
             raise UnsafeCodeError(f'Code Mode container failed: {detail}')
@@ -209,6 +204,73 @@ class ContainerCodeModeBackend:
 
 class UnsafeCodeError(ValueError):
     pass
+
+
+def _communicate_with_output_limit(
+    process: subprocess.Popen[bytes],
+    stdin_payload: bytes,
+    *,
+    timeout_seconds: float,
+    max_output_bytes: int,
+) -> tuple[str, str]:
+    stdout_chunks: list[bytes] = []
+    stderr_chunks: list[bytes] = []
+    total_output_bytes = 0
+    output_lock = threading.Lock()
+    output_exceeded = threading.Event()
+
+    def read_stream(stream: Any, chunks: list[bytes]) -> None:
+        nonlocal total_output_bytes
+        while True:
+            chunk = stream.read(8192)
+            if not chunk:
+                return
+            with output_lock:
+                total_output_bytes += len(chunk)
+                if total_output_bytes > max_output_bytes:
+                    output_exceeded.set()
+                    with suppress(Exception):
+                        process.kill()
+                    return
+            chunks.append(chunk)
+
+    assert process.stdout is not None
+    assert process.stderr is not None
+    stdout_thread = threading.Thread(
+        target=read_stream, args=(process.stdout, stdout_chunks), daemon=True
+    )
+    stderr_thread = threading.Thread(
+        target=read_stream, args=(process.stderr, stderr_chunks), daemon=True
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+    try:
+        if process.stdin is not None:
+            try:
+                process.stdin.write(stdin_payload)
+                process.stdin.close()
+            except OSError:
+                pass
+        process.wait(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as exc:
+        process.kill()
+        raise UnsafeCodeError('Code Mode timed out') from exc
+    finally:
+        stdout_thread.join(timeout=1)
+        stderr_thread.join(timeout=1)
+        with suppress(Exception):
+            if process.stdout is not None:
+                process.stdout.close()
+        with suppress(Exception):
+            if process.stderr is not None:
+                process.stderr.close()
+    if output_exceeded.is_set():
+        with suppress(Exception):
+            process.wait(timeout=1)
+        raise UnsafeCodeError('Code Mode container exceeded output limit')
+    stdout = b''.join(stdout_chunks).decode('utf-8', errors='replace')
+    stderr = b''.join(stderr_chunks).decode('utf-8', errors='replace')
+    return stdout, stderr
 
 
 def execute_code_mode(

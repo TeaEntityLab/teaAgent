@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import unittest
 
 from teaagent import (
@@ -149,6 +150,24 @@ class P2PrimitiveTests(unittest.TestCase):
     def test_container_code_mode_backend_rejects_empty_image(self) -> None:
         with self.assertRaises(UnsafeCodeError):
             ContainerCodeModeBackend(image='')
+
+    def test_container_code_mode_backend_enforces_streaming_output_limit(self) -> None:
+        class _LocalBackend(ContainerCodeModeBackend):
+            def _build_command(self, sandbox: CodeModeSandbox) -> list[str]:
+                return [
+                    sys.executable,
+                    '-c',
+                    "import sys; sys.stdin.read(); sys.stdout.write('x' * 1024); sys.stdout.flush()",
+                ]
+
+        backend = _LocalBackend(image='local-test')
+
+        with self.assertRaisesRegex(UnsafeCodeError, 'exceeded output limit'):
+            backend.execute(
+                'value = 1',
+                {},
+                CodeModeSandbox(timeout_seconds=2, max_output_bytes=16),
+            )
 
     def test_stateless_mcp_request_executes_via_registry(self) -> None:
         request = StatelessMCPRequest.create(
