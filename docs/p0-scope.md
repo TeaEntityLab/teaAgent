@@ -11,11 +11,16 @@
 
 ## Deferred
 
-- Real MCP transport and OAuth 2.1 / DPoP.
 - External state store such as Postgres or Redis.
-- OpenTelemetry trace export.
-- Agentic RAG, A2A, and multi-agent orchestration.
+- A2A runtime and cross-agent registry/runtime orchestration.
 - LLM-as-Judge and offline eval automation.
+
+## Implemented Since P0 Baseline
+
+- MCP transport is available (stdio plus Streamable HTTP).
+- OAuth 2.1 / DPoP primitives are implemented for authorization/resource server flows.
+- OpenTelemetry integration is available through telemetry sinks.
+- Agentic RAG primitives are implemented (lexical + fusion path), with advanced retrieval still iterative.
 
 ## Pilot Assumption
 

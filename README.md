@@ -32,6 +32,15 @@ See [docs/architecture.md](docs/architecture.md) for component details, data flo
 pip install -e .
 ```
 
+On macOS/Homebrew Python (PEP 668), prefer a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+pip install -e ".[dev]"
+```
+
 Or without the console script:
 
 ```bash

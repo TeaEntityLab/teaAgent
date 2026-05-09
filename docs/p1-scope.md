@@ -11,11 +11,14 @@
 
 ## Still Deferred
 
-- Real OpenTelemetry exporter.
 - Real vector database, SQL MCP, or web search MCP integrations.
 - LLM-as-Judge scoring.
 - A2A runtime and AgentCard registry.
-- OAuth 2.1 / DPoP enforcement.
+
+## Implemented Since P1 Baseline
+
+- OpenTelemetry exporter path is implemented via telemetry sinks/configuration.
+- OAuth 2.1 / DPoP primitives and enforcement hooks are implemented for MCP HTTP deployment guardrails.
 
 ## Extension Points
 
