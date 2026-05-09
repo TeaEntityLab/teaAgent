@@ -4,7 +4,8 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
-- Made `teaagent.cli.main()` accept injectable `_adapter_factory`, `_serve_mcp_http`, `_check_graphqlite`, and `_check_llm` keyword arguments, enabling handler extraction without breaking existing tests.
+- Split `teaagent/cli/__init__.py` (673 → 185 lines) by extracting handlers into `_handlers.py` and adding injectable dependency support to `main()`. All existing test patches continue to work through fallback defaults.
+- Made `teaagent.cli.main()` accept injectable `_adapter_factory`, `_serve_mcp_http`, `_check_graphqlite`, `_check_llm`, and `_run_model_conformance` keyword arguments, enabling handler extraction without breaking existing tests.
 - Split `teaagent/workspace_tools.py` into a `teaagent/workspace_tools/` package with four focused modules: `_config.py`, `_helpers.py`, `_shell.py`, `_files.py`. Backward-compatible public imports preserved via `__init__.py` re-exports.
 - Expanded audit string redaction with patterns for JWT tokens, AWS access keys (`AKIA...`), and GitHub personal access tokens (`ghp_...`, `github_pat_...`).
 - Split `teaagent/llm.py` into a `teaagent/llm/` package with focused modules: `_types.py`, `_transport.py`, `_retry.py`, `_extract.py`, `_adapters.py`, `_config.py`. Backward-compatible public imports preserved via `__init__.py` re-exports.
