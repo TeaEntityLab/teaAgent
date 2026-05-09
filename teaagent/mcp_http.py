@@ -27,6 +27,7 @@ from teaagent.tools import ToolRegistry
 MCP_PATH = '/mcp'
 SESSION_HEADER = 'Mcp-Session-Id'
 DEFAULT_PORT = 7330
+MAX_HTTP_BODY_BYTES = 1_000_000
 
 _OAUTH_PATHS = frozenset({_AUTHORIZE_PATH, _TOKEN_PATH, _OAUTH_METADATA_PATH})
 
@@ -250,10 +251,25 @@ def _make_handler(
                 return oauth_server.generate_dpop_nonce()
             return None
 
-        def _read_body(self) -> tuple[Optional[Any], Optional[str]]:
-            length = int(self.headers.get('Content-Length', '0') or '0')
+        def _content_length(self) -> tuple[Optional[int], Optional[str]]:
+            raw_length = self.headers.get('Content-Length', '0') or '0'
+            try:
+                length = int(raw_length)
+            except ValueError:
+                return None, 'invalid Content-Length'
             if length <= 0:
-                return None, 'missing JSON-RPC body'
+                return None, 'missing body'
+            if length > MAX_HTTP_BODY_BYTES:
+                return None, 'body too large'
+            return length, None
+
+        def _read_body(self) -> tuple[Optional[Any], Optional[str]]:
+            length, error = self._content_length()
+            if error is not None:
+                if error == 'missing body':
+                    return None, 'missing JSON-RPC body'
+                return None, error
+            assert length is not None
             raw = self.rfile.read(length)
             try:
                 return json.loads(raw.decode('utf-8')), None
@@ -330,13 +346,15 @@ def _make_handler(
                 return
 
             # Read form body (application/x-www-form-urlencoded)
-            length = int(self.headers.get('Content-Length', '0') or '0')
-            if length <= 0:
+            length, length_error = self._content_length()
+            if length_error is not None:
+                status = 413 if length_error == 'body too large' else 400
                 self._send_json(
-                    400,
-                    {'error': 'invalid_request', 'error_description': 'missing body'},
+                    status,
+                    {'error': 'invalid_request', 'error_description': length_error},
                 )
                 return
+            assert length is not None
             raw = self.rfile.read(length)
             try:
                 body = raw.decode('utf-8')
@@ -449,7 +467,8 @@ def _make_handler(
                 return
             payload, error = self._read_body()
             if error is not None:
-                self._send_status(400, error)
+                status = 413 if error == 'body too large' else 400
+                self._send_status(status, error)
                 return
             if not isinstance(payload, (dict, list)):
                 self._send_status(400, 'JSON-RPC payload must be object or array')

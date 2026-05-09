@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import socket
 import tempfile
 import threading
 import unittest
@@ -9,7 +10,12 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator, Optional
 
-from teaagent.mcp_http import MCP_PATH, SESSION_HEADER, build_mcp_http_server
+from teaagent.mcp_http import (
+    MAX_HTTP_BODY_BYTES,
+    MCP_PATH,
+    SESSION_HEADER,
+    build_mcp_http_server,
+)
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 
@@ -50,6 +56,18 @@ class _ServerFixture:
             return response.status, dict(response.getheaders()), data
         finally:
             conn.close()
+
+    def raw_request(self, request: bytes) -> bytes:
+        with socket.create_connection((self.host, self.port), timeout=5) as sock:
+            sock.sendall(request)
+            sock.shutdown(socket.SHUT_WR)
+            chunks: list[bytes] = []
+            while True:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            return b''.join(chunks)
 
     def close(self) -> None:
         self.server.shutdown()
@@ -174,6 +192,39 @@ class MCPHTTPTransportTests(unittest.TestCase):
                 },
             )
             self.assertEqual(status, 400)
+
+    def test_non_numeric_content_length_returns_400(self) -> None:
+        with server_fixture() as fixture:
+            response = fixture.raw_request(
+                b'POST /mcp HTTP/1.1\r\n'
+                + f'Host: {fixture.host}:{fixture.port}\r\n'.encode('ascii')
+                + b'Content-Type: application/json\r\n'
+                + b'Content-Length: not-a-number\r\n'
+                + b'\r\n{}'
+            )
+
+            self.assertIn(b'400', response.splitlines()[0])
+
+    def test_oversized_json_body_returns_413_without_reading_body(self) -> None:
+        with server_fixture() as fixture:
+            response = fixture.raw_request(
+                b'POST /mcp HTTP/1.1\r\n'
+                + f'Host: {fixture.host}:{fixture.port}\r\n'.encode('ascii')
+                + b'Content-Type: application/json\r\n'
+                + f'Content-Length: {MAX_HTTP_BODY_BYTES + 1}\r\n'.encode('ascii')
+                + b'\r\n'
+            )
+
+            self.assertIn(b'413', response.splitlines()[0])
+            self.assertIn(b'body too large', response)
+
+    def test_scalar_json_payload_returns_400(self) -> None:
+        with server_fixture() as fixture:
+            for payload in (None, True, 1, 'method'):
+                with self.subTest(payload=payload):
+                    status, _, data = _post(fixture, payload)
+                    self.assertEqual(status, 400)
+                    self.assertIn(b'JSON-RPC payload must be object or array', data)
 
     def test_unknown_method_returns_jsonrpc_error_inside_200(self) -> None:
         with server_fixture() as fixture:
