@@ -8,6 +8,7 @@ All notable changes to TeaAgent are tracked here.
 - Unified package version lookup to `importlib.metadata.version("teaagent")` with a local fallback, removing hard-coded duplication risk between code and packaging metadata.
 - Narrowed `teaagent.__all__` to a stable core API surface and added a migration guide at `docs/migration-top-level-api.md` for projects that relied on star-import convenience.
 - Clarified local developer setup for PEP 668 environments by adding virtualenv-first install steps to `README.md` and `CONTRIBUTING.md`.
+- Updated contributor check commands to use `.venv/bin/...` explicitly for reproducible local lint/type/test runs.
 - Consolidated agent-instruction precedence by making `AGENT.md` a compatibility pointer and declaring `AGENTS.md` as the canonical rule source.
 - Pinned dev `mypy` to `<2` to keep Python 3.9 type-check configuration compatible and avoid local warning churn.
 - Split `teaagent/tui.py` (517 → ~290 lines) by extracting `handle_command` logic to `_commands.py`.

@@ -19,9 +19,9 @@ pre-commit install
 Run the same checks as CI before opening a pull request:
 
 ```bash
-python3 -m ruff check .
-python3 -m mypy teaagent/
-python3 -m pytest -q
+.venv/bin/ruff check .
+.venv/bin/mypy teaagent/
+.venv/bin/pytest -q
 ```
 
 ## Pull Requests
