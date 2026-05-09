@@ -1,5 +1,14 @@
 # TeaAgent Examples
 
+## Full Agent Lifecycle
+
+Demonstrates the complete lifecycle — workspace tools, audit, memory, budget,
+agent loop, run-store persistence, metrics — without requiring LLM API keys:
+
+```bash
+python3 examples/full_agent_run.py
+```
+
 ## Inspect-Only Agent Run
 
 ```bash
