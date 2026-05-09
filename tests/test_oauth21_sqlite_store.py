@@ -162,6 +162,26 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
             self.assertIsNotNone(reopened.get_nonce('fresh'))
             self.assertIsNone(reopened.get_nonce('old'))
 
+    def test_nonce_consume_is_one_time(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SQLiteOAuthStore(Path(tmp) / 'oauth.sqlite3')
+            store.save_nonce('nonce-1', time.time())
+
+            self.assertIsNotNone(store.consume_nonce('nonce-1'))
+            self.assertIsNone(store.consume_nonce('nonce-1'))
+
+    def test_authorization_server_consumes_dpop_nonce_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            server = OAuth21AuthorizationServer(
+                signing_key=SIGNING_KEY,
+                issuer=ISSUER,
+                store=SQLiteOAuthStore(Path(tmp) / 'oauth.sqlite3'),
+            )
+            nonce = server.generate_dpop_nonce()
+
+            self.assertTrue(server.validate_dpop_nonce(nonce))
+            self.assertFalse(server.validate_dpop_nonce(nonce))
+
     def test_prune_removes_expired_codes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = SQLiteOAuthStore(Path(tmp) / 'oauth.sqlite3')

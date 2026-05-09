@@ -35,7 +35,8 @@ in a local SQLite database. It uses one transaction per operation, `BEGIN IMMEDI
 for authorization-code consume/delete, WAL journal mode, SQLite's busy timeout
 for local concurrent access, and a schema-version metadata row for future migrations.
 Client secrets are stored as PBKDF2-SHA256 hashes with per-client random salts rather
-than plaintext.
+than plaintext. DPoP nonces are consumed through a store-level read/delete operation
+so nonce validation has one-time replay semantics.
 
 ## Consequences
 

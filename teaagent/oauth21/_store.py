@@ -32,6 +32,8 @@ class OAuthStore(Protocol):
 
     def get_nonce(self, nonce: str) -> Optional[float]: ...
 
+    def consume_nonce(self, nonce: str) -> Optional[float]: ...
+
     def delete_nonce(self, nonce: str) -> None: ...
 
     def prune(
@@ -62,6 +64,9 @@ class InMemoryOAuthStore:
 
     def get_nonce(self, nonce: str) -> Optional[float]:
         return self.nonces.get(nonce)
+
+    def consume_nonce(self, nonce: str) -> Optional[float]:
+        return self.nonces.pop(nonce, None)
 
     def delete_nonce(self, nonce: str) -> None:
         self.nonces.pop(nonce, None)
@@ -205,6 +210,18 @@ class SQLiteOAuthStore:
             ).fetchone()
         if row is None:
             return None
+        return float(row[0])
+
+    def consume_nonce(self, nonce: str) -> Optional[float]:
+        with self._lock, self._connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            row = conn.execute(
+                'SELECT created_at FROM oauth_nonces WHERE nonce = ?',
+                (nonce,),
+            ).fetchone()
+            if row is None:
+                return None
+            conn.execute('DELETE FROM oauth_nonces WHERE nonce = ?', (nonce,))
         return float(row[0])
 
     def delete_nonce(self, nonce: str) -> None:

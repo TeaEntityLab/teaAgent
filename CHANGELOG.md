@@ -4,6 +4,7 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Made OAuth DPoP nonce validation one-time by adding `OAuthStore.consume_nonce()` and using atomic consume/delete semantics in `SQLiteOAuthStore`.
 - Added optional container image digest pinning and image allowlist enforcement to `ContainerCodeModeBackend`.
 - Changed `ContainerCodeModeBackend` to enforce `CodeModeSandbox.max_output_bytes` while streaming stdout/stderr and kill the child process immediately when the combined output limit is exceeded.
 - Updated README, SECURITY, and P2 scope docs so Code Mode backend limitations and optional dependency groups match the current implementation.

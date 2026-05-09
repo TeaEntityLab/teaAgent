@@ -272,6 +272,7 @@ class AuthorizationServerTests(unittest.TestCase):
     def test_dpop_nonce_management(self) -> None:
         nonce = self.as_.generate_dpop_nonce()
         self.assertTrue(self.as_.validate_dpop_nonce(nonce))
+        self.assertFalse(self.as_.validate_dpop_nonce(nonce))
 
     def test_dpop_nonce_invalid(self) -> None:
         self.assertFalse(self.as_.validate_dpop_nonce('nonexistent-nonce'))

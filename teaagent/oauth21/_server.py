@@ -202,13 +202,10 @@ class OAuth21AuthorizationServer:
         return nonce
 
     def validate_dpop_nonce(self, nonce: str) -> bool:
-        created = self._store.get_nonce(nonce)
+        created = self._store.consume_nonce(nonce)
         if created is None:
             return False
-        if time.time() - created > self._nonce_ttl:
-            self._store.delete_nonce(nonce)
-            return False
-        return True
+        return time.time() - created <= self._nonce_ttl
 
     def metadata(self) -> dict[str, Any]:
         return {
