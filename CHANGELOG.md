@@ -4,6 +4,12 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Aligned scope docs with current implementation status by updating P0/P1 deferred lists and adding implemented-since-baseline notes for MCP transport, OAuth/DPoP, and telemetry paths.
+- Unified package version lookup to `importlib.metadata.version("teaagent")` with a local fallback, removing hard-coded duplication risk between code and packaging metadata.
+- Narrowed `teaagent.__all__` to a stable core API surface and added a migration guide at `docs/migration-top-level-api.md` for projects that relied on star-import convenience.
+- Clarified local developer setup for PEP 668 environments by adding virtualenv-first install steps to `README.md` and `CONTRIBUTING.md`.
+- Consolidated agent-instruction precedence by making `AGENT.md` a compatibility pointer and declaring `AGENTS.md` as the canonical rule source.
+- Pinned dev `mypy` to `<2` to keep Python 3.9 type-check configuration compatible and avoid local warning churn.
 - Split `teaagent/tui.py` (517 → ~290 lines) by extracting `handle_command` logic to `_commands.py`.
 - Split `teaagent/mcp_http.py` (575 → ~400 lines) by extracting OAuth endpoint handlers to `_oauth.py`.
 - Split `teaagent/telemetry.py` into a `teaagent/telemetry/` package with focused modules: `_availability.py`, `_config.py`, `_audit.py`, `_metrics.py`, and `_transport.py`.

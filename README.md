@@ -188,5 +188,6 @@ Additional references:
 - [Audit event reference](docs/audit-events.md)
 - [Tool authoring guide](docs/tool-authoring.md)
 - [Provider authoring guide](docs/provider-authoring.md)
+- [Top-level API migration note](docs/migration-top-level-api.md)
 - [Security model](SECURITY.md)
 - [Examples](examples/README.md)

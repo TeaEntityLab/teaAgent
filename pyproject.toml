@@ -59,7 +59,7 @@ dev = [
     "pytest>=7",
     "pytest-cov>=4",
     "ruff>=0.4",
-    "mypy>=1",
+    "mypy>=1,<2",
 ]
 
 [project.scripts]
