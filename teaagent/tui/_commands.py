@@ -47,6 +47,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.provider = args[0]
         tui.output_fn(f'provider: {tui.provider}')
+        tui._save_tui_state()
         return True
     if action == 'model':
         if len(args) != 1:
@@ -54,6 +55,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.model = None if args[0] == 'default' else args[0]
         tui.output_fn(f'model: {tui.model or "default"}')
+        tui._save_tui_state()
         return True
     if action == 'route-model':
         if len(args) != 1 or args[0] not in {'on', 'off'}:
@@ -61,6 +63,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.route_model_enabled = args[0] == 'on'
         tui.output_fn(f'route-model: {"on" if tui.route_model_enabled else "off"}')
+        tui._save_tui_state()
         return True
     if action == 'route':
         if not args:
@@ -78,6 +81,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.root = Path(args[0]).resolve()
         tui.output_fn(f'root: {tui.root}')
+        tui._save_tui_state()
         return True
     if action == 'destructive':
         if len(args) != 1 or args[0] not in {'on', 'off'}:
@@ -85,6 +89,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.allow_destructive = args[0] == 'on'
         tui.output_fn(f'destructive: {"on" if tui.allow_destructive else "off"}')
+        tui._save_tui_state()
         return True
     if action == 'progress':
         if len(args) != 1 or args[0] not in {'on', 'off'}:
@@ -92,6 +97,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.progress = args[0] == 'on'
         tui.output_fn(f'progress: {"on" if tui.progress else "off"}')
+        tui._save_tui_state()
         return True
     if action == 'stream':
         if len(args) != 1 or args[0] not in {'on', 'off'}:
@@ -99,6 +105,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.stream = args[0] == 'on'
         tui.output_fn(f'stream: {"on" if tui.stream else "off"}')
+        tui._save_tui_state()
         return True
     if action == 'subagent':
         if len(args) != 1 or args[0] not in {'on', 'off'}:
@@ -106,6 +113,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.subagent = args[0] == 'on'
         tui.output_fn(f'subagent: {"on" if tui.subagent else "off"}')
+        tui._save_tui_state()
         return True
     if action == 'heartbeat':
         if len(args) != 1:
@@ -118,6 +126,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui.heartbeat_seconds = max(0.0, seconds)
         tui.output_fn(f'heartbeat: {tui.heartbeat_seconds}')
+        tui._save_tui_state()
         return True
     if action == 'status':
         if len(args) != 1:
@@ -138,6 +147,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn(f'error: {exc}')
             return True
         tui.output_fn(f'permission: {tui.permission_mode.value}')
+        tui._save_tui_state()
         return True
     if action == 'approve':
         if len(args) != 1:

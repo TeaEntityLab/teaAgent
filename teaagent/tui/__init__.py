@@ -96,16 +96,23 @@ class TeaAgentTUI:
         self._store: Optional[GraphQLiteGraphStore] = None
 
     def run(self) -> int:
+        self._load_tui_state()
         self._print_header()
         while True:
             try:
                 raw_command = self.input_fn(self._prompt())
             except EOFError:
                 self.output_fn('bye')
+                self._save_tui_state()
+                return 0
+            except KeyboardInterrupt:
+                self.output_fn('\nbye')
+                self._save_tui_state()
                 return 0
 
             should_continue = self.handle_command(raw_command)
             if not should_continue:
+                self._save_tui_state()
                 return 0
 
     @property
@@ -264,6 +271,52 @@ class TeaAgentTUI:
 
     def _stream_chunk(self, chunk: str) -> None:
         self.output_fn(chunk, end='')
+
+    @property
+    def _state_path(self) -> Path:
+        return Path.home() / '.teaagent' / 'tui_state.json'
+
+    def _load_tui_state(self) -> None:
+        if not self._state_path.is_file():
+            return
+        try:
+            data = json.loads(self._state_path.read_text(encoding='utf-8'))
+        except (json.JSONDecodeError, OSError):
+            return
+        if not isinstance(data, dict):
+            return
+        self.provider = data.get('provider', self.provider)
+        self.model = data.get('model', self.model)
+        self.root = Path(data.get('root', str(self.root))).resolve()
+        self.permission_mode = PermissionMode(
+            data.get('permission_mode', self.permission_mode.value)
+        )
+        self.allow_destructive = data.get('allow_destructive', self.allow_destructive)
+        self.progress = data.get('progress', self.progress)
+        self.stream = data.get('stream', self.stream)
+        self.subagent = data.get('subagent', self.subagent)
+        self.route_model_enabled = data.get(
+            'route_model_enabled', self.route_model_enabled
+        )
+        self.heartbeat_seconds = data.get('heartbeat_seconds', self.heartbeat_seconds)
+
+    def _save_tui_state(self) -> None:
+        self._state_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            'provider': self.provider,
+            'model': self.model,
+            'root': str(self.root),
+            'permission_mode': self.permission_mode.value,
+            'allow_destructive': self.allow_destructive,
+            'progress': self.progress,
+            'stream': self.stream,
+            'subagent': self.subagent,
+            'route_model_enabled': self.route_model_enabled,
+            'heartbeat_seconds': self.heartbeat_seconds,
+        }
+        self._state_path.write_text(
+            json.dumps(data, indent=2, sort_keys=True), encoding='utf-8'
+        )
 
     def _get_store(self) -> GraphQLiteGraphStore:
         if self._store is None:
