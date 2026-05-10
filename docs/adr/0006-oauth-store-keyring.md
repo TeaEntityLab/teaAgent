@@ -46,11 +46,16 @@ window to reject repeated proofs.
 - Single-host deployments can use `SQLiteOAuthStore` without changing MCP HTTP
   handlers or authorization-server call sites.
 - Production deployments that need cross-host or horizontally scaled OAuth state
-  should still implement a PostgreSQL/Redis-backed `OAuthStore`.
+  can use `PostgreSQLOAuthStore` or `RedisOAuthStore`, implemented post-ADR in P0-r3.
 - Key rotation verification uses `OAuthKeyRing` and JWT `kid` lookup, but key-ring
   distribution and rotation-window management remain deployment responsibilities.
 
 ## Deferred
 
-- PostgreSQL/Redis implementation of `OAuthStore` for cross-host deployments.
-- CLI support for key-ring files and rotation windows.
+- Key-ring distribution remains a deployment concern — `OAuthKeyRing` can generate and look up keys by `kid`, but distributing key material securely across hosts is outside the library's scope.
+
+## Post-Implementation (2026-05-10)
+
+Both items originally listed in this section have been implemented:
+- **PostgreSQL/Redis OAuthStore**: `PostgreSQLOAuthStore` with `DELETE…RETURNING` atomic consume and `RedisOAuthStore` with Lua-script atomic consume, NX nonce/code saves, and configurable key prefix (`teaagent/oauth21/_pg_store.py`, `teaagent/oauth21/_redis_store.py`).
+- **CLI key-ring support**: `--oauth-key-ring-file`, `--oauth-active-kid` with fail-closed validation, and `--oauth-rotation-window` (`cli/_mcp_parsers.py`, `cli/_handlers/_mcp.py`).

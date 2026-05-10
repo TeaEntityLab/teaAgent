@@ -4,6 +4,11 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added GraphQLite production deployment: `GraphQLitePersistentStore` with WAL mode, 5-version schema migration framework via `SQLiteMigrationStore`/`MigrationRunner`, index strategy (Entity name, Document source/doc_id, EDGE relation), `graph_retrieve` via Cypher traversal, round-trip `sync_to_knowledge_graph`, `graphqlite migrate` CLI, and production deployment guide at `docs/graphqlite-production.md`.
+- Added VS Code extension (`vscode/`) wrapping the CLI with command palette entries (doctor, agent run, preflight, model providers, GraphQLite smoke, TUI), custom task definitions, problem matcher, terminal profile, and TeaAgent output channel.
+- Added API documentation infrastructure: `pdoc>=14` dev dependency, `scripts/build_docs.py` build script covering all submodules, and class-level docstrings on core types (`AgentRunner`, `ToolRegistry`, `ToolAnnotations`, `ToolDefinition`, `RunBudget`, `MemoryEntry`).
+- Removed stale P0/P1/P2/P3 scope files (`docs/p0-scope.md`, `docs/p1-scope.md`, `docs/p2-scope.md`, `docs/p3-scope.md`) — all deferred items were already implemented and tracked in `docs/backlog-priority.md`.
+- Updated ADRs 0001, 0004, and 0006 with post-implementation notes for multi-agent orchestration, key rotation, cross-host OAuthStore backends, and key-ring CLI support.
 - Aligned scope docs with current implementation status by updating P0/P1 deferred lists and adding implemented-since-baseline notes for MCP transport, OAuth/DPoP, and telemetry paths.
 - Unified package version lookup to `importlib.metadata.version("teaagent")` with a local fallback, removing hard-coded duplication risk between code and packaging metadata.
 - Narrowed `teaagent.__all__` to a stable core API surface and added a migration guide at `docs/migration-top-level-api.md` for projects that relied on star-import convenience.

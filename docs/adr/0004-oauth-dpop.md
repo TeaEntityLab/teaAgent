@@ -35,6 +35,14 @@ verification (ES256/RS256).
   a future production-hardening ADR.
 - The `cryptography` import is conditional (`HAS_CRYPTOGRAPHY` flag);
 
+## Post-Implementation (2026-05-10)
+
+Key rotation and external client storage have been implemented:
+- `OAuthKeyRing.rotate` with configurable rotation overlap window, `key_for_validation` JWT `kid`-based lookup, and `--oauth-rotation-window` CLI (`teaagent/oauth21/_store.py`).
+- Cross-host persistence via `PostgreSQLOAuthStore` and `RedisOAuthStore` with atomic consume semantics (`teaagent/oauth21/_pg_store.py`, `teaagent/oauth21/_redis_store.py`).
+
+Refresh tokens remain deferred — the current OAuth flow uses access tokens with configurable duration only.
+
 ## Alternatives Considered
 
 - **Authlib**: Adds 10+ dependencies; overkill for a single JWT sign/verify
