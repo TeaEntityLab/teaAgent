@@ -21,6 +21,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
             key_ring, error = _load_key_ring(
                 Path(args.oauth_key_ring_file),
                 active_kid_override=args.oauth_active_kid,
+                rotation_window_seconds=args.oauth_rotation_window,
             )
             if error:
                 print(error, file=sys.stderr)
@@ -37,6 +38,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
                 issuer=args.oauth_issuer,
                 token_ttl=args.oauth_token_ttl,
                 dpop_replay_ttl=args.oauth_dpop_replay_ttl,
+                key_ring=key_ring,
             )
             for spec in args.oauth_client or []:
                 parts = spec.split(':', 2)
@@ -75,7 +77,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
 
 
 def _load_key_ring(
-    path: Path, *, active_kid_override: str | None
+    path: Path, *, active_kid_override: str | None, rotation_window_seconds: int = 0
 ) -> tuple[OAuthKeyRing | None, str | None]:
     if not path.exists():
         return None, f'OAuth key ring file not found: {path}'
@@ -109,4 +111,8 @@ def _load_key_ring(
     if active_kid not in keys:
         return None, f'OAuth active kid {active_kid!r} not found in key ring keys.'
 
-    return OAuthKeyRing(active_kid=active_kid, keys=keys), None
+    return OAuthKeyRing(
+        active_kid=active_kid,
+        keys=keys,
+        rotation_window_seconds=rotation_window_seconds,
+    ), None

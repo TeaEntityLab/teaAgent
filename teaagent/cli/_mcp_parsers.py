@@ -87,4 +87,11 @@ def register(
         default=60,
         help='DPoP proof replay-cache TTL in seconds. Default 60.',
     )
+    serve.add_argument(
+        '--oauth-rotation-window',
+        type=int,
+        default=0,
+        help='Key rotation overlap window in seconds. Tokens signed by a previously '
+        'active kid are accepted for this duration after rotation. Default 0 (no window).',
+    )
     serve.set_defaults(func=handlers['serve'])

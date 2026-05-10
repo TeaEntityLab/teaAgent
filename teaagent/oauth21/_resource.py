@@ -52,7 +52,9 @@ class OAuth21ResourceServer:
             raise OAuth21Error(f"Unsupported auth scheme: '{scheme}'")
         header, _ = decode_jwt_unsafe(token)
         kid = header.get('kid')
-        key = self._key_ring.key_for(kid if isinstance(kid, str) else None)
+        key = self._key_ring.key_for_validation(
+            kid if isinstance(kid, str) else None, now=time.time()
+        )
         claims = verify_jwt(token, key, iss=self._issuer)
         if scheme == _TOKEN_TYPE_DPOP or claims.get('cnf', {}).get('jkt'):
             if not HAS_CRYPTOGRAPHY:

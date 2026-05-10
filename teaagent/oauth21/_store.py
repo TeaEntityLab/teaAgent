@@ -6,8 +6,9 @@ import json
 import secrets
 import sqlite3
 import threading
+import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Protocol
 
@@ -341,6 +342,8 @@ def _hash_client_secret_with_salt(secret: str, salt: bytes) -> bytes:
 class OAuthKeyRing:
     active_kid: str
     keys: Mapping[str, bytes]
+    rotation_window_seconds: int = 0
+    deprecated_at: Mapping[str, float] = field(default_factory=dict)
 
     @classmethod
     def single(cls, key: bytes, *, kid: str = 'default') -> 'OAuthKeyRing':
@@ -350,7 +353,40 @@ class OAuthKeyRing:
     def active_key(self) -> bytes:
         return self.keys[self.active_kid]
 
+    def rotate(self, new_kid: str, *, now: Optional[float] = None) -> 'OAuthKeyRing':
+        if new_kid not in self.keys:
+            raise ValueError(
+                f'Cannot rotate to unknown kid {new_kid!r}; available: {list(self.keys)}'
+            )
+        ts = now if now is not None else time.time()
+        updated: dict[str, float] = dict(self.deprecated_at)
+        updated[self.active_kid] = ts
+        return OAuthKeyRing(
+            active_kid=new_kid,
+            keys=self.keys,
+            rotation_window_seconds=self.rotation_window_seconds,
+            deprecated_at=updated,
+        )
+
     def key_for(self, kid: Optional[str]) -> bytes:
         if kid and kid in self.keys:
             return self.keys[kid]
         return self.active_key
+
+    def key_for_validation(
+        self, kid: Optional[str], *, now: Optional[float] = None
+    ) -> bytes:
+        resolved = kid if (kid and kid in self.keys) else self.active_kid
+        key = self.keys[resolved]
+        if resolved != self.active_kid and self.rotation_window_seconds > 0:
+            deprecated_ts = self.deprecated_at.get(resolved)
+            if deprecated_ts is not None:
+                elapsed = (now if now is not None else time.time()) - deprecated_ts
+                if elapsed > self.rotation_window_seconds:
+                    from teaagent.oauth21._types import JWTError
+
+                    raise JWTError(
+                        f'Signing key {resolved!r} is outside rotation window '
+                        f'({elapsed:.0f}s > {self.rotation_window_seconds}s)'
+                    )
+        return key

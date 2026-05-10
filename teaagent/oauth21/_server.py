@@ -189,7 +189,9 @@ class OAuth21AuthorizationServer:
     def introspect_token(self, token: str) -> OAuth21TokenClaims:
         header, _ = decode_jwt_unsafe(token)
         kid = header.get('kid')
-        key = self._key_ring.key_for(kid if isinstance(kid, str) else None)
+        key = self._key_ring.key_for_validation(
+            kid if isinstance(kid, str) else None, now=time.time()
+        )
         payload = verify_jwt(token, key, iss=self._issuer)
         return OAuth21TokenClaims(
             iss=payload['iss'],

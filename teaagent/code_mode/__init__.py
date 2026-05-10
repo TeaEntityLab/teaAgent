@@ -5,7 +5,7 @@ from typing import Any
 
 from ._child_process import ChildProcessCodeModeBackend
 from ._container import CONTAINER_CODE_MODE_SCRIPT, ContainerCodeModeBackend
-from ._types import CodeModeBackend, CodeModeResult, CodeModeSandbox
+from ._types import CodeModeBackend, CodeModeResult, CodeModeSandbox, SandboxProfile
 from ._validation import (
     ALLOWED_NODES,
     SAFE_BUILTINS,
@@ -51,4 +51,5 @@ __all__ = [
     'ContainerCodeModeBackend',
     'UnsafeCodeError',
     'execute_code_mode',
+    'SandboxProfile',
 ]
