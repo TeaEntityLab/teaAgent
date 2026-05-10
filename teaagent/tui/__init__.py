@@ -243,7 +243,7 @@ class TeaAgentTUI:
         }
         if 'approval' in result.metadata:
             payload['approval'] = result.metadata['approval']
-        if result.error_message:
+        if result.error_message is not None:
             payload['error'] = result.error_message
         return payload
 

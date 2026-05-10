@@ -19,6 +19,7 @@ from teaagent.llm._types import (
     LLMHTTPError,
     LLMRequest,
     LLMResponse,
+    LLMResponseFormatError,
     LLMSafetyBlock,
     LLMToolCall,
     ProviderConfig,
@@ -82,6 +83,19 @@ def _extract_gemini_tool_calls(response: dict[str, Any]) -> list[LLMToolCall]:
                     )
                 )
     return calls
+
+
+def _native_tool_calls_to_decision_text(tool_calls: list[LLMToolCall]) -> str:
+    first = tool_calls[0]
+    return json.dumps(
+        {
+            'type': 'tool',
+            'tool_name': first.tool_name,
+            'arguments': first.tool_input,
+            'call_id': first.call_id,
+        },
+        sort_keys=True,
+    )
 
 
 def _extract_gemini_safety(response: dict[str, Any]) -> 'LLMSafetyBlock | None':
@@ -154,9 +168,15 @@ class OpenAICompatibleAdapter:
             ),
             self.retry_config,
         )
-        content = _extract_openai_content(self.provider, response)
-        usage = response.get('usage', {})
         tool_calls = _extract_openai_tool_calls(response)
+        try:
+            content = _extract_openai_content(self.provider, response)
+        except LLMResponseFormatError:
+            if tool_calls:
+                content = _native_tool_calls_to_decision_text(tool_calls)
+            else:
+                raise
+        usage = response.get('usage', {})
         return LLMResponse(
             provider=self.provider,
             model=model,
