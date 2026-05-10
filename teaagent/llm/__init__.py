@@ -74,5 +74,17 @@ from teaagent.llm._types import (
     LLMResponseFormatError as LLMResponseFormatError,
 )
 from teaagent.llm._types import (
+    LLMSafetyBlock as LLMSafetyBlock,
+)
+from teaagent.llm._types import (
+    LLMToolCall as LLMToolCall,
+)
+from teaagent.llm._types import (
+    LLMToolDefinition as LLMToolDefinition,
+)
+from teaagent.llm._types import (
     ProviderConfig as ProviderConfig,
+)
+from teaagent.llm._types import (
+    SafetyCategory as SafetyCategory,
 )

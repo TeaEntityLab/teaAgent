@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
+# Sentinel so callers can pass audit_logger=None without ambiguity.
+_AUDIT_UNSET = object()
+
 
 @runtime_checkable
 class ManagedRuntimeAdapter(Protocol):
@@ -26,9 +29,37 @@ class ManagedAgentRunner:
         self._runtime_name = runtime_name or type(adapter).__name__
 
     def run(
-        self, task: str, *, context: Optional[dict[str, Any]] = None
+        self,
+        task: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+        audit_logger: Any = _AUDIT_UNSET,
+        run_id: str = '',
     ) -> ManagedRunResult:
-        output = self._adapter.run_task(task, context=context or {})
+        ctx = context or {}
+        _log = None if audit_logger is _AUDIT_UNSET else audit_logger
+        if _log is not None:
+            _log.record(
+                'managed_task_started', run_id, runtime=self._runtime_name, task=task
+            )
+        try:
+            output = self._adapter.run_task(task, context=ctx)
+        except Exception as exc:
+            if _log is not None:
+                _log.record(
+                    'managed_task_failed',
+                    run_id,
+                    runtime=self._runtime_name,
+                    error=str(exc),
+                )
+            raise
+        if _log is not None:
+            _log.record(
+                'managed_task_completed',
+                run_id,
+                runtime=self._runtime_name,
+                output_length=len(output),
+            )
         return ManagedRunResult(output=output, runtime=self._runtime_name)
 
     def healthy(self) -> bool:
@@ -71,12 +102,31 @@ class AnthropicManagedRuntime:
         import anthropic
 
         client = anthropic.Anthropic(api_key=self._api_key)
-        response = client.messages.create(
-            model=self._model,
-            max_tokens=1024,
-            messages=[{'role': 'user', 'content': task}],
-        )
-        return response.content[0].text if response.content else ''
+        kwargs: dict[str, Any] = {
+            'model': self._model,
+            'max_tokens': context.get('max_tokens', 1024),
+            'messages': [{'role': 'user', 'content': task}],
+        }
+        tools_list = context.get('tools', [])
+        if tools_list:
+            kwargs['tools'] = [
+                {
+                    'name': t['name'],
+                    'description': t.get('description', ''),
+                    'input_schema': t.get(
+                        'input_schema', {'type': 'object', 'properties': {}}
+                    ),
+                }
+                for t in tools_list
+            ]
+        response = client.messages.create(**kwargs)
+        parts = []
+        for block in response.content:
+            if hasattr(block, 'text'):
+                parts.append(block.text)
+            elif getattr(block, 'type', None) == 'tool_use':
+                parts.append(f'[tool_call:{block.name}:{block.id}]')
+        return '\n'.join(filter(None, parts))
 
     def health_check(self) -> bool:  # pragma: no cover
         try:
@@ -117,9 +167,26 @@ class OpenAIManagedRuntime:
         client.beta.threads.messages.create(
             thread_id=thread.id, role='user', content=task
         )
-        run = client.beta.threads.runs.create_and_poll(
-            thread_id=thread.id, assistant_id=self._assistant_id
-        )
+        run_kwargs: dict[str, Any] = {
+            'thread_id': thread.id,
+            'assistant_id': self._assistant_id,
+        }
+        tools_list = context.get('tools', [])
+        if tools_list:
+            run_kwargs['tools'] = [
+                {
+                    'type': 'function',
+                    'function': {
+                        'name': t['name'],
+                        'description': t.get('description', ''),
+                        'parameters': t.get(
+                            'input_schema', {'type': 'object', 'properties': {}}
+                        ),
+                    },
+                }
+                for t in tools_list
+            ]
+        run = client.beta.threads.runs.create_and_poll(**run_kwargs)
         messages = client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id)
         for msg in messages.data:
             if msg.role == 'assistant':

@@ -10,6 +10,8 @@ class ConformanceTier(str, Enum):
     STREAMING = 'streaming'
     STRUCTURED_OUTPUT = 'structured_output'
     LATENCY = 'latency'
+    TOOL_CALLING = 'tool_calling'
+    SAFETY = 'safety'
 
 
 @dataclass(frozen=True)

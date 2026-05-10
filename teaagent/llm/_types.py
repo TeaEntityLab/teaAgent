@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Optional, Protocol
 
 
@@ -35,6 +36,39 @@ class LLMMessage:
 
 
 @dataclass(frozen=True)
+class LLMToolDefinition:
+    name: str
+    description: str
+    input_schema: dict[str, Any] = field(
+        default_factory=lambda: {'type': 'object', 'properties': {}}
+    )
+
+
+@dataclass(frozen=True)
+class LLMToolCall:
+    tool_name: str
+    tool_input: dict[str, Any]
+    call_id: str = ''
+
+
+class SafetyCategory(str, Enum):
+    HARASSMENT = 'harassment'
+    HATE_SPEECH = 'hate_speech'
+    SEXUAL = 'sexual'
+    VIOLENCE = 'violence'
+    SELF_HARM = 'self_harm'
+    DANGEROUS = 'dangerous'
+    OTHER = 'other'
+
+
+@dataclass(frozen=True)
+class LLMSafetyBlock:
+    blocked: bool
+    category: Optional[SafetyCategory] = None
+    detail: str = ''
+
+
+@dataclass(frozen=True)
 class LLMRequest:
     messages: list[LLMMessage]
     model: Optional[str] = None
@@ -43,6 +77,7 @@ class LLMRequest:
     temperature: float = 0.2
     stream: bool = False
     on_chunk: Optional[Callable[[str], None]] = None
+    tools: list[LLMToolDefinition] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -53,6 +88,8 @@ class LLMResponse:
     raw: dict[str, Any] = field(default_factory=dict)
     input_tokens: int = 0
     output_tokens: int = 0
+    tool_calls: list[LLMToolCall] = field(default_factory=list)
+    safety: Optional[LLMSafetyBlock] = None
 
     @property
     def estimated_cost_cents(self) -> float:

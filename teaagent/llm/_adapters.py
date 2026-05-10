@@ -19,8 +19,82 @@ from teaagent.llm._types import (
     LLMHTTPError,
     LLMRequest,
     LLMResponse,
+    LLMSafetyBlock,
+    LLMToolCall,
     ProviderConfig,
+    SafetyCategory,
 )
+
+_GEMINI_SAFETY_CATEGORY_MAP: dict[str, SafetyCategory] = {
+    'HARM_CATEGORY_HARASSMENT': SafetyCategory.HARASSMENT,
+    'HARM_CATEGORY_HATE_SPEECH': SafetyCategory.HATE_SPEECH,
+    'HARM_CATEGORY_SEXUALLY_EXPLICIT': SafetyCategory.SEXUAL,
+    'HARM_CATEGORY_DANGEROUS_CONTENT': SafetyCategory.DANGEROUS,
+}
+
+
+def _extract_claude_tool_calls(response: dict[str, Any]) -> list[LLMToolCall]:
+    calls = []
+    for block in response.get('content', []):
+        if isinstance(block, dict) and block.get('type') == 'tool_use':
+            calls.append(
+                LLMToolCall(
+                    tool_name=str(block.get('name', '')),
+                    tool_input=dict(block.get('input') or {}),
+                    call_id=str(block.get('id', '')),
+                )
+            )
+    return calls
+
+
+def _extract_openai_tool_calls(response: dict[str, Any]) -> list[LLMToolCall]:
+    calls: list[LLMToolCall] = []
+    choices = response.get('choices', [])
+    if not choices:
+        return calls
+    message = choices[0].get('message', {})
+    for tc in message.get('tool_calls') or []:
+        fn = tc.get('function', {})
+        try:
+            args = json.loads(fn.get('arguments', '{}'))
+        except Exception:
+            args = {}
+        calls.append(
+            LLMToolCall(
+                tool_name=str(fn.get('name', '')),
+                tool_input=args,
+                call_id=str(tc.get('id', '')),
+            )
+        )
+    return calls
+
+
+def _extract_gemini_tool_calls(response: dict[str, Any]) -> list[LLMToolCall]:
+    calls = []
+    for candidate in response.get('candidates', []):
+        for part in candidate.get('content', {}).get('parts', []):
+            fc = part.get('functionCall')
+            if fc:
+                calls.append(
+                    LLMToolCall(
+                        tool_name=str(fc.get('name', '')),
+                        tool_input=dict(fc.get('args') or {}),
+                    )
+                )
+    return calls
+
+
+def _extract_gemini_safety(response: dict[str, Any]) -> 'LLMSafetyBlock | None':
+    for candidate in response.get('candidates', []):
+        if candidate.get('finishReason') == 'SAFETY':
+            for rating in candidate.get('safetyRatings', []):
+                if rating.get('blocked'):
+                    cat = _GEMINI_SAFETY_CATEGORY_MAP.get(
+                        rating.get('category', ''), SafetyCategory.OTHER
+                    )
+                    return LLMSafetyBlock(blocked=True, category=cat)
+            return LLMSafetyBlock(blocked=True)
+    return None
 
 
 class OpenAICompatibleAdapter:
@@ -55,6 +129,18 @@ class OpenAICompatibleAdapter:
             'max_tokens': request.max_tokens,
             'temperature': request.temperature,
         }
+        if request.tools:
+            payload['tools'] = [
+                {
+                    'type': 'function',
+                    'function': {
+                        'name': t.name,
+                        'description': t.description,
+                        'parameters': t.input_schema,
+                    },
+                }
+                for t in request.tools
+            ]
         if request.stream:
             payload['stream'] = True
             return self._complete_streaming(request, model, payload)
@@ -70,6 +156,7 @@ class OpenAICompatibleAdapter:
         )
         content = _extract_openai_content(self.provider, response)
         usage = response.get('usage', {})
+        tool_calls = _extract_openai_tool_calls(response)
         return LLMResponse(
             provider=self.provider,
             model=model,
@@ -77,6 +164,7 @@ class OpenAICompatibleAdapter:
             raw=response,
             input_tokens=usage.get('prompt_tokens', 0),
             output_tokens=usage.get('completion_tokens', 0),
+            tool_calls=tool_calls,
         )
 
     def _complete_streaming(
@@ -174,6 +262,15 @@ class ClaudeAdapter:
         }
         if request.system:
             payload['system'] = request.system
+        if request.tools:
+            payload['tools'] = [
+                {
+                    'name': t.name,
+                    'description': t.description,
+                    'input_schema': t.input_schema,
+                }
+                for t in request.tools
+            ]
         response = _call_with_retry(
             self.provider,
             lambda: self.transport.post_json(
@@ -189,6 +286,7 @@ class ClaudeAdapter:
         )
         content = _extract_claude_content(response)
         usage = response.get('usage', {})
+        tool_calls = _extract_claude_tool_calls(response)
         return LLMResponse(
             provider=self.provider,
             model=model,
@@ -196,6 +294,7 @@ class ClaudeAdapter:
             raw=response,
             input_tokens=usage.get('input_tokens', 0),
             output_tokens=usage.get('output_tokens', 0),
+            tool_calls=tool_calls,
         )
 
 
@@ -230,6 +329,19 @@ class GeminiAdapter:
         }
         if request.system:
             payload['systemInstruction'] = {'parts': [{'text': request.system}]}
+        if request.tools:
+            payload['tools'] = [
+                {
+                    'functionDeclarations': [
+                        {
+                            'name': t.name,
+                            'description': t.description,
+                            'parameters': t.input_schema,
+                        }
+                    ]
+                }
+                for t in request.tools
+            ]
         response = _call_with_retry(
             self.provider,
             lambda: self.transport.post_json(
@@ -242,6 +354,8 @@ class GeminiAdapter:
         )
         content = _extract_gemini_content(response)
         metadata = response.get('usageMetadata', {})
+        tool_calls = _extract_gemini_tool_calls(response)
+        safety = _extract_gemini_safety(response)
         return LLMResponse(
             provider=self.provider,
             model=model,
@@ -249,4 +363,6 @@ class GeminiAdapter:
             raw=response,
             input_tokens=metadata.get('promptTokenCount', 0),
             output_tokens=metadata.get('candidatesTokenCount', 0),
+            tool_calls=tool_calls,
+            safety=safety,
         )

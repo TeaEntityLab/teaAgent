@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import http.server
 import json
 import sqlite3
+import threading
+import time as _time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 
 @dataclass(frozen=True)
@@ -198,3 +203,212 @@ class A2ADispatcher:
             raise LookupError(f'No registered agent named {agent_name!r}')
         output = runner(task, card)
         return A2ATaskResult(task=task, agent_name=card.name, output=output)
+
+
+def _make_a2a_handler(
+    card_json: str,
+    task_handler: Optional[Callable[[str, dict[str, Any]], str]],
+) -> type:
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path == '/.well-known/agent.json':
+                body = card_json.encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self) -> None:
+            if self.path == '/a2a/task' and task_handler is not None:
+                length = int(self.headers.get('Content-Length', '0'))
+                body = self.rfile.read(length)
+                try:
+                    req_data = json.loads(body.decode('utf-8'))
+                    output = task_handler(
+                        req_data.get('task', ''), req_data.get('context') or {}
+                    )
+                    resp_body = json.dumps({'output': output}).encode('utf-8')
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.send_header('Content-Length', str(len(resp_body)))
+                    self.end_headers()
+                    self.wfile.write(resp_body)
+                except Exception as exc:
+                    resp_body = json.dumps({'error': str(exc)}).encode('utf-8')
+                    self.send_response(500)
+                    self.send_header('Content-Type', 'application/json')
+                    self.send_header('Content-Length', str(len(resp_body)))
+                    self.end_headers()
+                    self.wfile.write(resp_body)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def log_message(self, *_: object) -> None:
+            pass
+
+    return _Handler
+
+
+class A2ADiscoveryServer:
+    """Serves an AgentCard at ``/.well-known/agent.json`` over HTTP.
+
+    Optionally handles POST ``/a2a/task`` for in-process task delegation when
+    *task_handler* is provided.  Use ``port=0`` to let the OS pick a free port
+    (useful in tests).
+    """
+
+    WELL_KNOWN_PATH = '/.well-known/agent.json'
+    TASK_PATH = '/a2a/task'
+
+    def __init__(
+        self,
+        card: AgentCard,
+        *,
+        host: str = '127.0.0.1',
+        port: int = 0,
+        task_handler: Optional[Callable[[str, dict[str, Any]], str]] = None,
+    ) -> None:
+        self._card = card
+        self._host = host
+        self._port = port
+        self._task_handler = task_handler
+        self._server: Optional[http.server.HTTPServer] = None
+        self._thread: Optional[threading.Thread] = None
+
+    @property
+    def port(self) -> int:
+        if self._server is not None:
+            return self._server.server_address[1]
+        return self._port
+
+    @property
+    def base_url(self) -> str:
+        return f'http://{self._host}:{self.port}'
+
+    def start(self) -> None:
+        card_json = json.dumps(self._card.to_dict())
+        handler_cls = _make_a2a_handler(card_json, self._task_handler)
+        self._server = http.server.HTTPServer((self._host, self._port), handler_cls)
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        if self._server is not None:
+            self._server.shutdown()
+            self._server = None
+
+    def __enter__(self) -> 'A2ADiscoveryServer':
+        self.start()
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.stop()
+
+
+class A2AClient:
+    """HTTP client for A2A task delegation and card discovery."""
+
+    def __init__(self, endpoint: str, *, timeout: int = 30) -> None:
+        self._endpoint = endpoint.rstrip('/')
+        self._timeout = timeout
+
+    @classmethod
+    def from_card(cls, card: AgentCard, *, timeout: int = 30) -> 'A2AClient':
+        if not card.endpoint:
+            raise ValueError(f'AgentCard {card.name!r} has no endpoint')
+        return cls(card.endpoint, timeout=timeout)
+
+    def fetch_card(self) -> AgentCard:
+        url = f'{self._endpoint}/.well-known/agent.json'
+        with urllib.request.urlopen(url, timeout=self._timeout) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+        return AgentCard.from_dict(data)
+
+    def delegate(
+        self,
+        task: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> A2ATaskResult:
+        payload = json.dumps({'task': task, 'context': context or {}}).encode('utf-8')
+        req = urllib.request.Request(
+            f'{self._endpoint}/a2a/task',
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+            result_data = json.loads(resp.read().decode('utf-8'))
+        agent_name = result_data.get('agent_name') or ''
+        return A2ATaskResult(
+            task=task,
+            agent_name=agent_name,
+            output=result_data.get('output', ''),
+        )
+
+
+class FederatedAgentRegistry:
+    """Pulls AgentCards from remote ``/.well-known/agent.json`` endpoints.
+
+    Cards are cached for *ttl_seconds* (default 300).  The cache is
+    refreshed lazily on first access and whenever it becomes stale.
+    ``refresh()`` can also be called manually and returns a list of
+    per-endpoint error strings for diagnostic purposes.
+    """
+
+    def __init__(
+        self,
+        endpoints: list[str],
+        *,
+        ttl_seconds: int = 300,
+        timeout: int = 10,
+    ) -> None:
+        self._endpoints = list(endpoints)
+        self._ttl = ttl_seconds
+        self._timeout = timeout
+        self._cache: list[AgentCard] = []
+        self._fetched_at: float = 0.0
+
+    def _is_stale(self) -> bool:
+        return _time.monotonic() - self._fetched_at > self._ttl
+
+    def refresh(self) -> list[str]:
+        errors: list[str] = []
+        cards: list[AgentCard] = []
+        for base_url in self._endpoints:
+            url = base_url.rstrip('/') + '/.well-known/agent.json'
+            try:
+                with urllib.request.urlopen(url, timeout=self._timeout) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                cards.append(AgentCard.from_dict(data))
+            except Exception as exc:
+                errors.append(f'{base_url}: {exc}')
+        self._cache = cards
+        self._fetched_at = _time.monotonic()
+        return errors
+
+    def _ensure_fresh(self) -> None:
+        if self._is_stale():
+            self.refresh()
+
+    def get(self, name: str) -> Optional[AgentCard]:
+        self._ensure_fresh()
+        for card in self._cache:
+            if card.name == name:
+                return card
+        return None
+
+    def list_cards(self) -> list[AgentCard]:
+        self._ensure_fresh()
+        return list(self._cache)
+
+    def find_by_capability(self, capability: str) -> list[AgentCard]:
+        return [c for c in self.list_cards() if capability in c.capabilities]
+
+    def find_by_tool(self, tool_name: str) -> list[AgentCard]:
+        return [c for c in self.list_cards() if tool_name in c.tools]
