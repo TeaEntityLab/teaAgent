@@ -21,7 +21,11 @@ class UrllibHTTPTransport:
         req = urllib_request.Request(
             url,
             data=body,
-            headers={'content-type': 'application/json', **headers},
+            headers={
+                'content-type': 'application/json',
+                'user-agent': 'TeaAgent',
+                **headers,
+            },
             method='POST',
         )
         try:

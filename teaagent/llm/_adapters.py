@@ -198,7 +198,11 @@ class OpenAICompatibleAdapter:
         else:
             body = json.dumps(payload).encode('utf-8')
             url = f'{self.config.resolved_base_url()}/chat/completions'
-            headers = {'content-type': 'application/json', **self._headers()}
+            headers = {
+                'content-type': 'application/json',
+                'user-agent': 'TeaAgent',
+                **self._headers(),
+            }
             req = urllib_request.Request(url, data=body, headers=headers, method='POST')
             try:
                 with urllib_request.urlopen(req, timeout=self.timeout) as resp:
