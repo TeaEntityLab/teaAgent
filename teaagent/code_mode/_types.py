@@ -38,6 +38,10 @@ class ContainerCodeModeBackendConfig:
     tmpfs_size_mb: int = 16
     require_image_digest: bool = False
     allowed_images: Optional[frozenset[str]] = None
+    seccomp_profile: Optional[str] = None
+    apparmor_profile: Optional[str] = None
+    selinux_label: Optional[str] = None
+    oci_runtime: Optional[str] = None
 
 
 class SandboxProfile(str, Enum):

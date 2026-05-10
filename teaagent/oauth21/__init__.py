@@ -7,7 +7,9 @@ from teaagent.oauth21._jwt import (
     decode_jwt_unsafe,
     verify_jwt,
 )
+from teaagent.oauth21._pg_store import PostgreSQLOAuthStore
 from teaagent.oauth21._pkce import compute_s256_challenge, generate_code_verifier
+from teaagent.oauth21._redis_store import RedisOAuthStore
 from teaagent.oauth21._resource import OAuth21ResourceServer
 from teaagent.oauth21._server import OAuth21AuthorizationServer
 from teaagent.oauth21._store import (
@@ -52,6 +54,8 @@ __all__ = [
     'OAuthStore',
     'InMemoryOAuthStore',
     'SQLiteOAuthStore',
+    'PostgreSQLOAuthStore',
+    'RedisOAuthStore',
     'OAuthKeyRing',
     'create_jwt',
     'verify_jwt',

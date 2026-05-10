@@ -74,6 +74,10 @@ class ContainerCodeModeBackend:
     tmpfs_size_mb: int = 16
     require_image_digest: bool = False
     allowed_images: Optional[frozenset[str]] = None
+    seccomp_profile: Optional[str] = None
+    apparmor_profile: Optional[str] = None
+    selinux_label: Optional[str] = None
+    oci_runtime: Optional[str] = None
 
     def __post_init__(self) -> None:
         if not self.image:
@@ -124,7 +128,7 @@ class ContainerCodeModeBackend:
 
     def _build_command(self, sandbox: CodeModeSandbox) -> list[str]:
         memory_mb = max(1, sandbox.memory_bytes // (1024 * 1024))
-        return [
+        cmd = [
             self.runtime,
             'run',
             '--rm',
@@ -145,12 +149,25 @@ class ContainerCodeModeBackend:
             f'cpu={sandbox.cpu_seconds}:{sandbox.cpu_seconds}',
             '--pids-limit',
             '64',
-            '-i',
-            self.image,
-            self.python_executable,
-            '-c',
-            CONTAINER_CODE_MODE_SCRIPT,
         ]
+        if self.oci_runtime:
+            cmd.extend(['--runtime', self.oci_runtime])
+        if self.seccomp_profile is not None:
+            cmd.append(f'--security-opt=seccomp={self.seccomp_profile}')
+        if self.apparmor_profile is not None:
+            cmd.append(f'--security-opt=apparmor={self.apparmor_profile}')
+        if self.selinux_label is not None:
+            cmd.append(f'--security-opt=label={self.selinux_label}')
+        cmd.extend(
+            [
+                '-i',
+                self.image,
+                self.python_executable,
+                '-c',
+                CONTAINER_CODE_MODE_SCRIPT,
+            ]
+        )
+        return cmd
 
 
 def _communicate_with_output_limit(
