@@ -7,8 +7,18 @@ from ._agent import (
     agent_runs_list,
     agent_status_command,
 )
-from ._audit import audit_list_command, audit_prune_command, audit_show_command
-from ._doctor import doctor_all, doctor_graphqlite, doctor_model
+from ._audit import (
+    audit_list_command,
+    audit_prune_command,
+    audit_serve_command,
+    audit_show_command,
+)
+from ._doctor import (
+    doctor_all,
+    doctor_graphqlite,
+    doctor_migration_command,
+    doctor_model,
+)
 from ._mcp import mcp_serve_command
 from ._memory import (
     memory_add_command,
@@ -34,6 +44,8 @@ from ._model import model_conformance, model_providers, model_route, model_smoke
 __all__ = [
     'agent_card_command',
     'agent_preflight_command',
+    'audit_serve_command',
+    'doctor_migration_command',
     'agent_resume_command',
     'agent_run_show',
     'agent_run_task',

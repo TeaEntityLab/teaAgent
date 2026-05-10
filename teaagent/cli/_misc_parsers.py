@@ -18,6 +18,7 @@ def register(
         handlers['doctor_graphqlite'],
         handlers['doctor_model'],
         handlers['doctor_all'],
+        migration_handler=handlers.get('doctor_migration'),
     )
     _completion(subparsers, handlers['completion'])
     _audit(
@@ -25,6 +26,7 @@ def register(
         handlers['audit_list'],
         handlers['audit_show'],
         handlers['audit_prune'],
+        serve_handler=handlers.get('audit_serve'),
     )
     _graphqlite(subparsers, handlers['graphqlite_query'], handlers['graphqlite_smoke'])
     _ultrawork(
@@ -85,6 +87,7 @@ def _doctor(
     graphqlite_handler: Callable,
     model_handler: Callable,
     all_handler: Optional[Callable] = None,
+    migration_handler: Optional[Callable] = None,
 ) -> None:
     doctor = subparsers.add_parser('doctor', help='Run environment checks.')
     subs = doctor.add_subparsers(dest='doctor_command', required=True)
@@ -118,6 +121,17 @@ def _doctor(
     )
     all_checks.set_defaults(func=all_handler or graphqlite_handler)
 
+    migration = subs.add_parser(
+        'migration', help='Check schema migration status for a SQLite store.'
+    )
+    migration.add_argument(
+        '--store',
+        default=None,
+        metavar='PATH',
+        help='SQLite database path to inspect for migration status.',
+    )
+    migration.set_defaults(func=migration_handler or graphqlite_handler)
+
 
 def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subparsers.add_parser('completion', help='Print a shell completion snippet.')
@@ -132,6 +146,7 @@ def _audit(
     list_handler: Callable,
     show_handler: Callable,
     prune_handler: Callable,
+    serve_handler: Optional[Callable] = None,
 ) -> None:
     audit = subparsers.add_parser('audit', help='Inspect and prune run audit logs.')
     subs = audit.add_subparsers(dest='audit_command', required=True)
@@ -160,6 +175,21 @@ def _audit(
         help='Delete all audit runs not protected by --keep.',
     )
     prune_cmd.set_defaults(func=prune_handler)
+
+    if serve_handler is not None:
+        serve_cmd = subs.add_parser(
+            'serve', help='Start a local web viewer for audit logs.'
+        )
+        serve_cmd.add_argument('--root', default='.', help='Workspace root.')
+        serve_cmd.add_argument(
+            '--host',
+            default='127.0.0.1',
+            help='Bind host. Defaults to 127.0.0.1.',
+        )
+        serve_cmd.add_argument(
+            '--port', type=int, default=8080, help='Bind port. Default 8080.'
+        )
+        serve_cmd.set_defaults(func=serve_handler)
 
 
 def _graphqlite(

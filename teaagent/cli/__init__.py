@@ -16,11 +16,13 @@ from teaagent.cli._handlers import (
     agent_status_command,
     audit_list_command,
     audit_prune_command,
+    audit_serve_command,
     audit_show_command,
     clarify_command,
     completion_command,
     doctor_all,
     doctor_graphqlite,
+    doctor_migration_command,
     doctor_model,
     graphqlite_query,
     graphqlite_smoke,
@@ -120,6 +122,8 @@ def build_parser() -> argparse.ArgumentParser:
             'audit_list': audit_list_command,
             'audit_show': audit_show_command,
             'audit_prune': audit_prune_command,
+            'audit_serve': audit_serve_command,
+            'doctor_migration': doctor_migration_command,
         },
     )
     register_memory(

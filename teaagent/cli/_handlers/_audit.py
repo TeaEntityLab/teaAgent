@@ -52,5 +52,13 @@ def audit_prune_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def audit_serve_command(args: argparse.Namespace) -> int:
+    from teaagent.audit_viewer import serve_audit_viewer
+
+    store = RunStore(args.root)
+    serve_audit_viewer(store, host=args.host, port=args.port)
+    return 0
+
+
 def print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))

@@ -37,5 +37,24 @@ def doctor_all(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def doctor_migration_command(args: argparse.Namespace) -> int:
+    from teaagent.schema_migration import SQLiteMigrationStore
+
+    store_path = getattr(args, 'store', None)
+    if not store_path:
+        print_json(
+            {'ok': False, 'error': '--store <path> is required for migration check'}
+        )
+        return 1
+    try:
+        store = SQLiteMigrationStore(store_path)
+        status = store.status([])
+        print_json({'ok': True, 'store': store_path, 'status': status})
+        return 0
+    except Exception as exc:
+        print_json({'ok': False, 'error': str(exc)})
+        return 1
+
+
 def print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))
