@@ -9,6 +9,7 @@ class ConformanceTier(str, Enum):
     CONTRACT = 'contract'
     STREAMING = 'streaming'
     STRUCTURED_OUTPUT = 'structured_output'
+    LATENCY = 'latency'
 
 
 @dataclass(frozen=True)

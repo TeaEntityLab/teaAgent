@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Callable, Iterable
 
 from teaagent.llm import (
@@ -114,6 +115,8 @@ def run_tiered_conformance(
     model: str | None = None,
     adapter_factory: AdapterFactory = create_llm_adapter,
     configuration_checker: ConfigurationChecker = check_llm_configuration,
+    latency_samples: int = 5,
+    latency_threshold_ms: float = 5000.0,
 ) -> TieredConformanceReport:
     selected_providers = list(providers or available_providers())
     results = [
@@ -123,6 +126,8 @@ def run_tiered_conformance(
             model=model,
             adapter_factory=adapter_factory,
             configuration_checker=configuration_checker,
+            latency_samples=latency_samples,
+            latency_threshold_ms=latency_threshold_ms,
         )
         for provider in selected_providers
     ]
@@ -136,6 +141,8 @@ def _run_tiered_provider(
     model: str | None,
     adapter_factory: AdapterFactory,
     configuration_checker: ConfigurationChecker,
+    latency_samples: int = 5,
+    latency_threshold_ms: float = 5000.0,
 ) -> TieredConformanceResult:
     configured, message = configuration_checker(provider)
     if not configured:
@@ -238,6 +245,38 @@ def _run_tiered_provider(
                         detail=f'response is not valid JSON: {raw[:80]}',
                     )
                 )
+
+        elif tier == ConformanceTier.LATENCY:
+            sample_times: list[float] = []
+            for _ in range(max(1, latency_samples)):
+                t0 = time.monotonic()
+                adapter.complete(  # type: ignore[attr-defined]
+                    LLMRequest(
+                        messages=[LLMMessage(role='user', content='Reply with: ok')],
+                        max_tokens=16,
+                    )
+                )
+                sample_times.append((time.monotonic() - t0) * 1000)
+            sample_times.sort()
+            p50_idx = len(sample_times) // 2
+            p95_idx = max(0, int(len(sample_times) * 0.95) - 1)
+            p50 = sample_times[p50_idx]
+            p95 = sample_times[p95_idx]
+            checks.append(
+                CheckResult(
+                    name='latency_p50_ms',
+                    status='passed',
+                    detail=f'{p50:.0f}ms',
+                )
+            )
+            p95_status = 'passed' if p95 <= latency_threshold_ms else 'failed'
+            checks.append(
+                CheckResult(
+                    name='latency_p95_ms',
+                    status=p95_status,
+                    detail=f'{p95:.0f}ms (threshold {latency_threshold_ms:.0f}ms)',
+                )
+            )
 
         elif tier == ConformanceTier.CONTRACT:
             if smoke_content == 'ok':
