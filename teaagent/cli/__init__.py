@@ -20,6 +20,7 @@ from teaagent.cli._handlers import (
     audit_show_command,
     clarify_command,
     completion_command,
+    configure_command,
     doctor_all,
     doctor_graphqlite,
     doctor_migration_command,
@@ -108,6 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
         {
             'clarify': clarify_command,
             'tui': start_tui,
+            'configure': configure_command,
             'doctor_graphqlite': doctor_graphqlite,
             'doctor_model': doctor_model,
             'doctor_all': doctor_all,

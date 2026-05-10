@@ -13,6 +13,7 @@ def register(
 ) -> None:
     _clarify(subparsers, handlers['clarify'])
     _tui(subparsers, handlers['tui'])
+    _configure(subparsers, handlers.get('configure'))
     _doctor(
         subparsers,
         handlers['doctor_graphqlite'],
@@ -136,6 +137,25 @@ def _doctor(
         help='SQLite database path to inspect for migration status.',
     )
     migration.set_defaults(func=migration_handler or graphqlite_handler)
+
+
+def _configure(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Optional[Callable] = None,
+) -> None:
+    p = subparsers.add_parser(
+        'configure',
+        help='Interactively set provider API keys.',
+        description='Check which providers are missing API keys and prompt for each one.',
+    )
+    p.add_argument(
+        '--provider',
+        action='append',
+        choices=available_providers(),
+        default=None,
+        help='Provider to configure. Can be repeated. Defaults to all providers.',
+    )
+    p.set_defaults(func=handler)
 
 
 def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

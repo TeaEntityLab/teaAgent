@@ -29,6 +29,7 @@ from ._memory import (
 from ._misc import (
     clarify_command,
     completion_command,
+    configure_command,
     graphqlite_migrate,
     graphqlite_query,
     graphqlite_smoke,
@@ -57,6 +58,7 @@ __all__ = [
     'audit_show_command',
     'clarify_command',
     'completion_command',
+    'configure_command',
     'doctor_all',
     'doctor_graphqlite',
     'doctor_model',

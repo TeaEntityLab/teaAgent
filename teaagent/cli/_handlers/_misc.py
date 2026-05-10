@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
+import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.intent import clarify_task
+from teaagent.llm import available_providers, check_llm_configuration
 from teaagent.policy import parse_permission_mode
 from teaagent.tui import run_tui
 from teaagent.ultrawork import UltraworkStore
@@ -127,17 +131,80 @@ def workspace_openapi_command(args: argparse.Namespace) -> int:
 def completion_command(args: argparse.Namespace) -> int:
     if args.shell == 'bash':
         print(
-            'complete -W "agent audit clarify completion doctor graphqlite mcp memory model tui ultrawork workspace" teaagent'
+            'complete -W "agent audit clarify completion configure doctor graphqlite mcp memory model tui ultrawork workspace" teaagent'
         )
     elif args.shell == 'zsh':
         print(
-            '#compdef teaagent\n_arguments "1: :((agent audit clarify completion doctor graphqlite mcp memory model tui ultrawork workspace))"'
+            '#compdef teaagent\n_arguments "1: :((agent audit clarify completion configure doctor graphqlite mcp memory model tui ultrawork workspace))"'
         )
     else:
         print(
-            'complete -c teaagent -f -a "agent audit clarify completion doctor graphqlite mcp memory model tui ultrawork workspace"'
+            'complete -c teaagent -f -a "agent audit clarify completion configure doctor graphqlite mcp memory model tui ultrawork workspace"'
         )
     return 0
+
+
+def configure_command(args: argparse.Namespace) -> int:
+    providers = args.provider or available_providers()
+    if not providers:
+        print_json({'ok': True, 'message': 'no providers to configure'})
+        return 0
+
+    missing = []
+    for provider in providers:
+        ok, message = check_llm_configuration(provider)
+        if not ok:
+            missing.append((provider, message))
+
+    if not missing:
+        print_json({'ok': True, 'message': 'all providers are already configured'})
+        return 0
+
+    env_path = Path.home() / '.teaagent' / 'env'
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if env_path.exists():
+        existing = env_path.read_text(encoding='utf-8')
+    else:
+        existing = ''
+
+    new_exports = ''
+    for provider, message in missing:
+        env_var = _provider_env_var(provider)
+        print(f'Provider {provider}: {message}')
+        try:
+            key = getpass.getpass(f'  Enter {env_var} (input hidden): ').strip()
+        except EOFError:
+            print(f'  Skipped {provider} (no input available)')
+            continue
+        if not key:
+            print(f'  Skipped {provider} (empty input)')
+            continue
+        export_line = f'export {env_var}={key}\n'
+        if export_line not in existing:
+            new_exports += export_line
+            os.environ[env_var] = key
+
+    if not new_exports:
+        print_json({'ok': False, 'message': 'no keys were entered, nothing written'})
+        return 1
+
+    env_path.write_text(existing + new_exports, encoding='utf-8')
+    print_json(
+        {
+            'ok': True,
+            'message': f'wrote {env_path}',
+            'hint': f'source {env_path}  # add this to your shell profile for persistence',
+        }
+    )
+    return 0
+
+
+def _provider_env_var(provider: str) -> str:
+    from teaagent.llm._config import PROVIDER_CONFIGS
+
+    config = PROVIDER_CONFIGS.get(provider)
+    return config.api_key_env if config else ''
 
 
 def print_json(value: Any) -> None:
