@@ -85,6 +85,12 @@ def _tui(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # 
         default=PermissionMode.PROMPT.value,
         help='Permission mode for ask commands.',
     )
+    p.add_argument(
+        '--chat',
+        action='store_true',
+        default=False,
+        help='Start with chat mode enabled.',
+    )
     p.set_defaults(func=handler)
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shlex
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from teaagent.graphqlite_store import check_graphqlite_runtime
 from teaagent.intent import clarify_task
@@ -13,6 +13,7 @@ from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
 
 if TYPE_CHECKING:
+    from teaagent.session import ChatSession
     from teaagent.tui import TeaAgentTUI
 
 
@@ -114,6 +115,80 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         tui.subagent = args[0] == 'on'
         tui.output_fn(f'subagent: {"on" if tui.subagent else "off"}')
         tui._save_tui_state()
+        return True
+    if action == 'chat':
+        if len(args) != 1 or args[0] not in {'on', 'off'}:
+            tui.output_fn("error: chat requires 'on' or 'off'")
+            return True
+        tui.chat = args[0] == 'on'
+        if tui.chat and not tui.session_id:
+            tui._ensure_session()
+        tui.output_fn(
+            f'chat: {"on" if tui.chat else "off"}'
+            + (f' (session: {tui.session_id[:8]})' if tui.session_id else '')
+        )
+        tui._save_tui_state()
+        return True
+    if action == 'session':
+        if not args:
+            tui.output_fn('error: session requires new, list, switch, clear, or show')
+            return True
+        sub = args[0]
+        if sub == 'new':
+            tui.chat = True
+            tui.session_id = None
+            new_session = tui._ensure_session()
+            tui.output_fn(f'session new: {new_session.id}')
+            tui._save_tui_state()
+            return True
+        if sub == 'list':
+            sessions = tui._get_session_store().list_sessions()
+            for s in sessions:
+                marker = ' *' if s['id'] == tui.session_id else ''
+                tui.output_fn(
+                    f'  {s["id"][:8]}  {s.get("label", "")}  '
+                    f'msgs:{s["message_count"]}{marker}'
+                )
+            if not sessions:
+                tui.output_fn('  (no sessions)')
+            return True
+        if sub == 'switch':
+            if len(args) != 2:
+                tui.output_fn('error: session switch requires a session id')
+                return True
+            sid = args[1]
+            switched_session: Optional[ChatSession] = tui._get_session_store().load(sid)
+            if switched_session is None:
+                tui.output_fn(f'error: session {sid[:8]} not found')
+                return True
+            tui.chat = True
+            tui.session_id = switched_session.id
+            tui.output_fn(
+                f'session switch: {switched_session.id[:8]}  msgs:{len(switched_session.messages)}'
+            )
+            tui._save_tui_state()
+            return True
+        if sub == 'clear':
+            if tui.session_id:
+                cleared_session: Optional[ChatSession] = tui._current_session()
+                if cleared_session:
+                    cleared_session.messages.clear()
+                    tui._get_session_store().save(cleared_session)
+                    tui.output_fn(f'session clear: {tui.session_id[:8]}')
+            else:
+                tui.output_fn('session clear: no active session')
+            return True
+        if sub == 'show':
+            if not tui.session_id:
+                tui.output_fn('session show: no active session')
+                return True
+            shown_session: Optional[ChatSession] = tui._current_session()
+            if shown_session is None:
+                tui.output_fn('session show: session not found')
+                return True
+            tui._print_json(shown_session.to_dict())
+            return True
+        tui.output_fn(f"error: unknown session subcommand '{sub}'")
         return True
     if action == 'heartbeat':
         if len(args) != 1:
@@ -256,5 +331,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         tui._print_json(tui._get_store().query(' '.join(args)))
         return True
 
+    if tui.chat:
+        return _handle_tui_command(tui, f'ask {raw_command}')
     tui.output_fn(f"error: unknown command '{action}'. Type 'help'.")
     return True

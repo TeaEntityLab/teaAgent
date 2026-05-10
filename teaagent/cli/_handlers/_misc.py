@@ -30,6 +30,7 @@ def start_tui(args: argparse.Namespace) -> int:
         root=args.root,
         allow_destructive=args.allow_destructive,
         permission_mode=parse_permission_mode(args.permission_mode),
+        chat=getattr(args, 'chat', False),
     )
 
 

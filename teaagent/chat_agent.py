@@ -45,6 +45,7 @@ class ChatAgentConfig:
     on_chunk: Optional[Callable[[str], None]] = None
     approval_handler: Optional[ApprovalHandler] = None
     checkpoint_store: Any = None
+    chat_messages: Optional[list[LLMMessage]] = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
@@ -63,6 +64,7 @@ class ModelDecisionEngine:
         task_spec: Optional[str] = None,
         stream: bool = False,
         on_chunk: Optional[Callable[[str], None]] = None,
+        chat_messages: Optional[list[LLMMessage]] = None,
     ) -> None:
         self.adapter = adapter
         self.registry = registry
@@ -72,6 +74,7 @@ class ModelDecisionEngine:
         self.task_spec = task_spec
         self.stream = stream
         self.on_chunk = on_chunk
+        self.chat_messages = chat_messages
 
     def decide(self, context: dict) -> Decision:
         prompt = assemble_agent_prompt(
@@ -92,10 +95,13 @@ class ModelDecisionEngine:
                 max_output_tokens=1024,
             )
 
+        messages = list(self.chat_messages or [])
+        messages.append(LLMMessage(role='user', content=prompt.user))
+
         response = self.adapter.complete(
             LLMRequest(
                 system=prompt.system,
-                messages=[LLMMessage(role='user', content=prompt.user)],
+                messages=messages,
                 model=self.model,
                 stream=self.stream,
                 on_chunk=self.on_chunk,
@@ -139,6 +145,7 @@ def run_chat_agent(
         task_spec=task_spec,
         stream=config.stream,
         on_chunk=config.on_chunk,
+        chat_messages=config.chat_messages,
     )
     audit_logger = audit or AuditLogger()
     runner = AgentRunner(

@@ -12,12 +12,13 @@ from teaagent.graphqlite_store import (
     GraphQLiteGraphStore,
 )
 from teaagent.intent import build_task_spec, clarify_task
-from teaagent.llm import LLMAdapter, create_llm_adapter
+from teaagent.llm import LLMAdapter, LLMMessage, create_llm_adapter
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore
 from teaagent.runner import ApprovalRequest, RunResult
+from teaagent.session import ChatMessage, ChatSession, SessionStore
 
 InputFn = Callable[[str], str]
 OutputFn = Callable[..., None]
@@ -40,6 +41,12 @@ HELP_TEXT = """Commands:
   progress <on|off>         Stream brief audit-event progress lines during ask runs.
   stream <on|off>           Stream model output token-by-token during ask runs.
   subagent <on|off>         Expose the 'subagent' tool so the model can delegate sub-tasks.
+  chat <on|off>             Enable or disable multi-turn chat mode with session history.
+  session new               Create a new chat session.
+  session list              List saved chat sessions.
+  session switch <id>       Switch to another chat session.
+  session clear             Clear messages in the current chat session.
+  session show              Show the current chat session details.
   heartbeat <seconds>       Set heartbeat interval for ask runs. 0 disables.
   status <run_id>           Show heartbeat liveness for a persisted run.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
@@ -89,11 +96,15 @@ class TeaAgentTUI:
         self.stream = False
         self.subagent = False
         self.heartbeat_seconds = 0.0
+        self.chat = False
+        self._chat_explicit = False
+        self.session_id: Optional[str] = None
         self.approved_call_ids: set[str] = set()
         self.input_fn = input_fn
         self.output_fn = output_fn
         self.adapter_factory = adapter_factory
         self._store: Optional[GraphQLiteGraphStore] = None
+        self._session_store: Optional[SessionStore] = None
 
     def run(self) -> int:
         self._load_tui_state()
@@ -164,6 +175,27 @@ class TeaAgentTUI:
             return
         self.output_fn(f"error: unknown memory command '{action}'")
 
+    def _get_session_store(self) -> SessionStore:
+        if self._session_store is None:
+            self._session_store = SessionStore(self.root)
+        return self._session_store
+
+    def _current_session(self) -> Optional[ChatSession]:
+        if not self.session_id:
+            return None
+        return self._get_session_store().load(self.session_id)
+
+    def _ensure_session(self) -> ChatSession:
+        session = self._current_session()
+        if session is not None:
+            return session
+        from uuid import uuid4
+
+        session = ChatSession(id=uuid4().hex)
+        self.session_id = session.id
+        self._get_session_store().save(session)
+        return session
+
     def _run_agent_task(
         self,
         task: str,
@@ -195,6 +227,14 @@ class TeaAgentTUI:
         audit = store.audit_logger()
         if self.progress:
             audit.add_sink(self._progress_sink)
+
+        chat_messages = None
+        if self.chat:
+            session = self._ensure_session()
+            chat_messages = [
+                LLMMessage(role=m.role, content=m.content) for m in session.messages
+            ]
+
         result = run_chat_agent(
             task=task,
             adapter=adapter,
@@ -209,12 +249,28 @@ class TeaAgentTUI:
                 stream=self.stream,
                 on_chunk=self._stream_chunk if self.stream else None,
                 approval_handler=self._approval_handler,
+                chat_messages=chat_messages,
             ),
             audit=audit,
             task_spec=task_spec,
             initial_observations=initial_observations,
         )
         store.logger_for_result(result, audit)
+
+        if self.chat:
+            chat_session: Optional[ChatSession] = self._current_session()
+            if chat_session is not None:
+                chat_session.messages.append(ChatMessage(role='user', content=task))
+                answer = (
+                    result.final_answer.content
+                    if result.final_answer
+                    else f'[{result.status}]'
+                )
+                chat_session.messages.append(
+                    ChatMessage(role='assistant', content=answer)
+                )
+                self._get_session_store().save(chat_session)
+
         payload = self._run_result_payload(
             result, routing=routing.to_dict() if routing else None
         )
@@ -299,6 +355,16 @@ class TeaAgentTUI:
             'route_model_enabled', self.route_model_enabled
         )
         self.heartbeat_seconds = data.get('heartbeat_seconds', self.heartbeat_seconds)
+        if not self._chat_explicit:
+            self.chat = data.get('chat', self.chat)
+        self.session_id = data.get('session_id', self.session_id)
+        self.progress = data.get('progress', self.progress)
+        self.stream = data.get('stream', self.stream)
+        self.subagent = data.get('subagent', self.subagent)
+        self.route_model_enabled = data.get(
+            'route_model_enabled', self.route_model_enabled
+        )
+        self.heartbeat_seconds = data.get('heartbeat_seconds', self.heartbeat_seconds)
 
     def _save_tui_state(self) -> None:
         self._state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -313,6 +379,8 @@ class TeaAgentTUI:
             'subagent': self.subagent,
             'route_model_enabled': self.route_model_enabled,
             'heartbeat_seconds': self.heartbeat_seconds,
+            'chat': self.chat,
+            'session_id': self.session_id,
         }
         self._state_path.write_text(
             json.dumps(data, indent=2, sort_keys=True), encoding='utf-8'
@@ -345,12 +413,17 @@ def run_tui(
     root: str | Path = '.',
     allow_destructive: bool = False,
     permission_mode: PermissionMode = PermissionMode.PROMPT,
+    chat: bool = False,
 ) -> int:
-    return TeaAgentTUI(
+    tui = TeaAgentTUI(
         database=database,
         provider=provider,
         model=model,
         root=root,
         allow_destructive=allow_destructive,
         permission_mode=permission_mode,
-    ).run()
+    )
+    if chat:
+        tui.chat = True
+        tui._chat_explicit = True
+    return tui.run()
