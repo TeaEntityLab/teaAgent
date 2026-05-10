@@ -217,7 +217,7 @@ export ANTHROPIC_BASE_URL=https://api.anthropic.com/v1
 export OPENAI_BASE_URL=https://api.openai.com/v1
 export GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 export OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-export OPENCODEZEN_BASE_URL=https://api.opencodezen.com/v1
+export OPENCODEZEN_BASE_URL=https://opencode.ai/zen/go/v1
 ```
 
 ## Workspace Tools

@@ -47,7 +47,7 @@ PROVIDER_CONFIGS = {
         name='opencodezen-go',
         api_key_env='OPENCODEZEN_API_KEY',
         default_model='opencodezen-go',
-        base_url='https://api.opencodezen.com/v1',
+        base_url='https://opencode.ai/zen/go/v1',
         base_url_env='OPENCODEZEN_BASE_URL',
     ),
 }
