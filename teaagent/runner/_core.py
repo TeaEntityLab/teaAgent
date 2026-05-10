@@ -220,6 +220,7 @@ class AgentRunner:
                     iterations=iterations,
                     tool_calls=tool_calls,
                     status=f'failed:{exc.category}',
+                    error_message=str(exc),
                 )
             except Exception as exc:  # pragma: no cover - defensive boundary
                 self.audit.record(
@@ -235,6 +236,7 @@ class AgentRunner:
                     iterations=iterations,
                     tool_calls=tool_calls,
                     status=f'failed:{ErrorCategory.SYSTEM}',
+                    error_message=str(exc),
                 )
 
         self.audit.record(
@@ -250,6 +252,7 @@ class AgentRunner:
             iterations=iterations,
             tool_calls=tool_calls,
             status=f'failed:{ErrorCategory.MODEL_LOGIC}',
+            error_message='iteration budget exceeded',
         )
 
     def _can_request_approval(self, destructive: bool) -> bool:

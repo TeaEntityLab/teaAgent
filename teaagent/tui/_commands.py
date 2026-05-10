@@ -165,7 +165,10 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         if not task_args:
             tui.output_fn('error: ask --clarify requires a task')
             return True
-        tui._run_agent_task(' '.join(task_args), clarify_first=clarify_first)
+        try:
+            tui._run_agent_task(' '.join(task_args), clarify_first=clarify_first)
+        except Exception as exc:
+            tui._print_json({'error': str(exc), 'status': 'failed:system'})
         return True
     if action == 'clarify':
         if not args:

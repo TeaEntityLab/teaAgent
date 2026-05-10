@@ -243,6 +243,8 @@ class TeaAgentTUI:
         }
         if 'approval' in result.metadata:
             payload['approval'] = result.metadata['approval']
+        if result.error_message:
+            payload['error'] = result.error_message
         return payload
 
     def _progress_sink(self, event: AuditEvent) -> None:

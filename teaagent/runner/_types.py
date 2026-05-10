@@ -54,3 +54,4 @@ class RunResult:
     tool_calls: int
     status: str
     metadata: dict[str, Any] = field(default_factory=dict)
+    error_message: Optional[str] = None
