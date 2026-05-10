@@ -29,6 +29,7 @@ from ._memory import (
 from ._misc import (
     clarify_command,
     completion_command,
+    graphqlite_migrate,
     graphqlite_query,
     graphqlite_smoke,
     start_tui,
@@ -59,6 +60,7 @@ __all__ = [
     'doctor_all',
     'doctor_graphqlite',
     'doctor_model',
+    'graphqlite_migrate',
     'graphqlite_query',
     'graphqlite_smoke',
     'mcp_serve_command',

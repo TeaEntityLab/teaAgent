@@ -43,6 +43,21 @@ def graphqlite_smoke(args: argparse.Namespace) -> int:
     return 0
 
 
+def graphqlite_migrate(args: argparse.Namespace) -> int:
+    from teaagent.graphqlite_production import (
+        GraphQLitePersistentStore,
+        GraphQLiteProductionConfig,
+    )
+
+    store = GraphQLitePersistentStore(
+        GraphQLiteProductionConfig(
+            database=args.database, auto_index=False, auto_migrate=False
+        )
+    )
+    print_json(store.migration_status())
+    return 0
+
+
 def ultrawork_start_command(args: argparse.Namespace) -> int:
     command = [
         sys.executable,

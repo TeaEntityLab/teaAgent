@@ -27,6 +27,10 @@ from teaagent.code_mode import (
 from teaagent.context import ContextCompactor
 from teaagent.eval import EvalCase, EvalReport, run_eval
 from teaagent.graph_rag import GraphEdge, KnowledgeGraph, graph_retrieve
+from teaagent.graphqlite_production import (
+    GraphQLitePersistentStore,
+    GraphQLiteProductionConfig,
+)
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
@@ -155,6 +159,8 @@ __all__ = [
     'GraphEdge',
     'GraphQLiteConfig',
     'GraphQLiteGraphStore',
+    'GraphQLitePersistentStore',
+    'GraphQLiteProductionConfig',
     'GraphQLiteRuntimeError',
     'GraphQLiteUnavailableError',
     'HAS_CRYPTOGRAPHY',

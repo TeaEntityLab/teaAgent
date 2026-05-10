@@ -28,7 +28,12 @@ def register(
         handlers['audit_prune'],
         serve_handler=handlers.get('audit_serve'),
     )
-    _graphqlite(subparsers, handlers['graphqlite_query'], handlers['graphqlite_smoke'])
+    _graphqlite(
+        subparsers,
+        handlers['graphqlite_query'],
+        handlers['graphqlite_smoke'],
+        migrate_handler=handlers.get('graphqlite_migrate'),
+    )
     _ultrawork(
         subparsers,
         handlers['ultrawork_start'],
@@ -196,6 +201,7 @@ def _graphqlite(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
     query_handler: Callable,
     smoke_handler: Callable,
+    migrate_handler: Optional[Callable] = None,
 ) -> None:
     graphqlite = subparsers.add_parser('graphqlite', help='Run GraphQLite operations.')
     subs = graphqlite.add_subparsers(dest='graphqlite_command', required=True)
@@ -218,6 +224,17 @@ def _graphqlite(
         help='SQLite database path. Defaults to :memory:.',
     )
     smoke.set_defaults(func=smoke_handler)
+
+    if migrate_handler is not None:
+        migrate = subs.add_parser(
+            'migrate', help='Show GraphQLite schema migration status.'
+        )
+        migrate.add_argument(
+            '--database',
+            default=':memory:',
+            help='SQLite database path. Defaults to :memory:.',
+        )
+        migrate.set_defaults(func=migrate_handler)
 
 
 def _ultrawork(

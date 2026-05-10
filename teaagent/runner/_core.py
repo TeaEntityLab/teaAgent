@@ -19,6 +19,16 @@ from ._types import ApprovalHandler, ApprovalRequest, DecisionFn, FinalAnswer, R
 
 
 class AgentRunner:
+    """Executes an agent run loop: decide, dispatch tools, enforce budgets, record audit events.
+
+    The runner orchestrates the core agent lifecycle:
+    1. Calls the *decide* function with the current context.
+    2. On a ``FinalAnswer``, records ``run_completed`` and returns.
+    3. On a tool request, validates tool existence, checks policy, dispatches the tool,
+       records the observation, and loops.
+    4. On budget exhaustion, records ``run_failed`` with a budget‑exceeded error.
+    """
+
     def __init__(
         self,
         *,

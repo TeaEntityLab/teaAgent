@@ -1,3 +1,5 @@
+"""Workspace tools: read, write, search, shell, and git operations scoped to a root directory."""
+
 from teaagent.workspace_tools._config import (
     WorkspaceToolConfig as WorkspaceToolConfig,
 )

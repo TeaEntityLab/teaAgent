@@ -12,6 +12,8 @@ from teaagent.storage import append_jsonl_line
 
 @dataclass(frozen=True)
 class MemoryEntry:
+    """A single tagged memory entry stored by the agent."""
+
     memory_id: str
     content: str
     tags: tuple[str, ...] = field(default_factory=tuple)

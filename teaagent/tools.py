@@ -12,6 +12,8 @@ ToolHandler = Callable[[dict[str, Any]], dict[str, Any]]
 
 @dataclass(frozen=True)
 class ToolAnnotations:
+    """Safety and behavioural annotations for a registered tool."""
+
     read_only: bool = False
     destructive: bool = False
     idempotent: bool = False
@@ -19,6 +21,8 @@ class ToolAnnotations:
 
 @dataclass(frozen=True)
 class ToolDefinition:
+    """Complete definition of a registered tool: schemas, annotations, and handler."""
+
     name: str
     description: str
     input_schema: dict[str, Any]
@@ -28,6 +32,13 @@ class ToolDefinition:
 
 
 class ToolRegistry:
+    """Central registry for all agent tools.
+
+    Provides registration, lookup, schema validation, and MCP‑compatible
+    metadata export.  Use ``build_workspace_tool_registry`` for the standard
+    workspace‑tool set.
+    """
+
     def __init__(self) -> None:
         self._tools: dict[str, ToolDefinition] = {}
 

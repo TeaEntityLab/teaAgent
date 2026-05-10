@@ -1,0 +1,184 @@
+{
+  "name": "teaagent",
+  "displayName": "TeaAgent",
+  "description": "Governance-first agent harness for autonomous coding tasks.",
+  "version": "0.1.0",
+  "publisher": "teaagent",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning"
+  ],
+  "keywords": [
+    "agent",
+    "governance",
+    "audit",
+    "llm",
+    "coding"
+  ],
+  "activationEvents": [
+    "onCommand:teaagent.doctor",
+    "onCommand:teaagent.agentRun",
+    "onCommand:teaagent.agentPreflight",
+    "onCommand:teaagent.modelProviders",
+    "onCommand:teaagent.graphqliteSmoke"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "teaagent.doctor",
+        "title": "TeaAgent: Run Doctor",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentRun",
+        "title": "TeaAgent: Run Agent",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentPreflight",
+        "title": "TeaAgent: Run Preflight",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.modelProviders",
+        "title": "TeaAgent: List Model Providers",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.graphqliteSmoke",
+        "title": "TeaAgent: GraphQLite Smoke Test",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.openTUI",
+        "title": "TeaAgent: Open TUI",
+        "category": "TeaAgent"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "teaagent",
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "TeaAgent subcommand",
+            "enum": [
+              "agent run",
+              "agent preflight",
+              "agent card",
+              "doctor all",
+              "doctor graphqlite",
+              "doctor model",
+              "model providers",
+              "model smoke",
+              "model conformance",
+              "graphqlite smoke",
+              "graphqlite query",
+              "graphqlite migrate",
+              "audit list",
+              "audit show"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "description": "Additional arguments to pass to the teaagent command"
+          },
+          "root": {
+            "type": "string",
+            "description": "Workspace root directory",
+            "default": "${workspaceFolder}"
+          }
+        }
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "teaagent",
+        "label": "TeaAgent Audit Events",
+        "owner": "teaagent",
+        "source": "teaagent",
+        "fileLocation": "absolute",
+        "pattern": [
+          {
+            "regexp": "^(error|warning)\\s+(.+):(\\d+):\\s+(.+)$",
+            "severity": 1,
+            "file": 2,
+            "line": 3,
+            "message": 4
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "TeaAgent",
+      "properties": {
+        "teaagent.executablePath": {
+          "type": "string",
+          "default": "teaagent",
+          "description": "Path to the teaagent executable. Defaults to 'teaagent' in PATH."
+        },
+        "teaagent.databasePath": {
+          "type": "string",
+          "default": ":memory:",
+          "description": "SQLite database path for GraphQLite."
+        },
+        "teaagent.defaultProvider": {
+          "type": "string",
+          "default": "gpt",
+          "enum": [
+            "gpt",
+            "claude",
+            "gemini",
+            "ollama"
+          ],
+          "description": "Default model provider for agent runs."
+        },
+        "teaagent.defaultModel": {
+          "type": "string",
+          "default": "",
+          "description": "Default model name to use."
+        },
+        "teaagent.defaultPermissionMode": {
+          "type": "string",
+          "default": "prompt",
+          "enum": [
+            "prompt",
+            "auto",
+            "plan"
+          ],
+          "description": "Default permission mode for agent runs."
+        }
+      }
+    },
+    "terminal": {
+      "profiles": [
+        {
+          "id": "teaagent.tui",
+          "title": "TeaAgent TUI",
+          "icon": "$(terminal-bash)",
+          "path": "${config:teaagent.executablePath}",
+          "args": [
+            "tui"
+          ]
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.3.0"
+  }
+}

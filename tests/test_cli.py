@@ -106,6 +106,18 @@ class CLITests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIsInstance(payload, list)
 
+    def test_graphqlite_migrate_shows_status(self) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            exit_code = main(['graphqlite', 'migrate', '--database', ':memory:'])
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertIn('applied', payload)
+        self.assertIn('pending', payload)
+        self.assertIn('total', payload)
+
     def test_ultrawork_show_unknown_via_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()

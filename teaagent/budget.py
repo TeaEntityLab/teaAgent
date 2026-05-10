@@ -8,6 +8,12 @@ from teaagent.llm import estimate_cost_preflight
 
 @dataclass(frozen=True)
 class RunBudget:
+    """Hard limits for a single agent run.
+
+    The runner checks these on every iteration.  When any limit is exceeded
+    a ``BudgetExceededError`` is raised.
+    """
+
     max_iterations: int = 25
     max_tool_calls: int = 25
     max_estimated_cost_cents: int = 100
