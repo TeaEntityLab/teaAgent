@@ -10,6 +10,7 @@ from teaagent.errors import (
     AgentHarnessError,
     BudgetExceededError,
     ErrorCategory,
+    ToolExecutionError,
     ToolPermissionError,
 )
 from teaagent.policy import ApprovalPolicy, PermissionMode
@@ -184,7 +185,24 @@ class AgentRunner:
                     arguments=decision.arguments,
                     annotations=annotations,
                 )
-                result = self.registry.execute(decision.tool_name, decision.arguments)
+                try:
+                    result = self.registry.execute(
+                        decision.tool_name, decision.arguments
+                    )
+                except ToolExecutionError as exc:
+                    tool_calls += 1
+                    err_observation: dict[str, Any] = {
+                        'call_id': decision.call_id,
+                        'tool_name': decision.tool_name,
+                        'error': str(exc),
+                    }
+                    context['observations'].append(err_observation)
+                    self.audit.record(
+                        'tool_call_failed', current_run_id, **err_observation
+                    )
+                    if self.checkpoint_store is not None:
+                        self.checkpoint_store.save(current_run_id, context)
+                    continue
                 tool_calls += 1
                 observation = {
                     'call_id': decision.call_id,

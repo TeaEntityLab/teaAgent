@@ -84,6 +84,8 @@ class TUITests(unittest.TestCase):
                 output_fn=output.append,
                 adapter_factory=lambda _provider, _model: adapter,
             )
+            tui.chat = False
+            tui._chat_explicit = True
 
             exit_code = tui.run()
 

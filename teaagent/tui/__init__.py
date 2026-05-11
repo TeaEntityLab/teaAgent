@@ -271,12 +271,15 @@ class TeaAgentTUI:
                 )
                 self._get_session_store().save(chat_session)
 
-        payload = self._run_result_payload(
-            result, routing=routing.to_dict() if routing else None
-        )
-        if initial_observations:
-            payload['replayed_observations'] = len(initial_observations)
-        self._print_json(payload)
+        if self.chat and result.status == 'completed' and result.final_answer:
+            self.output_fn(result.final_answer.content)
+        else:
+            payload = self._run_result_payload(
+                result, routing=routing.to_dict() if routing else None
+            )
+            if initial_observations:
+                payload['replayed_observations'] = len(initial_observations)
+            self._print_json(payload)
 
     def _approval_handler(self, request: ApprovalRequest) -> bool:
         self._print_json({'status': 'approval_required', 'approval': request.to_dict()})
