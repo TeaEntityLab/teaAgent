@@ -293,6 +293,8 @@ def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
     for path in sorted(config.root.rglob('*')):
         if not path.is_file():
             continue
+        if path.is_symlink():
+            continue
         rel = relative_path(config, path)
         if '.git' in path.parts or is_ignored(rel):
             continue
@@ -321,6 +323,8 @@ def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
     matches = []
     for path in sorted(config.root.rglob('*')):
         if not path.is_file():
+            continue
+        if path.is_symlink():
             continue
         rel = relative_path(config, path)
         if '.git' in path.parts or is_ignored(rel):
