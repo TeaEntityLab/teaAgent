@@ -17,8 +17,10 @@ Decision schema:
 {"type":"final","content":"answer"}
 
 Rules:
-- Use tools when workspace inspection or execution is needed.
-- Use final only when the task is complete or cannot proceed.
+- If the task is a simple question or chat that does not require workspace access, respond immediately with a final answer.
+- Use tools only when you need to inspect or modify files, run commands, or gather information from the workspace.
+- Do not use tools to explore the workspace unless the task specifically requires it.
+- Use final when you have enough information to answer, or when the task is complete.
 - Do not invent tool names or arguments.
 - Destructive tools may be blocked unless the user explicitly enables destructive actions.
 """

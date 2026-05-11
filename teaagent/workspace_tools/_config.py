@@ -70,6 +70,16 @@ def _build_gitignore_matcher(
 
 
 def _gitignore_match(rel_path: str, pattern: str) -> bool:
+    path_parts = Path(rel_path).parts
     if '/' not in pattern and '**' not in pattern:
-        return fnmatch(Path(rel_path).name, pattern)
+        if fnmatch(path_parts[-1], pattern):
+            return True
+        return any(part == pattern for part in path_parts)
+    if '**' in pattern:
+        segments = pattern.split('/')
+        glob_dir = segments[-1] if segments[-1] != '**' else None
+        if glob_dir:
+            return any(part == glob_dir for part in path_parts)
+        dir_name = segments[-2] if len(segments) >= 2 else segments[0]
+        return any(part == dir_name for part in path_parts)
     return fnmatch(rel_path, pattern)
