@@ -67,15 +67,23 @@ pip install -e ".[security]"
 
 ## Quick Start
 
+**New to TeaAgent?** See the [Quick Start Guide](docs/USAGE.md) for a step-by-step walkthrough covering API key setup, agent mode, chat mode, approvals, and troubleshooting.
+
 ```bash
-# Check provider configuration
+# 1. Set up API keys (one-time)
+cp scripts/provider_keys.zsh ~/.teaagent/provider_keys.zsh
+# Edit the file and fill in your keys, then:
+echo 'source ~/.teaagent/provider_keys.zsh' >> ~/.zshrc
+source ~/.zshrc
+
+# 2. Verify setup
 teaagent doctor model gpt
 
-# Run an inspect-only task
+# 3. Run an inspect-only task
 teaagent agent run gpt "Summarize the test suite" --permission-mode read-only
 
-# Start interactive TUI
-teaagent tui
+# 4. Start interactive TUI
+teaagent tui --chat
 ```
 
 ### Environment Variables

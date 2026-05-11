@@ -46,7 +46,7 @@ PROVIDER_CONFIGS = {
     'opencodezen-go': ProviderConfig(
         name='opencodezen-go',
         api_key_env='OPENCODEZEN_API_KEY',
-        default_model='opencodezen-go',
+        default_model='deepseek-v4-flash',
         base_url='https://opencode.ai/zen/go/v1',
         base_url_env='OPENCODEZEN_BASE_URL',
     ),
