@@ -44,7 +44,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
                 parts = spec.split(':', 2)
                 if len(parts) != 3:
                     print(
-                        f'Invalid --oauth-client format: {spec} (expected ID:SECRET:REDIRECT_URI)',
+                        'Invalid --oauth-client format (expected ID:SECRET:REDIRECT_URI).',
                         file=sys.stderr,
                     )
                     return 1
