@@ -80,11 +80,11 @@ def _load_key_ring(
     path: Path, *, active_kid_override: str | None, rotation_window_seconds: int = 0
 ) -> tuple[OAuthKeyRing | None, str | None]:
     if not path.exists():
-        return None, f'OAuth key ring file not found: {path}'
+        return None, 'OAuth key ring file not found.'
     try:
         payload = json.loads(path.read_text(encoding='utf-8'))
-    except (OSError, json.JSONDecodeError) as exc:
-        return None, f'Failed to read OAuth key ring file {path}: {exc}'
+    except (OSError, json.JSONDecodeError):
+        return None, 'Failed to read OAuth key ring file.'
     if not isinstance(payload, dict):
         return None, 'OAuth key ring file must contain a JSON object.'
     raw_keys = payload.get('keys')
@@ -98,7 +98,7 @@ def _load_key_ring(
         if not isinstance(secret, str) or len(secret) < 16:
             return (
                 None,
-                f'OAuth key ring secret for kid {kid!r} must be a string >= 16 chars.',
+                'OAuth key ring secrets must be strings with length >= 16 chars.',
             )
         keys[kid] = secret.encode('utf-8')
 
@@ -109,7 +109,7 @@ def _load_key_ring(
             "OAuth key ring file requires string 'active_kid' or --oauth-active-kid.",
         )
     if active_kid not in keys:
-        return None, f'OAuth active kid {active_kid!r} not found in key ring keys.'
+        return None, 'OAuth active kid not found in key ring keys.'
 
     return OAuthKeyRing(
         active_kid=active_kid,
