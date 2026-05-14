@@ -12,8 +12,8 @@ TeaAgent acceptance tests live under `tests/acceptance/` and verify user-facing 
 - A2A federation flow: remote discovery, partial endpoint failure, capability routing, delegation, context forwarding, and agent trace metadata.
 - Managed runtime flow: tool metadata context construction, workspace/request context forwarding, persisted managed task audit events, and result trace metadata.
 - Long-running worker flow: background worker start, list, show, log tail, and stop lifecycle.
+- Workspace edit flow: hash-anchored read/edit, git status, test command execution, git diff inspection, and final diff summary.
 
 ## Next User Stories
 
 - Live provider conformance gated by environment variables.
-- Workspace edit flow covering hash reads, patch application, git status, test execution, and final diff summary.
