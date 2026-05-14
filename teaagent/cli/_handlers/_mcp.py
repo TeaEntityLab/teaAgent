@@ -24,7 +24,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
                 rotation_window_seconds=args.oauth_rotation_window,
             )
             if error:
-                print(error, file=sys.stderr)
+                print('Invalid OAuth key ring configuration.', file=sys.stderr)
                 return 1
         elif args.oauth_active_kid:
             print(
