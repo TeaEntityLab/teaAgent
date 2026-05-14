@@ -13,7 +13,7 @@ from teaagent.llm._extract import (
     _first_choice_delta,
 )
 from teaagent.llm._retry import DEFAULT_RETRY_CONFIG, LLMRetryConfig, _call_with_retry
-from teaagent.llm._transport import UrllibHTTPTransport
+from teaagent.llm._transport import UrllibHTTPTransport, build_ssl_context_from_env
 from teaagent.llm._types import (
     HTTPTransport,
     LLMHTTPError,
@@ -205,7 +205,11 @@ class OpenAICompatibleAdapter:
             }
             req = urllib_request.Request(url, data=body, headers=headers, method='POST')
             try:
-                with urllib_request.urlopen(req, timeout=self.timeout) as resp:
+                ssl_context = build_ssl_context_from_env()
+                request_kwargs: dict[str, Any] = {'timeout': self.timeout}
+                if ssl_context is not None:
+                    request_kwargs['context'] = ssl_context
+                with urllib_request.urlopen(req, **request_kwargs) as resp:
                     lines = list(resp)
             except HTTPError as exc:
                 detail = exc.read().decode('utf-8', errors='replace')

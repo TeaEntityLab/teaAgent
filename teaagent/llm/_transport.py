@@ -1,11 +1,30 @@
 from __future__ import annotations
 
 import json
+import os
+import ssl
 from typing import Any
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 
 from teaagent.llm._types import LLMHTTPError
+
+
+def build_ssl_context_from_env() -> ssl.SSLContext | None:
+    ca_bundle = os.environ.get('REQUESTS_CA_BUNDLE') or os.environ.get('SSL_CERT_FILE')
+    client_cert = os.environ.get('TEAAGENT_TLS_CLIENT_CERT')
+    client_key = os.environ.get('TEAAGENT_TLS_CLIENT_KEY')
+    if not ca_bundle and not client_cert:
+        return None
+    context = ssl.create_default_context()
+    if ca_bundle:
+        context.load_verify_locations(cafile=ca_bundle)
+    if client_cert:
+        if client_key:
+            context.load_cert_chain(certfile=client_cert, keyfile=client_key)
+        else:
+            context.load_cert_chain(certfile=client_cert)
+    return context
 
 
 class UrllibHTTPTransport:
@@ -29,7 +48,11 @@ class UrllibHTTPTransport:
             method='POST',
         )
         try:
-            with urllib_request.urlopen(req, timeout=timeout) as response:
+            ssl_context = build_ssl_context_from_env()
+            request_kwargs: dict[str, Any] = {'timeout': timeout}
+            if ssl_context is not None:
+                request_kwargs['context'] = ssl_context
+            with urllib_request.urlopen(req, **request_kwargs) as response:
                 return json.loads(response.read().decode('utf-8'))
         except HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')

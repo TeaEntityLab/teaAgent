@@ -513,6 +513,7 @@ track p50/p95 latency across eval suites and detect regressions.*
 | `test_ultrawork_notify.py` | Webhook delivery, shell command, failure silence |
 | `test_eval_report.py` | HTML rendering, case names, pass/fail, judge scores |
 | `test_benchmark.py` | p50/p95/mean latency, regression detection, serialisation |
+| `test_llm_transport.py` | TLS env wiring: CA bundle + client cert passed into LLM HTTPS transport |
 
 ---
 
@@ -522,5 +523,4 @@ The following stories remain unimplemented.
 
 | ID | Story | Priority |
 |---|---|---|
-| AC-NEW-16 | HTTPS_PROXY / CA bundle / mTLS "just works" | P2 |
 | AC-NEW-20 | Local model (Ollama/vLLM) with full governance | P2 |
