@@ -40,6 +40,7 @@ def register(
         handlers['ultrawork_start'],
         handlers['ultrawork_list'],
         handlers['ultrawork_show'],
+        handlers['ultrawork_logs'],
         handlers['ultrawork_stop'],
     )
     _workspace(subparsers, handlers['workspace_tools'], handlers['workspace_openapi'])
@@ -268,6 +269,7 @@ def _ultrawork(
     start_handler: Callable,
     list_handler: Callable,
     show_handler: Callable,
+    logs_handler: Callable,
     stop_handler: Callable,
 ) -> None:
     ultrawork = subparsers.add_parser(
@@ -307,6 +309,14 @@ def _ultrawork(
     show.add_argument('worker_id', help='Worker id to inspect.')
     show.add_argument('--root', default='.', help='Workspace root.')
     show.set_defaults(func=show_handler)
+
+    logs = subs.add_parser('logs', help='Show one worker log tail.')
+    logs.add_argument('worker_id', help='Worker id to inspect.')
+    logs.add_argument('--root', default='.', help='Workspace root.')
+    logs.add_argument(
+        '--bytes', type=int, default=64_000, help='Maximum log bytes to return.'
+    )
+    logs.set_defaults(func=logs_handler)
 
     stop = subs.add_parser('stop', help='Stop a running worker.')
     stop.add_argument('worker_id', help='Worker id to stop.')

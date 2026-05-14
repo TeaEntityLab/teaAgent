@@ -102,6 +102,24 @@ class UltraworkStore:
         data['alive'] = self._is_alive(int(data['pid']))
         return data
 
+    def logs(self, worker_id: str, *, max_bytes: int = 64_000) -> dict[str, Any]:
+        data = self.show(worker_id)
+        log_path = Path(str(data['log_path']))
+        if not log_path.exists():
+            content = ''
+        else:
+            with log_path.open('rb') as fh:
+                if max_bytes > 0:
+                    fh.seek(0, os.SEEK_END)
+                    size = fh.tell()
+                    fh.seek(max(0, size - max_bytes), os.SEEK_SET)
+                content = fh.read().decode('utf-8', errors='replace')
+        return {
+            'worker_id': data['worker_id'],
+            'log_path': data['log_path'],
+            'content': content,
+        }
+
     def stop(self, worker_id: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
         data = self.show(worker_id)
         pid = int(data['pid'])

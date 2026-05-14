@@ -100,6 +100,15 @@ def ultrawork_show_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def ultrawork_logs_command(args: argparse.Namespace) -> int:
+    try:
+        print_json(UltraworkStore(args.root).logs(args.worker_id, max_bytes=args.bytes))
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    return 0
+
+
 def ultrawork_stop_command(args: argparse.Namespace) -> int:
     try:
         print_json(UltraworkStore(args.root).stop(args.worker_id))
