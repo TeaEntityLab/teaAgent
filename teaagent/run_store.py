@@ -206,3 +206,39 @@ class RunStore:
 
 def safe_run_id(run_id: str) -> str:
     return ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+
+
+def summarize_audit_events(events: list[dict[str, Any]]) -> dict[str, Any]:
+    event_counts: dict[str, int] = {}
+    tool_names: list[str] = []
+    destructive_tool_calls = 0
+    approval_required = False
+    status = 'unknown'
+    for event in events:
+        event_type = str(event.get('event_type', ''))
+        event_counts[event_type] = event_counts.get(event_type, 0) + 1
+        payload = event.get('payload', {})
+        if not isinstance(payload, dict):
+            payload = {}
+        if event_type == 'tool_call_started':
+            tool_name = payload.get('tool_name')
+            if isinstance(tool_name, str) and tool_name not in tool_names:
+                tool_names.append(tool_name)
+            annotations = payload.get('annotations', {})
+            if isinstance(annotations, dict) and annotations.get('destructive'):
+                destructive_tool_calls += 1
+        if event_type == 'tool_call_pending_approval':
+            approval_required = True
+        if event_type == 'run_completed':
+            status = 'completed'
+        elif event_type == 'run_paused':
+            status = str(payload.get('status', 'pending_approval'))
+        elif event_type == 'run_failed':
+            status = f'failed:{payload.get("category", "system")}'
+    return {
+        'status': status,
+        'event_counts': event_counts,
+        'tool_names': tool_names,
+        'destructive_tool_calls': destructive_tool_calls,
+        'approval_required': approval_required,
+    }

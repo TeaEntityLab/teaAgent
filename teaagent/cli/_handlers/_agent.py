@@ -10,7 +10,7 @@ from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.policy import parse_permission_mode
 from teaagent.preflight import preflight
-from teaagent.run_store import RunStore
+from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalRequest, RunResult
 
 
@@ -152,7 +152,12 @@ def _execute_agent_task(
 
         with suppress(Exception):
             _telemetry_sink.force_flush()
-    payload = run_result_payload(result, routing=routing.to_dict() if routing else None)
+    events = store.show_run(result.run_id)
+    payload = run_result_payload(
+        result,
+        routing=routing.to_dict() if routing else None,
+        audit_summary=summarize_audit_events(events),
+    )
     if resumed_from:
         payload['resumed_from'] = resumed_from
         payload['task'] = task
@@ -165,7 +170,10 @@ def _execute_agent_task(
 
 
 def run_result_payload(
-    result: RunResult, *, routing: Optional[dict[str, Any]]
+    result: RunResult,
+    *,
+    routing: Optional[dict[str, Any]],
+    audit_summary: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         'run_id': result.run_id,
@@ -175,6 +183,8 @@ def run_result_payload(
         'routing': routing,
         'final_answer': result.final_answer.content if result.final_answer else None,
     }
+    if audit_summary is not None:
+        payload['audit_summary'] = audit_summary
     if 'approval' in result.metadata:
         payload['approval'] = result.metadata['approval']
     return payload

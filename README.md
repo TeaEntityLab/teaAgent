@@ -181,6 +181,9 @@ teaagent agent run gpt "Summarize the tests" --permission-mode read-only
 # Run tests
 pytest
 
+# Run user-facing acceptance workflows
+python3 -m pytest tests/acceptance
+
 # Lint
 ruff check .
 ruff format --check .

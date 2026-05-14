@@ -16,7 +16,7 @@ from teaagent.llm import LLMAdapter, LLMMessage, create_llm_adapter
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode
-from teaagent.run_store import RunStore
+from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalRequest, RunResult
 from teaagent.session import ChatMessage, ChatSession, SessionStore
 
@@ -256,6 +256,7 @@ class TeaAgentTUI:
             initial_observations=initial_observations,
         )
         store.logger_for_result(result, audit)
+        audit_summary = summarize_audit_events(store.show_run(result.run_id))
 
         if self.chat:
             chat_session: Optional[ChatSession] = self._current_session()
@@ -275,7 +276,9 @@ class TeaAgentTUI:
             self.output_fn(result.final_answer.content)
         else:
             payload = self._run_result_payload(
-                result, routing=routing.to_dict() if routing else None
+                result,
+                routing=routing.to_dict() if routing else None,
+                audit_summary=audit_summary,
             )
             if initial_observations:
                 payload['replayed_observations'] = len(initial_observations)
@@ -295,7 +298,11 @@ class TeaAgentTUI:
         return approved
 
     def _run_result_payload(
-        self, result: RunResult, *, routing: Optional[dict]
+        self,
+        result: RunResult,
+        *,
+        routing: Optional[dict],
+        audit_summary: Optional[dict[str, Any]] = None,
     ) -> dict:
         payload = {
             'run_id': result.run_id,
@@ -309,6 +316,8 @@ class TeaAgentTUI:
         }
         if 'approval' in result.metadata:
             payload['approval'] = result.metadata['approval']
+        if audit_summary is not None:
+            payload['audit_summary'] = audit_summary
         if result.error_message is not None:
             payload['error'] = result.error_message
         return payload
