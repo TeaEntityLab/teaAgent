@@ -174,6 +174,128 @@ verifiable so that tampering is detectable.*
 
 ---
 
+#### Audit Hash Chain Integrity (new)
+
+**File:** `test_audit_chain.py` (integration)
+
+**Story (P1):** *As a security lead, I want each persisted audit event to carry
+a SHA-256 hash of the previous event so that any tampering is
+cryptographically detectable.*
+
+| Assertion | Details |
+|---|---|
+| Clean log verifies OK | `verify_audit_chain()` returns `valid=True` |
+| First event has `prev_hash="genesis"` | Chain anchor constant |
+| Second event's `prev_hash` equals first's `hash` | Sequential linkage |
+| Content tampering detected | Mutating `event_type` breaks the hash |
+| Event insertion detected | Foreign event with wrong `prev_hash` rejected |
+| Event deletion detected | Gap in chain detected on line 3 |
+| Multi-run log verifies OK | Two runs in one JSONL all pass |
+
+---
+
+#### Plugin Loader (new)
+
+**File:** `test_plugins.py` (integration)
+
+**Story (P1):** *As a third-party author, I want to register tools via
+`teaagent.tools` entry-points so that `pip install` adds tools with no manual
+wiring.*
+
+| Assertion | Details |
+|---|---|
+| No plugins → empty result | `loaded == []`, `failed == []` |
+| Single plugin registers tool | Tool appears in `ToolRegistry` |
+| Multiple plugins all loaded | 3 entry-points → 3 tools |
+| Failing plugin isolated | Bad plugin in `failed`, others unaffected |
+| `ep.load()` error isolated | `ImportError` quarantined |
+| Custom group respected | `group=` parameter forwarded to `entry_points()` |
+| `PLUGIN_GROUP == 'teaagent.tools'` | Canonical group constant |
+
+---
+
+#### A2A Circuit Breaker (new)
+
+**File:** `test_a2a_circuit_breaker.py` (integration)
+
+**Story (P1):** *As a platform engineer, I want unhealthy remote agents to be
+skipped automatically so that one bad endpoint does not block the entire
+federation refresh.*
+
+| Assertion | Details |
+|---|---|
+| Circuit opens after `failure_threshold` | `circuit_state()` returns `'open'` |
+| Open circuit skips endpoint | Second refresh URL not in call log |
+| Success resets failure count | `circuit_state()` returns `'closed'` |
+| Circuit resets after `reset_timeout_seconds` | Half-open → retry → closed |
+| No `circuit_breaker` → retries every time | Backward-compatible default |
+| Unknown endpoint is `'closed'` | `circuit_state('http://unknown')` = `'closed'` |
+| Healthy endpoints still return cards | Even when one is open |
+
+---
+
+#### Config Layering + Workspace Profile (new)
+
+**File:** `test_config_loader.py` (integration)
+
+**Story (P2 — AC-NEW-3):** *As a developer, I want my workspace
+`.teaagent/config.json` to set default permission-mode and iteration limits so
+that I don't have to repeat CLI flags on every run.*
+
+| Assertion | Details |
+|---|---|
+| `ResolvedConfig.get()` returns value | By key name |
+| `ResolvedConfig.source()` returns layer | `ConfigLayer.WORKSPACE` etc. |
+| `show()` lists key=value [layer] lines | Human-readable |
+| Workspace config loaded | `.teaagent/config.json` values in `ResolvedConfig` |
+| User config loaded | `~/.teaagent/config.json` values in `ResolvedConfig` |
+| Workspace overrides user | Same key → workspace wins |
+| Env overrides workspace | `TEAAGENT_PERMISSION_MODE` beats file |
+| `ChatAgentConfig.from_root()` applies profile | `permission_mode`, `max_iterations` set from config |
+| Explicit kwargs override profile | Caller wins over workspace config |
+
+---
+
+#### Run Undo Journal (new)
+
+**File:** `test_run_undo.py` (integration)
+
+**Story (P2 — AC-NEW-6):** *As a developer, I want `UndoJournal` to track
+pre-write file state so that I can revert all workspace writes from a run.*
+
+| Assertion | Details |
+|---|---|
+| Newly created file deleted on `restore()` | Path in `UndoResult.deleted` |
+| Overwritten file restored | Original content re-written; path in `restored` |
+| Multiple writes all undone | Two files → two deletions |
+| Idempotent when no writes | Empty `restore()` with no errors |
+| `UndoResult.ok` false on errors | Error list non-empty → `ok=False` |
+| Read-only tools not captured | No journal entry for `workspace_read_file` |
+| Path traversal attempts ignored | `../` outside root silently dropped |
+
+---
+
+#### Run Export / Import (new)
+
+**File:** `test_run_export.py` (integration)
+
+**Story (P2 — AC-NEW-19):** *As a user, I want to export a run to a portable
+archive and import it on another machine so that runs are reproducible and
+shareable.*
+
+| Assertion | Details |
+|---|---|
+| `export_run()` creates `.tar.gz` | Archive exists at `output_path` |
+| `import_run()` restores run | Events appear in destination `RunStore` |
+| Round-trip preserves all event fields | `src_events == dst_events` |
+| Import does not clobber other runs | Pre-existing run survives import |
+| `ExportManifest` fields correct | `run_id`, `event_count`, `archive_path` |
+| Import missing archive → `FileNotFoundError` | Clear error |
+| Export missing run → `FileNotFoundError` | Clear error |
+| Hash chain valid after import | `verify_audit_chain()` passes on imported log |
+
+---
+
 ## Integration Tests (tests/integration/)
 
 | File | Coverage |
@@ -193,6 +315,12 @@ verifiable so that tampering is detectable.*
 | `test_streaming_tool_calls.py` | `on_chunk` callbacks, audit events, token accumulation (IT-13) |
 | `test_schema_migration_live.py` | Migration ordering, idempotency, data survival, version tracking (IT-14) |
 | `test_dpop_replay_concurrency.py` | Concurrent JTI consume: exactly one success; expiry reset (IT-15) |
+| `test_audit_chain.py` | Hash-chain validity, tampering/insertion/deletion detection (new) |
+| `test_plugins.py` | Plugin discovery, isolation, custom group (new) |
+| `test_a2a_circuit_breaker.py` | Circuit open/close, skip, reset, backward compat (new) |
+| `test_config_loader.py` | Layer precedence, env override, workspace profile applied (new) |
+| `test_run_undo.py` | Pre-write capture, file deletion/restore, path traversal guard (new) |
+| `test_run_export.py` | Export/import round-trip, hash-chain survival, error cases (new) |
 
 ---
 
@@ -204,16 +332,13 @@ acceptance tests.  Each maps to a Review gap analysis recommendation.
 | ID | Story | Priority |
 |---|---|---|
 | AC-NEW-1 | `teaagent init` first-time wizard | P2 |
-| AC-NEW-3 | Workspace profile (`.teaagent/profile.toml`) | P2 |
 | AC-NEW-4 | Interactive diff preview + inline y/n approval | P0 |
-| AC-NEW-6 | `teaagent run undo <run_id>` workspace rollback | P2 |
 | AC-NEW-8 | Desktop/webhook notification on ultrawork completion | P2 |
 | AC-NEW-11 | A2A delegation carries `traceparent` header | P1 |
 | AC-NEW-15 | Configurable PII redaction categories | P2 |
 | AC-NEW-16 | HTTPS_PROXY / CA bundle / mTLS "just works" | P2 |
 | AC-NEW-17 | `teaagent upgrade` schema migration dry-run preview | P2 |
 | AC-NEW-18 | Graceful degradation when disk fills mid-run | P2 |
-| AC-NEW-19 | `teaagent run export / import` | P2 |
 | AC-NEW-20 | Local model (Ollama/vLLM) with full governance | P2 |
 | AC-NEW-21 | `teaagent eval run <suite>` with HTML report | P2 |
 | AC-NEW-22 | `teaagent benchmark` latency/cost regression tracking | P2 |

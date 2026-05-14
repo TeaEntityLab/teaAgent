@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import re
 import threading
@@ -12,6 +13,8 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.storage import append_jsonl_line
+
+_GENESIS_HASH = 'genesis'
 
 AUDIT_REDACTED = '[redacted]'
 AUDIT_TRUNCATED = '[truncated]'
@@ -62,17 +65,23 @@ class AuditEvent:
     event_id: str = field(default_factory=lambda: uuid4().hex)
     created_at: str = field(default_factory=utc_now)
 
-    def to_json(self) -> str:
-        return json.dumps(
-            {
-                'event_id': self.event_id,
-                'event_type': self.event_type,
-                'run_id': self.run_id,
-                'created_at': self.created_at,
-                'payload': self.payload,
-            },
-            sort_keys=True,
-        )
+    def to_json(
+        self,
+        *,
+        prev_hash: Optional[str] = None,
+        event_hash: Optional[str] = None,
+    ) -> str:
+        data: dict[str, Any] = {
+            'event_id': self.event_id,
+            'event_type': self.event_type,
+            'run_id': self.run_id,
+            'created_at': self.created_at,
+            'payload': self.payload,
+        }
+        if prev_hash is not None:
+            data['prev_hash'] = prev_hash
+            data['hash'] = event_hash or ''
+        return json.dumps(data, sort_keys=True)
 
 
 class AuditLogger:
@@ -83,6 +92,7 @@ class AuditLogger:
         self.events: list[AuditEvent] = []
         self._sinks: list[Callable[[AuditEvent], None]] = []
         self._lock = threading.Lock()
+        self._prev_hash: str = _GENESIS_HASH
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.path.parent)
@@ -97,7 +107,25 @@ class AuditLogger:
         with self._lock:
             self.events.append(event)
             if self.path is not None:
-                append_jsonl_line(self.path, event.to_json())
+                prev = self._prev_hash
+                canonical = json.dumps(
+                    {
+                        'event_id': event.event_id,
+                        'event_type': event.event_type,
+                        'run_id': event.run_id,
+                        'created_at': event.created_at,
+                        'payload': event.payload,
+                        'prev_hash': prev,
+                    },
+                    sort_keys=True,
+                    separators=(',', ':'),
+                )
+                current_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+                self._prev_hash = current_hash
+                append_jsonl_line(
+                    self.path,
+                    event.to_json(prev_hash=prev, event_hash=current_hash),
+                )
                 secure_audit_file(self.path)
             sinks = list(self._sinks)
         for sink in sinks:

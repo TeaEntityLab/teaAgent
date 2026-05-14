@@ -7,8 +7,14 @@ try:
 except PackageNotFoundError:
     __version__ = '0+local'
 
+from teaagent.agentcard import CircuitBreakerConfig
 from teaagent.aibom import AIBOMManifest, build_aibom
 from teaagent.audit import AuditLogger
+from teaagent.audit_chain import (
+    ChainVerificationResult,
+    compute_event_hash,
+    verify_audit_chain,
+)
 from teaagent.budget import RunBudget
 from teaagent.chat_agent import (
     ChatAgentConfig,
@@ -23,6 +29,13 @@ from teaagent.code_mode import (
     ContainerCodeModeBackend,
     UnsafeCodeError,
     execute_code_mode,
+)
+from teaagent.config_loader import (
+    CONFIG_KEYS,
+    ConfigLayer,
+    ConfigResolver,
+    ResolvedConfig,
+    load_workspace_config,
 )
 from teaagent.context import ContextCompactor
 from teaagent.errors import RunCancelledError
@@ -96,6 +109,7 @@ from teaagent.oauth21 import (
     generate_code_verifier,
     verify_jwt,
 )
+from teaagent.plugins import PluginLoadResult, load_plugins
 from teaagent.policy import ApprovalPolicy, PermissionMode, parse_permission_mode
 from teaagent.portability import (
     PortabilityResult,
@@ -106,7 +120,9 @@ from teaagent.preflight import PreflightReport, preflight
 from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_decision
 from teaagent.rag import Document, InMemoryRetriever, agentic_retrieve
 from teaagent.readiness import ReadinessReport, assess_managed_agent_readiness
+from teaagent.run_export import ExportManifest, export_run, import_run
 from teaagent.run_store import RunStore, RunSummary
+from teaagent.run_undo import UndoJournal, UndoResult
 from teaagent.runner import (
     AgentRunner,
     ApprovalRequest,
@@ -150,6 +166,15 @@ __all__ = [
     'ApprovalPolicy',
     'ApprovalRequest',
     'AuditLogger',
+    'CircuitBreakerConfig',
+    'CONFIG_KEYS',
+    'ConfigLayer',
+    'ConfigResolver',
+    'ResolvedConfig',
+    'load_workspace_config',
+    'ChainVerificationResult',
+    'compute_event_hash',
+    'verify_audit_chain',
     'ChatAgentConfig',
     'ChildProcessCodeModeBackend',
     'ClarificationResult',
@@ -211,6 +236,13 @@ __all__ = [
     'OAuthKeyRing',
     'OAuthStore',
     'PermissionMode',
+    'ExportManifest',
+    'PluginLoadResult',
+    'UndoJournal',
+    'UndoResult',
+    'export_run',
+    'import_run',
+    'load_plugins',
     'PortabilityResult',
     'PreflightReport',
     'PromptBundle',

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, replace
@@ -52,7 +53,34 @@ class ChatAgentConfig:
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
-        return cls(root=Path(root).resolve(), **kwargs)
+        from teaagent.config_loader import ConfigResolver
+        from teaagent.policy import parse_permission_mode
+
+        resolved_root = Path(root).resolve()
+        rc = ConfigResolver(workspace_root=resolved_root).resolve()
+
+        # Apply workspace profile values only for keys NOT already in kwargs
+        profile_overrides: dict[str, Any] = {}
+        if 'permission_mode' not in kwargs:
+            pm_str = rc.get('permission_mode')
+            if pm_str:
+                with contextlib.suppress(ValueError):
+                    profile_overrides['permission_mode'] = parse_permission_mode(pm_str)
+        if 'max_iterations' not in kwargs:
+            mi = rc.get('max_iterations')
+            if mi is not None:
+                profile_overrides['max_iterations'] = int(mi)
+        if 'max_tool_calls' not in kwargs:
+            mc = rc.get('max_tool_calls')
+            if mc is not None:
+                profile_overrides['max_tool_calls'] = int(mc)
+        if 'model' not in kwargs:
+            m = rc.get('model')
+            if m:
+                profile_overrides['model'] = m
+
+        merged = {**profile_overrides, **kwargs}
+        return cls(root=resolved_root, **merged)
 
 
 class ModelDecisionEngine:

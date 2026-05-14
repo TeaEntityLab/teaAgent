@@ -14,6 +14,40 @@ from typing import Any, Callable, Optional
 
 
 @dataclass(frozen=True)
+class CircuitBreakerConfig:
+    """Per-endpoint circuit-breaker parameters for :class:`FederatedAgentRegistry`.
+
+    After *failure_threshold* consecutive failures the circuit opens and the
+    endpoint is skipped on subsequent refreshes.  Once *reset_timeout_seconds*
+    have elapsed the circuit moves to half-open and the next refresh retries
+    the endpoint; a success closes the circuit, another failure re-opens it.
+    """
+
+    failure_threshold: int = 3
+    reset_timeout_seconds: float = 60.0
+
+
+@dataclass
+class _EndpointCircuit:
+    failures: int = 0
+    opened_at: Optional[float] = None  # monotonic timestamp when circuit opened
+
+    def is_open(self, reset_timeout: float) -> bool:
+        if self.opened_at is None:
+            return False
+        return (_time.monotonic() - self.opened_at) < reset_timeout
+
+    def record_failure(self, threshold: int) -> None:
+        self.failures += 1
+        if self.failures >= threshold:
+            self.opened_at = _time.monotonic()
+
+    def record_success(self) -> None:
+        self.failures = 0
+        self.opened_at = None
+
+
+@dataclass(frozen=True)
 class AgentCard:
     name: str
     version: str
@@ -376,12 +410,15 @@ class FederatedAgentRegistry:
         *,
         ttl_seconds: int = 300,
         timeout: int = 10,
+        circuit_breaker: Optional[CircuitBreakerConfig] = None,
     ) -> None:
         self._endpoints = list(endpoints)
         self._ttl = ttl_seconds
         self._timeout = timeout
         self._cache: list[AgentCard] = []
         self._fetched_at: float = 0.0
+        self._cb_config = circuit_breaker
+        self._circuits: dict[str, _EndpointCircuit] = {}
 
     def _is_stale(self) -> bool:
         return _time.monotonic() - self._fetched_at > self._ttl
@@ -390,16 +427,37 @@ class FederatedAgentRegistry:
         errors: list[str] = []
         cards: list[AgentCard] = []
         for base_url in self._endpoints:
+            circuit = self._circuits.setdefault(base_url, _EndpointCircuit())
+            if self._cb_config is not None and circuit.is_open(
+                self._cb_config.reset_timeout_seconds
+            ):
+                continue  # circuit open — skip this endpoint
             url = base_url.rstrip('/') + '/.well-known/agent.json'
             try:
                 with urllib.request.urlopen(url, timeout=self._timeout) as resp:
                     data = json.loads(resp.read().decode('utf-8'))
                 cards.append(AgentCard.from_dict(data))
+                circuit.record_success()
             except Exception as exc:
                 errors.append(f'{base_url}: {exc}')
+                if self._cb_config is not None:
+                    circuit.record_failure(self._cb_config.failure_threshold)
         self._cache = cards
         self._fetched_at = _time.monotonic()
         return errors
+
+    def circuit_state(self, base_url: str) -> str:
+        """Return ``'open'`` or ``'closed'`` for the given endpoint."""
+        circuit = self._circuits.get(base_url)
+        if circuit is None:
+            return 'closed'
+        if self._cb_config is None:
+            return 'closed'
+        return (
+            'open'
+            if circuit.is_open(self._cb_config.reset_timeout_seconds)
+            else 'closed'
+        )
 
     def _ensure_fresh(self) -> None:
         if self._is_stale():
