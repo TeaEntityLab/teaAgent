@@ -64,6 +64,7 @@ from teaagent.llm_conformance import (
     ModelConformanceResult,
     run_model_conformance,
 )
+from teaagent.mcp_client import MCPClientError, MCPHTTPClient
 from teaagent.mcp_http import build_mcp_http_server, serve_mcp_http
 from teaagent.mcp_server import handle_mcp_request, serve_mcp_stdio
 from teaagent.memory import MemoryCatalog, MemoryEntry
@@ -182,6 +183,8 @@ __all__ = [
     'LLMRequest',
     'LLMResponse',
     'LLMResponseFormatError',
+    'MCPClientError',
+    'MCPHTTPClient',
     'MemoryCatalog',
     'MemoryEntry',
     'MetricSnapshot',

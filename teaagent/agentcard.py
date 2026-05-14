@@ -206,13 +206,13 @@ class A2ADispatcher:
 
 
 def _make_a2a_handler(
-    card_json: str,
+    card_data: dict[str, Any],
     task_handler: Optional[Callable[[str, dict[str, Any]], str]],
 ) -> type:
     class _Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if self.path == '/.well-known/agent.json':
-                body = card_json.encode('utf-8')
+                body = json.dumps(card_data).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Connection', 'close')
                 self.send_header('Content-Type', 'application/json')
@@ -233,7 +233,9 @@ def _make_a2a_handler(
                     output = task_handler(
                         req_data.get('task', ''), req_data.get('context') or {}
                     )
-                    resp_body = json.dumps({'output': output}).encode('utf-8')
+                    resp_body = json.dumps(
+                        {'agent_name': card_data.get('name', ''), 'output': output}
+                    ).encode('utf-8')
                     self.send_response(200)
                     self.send_header('Connection', 'close')
                     self.send_header('Content-Type', 'application/json')
@@ -296,9 +298,11 @@ class A2ADiscoveryServer:
         return f'http://{self._host}:{self.port}'
 
     def start(self) -> None:
-        card_json = json.dumps(self._card.to_dict())
-        handler_cls = _make_a2a_handler(card_json, self._task_handler)
+        card_data = self._card.to_dict()
+        handler_cls = _make_a2a_handler(card_data, self._task_handler)
         self._server = http.server.HTTPServer((self._host, self._port), handler_cls)
+        if not card_data.get('endpoint'):
+            card_data['endpoint'] = self.base_url
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
 
