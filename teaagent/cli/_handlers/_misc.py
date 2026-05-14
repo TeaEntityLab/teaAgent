@@ -181,14 +181,9 @@ def init_command(args: argparse.Namespace) -> int:
     cfg_path = tea_dir / 'config.json'
     cfg_path.write_text(json.dumps(config, sort_keys=True, indent=2), encoding='utf-8')
 
-    env_path = None
-    if args.write_env and api_key:
-        env_var = _provider_env_var(provider)
-        env_path = tea_dir / 'env'
-        existing = env_path.read_text(encoding='utf-8') if env_path.exists() else ''
-        export_line = f'export {env_var}={api_key}\n'
-        if export_line not in existing:
-            env_path.write_text(existing + export_line, encoding='utf-8')
+    env_var = _provider_env_var(provider)
+    if api_key and env_var:
+        os.environ[env_var] = api_key
 
     payload = {
         'ok': True,
@@ -199,8 +194,8 @@ def init_command(args: argparse.Namespace) -> int:
         'max_iterations': int(args.max_iterations),
         'max_tool_calls': int(args.max_tool_calls),
     }
-    if env_path is not None:
-        payload['env_path'] = str(env_path)
+    if args.write_env and api_key:
+        payload['env_status'] = 'skipped clear-text env file write; key set for current process only'
     print_json(payload)
     return 0
 
@@ -221,15 +216,7 @@ def configure_command(args: argparse.Namespace) -> int:
         print_json({'ok': True, 'message': 'all providers are already configured'})
         return 0
 
-    env_path = Path.home() / '.teaagent' / 'env'
-    env_path.parent.mkdir(parents=True, exist_ok=True)
-
-    if env_path.exists():
-        existing = env_path.read_text(encoding='utf-8')
-    else:
-        existing = ''
-
-    new_exports = ''
+    configured_count = 0
     for provider, message in missing:
         env_var = _provider_env_var(provider)
         print(f'Provider {provider}: {message}')
@@ -241,21 +228,18 @@ def configure_command(args: argparse.Namespace) -> int:
         if not key:
             print(f'  Skipped {provider} (empty input)')
             continue
-        export_line = f'export {env_var}={key}\n'
-        if export_line not in existing:
-            new_exports += export_line
-            os.environ[env_var] = key
+        os.environ[env_var] = key
+        configured_count += 1
 
-    if not new_exports:
-        print_json({'ok': False, 'message': 'no keys were entered, nothing written'})
+    if configured_count == 0:
+        print_json({'ok': False, 'message': 'no keys were entered, nothing configured'})
         return 1
 
-    env_path.write_text(existing + new_exports, encoding='utf-8')
     print_json(
         {
             'ok': True,
-            'message': f'wrote {env_path}',
-            'hint': f'source {env_path}  # add this to your shell profile for persistence',
+            'message': f'configured {configured_count} provider(s) for current process only',
+            'hint': 'keys were not written to disk to avoid clear-text secret storage',
         }
     )
     return 0
