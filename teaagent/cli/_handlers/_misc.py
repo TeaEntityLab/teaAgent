@@ -141,16 +141,67 @@ def workspace_openapi_command(args: argparse.Namespace) -> int:
 def completion_command(args: argparse.Namespace) -> int:
     if args.shell == 'bash':
         print(
-            'complete -W "agent audit clarify completion configure doctor graphqlite mcp memory model tui ultrawork workspace" teaagent'
+            'complete -W "agent audit clarify completion configure doctor graphqlite init mcp memory model tui ultrawork workspace" teaagent'
         )
     elif args.shell == 'zsh':
         print(
-            '#compdef teaagent\n_arguments "1: :((agent audit clarify completion configure doctor graphqlite mcp memory model tui ultrawork workspace))"'
+            '#compdef teaagent\n_arguments "1: :((agent audit clarify completion configure doctor graphqlite init mcp memory model tui ultrawork workspace))"'
         )
     else:
         print(
-            'complete -c teaagent -f -a "agent audit clarify completion configure doctor graphqlite mcp memory model tui ultrawork workspace"'
+            'complete -c teaagent -f -a "agent audit clarify completion configure doctor graphqlite init mcp memory model tui ultrawork workspace"'
         )
+    return 0
+
+
+def init_command(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    tea_dir = root / '.teaagent'
+    tea_dir.mkdir(parents=True, exist_ok=True)
+
+    provider = args.provider
+    if not provider:
+        choices = ', '.join(available_providers())
+        provider = input(f'Select provider ({choices}) [gpt]: ').strip() or 'gpt'
+        if provider not in available_providers():
+            print_json({'ok': False, 'message': f'unknown provider: {provider}'})
+            return 1
+
+    api_key = args.api_key
+    if not api_key:
+        env_var = _provider_env_var(provider)
+        api_key = getpass.getpass(f'Enter {env_var} (input hidden): ').strip()
+
+    config = {
+        'provider': provider,
+        'permission_mode': args.permission_mode,
+        'max_iterations': int(args.max_iterations),
+        'max_tool_calls': int(args.max_tool_calls),
+    }
+    cfg_path = tea_dir / 'config.json'
+    cfg_path.write_text(json.dumps(config, sort_keys=True, indent=2), encoding='utf-8')
+
+    env_path = None
+    if args.write_env and api_key:
+        env_var = _provider_env_var(provider)
+        env_path = tea_dir / 'env'
+        existing = env_path.read_text(encoding='utf-8') if env_path.exists() else ''
+        export_line = f'export {env_var}={api_key}\n'
+        if export_line not in existing:
+            env_path.write_text(existing + export_line, encoding='utf-8')
+
+    payload = {
+        'ok': True,
+        'root': str(root),
+        'config_path': str(cfg_path),
+        'provider': provider,
+        'permission_mode': args.permission_mode,
+        'max_iterations': int(args.max_iterations),
+        'max_tool_calls': int(args.max_tool_calls),
+    }
+    if env_path is not None:
+        payload['env_path'] = str(env_path)
+    print_json(payload)
     return 0
 
 

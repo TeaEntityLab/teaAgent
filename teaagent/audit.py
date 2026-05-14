@@ -87,26 +87,46 @@ class AuditEvent:
 class AuditLogger:
     """Append-only audit logger with optional JSONL persistence."""
 
-    def __init__(self, path: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        path: Optional[Path] = None,
+        *,
+        redaction_config: Optional[Any] = None,
+    ) -> None:
         self.path = path
         self.events: list[AuditEvent] = []
         self._sinks: list[Callable[[AuditEvent], None]] = []
         self._lock = threading.Lock()
         self._prev_hash: str = _GENESIS_HASH
+        self._string_patterns = (
+            redaction_config.build_patterns()
+            if redaction_config is not None
+            else SENSITIVE_STRING_PATTERNS
+        )
+        self._disk_error: Optional[OSError] = None
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.path.parent)
+
+    @property
+    def disk_error(self) -> Optional[OSError]:
+        """Returns the first ``OSError`` that disabled disk writes, or ``None``."""
+        return self._disk_error
 
     def add_sink(self, sink: Callable[[AuditEvent], None]) -> None:
         self._sinks.append(sink)
 
     def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
         event = AuditEvent(
-            event_type=event_type, run_id=run_id, payload=redact_audit_payload(payload)
+            event_type=event_type,
+            run_id=run_id,
+            payload=redact_audit_payload(
+                payload, string_patterns=self._string_patterns
+            ),
         )
         with self._lock:
             self.events.append(event)
-            if self.path is not None:
+            if self.path is not None and self._disk_error is None:
                 prev = self._prev_hash
                 canonical = json.dumps(
                     {
@@ -121,12 +141,21 @@ class AuditLogger:
                     separators=(',', ':'),
                 )
                 current_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
-                self._prev_hash = current_hash
-                append_jsonl_line(
-                    self.path,
-                    event.to_json(prev_hash=prev, event_hash=current_hash),
-                )
-                secure_audit_file(self.path)
+                try:
+                    append_jsonl_line(
+                        self.path,
+                        event.to_json(prev_hash=prev, event_hash=current_hash),
+                    )
+                    self._prev_hash = current_hash
+                    secure_audit_file(self.path)
+                except OSError as exc:
+                    self._disk_error = exc
+                    err_event = AuditEvent(
+                        event_type='_disk_write_error',
+                        run_id=event.run_id,
+                        payload={'error': str(exc), 'errno': exc.errno},
+                    )
+                    self.events.append(err_event)
             sinks = list(self._sinks)
         for sink in sinks:
             with contextlib.suppress(Exception):
@@ -134,15 +163,22 @@ class AuditLogger:
         return event
 
 
-def redact_audit_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def redact_audit_payload(
+    payload: dict[str, Any],
+    *,
+    string_patterns: Any = None,
+) -> dict[str, Any]:
+    patterns = (
+        string_patterns if string_patterns is not None else SENSITIVE_STRING_PATTERNS
+    )
     redacted: dict[str, Any] = {}
     for key, value in payload.items():
         if key == 'arguments' and isinstance(value, dict):
-            redacted[key] = redact_tool_arguments(value)
+            redacted[key] = redact_tool_arguments(value, string_patterns=patterns)
         elif key == 'result' and isinstance(value, dict):
-            redacted[key] = redact_tool_result(value)
+            redacted[key] = redact_tool_result(value, string_patterns=patterns)
         else:
-            redacted[key] = redact_audit_value(key, value)
+            redacted[key] = redact_audit_value(key, value, string_patterns=patterns)
     return redacted
 
 
@@ -154,75 +190,117 @@ def secure_audit_file(path: Path) -> None:
     path.chmod(AUDIT_FILE_MODE)
 
 
-def redact_tool_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
+def redact_tool_arguments(
+    arguments: dict[str, Any], *, string_patterns: Any = None
+) -> dict[str, Any]:
     return {
-        str(key): redact_tool_argument_value(str(key), value)
+        str(key): redact_tool_argument_value(
+            str(key), value, string_patterns=string_patterns
+        )
         for key, value in arguments.items()
     }
 
 
-def redact_tool_argument_value(key: str, value: Any) -> Any:
+def redact_tool_argument_value(
+    key: str, value: Any, *, string_patterns: Any = None
+) -> Any:
     if is_sensitive_key(key) or key in SENSITIVE_ARGUMENT_KEYS:
         return AUDIT_REDACTED
     if isinstance(value, dict):
         return {
-            str(child_key): redact_tool_argument_value(str(child_key), child_value)
+            str(child_key): redact_tool_argument_value(
+                str(child_key), child_value, string_patterns=string_patterns
+            )
             for child_key, child_value in value.items()
         }
     if isinstance(value, list):
-        return [redact_tool_argument_value('', item) for item in value]
+        return [
+            redact_tool_argument_value('', item, string_patterns=string_patterns)
+            for item in value
+        ]
     if isinstance(value, tuple):
-        return [redact_tool_argument_value('', item) for item in value]
-    return redact_audit_value(key, value)
+        return [
+            redact_tool_argument_value('', item, string_patterns=string_patterns)
+            for item in value
+        ]
+    return redact_audit_value(key, value, string_patterns=string_patterns)
 
 
-def redact_tool_result(result: dict[str, Any]) -> dict[str, Any]:
+def redact_tool_result(
+    result: dict[str, Any], *, string_patterns: Any = None
+) -> dict[str, Any]:
     return {
-        str(key): redact_tool_result_value(str(key), value)
+        str(key): redact_tool_result_value(
+            str(key), value, string_patterns=string_patterns
+        )
         for key, value in result.items()
     }
 
 
-def redact_tool_result_value(key: str, value: Any) -> Any:
+def redact_tool_result_value(
+    key: str, value: Any, *, string_patterns: Any = None
+) -> Any:
     if is_sensitive_key(key) or key in SENSITIVE_RESULT_KEYS:
         return AUDIT_REDACTED
     if isinstance(value, dict):
         return {
-            str(child_key): redact_tool_result_value(str(child_key), child_value)
+            str(child_key): redact_tool_result_value(
+                str(child_key), child_value, string_patterns=string_patterns
+            )
             for child_key, child_value in value.items()
         }
     if isinstance(value, list):
-        return [redact_tool_result_value('', item) for item in value]
+        return [
+            redact_tool_result_value('', item, string_patterns=string_patterns)
+            for item in value
+        ]
     if isinstance(value, tuple):
-        return [redact_tool_result_value('', item) for item in value]
-    return redact_audit_value(key, value)
+        return [
+            redact_tool_result_value('', item, string_patterns=string_patterns)
+            for item in value
+        ]
+    return redact_audit_value(key, value, string_patterns=string_patterns)
 
 
-def redact_audit_value(key: str, value: Any) -> Any:
+def redact_audit_value(key: str, value: Any, *, string_patterns: Any = None) -> Any:
     # Only redact string / bytes values by key sensitivity.
     # Numeric, bool, and None values are telemetry data and are never sensitive.
     if is_sensitive_key(key) and isinstance(value, (str, bytes)):
         return AUDIT_REDACTED
     if isinstance(value, dict):
         return {
-            str(child_key): redact_audit_value(str(child_key), child_value)
+            str(child_key): redact_audit_value(
+                str(child_key), child_value, string_patterns=string_patterns
+            )
             for child_key, child_value in value.items()
         }
     if isinstance(value, list):
-        return [redact_audit_value('', item) for item in value]
+        return [
+            redact_audit_value('', item, string_patterns=string_patterns)
+            for item in value
+        ]
     if isinstance(value, tuple):
-        return [redact_audit_value('', item) for item in value]
+        return [
+            redact_audit_value('', item, string_patterns=string_patterns)
+            for item in value
+        ]
     if isinstance(value, str):
-        redacted = redact_sensitive_string(value)
+        patterns = (
+            string_patterns
+            if string_patterns is not None
+            else SENSITIVE_STRING_PATTERNS
+        )
+        redacted = redact_sensitive_string(value, patterns=patterns)
         if len(redacted) > MAX_AUDIT_STRING_LENGTH:
             return redacted[:MAX_AUDIT_STRING_LENGTH] + AUDIT_TRUNCATED
         return redacted
     return value
 
 
-def redact_sensitive_string(value: str) -> str:
+def redact_sensitive_string(value: str, *, patterns: Any = None) -> str:
+    active = patterns if patterns is not None else SENSITIVE_STRING_PATTERNS
     redacted = value
-    for pattern, replacement in SENSITIVE_STRING_PATTERNS:
+    for pattern, replacement in active:
         redacted = pattern.sub(replacement, redacted)
     return redacted
 

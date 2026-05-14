@@ -11,6 +11,7 @@ def register(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
     handlers: dict[str, Callable],
 ) -> None:
+    _init(subparsers, handlers.get('init'))
     _clarify(subparsers, handlers['clarify'])
     _tui(subparsers, handlers['tui'])
     _configure(subparsers, handlers.get('configure'))
@@ -44,6 +45,55 @@ def register(
         handlers['ultrawork_stop'],
     )
     _workspace(subparsers, handlers['workspace_tools'], handlers['workspace_openapi'])
+
+
+def _init(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Optional[Callable] = None,
+) -> None:
+    p = subparsers.add_parser(
+        'init',
+        help='Initialize workspace TeaAgent config (first-time wizard).',
+        description='Create .teaagent/config.json and optionally .teaagent/env for provider keys.',
+    )
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument(
+        '--provider',
+        choices=available_providers(),
+        default=None,
+        help='Default provider to set. If omitted, prompts interactively.',
+    )
+    p.add_argument(
+        '--api-key',
+        default=None,
+        help='Provider API key. If omitted, prompts interactively (hidden).',
+    )
+    p.add_argument(
+        '--permission-mode',
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help='Default permission mode written to config.',
+    )
+    p.add_argument(
+        '--max-iterations',
+        type=int,
+        default=10,
+        help='Default max_iterations written to config.',
+    )
+    p.add_argument(
+        '--max-tool-calls',
+        type=int,
+        default=10,
+        help='Default max_tool_calls written to config.',
+    )
+    p.add_argument(
+        '--write-env',
+        action='store_true',
+        help='Also write .teaagent/env export line for the selected provider API key.',
+    )
+    p.set_defaults(func=handler)
 
 
 def _clarify(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

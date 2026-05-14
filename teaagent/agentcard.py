@@ -200,6 +200,7 @@ class A2ATaskResult:
     agent_name: str
     output: str
     routed_by_capability: Optional[str] = None
+    traceparent: Optional[str] = None
 
 
 class A2ADispatcher:
@@ -377,12 +378,16 @@ class A2AClient:
         task: str,
         *,
         context: Optional[dict[str, Any]] = None,
+        traceparent: Optional[str] = None,
     ) -> A2ATaskResult:
         payload = json.dumps({'task': task, 'context': context or {}}).encode('utf-8')
+        headers: dict[str, str] = {'Content-Type': 'application/json'}
+        if traceparent is not None:
+            headers['traceparent'] = traceparent
         req = urllib.request.Request(
             f'{self._endpoint}/a2a/task',
             data=payload,
-            headers={'Content-Type': 'application/json'},
+            headers=headers,
             method='POST',
         )
         with urllib.request.urlopen(req, timeout=self._timeout) as resp:
@@ -392,6 +397,7 @@ class A2AClient:
             task=task,
             agent_name=agent_name,
             output=result_data.get('output', ''),
+            traceparent=traceparent,
         )
 
 

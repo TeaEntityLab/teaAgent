@@ -15,6 +15,88 @@ from teaagent.cli import main
 
 
 class CLITests(unittest.TestCase):
+    def test_init_writes_workspace_config_non_interactive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        'init',
+                        '--root',
+                        tmp,
+                        '--provider',
+                        'gpt',
+                        '--api-key',
+                        'sk-test-123',
+                        '--permission-mode',
+                        'workspace-write',
+                        '--max-iterations',
+                        '12',
+                        '--max-tool-calls',
+                        '9',
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(output.getvalue())
+            self.assertTrue(payload['ok'])
+            cfg_path = Path(tmp) / '.teaagent' / 'config.json'
+            self.assertTrue(cfg_path.exists())
+            cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
+            self.assertEqual(cfg['provider'], 'gpt')
+            self.assertEqual(cfg['permission_mode'], 'workspace-write')
+            self.assertEqual(cfg['max_iterations'], 12)
+            self.assertEqual(cfg['max_tool_calls'], 9)
+
+    def test_init_writes_env_file_when_requested(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.dict(os.environ, {}, clear=True),
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        'init',
+                        '--root',
+                        tmp,
+                        '--provider',
+                        'gpt',
+                        '--api-key',
+                        'sk-test-456',
+                        '--write-env',
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(output.getvalue())
+            self.assertTrue(payload['ok'])
+            env_path = Path(tmp) / '.teaagent' / 'env'
+            self.assertTrue(env_path.exists())
+            content = env_path.read_text(encoding='utf-8')
+            self.assertIn('OPENAI_API_KEY=sk-test-456', content)
+
+    def test_init_interactive_prompts_for_api_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with (
+                patch(
+                    'teaagent.cli._handlers._misc.getpass.getpass',
+                    return_value='sk-prompt-1',
+                ),
+                patch('teaagent.cli._handlers._misc.input', return_value='gpt'),
+                redirect_stdout(output),
+            ):
+                exit_code = main(['init', '--root', tmp])
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(output.getvalue())
+            self.assertTrue(payload['ok'])
+            cfg = json.loads(
+                (Path(tmp) / '.teaagent' / 'config.json').read_text(encoding='utf-8')
+            )
+            self.assertEqual(cfg['provider'], 'gpt')
+
     def test_doctor_graphqlite_outputs_json(self) -> None:
         output = io.StringIO()
 

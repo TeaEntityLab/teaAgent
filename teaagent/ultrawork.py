@@ -50,10 +50,11 @@ class WorkerRecord:
 class UltraworkStore:
     """Detached background workers persisted under .teaagent/ultrawork/."""
 
-    def __init__(self, root: str | Path = '.') -> None:
+    def __init__(self, root: str | Path = '.', *, notify_config: Any = None) -> None:
         self.root = Path(root).resolve()
         self.dir = self.root / '.teaagent' / 'ultrawork'
         self.dir.mkdir(parents=True, exist_ok=True)
+        self._notify_config = notify_config
 
     def start(self, command: list[str], *, label: Optional[str] = None) -> WorkerRecord:
         if not command:
@@ -147,6 +148,18 @@ class UltraworkStore:
             record_path,
             json.dumps({k: v for k, v in data.items() if k != 'alive'}, sort_keys=True),
         )
+        if self._notify_config is not None:
+            from teaagent.notify import fire_notification
+
+            class _Rec:
+                pass
+
+            rec = _Rec()
+            rec.worker_id = worker_id  # type: ignore[attr-defined]
+            rec.pid = data.get('pid')  # type: ignore[attr-defined]
+            rec.started_at = data.get('started_at', '')  # type: ignore[attr-defined]
+            rec.command = data.get('command', [])  # type: ignore[attr-defined]
+            fire_notification(self._notify_config, rec, event='stopped')
         return data
 
     @staticmethod

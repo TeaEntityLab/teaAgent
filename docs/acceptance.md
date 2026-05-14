@@ -324,21 +324,203 @@ shareable.*
 
 ---
 
+---
+
+#### Interactive Diff Preview + y/n Approval (new)
+
+**File:** `test_approval_ui.py` (integration)
+
+**Story (AC-NEW-4 P0):** *As a developer, I want to preview a destructive edit
+as a unified diff and approve or reject it inline.*
+
+| Assertion | Details |
+|---|---|
+| `y` returns `True` | Case-insensitive |
+| `n` returns `False` | Case-insensitive |
+| Unified diff shown for write tool | `-old` / `+new` lines present |
+| New-file creation diff shown | All lines prefixed `+` |
+| Non-write tool shows arg summary | Tool name always visible |
+| Invalid input re-prompts | Up to `max_prompts` then auto-deny |
+| `e` (explain) shows details then re-prompts | Full metadata printed |
+| Path traversal in args handled | No crash, returns False |
+
+---
+
+#### A2A Traceparent Propagation (new)
+
+**File:** `test_a2a_traceparent.py` (integration)
+
+**Story (AC-NEW-11 P1):** *As an SRE, I want every A2A delegation to carry
+traceparent so I can see the full multi-agent call tree in Tempo/Jaeger.*
+
+| Assertion | Details |
+|---|---|
+| `generate_traceparent()` produces valid W3C format | version-traceId-parentId-flags |
+| `parse_traceparent()` extracts all four fields | Validated lengths and hex |
+| Malformed header raises `TraceparentError` | Bad format detected |
+| `A2AClient.delegate(traceparent=tp)` injects header | HTTP request carries it |
+| Without `traceparent`, header absent | No leakage |
+| Result carries outbound traceparent | For span continuation |
+| Every generated traceparent is unique | 20 consecutive calls all different |
+
+---
+
+#### Configurable PII Redaction (new)
+
+**File:** `test_redaction_config.py` (integration)
+
+**Story (AC-NEW-15 P2):** *As a regulated user, I want to toggle which PII
+patterns are redacted in audit logs per deployment.*
+
+| Assertion | Details |
+|---|---|
+| Default redacts Bearer tokens | Audit log value absent |
+| `bearer_tokens=False` preserves token | Value survives in log |
+| `api_keys=False` preserves `sk-` token | |
+| `aws_keys=False` preserves AKIA key | |
+| `extra_patterns` adds custom regex | Custom replacement visible |
+| All patterns disabled preserves all tokens | |
+
+---
+
+#### Migration Dry-Run (new)
+
+**File:** `test_migration_dry_run.py` (integration)
+
+**Story (AC-NEW-17 P2):** *As a user upgrading TeaAgent, I want a dry-run
+preview that shows which migrations would run without applying them.*
+
+| Assertion | Details |
+|---|---|
+| `apply_pending(dry_run=True)` does not create table | No SQL executed |
+| `result.dry_run_pending` lists pending versions | Correct version set |
+| Partial-applied state reflected in dry-run | Only unapplied shown |
+| Dry-run does not call `mark_applied` | `applied_versions()` still empty |
+| Normal run after dry-run applies all | Tables created |
+| Already-applied → `dry_run_pending=[]` | |
+
+---
+
+#### Disk-Full Graceful Degradation (new)
+
+**File:** `test_disk_full_degradation.py` (integration)
+
+**Story (AC-NEW-18 P2):** *As a user whose disk fills mid-run, I want
+graceful degradation: audit buffered to memory, error surfaced, no corruption.*
+
+| Assertion | Details |
+|---|---|
+| `OSError(ENOSPC)` on write does not raise | Run continues |
+| In-memory events captured after disk full | Events list populated |
+| `_disk_write_error` synthetic event recorded | Error details in payload |
+| `audit.disk_error` property returns the `OSError` | |
+| `disk_error` is `None` on success | |
+| Further writes skipped (no retry) | `append_jsonl_line` called once |
+| Non-ENOSPC `OSError` also handled | `EACCES` treated the same |
+
+---
+
+#### Ultrawork Completion Notification (new)
+
+**File:** `test_ultrawork_notify.py` (integration)
+
+**Story (AC-NEW-8 P2):** *As a user, I want desktop/webhook notification when
+a long-running ultrawork task finishes.*
+
+| Assertion | Details |
+|---|---|
+| Webhook POST delivers `worker_id` and `event` | Verified against live server |
+| Shell command executed on stop | `subprocess.run` called with command |
+| Webhook failure silenced | Unreachable URL does not raise |
+| Both webhook and shell fire together | |
+| `NotifyConfig` defaults are `None` | No accidental notifications |
+| `UltraworkStore(notify_config=cfg).stop()` fires notification | End-to-end |
+
+---
+
+#### Eval HTML Report (new)
+
+**File:** `test_eval_report.py` (integration)
+
+**Story (AC-NEW-21 P2):** *As a model evaluator, I want `render_html_report`
+to produce a self-contained HTML file comparing pass/fail, scores, and
+reasoning.*
+
+| Assertion | Details |
+|---|---|
+| Returns a string | Non-empty HTML |
+| Case names present | All three test cases in output |
+| Pass/fail indicators shown | PASS ✓ / FAIL ✗ labels |
+| Pass rate percentage present | `n%` format |
+| Valid HTML structure | `<html>` and `</html>` tags |
+| Judge scores and reasoning rendered | `0.9` and reasoning text |
+| Empty report renders gracefully | No crash, valid HTML skeleton |
+
+---
+
+#### Benchmark Latency / Cost Tracking (new)
+
+**File:** `test_benchmark.py` (integration)
+
+**Story (AC-NEW-22 P2):** *As a CI maintainer, I want `run_benchmark` to
+track p50/p95 latency across eval suites and detect regressions.*
+
+| Assertion | Details |
+|---|---|
+| `run_benchmark()` returns `BenchmarkResult` | Typed result |
+| `case_metrics` length equals suite case count | One entry per case |
+| Per-case `latency_ms >= 0` | Measured with `perf_counter` |
+| `p50_ms` and `p95_ms` computed | `p95 >= p50` |
+| `mean_ms > 0` for real runner | Non-zero average |
+| Output captured per case | `CaseMetrics.output` set |
+| `regression_detected(baseline)` returns bool | Compares against thresholds |
+| No regression when baseline is very high | |
+| Regression detected when runner is slow | 50 ms > 2 ms threshold |
+| `to_dict()` serialisable | Contains `suite_name`, `p50_ms`, `p95_ms` |
+
+---
+
+## Integration Tests (tests/integration/)
+
+| File | Coverage |
+|---|---|
+| `test_runner_cost_tracking.py` | `RunResult` cost fields + audit event fields (IT-1) |
+| `test_cancel_token.py` | Cancel token — pre-cancel, mid-run, thread-safe (IT-2) |
+| `test_tool_rate_limit.py` | Sliding-window quota, concurrency safety, expiry (IT-3) |
+| `test_mcp_tool_adapter.py` | `register_mcp_tools` discovery, annotations, filter (IT-4) |
+| `test_skill_loader.py` | `load_skills` discovery, dedup, cap, prompt injection (IT-5) |
+| `test_audit_sink_isolation.py` | Crashing sink does not propagate or block other sinks (IT-6) |
+| `test_file_policy.py` | `DenyRule` matching, `FilePolicy.assert_allowed`, runner wiring (IT-7) |
+| `test_webhook_sink.py` | HTTP delivery, HMAC, filter, failure suppression (IT-8) |
+| `test_error_hints.py` | All error classes have default hints, `str()` rendering (IT-9) |
+| `test_subagent_budget_inheritance.py` | Subagent depth limit, error dict, registry guard (IT-10) |
+| `test_run_resume_checkpoint.py` | Checkpoint save on tool completion, pending-approval, SQLite round-trip, obs replay (IT-11) |
+| `test_destructive_approval_lifecycle.py` | Pause → approve → resume; deny path; auto-approve handler; read-only block (IT-12) |
+| `test_streaming_tool_calls.py` | `on_chunk` callbacks, audit events, token accumulation (IT-13) |
+| `test_schema_migration_live.py` | Migration ordering, idempotency, data survival, version tracking (IT-14) |
+| `test_dpop_replay_concurrency.py` | Concurrent JTI consume: exactly one success; expiry reset (IT-15) |
+| `test_audit_chain.py` | Hash-chain validity, tampering/insertion/deletion detection |
+| `test_plugins.py` | Plugin discovery, isolation, custom group |
+| `test_a2a_circuit_breaker.py` | Circuit open/close, skip, reset, backward compat |
+| `test_config_loader.py` | Layer precedence, env override, workspace profile applied |
+| `test_run_undo.py` | Pre-write capture, file deletion/restore, path traversal guard |
+| `test_run_export.py` | Export/import round-trip, hash-chain survival, error cases |
+| `test_approval_ui.py` | Diff preview, y/n/e flow, path traversal, max prompts |
+| `test_a2a_traceparent.py` | W3C format gen/parse, header injection, result field |
+| `test_redaction_config.py` | Toggle groups, custom pattern, default behaviour |
+| `test_migration_dry_run.py` | Dry-run preview, no SQL, pending version list |
+| `test_disk_full_degradation.py` | ENOSPC graceful degradation, in-memory fallback |
+| `test_ultrawork_notify.py` | Webhook delivery, shell command, failure silence |
+| `test_eval_report.py` | HTML rendering, case names, pass/fail, judge scores |
+| `test_benchmark.py` | p50/p95/mean latency, regression detection, serialisation |
+
+---
+
 ## Next User Stories
 
-The following stories are specified and prioritised but do not yet have
-acceptance tests.  Each maps to a Review gap analysis recommendation.
+The following stories remain unimplemented.
 
 | ID | Story | Priority |
 |---|---|---|
-| AC-NEW-1 | `teaagent init` first-time wizard | P2 |
-| AC-NEW-4 | Interactive diff preview + inline y/n approval | P0 |
-| AC-NEW-8 | Desktop/webhook notification on ultrawork completion | P2 |
-| AC-NEW-11 | A2A delegation carries `traceparent` header | P1 |
-| AC-NEW-15 | Configurable PII redaction categories | P2 |
 | AC-NEW-16 | HTTPS_PROXY / CA bundle / mTLS "just works" | P2 |
-| AC-NEW-17 | `teaagent upgrade` schema migration dry-run preview | P2 |
-| AC-NEW-18 | Graceful degradation when disk fills mid-run | P2 |
 | AC-NEW-20 | Local model (Ollama/vLLM) with full governance | P2 |
-| AC-NEW-21 | `teaagent eval run <suite>` with HTML report | P2 |
-| AC-NEW-22 | `teaagent benchmark` latency/cost regression tracking | P2 |

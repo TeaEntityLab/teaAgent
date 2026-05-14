@@ -7,13 +7,22 @@ try:
 except PackageNotFoundError:
     __version__ = '0+local'
 
+from teaagent.a2a_trace import TraceparentError, generate_traceparent, parse_traceparent
 from teaagent.agentcard import CircuitBreakerConfig
 from teaagent.aibom import AIBOMManifest, build_aibom
+from teaagent.approval_ui import DiffApprovalHandler
 from teaagent.audit import AuditLogger
 from teaagent.audit_chain import (
     ChainVerificationResult,
     compute_event_hash,
     verify_audit_chain,
+)
+from teaagent.benchmark import (
+    BenchmarkBaseline,
+    BenchmarkResult,
+    BenchmarkSuite,
+    CaseMetrics,
+    run_benchmark,
 )
 from teaagent.budget import RunBudget
 from teaagent.chat_agent import (
@@ -40,6 +49,7 @@ from teaagent.config_loader import (
 from teaagent.context import ContextCompactor
 from teaagent.errors import RunCancelledError
 from teaagent.eval import EvalCase, EvalReport, run_eval
+from teaagent.eval_report import render_html_report
 from teaagent.file_policy import DenyRule, FilePolicy, load_file_policy
 from teaagent.graph_rag import GraphEdge, KnowledgeGraph, graph_retrieve
 from teaagent.graphqlite_production import (
@@ -86,6 +96,7 @@ from teaagent.mcp_server import handle_mcp_request, serve_mcp_stdio
 from teaagent.mcp_tool_adapter import register_mcp_tools
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, classify_task, route_model
+from teaagent.notify import NotifyConfig, fire_notification
 from teaagent.oauth21 import (
     HAS_CRYPTOGRAPHY,
     DPoPValidationResult,
@@ -120,6 +131,7 @@ from teaagent.preflight import PreflightReport, preflight
 from teaagent.prompt import PromptBundle, assemble_agent_prompt, parse_model_decision
 from teaagent.rag import Document, InMemoryRetriever, agentic_retrieve
 from teaagent.readiness import ReadinessReport, assess_managed_agent_readiness
+from teaagent.redaction import RedactionConfig
 from teaagent.run_export import ExportManifest, export_run, import_run
 from teaagent.run_store import RunStore, RunSummary
 from teaagent.run_undo import UndoJournal, UndoResult
@@ -166,7 +178,17 @@ __all__ = [
     'ApprovalPolicy',
     'ApprovalRequest',
     'AuditLogger',
+    'BenchmarkBaseline',
+    'BenchmarkResult',
+    'BenchmarkSuite',
+    'CaseMetrics',
+    'run_benchmark',
+    'render_html_report',
     'CircuitBreakerConfig',
+    'DiffApprovalHandler',
+    'TraceparentError',
+    'generate_traceparent',
+    'parse_traceparent',
     'CONFIG_KEYS',
     'ConfigLayer',
     'ConfigResolver',
@@ -237,7 +259,10 @@ __all__ = [
     'OAuthStore',
     'PermissionMode',
     'ExportManifest',
+    'NotifyConfig',
     'PluginLoadResult',
+    'fire_notification',
+    'RedactionConfig',
     'UndoJournal',
     'UndoResult',
     'export_run',
