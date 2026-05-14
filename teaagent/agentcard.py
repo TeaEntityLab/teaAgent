@@ -214,12 +214,14 @@ def _make_a2a_handler(
             if self.path == '/.well-known/agent.json':
                 body = card_json.encode('utf-8')
                 self.send_response(200)
+                self.send_header('Connection', 'close')
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
             else:
                 self.send_response(404)
+                self.send_header('Connection', 'close')
                 self.end_headers()
 
         def do_POST(self) -> None:
@@ -233,6 +235,7 @@ def _make_a2a_handler(
                     )
                     resp_body = json.dumps({'output': output}).encode('utf-8')
                     self.send_response(200)
+                    self.send_header('Connection', 'close')
                     self.send_header('Content-Type', 'application/json')
                     self.send_header('Content-Length', str(len(resp_body)))
                     self.end_headers()
@@ -240,12 +243,14 @@ def _make_a2a_handler(
                 except Exception as exc:
                     resp_body = json.dumps({'error': str(exc)}).encode('utf-8')
                     self.send_response(500)
+                    self.send_header('Connection', 'close')
                     self.send_header('Content-Type', 'application/json')
                     self.send_header('Content-Length', str(len(resp_body)))
                     self.end_headers()
                     self.wfile.write(resp_body)
             else:
                 self.send_response(404)
+                self.send_header('Connection', 'close')
                 self.end_headers()
 
         def log_message(self, *_: object) -> None:
