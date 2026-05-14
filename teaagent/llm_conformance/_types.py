@@ -111,6 +111,8 @@ class ModelConformanceResult:
 @dataclass(frozen=True)
 class ModelConformanceReport:
     results: list[ModelConformanceResult]
+    live_env_var: str | None = None
+    live_enabled: bool | None = None
 
     @property
     def passed(self) -> int:
@@ -129,10 +131,15 @@ class ModelConformanceReport:
         return self.failed == 0
 
     def as_dict(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             'ok': self.ok,
             'passed': self.passed,
             'failed': self.failed,
             'skipped': self.skipped,
             'results': [result.as_dict() for result in self.results],
         }
+        if self.live_env_var is not None:
+            payload['live_env_var'] = self.live_env_var
+        if self.live_enabled is not None:
+            payload['live_enabled'] = self.live_enabled
+        return payload

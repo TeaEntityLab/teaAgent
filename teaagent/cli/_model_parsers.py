@@ -55,6 +55,11 @@ def register(
     conformance.add_argument(
         '--max-tokens', type=int, default=32, help='Maximum output tokens.'
     )
+    conformance.add_argument(
+        '--live-env-var',
+        default=None,
+        help='Skip selected providers unless this environment variable is set to 1.',
+    )
     conformance.set_defaults(func=handlers['conformance'])
 
     route = subs.add_parser(

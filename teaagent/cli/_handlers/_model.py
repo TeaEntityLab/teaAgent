@@ -32,13 +32,15 @@ def model_smoke(args: argparse.Namespace) -> int:
 
 
 def model_conformance(args: argparse.Namespace) -> int:
-    report = args._run_model_conformance(  # type: ignore[attr-defined]
-        args.provider,
-        prompt=args.prompt,
-        expected_content=args.expect if args.expect else None,
-        max_tokens=args.max_tokens,
-        model=args.model,
-    )
+    kwargs = {
+        'prompt': args.prompt,
+        'expected_content': args.expect if args.expect else None,
+        'max_tokens': args.max_tokens,
+        'model': args.model,
+    }
+    if args.live_env_var is not None:
+        kwargs['live_env_var'] = args.live_env_var
+    report = args._run_model_conformance(args.provider, **kwargs)  # type: ignore[attr-defined]
     print_json(report.as_dict())
     return 0 if report.ok else 1
 

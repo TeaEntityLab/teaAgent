@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from typing import Callable, Iterable
 
@@ -32,10 +33,27 @@ def run_model_conformance(
     expected_content: str | None = 'ok',
     max_tokens: int = 32,
     model: str | None = None,
+    live_env_var: str | None = None,
     adapter_factory: AdapterFactory = create_llm_adapter,
     configuration_checker: ConfigurationChecker = check_llm_configuration,
 ) -> ModelConformanceReport:
     selected_providers = list(providers or available_providers())
+    live_enabled = None
+    if live_env_var is not None:
+        live_enabled = os.environ.get(live_env_var) == '1'
+        if not live_enabled:
+            return ModelConformanceReport(
+                results=[
+                    ModelConformanceResult(
+                        provider=provider,
+                        status='skipped',
+                        error=f'live provider conformance gated by env {live_env_var}=1',
+                    )
+                    for provider in selected_providers
+                ],
+                live_env_var=live_env_var,
+                live_enabled=False,
+            )
     results = [
         _run_provider_conformance(
             provider,
@@ -48,7 +66,11 @@ def run_model_conformance(
         )
         for provider in selected_providers
     ]
-    return ModelConformanceReport(results=results)
+    return ModelConformanceReport(
+        results=results,
+        live_env_var=live_env_var,
+        live_enabled=live_enabled,
+    )
 
 
 def _run_provider_conformance(

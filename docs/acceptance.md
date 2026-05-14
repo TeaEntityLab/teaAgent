@@ -13,7 +13,8 @@ TeaAgent acceptance tests live under `tests/acceptance/` and verify user-facing 
 - Managed runtime flow: tool metadata context construction, workspace/request context forwarding, persisted managed task audit events, and result trace metadata.
 - Long-running worker flow: background worker start, list, show, log tail, and stop lifecycle.
 - Workspace edit flow: hash-anchored read/edit, git status, test command execution, git diff inspection, and final diff summary.
+- Live provider conformance flow: provider checks are skipped unless an explicit environment gate is set, preventing accidental live API calls in CI.
 
 ## Next User Stories
 
-- Live provider conformance gated by environment variables.
+- Expand acceptance coverage for external hosted-provider runs when CI secrets are intentionally provisioned.
