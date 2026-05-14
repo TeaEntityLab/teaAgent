@@ -36,7 +36,37 @@ class LLMAdapterTests(unittest.TestCase):
     def test_available_providers_include_requested_adapters(self) -> None:
         self.assertEqual(
             available_providers(),
-            ['claude', 'gemini', 'gpt', 'opencodezen-go', 'openrouter'],
+            [
+                'claude',
+                'gemini',
+                'gpt',
+                'ollama',
+                'opencodezen-go',
+                'openrouter',
+                'vllm',
+            ],
+        )
+
+    def test_ollama_is_openai_compatible_without_api_key(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(os.environ, {}, clear=True):
+            adapter = create_llm_adapter('ollama', transport=transport)
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+        self.assertEqual(
+            transport.calls[0]['url'], 'http://localhost:11434/v1/chat/completions'
+        )
+
+    def test_vllm_is_openai_compatible_without_api_key(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(os.environ, {}, clear=True):
+            adapter = create_llm_adapter('vllm', transport=transport)
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+        self.assertEqual(
+            transport.calls[0]['url'], 'http://localhost:8000/v1/chat/completions'
         )
 
     def test_gpt_adapter_uses_openai_chat_completions_shape(self) -> None:

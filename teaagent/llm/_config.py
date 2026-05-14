@@ -43,6 +43,22 @@ PROVIDER_CONFIGS = {
         base_url='https://openrouter.ai/api/v1',
         base_url_env='OPENROUTER_BASE_URL',
     ),
+    'ollama': ProviderConfig(
+        name='ollama',
+        api_key_env='OLLAMA_API_KEY',
+        default_model='llama3.2',
+        base_url='http://localhost:11434/v1',
+        api_key='ollama',
+        base_url_env='OLLAMA_BASE_URL',
+    ),
+    'vllm': ProviderConfig(
+        name='vllm',
+        api_key_env='VLLM_API_KEY',
+        default_model='meta-llama/Llama-3.1-8B-Instruct',
+        base_url='http://localhost:8000/v1',
+        api_key='vllm',
+        base_url_env='VLLM_BASE_URL',
+    ),
     'opencodezen-go': ProviderConfig(
         name='opencodezen-go',
         api_key_env='OPENCODEZEN_API_KEY',
@@ -100,7 +116,9 @@ PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
     'gpt': 0.00015,
     'gemini': 0.000075,
     'openrouter': 0.0005,
+    'ollama': 0.0,
     'opencodezen-go': 0.0005,
+    'vllm': 0.0,
 }
 
 PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
@@ -108,7 +126,9 @@ PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
     'gpt': 0.0006,
     'gemini': 0.0003,
     'openrouter': 0.002,
+    'ollama': 0.0,
     'opencodezen-go': 0.002,
+    'vllm': 0.0,
 }
 
 

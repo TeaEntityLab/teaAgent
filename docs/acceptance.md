@@ -519,8 +519,4 @@ track p50/p95 latency across eval suites and detect regressions.*
 
 ## Next User Stories
 
-The following stories remain unimplemented.
-
-| ID | Story | Priority |
-|---|---|---|
-| AC-NEW-20 | Local model (Ollama/vLLM) with full governance | P2 |
+All currently tracked stories are implemented.
