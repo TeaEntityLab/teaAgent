@@ -29,7 +29,7 @@ teaagent --help
 
 ## API Key Setup
 
-TeaAgent supports 5 LLM providers. Set environment variables for the ones you want to use:
+TeaAgent supports 7 LLM providers. Set environment variables for the ones you want to use:
 
 | Provider  | Env Var                | Default Model          | Get Key                                          |
 |-----------|------------------------|------------------------|--------------------------------------------------|
@@ -37,9 +37,11 @@ TeaAgent supports 5 LLM providers. Set environment variables for the ones you wa
 | gpt       | `OPENAI_API_KEY`       | gpt-4o-mini            | https://platform.openai.com/api-keys             |
 | gemini    | `GEMINI_API_KEY`       | gemini-1.5-flash       | https://aistudio.google.com/apikey                |
 | openrouter| `OPENROUTER_API_KEY`   | openai/gpt-4o-mini     | https://openrouter.ai/settings/keys               |
+| ollama    | `OLLAMA_API_KEY` (optional) | llama3.2         | Local server (default `http://localhost:11434/v1`) |
+| vllm      | `VLLM_API_KEY` (optional) | meta-llama/Llama-3.1-8B-Instruct | Local server (default `http://localhost:8000/v1`) |
 | opencodezen-go | `OPENCODEZEN_API_KEY` | deepseek-v4-flash* | https://opencode.ai/settings                      |
 
-\* The `opencodezen-go` provider's default model name is `opencodezen-go`, but the API requires a real model name like `deepseek-v4-flash`. Always pass `--model` with this provider (see [Choosing a Model](#choosing-a-model)).
+\* `opencodezen-go` defaults to `deepseek-v4-flash`. You can still pass `--model` to pick another supported model.
 
 ### Lazy Setup (Recommended)
 
@@ -60,7 +62,20 @@ source ~/.zshrc
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
+export OPENROUTER_API_KEY="sk-or-..."
+export OLLAMA_BASE_URL="http://localhost:11434/v1"
+export VLLM_BASE_URL="http://localhost:8000/v1"
 # ... etc
+```
+
+Network/TLS environment variables are also supported:
+
+```bash
+export HTTPS_PROXY="http://proxy.internal:8080"
+export REQUESTS_CA_BUNDLE="/path/to/ca-bundle.pem"
+export SSL_CERT_FILE="/path/to/ca-bundle.pem"
+export TEAAGENT_TLS_CLIENT_CERT="/path/to/client.crt"
+export TEAAGENT_TLS_CLIENT_KEY="/path/to/client.key"
 ```
 
 ### Override Default Models
@@ -72,7 +87,6 @@ export CLAUDE_MODEL="claude-3-5-sonnet-latest"
 export GPT_MODEL="gpt-4o"
 export GEMINI_MODEL="gemini-2.0-flash"
 export OPENROUTER_MODEL="anthropic/claude-3.5-sonnet"
-export OPENCODEZEN_GO_MODEL="deepseek-v4-flash"
 ```
 
 Or override with `--model` on the command line (see below).
@@ -84,6 +98,8 @@ Check that your key is detected:
 ```bash
 teaagent doctor model gpt
 teaagent doctor model claude
+teaagent doctor model ollama
+teaagent doctor model vllm
 teaagent doctor model opencodezen-go
 ```
 
@@ -123,7 +139,7 @@ teaagent agent run gpt "do something"
 
 ### Using a Specific Model
 
-Some providers (especially `opencodezen-go`) need an explicit model:
+Use `--model` when you want to override defaults:
 
 ```bash
 teaagent agent run --model deepseek-v4-flash opencodezen-go "list all Python files"
@@ -205,7 +221,7 @@ teaagent> ask which ones are test files?
 | `session switch <id>` | Switch to a saved session |
 | `ask <task>` | Run an agent task |
 | `ask --clarify <task>` | Run with ambiguity check first |
-| `provider <name>` | Set LLM provider (gpt, claude, gemini, openrouter, opencodezen-go) |
+| `provider <name>` | Set LLM provider (gpt, claude, gemini, openrouter, ollama, vllm, opencodezen-go) |
 | `model <name>` | Override model name |
 | `permission <mode>` | Set permission mode |
 | `destructive on/off` | Toggle destructive tool access |
@@ -287,7 +303,7 @@ The `opencodezen-go` provider at `https://opencode.ai/zen/go/v1` supports these 
 | `mimo-v2.5` | |
 | `hy3-preview` | |
 
-Always pass `--model` with `opencodezen-go`:
+To pick a specific `opencodezen-go` model explicitly:
 
 ```bash
 teaagent agent run --model deepseek-v4-flash opencodezen-go "your task"
@@ -319,7 +335,7 @@ teaagent agent run gpt "do something"
 
 ### "opencodezen-go response missing text content"
 
-The `opencodezen-go` provider default model name is `opencodezen-go`, which is not a real model name. Always pass an explicit model:
+Use an explicit model when you want one of the higher-capability `opencodezen-go` variants:
 
 ```bash
 teaagent agent run --model deepseek-v4-flash opencodezen-go "your task"

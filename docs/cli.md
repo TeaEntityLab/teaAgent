@@ -180,6 +180,8 @@ teaagent doctor model claude
 teaagent doctor model gpt
 teaagent doctor model gemini
 teaagent doctor model openrouter
+teaagent doctor model ollama
+teaagent doctor model vllm
 teaagent doctor model opencodezen-go
 ```
 
@@ -207,6 +209,8 @@ export ANTHROPIC_API_KEY=...
 export OPENAI_API_KEY=...
 export GEMINI_API_KEY=...
 export OPENROUTER_API_KEY=...
+export OLLAMA_API_KEY=...    # optional for local deployments
+export VLLM_API_KEY=...      # optional for local deployments
 export OPENCODEZEN_API_KEY=...
 ```
 
@@ -217,7 +221,19 @@ export ANTHROPIC_BASE_URL=https://api.anthropic.com/v1
 export OPENAI_BASE_URL=https://api.openai.com/v1
 export GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 export OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+export OLLAMA_BASE_URL=http://localhost:11434/v1
+export VLLM_BASE_URL=http://localhost:8000/v1
 export OPENCODEZEN_BASE_URL=https://opencode.ai/zen/go/v1
+```
+
+Optional proxy/TLS settings:
+
+```bash
+export HTTPS_PROXY=http://proxy.internal:8080
+export REQUESTS_CA_BUNDLE=/path/to/ca-bundle.pem
+export SSL_CERT_FILE=/path/to/ca-bundle.pem
+export TEAAGENT_TLS_CLIENT_CERT=/path/to/client.crt
+export TEAAGENT_TLS_CLIENT_KEY=/path/to/client.key
 ```
 
 ## Workspace Tools
