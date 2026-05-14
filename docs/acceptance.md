@@ -10,10 +10,10 @@ TeaAgent acceptance tests live under `tests/acceptance/` and verify user-facing 
 - TUI prompt approval workflow: approval prompt, destructive write, final run payload, and audit summary.
 - MCP client compatibility flow: bearer auth, session lifecycle, `tools/list`, `tools/call`, and session close.
 - A2A federation flow: remote discovery, partial endpoint failure, capability routing, delegation, context forwarding, and agent trace metadata.
+- Managed runtime flow: tool metadata context construction, workspace/request context forwarding, persisted managed task audit events, and result trace metadata.
 
 ## Next User Stories
 
 - Live provider conformance gated by environment variables.
-- Managed runtime flow that forwards task context/tools and records managed runtime audit events.
 - Long-running worker flow covering `ultrawork start`, heartbeat/status, logs, and stop.
 - Workspace edit flow covering hash reads, patch application, git status, test execution, and final diff summary.

@@ -21,6 +21,19 @@ class ManagedRunResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+def managed_runtime_context(
+    registry: Any,
+    *,
+    workspace_root: Optional[str] = None,
+    extra: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    context = dict(extra or {})
+    context['tools'] = registry.mcp_metadata()
+    if workspace_root is not None:
+        context['workspace_root'] = workspace_root
+    return context
+
+
 class ManagedAgentRunner:
     def __init__(
         self, adapter: ManagedRuntimeAdapter, *, runtime_name: str = ''
@@ -37,10 +50,18 @@ class ManagedAgentRunner:
         run_id: str = '',
     ) -> ManagedRunResult:
         ctx = context or {}
+        context_keys = sorted(ctx.keys())
+        tools = ctx.get('tools', [])
+        tool_count = len(tools) if isinstance(tools, list) else 0
         _log = None if audit_logger is _AUDIT_UNSET else audit_logger
         if _log is not None:
             _log.record(
-                'managed_task_started', run_id, runtime=self._runtime_name, task=task
+                'managed_task_started',
+                run_id,
+                runtime=self._runtime_name,
+                task=task,
+                context_keys=context_keys,
+                tool_count=tool_count,
             )
         try:
             output = self._adapter.run_task(task, context=ctx)
@@ -51,6 +72,8 @@ class ManagedAgentRunner:
                     run_id,
                     runtime=self._runtime_name,
                     error=str(exc),
+                    context_keys=context_keys,
+                    tool_count=tool_count,
                 )
             raise
         if _log is not None:
@@ -59,8 +82,18 @@ class ManagedAgentRunner:
                 run_id,
                 runtime=self._runtime_name,
                 output_length=len(output),
+                context_keys=context_keys,
+                tool_count=tool_count,
             )
-        return ManagedRunResult(output=output, runtime=self._runtime_name)
+        return ManagedRunResult(
+            output=output,
+            runtime=self._runtime_name,
+            metadata={
+                'run_id': run_id,
+                'context_keys': context_keys,
+                'tool_count': tool_count,
+            },
+        )
 
     def healthy(self) -> bool:
         return self._adapter.health_check()
