@@ -71,6 +71,7 @@ class CLITests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             payload = json.loads(output.getvalue())
             self.assertTrue(payload['ok'])
+            self.assertEqual(payload['env_status'], 'written')
             env_path = Path(tmp) / '.teaagent' / 'env'
             self.assertTrue(env_path.exists())
             content = env_path.read_text(encoding='utf-8')
@@ -358,6 +359,7 @@ class CLITests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertIn("OAuth active kid 'v2' not found", stderr.getvalue())
+        self.assertIn('available kids: v1', stderr.getvalue())
 
     def test_mcp_http_oauth_dpop_replay_ttl_accepted(self) -> None:
         with (

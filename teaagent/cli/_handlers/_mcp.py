@@ -109,7 +109,11 @@ def _load_key_ring(
             "OAuth key ring file requires string 'active_kid' or --oauth-active-kid.",
         )
     if active_kid not in keys:
-        return None, 'OAuth active kid not found in key ring keys.'
+        available = ', '.join(sorted(keys.keys()))
+        return (
+            None,
+            f"OAuth active kid '{active_kid}' not found in key ring keys; available kids: {available}.",
+        )
 
     return OAuthKeyRing(
         active_kid=active_kid,

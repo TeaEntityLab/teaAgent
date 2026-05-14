@@ -194,8 +194,13 @@ def init_command(args: argparse.Namespace) -> int:
         'max_iterations': int(args.max_iterations),
         'max_tool_calls': int(args.max_tool_calls),
     }
-    if args.write_env and api_key:
-        payload['env_status'] = 'skipped clear-text env file write; key set for current process only'
+    if args.write_env and api_key and env_var:
+        env_path = tea_dir / 'env'
+        env_path.write_text(f'{env_var}={api_key}\n', encoding='utf-8')
+        payload['env_status'] = 'written'
+        payload['env_path'] = str(env_path)
+    elif args.write_env:
+        payload['env_status'] = 'skipped (missing api key or env var mapping)'
     print_json(payload)
     return 0
 
