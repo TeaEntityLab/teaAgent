@@ -27,6 +27,11 @@ def register(
     smoke.add_argument(
         '--max-tokens', type=int, default=32, help='Maximum output tokens.'
     )
+    smoke.add_argument(
+        '--live-env-var',
+        default=None,
+        help='Skip smoke call unless this environment variable is set to 1.',
+    )
     smoke.set_defaults(func=handlers['smoke'])
 
     conformance = subs.add_parser(

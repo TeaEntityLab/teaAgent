@@ -14,7 +14,8 @@ TeaAgent acceptance tests live under `tests/acceptance/` and verify user-facing 
 - Long-running worker flow: background worker start, list, show, log tail, and stop lifecycle.
 - Workspace edit flow: hash-anchored read/edit, git status, test command execution, git diff inspection, and final diff summary.
 - Live provider conformance flow: provider checks are skipped unless an explicit environment gate is set, preventing accidental live API calls in CI.
+- Hosted-provider smoke flow: `model smoke --live-env-var` skips live adapter calls unless CI explicitly sets the gate to `1`.
 
 ## Next User Stories
 
-- Expand acceptance coverage for external hosted-provider runs when CI secrets are intentionally provisioned.
+- Define the next product-facing acceptance story beyond safe provider gates, such as release packaging smoke or IDE command flow.

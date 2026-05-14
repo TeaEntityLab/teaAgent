@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from typing import Any
 
 from teaagent.llm import LLMMessage, LLMRequest, available_providers
@@ -14,6 +15,16 @@ def model_providers(_args: argparse.Namespace) -> int:
 
 
 def model_smoke(args: argparse.Namespace) -> int:
+    live_env_var = getattr(args, 'live_env_var', None)
+    if live_env_var is not None and os.environ.get(live_env_var) != '1':
+        print_json(
+            {
+                'provider': args.provider,
+                'skipped': True,
+                'reason': f'gated by env {live_env_var}=1',
+            }
+        )
+        return 0
     adapter = args._adapter_factory(args.provider, model=args.model)  # type: ignore[attr-defined]
     response = adapter.complete(
         LLMRequest(
