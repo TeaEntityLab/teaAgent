@@ -58,7 +58,8 @@ class ErrorHierarchyTests(unittest.TestCase):
             ToolExecutionError,
         ]:
             exc = cls('test message 123')
-            self.assertEqual(str(exc), 'test message 123')
+            # str() includes the original message; it may also include a hint suffix
+            self.assertIn('test message 123', str(exc))
 
 
 class ErrorCategoryMatchingTests(unittest.TestCase):

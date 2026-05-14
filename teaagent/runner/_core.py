@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -10,9 +11,11 @@ from teaagent.errors import (
     AgentHarnessError,
     BudgetExceededError,
     ErrorCategory,
+    RunCancelledError,
     ToolExecutionError,
     ToolPermissionError,
 )
+from teaagent.file_policy import FilePolicy
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.tools import ToolRegistry
 
@@ -41,6 +44,8 @@ class AgentRunner:
         compactor: Optional[ContextCompactor] = None,
         compact_after_observations: int = 20,
         checkpoint_store: Any = None,
+        cancel_token: Optional[threading.Event] = None,
+        file_policy: Optional[FilePolicy] = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -51,6 +56,8 @@ class AgentRunner:
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
         self.checkpoint_store = checkpoint_store
+        self.cancel_token = cancel_token
+        self.file_policy = file_policy
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
@@ -77,6 +84,8 @@ class AgentRunner:
         iterations = 0
         tool_calls = len(observations)
         cost_cents = 0.0
+        input_tokens = 0
+        output_tokens = 0
         self.audit.record(
             'run_started',
             current_run_id,
@@ -88,9 +97,13 @@ class AgentRunner:
             iterations += 1
             self.audit.record('iteration_started', current_run_id, iteration=iterations)
             try:
+                if self.cancel_token is not None and self.cancel_token.is_set():
+                    raise RunCancelledError('run cancelled by cancel token')
                 self._assert_cost_budget(cost_cents)
                 decision = decide(context)
                 cost_cents = context.get('_cost_cents', cost_cents)
+                input_tokens = context.get('_input_tokens', input_tokens)
+                output_tokens = context.get('_output_tokens', output_tokens)
                 self._assert_cost_budget(cost_cents)
                 if isinstance(decision, FinalAnswer):
                     self.audit.record(
@@ -99,6 +112,8 @@ class AgentRunner:
                         answer=decision.content,
                         metadata=decision.metadata,
                         cost_cents=cost_cents,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
                     )
                     return RunResult(
                         run_id=current_run_id,
@@ -106,6 +121,9 @@ class AgentRunner:
                         iterations=iterations,
                         tool_calls=tool_calls,
                         status='completed',
+                        cost_cents=cost_cents,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
                     )
 
                 if tool_calls >= self.budget.max_tool_calls:
@@ -117,6 +135,11 @@ class AgentRunner:
                     'destructive': tool.annotations.destructive,
                     'idempotent': tool.annotations.idempotent,
                 }
+                if self.file_policy is not None:
+                    self.file_policy.assert_allowed(
+                        tool_name=decision.tool_name,
+                        arguments=decision.arguments,
+                    )
                 try:
                     self.approval_policy.assert_allowed(
                         tool_name=decision.tool_name,
@@ -154,6 +177,9 @@ class AgentRunner:
                                 tool_calls=tool_calls,
                                 status='pending_approval',
                                 metadata={'approval': approval_request.to_dict()},
+                                cost_cents=cost_cents,
+                                input_tokens=input_tokens,
+                                output_tokens=output_tokens,
                             )
                         if self.approval_handler(approval_request):
                             self.audit.record(
@@ -231,6 +257,8 @@ class AgentRunner:
                     category=exc.category,
                     message=str(exc),
                     cost_cents=cost_cents,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
                 )
                 return RunResult(
                     run_id=current_run_id,
@@ -239,6 +267,9 @@ class AgentRunner:
                     tool_calls=tool_calls,
                     status=f'failed:{exc.category}',
                     error_message=str(exc),
+                    cost_cents=cost_cents,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
                 )
             except Exception as exc:  # pragma: no cover - defensive boundary
                 self.audit.record(
@@ -247,6 +278,8 @@ class AgentRunner:
                     category=ErrorCategory.SYSTEM,
                     message=str(exc),
                     cost_cents=cost_cents,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
                 )
                 return RunResult(
                     run_id=current_run_id,
@@ -255,6 +288,9 @@ class AgentRunner:
                     tool_calls=tool_calls,
                     status=f'failed:{ErrorCategory.SYSTEM}',
                     error_message=str(exc),
+                    cost_cents=cost_cents,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
                 )
 
         self.audit.record(
@@ -263,6 +299,8 @@ class AgentRunner:
             category=ErrorCategory.MODEL_LOGIC,
             message='iteration budget exceeded',
             cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )
         return RunResult(
             run_id=current_run_id,
@@ -271,6 +309,9 @@ class AgentRunner:
             tool_calls=tool_calls,
             status=f'failed:{ErrorCategory.MODEL_LOGIC}',
             error_message='iteration budget exceeded',
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )
 
     def _can_request_approval(self, destructive: bool) -> bool:

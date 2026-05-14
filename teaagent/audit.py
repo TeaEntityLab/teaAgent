@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import threading
@@ -100,7 +101,8 @@ class AuditLogger:
                 secure_audit_file(self.path)
             sinks = list(self._sinks)
         for sink in sinks:
-            sink(event)
+            with contextlib.suppress(Exception):
+                sink(event)
         return event
 
 
@@ -169,7 +171,9 @@ def redact_tool_result_value(key: str, value: Any) -> Any:
 
 
 def redact_audit_value(key: str, value: Any) -> Any:
-    if is_sensitive_key(key):
+    # Only redact string / bytes values by key sensitivity.
+    # Numeric, bool, and None values are telemetry data and are never sensitive.
+    if is_sensitive_key(key) and isinstance(value, (str, bytes)):
         return AUDIT_REDACTED
     if isinstance(value, dict):
         return {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -24,6 +25,7 @@ from teaagent.prompt import (
 )
 from teaagent.run_store import RunStore
 from teaagent.runner import AgentRunner, ApprovalHandler, Decision, RunResult
+from teaagent.skill_loader import SkillContent, load_skills
 from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.workspace_tools import build_workspace_tool_registry
 
@@ -46,6 +48,7 @@ class ChatAgentConfig:
     approval_handler: Optional[ApprovalHandler] = None
     checkpoint_store: Any = None
     chat_messages: Optional[list[LLMMessage]] = None
+    cancel_token: Optional[threading.Event] = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
@@ -65,6 +68,7 @@ class ModelDecisionEngine:
         stream: bool = False,
         on_chunk: Optional[Callable[[str], None]] = None,
         chat_messages: Optional[list[LLMMessage]] = None,
+        skills: Optional[list[SkillContent]] = None,
     ) -> None:
         self.adapter = adapter
         self.registry = registry
@@ -75,6 +79,7 @@ class ModelDecisionEngine:
         self.stream = stream
         self.on_chunk = on_chunk
         self.chat_messages = chat_messages
+        self.skills = skills
 
     def decide(self, context: dict) -> Decision:
         prompt = assemble_agent_prompt(
@@ -83,6 +88,7 @@ class ModelDecisionEngine:
             registry=self.registry,
             project_instructions=self.project_instructions,
             task_spec=self.task_spec,
+            skills=self.skills,
         )
 
         if self.budget is not None and self.model:
@@ -109,6 +115,12 @@ class ModelDecisionEngine:
         )
         previous_cost = context.get('_cost_cents', 0.0)
         context['_cost_cents'] = previous_cost + response.estimated_cost_cents
+        context['_input_tokens'] = (
+            context.get('_input_tokens', 0) + response.input_tokens
+        )
+        context['_output_tokens'] = (
+            context.get('_output_tokens', 0) + response.output_tokens
+        )
         return parse_model_decision(response.content)
 
 
@@ -133,6 +145,7 @@ def run_chat_agent(
     memories = memory_entries_to_prompt(
         MemoryCatalog(config.root).search(task, limit=config.memory_limit)
     )
+    active_skills = load_skills(config.root)
     runner_budget = RunBudget(
         max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls
     )
@@ -146,6 +159,7 @@ def run_chat_agent(
         stream=config.stream,
         on_chunk=config.on_chunk,
         chat_messages=config.chat_messages,
+        skills=active_skills,
     )
     audit_logger = audit or AuditLogger()
     runner = AgentRunner(
@@ -160,6 +174,7 @@ def run_chat_agent(
         approval_handler=config.approval_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),
         checkpoint_store=config.checkpoint_store,
+        cancel_token=config.cancel_token,
     )
     run_id = uuid4().hex
     heartbeat: Optional[Heartbeat] = None
