@@ -34,7 +34,7 @@ Reject container-level isolation, seccomp, and V8 isolates as P2 scope.
 
 ## Alternatives Considered
 
-- **subinterpreters (PEP 554)**: Not available in Python 3.9; too bleeding-edge.
+- **subinterpreters (PEP 554)**: Not available in Python 3.10; too bleeding-edge (still provisional in 3.12+).
 - **Docker/container per execution**: Latency of ~1s per Code Mode call makes
   it impractical for the dozens of calls an agent may make in one run.
 - **V8/QuickJS isolate via PyMiniRacer or similar**: Adds a C extension dependency

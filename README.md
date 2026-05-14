@@ -47,7 +47,7 @@ Or without the console script:
 python3 -m teaagent.cli --help
 ```
 
-Requires Python >= 3.9. Optional dependency groups enable non-core integrations:
+Requires Python >= 3.10. Optional dependency groups enable non-core integrations:
 
 ```bash
 pip install -e ".[graphqlite]"
