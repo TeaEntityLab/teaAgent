@@ -117,11 +117,8 @@ class ProviderConfig:
         return api_key
 
     def resolved_model(self) -> str:
-        return (
-            self.model
-            or os.environ.get(f'{self.name.upper()}_MODEL')
-            or self.default_model
-        )
+        env_prefix = self.name.upper().replace('-', '_')
+        return self.model or os.environ.get(f'{env_prefix}_MODEL') or self.default_model
 
     def resolved_base_url(self) -> str:
         if self.base_url_env and os.environ.get(self.base_url_env):

@@ -151,6 +151,21 @@ class LLMAdapterTests(unittest.TestCase):
             transport.calls[0]['url'], 'https://local.test/v1/chat/completions'
         )
 
+    def test_opencodezen_go_model_env_override_uses_underscore_key(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'OPENCODEZEN_API_KEY': 'key',
+                'OPENCODEZEN_GO_MODEL': 'deepseek-v4-pro',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('opencodezen-go', transport=transport)
+            adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(transport.calls[0]['payload']['model'], 'deepseek-v4-pro')
+
     def test_configuration_check_reports_missing_key(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             ok, message = check_llm_configuration('gpt')
