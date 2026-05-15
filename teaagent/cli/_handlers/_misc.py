@@ -194,13 +194,17 @@ def init_command(args: argparse.Namespace) -> int:
         'max_iterations': int(args.max_iterations),
         'max_tool_calls': int(args.max_tool_calls),
     }
-    if args.write_env and api_key and env_var:
+    if args.write_env and env_var:
         env_path = tea_dir / 'env'
-        env_path.write_text(f'{env_var}={api_key}\n', encoding='utf-8')
-        payload['env_status'] = 'written'
+        env_path.write_text(
+            f'# Set this in your shell or secret manager; do not store API keys in clear text.\n'
+            f'# export {env_var}=<your_api_key>\n',
+            encoding='utf-8',
+        )
+        payload['env_status'] = 'template_written_without_secret'
         payload['env_path'] = str(env_path)
     elif args.write_env:
-        payload['env_status'] = 'skipped (missing api key or env var mapping)'
+        payload['env_status'] = 'skipped (missing env var mapping)'
     print_json(payload)
     return 0
 
