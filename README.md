@@ -197,6 +197,8 @@ See [docs/cli.md](docs/cli.md) for full CLI reference, scope docs for P0/P1/P2 f
 Additional references:
 
 - [Audit event reference](docs/audit-events.md)
+- [Use-case traceability](docs/use-cases.md)
+- [Acceptance coverage](docs/acceptance.md)
 - [Tool authoring guide](docs/tool-authoring.md)
 - [Provider authoring guide](docs/provider-authoring.md)
 - [Top-level API migration note](docs/migration-top-level-api.md)

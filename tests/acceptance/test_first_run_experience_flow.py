@@ -66,3 +66,28 @@ def test_first_run_init_preserves_existing_agents_md(tmp_path: Path) -> None:
     assert exit_code == 0
     assert payload['agents_md_status'] == 'existing'
     assert agents_path.read_text(encoding='utf-8') == 'custom project rules\n'
+
+
+def test_first_run_init_returns_onboarding_checklist(tmp_path: Path) -> None:
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main(
+            [
+                'init',
+                '--root',
+                str(tmp_path),
+                '--provider',
+                'gpt',
+                '--api-key',
+                'sk-test-first-run',
+            ]
+        )
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 0
+    checklist = payload.get('next_steps')
+    assert isinstance(checklist, list)
+    assert len(checklist) >= 3
+    assert any('doctor model gpt' in step for step in checklist)
+    assert any('agent run gpt' in step and 'read-only' in step for step in checklist)
+    assert any('mcp serve --http --port 7330' in step for step in checklist)

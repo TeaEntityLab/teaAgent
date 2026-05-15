@@ -336,7 +336,11 @@ def _auto_curate_memory(
     )
     if not summary:
         return
-    MemoryCatalog(root).add(summary, tags=('auto-curated', 'run-summary'))
+    catalog = MemoryCatalog(root)
+    recent = catalog.list(limit=50)
+    if any(entry.content == summary and 'auto-curated' in entry.tags for entry in recent):
+        return
+    catalog.add(summary, tags=('auto-curated', 'run-summary'))
 
 
 def _build_auto_curated_summary(

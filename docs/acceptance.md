@@ -33,11 +33,11 @@ directory.
 | `test_daily_cli.py` | Daily CLI workflow | `agent preflight`, `agent run`, `agent show`, audit persistence, run-level audit summary |
 | `test_daily_tui.py` | Daily TUI workflow | Chat mode, memory injection, progress streaming, answer persistence in session history |
 | `test_error_remediation_flow.py` | Error remediation hints | Core errors include actionable default hints and custom hint override support |
-| `test_first_run_experience_flow.py` | First-run onboarding | `init` bootstraps `.teaagent/config.json`, creates `AGENTS.md` when missing, preserves existing `AGENTS.md` |
+| `test_first_run_experience_flow.py` | First-run onboarding | `init` bootstraps `.teaagent/config.json`, creates `AGENTS.md` when missing, preserves existing `AGENTS.md`, and returns actionable onboarding checklist |
 | `test_live_provider_conformance_flow.py` | Live provider conformance | Live checks are skipped unless an explicit environment gate is set |
 | `test_managed_runtime_flow.py` | Managed runtime | Tool metadata context, workspace/request forwarding, managed-task audit events, trace metadata |
 | `test_mcp_client_flow.py` | MCP client compatibility | Bearer auth, session lifecycle, `tools/list`, `tools/call`, session close |
-| `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task, outcome, and last tool context |
+| `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task/outcome/last-tool context, deduplicate identical summaries, and skip pending-approval runs |
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
 | `test_policy_as_code_flow.py` | Policy-as-code deny rules | Workspace `policy.yaml`, deny enforcement, non-match pass-through, `danger-full-access` independence, argument matching |
 | `test_remote_mcp_consumption_flow.py` | Remote MCP tool consumption | Remote tool registration, annotation propagation, prefix filtering, shared rate limits, proxied calls |
@@ -67,6 +67,7 @@ directory.
 | `test_file_policy.py` | Deny-rule matching, first-match behavior, policy loading, runner wiring |
 | `test_mcp_tool_adapter.py` | MCP tool discovery, annotations, prefix filtering |
 | `test_migration_dry_run.py` | Migration dry-run preview without SQL side effects |
+| `test_memory_retrieval_ranking.py` | Memory search relevance ranking favors high-signal auto-curated run summaries |
 | `test_plugins.py` | Plugin discovery, registration, failure isolation, custom entry-point group |
 | `test_redaction_config.py` | Configurable PII redaction toggles and custom patterns |
 | `test_run_export.py` | Run archive export/import, hash-chain preservation, missing-file errors |
@@ -91,4 +92,4 @@ directory.
 
 All currently tracked acceptance stories are implemented. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`56 passed`.
+`59 passed`.

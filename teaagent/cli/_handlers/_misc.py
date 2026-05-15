@@ -208,6 +208,11 @@ def init_command(args: argparse.Namespace) -> int:
         'permission_mode': args.permission_mode,
         'max_iterations': int(args.max_iterations),
         'max_tool_calls': int(args.max_tool_calls),
+        'next_steps': [
+            f'teaagent doctor model {provider}',
+            f'teaagent agent run {provider} "Summarize this repository" --root {root} --permission-mode read-only',
+            f'teaagent mcp serve --http --port 7330 --root {root}',
+        ],
     }
     if args.write_env and env_var:
         env_path = tea_dir / 'env'

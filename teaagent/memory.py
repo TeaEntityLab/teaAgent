@@ -51,12 +51,21 @@ class MemoryCatalog:
         normalized = query.strip().lower()
         if not normalized:
             return []
+        tokens = tuple(token for token in normalized.split() if token)
         matches = [
             entry
-            for entry in reversed(self._read_entries())
+            for entry in self._read_entries()
             if memory_matches(entry, normalized)
         ]
-        return matches[:limit]
+        ranked = sorted(
+            matches,
+            key=lambda entry: (
+                memory_relevance_score(entry, tokens),
+                entry.created_at,
+            ),
+            reverse=True,
+        )
+        return ranked[:limit]
 
     def show(self, memory_id: str) -> MemoryEntry:
         safe_id = memory_id.strip()
@@ -109,6 +118,22 @@ def normalize_tags(tags: tuple[str, ...]) -> tuple[str, ...]:
 def memory_matches(entry: MemoryEntry, query: str) -> bool:
     haystack = ' '.join((entry.content.lower(), ' '.join(entry.tags).lower()))
     return all(token in haystack for token in query.split())
+
+
+def memory_relevance_score(entry: MemoryEntry, tokens: tuple[str, ...]) -> int:
+    content = entry.content.lower()
+    tags = tuple(tag.lower() for tag in entry.tags)
+    score = 0
+    for token in tokens:
+        if token in content:
+            score += 3
+        if any(token in tag for tag in tags):
+            score += 2
+    if 'auto-curated' in tags:
+        score += 4
+    if 'run-summary' in tags:
+        score += 2
+    return score
 
 
 def memory_entries_to_prompt(entries: list[MemoryEntry]) -> list[dict[str, Any]]:
