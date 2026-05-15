@@ -70,10 +70,21 @@ def assemble_agent_prompt(
 
 
 def load_project_instructions(root: str | Path) -> str:
-    path = Path(root) / 'AGENTS.md'
-    if not path.exists():
-        return ''
-    return path.read_text(encoding='utf-8')
+    resolved = Path(root).resolve()
+    start_dir = resolved if resolved.is_dir() else resolved.parent
+    filenames = ('AGENTS.override.md', 'AGENTS.md', 'CLAUDE.md', 'AGENT.md')
+    parts: list[str] = []
+
+    for directory in reversed(start_dir.parents):
+        for filename in filenames:
+            path = directory / filename
+            if path.exists():
+                parts.append(path.read_text(encoding='utf-8'))
+    for filename in filenames:
+        path = start_dir / filename
+        if path.exists():
+            parts.append(path.read_text(encoding='utf-8'))
+    return '\n\n'.join(part for part in parts if part.strip())
 
 
 def parse_model_decision(text: str) -> ToolRequest | FinalAnswer:

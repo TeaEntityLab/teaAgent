@@ -81,6 +81,36 @@ class LoadProjectInstructionsTests(unittest.TestCase):
             result = load_project_instructions(tmp)
             self.assertEqual(result, 'Project rules here\n')
 
+    def test_loads_hierarchical_instructions_from_parent_to_child(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            child = root / 'a' / 'b'
+            child.mkdir(parents=True)
+            (root / 'AGENTS.md').write_text('root rules\n', encoding='utf-8')
+            (root / 'a' / 'AGENTS.md').write_text('a rules\n', encoding='utf-8')
+            (child / 'AGENTS.md').write_text('b rules\n', encoding='utf-8')
+
+            result = load_project_instructions(child)
+
+            self.assertIn('root rules', result)
+            self.assertIn('a rules', result)
+            self.assertIn('b rules', result)
+            self.assertLess(result.index('root rules'), result.index('a rules'))
+            self.assertLess(result.index('a rules'), result.index('b rules'))
+
+    def test_loads_fallback_instruction_filenames(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            child = root / 'repo'
+            child.mkdir(parents=True)
+            (root / 'AGENT.md').write_text('legacy root rules\n', encoding='utf-8')
+            (child / 'CLAUDE.md').write_text('child claude rules\n', encoding='utf-8')
+
+            result = load_project_instructions(child)
+
+            self.assertIn('legacy root rules', result)
+            self.assertIn('child claude rules', result)
+
 
 class AssembleAgentPromptTests(unittest.TestCase):
     def setUp(self) -> None:
