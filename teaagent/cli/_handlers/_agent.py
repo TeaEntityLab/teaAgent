@@ -124,6 +124,7 @@ def _execute_agent_task(
         from teaagent.checkpoint import SQLiteCheckpointStore
 
         checkpoint_store = SQLiteCheckpointStore(checkpoint_path)
+    resolved_permission_mode = parse_permission_mode(args.permission_mode)
     result = run_chat_agent(
         task=task,
         adapter=adapter,
@@ -133,7 +134,7 @@ def _execute_agent_task(
             max_tool_calls=args.max_tool_calls,
             allow_destructive=args.allow_destructive,
             model=selected_model,
-            permission_mode=parse_permission_mode(args.permission_mode),
+            permission_mode=resolved_permission_mode,
             approved_call_ids=frozenset(args.approve_call_id),
             enable_subagent=args.subagent,
             max_subagent_depth=args.max_subagent_depth,
@@ -157,6 +158,7 @@ def _execute_agent_task(
         result,
         routing=routing.to_dict() if routing else None,
         audit_summary=summarize_audit_events(events),
+        permission_mode=resolved_permission_mode.value,
     )
     if resumed_from:
         payload['resumed_from'] = resumed_from
@@ -174,6 +176,7 @@ def run_result_payload(
     *,
     routing: Optional[dict[str, Any]],
     audit_summary: Optional[dict[str, Any]] = None,
+    permission_mode: Optional[str] = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         'run_id': result.run_id,
@@ -183,6 +186,9 @@ def run_result_payload(
         'routing': routing,
         'final_answer': result.final_answer.content if result.final_answer else None,
     }
+    if permission_mode is not None:
+        payload['permission_mode'] = permission_mode
+        payload['run_mode'] = 'planning' if permission_mode == 'read-only' else 'execution'
     if audit_summary is not None:
         payload['audit_summary'] = audit_summary
     if 'approval' in result.metadata:

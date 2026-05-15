@@ -143,7 +143,10 @@
             "gpt",
             "claude",
             "gemini",
-            "ollama"
+            "openrouter",
+            "ollama",
+            "vllm",
+            "opencodezen-go"
           ],
           "description": "Default model provider for agent runs."
         },

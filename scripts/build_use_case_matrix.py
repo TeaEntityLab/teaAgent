@@ -32,6 +32,26 @@ USE_CASES: dict[str, tuple[str, ...]] = {
     ),
     'Memory continuity': ('test_memory_auto_curation_flow.py',),
     'IDE-assisted workflows': ('test_vscode_extension_mcp_boot_flow.py',),
+    'Product onboarding and provider readiness': (
+        'test_first_run_experience_flow.py',
+        'test_model_smoke_gating_flow.py',
+        'test_live_provider_conformance_flow.py',
+        'test_provider_matrix_consistency_flow.py',
+    ),
+    'Read-only planning mode': ('test_plan_mode_read_only_flow.py',),
+    'End-to-end code-change loop': (
+        'test_workspace_edit_flow.py',
+        'test_agent_fix_test_review_flow.py',
+    ),
+    'Reversible change recovery': ('test_run_undo_acceptance_flow.py',),
+    'Runtime IDE MCP smoke': (
+        'test_vscode_extension_mcp_boot_flow.py',
+        'test_vscode_mcp_runtime_smoke_flow.py',
+    ),
+    'Session resume continuity': ('test_session_resume_continuity_flow.py',),
+    'External ecosystem compatibility': (
+        'test_external_tool_manifest_compatibility_flow.py',
+    ),
 }
 
 

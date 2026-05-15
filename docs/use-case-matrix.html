@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TeaAgent Use-case Coverage</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --text: #19212d;
+      --muted: #5c6573;
+      --border: #d9dee8;
+      --ok: #0f7b44;
+      --no: #a33a3a;
+    }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+    .summary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .summary h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+    .summary p {
+      margin: 0;
+      color: var(--muted);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th {
+      background: #f1f4f9;
+      color: #2d3748;
+      font-weight: 600;
+    }
+    td.yes {
+      color: var(--ok);
+      font-weight: 600;
+    }
+    td.no {
+      color: var(--no);
+      font-weight: 600;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="summary">
+      <h1>TeaAgent Use-case Coverage</h1>
+      <p>Covered: 14/14 (100.0%)</p>
+    </section>
+    <table>
+      <thead>
+        <tr>
+          <th>Use Case</th>
+          <th>Covered</th>
+          <th>Required Tests</th>
+          <th>Missing Tests</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Project instruction conformance</td><td class="yes">yes</td><td><code>`test_agents_md_injection_flow.py`, `test_first_run_experience_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Safe autonomous coding run</td><td class="yes">yes</td><td><code>`test_daily_cli.py`, `test_daily_tui.py`, `test_policy_as_code_flow.py`, `test_workspace_edit_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Destructive-action governance</td><td class="yes">yes</td><td><code>`test_cancel_flow.py`, `test_daily_cli.py`, `test_policy_as_code_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Tool ecosystem extensibility</td><td class="yes">yes</td><td><code>`test_skill_install_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_mcp_client_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Reliability and forensics</td><td class="yes">yes</td><td><code>`test_audit_chain_integrity_flow.py`, `test_webhook_audit_flow.py`, `test_cost_tracking_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Memory continuity</td><td class="yes">yes</td><td><code>`test_memory_auto_curation_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>IDE-assisted workflows</td><td class="yes">yes</td><td><code>`test_vscode_extension_mcp_boot_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Product onboarding and provider readiness</td><td class="yes">yes</td><td><code>`test_first_run_experience_flow.py`, `test_model_smoke_gating_flow.py`, `test_live_provider_conformance_flow.py`, `test_provider_matrix_consistency_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Read-only planning mode</td><td class="yes">yes</td><td><code>`test_plan_mode_read_only_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>End-to-end code-change loop</td><td class="yes">yes</td><td><code>`test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Reversible change recovery</td><td class="yes">yes</td><td><code>`test_run_undo_acceptance_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Runtime IDE MCP smoke</td><td class="yes">yes</td><td><code>`test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Session resume continuity</td><td class="yes">yes</td><td><code>`test_session_resume_continuity_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>External ecosystem compatibility</td><td class="yes">yes</td><td><code>`test_external_tool_manifest_compatibility_flow.py`</code></td><td><code>-</code></td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

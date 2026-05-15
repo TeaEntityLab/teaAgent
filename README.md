@@ -8,7 +8,7 @@ Governance-first agent harness for autonomous coding tasks. Thin orchestration l
 CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace Tools
                   ↕                              ↕
            LLM Adapters                  ApprovalPolicy
-           (5 providers)                 (5 permission modes)
+           (7 providers)                 (5 permission modes)
 ```
 
 - **AgentRunner**: Iterates between model decisions and tool executions within budget limits.
@@ -93,6 +93,8 @@ export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=...
 export GEMINI_API_KEY=...
 export OPENROUTER_API_KEY=...
+export OLLAMA_API_KEY=...   # optional for local deployments
+export VLLM_API_KEY=...     # optional for local deployments
 export OPENCODEZEN_API_KEY=...
 ```
 

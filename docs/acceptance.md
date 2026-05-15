@@ -26,6 +26,7 @@ directory.
 | File | Story | Key assertions |
 |---|---|---|
 | `test_a2a_federation_flow.py` | A2A federation | Remote discovery, partial endpoint failure, capability routing, delegation, context forwarding, agent trace metadata |
+| `test_agent_fix_test_review_flow.py` | End-to-end code-change loop | Baseline test failure, scoped hash-anchored edit, pytest rerun, diff inspection, and final repair summary |
 | `test_agents_md_injection_flow.py` | Hierarchical instruction injection | Parent/child instruction merge order, fallback filename support (`AGENT.md`, `CLAUDE.md`) |
 | `test_audit_chain_integrity_flow.py` | Audit log integrity | JSONL parseability, unique event IDs, redaction, disk/in-memory event parity, restricted file permissions |
 | `test_cancel_flow.py` | Graceful cancel | Thread-safe cancel token stops runs cleanly and keeps audit state intact |
@@ -33,17 +34,23 @@ directory.
 | `test_daily_cli.py` | Daily CLI workflow | `agent preflight`, `agent run`, `agent show`, audit persistence, run-level audit summary |
 | `test_daily_tui.py` | Daily TUI workflow | Chat mode, memory injection, progress streaming, answer persistence in session history |
 | `test_error_remediation_flow.py` | Error remediation hints | Core errors include actionable default hints and custom hint override support |
+| `test_external_tool_manifest_compatibility_flow.py` | External ecosystem compatibility | External MCP manifests and community skill packages remain compatible; invalid schemas fail with clear validation errors |
 | `test_first_run_experience_flow.py` | First-run onboarding | `init` bootstraps `.teaagent/config.json`, creates `AGENTS.md` when missing, preserves existing `AGENTS.md`, and returns actionable onboarding checklist |
+| `test_provider_matrix_consistency_flow.py` | Provider/docs consistency | Runtime provider registry matches README/USAGE provider count, API key env vars, default model table, and CLI `model providers` output |
 | `test_live_provider_conformance_flow.py` | Live provider conformance | Live checks are skipped unless an explicit environment gate is set |
 | `test_managed_runtime_flow.py` | Managed runtime | Tool metadata context, workspace/request forwarding, managed-task audit events, trace metadata |
 | `test_mcp_client_flow.py` | MCP client compatibility | Bearer auth, session lifecycle, `tools/list`, `tools/call`, session close |
 | `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task/outcome/last-tool context, deduplicate identical summaries, and skip pending-approval runs |
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
+| `test_plan_mode_read_only_flow.py` | Read-only planning mode | Read-only runs complete with planning metadata for inspect tasks and block file writes/shell mutation |
 | `test_policy_as_code_flow.py` | Policy-as-code deny rules | Workspace `policy.yaml`, deny enforcement, non-match pass-through, `danger-full-access` independence, argument matching |
 | `test_remote_mcp_consumption_flow.py` | Remote MCP tool consumption | Remote tool registration, annotation propagation, prefix filtering, shared rate limits, proxied calls |
+| `test_run_undo_acceptance_flow.py` | Reversible change recovery | Undo journal captures pre-write state and restores modified/new files to pre-run workspace state |
+| `test_session_resume_continuity_flow.py` | Session resume continuity | Pending-approval resume replays observations from checkpoint/store, preserves audit lineage, and auto-curates memory on completion |
 | `test_skill_install_flow.py` | Skill discovery and injection | Skill discovery, prompt injection, multi-skill loading, project override precedence, model-decision prompt wiring |
 | `test_ultrawork_flow.py` | Long-running worker | Worker start, list, show, log tail, and stop lifecycle |
 | `test_vscode_extension_mcp_boot_flow.py` | VSCode MCP boot flow | Extension manifest command contribution, source command wiring for MCP HTTP server, permission mode enum parity |
+| `test_vscode_mcp_runtime_smoke_flow.py` | VSCode MCP runtime smoke | VSCode MCP command wiring, provider enum parity, and MCP HTTP initialize/list/call/close runtime flow |
 | `test_webhook_audit_flow.py` | Webhook audit delivery | Run event delivery, HMAC verification, event filtering, failure suppression |
 | `test_workspace_edit_flow.py` | Workspace edit workflow | Hash-anchored read/edit, git status, command execution, diff inspection, final diff summary |
 
@@ -90,6 +97,11 @@ directory.
 
 ## Current Status
 
-All currently tracked acceptance stories are implemented. As of the latest
+All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`59 passed`.
+`69 passed`.
+
+This file documents implemented acceptance flows. Market-standard use-case gaps
+and planned future acceptance files are tracked in
+[`docs/use-cases.md`](use-cases.md) and
+[`docs/use-case-matrix.md`](use-case-matrix.md).

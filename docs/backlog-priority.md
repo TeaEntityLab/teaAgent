@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-10
+Last updated: 2026-05-16
 
 ---
 
@@ -39,22 +39,24 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — High (P0)
 
-*(All P0 items implemented — see Implemented table above.)*
+*(No open P0 items in this track.)*
 
 ---
 
 ## Open — Medium (P1)
 
-*(All P1 items implemented — see Implemented table above.)*
+*(No open P1 items in this track.)*
 
 ---
 
 ## Open — Low (P2)
 
-*(All P2 items implemented — see Implemented table above.)*
+| Item | Why now | Acceptance target |
+|------|---------|-------------------|
+| Periodic mainstream-agent README refresh | Agent conventions are moving quickly; roadmap claims should be refreshed from official READMEs before major planning cycles. | Add a manual checklist or script-backed note that records reviewed sources and date. |
 
 ---
 
 ## Recommended Execution Order (remaining)
 
-*(All items implemented.)*
+1. Periodic mainstream-agent README refresh.
