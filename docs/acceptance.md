@@ -37,11 +37,13 @@ directory.
 | `test_live_provider_conformance_flow.py` | Live provider conformance | Live checks are skipped unless an explicit environment gate is set |
 | `test_managed_runtime_flow.py` | Managed runtime | Tool metadata context, workspace/request forwarding, managed-task audit events, trace metadata |
 | `test_mcp_client_flow.py` | MCP client compatibility | Bearer auth, session lifecycle, `tools/list`, `tools/call`, session close |
+| `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task, outcome, and last tool context |
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
 | `test_policy_as_code_flow.py` | Policy-as-code deny rules | Workspace `policy.yaml`, deny enforcement, non-match pass-through, `danger-full-access` independence, argument matching |
 | `test_remote_mcp_consumption_flow.py` | Remote MCP tool consumption | Remote tool registration, annotation propagation, prefix filtering, shared rate limits, proxied calls |
 | `test_skill_install_flow.py` | Skill discovery and injection | Skill discovery, prompt injection, multi-skill loading, project override precedence, model-decision prompt wiring |
 | `test_ultrawork_flow.py` | Long-running worker | Worker start, list, show, log tail, and stop lifecycle |
+| `test_vscode_extension_mcp_boot_flow.py` | VSCode MCP boot flow | Extension manifest command contribution, source command wiring for MCP HTTP server, permission mode enum parity |
 | `test_webhook_audit_flow.py` | Webhook audit delivery | Run event delivery, HMAC verification, event filtering, failure suppression |
 | `test_workspace_edit_flow.py` | Workspace edit workflow | Hash-anchored read/edit, git status, command execution, diff inspection, final diff summary |
 
@@ -89,4 +91,4 @@ directory.
 
 All currently tracked acceptance stories are implemented. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`53 passed`.
+`56 passed`.

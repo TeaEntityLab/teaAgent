@@ -103,13 +103,23 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 
     const disposablePreflight = vscode.commands.registerCommand('teaagent.agentPreflight', async () => {
-        const exe = executablePath();
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const provider = vscode.workspace.getConfiguration('teaagent').get<string>('defaultProvider', 'gpt');
+        const task = await promptForInput('Enter preflight task', 'Summarize repository status');
+        if (!task) {
+            return;
+        }
 
         await runTeaAgentWithOutput(
-            ['agent', 'preflight'],
+            ['agent', 'preflight', provider, task],
             { title: 'Running Preflight', cwd: workspaceRoot }
         );
+    });
+
+    const disposableMcpServer = vscode.commands.registerCommand('teaagent.startMcpServer', async () => {
+        const port = vscode.workspace.getConfiguration('teaagent').get<number>('mcpServerPort', 7330);
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        runTeaAgent(['mcp', 'serve', '--http', '--port', String(port), '--root', workspaceRoot], workspaceRoot);
     });
 
     const disposableProviders = vscode.commands.registerCommand('teaagent.modelProviders', async () => {
@@ -169,6 +179,7 @@ export function activate(context: vscode.ExtensionContext): void {
         disposablePreflight,
         disposableProviders,
         disposableGQLSmoke,
+        disposableMcpServer,
         disposableTUI,
         taskProvider
     );

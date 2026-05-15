@@ -212,13 +212,20 @@ def run_chat_agent(
         )
         heartbeat.start()
     try:
-        return runner.run(
+        result = runner.run(
             task=task,
             decide=lambda context: engine.decide(with_memories(context, memories)),
             run_id=run_id,
             initial_observations=initial_observations,
             initial_context_extra=initial_context_extra,
         )
+        _auto_curate_memory(
+            root=config.root,
+            task=task,
+            result=result,
+            audit_events=audit_logger.events,
+        )
+        return result
     finally:
         if heartbeat is not None:
             heartbeat.stop()
@@ -313,3 +320,46 @@ def _subagent_error(message: str) -> dict[str, Any]:
         'final_answer': '',
         'message': message,
     }
+
+
+def _auto_curate_memory(
+    *,
+    root: Path,
+    task: str,
+    result: RunResult,
+    audit_events: list[Any],
+) -> None:
+    if result.status != 'completed' or result.final_answer is None:
+        return
+    summary = _build_auto_curated_summary(
+        task=task, final_answer=result.final_answer.content, audit_events=audit_events
+    )
+    if not summary:
+        return
+    MemoryCatalog(root).add(summary, tags=('auto-curated', 'run-summary'))
+
+
+def _build_auto_curated_summary(
+    *, task: str, final_answer: str, audit_events: list[Any]
+) -> str:
+    clean_task = task.strip()
+    clean_answer = final_answer.strip()
+    if not clean_task or not clean_answer:
+        return ''
+    last_tool_name = ''
+    for event in reversed(audit_events):
+        if getattr(event, 'event_type', None) != 'tool_call_completed':
+            continue
+        payload = getattr(event, 'payload', {})
+        if isinstance(payload, dict):
+            tool_name = payload.get('tool_name')
+            if isinstance(tool_name, str) and tool_name:
+                last_tool_name = tool_name
+                break
+    if last_tool_name:
+        return (
+            f'Task: {clean_task}\n'
+            f'Outcome: {clean_answer}\n'
+            f'Last tool used: {last_tool_name}'
+        )
+    return f'Task: {clean_task}\nOutcome: {clean_answer}'

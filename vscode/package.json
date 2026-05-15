@@ -24,7 +24,8 @@
     "onCommand:teaagent.agentRun",
     "onCommand:teaagent.agentPreflight",
     "onCommand:teaagent.modelProviders",
-    "onCommand:teaagent.graphqliteSmoke"
+    "onCommand:teaagent.graphqliteSmoke",
+    "onCommand:teaagent.startMcpServer"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -57,6 +58,11 @@
       {
         "command": "teaagent.openTUI",
         "title": "TeaAgent: Open TUI",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.startMcpServer",
+        "title": "TeaAgent: Start MCP Server",
         "category": "TeaAgent"
       }
     ],
@@ -150,11 +156,18 @@
           "type": "string",
           "default": "prompt",
           "enum": [
+            "read-only",
+            "workspace-write",
             "prompt",
-            "auto",
-            "plan"
+            "allow",
+            "danger-full-access"
           ],
           "description": "Default permission mode for agent runs."
+        },
+        "teaagent.mcpServerPort": {
+          "type": "number",
+          "default": 7330,
+          "description": "Default port for TeaAgent MCP HTTP server."
         }
       }
     },
