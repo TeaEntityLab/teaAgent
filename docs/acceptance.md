@@ -26,12 +26,14 @@ directory.
 | File | Story | Key assertions |
 |---|---|---|
 | `test_a2a_federation_flow.py` | A2A federation | Remote discovery, partial endpoint failure, capability routing, delegation, context forwarding, agent trace metadata |
+| `test_agents_md_injection_flow.py` | Hierarchical instruction injection | Parent/child instruction merge order, fallback filename support (`AGENT.md`, `CLAUDE.md`) |
 | `test_audit_chain_integrity_flow.py` | Audit log integrity | JSONL parseability, unique event IDs, redaction, disk/in-memory event parity, restricted file permissions |
 | `test_cancel_flow.py` | Graceful cancel | Thread-safe cancel token stops runs cleanly and keeps audit state intact |
 | `test_cost_tracking_flow.py` | Cost and token tracking | Terminal results and `run_completed` audit events carry token and cost fields |
 | `test_daily_cli.py` | Daily CLI workflow | `agent preflight`, `agent run`, `agent show`, audit persistence, run-level audit summary |
 | `test_daily_tui.py` | Daily TUI workflow | Chat mode, memory injection, progress streaming, answer persistence in session history |
 | `test_error_remediation_flow.py` | Error remediation hints | Core errors include actionable default hints and custom hint override support |
+| `test_first_run_experience_flow.py` | First-run onboarding | `init` bootstraps `.teaagent/config.json`, creates `AGENTS.md` when missing, preserves existing `AGENTS.md` |
 | `test_live_provider_conformance_flow.py` | Live provider conformance | Live checks are skipped unless an explicit environment gate is set |
 | `test_managed_runtime_flow.py` | Managed runtime | Tool metadata context, workspace/request forwarding, managed-task audit events, trace metadata |
 | `test_mcp_client_flow.py` | MCP client compatibility | Bearer auth, session lifecycle, `tools/list`, `tools/call`, session close |
@@ -87,4 +89,4 @@ directory.
 
 All currently tracked acceptance stories are implemented. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`49 passed`.
+`53 passed`.

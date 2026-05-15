@@ -47,6 +47,8 @@ class CLITests(unittest.TestCase):
             self.assertEqual(cfg['permission_mode'], 'workspace-write')
             self.assertEqual(cfg['max_iterations'], 12)
             self.assertEqual(cfg['max_tool_calls'], 9)
+            self.assertEqual(payload['agents_md_status'], 'created')
+            self.assertTrue((Path(tmp) / 'AGENTS.md').exists())
 
     def test_init_writes_env_file_when_requested(self) -> None:
         with (

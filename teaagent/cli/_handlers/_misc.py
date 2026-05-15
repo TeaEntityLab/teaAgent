@@ -180,6 +180,19 @@ def init_command(args: argparse.Namespace) -> int:
     }
     cfg_path = tea_dir / 'config.json'
     cfg_path.write_text(json.dumps(config, sort_keys=True, indent=2), encoding='utf-8')
+    agents_md_path = root / 'AGENTS.md'
+    agents_md_status = 'existing'
+    if not agents_md_path.exists():
+        agents_md_path.write_text(
+            (
+                '# TeaAgent Project Instructions\n\n'
+                '- Keep edits minimal, reviewable, and reversible.\n'
+                '- Prefer tests-first for behavior changes.\n'
+                '- Verify with focused tests before finalizing.\n'
+            ),
+            encoding='utf-8',
+        )
+        agents_md_status = 'created'
 
     env_var = _provider_env_var(provider)
     if api_key and env_var:
@@ -189,6 +202,8 @@ def init_command(args: argparse.Namespace) -> int:
         'ok': True,
         'root': str(root),
         'config_path': str(cfg_path),
+        'agents_md_path': str(agents_md_path),
+        'agents_md_status': agents_md_status,
         'provider': provider,
         'permission_mode': args.permission_mode,
         'max_iterations': int(args.max_iterations),

@@ -175,6 +175,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def apply_config_defaults(args: argparse.Namespace) -> None:
+    if getattr(args, 'command', None) == 'init':
+        return
     config_path = resolve_config_path(getattr(args, 'config', None))
     if config_path is None:
         return
@@ -195,7 +197,6 @@ def apply_config_defaults(args: argparse.Namespace) -> None:
     defaults = {
         'root': '.',
         'model': None,
-        'provider': 'gpt',
         'permission_mode': PermissionMode.PROMPT.value,
     }
     for key, value in data.items():
