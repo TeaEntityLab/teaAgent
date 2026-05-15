@@ -145,6 +145,92 @@ def _parse_rules(raw_rules: list[Any]) -> list[DenyRule]:
     return rules
 
 
+def _parse_scalar(value: str) -> Any:
+    value = value.strip()
+    if not value:
+        return ''
+    if value[0] == value[-1] and value.startswith(("'", '"')):
+        return value[1:-1]
+    if value.lower() in {'true', 'false'}:
+        return value.lower() == 'true'
+    try:
+        return int(value)
+    except ValueError:
+        return value
+
+
+def _load_simple_policy_yaml(text: str) -> dict[str, Any]:
+    """Parse the small policy.yaml subset supported without PyYAML.
+
+    The project keeps runtime dependencies to the standard library. This parser
+    intentionally supports only the policy schema documented above: top-level
+    scalars plus a ``rules`` list of mappings with optional one-level
+    ``argument_pattern`` mappings.
+    """
+    data: dict[str, Any] = {}
+    current_rule: Optional[dict[str, Any]] = None
+    nested_key: Optional[str] = None
+
+    for raw_line in text.splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith('#'):
+            continue
+        indent = len(raw_line) - len(raw_line.lstrip(' '))
+        line = raw_line.strip()
+
+        if indent == 0:
+            current_rule = None
+            nested_key = None
+            key, sep, value = line.partition(':')
+            if not sep:
+                raise ValueError('policy YAML line must contain ":"')
+            key = key.strip()
+            if key == 'rules' and not value.strip():
+                data[key] = []
+            else:
+                data[key] = _parse_scalar(value)
+            continue
+
+        if indent == 2 and line.startswith('- '):
+            rule_data = line[2:].strip()
+            current_rule = {}
+            nested_key = None
+            data.setdefault('rules', []).append(current_rule)
+            if rule_data:
+                key, sep, value = rule_data.partition(':')
+                if not sep:
+                    raise ValueError('policy rule line must contain ":"')
+                current_rule[key.strip()] = _parse_scalar(value)
+            continue
+
+        if current_rule is None:
+            raise ValueError('policy YAML nested value must appear under rules')
+
+        key, sep, value = line.partition(':')
+        if not sep:
+            raise ValueError('policy YAML line must contain ":"')
+        key = key.strip()
+        value = value.strip()
+        if indent == 4:
+            if value:
+                current_rule[key] = _parse_scalar(value)
+                nested_key = None
+            else:
+                current_rule[key] = {}
+                nested_key = key
+            continue
+
+        if indent == 6 and nested_key is not None:
+            nested = current_rule.setdefault(nested_key, {})
+            if not isinstance(nested, dict):
+                raise ValueError(f'policy YAML key {nested_key!r} must be a mapping')
+            nested[key] = _parse_scalar(value)
+            continue
+
+        raise ValueError(f'unsupported policy YAML indentation: {indent}')
+
+    return data
+
+
 def _load_policy_dict(path: Path) -> dict[str, Any]:
     """Load a policy file (YAML or JSON) and return its contents as a dict."""
     text = path.read_text(encoding='utf-8')
@@ -154,9 +240,7 @@ def _load_policy_dict(path: Path) -> dict[str, Any]:
 
             data = yaml.safe_load(text)
         except ImportError:
-            # Fall back to JSON parser if PyYAML is not installed — covers
-            # YAML that happens to be valid JSON (pure-JSON policy files).
-            data = json.loads(text)
+            data = _load_simple_policy_yaml(text)
     else:
         data = json.loads(text)
     if not isinstance(data, dict):
