@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from teaagent.audit import AuditLogger
 from teaagent.auto_mode import AutoModeConfig
+from teaagent.browser_tools import register_browser_tools
 from teaagent.budget import RunBudget
 from teaagent.code_analysis import (
     CodeAnalysisConfig,
@@ -220,6 +221,7 @@ def run_chat_agent(
         )
     if config.enable_git_tools:
         register_git_tools(tool_registry, GitToolConfig(root=config.root))
+    register_browser_tools(tool_registry)
     project_instructions = load_project_instructions(config.root)
     memories = memory_entries_to_prompt(
         MemoryCatalog(config.root).search(task, limit=config.memory_limit)

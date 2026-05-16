@@ -29,6 +29,12 @@ from teaagent.benchmark import (
     CaseMetrics,
     run_benchmark,
 )
+from teaagent.browser_tools import (
+    HAS_PLAYWRIGHT as HAS_PLAYWRIGHT,
+)
+from teaagent.browser_tools import (
+    register_browser_tools as register_browser_tools,
+)
 from teaagent.budget import RunBudget
 from teaagent.chat_agent import (
     ChatAgentConfig,
@@ -255,6 +261,7 @@ __all__ = [
     'GraphQLiteUnavailableError',
     'HAS_CRYPTOGRAPHY',
     'HAS_OTEL',
+    'HAS_PLAYWRIGHT',
     'Heartbeat',
     'InMemoryMetricsSink',
     'InMemoryOAuthStore',
@@ -375,6 +382,7 @@ __all__ = [
     'parse_model_decision',
     'parse_permission_mode',
     'preflight',
+    'register_browser_tools',
     'register_git_tools',
     'register_subagent_tool',
     'register_workspace_tools',

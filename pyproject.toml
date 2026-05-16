@@ -35,6 +35,9 @@ graphqlite = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
 ]
+playwright = [
+    "playwright>=1.40",
+]
 oauth = [
     "cryptography>=3.4",
 ]
@@ -54,6 +57,7 @@ dev = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
     "cryptography>=3.4",
+    "playwright>=1.40",
     "pre-commit>=3",
     "pytest>=7",
     "pytest-cov>=4",
