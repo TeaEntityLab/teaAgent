@@ -90,6 +90,11 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         help='Emit a heartbeat audit event every N seconds while running. 0 disables.',
     )
     p.add_argument(
+        '--code-analysis',
+        action='store_true',
+        help='Enable LSP-backed code analysis tools (code_definition/code_references/code_diagnostics).',
+    )
+    p.add_argument(
         '--telemetry-otlp-endpoint',
         default=None,
         metavar='URL',
@@ -204,6 +209,11 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         type=float,
         default=0.0,
         help='Heartbeat interval seconds. 0 disables.',
+    )
+    p.add_argument(
+        '--code-analysis',
+        action='store_true',
+        help='Enable LSP-backed code analysis tools (code_definition/code_references/code_diagnostics).',
     )
     p.add_argument(
         '--fresh-restart',

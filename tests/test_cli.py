@@ -15,6 +15,36 @@ from teaagent.cli import main
 
 
 class CLITests(unittest.TestCase):
+    def test_agent_run_code_analysis_flag_enables_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"code_diagnostics","arguments":{"path":"README.md"},"call_id":"diag-1"}',
+                    '{"type":"final","content":"done"}',
+                ]
+            )
+
+            with (
+                patch('teaagent.cli.create_llm_adapter', return_value=adapter),
+                redirect_stdout(output),
+            ):
+                exit_code = main(
+                    [
+                        'agent',
+                        'run',
+                        'gpt',
+                        'run diagnostics',
+                        '--root',
+                        tmp,
+                        '--code-analysis',
+                    ]
+                )
+
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload['status'], 'completed')
+
     def test_init_writes_workspace_config_non_interactive(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()

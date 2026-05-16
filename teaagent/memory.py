@@ -53,9 +53,7 @@ class MemoryCatalog:
             return []
         tokens = tuple(token for token in normalized.split() if token)
         matches = [
-            entry
-            for entry in self._read_entries()
-            if memory_matches(entry, normalized)
+            entry for entry in self._read_entries() if memory_matches(entry, normalized)
         ]
         ranked = sorted(
             matches,

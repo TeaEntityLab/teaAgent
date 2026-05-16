@@ -31,6 +31,12 @@ from teaagent.chat_agent import (
     register_subagent_tool,
     run_chat_agent,
 )
+from teaagent.code_analysis import (
+    CodeAnalysisConfig,
+    CodeReference,
+    LSPServerConfig,
+    register_code_analysis_tools,
+)
 from teaagent.code_mode import (
     ChildProcessCodeModeBackend,
     CodeModeResult,
@@ -149,6 +155,7 @@ from teaagent.stateless_mcp import (
     StatelessMCPResponse,
     handle_stateless_tool_request,
 )
+from teaagent.subagents import SubagentDef, SubagentManager, SubagentSession
 from teaagent.telemetry import (
     HAS_OTEL,
     InMemoryMetricsSink,
@@ -202,6 +209,10 @@ __all__ = [
     'ClarificationResult',
     'CodeModeResult',
     'CodeModeSandbox',
+    'register_code_analysis_tools',
+    'LSPServerConfig',
+    'CodeReference',
+    'CodeAnalysisConfig',
     'ContainerCodeModeBackend',
     'ContextCompactor',
     'DPoPValidationResult',
@@ -281,6 +292,9 @@ __all__ = [
     'SQLiteOAuthStore',
     'SkillContent',
     'SkillReviewResult',
+    'SubagentDef',
+    'SubagentManager',
+    'SubagentSession',
     'load_file_policy',
     'load_skills',
     'skills_to_prompt_section',

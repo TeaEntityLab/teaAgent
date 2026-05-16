@@ -21,8 +21,8 @@ from teaagent.run_undo import UndoJournal
 
 
 def test_run_undo_restores_workspace_after_agent_writes(tmp_path: Path) -> None:
-    existing = tmp_path / "notes.txt"
-    existing.write_text("before\n", encoding="utf-8")
+    existing = tmp_path / 'notes.txt'
+    existing.write_text('before\n', encoding='utf-8')
 
     adapter = FakeAdapter(
         [
@@ -33,11 +33,11 @@ def test_run_undo_restores_workspace_after_agent_writes(tmp_path: Path) -> None:
     )
 
     audit = AuditLogger()
-    journal = UndoJournal(tmp_path, path=tmp_path / ".teaagent" / "undo.jsonl")
+    journal = UndoJournal(tmp_path, path=tmp_path / '.teaagent' / 'undo.jsonl')
     audit.add_sink(journal)
 
     result = run_chat_agent(
-        task="Update notes and create a companion file",
+        task='Update notes and create a companion file',
         adapter=adapter,
         config=ChatAgentConfig.from_root(
             tmp_path,
@@ -48,14 +48,14 @@ def test_run_undo_restores_workspace_after_agent_writes(tmp_path: Path) -> None:
         audit=audit,
     )
 
-    assert result.status == "completed"
-    assert existing.read_text(encoding="utf-8") == "after\n"
-    assert (tmp_path / "new.txt").read_text(encoding="utf-8") == "created\n"
+    assert result.status == 'completed'
+    assert existing.read_text(encoding='utf-8') == 'after\n'
+    assert (tmp_path / 'new.txt').read_text(encoding='utf-8') == 'created\n'
 
     undo = journal.restore()
     assert undo.ok is True
-    assert "notes.txt" in undo.restored
-    assert "new.txt" in undo.deleted
+    assert 'notes.txt' in undo.restored
+    assert 'new.txt' in undo.deleted
     assert undo.errors == []
-    assert existing.read_text(encoding="utf-8") == "before\n"
-    assert not (tmp_path / "new.txt").exists()
+    assert existing.read_text(encoding='utf-8') == 'before\n'
+    assert not (tmp_path / 'new.txt').exists()

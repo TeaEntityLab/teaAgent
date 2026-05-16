@@ -3,13 +3,20 @@ from __future__ import annotations
 import contextlib
 import threading
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
+from teaagent.code_analysis import (
+    CodeAnalysisConfig,
+    LSPServerManager,
+    extract_candidate_paths,
+    get_lsp_context,
+    register_code_analysis_tools,
+)
 from teaagent.context import ContextCompactor
 from teaagent.heartbeat import Heartbeat
 from teaagent.llm import (
@@ -24,10 +31,10 @@ from teaagent.prompt import (
     load_project_instructions,
     parse_model_decision,
 )
-from teaagent.run_store import RunStore
 from teaagent.runner import AgentRunner, ApprovalHandler, Decision, RunResult
 from teaagent.skill_loader import SkillContent, load_skills
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.subagents import SubagentManager, register_subagent_tools
+from teaagent.tools import ToolRegistry
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 
@@ -50,6 +57,8 @@ class ChatAgentConfig:
     checkpoint_store: Any = None
     chat_messages: Optional[list[LLMMessage]] = None
     cancel_token: Optional[threading.Event] = None
+    subagent_manager: Optional[SubagentManager] = None
+    code_analysis_config: Optional[CodeAnalysisConfig] = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
@@ -78,6 +87,12 @@ class ChatAgentConfig:
             m = rc.get('model')
             if m:
                 profile_overrides['model'] = m
+        if 'code_analysis_config' not in kwargs:
+            ca_enabled = rc.get('code_analysis_enabled')
+            if isinstance(ca_enabled, bool) and ca_enabled:
+                profile_overrides['code_analysis_config'] = (
+                    CodeAnalysisConfig.from_root(resolved_root, enabled=True)
+                )
 
         merged = {**profile_overrides, **kwargs}
         return cls(root=resolved_root, **merged)
@@ -165,9 +180,28 @@ def run_chat_agent(
     initial_context_extra: Optional[dict[str, Any]] = None,
 ) -> RunResult:
     tool_registry = registry or build_workspace_tool_registry(config.root)
+    manager = config.subagent_manager or SubagentManager(
+        root=config.root, parent_config=config, parent_adapter=adapter
+    )
+    context_extra = dict(initial_context_extra or {})
+    if config.code_analysis_config is not None:
+        register_code_analysis_tools(tool_registry, config.code_analysis_config)
+        lsp_manager = LSPServerManager(config.code_analysis_config)
+        candidate_paths = extract_candidate_paths(task, task_spec or '')
+        if candidate_paths:
+            context_extra['lsp_context'] = get_lsp_context(
+                candidate_paths=candidate_paths,
+                manager=lsp_manager,
+                max_files=config.code_analysis_config.max_files_for_context,
+                diagnostic_severity_limit=config.code_analysis_config.diagnostic_severity_limit,
+            )
     if config.enable_subagent and depth < config.max_subagent_depth:
-        register_subagent_tool(
-            tool_registry, adapter=adapter, config=config, depth=depth
+        register_subagent_tools(
+            tool_registry,
+            adapter=adapter,
+            config=config,
+            depth=depth,
+            manager=manager,
         )
     project_instructions = load_project_instructions(config.root)
     memories = memory_entries_to_prompt(
@@ -217,7 +251,7 @@ def run_chat_agent(
             decide=lambda context: engine.decide(with_memories(context, memories)),
             run_id=run_id,
             initial_observations=initial_observations,
-            initial_context_extra=initial_context_extra,
+            initial_context_extra=(context_extra or None),
         )
         _auto_curate_memory(
             root=config.root,
@@ -246,68 +280,17 @@ def register_subagent_tool(
     config: ChatAgentConfig,
     depth: int,
 ) -> None:
-    def execute(args: dict[str, Any]) -> dict[str, Any]:
-        if depth >= config.max_subagent_depth:
-            return _subagent_error(
-                f'subagent depth {config.max_subagent_depth} reached'
-            )
-        task = args.get('task')
-        if not isinstance(task, str) or not task.strip():
-            return _subagent_error("subagent requires non-empty 'task'")
-        sub_config = replace(
-            config,
-            max_iterations=int(args.get('max_iterations', 5)),
-            max_tool_calls=int(args.get('max_tool_calls', 5)),
-        )
-        store = RunStore(config.root)
-        sub_audit = store.audit_logger()
-        sub_result = run_chat_agent(
-            task=task,
-            adapter=adapter,
-            config=sub_config,
-            audit=sub_audit,
-            depth=depth + 1,
-        )
-        store.logger_for_result(sub_result, sub_audit)
-        return {
-            'run_id': sub_result.run_id,
-            'status': sub_result.status,
-            'iterations': sub_result.iterations,
-            'tool_calls': sub_result.tool_calls,
-            'final_answer': sub_result.final_answer.content
-            if sub_result.final_answer
-            else '',
-            'message': '',
-        }
-
-    registry.register(
-        name='subagent',
-        description='Delegate one focused sub-task to a fresh agent run sharing tools and policy.',
-        input_schema={
-            'type': 'object',
-            'properties': {
-                'task': {'type': 'string'},
-                'max_iterations': {'type': 'integer'},
-                'max_tool_calls': {'type': 'integer'},
-            },
-            'required': ['task'],
-        },
-        output_schema={
-            'type': 'object',
-            'properties': {
-                'run_id': {'type': 'string'},
-                'status': {'type': 'string'},
-                'iterations': {'type': 'integer'},
-                'tool_calls': {'type': 'integer'},
-                'final_answer': {'type': 'string'},
-                'message': {'type': 'string'},
-            },
-            'required': ['status'],
-        },
-        annotations=ToolAnnotations(
-            read_only=False, destructive=False, idempotent=False
-        ),
-        handler=execute,
+    manager = config.subagent_manager or SubagentManager(
+        root=config.root, parent_config=config, parent_adapter=adapter
+    )
+    if config.code_analysis_config is not None:
+        register_code_analysis_tools(registry, config.code_analysis_config)
+    register_subagent_tools(
+        registry,
+        adapter=adapter,
+        config=config,
+        depth=depth,
+        manager=manager,
     )
 
 
@@ -338,7 +321,9 @@ def _auto_curate_memory(
         return
     catalog = MemoryCatalog(root)
     recent = catalog.list(limit=50)
-    if any(entry.content == summary and 'auto-curated' in entry.tags for entry in recent):
+    if any(
+        entry.content == summary and 'auto-curated' in entry.tags for entry in recent
+    ):
         return
     catalog.add(summary, tags=('auto-curated', 'run-summary'))
 

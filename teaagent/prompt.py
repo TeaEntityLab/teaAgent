@@ -60,6 +60,7 @@ def assemble_agent_prompt(
             {
                 'task': task,
                 'task_spec': task_spec,
+                'lsp_context': context.get('lsp_context', ''),
                 'memories': context.get('memories', []),
                 'observations': context.get('observations', []),
             },

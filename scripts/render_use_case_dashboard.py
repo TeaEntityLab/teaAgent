@@ -18,11 +18,11 @@ def parse_matrix_markdown(markdown: str) -> list[MatrixRow]:
     rows: list[MatrixRow] = []
     for line in markdown.splitlines():
         line = line.strip()
-        if not line.startswith("|"):
+        if not line.startswith('|'):
             continue
-        if line.startswith("|---") or "Use Case" in line:
+        if line.startswith('|---') or 'Use Case' in line:
             continue
-        parts = [part.strip() for part in line.strip("|").split("|")]
+        parts = [part.strip() for part in line.strip('|').split('|')]
         if len(parts) != 4:
             continue
         rows.append(
@@ -38,17 +38,17 @@ def parse_matrix_markdown(markdown: str) -> list[MatrixRow]:
 
 def render_html(rows: list[MatrixRow]) -> str:
     total = len(rows)
-    covered = sum(1 for row in rows if row.covered == "yes")
+    covered = sum(1 for row in rows if row.covered == 'yes')
     percent = 0.0 if total == 0 else (covered / total) * 100.0
 
-    table_rows = "\n".join(
+    table_rows = '\n'.join(
         (
-            "<tr>"
-            f"<td>{html.escape(row.use_case)}</td>"
-            f"<td class=\"{row.covered}\">{html.escape(row.covered)}</td>"
-            f"<td><code>{html.escape(row.required_tests)}</code></td>"
-            f"<td><code>{html.escape(row.missing_tests)}</code></td>"
-            "</tr>"
+            '<tr>'
+            f'<td>{html.escape(row.use_case)}</td>'
+            f'<td class="{row.covered}">{html.escape(row.covered)}</td>'
+            f'<td><code>{html.escape(row.required_tests)}</code></td>'
+            f'<td><code>{html.escape(row.missing_tests)}</code></td>'
+            '</tr>'
         )
         for row in rows
     )
@@ -157,28 +157,28 @@ def render_html(rows: list[MatrixRow]) -> str:
 
 
 def render_dashboard(*, matrix_path: Path, output_path: Path) -> None:
-    rows = parse_matrix_markdown(matrix_path.read_text(encoding="utf-8"))
-    output_path.write_text(render_html(rows), encoding="utf-8")
+    rows = parse_matrix_markdown(matrix_path.read_text(encoding='utf-8'))
+    output_path.write_text(render_html(rows), encoding='utf-8')
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Render docs/use-case-matrix.md as an HTML dashboard."
+        description='Render docs/use-case-matrix.md as an HTML dashboard.'
     )
     parser.add_argument(
-        "--matrix",
-        default="docs/use-case-matrix.md",
-        help="Path to markdown matrix file.",
+        '--matrix',
+        default='docs/use-case-matrix.md',
+        help='Path to markdown matrix file.',
     )
     parser.add_argument(
-        "--output",
-        default="docs/use-case-matrix.html",
-        help="Path to generated HTML output.",
+        '--output',
+        default='docs/use-case-matrix.html',
+        help='Path to generated HTML output.',
     )
     args = parser.parse_args()
     render_dashboard(matrix_path=Path(args.matrix), output_path=Path(args.output))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

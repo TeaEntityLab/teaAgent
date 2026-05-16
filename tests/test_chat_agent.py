@@ -13,6 +13,7 @@ from conftest import FakeAdapter
 from teaagent import (
     ApprovalPolicy,
     ChatAgentConfig,
+    CodeAnalysisConfig,
     MemoryCatalog,
     PermissionMode,
     parse_model_decision,
@@ -58,6 +59,47 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(result.tool_calls, 1)
             self.assertEqual(result.final_answer.content, 'read hello.txt')
             self.assertIn('workspace_read_file', adapter.requests[0].system)
+
+    def test_chat_agent_can_use_code_analysis_tools_when_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = FakeAdapter(
+                [
+                    '{"type":"tool","tool_name":"code_diagnostics","arguments":{"path":"README.md"},"call_id":"diag-1"}',
+                    '{"type":"final","content":"analysis done"}',
+                ]
+            )
+
+            result = run_chat_agent(
+                task='inspect diagnostics',
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(
+                    tmp,
+                    code_analysis_config=CodeAnalysisConfig.from_root(
+                        tmp, enabled=True
+                    ),
+                ),
+            )
+
+            self.assertEqual(result.status, 'completed')
+            self.assertEqual(result.tool_calls, 1)
+
+    def test_chat_agent_includes_lsp_context_when_task_mentions_code_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
+
+            result = run_chat_agent(
+                task='inspect src/app.py',
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(
+                    tmp,
+                    code_analysis_config=CodeAnalysisConfig.from_root(
+                        tmp, enabled=True
+                    ),
+                ),
+            )
+
+            self.assertEqual(result.status, 'completed')
+            self.assertIn('lsp_context', adapter.requests[0].messages[0].content)
 
     def test_chat_agent_injects_task_spec_into_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

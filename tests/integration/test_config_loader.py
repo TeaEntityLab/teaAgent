@@ -205,3 +205,18 @@ def test_config_keys_includes_known_keys():
     assert 'max_iterations' in CONFIG_KEYS
     assert 'max_tool_calls' in CONFIG_KEYS
     assert 'model' in CONFIG_KEYS
+    assert 'code_analysis_enabled' in CONFIG_KEYS
+
+
+def test_chat_agent_config_from_root_enables_code_analysis_from_profile(tmp_path):
+    from teaagent.chat_agent import ChatAgentConfig
+
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'code_analysis_enabled': True}),
+        encoding='utf-8',
+    )
+    config = ChatAgentConfig.from_root(tmp_path)
+    assert config.code_analysis_config is not None
+    assert config.code_analysis_config.enabled is True

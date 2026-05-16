@@ -30,6 +30,7 @@ directory.
 | `test_agents_md_injection_flow.py` | Hierarchical instruction injection | Parent/child instruction merge order, fallback filename support (`AGENT.md`, `CLAUDE.md`) |
 | `test_audit_chain_integrity_flow.py` | Audit log integrity | JSONL parseability, unique event IDs, redaction, disk/in-memory event parity, restricted file permissions |
 | `test_cancel_flow.py` | Graceful cancel | Thread-safe cancel token stops runs cleanly and keeps audit state intact |
+| `test_code_analysis_prompt_injection_flow.py` | Code-analysis prompt injection | Enabling code analysis injects `lsp_context` in model payload for code-path tasks without requiring external LSP binaries |
 | `test_cost_tracking_flow.py` | Cost and token tracking | Terminal results and `run_completed` audit events carry token and cost fields |
 | `test_daily_cli.py` | Daily CLI workflow | `agent preflight`, `agent run`, `agent show`, audit persistence, run-level audit summary |
 | `test_daily_tui.py` | Daily TUI workflow | Chat mode, memory injection, progress streaming, answer persistence in session history |
@@ -99,7 +100,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`69 passed`.
+`70 passed`.
 
 <!-- ACCEPTANCE_TIERS:START -->
 

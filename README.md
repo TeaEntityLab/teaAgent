@@ -188,6 +188,28 @@ teaagent agent runs
 teaagent agent resume gpt <run_id>
 ```
 
+### LSP Code Analysis (P0)
+
+Enable LSP-backed tools for semantic code navigation:
+
+```bash
+teaagent agent run gpt "inspect src/app.py" --code-analysis
+```
+
+Available tools when enabled:
+- `code_definition`
+- `code_references`
+- `code_diagnostics`
+- `code_symbols`
+
+You can also enable this by workspace config:
+
+```json
+{
+  "code_analysis_enabled": true
+}
+```
+
 ### Streaming Progress
 
 The TUI `progress on` command streams audit events (iteration, tool calls, completion) during agent runs. The LLM adapter supports streaming via the `stream` parameter on `LLMRequest`.

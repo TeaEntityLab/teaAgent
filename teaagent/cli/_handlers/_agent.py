@@ -6,6 +6,7 @@ import sys
 from typing import Any, Optional
 
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.policy import parse_permission_mode
@@ -141,6 +142,11 @@ def _execute_agent_task(
             heartbeat_seconds=args.heartbeat,
             approval_handler=approval_handler,
             checkpoint_store=checkpoint_store,
+            code_analysis_config=(
+                CodeAnalysisConfig.from_root(args.root, enabled=True)
+                if getattr(args, 'code_analysis', False)
+                else None
+            ),
         ),
         audit=audit,
         task_spec=task_spec,
@@ -188,7 +194,9 @@ def run_result_payload(
     }
     if permission_mode is not None:
         payload['permission_mode'] = permission_mode
-        payload['run_mode'] = 'planning' if permission_mode == 'read-only' else 'execution'
+        payload['run_mode'] = (
+            'planning' if permission_mode == 'read-only' else 'execution'
+        )
     if audit_summary is not None:
         payload['audit_summary'] = audit_summary
     if 'approval' in result.metadata:

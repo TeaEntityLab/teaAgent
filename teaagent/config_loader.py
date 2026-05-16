@@ -62,6 +62,11 @@ CONFIG_KEYS: dict[str, dict[str, Any]] = {
         'default': None,
         'type': str,
     },
+    'code_analysis_enabled': {
+        'env': 'TEAAGENT_CODE_ANALYSIS_ENABLED',
+        'default': False,
+        'type': bool,
+    },
 }
 
 
