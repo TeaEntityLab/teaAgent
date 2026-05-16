@@ -66,6 +66,27 @@ PROVIDER_CONFIGS = {
         base_url='https://opencode.ai/zen/go/v1',
         base_url_env='OPENCODEZEN_BASE_URL',
     ),
+    'mistral': ProviderConfig(
+        name='mistral',
+        api_key_env='MISTRAL_API_KEY',
+        default_model='mistral-large-latest',
+        base_url='https://api.mistral.ai/v1',
+        base_url_env='MISTRAL_BASE_URL',
+    ),
+    'deepseek': ProviderConfig(
+        name='deepseek',
+        api_key_env='DEEPSEEK_API_KEY',
+        default_model='deepseek-chat',
+        base_url='https://api.deepseek.com/v1',
+        base_url_env='DEEPSEEK_BASE_URL',
+    ),
+    'grok': ProviderConfig(
+        name='grok',
+        api_key_env='XAI_API_KEY',
+        default_model='grok-3-latest',
+        base_url='https://api.x.ai/v1',
+        base_url_env='XAI_BASE_URL',
+    ),
 }
 
 
@@ -119,6 +140,9 @@ PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
     'ollama': 0.0,
     'opencodezen-go': 0.0005,
     'vllm': 0.0,
+    'mistral': 0.002,
+    'deepseek': 0.00014,
+    'grok': 0.003,
 }
 
 PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
@@ -129,6 +153,9 @@ PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
     'ollama': 0.0,
     'opencodezen-go': 0.002,
     'vllm': 0.0,
+    'mistral': 0.006,
+    'deepseek': 0.00028,
+    'grok': 0.015,
 }
 
 

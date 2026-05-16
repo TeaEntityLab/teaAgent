@@ -17,6 +17,11 @@ from teaagent.audit_chain import (
     compute_event_hash,
     verify_audit_chain,
 )
+from teaagent.auto_mode import (
+    AutoModeConfig,
+    AutoModeGuard,
+    AutoModeLimitError,
+)
 from teaagent.benchmark import (
     BenchmarkBaseline,
     BenchmarkResult,
@@ -71,6 +76,16 @@ from teaagent.graphqlite_store import (
     ensure_sqlite_extension_loading,
 )
 from teaagent.heartbeat import Heartbeat
+from teaagent.hooks import (
+    HookConfig,
+    HookError,
+    HookRegistry,
+    format_check_hook,
+    lint_check_hook,
+    post_lint_check_hook,
+    run_tests_hook,
+    shell_command_hook,
+)
 from teaagent.intent import (
     ClarificationResult,
     IntentScore,
@@ -173,8 +188,10 @@ from teaagent.trace import TraceRecorder
 from teaagent.ultrawork import UltraworkStore, WorkerRecord
 from teaagent.webhook_sink import WebhookAuditSink
 from teaagent.workspace_tools import (
+    GitToolConfig,
     WorkspaceToolConfig,
     build_workspace_tool_registry,
+    register_git_tools,
     register_workspace_tools,
 )
 
@@ -182,9 +199,15 @@ __all__ = [
     '__version__',
     'AIBOMManifest',
     'AgentRunner',
+    'AIBOMComponent',
+    'AgentCard',
     'ApprovalPolicy',
     'ApprovalRequest',
+    'AuditEvent',
     'AuditLogger',
+    'AutoModeConfig',
+    'AutoModeGuard',
+    'AutoModeLimitError',
     'BenchmarkBaseline',
     'BenchmarkResult',
     'BenchmarkSuite',
@@ -312,6 +335,7 @@ __all__ = [
     'UnsafeCodeError',
     'WorkerRecord',
     'WebhookAuditSink',
+    'GitToolConfig',
     'WorkspaceToolConfig',
     'agentic_retrieve',
     'assemble_agent_prompt',
@@ -339,10 +363,19 @@ __all__ = [
     'graph_retrieve',
     'handle_mcp_request',
     'handle_stateless_tool_request',
+    'HookConfig',
+    'HookError',
+    'HookRegistry',
+    'format_check_hook',
+    'lint_check_hook',
+    'post_lint_check_hook',
+    'run_tests_hook',
+    'shell_command_hook',
     'managed_runtime_context',
     'parse_model_decision',
     'parse_permission_mode',
     'preflight',
+    'register_git_tools',
     'register_subagent_tool',
     'register_workspace_tools',
     'review_skill',

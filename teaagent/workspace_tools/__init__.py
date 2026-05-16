@@ -1,4 +1,4 @@
-"""Workspace tools: read, write, search, shell, and git operations scoped to a root directory."""
+"""Workspace tools: read, write, search, shell, git operations, and git write ops scoped to a root directory."""
 
 from teaagent.workspace_tools._config import (
     WorkspaceToolConfig as WorkspaceToolConfig,
@@ -11,6 +11,12 @@ from teaagent.workspace_tools._files import (
 )
 from teaagent.workspace_tools._files import (
     register_workspace_tools as register_workspace_tools,
+)
+from teaagent.workspace_tools._git import (
+    GitToolConfig as GitToolConfig,
+)
+from teaagent.workspace_tools._git import (
+    register_git_tools as register_git_tools,
 )
 from teaagent.workspace_tools._helpers import (
     compute_line_hash as compute_line_hash,

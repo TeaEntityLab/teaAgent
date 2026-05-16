@@ -183,6 +183,9 @@ teaagent doctor model openrouter
 teaagent doctor model ollama
 teaagent doctor model vllm
 teaagent doctor model opencodezen-go
+teaagent doctor model mistral
+teaagent doctor model deepseek
+teaagent doctor model grok
 ```
 
 Run a smoke prompt:

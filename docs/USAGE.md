@@ -29,7 +29,7 @@ teaagent --help
 
 ## API Key Setup
 
-TeaAgent supports 7 LLM providers. Set environment variables for the ones you want to use:
+TeaAgent supports 10 LLM providers. Set environment variables for the ones you want to use:
 
 | Provider  | Env Var                | Default Model          | Get Key                                          |
 |-----------|------------------------|------------------------|--------------------------------------------------|
@@ -40,6 +40,9 @@ TeaAgent supports 7 LLM providers. Set environment variables for the ones you wa
 | ollama    | `OLLAMA_API_KEY` (optional) | llama3.2         | Local server (default `http://localhost:11434/v1`) |
 | vllm      | `VLLM_API_KEY` (optional) | meta-llama/Llama-3.1-8B-Instruct | Local server (default `http://localhost:8000/v1`) |
 | opencodezen-go | `OPENCODEZEN_API_KEY` | deepseek-v4-flash* | https://opencode.ai/settings                      |
+| mistral   | `MISTRAL_API_KEY`      | mistral-large-latest | https://console.mistral.ai/api-keys/              |
+| deepseek  | `DEEPSEEK_API_KEY`     | deepseek-chat        | https://platform.deepseek.com/api-keys            |
+| grok      | `XAI_API_KEY`          | grok-3-latest        | https://console.x.ai/                             |
 
 \* `opencodezen-go` defaults to `deepseek-v4-flash`. You can still pass `--model` to pick another supported model.
 

@@ -5,6 +5,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
+from teaagent.auto_mode import AutoModeConfig, AutoModeGuard
 from teaagent.budget import RunBudget
 from teaagent.context import ContextCompactor
 from teaagent.errors import (
@@ -46,6 +47,7 @@ class AgentRunner:
         checkpoint_store: Any = None,
         cancel_token: Optional[threading.Event] = None,
         file_policy: Optional[FilePolicy] = None,
+        auto_mode_config: Optional[AutoModeConfig] = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -58,6 +60,9 @@ class AgentRunner:
         self.checkpoint_store = checkpoint_store
         self.cancel_token = cancel_token
         self.file_policy = file_policy
+        self.auto_mode_guard: Optional[AutoModeGuard] = None
+        if auto_mode_config is not None and auto_mode_config.enabled:
+            self.auto_mode_guard = AutoModeGuard(config=auto_mode_config)
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
@@ -95,6 +100,8 @@ class AgentRunner:
 
         while iterations < self.budget.max_iterations:
             iterations += 1
+            if self.auto_mode_guard is not None:
+                self.auto_mode_guard.record_iteration()
             self.audit.record('iteration_started', current_run_id, iteration=iterations)
             try:
                 if self.cancel_token is not None and self.cancel_token.is_set():
@@ -115,6 +122,9 @@ class AgentRunner:
                         input_tokens=input_tokens,
                         output_tokens=output_tokens,
                     )
+                    extra_meta: dict[str, Any] = {}
+                    if self.auto_mode_guard is not None:
+                        extra_meta['auto_mode'] = self.auto_mode_guard.summary()
                     return RunResult(
                         run_id=current_run_id,
                         final_answer=decision,
@@ -124,6 +134,7 @@ class AgentRunner:
                         cost_cents=cost_cents,
                         input_tokens=input_tokens,
                         output_tokens=output_tokens,
+                        metadata=extra_meta if extra_meta else decision.metadata,
                     )
 
                 if tool_calls >= self.budget.max_tool_calls:
@@ -139,6 +150,16 @@ class AgentRunner:
                     self.file_policy.assert_allowed(
                         tool_name=decision.tool_name,
                         arguments=decision.arguments,
+                    )
+                # Auto mode: block disallowed tools, auto-approve allowed ones
+                if self.auto_mode_guard is not None:
+                    if not self.auto_mode_guard.is_tool_allowed(decision.tool_name):
+                        raise ToolPermissionError(
+                            f"Auto mode: tool '{decision.tool_name}' is not allowed"
+                        )
+                    # In auto mode, skip approval prompts for allowed tools
+                    self.approval_policy = ApprovalPolicy(
+                        allow_all_destructive=True,
                     )
                 try:
                     self.approval_policy.assert_allowed(
@@ -230,6 +251,8 @@ class AgentRunner:
                         self.checkpoint_store.save(current_run_id, context)
                     continue
                 tool_calls += 1
+                if self.auto_mode_guard is not None:
+                    self.auto_mode_guard.record_tool_call()
                 observation = {
                     'call_id': decision.call_id,
                     'tool_name': decision.tool_name,

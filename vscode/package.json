@@ -146,7 +146,10 @@
             "openrouter",
             "ollama",
             "vllm",
-            "opencodezen-go"
+            "opencodezen-go",
+            "mistral",
+            "deepseek",
+            "grok"
           ],
           "description": "Default model provider for agent runs."
         },

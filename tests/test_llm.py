@@ -38,8 +38,11 @@ class LLMAdapterTests(unittest.TestCase):
             available_providers(),
             [
                 'claude',
+                'deepseek',
                 'gemini',
                 'gpt',
+                'grok',
+                'mistral',
                 'ollama',
                 'opencodezen-go',
                 'openrouter',

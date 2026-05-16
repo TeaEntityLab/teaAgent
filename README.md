@@ -60,7 +60,7 @@ teaagent agent run gpt "Summarize the test suite" --permission-mode read-only
 CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace Tools
                   ↕                              ↕
            LLM Adapters                  ApprovalPolicy
-           (7 providers)                 (5 permission modes)
+           (10 providers)                 (5 permission modes)
 ```
 
 - **AgentRunner**: Iterates between model decisions and tool executions within budget limits.
@@ -148,6 +148,9 @@ export OPENROUTER_API_KEY=...
 export OLLAMA_API_KEY=...   # optional for local deployments
 export VLLM_API_KEY=...     # optional for local deployments
 export OPENCODEZEN_API_KEY=...
+export MISTRAL_API_KEY=...
+export DEEPSEEK_API_KEY=...
+export XAI_API_KEY=...
 ```
 
 ## Features

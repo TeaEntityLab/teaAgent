@@ -9,6 +9,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
+from teaagent.auto_mode import AutoModeConfig
 from teaagent.budget import RunBudget
 from teaagent.code_analysis import (
     CodeAnalysisConfig,
@@ -19,6 +20,7 @@ from teaagent.code_analysis import (
 )
 from teaagent.context import ContextCompactor
 from teaagent.heartbeat import Heartbeat
+from teaagent.hooks import HookRegistry
 from teaagent.llm import (
     LLMAdapter,
     LLMMessage,
@@ -35,7 +37,11 @@ from teaagent.runner import AgentRunner, ApprovalHandler, Decision, RunResult
 from teaagent.skill_loader import SkillContent, load_skills
 from teaagent.subagents import SubagentManager, register_subagent_tools
 from teaagent.tools import ToolRegistry
-from teaagent.workspace_tools import build_workspace_tool_registry
+from teaagent.workspace_tools import (
+    GitToolConfig,
+    build_workspace_tool_registry,
+    register_git_tools,
+)
 
 
 @dataclass(frozen=True)
@@ -59,6 +65,9 @@ class ChatAgentConfig:
     cancel_token: Optional[threading.Event] = None
     subagent_manager: Optional[SubagentManager] = None
     code_analysis_config: Optional[CodeAnalysisConfig] = None
+    enable_git_tools: bool = False
+    hook_registry: Optional[HookRegistry] = None
+    auto_mode_config: Optional[AutoModeConfig] = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
@@ -93,6 +102,10 @@ class ChatAgentConfig:
                 profile_overrides['code_analysis_config'] = (
                     CodeAnalysisConfig.from_root(resolved_root, enabled=True)
                 )
+        if 'enable_git_tools' not in kwargs:
+            git_enabled = rc.get('git_tools_enabled')
+            if isinstance(git_enabled, bool) and git_enabled:
+                profile_overrides['enable_git_tools'] = True
 
         merged = {**profile_overrides, **kwargs}
         return cls(root=resolved_root, **merged)
@@ -180,6 +193,8 @@ def run_chat_agent(
     initial_context_extra: Optional[dict[str, Any]] = None,
 ) -> RunResult:
     tool_registry = registry or build_workspace_tool_registry(config.root)
+    if config.hook_registry is not None and tool_registry.hook_registry is None:
+        tool_registry.hook_registry = config.hook_registry
     manager = config.subagent_manager or SubagentManager(
         root=config.root, parent_config=config, parent_adapter=adapter
     )
@@ -203,6 +218,8 @@ def run_chat_agent(
             depth=depth,
             manager=manager,
         )
+    if config.enable_git_tools:
+        register_git_tools(tool_registry, GitToolConfig(root=config.root))
     project_instructions = load_project_instructions(config.root)
     memories = memory_entries_to_prompt(
         MemoryCatalog(config.root).search(task, limit=config.memory_limit)
@@ -237,6 +254,7 @@ def run_chat_agent(
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),
         checkpoint_store=config.checkpoint_store,
         cancel_token=config.cancel_token,
+        auto_mode_config=config.auto_mode_config,
     )
     run_id = uuid4().hex
     heartbeat: Optional[Heartbeat] = None

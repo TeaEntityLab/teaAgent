@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from teaagent.errors import ToolExecutionError
+from teaagent.hooks import HookRegistry
 from teaagent.schema import validate_object_schema
 
 ToolHandler = Callable[[dict[str, Any]], dict[str, Any]]
@@ -89,9 +90,10 @@ class ToolRegistry:
     for the standard workspace‑tool set.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, hook_registry: Optional[HookRegistry] = None) -> None:
         self._tools: dict[str, ToolDefinition] = {}
         self._rate_states: dict[str, _RateLimiterState] = {}
+        self.hook_registry = hook_registry
 
     def register(
         self,
@@ -128,6 +130,10 @@ class ToolRegistry:
         except KeyError as exc:
             raise KeyError(f"tool '{name}' is not registered") from exc
 
+    def list_tools(self) -> list[str]:
+        """Return names of all registered tools."""
+        return list(self._tools)
+
     def call_count(self, name: str) -> int:
         """Return the current sliding-window call count for a rate-limited tool."""
         state = self._rate_states.get(name)
@@ -139,6 +145,8 @@ class ToolRegistry:
         state = self._rate_states.get(name)
         if state is not None:
             state.check_and_record(name)
+        if self.hook_registry is not None:
+            self.hook_registry.run_pre_hooks(name, arguments)
         try:
             result = tool.handler(arguments)
         except ToolExecutionError:
@@ -147,6 +155,8 @@ class ToolRegistry:
             Exception
         ) as exc:  # pragma: no cover - preserves original detail in message
             raise ToolExecutionError(f"tool '{name}' failed: {exc}") from exc
+        if self.hook_registry is not None:
+            self.hook_registry.run_post_hooks(name, arguments, result)
         validate_object_schema(tool.output_schema, result, label=f'tool.{name}.output')
         return result
 
