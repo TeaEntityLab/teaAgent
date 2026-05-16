@@ -189,6 +189,8 @@ def run_result_payload(
         'status': result.status,
         'iterations': result.iterations,
         'tool_calls': result.tool_calls,
+        'input_tokens': result.input_tokens,
+        'output_tokens': result.output_tokens,
         'routing': routing,
         'final_answer': result.final_answer.content if result.final_answer else None,
     }

@@ -8,6 +8,7 @@ TIERS: dict[str, tuple[str, ...]] = {
     'p0': (
         'test_first_run_experience_flow.py',
         'test_daily_cli.py',
+        'test_p0_slo_flow.py',
         'test_plan_mode_read_only_flow.py',
         'test_workspace_edit_flow.py',
         'test_agent_fix_test_review_flow.py',

@@ -25,20 +25,20 @@ Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 
 ## Current Core Use Cases
 
-| Use Case | User Goal | Primary Acceptance Coverage | Status |
-|---|---|---|---|
-| Project instruction conformance | Ensure repo-local agent rules are always applied. | `test_agents_md_injection_flow.py`, `test_first_run_experience_flow.py` | Implemented |
-| Safe autonomous coding run | Execute coding tasks with policy controls and auditability. | `test_daily_cli.py`, `test_daily_tui.py`, `test_policy_as_code_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py` | Implemented |
-| Destructive-action governance | Require approval before risky operations. | `test_cancel_flow.py`, `test_daily_cli.py` (pause/resume), `test_policy_as_code_flow.py`, `test_run_undo_acceptance_flow.py` | Implemented |
-| Tool ecosystem extensibility | Load skills and remote MCP tools reliably. | `test_skill_install_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_mcp_client_flow.py` | Implemented baseline |
-| Reliability and forensics | Preserve run history, webhook delivery, and audit integrity. | `test_audit_chain_integrity_flow.py`, `test_webhook_audit_flow.py`, `test_cost_tracking_flow.py` | Implemented baseline |
-| Memory continuity | Reuse successful outcomes across runs without manual logging. | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` | Implemented |
-| IDE-assisted workflows | Operate MCP flows and commands from VSCode extension. | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` | Implemented |
+| Use Case | User Goal | Blast Radius | Rollback Path | Audit Criticality | Primary Acceptance Coverage | Status |
+|---|---|---|---|---|---|---|
+| Project instruction conformance | Ensure repo-local agent rules are always applied. | high | git revert AGENTS.md | medium | `test_agents_md_injection_flow.py`, `test_first_run_experience_flow.py` | Implemented |
+| Safe autonomous coding run | Execute coding tasks with policy controls and auditability. | high | teaagent agent undo | high | `test_daily_cli.py`, `test_daily_tui.py`, `test_policy_as_code_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py` | Implemented |
+| Destructive-action governance | Require approval before risky operations. | critical | teaagent agent undo | critical | `test_cancel_flow.py`, `test_daily_cli.py` (pause/resume), `test_policy_as_code_flow.py`, `test_run_undo_acceptance_flow.py` | Implemented |
+| Tool ecosystem extensibility | Load skills and remote MCP tools reliably. | medium | remove skill/MCP config | medium | `test_skill_install_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_mcp_client_flow.py` | Implemented baseline |
+| Reliability and forensics | Preserve run history, webhook delivery, and audit integrity. | high | N/A (read-only verification) | critical | `test_audit_chain_integrity_flow.py`, `test_webhook_audit_flow.py`, `test_cost_tracking_flow.py` | Implemented baseline |
+| Memory continuity | Reuse successful outcomes across runs without manual logging. | low | clear .teaagent/memory/ | low | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` | Implemented |
+| IDE-assisted workflows | Operate MCP flows and commands from VSCode extension. | low | restart VSCode | low | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` | Implemented |
 
 ## Planned Market-Standard Use Cases
 
-| Use Case | User Goal | Required Acceptance Coverage | Priority | Status |
-|---|---|---|---|---|
+| Use Case | User Goal | Blast Radius | Rollback Path | Audit Criticality | Required Acceptance Coverage | Priority | Status |
+|---|---|---|---|---|---|---|---|
 | Product onboarding and provider readiness | Install, initialize, verify providers, and start a safe first run without reading architecture docs. | `test_first_run_experience_flow.py`, `test_model_smoke_gating_flow.py`, `test_live_provider_conformance_flow.py`, `test_provider_matrix_consistency_flow.py` | P0 | Implemented |
 | Read-only planning mode | Explore an unfamiliar repo and produce a plan without file edits or shell mutation. | `test_plan_mode_read_only_flow.py` | P0 | Implemented |
 | End-to-end code-change loop | Ask the agent to fix a small failing test, apply a scoped edit, rerun tests, inspect diff, and report the result. | `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py` | P0 | Implemented |

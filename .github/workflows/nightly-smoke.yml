@@ -1,0 +1,72 @@
+name: Nightly Provider Smoke
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily 06:00 UTC
+  workflow_dispatch:       # manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    strategy:
+      matrix:
+        provider:
+          - claude
+          - gpt
+          - gemini
+          - openrouter
+          - opencodezen-go
+      fail-fast: false       # one provider failure shouldn't cancel others
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      TEAAGENT_ACCEPT_HOSTED_SMOKE: 1
+      ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY   || '' }}
+      OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY      || '' }}
+      GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY      || '' }}
+      OPENROUTER_API_KEY:  ${{ secrets.OPENROUTER_API_KEY  || '' }}
+      OPENCODEZEN_API_KEY: ${{ secrets.OPENCODEZEN_API_KEY || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Smoke — ${{ matrix.provider }}
+        id: smoke
+        continue-on-error: true
+        run: |
+          teaagent model smoke "${{ matrix.provider }}" 2>&1
+
+      - name: Conformance — ${{ matrix.provider }}
+        id: conformance
+        continue-on-error: true
+        run: |
+          teaagent model conformance --provider "${{ matrix.provider }}" 2>&1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## ${{ matrix.provider }}" >> $GITHUB_STEP_SUMMARY
+          echo "- smoke: **${{ steps.smoke.outcome }}**" >> $GITHUB_STEP_SUMMARY
+          echo "- conformance: **${{ steps.conformance.outcome }}**" >> $GITHUB_STEP_SUMMARY
+
+  report:
+    if: always()
+    needs: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate results
+        run: |
+          echo "# Nightly Smoke Results" >> $GITHUB_STEP_SUMMARY
+          echo "See per-provider results above." >> $GITHUB_STEP_SUMMARY

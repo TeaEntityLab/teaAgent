@@ -4,54 +4,150 @@ import argparse
 import re
 from pathlib import Path
 
+USE_CASE_META: dict[str, dict[str, str]] = {
+    'Project instruction conformance': {
+        'blast_radius': 'high',
+        'rollback_path': 'git revert AGENTS.md',
+        'audit_criticality': 'medium',
+    },
+    'Safe autonomous coding run': {
+        'blast_radius': 'high',
+        'rollback_path': 'teaagent agent undo',
+        'audit_criticality': 'high',
+    },
+    'Destructive-action governance': {
+        'blast_radius': 'critical',
+        'rollback_path': 'teaagent agent undo',
+        'audit_criticality': 'critical',
+    },
+    'Tool ecosystem extensibility': {
+        'blast_radius': 'medium',
+        'rollback_path': 'remove skill/MCP config',
+        'audit_criticality': 'medium',
+    },
+    'Reliability and forensics': {
+        'blast_radius': 'high',
+        'rollback_path': 'N/A (read-only verification)',
+        'audit_criticality': 'critical',
+    },
+    'Memory continuity': {
+        'blast_radius': 'low',
+        'rollback_path': 'clear .teaagent/memory/',
+        'audit_criticality': 'low',
+    },
+    'IDE-assisted workflows': {
+        'blast_radius': 'low',
+        'rollback_path': 'restart VSCode',
+        'audit_criticality': 'low',
+    },
+    'Product onboarding and provider readiness': {
+        'blast_radius': 'low',
+        'rollback_path': 're-run teaagent init',
+        'audit_criticality': 'low',
+    },
+    'Read-only planning mode': {
+        'blast_radius': 'low',
+        'rollback_path': 'N/A (no mutations)',
+        'audit_criticality': 'low',
+    },
+    'End-to-end code-change loop': {
+        'blast_radius': 'high',
+        'rollback_path': 'git checkout -- .',
+        'audit_criticality': 'high',
+    },
+    'Reversible change recovery': {
+        'blast_radius': 'medium',
+        'rollback_path': 'teaagent agent undo',
+        'audit_criticality': 'medium',
+    },
+    'Runtime IDE MCP smoke': {
+        'blast_radius': 'low',
+        'rollback_path': 'restart MCP server',
+        'audit_criticality': 'medium',
+    },
+    'Session resume continuity': {
+        'blast_radius': 'medium',
+        'rollback_path': 're-run original task',
+        'audit_criticality': 'high',
+    },
+    'External ecosystem compatibility': {
+        'blast_radius': 'low',
+        'rollback_path': 'fix manifest/schema',
+        'audit_criticality': 'low',
+    },
+}
+
 USE_CASES: dict[str, tuple[str, ...]] = {
-    'Project instruction conformance': (
-        'test_agents_md_injection_flow.py',
-        'test_first_run_experience_flow.py',
-    ),
-    'Safe autonomous coding run': (
-        'test_daily_cli.py',
-        'test_daily_tui.py',
-        'test_policy_as_code_flow.py',
-        'test_workspace_edit_flow.py',
-    ),
-    'Destructive-action governance': (
-        'test_cancel_flow.py',
-        'test_daily_cli.py',
-        'test_policy_as_code_flow.py',
-    ),
-    'Tool ecosystem extensibility': (
-        'test_skill_install_flow.py',
-        'test_remote_mcp_consumption_flow.py',
-        'test_mcp_client_flow.py',
-    ),
-    'Reliability and forensics': (
-        'test_audit_chain_integrity_flow.py',
-        'test_webhook_audit_flow.py',
-        'test_cost_tracking_flow.py',
-    ),
-    'Memory continuity': ('test_memory_auto_curation_flow.py',),
-    'IDE-assisted workflows': ('test_vscode_extension_mcp_boot_flow.py',),
-    'Product onboarding and provider readiness': (
-        'test_first_run_experience_flow.py',
-        'test_model_smoke_gating_flow.py',
-        'test_live_provider_conformance_flow.py',
-        'test_provider_matrix_consistency_flow.py',
-    ),
-    'Read-only planning mode': ('test_plan_mode_read_only_flow.py',),
-    'End-to-end code-change loop': (
-        'test_workspace_edit_flow.py',
-        'test_agent_fix_test_review_flow.py',
-    ),
-    'Reversible change recovery': ('test_run_undo_acceptance_flow.py',),
-    'Runtime IDE MCP smoke': (
-        'test_vscode_extension_mcp_boot_flow.py',
-        'test_vscode_mcp_runtime_smoke_flow.py',
-    ),
-    'Session resume continuity': ('test_session_resume_continuity_flow.py',),
-    'External ecosystem compatibility': (
-        'test_external_tool_manifest_compatibility_flow.py',
-    ),
+    name: tests
+    for name, tests in [
+        (
+            'Project instruction conformance',
+            ('test_agents_md_injection_flow.py', 'test_first_run_experience_flow.py'),
+        ),
+        (
+            'Safe autonomous coding run',
+            (
+                'test_daily_cli.py',
+                'test_daily_tui.py',
+                'test_policy_as_code_flow.py',
+                'test_workspace_edit_flow.py',
+            ),
+        ),
+        (
+            'Destructive-action governance',
+            (
+                'test_cancel_flow.py',
+                'test_daily_cli.py',
+                'test_policy_as_code_flow.py',
+                'test_p0_slo_flow.py',
+            ),
+        ),
+        (
+            'Tool ecosystem extensibility',
+            (
+                'test_skill_install_flow.py',
+                'test_remote_mcp_consumption_flow.py',
+                'test_mcp_client_flow.py',
+            ),
+        ),
+        (
+            'Reliability and forensics',
+            (
+                'test_audit_chain_integrity_flow.py',
+                'test_webhook_audit_flow.py',
+                'test_cost_tracking_flow.py',
+            ),
+        ),
+        ('Memory continuity', ('test_memory_auto_curation_flow.py',)),
+        ('IDE-assisted workflows', ('test_vscode_extension_mcp_boot_flow.py',)),
+        (
+            'Product onboarding and provider readiness',
+            (
+                'test_first_run_experience_flow.py',
+                'test_model_smoke_gating_flow.py',
+                'test_live_provider_conformance_flow.py',
+                'test_provider_matrix_consistency_flow.py',
+            ),
+        ),
+        ('Read-only planning mode', ('test_plan_mode_read_only_flow.py',)),
+        (
+            'End-to-end code-change loop',
+            ('test_workspace_edit_flow.py', 'test_agent_fix_test_review_flow.py'),
+        ),
+        ('Reversible change recovery', ('test_run_undo_acceptance_flow.py',)),
+        (
+            'Runtime IDE MCP smoke',
+            (
+                'test_vscode_extension_mcp_boot_flow.py',
+                'test_vscode_mcp_runtime_smoke_flow.py',
+            ),
+        ),
+        ('Session resume continuity', ('test_session_resume_continuity_flow.py',)),
+        (
+            'External ecosystem compatibility',
+            ('test_external_tool_manifest_compatibility_flow.py',),
+        ),
+    ]
 }
 
 
@@ -65,15 +161,21 @@ def build_matrix_markdown(available_tests: set[str]) -> str:
         '',
         'Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.',
         '',
-        '| Use Case | Covered | Required Tests | Missing Tests |',
-        '|---|---|---|---|',
+        '| Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |',
+        '|---|---|---|---|---|---|---|',
     ]
     for use_case, required in USE_CASES.items():
+        meta = USE_CASE_META.get(use_case, {})
         missing = [name for name in required if name not in available_tests]
         covered = 'yes' if not missing else 'no'
+        blast = meta.get('blast_radius', '—')
+        rollback = meta.get('rollback_path', '—')
+        criticality = meta.get('audit_criticality', '—')
         required_text = ', '.join(f'`{name}`' for name in required)
         missing_text = ', '.join(f'`{name}`' for name in missing) if missing else '-'
-        lines.append(f'| {use_case} | {covered} | {required_text} | {missing_text} |')
+        lines.append(
+            f'| {use_case} | {covered} | {blast} | {rollback} | {criticality} | {required_text} | {missing_text} |'
+        )
     lines.append('')
     return '\n'.join(lines)
 
