@@ -2,6 +2,58 @@
 
 Governance-first agent harness for autonomous coding tasks. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
 
+## Start Here
+
+### 1. Install
+
+```bash
+pip install -e .
+```
+
+On macOS/Homebrew Python (PEP 668), prefer a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+pip install -e ".[dev]"
+```
+
+### 2. First Run
+
+```bash
+# Verify provider setup
+teaagent doctor model gpt
+
+# Safe read-only first task
+teaagent agent run gpt "Summarize the test suite" --permission-mode read-only
+```
+
+### 3. Permission Modes
+
+- `read-only`: blocks destructive tools
+- `workspace-write`: allows file writes, blocks shell mutation
+- `prompt`: asks for approval on destructive actions
+- `allow`: allows destructive tools for the session
+- `danger-full-access`: full access for trusted automation only
+
+### 4. Plan vs Write
+
+- Planning/exploration: use `--permission-mode read-only`
+- Editing/implementation: use `--permission-mode workspace-write` or `prompt`
+
+### 5. Extensibility
+
+- MCP server: `teaagent mcp serve`
+- Skills/plugins: documented in [docs/tool-authoring.md](docs/tool-authoring.md) and [docs/provider-authoring.md](docs/provider-authoring.md)
+
+### 6. Docs
+
+- Quick start: [docs/USAGE.md](docs/USAGE.md)
+- CLI/MCP reference: [docs/cli.md](docs/cli.md)
+- Acceptance coverage: [docs/acceptance.md](docs/acceptance.md)
+- Use-case traceability: [docs/use-cases.md](docs/use-cases.md)
+
 ## Architecture
 
 ```

@@ -101,6 +101,26 @@ All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
 `69 passed`.
 
+<!-- ACCEPTANCE_TIERS:START -->
+
+## Acceptance Tiers (P0/P1/P2)
+
+Use these tiers to control regression scope and release risk:
+
+| Tier | Purpose | Representative acceptance flows |
+|---|---|---|
+| P0 | Safe first-run, policy boundaries, and core coding loop | `test_first_run_experience_flow.py`, `test_daily_cli.py`, `test_plan_mode_read_only_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`, `test_policy_as_code_flow.py` |
+| P1 | Recovery, continuity, and IDE/runtime surface reliability | `test_run_undo_acceptance_flow.py`, `test_session_resume_continuity_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`, `test_mcp_client_flow.py` |
+| P2 | Ecosystem compatibility and extended operations | `test_external_tool_manifest_compatibility_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_ultrawork_flow.py`, `test_webhook_audit_flow.py` |
+
+Recommended execution cadence:
+
+1. Every PR: run all P0.
+2. Before merge to `main`: run P0 + P1.
+3. Before release: run full acceptance (P0 + P1 + P2).
+
+<!-- ACCEPTANCE_TIERS:END -->
+
 This file documents implemented acceptance flows. Market-standard use-case gaps
 and planned future acceptance files are tracked in
 [`docs/use-cases.md`](use-cases.md) and

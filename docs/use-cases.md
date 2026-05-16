@@ -9,19 +9,19 @@ Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 
 ## Requirement Baseline
 
-| Requirement | Mainstream signal | TeaAgent status | Next planning action |
+| Requirement | Mainstream signal | TeaAgent status | Verification evidence |
 |---|---|---|---|
-| Terminal-first local agent | Codex, Claude Code, and OpenCode all lead with a local CLI/TUI workflow. | Covered by CLI/TUI workflows and quick-start docs. | Keep `test_daily_cli.py` and `test_daily_tui.py` as P0 smoke coverage. |
-| First-run onboarding | Mainstream READMEs put install, setup, first command, and troubleshooting before architecture. | Covered by `init`, model smoke gating, and first-run acceptance. | Add a docs-consistency check for README/USAGE provider counts and defaults. |
-| Project instruction loading | Modern agents rely on repo-local instruction files such as `AGENTS.md` or migration fallbacks. | Covered by hierarchical `AGENTS.md`, `AGENT.md`, and `CLAUDE.md` loading. | Keep as a compatibility requirement, not just an internal prompt feature. |
-| Read-only planning/exploration mode | OpenCode exposes a read-only `plan` agent; other tools distinguish explore/plan from edit/build. | Partially covered by `read-only` permission mode, but not as a named planning use case. | Add `test_plan_mode_read_only_flow.py`. |
-| Build/edit/test/diff loop | Coding agents are expected to read code, edit files, run tests, inspect diffs, and summarize results. | Partially covered by `test_workspace_edit_flow.py`; current flow uses a deterministic fake adapter. | Add `test_agent_fix_test_review_flow.py` for a full user-facing repair loop. |
-| Approval and hard policy boundaries | Mainstream agents increasingly expose permission modes, approvals, and sandbox profiles. | Strong coverage: permission modes, prompt approval, policy-as-code, audit, and sandbox tests. | Promote undo/revert from integration to acceptance-level product recovery. |
-| Provider/model flexibility | Hermes and OpenCode emphasize no lock-in and multi-provider operation. | Partially covered by provider adapters and gated conformance. README/USAGE provider count is inconsistent. | Add provider matrix docs consistency and live conformance report coverage. |
-| Tool ecosystem extensibility | MCP, skills/plugins, custom commands, and external tools are mainstream extension points. | Covered by skills, MCP server/client, remote MCP registration, and plugin integration. | Add a compatibility fixture for external MCP manifests and skill metadata. |
-| Multi-surface operation | Codex and Claude Code support IDE surfaces; Hermes supports messaging gateways; OpenCode supports desktop/client-server surfaces. | Partially covered by VSCode manifest/source checks. | Add runtime VSCode MCP boot smoke coverage. |
-| Session continuity and memory | Hermes foregrounds learning loops and memory; terminal agents need resumable sessions. | Partially covered by memory auto-curation and checkpoint integration. | Add acceptance coverage for session resume continuity across CLI/TUI. |
-| Reversible change recovery | Production-grade autonomous edit tools need rollback/undo stories. | Covered at integration level through run undo tests, not as a user-facing acceptance story. | Add `test_run_undo_acceptance_flow.py`. |
+| Terminal-first local agent | Codex, Claude Code, and OpenCode all lead with a local CLI/TUI workflow. | Implemented. | `test_daily_cli.py`, `test_daily_tui.py` |
+| First-run onboarding | Mainstream READMEs put install, setup, first command, and troubleshooting before architecture. | Implemented. | `test_first_run_experience_flow.py`, `test_model_smoke_gating_flow.py` |
+| Project instruction loading | Modern agents rely on repo-local instruction files such as `AGENTS.md` or migration fallbacks. | Implemented. | `test_agents_md_injection_flow.py` |
+| Read-only planning/exploration mode | OpenCode exposes a read-only `plan` agent; other tools distinguish explore/plan from edit/build. | Implemented. | `test_plan_mode_read_only_flow.py` |
+| Build/edit/test/diff loop | Coding agents are expected to read code, edit files, run tests, inspect diffs, and summarize results. | Implemented. | `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py` |
+| Approval and hard policy boundaries | Mainstream agents increasingly expose permission modes, approvals, and sandbox profiles. | Implemented. | `test_policy_as_code_flow.py`, `test_cancel_flow.py`, `test_run_undo_acceptance_flow.py` |
+| Provider/model flexibility | Hermes and OpenCode emphasize no lock-in and multi-provider operation. | Implemented. | `test_provider_matrix_consistency_flow.py`, `test_live_provider_conformance_flow.py` |
+| Tool ecosystem extensibility | MCP, skills/plugins, custom commands, and external tools are mainstream extension points. | Implemented. | `test_skill_install_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_external_tool_manifest_compatibility_flow.py` |
+| Multi-surface operation | Codex and Claude Code support IDE surfaces; Hermes supports messaging gateways; OpenCode supports desktop/client-server surfaces. | Implemented (VSCode surface). | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` |
+| Session continuity and memory | Hermes foregrounds learning loops and memory; terminal agents need resumable sessions. | Implemented. | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` |
+| Reversible change recovery | Production-grade autonomous edit tools need rollback/undo stories. | Implemented. | `test_run_undo_acceptance_flow.py` |
 
 ## Current Core Use Cases
 
@@ -57,3 +57,12 @@ Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 6. Completed (P1): Session resume continuity acceptance (`test_session_resume_continuity_flow.py`).
 7. Completed (P2): External ecosystem compatibility acceptance (`test_external_tool_manifest_compatibility_flow.py`).
 8. Completed (P2): Published rendered dashboard at `docs/use-case-matrix.html`.
+
+## Evidence Commands
+
+Use these commands as the default claim-verification workflow before updating docs:
+
+1. `python3 scripts/build_acceptance_status.py`
+2. `python3 scripts/build_use_case_matrix.py`
+3. `python3 scripts/validate_docs_consistency.py`
+4. `python3 -m pytest tests/acceptance --collect-only -q`
