@@ -109,3 +109,111 @@ class MCPHTTPClient:
         if self.session_id is not None:
             headers[SESSION_HEADER] = self.session_id
         return headers
+
+
+# --- Filtered MCP Client with OAuth and Sampling Support ---
+
+
+class FilteredMCPClient:
+    """MCP client wrapper with tool filtering and sampling support.
+
+    This wrapper adds:
+    - Tool allow/block lists for security
+    - Sampling configuration for AI-powered tools
+    - OAuth token refresh support
+    """
+
+    def __init__(
+        self,
+        inner: MCPHTTPClient,
+        *,
+        allowed_tools: Optional[frozenset[str]] = None,
+        blocked_tools: Optional[frozenset[str]] = None,
+        sampling_max_tokens: int = 4096,
+        sampling_temperature: float = 0.7,
+        oauth_token: Optional[str] = None,
+    ) -> None:
+        self._inner = inner
+        self._allowed_tools = allowed_tools
+        self._blocked_tools = blocked_tools
+        self._sampling_max_tokens = sampling_max_tokens
+        self._sampling_temperature = sampling_temperature
+        self._oauth_token = oauth_token
+        self._available_tools: Optional[list[dict[str, Any]]] = None
+
+    def initialize(self) -> dict[str, Any]:
+        result = self._inner.initialize()
+        self._available_tools = self._inner.list_tools()
+        return result
+
+    def list_tools(self) -> list[dict[str, Any]]:
+        if self._available_tools is None:
+            self._available_tools = self._inner.list_tools()
+
+        if self._blocked_tools:
+            return [
+                t
+                for t in self._available_tools
+                if t.get('name') not in self._blocked_tools
+            ]
+
+        if self._allowed_tools:
+            return [
+                t for t in self._available_tools if t.get('name') in self._allowed_tools
+            ]
+
+        return self._available_tools
+
+    def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        self._check_tool_allowed(name)
+
+        if name.startswith('mcp_ai_') or name.startswith(' sampling'):
+            arguments = self._apply_sampling(arguments)
+
+        return self._inner.call_tool(name, arguments)
+
+    def _check_tool_allowed(self, name: str) -> None:
+        if self._blocked_tools and name in self._blocked_tools:
+            raise MCPClientError(f"Tool '{name}' is blocked by filter policy")
+
+        if self._allowed_tools and name not in self._allowed_tools:
+            raise MCPClientError(
+                f"Tool '{name}' not in allowed list. "
+                f'Allowed: {sorted(self._allowed_tools)}'
+            )
+
+    def _apply_sampling(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        if 'sampling' not in arguments:
+            arguments['sampling'] = {}
+        arguments['sampling'].setdefault('max_tokens', self._sampling_max_tokens)
+        arguments['sampling'].setdefault('temperature', self._sampling_temperature)
+        return arguments
+
+    def refresh_oauth_token(self, token: str) -> None:
+        self._oauth_token = token
+
+    def close(self) -> None:
+        self._inner.close()
+
+
+class MCPClientFactory:
+    """Factory for creating configured MCP clients."""
+
+    @staticmethod
+    def create_http(
+        endpoint: str,
+        *,
+        auth_token: Optional[str] = None,
+        allowed_tools: Optional[list[str]] = None,
+        blocked_tools: Optional[list[str]] = None,
+        sampling_max_tokens: int = 4096,
+        sampling_temperature: float = 0.7,
+    ) -> FilteredMCPClient:
+        inner = MCPHTTPClient(endpoint, auth_token=auth_token)
+        return FilteredMCPClient(
+            inner,
+            allowed_tools=frozenset(allowed_tools) if allowed_tools else None,
+            blocked_tools=frozenset(blocked_tools) if blocked_tools else None,
+            sampling_max_tokens=sampling_max_tokens,
+            sampling_temperature=sampling_temperature,
+        )

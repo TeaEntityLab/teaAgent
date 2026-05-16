@@ -10,6 +10,11 @@ from teaagent.audit import utc_now
 from teaagent.storage import append_jsonl_line
 
 
+def _create_memory_hierarchy(root: str | Path) -> 'MemoryHierarchy':
+    """Factory function to create memory hierarchy."""
+    return MemoryHierarchy(root)
+
+
 @dataclass(frozen=True)
 class MemoryEntry:
     """A single tagged memory entry stored by the agent."""
@@ -136,3 +141,122 @@ def memory_relevance_score(entry: MemoryEntry, tokens: tuple[str, ...]) -> int:
 
 def memory_entries_to_prompt(entries: list[MemoryEntry]) -> list[dict[str, Any]]:
     return [entry.to_dict() for entry in entries]
+
+
+# --- Three-Tier Memory Hierarchy (Claude Code compatible) ---
+
+
+class MemoryHierarchy:
+    """Three-tier memory system: Project / Personal / Auto-Memory.
+
+    Matches Claude Code's memory hierarchy:
+    - Project: `.teaagent/memory.jsonl` (team-shared, git-tracked)
+    - Personal: `~/.config/teaagent/memory.jsonl` (user-specific, not git-tracked)
+    - Auto-Memory: `.claude/MEMORY.md` (persistent, not git-tracked)
+    """
+
+    def __init__(self, root: str | Path = '.') -> None:
+        self.root = Path(root).resolve()
+        self._project_catalog: MemoryCatalog | None = None
+        self._personal_catalog: MemoryCatalog | None = None
+
+    @property
+    def project(self) -> MemoryCatalog:
+        """Project-level memory (git-tracked)."""
+        if self._project_catalog is None:
+            self._project_catalog = MemoryCatalog(self.root)
+        return self._project_catalog
+
+    @property
+    def personal(self) -> MemoryCatalog:
+        """Personal-level memory (user-wide, not git-tracked)."""
+        if self._personal_catalog is None:
+            personal_path = Path.home() / '.config' / 'teaagent'
+            personal_path.mkdir(parents=True, exist_ok=True)
+            self._personal_catalog = MemoryCatalog(personal_path)
+        return self._personal_catalog
+
+    def auto_memory_path(self) -> Path:
+        """Path to auto-memory file (`.claude/MEMORY.md` compatible)."""
+        return self.root / '.claude' / 'MEMORY.md'
+
+    def load_auto_memory(self) -> str:
+        """Load auto-memory content from `.claude/MEMORY.md`."""
+        path = self.auto_memory_path()
+        if path.exists():
+            return path.read_text(encoding='utf-8')
+        return ''
+
+    def save_auto_memory(self, content: str) -> None:
+        """Save content to `.claude/MEMORY.md`."""
+        path = self.auto_memory_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding='utf-8')
+
+    def append_auto_memory(self, entry: str) -> None:
+        """Append a new entry to auto-memory (creates new section)."""
+        existing = self.load_auto_memory()
+        timestamp = utc_now()
+        new_content = f'{existing}\n\n## {timestamp}\n\n{entry}'.strip()
+        self.save_auto_memory(new_content)
+
+    def search_all(
+        self,
+        query: str,
+        *,
+        limit: int = 10,
+        include_project: bool = True,
+        include_personal: bool = True,
+        include_auto: bool = False,
+    ) -> dict[str, list[MemoryEntry]]:
+        """Search across all memory tiers.
+
+        Returns a dict with keys: 'project', 'personal', 'auto_memory'
+        """
+        results: dict[str, list[MemoryEntry]] = {
+            'project': [],
+            'personal': [],
+            'auto_memory': [],
+        }
+
+        if include_project:
+            results['project'] = self.project.search(query, limit=limit)
+
+        if include_personal:
+            results['personal'] = self.personal.search(query, limit=limit)
+
+        if include_auto:
+            auto_content = self.load_auto_memory()
+            if query.lower() in auto_content.lower():
+                results['auto_memory'] = [
+                    MemoryEntry(
+                        memory_id='auto-memory-1',
+                        content=auto_content[:500],
+                        tags=('auto-memory',),
+                    )
+                ]
+
+        return results
+
+    def to_prompt_context(self, max_entries: int = 5) -> str:
+        """Generate prompt context from all memory tiers."""
+        parts: list[str] = []
+
+        project_entries = self.project.list(limit=max_entries)
+        if project_entries:
+            parts.append('## Project Memory')
+            for entry in project_entries:
+                parts.append(f'- [{entry.created_at[:10]}] {entry.content[:200]}')
+
+        personal_entries = self.personal.list(limit=max_entries)
+        if personal_entries:
+            parts.append('## Personal Memory')
+            for entry in personal_entries:
+                parts.append(f'- [{entry.created_at[:10]}] {entry.content[:200]}')
+
+        auto_memory = self.load_auto_memory()
+        if auto_memory:
+            parts.append('## Auto-Memory')
+            parts.append(auto_memory[:500])
+
+        return '\n'.join(parts) if parts else ''
