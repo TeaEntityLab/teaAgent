@@ -53,6 +53,7 @@ def _extract_python_relations(path: Path) -> list[CodeRelation]:
     tree = ast.parse(text)
     relations: list[CodeRelation] = []
     module_name = path.stem
+    # The module itself is the initial scope.
     scope_stack: list[str] = [module_name]
 
     class Visitor(ast.NodeVisitor):
@@ -84,7 +85,8 @@ def _extract_python_relations(path: Path) -> list[CodeRelation]:
                 )
 
         def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-            fn_name = '.'.join(scope_stack + [node.name])
+            # Avoid redundant module prefix if it's already the top of the stack
+            fn_name = f'{scope_stack[-1]}.{node.name}'
             relations.append(
                 CodeRelation(
                     source=scope_stack[-1],
@@ -99,7 +101,7 @@ def _extract_python_relations(path: Path) -> list[CodeRelation]:
             scope_stack.pop()
 
         def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-            fn_name = '.'.join(scope_stack + [node.name])
+            fn_name = f'{scope_stack[-1]}.{node.name}'
             relations.append(
                 CodeRelation(
                     source=scope_stack[-1],
@@ -114,7 +116,7 @@ def _extract_python_relations(path: Path) -> list[CodeRelation]:
             scope_stack.pop()
 
         def visit_ClassDef(self, node: ast.ClassDef) -> None:
-            class_name = '.'.join(scope_stack + [node.name])
+            class_name = f'{scope_stack[-1]}.{node.name}'
             relations.append(
                 CodeRelation(
                     source=scope_stack[-1],

@@ -64,6 +64,25 @@ def git_commit(
     }
 
 
+def git_lore_commit(
+    config: GitToolConfig,
+    summary: str,
+    why: str,
+    what: str,
+    *,
+    session_id: Optional[str] = None,
+    amend: bool = False,
+    no_verify: bool = False,
+) -> dict[str, Any]:
+    """Create a Lore-compliant commit with structured message and OmX trailer."""
+    lines = [summary, '', f'Why: {why}', f'What: {what}']
+    if session_id:
+        lines.extend(['', f'Session-ID: {session_id}'])
+    lines.extend(['', 'Co-authored-by: OmX <omx@oh-my-codex.dev>'])
+    message = '\n'.join(lines)
+    return git_commit(config, message, amend=amend, no_verify=no_verify)
+
+
 def git_create_branch(
     config: GitToolConfig,
     name: str,
@@ -245,6 +264,57 @@ def register_git_tools(registry: ToolRegistry, config: GitToolConfig) -> None:
         handler=lambda args: git_commit(
             config,
             args['message'],
+            amend=args.get('amend', False),
+            no_verify=args.get('no_verify', False),
+        ),
+        rate_limit=ToolRateLimit(max_calls=10, window_seconds=60.0),
+    )
+
+    registry.register(
+        name='git_lore_commit',
+        description='Create a Lore-compliant commit message with structured Why/What and OmX co-author trailer.',
+        input_schema=_object_schema(
+            {
+                'summary': {
+                    'type': 'string',
+                    'description': 'Commit summary (first line).',
+                },
+                'why': {
+                    'type': 'string',
+                    'description': 'The rationale for this change.',
+                },
+                'what': {'type': 'string', 'description': 'What was actually changed.'},
+                'session_id': {
+                    'type': 'string',
+                    'description': 'Optional session ID for traceability.',
+                },
+                'amend': {
+                    'type': 'boolean',
+                    'description': 'Amend the previous commit.',
+                },
+                'no_verify': {
+                    'type': 'boolean',
+                    'description': 'Skip pre-commit hooks.',
+                },
+            },
+            required=['summary', 'why', 'what'],
+        ),
+        output_schema=_object_schema(
+            {
+                'stdout': {'type': 'string'},
+                'stderr': {'type': 'string'},
+                'exit_code': {'type': 'integer'},
+                'commit_sha': {'type': 'string'},
+            },
+            required=['stdout', 'stderr', 'exit_code', 'commit_sha'],
+        ),
+        annotations=ToolAnnotations(destructive=True),
+        handler=lambda args: git_lore_commit(
+            config,
+            args['summary'],
+            args['why'],
+            args['what'],
+            session_id=args.get('session_id'),
             amend=args.get('amend', False),
             no_verify=args.get('no_verify', False),
         ),

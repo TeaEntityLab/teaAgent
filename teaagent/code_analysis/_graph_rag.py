@@ -10,6 +10,24 @@ from teaagent.graph_rag import GraphEdge, KnowledgeGraph
 from teaagent.rag import Document
 
 
+def ingest_code_to_graph(
+    graph: KnowledgeGraph,
+    relations: list[CodeRelation],
+    *,
+    document_id: str,
+) -> None:
+    """Ingest already extracted CodeRelations into a KnowledgeGraph."""
+    for relation in relations:
+        graph.add_edge(
+            GraphEdge(
+                source=relation.source,
+                relation=relation.relation,
+                target=relation.target,
+                document_ids=(document_id,),
+            )
+        )
+
+
 def ingest_code_relations_to_graph(
     path: str,
     graph: KnowledgeGraph,
@@ -29,13 +47,5 @@ def ingest_code_relations_to_graph(
             )
         )
     relations = extract_tree_sitter_relations(str(file_path))
-    for relation in relations:
-        graph.add_edge(
-            GraphEdge(
-                source=relation.source,
-                relation=relation.relation,
-                target=relation.target,
-                document_ids=(resolved_doc_id,),
-            )
-        )
+    ingest_code_to_graph(graph, relations, document_id=resolved_doc_id)
     return relations

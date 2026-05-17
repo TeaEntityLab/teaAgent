@@ -1,3 +1,10 @@
+---
+type: documentation
+audience: user, agent
+status: stable
+version: 1.0.0
+last_audit: 2026-05-17
+---
 # TeaAgent Quick Start Guide
 
 A beginner-friendly walkthrough from installation to your first agent run and chat session.
