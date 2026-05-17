@@ -200,7 +200,8 @@ def run_chat_agent(
         root=config.root, parent_config=config, parent_adapter=adapter
     )
     context_extra = dict(initial_context_extra or {})
-    if config.code_analysis_config is not None:
+    _registry_fresh = registry is None
+    if _registry_fresh and config.code_analysis_config is not None:
         register_code_analysis_tools(tool_registry, config.code_analysis_config)
         lsp_manager = LSPServerManager(config.code_analysis_config)
         candidate_paths = extract_candidate_paths(task, task_spec or '')
@@ -219,9 +220,10 @@ def run_chat_agent(
             depth=depth,
             manager=manager,
         )
-    if config.enable_git_tools:
+    if _registry_fresh and config.enable_git_tools:
         register_git_tools(tool_registry, GitToolConfig(root=config.root))
-    register_browser_tools(tool_registry)
+    if _registry_fresh:
+        register_browser_tools(tool_registry)
     project_instructions = load_project_instructions(config.root)
     memories = memory_entries_to_prompt(
         MemoryCatalog(config.root).search(task, limit=config.memory_limit)

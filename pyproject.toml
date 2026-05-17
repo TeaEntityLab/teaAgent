@@ -31,6 +31,9 @@ include = ["teaagent*"]
 teaagent = ["py.typed"]
 
 [project.optional-dependencies]
+tui = [
+    "prompt-toolkit>=3.0.0",
+]
 code-analysis = [
     "tree-sitter>=0.25.0",
     "tree-sitter-language-pack>=1.0.0",

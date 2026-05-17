@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+
+if TYPE_CHECKING:
+    from prompt_toolkit import PromptSession
 
 from teaagent import __version__
 from teaagent.audit import AuditEvent
@@ -81,7 +84,7 @@ class TeaAgentTUI:
         root: str | Path = '.',
         allow_destructive: bool = False,
         permission_mode: PermissionMode = PermissionMode.PROMPT,
-        input_fn: InputFn = input,
+        input_fn: Optional[InputFn] = None,
         output_fn: OutputFn = print,
         adapter_factory: AdapterFactory = default_adapter_factory,
     ) -> None:
@@ -105,19 +108,37 @@ class TeaAgentTUI:
         self.adapter_factory = adapter_factory
         self._store: Optional[GraphQLiteGraphStore] = None
         self._session_store: Optional[SessionStore] = None
+        self._session: Optional['PromptSession'] = None
 
     def run(self) -> int:
         self._load_tui_state()
         self._print_header()
+
+        # Initialize prompt_toolkit session if available and no custom input_fn is provided
+        if self.input_fn is None:
+            try:
+                from prompt_toolkit import PromptSession
+                from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+                from prompt_toolkit.history import FileHistory
+
+                history_path = self._state_path.parent / 'history.txt'
+                self._session = PromptSession(
+                    history=FileHistory(str(history_path)),
+                    auto_suggest=AutoSuggestFromHistory(),
+                )
+            except ImportError:
+                self._session = None
+
         while True:
             try:
-                raw_command = self.input_fn(self._prompt())
-            except EOFError:
+                if self.input_fn:
+                    raw_command = self.input_fn(self._prompt())
+                elif self._session:
+                    raw_command = self._session.prompt(self._prompt())
+                else:
+                    raw_command = input(self._prompt())
+            except (EOFError, KeyboardInterrupt):
                 self.output_fn('bye')
-                self._save_tui_state()
-                return 0
-            except KeyboardInterrupt:
-                self.output_fn('\nbye')
                 self._save_tui_state()
                 return 0
 
@@ -286,9 +307,8 @@ class TeaAgentTUI:
 
     def _approval_handler(self, request: ApprovalRequest) -> bool:
         self._print_json({'status': 'approval_required', 'approval': request.to_dict()})
-        answer = self.input_fn(
-            f'approve {request.call_id} ({request.tool_name})? [y/N] '
-        )
+        fn = self.input_fn or input
+        answer = fn(f'approve {request.call_id} ({request.tool_name})? [y/N] ')
         approved = answer.strip().lower() in {'y', 'yes'}
         self.output_fn(
             f'approval: {"approved" if approved else "denied"} {request.call_id}'
@@ -426,6 +446,7 @@ def run_tui(
     allow_destructive: bool = False,
     permission_mode: PermissionMode = PermissionMode.PROMPT,
     chat: bool = False,
+    input_fn: Optional[InputFn] = None,
 ) -> int:
     tui = TeaAgentTUI(
         database=database,
@@ -434,6 +455,7 @@ def run_tui(
         root=root,
         allow_destructive=allow_destructive,
         permission_mode=permission_mode,
+        input_fn=input_fn,
     )
     if chat:
         tui.chat = True

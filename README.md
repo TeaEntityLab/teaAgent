@@ -19,6 +19,12 @@ python3 -m pip install --upgrade pip
 pip install -e ".[dev]"
 ```
 
+Install enhanced TUI editing/history support (optional):
+
+```bash
+pip install -e ".[tui]"
+```
+
 ### 2. First Run
 
 ```bash
@@ -108,6 +114,7 @@ Requires Python >= 3.10. Optional dependency groups enable non-core integrations
 
 ```bash
 pip install -e ".[graphqlite]"
+pip install -e ".[tui]"
 pip install -e ".[oauth]"
 pip install -e ".[telemetry]"
 pip install -e ".[dev]"
@@ -116,6 +123,7 @@ pip install -e ".[security]"
 ```
 
 - `graphqlite`: GraphQL RAG persistence features.
+- `tui`: `prompt-toolkit`-powered interactive editing/history in `teaagent tui`.
 - `oauth`: OAuth 2.1 / DPoP cryptographic proof validation.
 - `telemetry`: OpenTelemetry tracing and metrics exporters.
 - `dev`: tests, linting, type checking, and pre-commit.

@@ -28,6 +28,12 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+Optional: install richer TUI line editing/history support:
+
+```bash
+pip install -e ".[tui]"
+```
+
 Verify it works:
 
 ```bash
@@ -189,6 +195,8 @@ Interactive multi-turn conversation with persistent history.
 ```bash
 teaagent tui
 ```
+
+If `prompt-toolkit` is installed (`pip install -e ".[tui]"`), the TUI uses enhanced history/autosuggest. Without it, TUI still works via standard `input()` fallback.
 
 ### Enabling Chat Mode
 

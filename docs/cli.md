@@ -8,6 +8,12 @@ For local development, install the package in editable mode:
 python3 -m pip install -e .
 ```
 
+Install optional enhanced TUI support:
+
+```bash
+python3 -m pip install -e ".[tui]"
+```
+
 Then run:
 
 ```bash
@@ -104,6 +110,8 @@ Start the interactive terminal UI:
 ```bash
 teaagent tui
 ```
+
+With `.[tui]` installed, TeaAgent uses `prompt-toolkit` for history and autosuggest. If not installed, it falls back to builtin `input()` automatically.
 
 Or without installing the console script:
 

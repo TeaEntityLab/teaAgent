@@ -25,11 +25,14 @@ from teaagent.workspace_tools._helpers import object_schema
 
 _BROWSER_INSTANCE: Any = None
 """Lazily initialised Playwright browser object (sync wrapper around async)."""
+_PLAYWRIGHT_INSTANCE: Any = None
+_PAGE_INSTANCE: Any = None
 
 
 def _ensure_browser() -> Any:
     """Return a global browser instance, starting one if needed."""
     global _BROWSER_INSTANCE  # noqa: PLW0603
+    global _PLAYWRIGHT_INSTANCE  # noqa: PLW0603
     if _BROWSER_INSTANCE is None:
         if not HAS_PLAYWRIGHT:
             raise RuntimeError(
@@ -37,23 +40,38 @@ def _ensure_browser() -> Any:
             )
         from playwright.sync_api import sync_playwright
 
-        _pw = sync_playwright().start()
-        _BROWSER_INSTANCE = _pw.chromium.launch(headless=True)
+        _PLAYWRIGHT_INSTANCE = sync_playwright().start()
+        _BROWSER_INSTANCE = _PLAYWRIGHT_INSTANCE.chromium.launch(headless=True)
     return _BROWSER_INSTANCE
 
 
-def _new_page() -> Any:
-    """Create a new browser page (tab)."""
-    browser = _ensure_browser()
-    return browser.new_page()
+def _get_page() -> Any:
+    """Return a reusable browser page, creating one if needed."""
+    global _PAGE_INSTANCE  # noqa: PLW0603
+    if _PAGE_INSTANCE is None or _PAGE_INSTANCE.is_closed():
+        browser = _ensure_browser()
+        _PAGE_INSTANCE = browser.new_page()
+    return _PAGE_INSTANCE
 
 
 def _cleanup_browser() -> None:
     """Close the global browser instance (used by tests)."""
     global _BROWSER_INSTANCE  # noqa: PLW0603
+    global _PLAYWRIGHT_INSTANCE  # noqa: PLW0603
+    global _PAGE_INSTANCE  # noqa: PLW0603
+    if _PAGE_INSTANCE is not None and not _PAGE_INSTANCE.is_closed():
+        _PAGE_INSTANCE.close()
+    _PAGE_INSTANCE = None
     if _BROWSER_INSTANCE is not None:
         _BROWSER_INSTANCE.close()
-        _BROWSER_INSTANCE = None
+    _BROWSER_INSTANCE = None
+    if _PLAYWRIGHT_INSTANCE is not None:
+        _PLAYWRIGHT_INSTANCE.stop()
+    _PLAYWRIGHT_INSTANCE = None
+
+
+def _browser_error_result(exc: Exception) -> dict[str, Any]:
+    return {'status': 'error', 'message': str(exc)}
 
 
 # ---------------------------------------------------------------------------
@@ -63,8 +81,8 @@ def _cleanup_browser() -> None:
 
 def browser_navigate(url: str, *, timeout_ms: int = 30000) -> dict[str, Any]:
     """Navigate to *url* and return the resulting page title and URL."""
-    page = _new_page()
     try:
+        page = _get_page()
         page.goto(url, timeout=timeout_ms, wait_until='domcontentloaded')
         return {
             'status': 'ok',
@@ -72,15 +90,13 @@ def browser_navigate(url: str, *, timeout_ms: int = 30000) -> dict[str, Any]:
             'title': page.title(),
         }
     except Exception as exc:
-        return {'status': 'error', 'message': str(exc)}
-    finally:
-        page.close()
+        return _browser_error_result(exc)
 
 
 def browser_snapshot(*, timeout_ms: int = 5000) -> dict[str, Any]:
     """Return the current page state: URL, title, visible text, links."""
-    page = _new_page()
     try:
+        page = _get_page()
         page.wait_for_load_state('networkidle', timeout=timeout_ms)
         links = page.eval_on_selector_all(
             'a[href]', 'els => els.map(e => ({text: e.innerText.trim(), href: e.href}))'
@@ -93,35 +109,32 @@ def browser_snapshot(*, timeout_ms: int = 5000) -> dict[str, Any]:
             'links': links[:50],
         }
     except Exception as exc:
-        return {'status': 'error', 'message': str(exc)}
-    finally:
-        page.close()
+        return _browser_error_result(exc)
 
 
 def browser_screenshot(
     *, full_page: bool = False, timeout_ms: int = 10000
 ) -> dict[str, Any]:
     """Take a screenshot and return it as a base64-encoded PNG."""
-    page = _new_page()
     try:
         import base64
+
+        page = _get_page()
 
         b64 = base64.b64encode(
             page.screenshot(full_page=full_page, timeout=timeout_ms)
         ).decode('ascii')
         return {'status': 'ok', 'data': b64, 'mime_type': 'image/png'}
     except Exception as exc:
-        return {'status': 'error', 'message': str(exc)}
-    finally:
-        page.close()
+        return _browser_error_result(exc)
 
 
 def browser_get_content(
     *, include_html: bool = False, timeout_ms: int = 5000
 ) -> dict[str, Any]:
     """Extract page content as text or HTML."""
-    page = _new_page()
     try:
+        page = _get_page()
         page.wait_for_load_state('networkidle', timeout=timeout_ms)
         if include_html:
             content = page.content()
@@ -134,15 +147,13 @@ def browser_get_content(
             'truncated': len(content) > 50000,
         }
     except Exception as exc:
-        return {'status': 'error', 'message': str(exc)}
-    finally:
-        page.close()
+        return _browser_error_result(exc)
 
 
 def browser_click(selector: str, *, timeout_ms: int = 10000) -> dict[str, Any]:
     """Click an element identified by *selector*."""
-    page = _new_page()
     try:
+        page = _get_page()
         page.click(selector, timeout=timeout_ms)
         return {
             'status': 'ok',
@@ -150,35 +161,29 @@ def browser_click(selector: str, *, timeout_ms: int = 10000) -> dict[str, Any]:
             'title': page.title(),
         }
     except Exception as exc:
-        return {'status': 'error', 'message': str(exc)}
-    finally:
-        page.close()
+        return _browser_error_result(exc)
 
 
 def browser_fill(
     selector: str, value: str, *, timeout_ms: int = 10000
 ) -> dict[str, Any]:
     """Fill a form field identified by *selector* with *value*."""
-    page = _new_page()
     try:
+        page = _get_page()
         page.fill(selector, value, timeout=timeout_ms)
         return {'status': 'ok'}
     except Exception as exc:
-        return {'status': 'error', 'message': str(exc)}
-    finally:
-        page.close()
+        return _browser_error_result(exc)
 
 
 def browser_evaluate(expression: str) -> dict[str, Any]:
     """Run JavaScript *expression* in the page context."""
-    page = _new_page()
     try:
+        page = _get_page()
         result = page.evaluate(expression)
         return {'status': 'ok', 'result': str(result)[:10000]}
     except Exception as exc:
-        return {'status': 'error', 'message': str(exc)}
-    finally:
-        page.close()
+        return _browser_error_result(exc)
 
 
 # ---------------------------------------------------------------------------

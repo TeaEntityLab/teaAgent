@@ -13,6 +13,25 @@ from teaagent.browser_tools import (
 from teaagent.tools import ToolRegistry
 
 
+def _playwright_runtime_available() -> bool:
+    if not HAS_PLAYWRIGHT:
+        return False
+    try:
+        import asyncio
+
+        asyncio.get_running_loop()
+        return False
+    except RuntimeError:
+        pass
+    try:
+        from teaagent.browser_tools import browser_navigate
+
+        result = browser_navigate('data:text/html,<title>ok</title>')
+        return result.get('status') == 'ok'
+    finally:
+        _cleanup_browser()
+
+
 class BrowserToolsRegistrationTest(unittest.TestCase):
     """Tests for tool registration (works regardless of Playwright availability)."""
 
@@ -54,7 +73,10 @@ class BrowserToolsRegistrationTest(unittest.TestCase):
         self.assertIn('pip install', _DISABLED_MESSAGE)
 
 
-@unittest.skipUnless(HAS_PLAYWRIGHT, 'playwright packages not installed')
+@unittest.skipUnless(
+    _playwright_runtime_available(),
+    'playwright runtime unavailable (missing browser binaries or running asyncio loop)',
+)
 class BrowserToolsFunctionalTest(unittest.TestCase):
     """Functional tests that require Playwright and a browser binary."""
 
