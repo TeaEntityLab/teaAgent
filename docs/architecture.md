@@ -200,3 +200,121 @@ sees the result.
 - **New Code Mode backend**: implement `CodeModeBackend` protocol.
 - **New audit sink**: call `audit.add_sink(callback)` with any `AuditEvent → None`.
 - **New MCP transport**: call `handle_mcp_request(registry, payload)`.
+- **New hook**: register through `HookRegistry` with 8-event lifecycle.
+- **New plugin**: add to `.teaagent/plugins/` with `plugin.json`.
+
+## Hook System (8-Event Lifecycle)
+
+TeaAgent implements Claude Code compatible 8-event hook system:
+
+| Event | Trigger | Use Case |
+|-------|---------|----------|
+| `SessionStart` | Before session begins | Initialize context, load configs |
+| `UserPromptSubmit` | After user message | Log prompts, analyze intent |
+| `PreToolUse` | Before tool execution | Permission checks, input validation |
+| `PostToolUse` | After tool execution | Lint checks, test runs |
+| `PreCompact` | Before context compression | Prepare for compaction |
+| `Stop` | Before session stops | Save state, cleanup |
+| `SubagentStop` | After subagent completes | Aggregate results |
+| `SessionEnd` | After session ends | Finalize audit, memory flush |
+
+Built-in hooks:
+- `permission_check_hook` - Enforce Allow/Ask/Deny patterns
+- `lint_check_hook` - Run linter after file modifications
+- `run_tests_hook` - Run tests after code changes
+- `mcp_tool_filter_hook` - Filter MCP tools by allow/block lists
+
+## Three-Tier Memory System
+
+Claude Code compatible memory hierarchy:
+
+| Tier | Location | Git-tracked | Use Case |
+|------|----------|-------------|----------|
+| Project | `.teaagent/memory.jsonl` | Yes | Team-shared context |
+| Personal | `~/.config/teaagent/memory.jsonl` | No | User-specific notes |
+| Auto-Memory | `.claude/MEMORY.md` | No | Persistent learnings
+
+```python
+from teaagent.memory import MemoryHierarchy
+
+mem = MemoryHierarchy(root="/path/to/project")
+mem.project.add("Found a bug in auth module", tags=("bug", "auth"))
+mem.personal.add("User prefers dark mode", tags=("preference",))
+
+# Search across all tiers
+results = mem.search_all("bug", limit=10)
+```
+
+## Plugin System
+
+Four extension points (Claude Code compatible):
+
+### 1. Commands
+Slash commands that add CLI functionality.
+
+### 2. Agents
+Custom subagents with specialized prompts and tool subsets.
+
+### 3. Hooks
+Lifecycle event handlers (see Hook System above).
+
+### 4. MCP Servers
+External tool integrations.
+
+Discovery order (first match wins):
+1. Project: `<workspace>/.teaagent/plugins/`
+2. User: `~/.config/teaagent/plugins/`
+3. Built-in: `teaagent/plugins/builtin/`
+
+## Context Compaction
+
+Automatic context compression at threshold levels (Claude Code traffic light):
+
+| Level | Token Usage | Behavior |
+|-------|-------------|----------|
+| Green | 0-75% | Normal operation |
+| Yellow | 75-92% | User hints for session save |
+| Red | 92%+ | Auto-triggered compaction |
+
+```python
+from teaagent.context import CompactionManager
+
+manager = CompactionManager()
+if manager.should_compact(token_count=180000):
+    result = manager.check_and_compact(context, 180000)
+    # Tokens saved: result.tokens_saved
+```
+
+## Plan Mode
+
+Read-only exploration mode for safe codebase analysis:
+
+```python
+from teaagent.plan_mode import PlanMode, PlanModeState
+
+plan = PlanMode()
+plan.enable("Analyzing unfamiliar codebase")
+
+# Tools blocked in plan mode:
+# - workspace_write_file
+# - workspace_apply_patch
+# - shell
+
+plan.add_note("Found authentication module at line 42")
+plan.disable()
+```
+
+## ACP (Agent Client Protocol)
+
+IDE integration for VS Code, Zed, and JetBrains:
+
+```
+CLI/TUI → ACPServer → JSON-RPC over stdio → IDE
+```
+
+Methods:
+- `initialize` - Handshake and capability negotiation
+- `tools/list` - List available tools
+- `tools/call` - Execute a tool
+- `completion` - Request agent completion
+- `tools/cancel` - Cancel running tool

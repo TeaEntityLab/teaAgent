@@ -45,7 +45,10 @@ from teaagent.chat_agent import (
 from teaagent.code_analysis import (
     CodeAnalysisConfig,
     CodeReference,
+    CodeRelation,
     LSPServerConfig,
+    extract_tree_sitter_relations,
+    ingest_code_relations_to_graph,
     register_code_analysis_tools,
 )
 from teaagent.code_mode import (
@@ -241,7 +244,10 @@ __all__ = [
     'register_code_analysis_tools',
     'LSPServerConfig',
     'CodeReference',
+    'CodeRelation',
     'CodeAnalysisConfig',
+    'extract_tree_sitter_relations',
+    'ingest_code_relations_to_graph',
     'ContainerCodeModeBackend',
     'ContextCompactor',
     'DPoPValidationResult',

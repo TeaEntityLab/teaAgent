@@ -22,6 +22,11 @@ Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 | Multi-surface operation | Codex and Claude Code support IDE surfaces; Hermes supports messaging gateways; OpenCode supports desktop/client-server surfaces. | Implemented (VSCode surface). | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` |
 | Session continuity and memory | Hermes foregrounds learning loops and memory; terminal agents need resumable sessions. | Implemented. | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` |
 | Reversible change recovery | Production-grade autonomous edit tools need rollback/undo stories. | Implemented. | `test_run_undo_acceptance_flow.py` |
+| Hook lifecycle system | Claude Code and Hermes implement 8-event hooks for extensibility. | Implemented. | `test_hooks.py` |
+| Three-tier memory hierarchy | Claude Code implements Project/Personal/Auto-Memory tiers. | Implemented. | `test_memory.py` |
+| Context compaction | Claude Code triggers auto-compaction at 75-92% token usage. | Implemented. | `test_preflight.py` |
+| Plugin system | Claude Code supports Commands/Agents/Hooks/MCP extension points. | Implemented. | `test_plugins.py` |
+| ACP IDE integration | Protocol for VS Code, Zed, JetBrains integration. | Implemented. | `test_vscode_*_flow.py` |
 
 ## Current Core Use Cases
 
@@ -34,6 +39,11 @@ Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 | Reliability and forensics | Preserve run history, webhook delivery, and audit integrity. | high | N/A (read-only verification) | critical | `test_audit_chain_integrity_flow.py`, `test_webhook_audit_flow.py`, `test_cost_tracking_flow.py` | Implemented baseline |
 | Memory continuity | Reuse successful outcomes across runs without manual logging. | low | clear .teaagent/memory/ | low | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` | Implemented |
 | IDE-assisted workflows | Operate MCP flows and commands from VSCode extension. | low | restart VSCode | low | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` | Implemented |
+| Hook lifecycle management | Execute custom logic on tool events (PreToolUse, PostToolUse, etc.). | medium | disable hooks config | medium | `test_hooks.py` | Implemented |
+| Three-tier memory system | Use Project/Personal/Auto-Memory for context persistence. | low | clear memory files | low | `test_memory.py` | Implemented |
+| Context auto-compaction | Automatically compress context when approaching token limits. | low | N/A | low | `test_preflight.py` | Implemented |
+| Plan mode exploration | Explore codebases in read-only mode without modifications. | low | N/A | low | `test_plan_mode_read_only_flow.py` | Implemented |
+| Plugin extensibility | Add custom Commands, Agents, or MCP integrations. | medium | remove plugin | low | `test_plugins.py` | Implemented |
 
 ## Planned Market-Standard Use Cases
 

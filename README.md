@@ -69,12 +69,17 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **AuditLogger**: Universal event sink — every decision, execution, and error is recorded.
 - **ModelDecisionEngine**: Bridges LLM responses into structured decisions via prompt assembly and JSON parsing.
 - **Workspace Tools**: File read/write, shell inspect/mutate, glob search, git status, hash-anchored editing.
-- **Memory Catalog**: Append-only JSONL store for workspace observations injected into agent prompts.
+- **Memory Catalog**: Three-tier memory system (Project/Personal/Auto-Memory) for persistent context.
 - **Intent Clarification**: Deterministic ambiguity scoring before model invocation.
 - **Run Store**: Persistent JSONL run history with resumable task replay.
 - **Code Mode**: Restricted Python execution with AST validation and pluggable child-process or container backends.
 - **Telemetry**: OpenTelemetry spans plus audit-driven metrics sinks for run and tool lifecycle events.
 - **Heartbeat**: Background audit events for run liveness monitoring and hang detection.
+- **Hook System**: 8-event lifecycle (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop, SubagentStop, SessionEnd) for extensibility.
+- **Plugin System**: Four extension points (Commands, Agents, Hooks, MCP Servers) compatible with Claude Code.
+- **Context Compaction**: Automatic context compression at 75-92% token usage (Claude Code compatible).
+- **Plan Mode**: Read-only exploration mode for safe codebase analysis.
+- **ACP Adapter**: Agent Client Protocol integration for VS Code, Zed, and JetBrains IDEs.
 
 See [docs/architecture.md](docs/architecture.md) for component details, data flow, and extension points.
 
@@ -165,6 +170,19 @@ export XAI_API_KEY=...
 | `allow` | Allows destructive tools for the session |
 | `danger-full-access` | Full access; reserve for trusted automation |
 
+### Plan Mode
+
+Enable read-only exploration mode to analyze codebases without making changes:
+
+```bash
+teaagent agent run gpt "Analyze this codebase" --permission-mode read-only
+```
+
+This is useful for:
+- Understanding unfamiliar code
+- Planning refactoring approaches
+- Code review without accidental modifications
+
 ### Tool Governance
 
 - All tools registered through `ToolRegistry` with name, description, input/output schemas, and annotations.
@@ -230,6 +248,87 @@ teaagent mcp serve --http --port 7330 --auth-token "$MCP_TOKEN"
 ```
 
 `initialize` issues a fresh `Mcp-Session-Id` header; every later request must echo it. Pass `--allowed-origin` (repeatable) to restrict browser callers. See [docs/cli.md](docs/cli.md#mcp-server) for full transport details.
+
+#### MCP Filtering & Sampling
+
+MCP tool calls can be filtered by allow/block lists and configured with sampling parameters:
+
+```python
+from teaagent.mcp_client import MCPClientFactory
+
+client = MCPClientFactory.create_http(
+    "https://mcp-server.example.com/mcp",
+    allowed_tools=["read_file", "search"],
+    blocked_tools=["shell", "delete"],
+    sampling_max_tokens=4096,
+    sampling_temperature=0.7,
+)
+```
+
+### Skills System
+
+TeaAgent supports skill packages for reusable agent behaviors. Skills are discovered from:
+
+1. Project: `.opencode/skill/`
+2. User: `~/.config/opencode/skills/`
+
+Built-in skills:
+- `code-review` - Code review and quality analysis
+- `git-workflow` - Git operations and branch management
+- `testing` - Test writing and execution
+- `refactoring` - Code refactoring guidance
+- `mcp-integration` - MCP server configuration
+- `p0-agent-harness` - P0 harness behavior (built-in)
+
+### Plugin System
+
+Four extension points for customization:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| Commands | Slash commands | `/commit`, `/review` |
+| Agents | Custom subagents | `@code-reviewer`, `@tester` |
+| Hooks | Lifecycle events | PreToolUse, PostToolUse |
+| MCP Servers | External integrations | GitHub, databases |
+
+### Hook System
+
+8-event lifecycle hooks (Claude Code compatible):
+
+- `SessionStart` - Before session begins
+- `UserPromptSubmit` - After user message
+- `PreToolUse` - Before tool execution (can veto)
+- `PostToolUse` - After tool execution
+- `PreCompact` - Before context compaction
+- `Stop` - Before session stops
+- `SubagentStop` - After subagent completes
+- `SessionEnd` - After session ends
+
+```python
+from teaagent.hooks import HookRegistry, permission_check_hook, PermissionMode
+
+registry = HookRegistry()
+registry.register_pre_hook(permission_check_hook(mode=PermissionMode.AUTO))
+```
+
+### Context Compaction
+
+Automatic context compression when token usage exceeds 75-92% (Claude Code traffic light zones):
+
+- Green (0-75%): Normal operation
+- Yellow (75-92%): User hints
+- Red (92%+): Auto-compaction triggered
+
+### ACP (Agent Client Protocol)
+
+IDE integration for VS Code, Zed, and JetBrains via JSON-RPC over stdio:
+
+```bash
+# Run as ACP server
+teaagent acp serve
+```
+
+ ACP enables TeaAgent to run inside ACP-compatible editors with full tool access.
 
 ### 5-Minute Walkthrough
 

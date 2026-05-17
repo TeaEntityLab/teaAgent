@@ -31,6 +31,10 @@ include = ["teaagent*"]
 teaagent = ["py.typed"]
 
 [project.optional-dependencies]
+code-analysis = [
+    "tree-sitter>=0.25.0",
+    "tree-sitter-language-pack>=1.0.0",
+]
 graphqlite = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
@@ -64,6 +68,8 @@ dev = [
     "ruff>=0.4",
     "mypy>=1,<2",
     "pdoc>=14",
+    "tree-sitter>=0.25.0",
+    "tree-sitter-language-pack>=1.0.0",
 ]
 
 [project.scripts]

@@ -4,6 +4,14 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added 8-event Hook System (Claude Code compatible): `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact`, `Stop`, `SubagentStop`, `SessionEnd`. Includes `HookRegistry`, `permission_check_hook`, `lint_check_hook`, `run_tests_hook`, `mcp_tool_filter_hook`, and `PermissionMode` enum.
+- Added Three-Tier Memory System (Claude Code compatible): `MemoryHierarchy` with Project (`.teaagent/memory.jsonl`), Personal (`~/.config/teaagent/memory.jsonl`), and Auto-Memory (`.claude/MEMORY.md`) tiers.
+- Added Context Compaction with traffic light zones: Green (0-75%), Yellow (75-92%), Red (92%+). Implements `CompactionManager` with `should_compact()` and `check_and_compact()`.
+- Added Plugin System with four extension points: Commands, Agents, Hooks, MCP Servers. Includes `PluginRegistry`, `PluginManifest`, `CommandPlugin`, `AgentPlugin`, and built-in plugins (code-reviewer, tester, docs-writer).
+- Added Plan Mode for read-only exploration: `PlanMode` class with `enable()`, `disable()`, `can_execute_tool()` to block writes/shell in exploration mode.
+- Added ACP (Agent Client Protocol) adapter for IDE integration: `ACPServer` for VS Code, Zed, JetBrains with `initialize`, `tools/list`, `tools/call`, `completion`, `tools/cancel` methods.
+- Added FilteredMCPClient with tool filtering (allow/block lists) and sampling configuration (max_tokens, temperature).
+- Added bundled skills: `code-review`, `git-workflow`, `testing`, `refactoring`, `mcp-integration` under `.opencode/skill/`.
 - Added GraphQLite production deployment: `GraphQLitePersistentStore` with WAL mode, 5-version schema migration framework via `SQLiteMigrationStore`/`MigrationRunner`, index strategy (Entity name, Document source/doc_id, EDGE relation), `graph_retrieve` via Cypher traversal, round-trip `sync_to_knowledge_graph`, `graphqlite migrate` CLI, and production deployment guide at `docs/graphqlite-production.md`.
 - Added VS Code extension (`vscode/`) wrapping the CLI with command palette entries (doctor, agent run, preflight, model providers, GraphQLite smoke, TUI), custom task definitions, problem matcher, terminal profile, and TeaAgent output channel.
 - Added API documentation infrastructure: `pdoc>=14` dev dependency, `scripts/build_docs.py` build script covering all submodules, and class-level docstrings on core types (`AgentRunner`, `ToolRegistry`, `ToolAnnotations`, `ToolDefinition`, `RunBudget`, `MemoryEntry`).
