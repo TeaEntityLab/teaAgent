@@ -29,6 +29,7 @@ directory.
 | `test_backend_adapter_flow.py` | Backend adapter routing and fallback | `workspace_knowledge_search` supports `backend=auto` primary/fallback behavior and `workspace_code_parse` routes actions through registered `CodeParseBackend` implementations |
 | `test_agent_fix_test_review_flow.py` | End-to-end code-change loop | Baseline test failure, scoped hash-anchored edit, pytest rerun, diff inspection, and final repair summary |
 | `test_agents_md_injection_flow.py` | Hierarchical instruction injection | Parent/child instruction merge order, fallback filename support (`AGENT.md`, `CLAUDE.md`) |
+| `test_anp_adapter_flow.py` | ANP bidirectional adapter boundary | Inbound ANP-to-local mapping, local-first `auto` routing, remote fallback on local failure, and remote-route endpoint guard |
 | `test_audit_chain_integrity_flow.py` | Audit log integrity | JSONL parseability, unique event IDs, redaction, disk/in-memory event parity, restricted file permissions |
 | `test_cancel_flow.py` | Graceful cancel | Thread-safe cancel token stops runs cleanly and keeps audit state intact |
 | `test_code_analysis_prompt_injection_flow.py` | Code-analysis prompt injection | Enabling code analysis injects `lsp_context` in model payload for code-path tasks without requiring external LSP binaries |

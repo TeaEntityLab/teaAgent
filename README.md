@@ -59,6 +59,7 @@ teaagent agent run gpt "Summarize the test suite" --permission-mode read-only
 - CLI/MCP reference: [docs/cli.md](docs/cli.md)
 - Acceptance coverage: [docs/acceptance.md](docs/acceptance.md)
 - Use-case traceability: [docs/use-cases.md](docs/use-cases.md)
+- Architecture decisions: [docs/adr](docs/adr) (including ANP adapter boundary in ADR 0007)
 
 ## Architecture
 

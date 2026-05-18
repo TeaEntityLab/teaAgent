@@ -157,6 +157,21 @@ implements `chat()` returning an `LLMResponse`. Features include:
 - Cost budget pre-flight.
 - Streaming via `stream=True` and `on_chunk` callbacks.
 
+### 9. External Federation Boundary (ANP Adapter)
+
+TeaAgent treats ANP as an optional external federation surface through a
+bidirectional adapter boundary:
+
+- **Inbound** (`ANP -> TeaAgent`): network requests normalize into internal
+  execution/delegation flows and must still pass `ToolRegistry`,
+  `ApprovalPolicy`, budget enforcement, and `AuditLogger`.
+- **Outbound** (`TeaAgent -> ANP`): selected tasks can be delegated to ANP
+  peers through a typed client, then mapped back into internal result/audit
+  models.
+
+This keeps core runtime governance stable while enabling cross-organization
+agent interoperability. See ADR 0007 for scope and invariants.
+
 ## Data Flow
 
 ```

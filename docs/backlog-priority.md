@@ -45,7 +45,9 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — Medium (P1)
 
-*(No open P1 items in this track.)*
+| Item | Why now | Acceptance target |
+|------|---------|-------------------|
+| ANP bidirectional adapter PoC (inbound/outbound federation boundary without core-runtime replacement) | Establish external agent-network interoperability while preserving TeaAgent governance invariants (ToolRegistry/ApprovalPolicy/Audit). | Add acceptance coverage for inbound mapping, outbound delegation timeout/fallback, and invariant checks that ANP paths cannot bypass approval/audit/budget enforcement. |
 
 ---
 
