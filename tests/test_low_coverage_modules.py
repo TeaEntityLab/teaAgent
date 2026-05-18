@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -312,7 +313,10 @@ class TestRaiseProviderError(unittest.TestCase):
 # Telemetry Transport Tests
 # ---------------------------------------------------------------------------
 
+HAS_OTEL = importlib.util.find_spec('opentelemetry') is not None
 
+
+@unittest.skipUnless(HAS_OTEL, 'opentelemetry not installed')
 class TestTracingHTTPTransport(unittest.TestCase):
     def test_success_creates_span(self) -> None:
         mock_tracer = MagicMock()

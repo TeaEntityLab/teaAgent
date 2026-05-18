@@ -5,9 +5,8 @@ from typing import Any
 
 try:
     from opentelemetry import trace as _otel_trace
-    from opentelemetry.trace import Status, StatusCode
 except ImportError:  # pragma: no cover
-    pass
+    _otel_trace = None  # type: ignore[assignment]
 
 
 class TracingHTTPTransport:
@@ -29,6 +28,8 @@ class TracingHTTPTransport:
         *,
         timeout: int,
     ) -> dict[str, Any]:
+        from opentelemetry.trace import Status, StatusCode
+
         method = 'POST'
         with self._tracer.start_as_current_span('llm.http_call') as span:
             span.set_attribute('http.url', url)
