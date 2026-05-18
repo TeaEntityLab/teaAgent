@@ -47,6 +47,7 @@ class LLMAdapterTests(unittest.TestCase):
                 'opencodezen-go',
                 'openrouter',
                 'vllm',
+                'workers-ai',
             ],
         )
 
@@ -248,6 +249,79 @@ class LLMAdapterTests(unittest.TestCase):
 
         self.assertEqual(
             transport.calls[0]['headers']['HTTP-Referer'], 'https://myapp.com'
+        )
+
+    def test_workers_ai_uses_openai_compatible_shape(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+                'WORKERS_AI_BASE_URL': 'https://api.cloudflare.com/client/v4/accounts/abc/ai/v1',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('workers-ai', transport=transport)
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+        call = transport.calls[0]
+        self.assertEqual(
+            call['url'],
+            'https://api.cloudflare.com/client/v4/accounts/abc/ai/v1/chat/completions',
+        )
+        self.assertEqual(call['headers']['authorization'], 'Bearer cf-token')
+        self.assertEqual(call['payload']['model'], '@cf/meta/llama-3.1-8b-instruct')
+
+    def test_workers_ai_uses_cloudflare_account_id_when_base_url_unset(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+                'CLOUDFLARE_ACCOUNT_ID': 'acct-123',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('workers-ai', transport=transport)
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+        self.assertEqual(
+            transport.calls[0]['url'],
+            'https://api.cloudflare.com/client/v4/accounts/acct-123/ai/v1/chat/completions',
+        )
+
+    def test_workers_ai_requires_account_id_or_base_url(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('workers-ai', transport=transport)
+            with self.assertRaises(LLMConfigurationError):
+                adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+    def test_provider_extra_headers_supports_aig_auth(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+                'WORKERS_AI_BASE_URL': 'https://api.cloudflare.com/client/v4/accounts/abc/ai/v1',
+                'WORKERS_AI_EXTRA_HEADERS': '{"cf-aig-authorization":"Bearer aig-token"}',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('workers-ai', transport=transport)
+            adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(
+            transport.calls[0]['headers']['cf-aig-authorization'],
+            'Bearer aig-token',
         )
 
     def test_openai_streaming_reads_sse_lines_incrementally(self) -> None:

@@ -42,7 +42,7 @@ teaagent --help
 
 ## API Key Setup
 
-TeaAgent supports 10 LLM providers. Set environment variables for the ones you want to use:
+TeaAgent supports 11 LLM providers. Set environment variables for the ones you want to use:
 
 | Provider  | Env Var                | Default Model          | Get Key                                          |
 |-----------|------------------------|------------------------|--------------------------------------------------|
@@ -56,6 +56,7 @@ TeaAgent supports 10 LLM providers. Set environment variables for the ones you w
 | mistral   | `MISTRAL_API_KEY`      | mistral-large-latest | https://console.mistral.ai/api-keys/              |
 | deepseek  | `DEEPSEEK_API_KEY`     | deepseek-chat        | https://platform.deepseek.com/api-keys            |
 | grok      | `XAI_API_KEY`          | grok-3-latest        | https://console.x.ai/                             |
+| workers-ai | `CLOUDFLARE_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID` when `WORKERS_AI_BASE_URL` is unset) | @cf/meta/llama-3.1-8b-instruct | https://dash.cloudflare.com/profile/api-tokens |
 
 \* `opencodezen-go` defaults to `deepseek-v4-flash`. You can still pass `--model` to pick another supported model.
 
@@ -64,13 +65,38 @@ TeaAgent supports 10 LLM providers. Set environment variables for the ones you w
 Copy and source the provided key template:
 
 ```bash
-cp scripts/provider_keys.zsh ~/.teaagent/provider_keys.zsh
+cp scripts/providers_env.zsh ~/.teaagent/providers_env.zsh
 # Edit the file and fill in your keys
-${EDITOR:-vi} ~/.teaagent/provider_keys.zsh
+${EDITOR:-vi} ~/.teaagent/providers_env.zsh
 
 # Add to your shell profile (~/.zshrc):
-echo 'source ~/.teaagent/provider_keys.zsh' >> ~/.zshrc
+echo 'source ~/.teaagent/providers_env.zsh' >> ~/.zshrc
 source ~/.zshrc
+```
+
+Use `.teaagent/env` for per-project overrides. Load it after global defaults:
+
+```bash
+source .teaagent/env
+```
+
+### Optional: macOS Keychain Setup
+
+If you use `~/.teaagent/provider_keys.zsh` with Keychain integration, configure
+or rotate saved keys with:
+
+```bash
+cp scripts/provider_keys_keychain.zsh ~/.teaagent/provider_keys_keychain.zsh
+source ~/.teaagent/provider_keys_keychain.zsh
+teaagent_configure_provider_keys
+```
+
+Suggested load order:
+
+```bash
+source ~/.teaagent/providers_env.zsh
+source ~/.teaagent/provider_keys.zsh
+source .teaagent/env
 ```
 
 ### Manual Setup
@@ -81,6 +107,9 @@ export OPENAI_API_KEY="sk-..."
 export OPENROUTER_API_KEY="sk-or-..."
 export OLLAMA_BASE_URL="http://localhost:11434/v1"
 export VLLM_BASE_URL="http://localhost:8000/v1"
+export WORKERS_AI_BASE_URL="https://api.cloudflare.com/client/v4/accounts/<account_id>/ai/v1"
+# Optional when using AI Gateway authenticated mode:
+# export WORKERS_AI_EXTRA_HEADERS='{"cf-aig-authorization":"Bearer <gateway_token>"}'
 # ... etc
 ```
 
@@ -117,6 +146,15 @@ teaagent doctor model claude
 teaagent doctor model ollama
 teaagent doctor model vllm
 teaagent doctor model opencodezen-go
+teaagent doctor model workers-ai
+teaagent doctor model gpt --wizard
+# Guided Cloudflare AI Gateway + Workers AI check
+teaagent doctor aigateway
+# Guided provider/project/MCP setup
+teaagent doctor providers --wizard
+teaagent doctor providers --wizard --provider gpt --provider workers-ai --write-env --root .
+teaagent doctor project --wizard --root .
+teaagent doctor mcp --wizard --root .
 ```
 
 Send a test prompt:

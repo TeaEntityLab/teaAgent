@@ -149,7 +149,8 @@
             "opencodezen-go",
             "mistral",
             "deepseek",
-            "grok"
+            "grok",
+            "workers-ai"
           ],
           "description": "Default model provider for agent runs."
         },

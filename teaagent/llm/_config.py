@@ -87,6 +87,13 @@ PROVIDER_CONFIGS = {
         base_url='https://api.x.ai/v1',
         base_url_env='XAI_BASE_URL',
     ),
+    'workers-ai': ProviderConfig(
+        name='workers-ai',
+        api_key_env='CLOUDFLARE_API_TOKEN',
+        default_model='@cf/meta/llama-3.1-8b-instruct',
+        base_url='https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1',
+        base_url_env='WORKERS_AI_BASE_URL',
+    ),
 }
 
 
@@ -143,6 +150,7 @@ PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
     'mistral': 0.002,
     'deepseek': 0.00014,
     'grok': 0.003,
+    'workers-ai': 0.0005,
 }
 
 PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
@@ -156,6 +164,7 @@ PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
     'mistral': 0.006,
     'deepseek': 0.00028,
     'grok': 0.015,
+    'workers-ai': 0.0015,
 }
 
 

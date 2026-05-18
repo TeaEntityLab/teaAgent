@@ -21,10 +21,15 @@ from teaagent.cli._handlers import (
     clarify_command,
     completion_command,
     configure_command,
+    doctor_aigateway,
     doctor_all,
+    doctor_env_order,
     doctor_graphqlite,
+    doctor_mcp,
     doctor_migration_command,
     doctor_model,
+    doctor_project,
+    doctor_providers,
     graphqlite_migrate,
     graphqlite_query,
     graphqlite_smoke,
@@ -114,6 +119,11 @@ def build_parser() -> argparse.ArgumentParser:
             'configure': configure_command,
             'doctor_graphqlite': doctor_graphqlite,
             'doctor_model': doctor_model,
+            'doctor_aigateway': doctor_aigateway,
+            'doctor_providers': doctor_providers,
+            'doctor_project': doctor_project,
+            'doctor_mcp': doctor_mcp,
+            'doctor_env_order': doctor_env_order,
             'doctor_all': doctor_all,
             'graphqlite_query': graphqlite_query,
             'graphqlite_smoke': graphqlite_smoke,
@@ -199,8 +209,13 @@ def apply_config_defaults(args: argparse.Namespace) -> None:
         'model': None,
         'permission_mode': PermissionMode.PROMPT.value,
     }
+    command = getattr(args, 'command', None)
+    doctor_command = getattr(args, 'doctor_command', None)
     for key, value in data.items():
         if not hasattr(args, key):
+            continue
+        # Keep `doctor all` semantics stable: without explicit --provider, check all providers.
+        if command == 'doctor' and doctor_command == 'all' and key == 'provider':
             continue
         if getattr(args, key) == defaults.get(key):
             setattr(args, key, value)

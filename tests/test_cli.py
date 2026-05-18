@@ -173,6 +173,221 @@ class CLITests(unittest.TestCase):
             self.assertTrue(payload['ok'])
             self.assertEqual(payload['provider'], 'gpt')
 
+    def test_doctor_model_wizard_uses_keychain_when_prompt_empty(self) -> None:
+        output = io.StringIO()
+        with (
+            patch('teaagent.cli._handlers._doctor.getpass.getpass', return_value=''),
+            patch('teaagent.cli._handlers._doctor.input', return_value=''),
+            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            patch.dict(os.environ, {}, clear=True),
+            redirect_stdout(output),
+        ):
+            security_run.return_value.returncode = 0
+            security_run.return_value.stdout = 'sk-from-keychain\n'
+            exit_code = main(['doctor', 'model', 'gpt', '--wizard'])
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['token_source'], 'keychain')
+
+    def test_doctor_aigateway_reports_missing_base_url(self) -> None:
+        with patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'cf-token'}, clear=True):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(['doctor', 'aigateway'])
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(payload['ok'])
+            self.assertEqual(payload['provider'], 'workers-ai')
+            self.assertEqual(payload['mode'], 'unknown')
+
+    def test_doctor_aigateway_reports_gateway_mode_when_configured(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+                'WORKERS_AI_BASE_URL': 'https://gateway.ai.cloudflare.com/v1/acct/gw/workers-ai/v1',
+                'WORKERS_AI_EXTRA_HEADERS': '{"cf-aig-authorization":"Bearer aig-token"}',
+            },
+            clear=True,
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(['doctor', 'aigateway'])
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload['ok'])
+            self.assertEqual(payload['provider'], 'workers-ai')
+            self.assertEqual(payload['mode'], 'gateway')
+
+    def test_doctor_aigateway_wizard_writes_env(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with (
+                patch(
+                    'teaagent.cli._handlers._doctor.input',
+                    side_effect=['acct123', 'gw123', 'y'],
+                ),
+                patch(
+                    'teaagent.cli._handlers._doctor.getpass.getpass',
+                    side_effect=['cf-token', 'gw-token'],
+                ),
+                patch.dict(os.environ, {}, clear=True),
+                redirect_stdout(output),
+            ):
+                exit_code = main(
+                    ['doctor', 'aigateway', '--wizard', '--write-env', '--root', tmp]
+                )
+
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload['ok'])
+            self.assertEqual(payload['mode'], 'wizard')
+            self.assertEqual(payload['env_status'], 'written')
+            env_path = Path(tmp) / '.teaagent' / 'env'
+            self.assertTrue(env_path.exists())
+            content = env_path.read_text(encoding='utf-8')
+            self.assertIn('CLOUDFLARE_API_TOKEN=cf-token', content)
+            self.assertIn(
+                'WORKERS_AI_BASE_URL=https://gateway.ai.cloudflare.com/v1/acct123/gw123/workers-ai/v1',
+                content,
+            )
+
+    def test_doctor_aigateway_wizard_reads_keychain_token_when_input_empty(
+        self,
+    ) -> None:
+        output = io.StringIO()
+        with (
+            patch(
+                'teaagent.cli._handlers._doctor.input',
+                side_effect=['acct123', 'gw123', 'n'],
+            ),
+            patch(
+                'teaagent.cli._handlers._doctor.getpass.getpass',
+                return_value='',
+            ),
+            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            patch.dict(os.environ, {}, clear=True),
+            redirect_stdout(output),
+        ):
+            security_run.return_value.returncode = 0
+            security_run.return_value.stdout = 'cf-token-from-keychain\n'
+            exit_code = main(['doctor', 'aigateway', '--wizard'])
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload['ok'])
+        self.assertTrue(payload['configured']['CLOUDFLARE_API_TOKEN'])
+
+    def test_doctor_providers_outputs_checks(self) -> None:
+        output = io.StringIO()
+        with (
+            patch('teaagent.cli.check_llm_configuration', return_value=(True, 'ok')),
+            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            redirect_stdout(output),
+        ):
+            security_run.return_value.returncode = 1
+            security_run.return_value.stdout = ''
+            exit_code = main(['doctor', 'providers'])
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload['ok'])
+        self.assertTrue(payload['checks'])
+        self.assertIn('env_loaded', payload['checks'][0])
+        self.assertIn('keychain_present', payload['checks'][0])
+
+    def test_doctor_providers_wizard_sets_env(self) -> None:
+        output = io.StringIO()
+        with (
+            patch(
+                'teaagent.cli._handlers._doctor.getpass.getpass',
+                return_value='sk-test-provider',
+            ),
+            patch.dict(os.environ, {'OPENAI_API_KEY': ''}, clear=True),
+            redirect_stdout(output),
+        ):
+            exit_code = main(['doctor', 'providers', '--wizard', '--provider', 'gpt'])
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertIn('gpt', payload['configured'])
+
+    def test_doctor_providers_wizard_batch_write_env(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with (
+                patch(
+                    'teaagent.cli._handlers._doctor.getpass.getpass',
+                    side_effect=['sk-openai', 'sk-anthropic'],
+                ),
+                patch.dict(
+                    os.environ,
+                    {'OPENAI_API_KEY': '', 'ANTHROPIC_API_KEY': ''},
+                    clear=True,
+                ),
+                redirect_stdout(output),
+            ):
+                exit_code = main(
+                    [
+                        'doctor',
+                        'providers',
+                        '--wizard',
+                        '--provider',
+                        'gpt',
+                        '--provider',
+                        'claude',
+                        '--write-env',
+                        '--root',
+                        tmp,
+                    ]
+                )
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(set(payload['configured']), {'gpt', 'claude'})
+            self.assertEqual(payload['env_status'], 'written')
+            env_content = (Path(tmp) / '.teaagent' / 'env').read_text(encoding='utf-8')
+            self.assertIn('export OPENAI_API_KEY=sk-openai', env_content)
+            self.assertIn('export ANTHROPIC_API_KEY=sk-anthropic', env_content)
+
+    def test_doctor_project_wizard_outputs_next_steps(self) -> None:
+        output = io.StringIO()
+        with (
+            patch(
+                'teaagent.cli._handlers._doctor.input',
+                side_effect=['gpt', 'prompt'],
+            ),
+            redirect_stdout(output),
+        ):
+            exit_code = main(['doctor', 'project', '--wizard', '--root', '.'])
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['provider'], 'gpt')
+        self.assertTrue(payload['next_steps'])
+
+    def test_doctor_mcp_wizard_outputs_launch_command(self) -> None:
+        output = io.StringIO()
+        with (
+            patch(
+                'teaagent.cli._handlers._doctor.input',
+                side_effect=['127.0.0.1', '7330', 'n'],
+            ),
+            redirect_stdout(output),
+        ):
+            exit_code = main(['doctor', 'mcp', '--wizard', '--root', '.'])
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertIn('teaagent mcp serve --http', payload['launch_command'])
+
+    def test_doctor_env_order_reports_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(['doctor', 'env-order', '--root', tmp])
+            payload = json.loads(output.getvalue())
+            self.assertIn(exit_code, (0, 1))
+            self.assertIn('checks', payload)
+            self.assertIn('recommended_order', payload)
+
     def test_model_smoke_outputs_provider_and_content(self) -> None:
         adapter = FakeAdapter(['hello from fake'])
         output = io.StringIO()
@@ -438,6 +653,29 @@ class CLITests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertTrue(payload['ok'])
         self.assertEqual(payload['checks']['providers'][0]['provider'], 'gpt')
+
+    def test_doctor_all_accepts_provider_from_config_string(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = os.path.join(tmp, 'config.json')
+            with open(config, 'w', encoding='utf-8') as handle:
+                json.dump({'provider': 'openrouter'}, handle)
+            output = io.StringIO()
+
+            with (
+                patch(
+                    'teaagent.cli.check_graphqlite_runtime', return_value=(True, 'ok')
+                ),
+                patch(
+                    'teaagent.cli.check_llm_configuration', return_value=(True, 'ok')
+                ),
+                redirect_stdout(output),
+            ):
+                exit_code = main(['--config', config, 'doctor', 'all'])
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload['ok'])
+        self.assertGreaterEqual(len(payload['checks']['providers']), 2)
 
     def test_config_defaults_apply_to_optional_flags(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

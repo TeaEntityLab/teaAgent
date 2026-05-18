@@ -194,6 +194,64 @@ teaagent doctor model opencodezen-go
 teaagent doctor model mistral
 teaagent doctor model deepseek
 teaagent doctor model grok
+teaagent doctor model workers-ai
+teaagent doctor model gpt --wizard
+```
+
+Guided Cloudflare AI Gateway readiness check:
+
+```bash
+teaagent doctor aigateway
+```
+
+This command validates `CLOUDFLARE_API_TOKEN`, `WORKERS_AI_BASE_URL`, and optional
+`WORKERS_AI_EXTRA_HEADERS` (for authenticated gateway mode), then returns a
+step-by-step `next_steps` checklist.
+
+Interactive setup wizard:
+
+```bash
+teaagent doctor aigateway --wizard
+teaagent doctor aigateway --wizard --write-env --root .
+```
+
+Provider setup wizard:
+
+```bash
+teaagent doctor providers
+teaagent doctor providers --wizard
+teaagent doctor providers --wizard --provider gpt --provider claude --write-env --root .
+```
+
+`teaagent doctor providers` now includes token-source signals per provider:
+`env_loaded` and `keychain_present`.
+
+Project onboarding wizard:
+
+```bash
+teaagent doctor project
+teaagent doctor project --wizard --root .
+```
+
+MCP setup wizard:
+
+```bash
+teaagent doctor mcp
+teaagent doctor mcp --wizard --root .
+```
+
+Environment layering check:
+
+```bash
+teaagent doctor env-order --root .
+```
+
+If you use macOS Keychain integration, load and configure keys with:
+
+```bash
+cp scripts/provider_keys_keychain.zsh ~/.teaagent/provider_keys_keychain.zsh
+source ~/.teaagent/provider_keys_keychain.zsh
+teaagent_configure_provider_keys
 ```
 
 Run a smoke prompt:
@@ -223,6 +281,7 @@ export OPENROUTER_API_KEY=...
 export OLLAMA_API_KEY=...    # optional for local deployments
 export VLLM_API_KEY=...      # optional for local deployments
 export OPENCODEZEN_API_KEY=...
+export CLOUDFLARE_API_TOKEN=...
 ```
 
 Optional base URL overrides:
@@ -235,6 +294,7 @@ export OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 export OLLAMA_BASE_URL=http://localhost:11434/v1
 export VLLM_BASE_URL=http://localhost:8000/v1
 export OPENCODEZEN_BASE_URL=https://opencode.ai/zen/go/v1
+export WORKERS_AI_BASE_URL=https://api.cloudflare.com/client/v4/accounts/<account_id>/ai/v1
 ```
 
 Optional proxy/TLS settings:

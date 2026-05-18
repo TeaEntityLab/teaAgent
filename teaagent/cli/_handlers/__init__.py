@@ -14,10 +14,15 @@ from ._audit import (
     audit_show_command,
 )
 from ._doctor import (
+    doctor_aigateway,
     doctor_all,
+    doctor_env_order,
     doctor_graphqlite,
+    doctor_mcp,
     doctor_migration_command,
     doctor_model,
+    doctor_project,
+    doctor_providers,
 )
 from ._mcp import mcp_serve_command
 from ._memory import (
@@ -50,6 +55,11 @@ __all__ = [
     'agent_preflight_command',
     'audit_serve_command',
     'doctor_migration_command',
+    'doctor_aigateway',
+    'doctor_providers',
+    'doctor_project',
+    'doctor_mcp',
+    'doctor_env_order',
     'agent_resume_command',
     'agent_run_show',
     'agent_run_task',

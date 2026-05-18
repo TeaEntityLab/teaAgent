@@ -122,9 +122,20 @@ class ProviderConfig:
         return self.model or os.environ.get(f'{env_prefix}_MODEL') or self.default_model
 
     def resolved_base_url(self) -> str:
-        if self.base_url_env and os.environ.get(self.base_url_env):
-            return os.environ[self.base_url_env].rstrip('/')
-        return self.base_url.rstrip('/')
+        base_url = (
+            os.environ[self.base_url_env].strip()
+            if self.base_url_env and os.environ.get(self.base_url_env)
+            else self.base_url
+        )
+        if '{ACCOUNT_ID}' in base_url:
+            account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '').strip()
+            if account_id:
+                base_url = base_url.replace('{ACCOUNT_ID}', account_id)
+        if '{ACCOUNT_ID}' in base_url:
+            raise LLMConfigurationError(
+                f'{self.name} requires CLOUDFLARE_ACCOUNT_ID or {self.base_url_env}'
+            )
+        return base_url.rstrip('/')
 
 
 class HTTPTransport(Protocol):

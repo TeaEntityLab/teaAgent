@@ -19,6 +19,11 @@ def register(
         subparsers,
         handlers['doctor_graphqlite'],
         handlers['doctor_model'],
+        handlers.get('doctor_aigateway'),
+        handlers.get('doctor_providers'),
+        handlers.get('doctor_project'),
+        handlers.get('doctor_mcp'),
+        handlers.get('doctor_env_order'),
         handlers['doctor_all'],
         migration_handler=handlers.get('doctor_migration'),
     )
@@ -149,6 +154,11 @@ def _doctor(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
     graphqlite_handler: Callable,
     model_handler: Callable,
+    aigateway_handler: Optional[Callable] = None,
+    providers_handler: Optional[Callable] = None,
+    project_handler: Optional[Callable] = None,
+    mcp_handler: Optional[Callable] = None,
+    env_order_handler: Optional[Callable] = None,
     all_handler: Optional[Callable] = None,
     migration_handler: Optional[Callable] = None,
 ) -> None:
@@ -167,7 +177,114 @@ def _doctor(
     mdl.add_argument(
         'provider', choices=available_providers(), help='Model provider to check.'
     )
+    mdl.add_argument(
+        '--wizard',
+        action='store_true',
+        help='Run interactive setup wizard for this provider.',
+    )
+    mdl.add_argument(
+        '--write-env',
+        action='store_true',
+        help='When used with --wizard, write exports to .teaagent/env under --root.',
+    )
+    mdl.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root used by --write-env. Defaults to current directory.',
+    )
     mdl.set_defaults(func=model_handler)
+
+    aig = subs.add_parser(
+        'aigateway',
+        help='Guided check for Cloudflare Workers AI + AI Gateway configuration.',
+    )
+    aig.add_argument(
+        '--wizard',
+        action='store_true',
+        help='Run interactive setup wizard for AI Gateway environment variables.',
+    )
+    aig.add_argument(
+        '--write-env',
+        action='store_true',
+        help='When used with --wizard, write exports to .teaagent/env under --root.',
+    )
+    aig.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root used by --write-env. Defaults to current directory.',
+    )
+    aig.set_defaults(func=aigateway_handler or model_handler)
+
+    providers = subs.add_parser(
+        'providers',
+        help='Guided provider readiness checks and optional key setup.',
+    )
+    providers.add_argument(
+        '--wizard',
+        action='store_true',
+        help='Run interactive provider setup wizard.',
+    )
+    providers.add_argument(
+        '--provider',
+        action='append',
+        choices=available_providers(),
+        default=None,
+        help='Provider to configure in wizard mode. Can be repeated. Defaults to all.',
+    )
+    providers.add_argument(
+        '--write-env',
+        action='store_true',
+        help='When used with --wizard, write configured exports to .teaagent/env under --root.',
+    )
+    providers.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root used by --write-env. Defaults to current directory.',
+    )
+    providers.set_defaults(func=providers_handler or model_handler)
+
+    project = subs.add_parser(
+        'project',
+        help='Guided first-run project readiness wizard.',
+    )
+    project.add_argument(
+        '--wizard',
+        action='store_true',
+        help='Run interactive project setup wizard.',
+    )
+    project.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root for generated next steps. Defaults to current directory.',
+    )
+    project.set_defaults(func=project_handler or model_handler)
+
+    mcp = subs.add_parser(
+        'mcp',
+        help='Guided MCP server setup checks and launch command generation.',
+    )
+    mcp.add_argument(
+        '--wizard',
+        action='store_true',
+        help='Run interactive MCP setup wizard.',
+    )
+    mcp.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root for generated command. Defaults to current directory.',
+    )
+    mcp.set_defaults(func=mcp_handler or model_handler)
+
+    env_order = subs.add_parser(
+        'env-order',
+        help='Check global and project env file layering order.',
+    )
+    env_order.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root to inspect for .teaagent/env. Defaults to current directory.',
+    )
+    env_order.set_defaults(func=env_order_handler or model_handler)
 
     all_checks = subs.add_parser('all', help='Run all environment checks.')
     all_checks.add_argument(

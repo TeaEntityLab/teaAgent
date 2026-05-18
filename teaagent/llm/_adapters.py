@@ -260,7 +260,29 @@ class OpenAICompatibleAdapter:
                 headers['HTTP-Referer'] = os.environ['OPENROUTER_HTTP_REFERER']
             if os.environ.get('OPENROUTER_APP_TITLE'):
                 headers['X-Title'] = os.environ['OPENROUTER_APP_TITLE']
+        headers.update(_provider_extra_headers(self.provider))
         return headers
+
+
+def _provider_extra_headers(provider: str) -> dict[str, str]:
+    env_prefix = provider.upper().replace('-', '_')
+    extra = os.environ.get(f'{env_prefix}_EXTRA_HEADERS')
+    if not extra:
+        return {}
+    try:
+        parsed = json.loads(extra)
+    except json.JSONDecodeError as exc:
+        raise LLMHTTPError(
+            f'invalid {env_prefix}_EXTRA_HEADERS JSON: {exc.msg}'
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise LLMHTTPError(f'{env_prefix}_EXTRA_HEADERS must be a JSON object')
+    normalized: dict[str, str] = {}
+    for key, value in parsed.items():
+        if not isinstance(key, str):
+            raise LLMHTTPError(f'{env_prefix}_EXTRA_HEADERS keys must be strings')
+        normalized[key] = str(value)
+    return normalized
 
 
 class ClaudeAdapter:
