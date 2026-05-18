@@ -70,6 +70,20 @@ from teaagent.context import ContextCompactor
 from teaagent.errors import RunCancelledError
 from teaagent.eval import EvalCase, EvalReport, run_eval
 from teaagent.eval_report import render_html_report
+from teaagent.external_backends import (
+    CodegraphMcpAdapter,
+    CodeParseBackend,
+    CxCliAdapter,
+    FallbackKnowledgeBackend,
+    KnowledgeSearchBackend,
+    LocalKnowledgeAdapter,
+    QmdCliAdapter,
+    QmdMcpAdapter,
+    get_code_parse_backend,
+    get_knowledge_backend,
+    register_code_parse_backend,
+    register_knowledge_backend,
+)
 from teaagent.file_policy import DenyRule, FilePolicy, load_file_policy
 from teaagent.graph_rag import GraphEdge, KnowledgeGraph, graph_retrieve
 from teaagent.graphqlite_production import (
@@ -94,6 +108,11 @@ from teaagent.hooks import (
     post_lint_check_hook,
     run_tests_hook,
     shell_command_hook,
+)
+from teaagent.hybrid_search import (
+    HybridSearchBackend,
+    get_hybrid_backend,
+    register_hybrid_backend,
 )
 from teaagent.intent import (
     ClarificationResult,
@@ -241,6 +260,9 @@ __all__ = [
     'ClarificationResult',
     'CodeModeResult',
     'CodeModeSandbox',
+    'CodeParseBackend',
+    'CodegraphMcpAdapter',
+    'CxCliAdapter',
     'register_code_analysis_tools',
     'LSPServerConfig',
     'CodeReference',
@@ -257,6 +279,7 @@ __all__ = [
     'FilePolicy',
     'EvalCase',
     'EvalReport',
+    'FallbackKnowledgeBackend',
     'FinalAnswer',
     'GraphEdge',
     'GraphQLiteConfig',
@@ -269,6 +292,7 @@ __all__ = [
     'HAS_OTEL',
     'HAS_PLAYWRIGHT',
     'Heartbeat',
+    'HybridSearchBackend',
     'InMemoryMetricsSink',
     'InMemoryOAuthStore',
     'InMemoryRetriever',
@@ -278,6 +302,8 @@ __all__ = [
     'InvalidGrantError',
     'JWTError',
     'KnowledgeGraph',
+    'KnowledgeSearchBackend',
+    'LocalKnowledgeAdapter',
     'LLMConfigurationError',
     'LLMHTTPError',
     'LLMMessage',
@@ -320,6 +346,8 @@ __all__ = [
     'PromptBundle',
     'ProviderConfig',
     'ProviderProfile',
+    'QmdCliAdapter',
+    'QmdMcpAdapter',
     'ReadinessReport',
     'RunBudget',
     'RunCancelledError',
@@ -389,14 +417,20 @@ __all__ = [
     'parse_permission_mode',
     'preflight',
     'register_browser_tools',
+    'register_code_parse_backend',
     'register_git_tools',
+    'register_knowledge_backend',
     'register_subagent_tool',
     'register_workspace_tools',
+    'register_hybrid_backend',
+    'get_hybrid_backend',
     'review_skill',
     'route_model',
     'run_chat_agent',
     'run_eval',
     'run_model_conformance',
+    'get_code_parse_backend',
+    'get_knowledge_backend',
     'serve_mcp_http',
     'serve_mcp_stdio',
     'verify_jwt',

@@ -6,6 +6,12 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
+from teaagent.external_backends import (
+    FallbackKnowledgeBackend,
+    get_code_parse_backend,
+    get_knowledge_backend,
+)
+from teaagent.hybrid_search import get_hybrid_backend
 from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.workspace_tools._config import (
     WorkspaceToolConfig,
@@ -152,6 +158,127 @@ def register_workspace_tools(
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
         handler=lambda args: search_text(config, args),
+    )
+    registry.register(
+        name='workspace_hybrid_index',
+        description='Build or refresh a fallback hybrid index (FTS5 + basic vectors + RRF) for workspace files.',
+        input_schema=object_schema(
+            {
+                'include': 'string',
+                'collection': 'string',
+                'backend': 'string',
+                'clear': 'boolean',
+            },
+            required=[],
+        ),
+        output_schema=object_schema(
+            {
+                'backend': 'string',
+                'collection': 'string',
+                'indexed': 'integer',
+                'skipped': 'integer',
+                'include': 'string',
+                'database': 'string',
+            },
+            required=[
+                'backend',
+                'collection',
+                'indexed',
+                'skipped',
+                'include',
+                'database',
+            ],
+        ),
+        annotations=ToolAnnotations(destructive=True, idempotent=False),
+        handler=lambda args: hybrid_index(config, args),
+    )
+    registry.register(
+        name='workspace_hybrid_search',
+        description='Run hybrid retrieval against an indexed collection with backend selection for local or external adapters.',
+        input_schema=object_schema(
+            {
+                'query': 'string',
+                'limit': 'integer',
+                'collection': 'string',
+                'backend': 'string',
+            },
+            required=['query'],
+        ),
+        output_schema=object_schema(
+            {
+                'backend': 'string',
+                'collection': 'string',
+                'query': 'string',
+                'hits': {'type': 'array', 'items': {'type': 'object'}},
+            },
+            required=['backend', 'collection', 'query', 'hits'],
+        ),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda args: hybrid_search(config, args),
+    )
+    registry.register(
+        name='workspace_knowledge_index',
+        description='Index knowledge with pluggable backend. Use backend=auto for primary-then-fallback behavior.',
+        input_schema=object_schema(
+            {
+                'backend': 'string',
+                'include': 'string',
+                'collection': 'string',
+                'clear': 'boolean',
+                'primary_backend': 'string',
+                'fallback_backend': 'string',
+            },
+            required=[],
+        ),
+        output_schema=object_schema(
+            {'backend': 'string', 'result': {'type': 'object'}},
+            required=['backend', 'result'],
+        ),
+        annotations=ToolAnnotations(destructive=True, idempotent=False),
+        handler=lambda args: knowledge_index(config, args),
+    )
+    registry.register(
+        name='workspace_knowledge_search',
+        description='Search knowledge with pluggable backend. Use backend=auto for primary-then-fallback behavior.',
+        input_schema=object_schema(
+            {
+                'backend': 'string',
+                'query': 'string',
+                'limit': 'integer',
+                'collection': 'string',
+                'primary_backend': 'string',
+                'fallback_backend': 'string',
+            },
+            required=['query'],
+        ),
+        output_schema=object_schema(
+            {'backend': 'string', 'result': {'type': 'object'}},
+            required=['backend', 'result'],
+        ),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda args: knowledge_search(config, args),
+    )
+    registry.register(
+        name='workspace_code_parse',
+        description='Run code parsing/navigation actions via pluggable code_parse backends (cx/codegraph/etc).',
+        input_schema=object_schema(
+            {
+                'backend': 'string',
+                'action': 'string',
+                'path': 'string',
+                'name': 'string',
+                'kind': 'string',
+                'file': 'string',
+                'from': 'string',
+            },
+            required=['action'],
+        ),
+        output_schema=object_schema(
+            {'backend': 'string', 'action': 'string', 'result': {'type': 'object'}},
+            required=['backend', 'action', 'result'],
+        ),
+        annotations=ToolAnnotations(read_only=True, idempotent=True),
+        handler=lambda args: code_parse(config, args),
     )
     registry.register(
         name='workspace_git_status',
@@ -358,6 +485,79 @@ def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
         'truncated': False,
         'offset': offset + skipped + len(matches),
     }
+
+
+def hybrid_index(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    backend_name = str(args.get('backend', 'local'))
+    backend = get_hybrid_backend(backend_name)
+    payload = dict(args)
+    result = backend.index(root=config.root, args=payload)
+    if 'backend' not in result:
+        result['backend'] = backend_name
+    return result
+
+
+def hybrid_search(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    backend_name = str(args.get('backend', 'local'))
+    limit = positive_int_arg(args, 'limit', default=5)
+    backend = get_hybrid_backend(backend_name)
+    payload = dict(args)
+    payload['limit'] = limit
+    result = backend.search(root=config.root, args=payload)
+    if 'backend' not in result:
+        result['backend'] = backend_name
+    return result
+
+
+def knowledge_index(
+    config: WorkspaceToolConfig, args: dict[str, Any]
+) -> dict[str, Any]:
+    backend_name = str(args.get('backend', 'local'))
+    payload = dict(args)
+    backend = _resolve_knowledge_backend(backend_name, payload)
+    result = backend.index(root=config.root, args=payload)
+    return {'backend': backend_name, 'result': result}
+
+
+def knowledge_search(
+    config: WorkspaceToolConfig, args: dict[str, Any]
+) -> dict[str, Any]:
+    backend_name = str(args.get('backend', 'local'))
+    payload = dict(args)
+    payload['limit'] = positive_int_arg(args, 'limit', default=5)
+    backend = _resolve_knowledge_backend(backend_name, payload)
+    result = backend.search(root=config.root, args=payload)
+    return {'backend': backend_name, 'result': result}
+
+
+def code_parse(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    backend_name = str(args.get('backend', 'cx_cli'))
+    action = str(args['action'])
+    backend = get_code_parse_backend(backend_name)
+    payload = dict(args)
+    if action == 'health':
+        result = backend.health(root=config.root)
+    elif action == 'overview':
+        result = backend.overview(root=config.root, args=payload)
+    elif action == 'symbols':
+        result = backend.symbols(root=config.root, args=payload)
+    elif action == 'definition':
+        result = backend.definition(root=config.root, args=payload)
+    elif action == 'references':
+        result = backend.references(root=config.root, args=payload)
+    else:
+        raise ValueError(
+            'action must be one of: health, overview, symbols, definition, references'
+        )
+    return {'backend': backend_name, 'action': action, 'result': result}
+
+
+def _resolve_knowledge_backend(backend_name: str, payload: dict[str, Any]) -> Any:
+    if backend_name != 'auto':
+        return get_knowledge_backend(backend_name)
+    primary = str(payload.pop('primary_backend', 'qmd_mcp'))
+    fallback = str(payload.pop('fallback_backend', 'local'))
+    return FallbackKnowledgeBackend(primary=primary, fallback=fallback)
 
 
 def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:

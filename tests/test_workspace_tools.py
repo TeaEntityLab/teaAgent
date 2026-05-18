@@ -11,6 +11,9 @@ from teaagent import (
     ToolRegistry,
     WorkspaceToolConfig,
     build_workspace_tool_registry,
+    register_code_parse_backend,
+    register_hybrid_backend,
+    register_knowledge_backend,
     register_workspace_tools,
 )
 from teaagent.cli import main
@@ -389,6 +392,164 @@ class WorkspaceToolTests(unittest.TestCase):
             with self.assertRaises(ToolExecutionError) as ctx:
                 registry.execute('workspace_search_text', {'pattern': 'x', 'limit': 0})
             self.assertIn('limit', str(ctx.exception))
+
+    def test_hybrid_index_and_search(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'docs').mkdir()
+            (root / 'docs' / 'auth.md').write_text(
+                'authentication token flow and session refresh', encoding='utf-8'
+            )
+            (root / 'docs' / 'billing.md').write_text(
+                'billing invoice revenue tracking', encoding='utf-8'
+            )
+            registry = build_workspace_tool_registry(root)
+
+            indexed = registry.execute(
+                'workspace_hybrid_index',
+                {'include': 'docs/*.md', 'collection': 'kb', 'clear': True},
+            )
+            searched = registry.execute(
+                'workspace_hybrid_search',
+                {'query': 'authentication token', 'collection': 'kb', 'limit': 3},
+            )
+
+            self.assertEqual(indexed['backend'], 'local')
+            self.assertEqual(indexed['indexed'], 2)
+            self.assertTrue((root / '.teaagent' / 'hybrid_search.sqlite3').exists())
+            self.assertGreaterEqual(len(searched['hits']), 1)
+            self.assertEqual(searched['hits'][0]['path'], 'docs/auth.md')
+
+    def test_hybrid_search_supports_custom_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            class FakeBackend:
+                def index(
+                    self, *, root: Path, args: dict[str, object]
+                ) -> dict[str, object]:
+                    return {
+                        'backend': 'fake',
+                        'collection': str(args.get('collection', 'default')),
+                        'indexed': 1,
+                        'skipped': 0,
+                        'include': str(args.get('include', '**/*')),
+                        'database': str(root / 'fake.db'),
+                    }
+
+                def search(
+                    self, *, root: Path, args: dict[str, object]
+                ) -> dict[str, object]:
+                    return {
+                        'backend': 'fake',
+                        'collection': str(args.get('collection', 'default')),
+                        'query': str(args['query']),
+                        'hits': [
+                            {
+                                'path': 'external://result',
+                                'score': 1.0,
+                                'lexical_score': 0.0,
+                                'vector_score': 1.0,
+                                'snippet': 'external backend',
+                            }
+                        ],
+                    }
+
+            register_hybrid_backend('fake', FakeBackend())
+            indexed = registry.execute(
+                'workspace_hybrid_index',
+                {'backend': 'fake', 'collection': 'kb'},
+            )
+            searched = registry.execute(
+                'workspace_hybrid_search',
+                {'backend': 'fake', 'query': 'hello', 'collection': 'kb'},
+            )
+
+            self.assertEqual(indexed['backend'], 'fake')
+            self.assertEqual(searched['backend'], 'fake')
+            self.assertEqual(searched['hits'][0]['path'], 'external://result')
+
+    def test_workspace_knowledge_search_auto_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            class PrimaryFail:
+                def health(self, *, root: Path):
+                    raise RuntimeError('down')
+
+                def index(self, *, root: Path, args: dict[str, object]):
+                    raise RuntimeError('down')
+
+                def search(self, *, root: Path, args: dict[str, object]):
+                    raise RuntimeError('down')
+
+                def get(self, *, root: Path, args: dict[str, object]):
+                    raise RuntimeError('down')
+
+            class FallbackOk:
+                def health(self, *, root: Path):
+                    return {'ok': True}
+
+                def index(self, *, root: Path, args: dict[str, object]):
+                    return {'source': 'fallback', 'op': 'index'}
+
+                def search(self, *, root: Path, args: dict[str, object]):
+                    return {'source': 'fallback', 'op': 'search'}
+
+                def get(self, *, root: Path, args: dict[str, object]):
+                    return {'source': 'fallback', 'op': 'get'}
+
+            register_knowledge_backend('primary_fail_ws', PrimaryFail())
+            register_knowledge_backend('fallback_ok_ws', FallbackOk())
+
+            result = registry.execute(
+                'workspace_knowledge_search',
+                {
+                    'backend': 'auto',
+                    'primary_backend': 'primary_fail_ws',
+                    'fallback_backend': 'fallback_ok_ws',
+                    'query': 'auth',
+                },
+            )
+            payload = result['result']
+            self.assertEqual(result['backend'], 'auto')
+            self.assertEqual(payload['source'], 'fallback')
+            self.assertTrue(payload['fallback_used'])
+            self.assertIn('primary_error', payload)
+
+    def test_workspace_code_parse_routes_action(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = build_workspace_tool_registry(tmp)
+
+            class FakeCodeParse:
+                def health(self, *, root: Path):
+                    return {'ok': True}
+
+                def overview(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'overview', 'path': args.get('path')}
+
+                def symbols(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'symbols', 'name': args.get('name')}
+
+                def definition(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'definition', 'name': args.get('name')}
+
+                def references(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'references', 'name': args.get('name')}
+
+            register_code_parse_backend('fake_code_parse_ws', FakeCodeParse())
+            result = registry.execute(
+                'workspace_code_parse',
+                {
+                    'backend': 'fake_code_parse_ws',
+                    'action': 'definition',
+                    'name': 'AuthService.login',
+                },
+            )
+
+            self.assertEqual(result['backend'], 'fake_code_parse_ws')
+            self.assertEqual(result['action'], 'definition')
+            self.assertEqual(result['result']['kind'], 'definition')
 
 
 class GitignoreAndPaginationTests(unittest.TestCase):

@@ -271,11 +271,21 @@ Registered tools:
 - `workspace_list_files`: list files by glob.
 - `workspace_search_text`: regex search text files.
 - `workspace_git_status`: run `git status --short`.
+- `workspace_hybrid_index`: local fallback hybrid index builder (FTS5 + basic vector + RRF).
+- `workspace_hybrid_search`: local fallback hybrid retrieval over indexed collections.
+- `workspace_knowledge_index`: pluggable knowledge indexing (`backend` or `backend=auto`).
+- `workspace_knowledge_search`: pluggable knowledge retrieval (`backend` or `backend=auto`).
+- `workspace_code_parse`: pluggable code-navigation action router (`health`, `overview`, `symbols`, `definition`, `references`).
 - `workspace_run_shell_inspect`: run inspect-safe shell commands without destructive permission.
 - `workspace_run_shell_mutate`: run arbitrary shell commands; destructive.
 - `workspace_run_shell`: compatibility alias for `workspace_run_shell_mutate`; destructive.
 
 All path-based tools reject paths that escape the configured workspace root.
+
+Backend notes:
+
+- `workspace_knowledge_*` uses `KnowledgeSearchBackend` registrations and supports fallback routing with `backend=auto` plus optional `primary_backend`/`fallback_backend`.
+- `workspace_code_parse` uses `CodeParseBackend` registrations for tools such as `cx` and `codegraph` adapters without hard-coding one provider.
 
 ## Clarification
 

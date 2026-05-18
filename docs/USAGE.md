@@ -337,6 +337,21 @@ teaagent agent run gpt "review this patch" --route-model
 
 Routes tasks into categories (review, test, code, docs, search, general) and selects a provider-specific model.
 
+### Pluggable Retrieval and Code Parse Backends
+
+TeaAgent now supports adapter-based backend routing for knowledge retrieval and
+code navigation:
+
+- `workspace_knowledge_index` / `workspace_knowledge_search` route through
+  `KnowledgeSearchBackend` implementations.
+- `workspace_code_parse` routes `health`, `overview`, `symbols`, `definition`,
+  and `references` actions through `CodeParseBackend` implementations.
+- `backend=auto` on knowledge tools enables primary-then-fallback behavior
+  (for example, external `qmd` adapter first, local fallback second).
+
+This keeps integrations flexible for qmd/cx/codegraph-like ecosystems without
+hard-coding one external tool.
+
 ## Common Problems
 
 ### "unrecognized arguments: --task"

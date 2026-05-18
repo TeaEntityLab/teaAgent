@@ -32,6 +32,7 @@ TIER_DOC_TESTS: dict[str, tuple[str, ...]] = {
     'p0': TIERS['p0'],
     'p1': TIERS['p1'],
     'p2': (
+        'test_backend_adapter_flow.py',
         'test_external_tool_manifest_compatibility_flow.py',
         'test_remote_mcp_consumption_flow.py',
         'test_ultrawork_flow.py',

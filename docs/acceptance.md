@@ -26,6 +26,7 @@ directory.
 | File | Story | Key assertions |
 |---|---|---|
 | `test_a2a_federation_flow.py` | A2A federation | Remote discovery, partial endpoint failure, capability routing, delegation, context forwarding, agent trace metadata |
+| `test_backend_adapter_flow.py` | Backend adapter routing and fallback | `workspace_knowledge_search` supports `backend=auto` primary/fallback behavior and `workspace_code_parse` routes actions through registered `CodeParseBackend` implementations |
 | `test_agent_fix_test_review_flow.py` | End-to-end code-change loop | Baseline test failure, scoped hash-anchored edit, pytest rerun, diff inspection, and final repair summary |
 | `test_agents_md_injection_flow.py` | Hierarchical instruction injection | Parent/child instruction merge order, fallback filename support (`AGENT.md`, `CLAUDE.md`) |
 | `test_audit_chain_integrity_flow.py` | Audit log integrity | JSONL parseability, unique event IDs, redaction, disk/in-memory event parity, restricted file permissions |
@@ -101,7 +102,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`71 passed`.
+`72 passed`.
 
 <!-- ACCEPTANCE_TIERS:START -->
 
@@ -113,7 +114,7 @@ Use these tiers to control regression scope and release risk:
 |---|---|---|
 | P0 | Safe first-run, policy boundaries, and core coding loop | `test_first_run_experience_flow.py`, `test_daily_cli.py`, `test_p0_slo_flow.py`, `test_plan_mode_read_only_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`, `test_policy_as_code_flow.py` |
 | P1 | Recovery, continuity, and IDE/runtime surface reliability | `test_run_undo_acceptance_flow.py`, `test_session_resume_continuity_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`, `test_mcp_client_flow.py` |
-| P2 | Ecosystem compatibility and extended operations | `test_external_tool_manifest_compatibility_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_ultrawork_flow.py`, `test_webhook_audit_flow.py` |
+| P2 | Ecosystem compatibility and extended operations | `test_backend_adapter_flow.py`, `test_external_tool_manifest_compatibility_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_ultrawork_flow.py`, `test_webhook_audit_flow.py` |
 
 Recommended execution cadence:
 
