@@ -122,6 +122,10 @@ class ProviderConfig:
         return self.model or os.environ.get(f'{env_prefix}_MODEL') or self.default_model
 
     def resolved_base_url(self) -> str:
+        if self.name == 'workers-ai':
+            gateway_compat_url = os.environ.get('AIGATEWAY_BASE_URL', '').strip()
+            if gateway_compat_url:
+                return gateway_compat_url.rstrip('/')
         base_url = (
             os.environ[self.base_url_env].strip()
             if self.base_url_env and os.environ.get(self.base_url_env)

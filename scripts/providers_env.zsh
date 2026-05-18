@@ -48,6 +48,8 @@ export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-}"
 # export OPENROUTER_BASE_URL="https://openrouter.ai/api/v1"
 # export OPENCODEZEN_BASE_URL="https://opencode.ai/zen/go/v1"
 # export WORKERS_AI_BASE_URL="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1"
+# AI Gateway unified OpenAI-compatible endpoint:
+# export AIGATEWAY_BASE_URL="https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/compat"
 # Optional when AI Gateway authenticated mode is enabled:
 # export WORKERS_AI_EXTRA_HEADERS='{"cf-aig-authorization":"Bearer <gateway_token>"}'
 

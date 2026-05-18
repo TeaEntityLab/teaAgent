@@ -202,18 +202,34 @@ Guided Cloudflare AI Gateway readiness check:
 
 ```bash
 teaagent doctor aigateway
+teaagent doctor aigateway --mode workers-ai
+teaagent doctor aigateway --mode compat
 ```
 
-This command validates `CLOUDFLARE_API_TOKEN`, `WORKERS_AI_BASE_URL`, and optional
-`WORKERS_AI_EXTRA_HEADERS` (for authenticated gateway mode), then returns a
-step-by-step `next_steps` checklist.
+This command validates `CLOUDFLARE_API_TOKEN`, a mode-specific base URL
+(`WORKERS_AI_BASE_URL` for `workers-ai` mode or `AIGATEWAY_BASE_URL` for `compat`
+mode), and optional `WORKERS_AI_EXTRA_HEADERS` (for authenticated gateway mode),
+then returns a step-by-step `next_steps` checklist.
+
+Boundary:
+- Workers AI = inference provider endpoint.
+- AI Gateway = optional routing/policy layer in front of Workers AI.
+- `WORKERS_AI_BASE_URL` may use either direct Workers AI (`.../ai/v1`) or AI Gateway compat (`https://gateway.ai.cloudflare.com/.../workers-ai/v1`).
 
 Interactive setup wizard:
 
 ```bash
 teaagent doctor aigateway --wizard
+teaagent doctor aigateway --mode compat --wizard
 teaagent doctor aigateway --wizard --write-env --root .
 ```
+
+`--mode workers-ai` expects the provider route:
+`https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/workers-ai/v1`
+
+`--mode compat` expects the unified OpenAI-compatible route:
+`https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/compat`
+Use model names like `dynamic/default` or `<provider>/<model>`.
 
 Provider setup wizard:
 
@@ -239,6 +255,9 @@ MCP setup wizard:
 teaagent doctor mcp
 teaagent doctor mcp --wizard --root .
 ```
+
+When bearer auth is enabled in wizard mode, output redacts the token from
+`launch_command` to avoid leaking secrets in logs.
 
 Environment layering check:
 

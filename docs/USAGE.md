@@ -82,7 +82,7 @@ source .teaagent/env
 
 ### Optional: macOS Keychain Setup
 
-If you use `~/.teaagent/provider_keys.zsh` with Keychain integration, configure
+If you use `~/.teaagent/provider_keys_keychain.zsh` for Keychain integration, configure
 or rotate saved keys with:
 
 ```bash
@@ -95,9 +95,15 @@ Suggested load order:
 
 ```bash
 source ~/.teaagent/providers_env.zsh
-source ~/.teaagent/provider_keys.zsh
+source ~/.teaagent/provider_keys_keychain.zsh
 source .teaagent/env
 ```
+
+Workers AI vs AI Gateway:
+- Workers AI is the inference provider endpoint.
+- AI Gateway is an optional policy/routing layer in front of Workers AI.
+- `WORKERS_AI_BASE_URL` accepts either a direct Workers AI endpoint (`.../ai/v1`) or a Gateway compat endpoint (`https://gateway.ai.cloudflare.com/.../workers-ai/v1`).
+- For AI Gateway unified OpenAI-compatible routing, set `AIGATEWAY_BASE_URL=https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/compat` and use model names like `dynamic/default`.
 
 ### Manual Setup
 

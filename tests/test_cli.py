@@ -218,10 +218,65 @@ class CLITests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertTrue(payload['ok'])
             self.assertEqual(payload['provider'], 'workers-ai')
-            self.assertEqual(payload['mode'], 'gateway')
+            self.assertEqual(payload['mode'], 'gateway-workers-ai')
+
+    def test_doctor_aigateway_compat_mode_reports_gateway_compat(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+                'AIGATEWAY_BASE_URL': 'https://gateway.ai.cloudflare.com/v1/acct/gw/compat',
+            },
+            clear=True,
+        ):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(['doctor', 'aigateway', '--mode', 'compat'])
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload['ok'])
+            self.assertEqual(payload['requested_mode'], 'compat')
+            self.assertEqual(payload['mode'], 'gateway-compat')
+
+    def test_doctor_aigateway_compat_mode_write_env_without_wizard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with (
+                patch.dict(
+                    os.environ,
+                    {
+                        'CLOUDFLARE_API_TOKEN': 'cf-token',
+                        'AIGATEWAY_BASE_URL': 'https://gateway.ai.cloudflare.com/v1/acct/gw/compat',
+                    },
+                    clear=True,
+                ),
+                redirect_stdout(output),
+            ):
+                exit_code = main(
+                    [
+                        'doctor',
+                        'aigateway',
+                        '--mode',
+                        'compat',
+                        '--write-env',
+                        '--root',
+                        tmp,
+                    ]
+                )
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload['env_status'], 'written')
+            env_content = (Path(tmp) / '.teaagent' / 'env').read_text(encoding='utf-8')
+            self.assertIn(
+                'export AIGATEWAY_BASE_URL=https://gateway.ai.cloudflare.com/v1/acct/gw/compat',
+                env_content,
+            )
 
     def test_doctor_aigateway_wizard_writes_env(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / '.teaagent' / 'env'
+            env_path.parent.mkdir(parents=True, exist_ok=True)
+            env_path.write_text('export OPENAI_API_KEY=sk-existing\n', encoding='utf-8')
             output = io.StringIO()
             with (
                 patch(
@@ -247,9 +302,47 @@ class CLITests(unittest.TestCase):
             env_path = Path(tmp) / '.teaagent' / 'env'
             self.assertTrue(env_path.exists())
             content = env_path.read_text(encoding='utf-8')
+            self.assertIn('OPENAI_API_KEY=sk-existing', content)
             self.assertIn('CLOUDFLARE_API_TOKEN=cf-token', content)
             self.assertIn(
                 'WORKERS_AI_BASE_URL=https://gateway.ai.cloudflare.com/v1/acct123/gw123/workers-ai/v1',
+                content,
+            )
+
+    def test_doctor_aigateway_wizard_writes_compat_base_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with (
+                patch(
+                    'teaagent.cli._handlers._doctor.input',
+                    side_effect=['acct123', 'gw123', 'n'],
+                ),
+                patch(
+                    'teaagent.cli._handlers._doctor.getpass.getpass',
+                    side_effect=['cf-token'],
+                ),
+                patch.dict(os.environ, {}, clear=True),
+                redirect_stdout(output),
+            ):
+                exit_code = main(
+                    [
+                        'doctor',
+                        'aigateway',
+                        '--mode',
+                        'compat',
+                        '--wizard',
+                        '--write-env',
+                        '--root',
+                        tmp,
+                    ]
+                )
+            payload = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload['ok'])
+            self.assertTrue(payload['configured']['AIGATEWAY_BASE_URL'])
+            content = (Path(tmp) / '.teaagent' / 'env').read_text(encoding='utf-8')
+            self.assertIn(
+                'AIGATEWAY_BASE_URL=https://gateway.ai.cloudflare.com/v1/acct123/gw123/compat',
                 content,
             )
 
@@ -309,10 +402,14 @@ class CLITests(unittest.TestCase):
             exit_code = main(['doctor', 'providers', '--wizard', '--provider', 'gpt'])
         payload = json.loads(output.getvalue())
         self.assertEqual(exit_code, 0)
+        self.assertTrue(payload['ok'])
         self.assertIn('gpt', payload['configured'])
 
     def test_doctor_providers_wizard_batch_write_env(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / '.teaagent' / 'env'
+            env_path.parent.mkdir(parents=True, exist_ok=True)
+            env_path.write_text('export GEMINI_API_KEY=sk-existing\n', encoding='utf-8')
             output = io.StringIO()
             with (
                 patch(
@@ -347,6 +444,23 @@ class CLITests(unittest.TestCase):
             env_content = (Path(tmp) / '.teaagent' / 'env').read_text(encoding='utf-8')
             self.assertIn('export OPENAI_API_KEY=sk-openai', env_content)
             self.assertIn('export ANTHROPIC_API_KEY=sk-anthropic', env_content)
+            self.assertIn('export GEMINI_API_KEY=sk-existing', env_content)
+
+    def test_doctor_providers_wizard_fails_when_selected_provider_missing(self) -> None:
+        output = io.StringIO()
+        with (
+            patch('teaagent.cli._handlers._doctor.getpass.getpass', return_value=''),
+            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            patch.dict(os.environ, {'OPENAI_API_KEY': ''}, clear=True),
+            redirect_stdout(output),
+        ):
+            security_run.return_value.returncode = 1
+            security_run.return_value.stdout = ''
+            exit_code = main(['doctor', 'providers', '--wizard', '--provider', 'gpt'])
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 1)
+        self.assertFalse(payload['ok'])
+        self.assertEqual(payload['unresolved'][0]['provider'], 'gpt')
 
     def test_doctor_project_wizard_outputs_next_steps(self) -> None:
         output = io.StringIO()
@@ -377,6 +491,24 @@ class CLITests(unittest.TestCase):
         payload = json.loads(output.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertIn('teaagent mcp serve --http', payload['launch_command'])
+
+    def test_doctor_mcp_wizard_redacts_auth_token_in_launch_command(self) -> None:
+        output = io.StringIO()
+        with (
+            patch(
+                'teaagent.cli._handlers._doctor.input',
+                side_effect=['127.0.0.1', '7330', 'y'],
+            ),
+            patch(
+                'teaagent.cli._handlers._doctor.getpass.getpass', return_value='secret'
+            ),
+            redirect_stdout(output),
+        ):
+            exit_code = main(['doctor', 'mcp', '--wizard', '--root', '.'])
+        payload = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertIn('--auth-token <redacted>', payload['launch_command'])
+        self.assertNotIn('secret', payload['launch_command'])
 
     def test_doctor_env_order_reports_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

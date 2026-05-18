@@ -305,6 +305,26 @@ class LLMAdapterTests(unittest.TestCase):
             with self.assertRaises(LLMConfigurationError):
                 adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
 
+    def test_workers_ai_prefers_aigateway_compat_base_url_when_set(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+                'AIGATEWAY_BASE_URL': 'https://gateway.ai.cloudflare.com/v1/acct/gw/compat',
+                'WORKERS_AI_BASE_URL': 'https://api.cloudflare.com/client/v4/accounts/abc/ai/v1',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('workers-ai', transport=transport)
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+        self.assertEqual(
+            transport.calls[0]['url'],
+            'https://gateway.ai.cloudflare.com/v1/acct/gw/compat/chat/completions',
+        )
+
     def test_provider_extra_headers_supports_aig_auth(self) -> None:
         transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
         with patch.dict(

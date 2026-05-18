@@ -4,6 +4,7 @@ import argparse
 import getpass
 import json
 import os
+import shlex
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -36,19 +37,31 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
 
     provider = 'workers-ai'
     ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
-    base_url = os.environ.get('WORKERS_AI_BASE_URL', '').strip()
+    requested_mode = getattr(args, 'mode', 'workers-ai')
+    compat_base_url = os.environ.get('AIGATEWAY_BASE_URL', '').strip()
+    workers_base_url = os.environ.get('WORKERS_AI_BASE_URL', '').strip()
+    base_url = compat_base_url if requested_mode == 'compat' else workers_base_url
+    if not base_url and requested_mode == 'compat':
+        base_url = workers_base_url
     extra_headers = os.environ.get('WORKERS_AI_EXTRA_HEADERS', '').strip()
+    base_url_env = (
+        'AIGATEWAY_BASE_URL' if requested_mode == 'compat' else 'WORKERS_AI_BASE_URL'
+    )
 
     checks: dict[str, Any] = {
         'api_token': {'ok': ok, 'message': message, 'env': 'CLOUDFLARE_API_TOKEN'},
         'base_url': {
             'ok': bool(base_url),
-            'env': 'WORKERS_AI_BASE_URL',
+            'env': base_url_env,
             'value': base_url or None,
             'message': (
                 'configured'
                 if base_url
-                else 'missing WORKERS_AI_BASE_URL (set to Workers AI or AI Gateway endpoint)'
+                else (
+                    'missing AIGATEWAY_BASE_URL (set to https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/compat)'
+                    if requested_mode == 'compat'
+                    else 'missing WORKERS_AI_BASE_URL (set to Workers AI or AI Gateway workers-ai endpoint)'
+                )
             ),
         },
         'aig_auth_header': {
@@ -64,23 +77,44 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
     }
 
     uses_gateway = base_url.startswith('https://gateway.ai.cloudflare.com/')
+    uses_gateway_compat = uses_gateway and '/compat' in base_url
+    uses_gateway_workers = uses_gateway and '/workers-ai/' in base_url
     uses_workers_ai_direct = '/ai/v1' in base_url and not uses_gateway
     mode = (
-        'gateway'
-        if uses_gateway
+        'gateway-compat'
+        if uses_gateway_compat
+        else 'gateway-workers-ai'
+        if uses_gateway_workers
         else 'workers-ai-direct'
         if uses_workers_ai_direct
         else 'unknown'
     )
     all_ok = checks['api_token']['ok'] and checks['base_url']['ok']
+    endpoint_profile = (
+        'gateway-openai-compatible-unified'
+        if mode == 'gateway-compat'
+        else 'gateway-workers-ai-openai-compatible'
+        if mode == 'gateway-workers-ai'
+        else 'workers-ai-direct-openai-compatible'
+        if mode == 'workers-ai-direct'
+        else 'unrecognized'
+    )
     next_steps = [
         'teaagent doctor model workers-ai',
         'teaagent model smoke workers-ai --prompt "Reply with exactly: ok"',
     ]
-    if mode != 'gateway':
+    if requested_mode == 'compat':
         next_steps.insert(
             0,
-            'Set WORKERS_AI_BASE_URL to AI Gateway compat endpoint: https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/workers-ai/v1',
+            'Set AIGATEWAY_BASE_URL to https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/compat',
+        )
+        next_steps.append(
+            'Use model names like dynamic/default or <provider>/<model> (for example: openai/gpt-5-mini).'
+        )
+    elif mode != 'gateway-workers-ai':
+        next_steps.insert(
+            0,
+            'Set WORKERS_AI_BASE_URL to AI Gateway workers-ai endpoint: https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/workers-ai/v1',
         )
     if not checks['aig_auth_header']['ok']:
         next_steps.append(
@@ -89,10 +123,40 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
     payload = {
         'ok': all_ok,
         'provider': provider,
+        'requested_mode': requested_mode,
         'mode': mode,
+        'endpoint_profile': endpoint_profile,
+        'boundary': {
+            'workers_ai': 'inference provider endpoint',
+            'ai_gateway': 'optional policy/routing layer in front of Workers AI',
+        },
         'checks': checks,
         'next_steps': next_steps,
     }
+
+    if getattr(args, 'write_env', False):
+        root = Path(getattr(args, 'root', '.')).resolve()
+        env_file = root / '.teaagent' / 'env'
+        base_url_key = (
+            'AIGATEWAY_BASE_URL'
+            if requested_mode == 'compat'
+            else 'WORKERS_AI_BASE_URL'
+        )
+        updates: dict[str, str] = {
+            'CLOUDFLARE_API_TOKEN': os.environ.get('CLOUDFLARE_API_TOKEN', '').strip()
+        }
+        if base_url:
+            updates[base_url_key] = base_url
+        if extra_headers:
+            updates['WORKERS_AI_EXTRA_HEADERS'] = extra_headers
+        _merge_env_exports(
+            env_file,
+            updates,
+            '# Updated by `teaagent doctor aigateway --write-env`.',
+        )
+        payload['env_status'] = 'written'
+        payload['env_path'] = str(env_file)
+
     print_json(payload)
     return 0 if all_ok else 1
 
@@ -218,6 +282,7 @@ def doctor_env_order(args: argparse.Namespace) -> int:
 
 
 def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
+    requested_mode = getattr(args, 'mode', 'workers-ai')
     account_id = input('Cloudflare account id: ').strip()
     gateway_id = input('AI Gateway id: ').strip()
     api_token = getpass.getpass('CLOUDFLARE_API_TOKEN (hidden): ').strip()
@@ -237,8 +302,14 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
 
     base_url = ''
     if account_id and gateway_id:
-        base_url = f'https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/workers-ai/v1'
-        os.environ['WORKERS_AI_BASE_URL'] = base_url
+        if requested_mode == 'compat':
+            base_url = (
+                f'https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/compat'
+            )
+            os.environ['AIGATEWAY_BASE_URL'] = base_url
+        else:
+            base_url = f'https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/workers-ai/v1'
+            os.environ['WORKERS_AI_BASE_URL'] = base_url
     if api_token:
         os.environ['CLOUDFLARE_API_TOKEN'] = api_token
     if auth_enabled and gateway_token:
@@ -250,21 +321,24 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
     env_path: str | None = None
     if getattr(args, 'write_env', False):
         root = Path(getattr(args, 'root', '.')).resolve()
-        tea_dir = root / '.teaagent'
-        tea_dir.mkdir(parents=True, exist_ok=True)
-        env_file = tea_dir / 'env'
-        lines = [
-            '# Auto-generated by `teaagent doctor aigateway --wizard`.',
-            f'export CLOUDFLARE_API_TOKEN={api_token}',
-            f'export WORKERS_AI_BASE_URL={base_url}',
-        ]
+        env_file = root / '.teaagent' / 'env'
+        updates = {
+            'CLOUDFLARE_API_TOKEN': api_token,
+            (
+                'AIGATEWAY_BASE_URL'
+                if requested_mode == 'compat'
+                else 'WORKERS_AI_BASE_URL'
+            ): base_url,
+        }
         if auth_enabled and gateway_token:
-            lines.append(
-                'export WORKERS_AI_EXTRA_HEADERS=\'{"cf-aig-authorization":"Bearer '
-                + gateway_token
-                + '"}\''
+            updates['WORKERS_AI_EXTRA_HEADERS'] = json.dumps(
+                {'cf-aig-authorization': f'Bearer {gateway_token}'}
             )
-        env_file.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        _merge_env_exports(
+            env_file,
+            updates,
+            '# Updated by `teaagent doctor aigateway --wizard`.',
+        )
         env_status = 'written'
         env_path = str(env_file)
 
@@ -273,9 +347,14 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
         'ok': ok,
         'mode': 'wizard',
         'provider': 'workers-ai',
+        'requested_mode': requested_mode,
         'configured': {
             'CLOUDFLARE_API_TOKEN': bool(api_token),
-            'WORKERS_AI_BASE_URL': bool(base_url),
+            (
+                'AIGATEWAY_BASE_URL'
+                if requested_mode == 'compat'
+                else 'WORKERS_AI_BASE_URL'
+            ): bool(base_url),
             'WORKERS_AI_EXTRA_HEADERS': bool(auth_enabled and gateway_token),
         },
         'next_steps': [
@@ -341,16 +420,15 @@ def _doctor_model_wizard(args: argparse.Namespace) -> int:
     env_path: str | None = None
     if getattr(args, 'write_env', False):
         root = Path(getattr(args, 'root', '.')).resolve()
-        tea_dir = root / '.teaagent'
-        tea_dir.mkdir(parents=True, exist_ok=True)
-        env_file = tea_dir / 'env'
-        lines = [
-            f'# Auto-generated by `teaagent doctor model {provider} --wizard`.',
-            f'export {env_name}={key}',
-        ]
+        env_file = root / '.teaagent' / 'env'
+        updates = {env_name: key}
         if config.base_url_env and base_url_value:
-            lines.append(f'export {config.base_url_env}={base_url_value}')
-        env_file.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+            updates[config.base_url_env] = base_url_value
+        _merge_env_exports(
+            env_file,
+            updates,
+            f'# Updated by `teaagent doctor model {provider} --wizard`.',
+        )
         env_status = 'written'
         env_path = str(env_file)
 
@@ -410,22 +488,29 @@ def _doctor_providers_wizard(args: argparse.Namespace) -> int:
     env_path: str | None = None
     if getattr(args, 'write_env', False):
         root = Path(getattr(args, 'root', '.')).resolve()
-        tea_dir = root / '.teaagent'
-        tea_dir.mkdir(parents=True, exist_ok=True)
-        env_file = tea_dir / 'env'
-        header = '# Auto-generated by `teaagent doctor providers --wizard`.'
-        body = [header, *env_exports] if env_exports else [header]
-        env_file.write_text('\n'.join(body) + '\n', encoding='utf-8')
+        env_file = root / '.teaagent' / 'env'
+        updates: dict[str, str] = {}
+        for export_line in env_exports:
+            name, _, value = export_line.partition('=')
+            updates[name.replace('export ', '', 1)] = value
+        _merge_env_exports(
+            env_file,
+            updates,
+            '# Updated by `teaagent doctor providers --wizard`.',
+        )
         env_status = 'written'
         env_path = str(env_file)
 
+    unresolved = [item for item in skipped if item.get('reason') == 'missing']
+    ok = len(unresolved) == 0
     payload: dict[str, Any] = {
-        'ok': True,
+        'ok': ok,
         'mode': 'wizard',
         'selected': selected,
         'configured': configured,
         'auto_resolved': auto_resolved,
         'skipped': skipped,
+        'unresolved': unresolved,
         'env_status': env_status,
         'next_steps': [
             'teaagent doctor providers',
@@ -436,7 +521,7 @@ def _doctor_providers_wizard(args: argparse.Namespace) -> int:
     if env_path:
         payload['env_path'] = env_path
     print_json(payload)
-    return 0
+    return 0 if ok else 1
 
 
 def _doctor_project_wizard(args: argparse.Namespace) -> int:
@@ -489,17 +574,52 @@ def _doctor_mcp_wizard(args: argparse.Namespace) -> int:
         auth_token = getpass.getpass('Auth token (hidden): ').strip()
 
     cmd = f'teaagent mcp serve --http --host {host} --port {port} --root {root}'
+    launch_command = cmd
     if auth_token:
-        cmd += f' --auth-token {auth_token}'
+        launch_command += ' --auth-token <redacted>'
     payload = {
         'ok': True,
         'mode': 'wizard',
         'config': {'host': host, 'port': port, 'auth_token': bool(auth_token)},
-        'launch_command': cmd,
-        'next_steps': [cmd],
+        'launch_command': launch_command,
+        'next_steps': [launch_command],
     }
     print_json(payload)
     return 0
+
+
+def _merge_env_exports(env_file: Path, updates: dict[str, str], header: str) -> None:
+    env_file.parent.mkdir(parents=True, exist_ok=True)
+    existing = _read_existing_exports(env_file)
+    merged = {**existing, **{k: v for k, v in updates.items() if v}}
+
+    lines = [header]
+    for key in sorted(merged.keys()):
+        lines.append(f'export {key}={shlex.quote(merged[key])}')
+    env_file.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def _read_existing_exports(env_file: Path) -> dict[str, str]:
+    if not env_file.is_file():
+        return {}
+    exports: dict[str, str] = {}
+    for raw_line in env_file.read_text(encoding='utf-8').splitlines():
+        line = raw_line.strip()
+        if not line.startswith('export '):
+            continue
+        assignment = line[len('export ') :]
+        key, sep, value = assignment.partition('=')
+        if not sep:
+            continue
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        try:
+            exports[key] = shlex.split(value)[0] if value else ''
+        except ValueError:
+            exports[key] = value.strip('"\'')
+    return exports
 
 
 def doctor_all(args: argparse.Namespace) -> int:

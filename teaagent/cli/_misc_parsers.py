@@ -204,6 +204,12 @@ def _doctor(
         help='Run interactive setup wizard for AI Gateway environment variables.',
     )
     aig.add_argument(
+        '--mode',
+        choices=('workers-ai', 'compat'),
+        default='workers-ai',
+        help='Gateway endpoint mode: workers-ai provider path or OpenAI-compatible /compat path.',
+    )
+    aig.add_argument(
         '--write-env',
         action='store_true',
         help='When used with --wizard, write exports to .teaagent/env under --root.',
