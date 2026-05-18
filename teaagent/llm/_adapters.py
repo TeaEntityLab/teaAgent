@@ -155,21 +155,21 @@ class OpenAICompatibleAdapter:
                 }
                 for t in request.tools
             ]
-        if request.response_format:
+        if request.response_format and self._supports_response_format():
             payload['response_format'] = request.response_format
         if request.stream:
             payload['stream'] = True
             return self._complete_streaming(request, model, payload)
-        response = _call_with_retry(
-            self.provider,
-            lambda: self.transport.post_json(
-                f'{self.config.resolved_base_url()}/chat/completions',
-                self._headers(),
-                payload,
-                timeout=self.timeout,
-            ),
-            self.retry_config,
-        )
+        try:
+            response = self._post_chat_completions(payload)
+        except LLMHTTPError as exc:
+            if not (
+                request.response_format and _supports_response_format_fallback(exc)
+            ):
+                raise
+            payload = dict(payload)
+            payload.pop('response_format', None)
+            response = self._post_chat_completions(payload)
         tool_calls = _extract_openai_tool_calls(response)
         try:
             content = _extract_openai_content(self.provider, response)
@@ -187,6 +187,21 @@ class OpenAICompatibleAdapter:
             input_tokens=usage.get('prompt_tokens', 0),
             output_tokens=usage.get('completion_tokens', 0),
             tool_calls=tool_calls,
+        )
+
+    def _supports_response_format(self) -> bool:
+        return self.provider not in {'opencodezen-go', 'opencodezen'}
+
+    def _post_chat_completions(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return _call_with_retry(
+            self.provider,
+            lambda: self.transport.post_json(
+                f'{self.config.resolved_base_url()}/chat/completions',
+                self._headers(),
+                payload,
+                timeout=self.timeout,
+            ),
+            self.retry_config,
         )
 
     def _complete_streaming(
@@ -283,6 +298,20 @@ def _provider_extra_headers(provider: str) -> dict[str, str]:
             raise LLMHTTPError(f'{env_prefix}_EXTRA_HEADERS keys must be strings')
         normalized[key] = str(value)
     return normalized
+
+
+def _supports_response_format_fallback(exc: LLMHTTPError) -> bool:
+    if exc.status_code < 400 or exc.status_code >= 500:
+        return False
+    message = str(exc).lower()
+    if 'response_format' not in message:
+        return False
+    return (
+        'unavailable' in message
+        or 'unsupported' in message
+        or 'not supported' in message
+        or 'invalid_request_error' in message
+    )
 
 
 class ClaudeAdapter:

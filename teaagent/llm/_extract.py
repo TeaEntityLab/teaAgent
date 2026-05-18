@@ -17,9 +17,24 @@ def _extract_openai_content(provider: str, response: dict[str, Any]) -> str:
     if not isinstance(message, dict):
         raise LLMResponseFormatError(f'{provider} response missing message')
     content = message.get('content')
-    if not isinstance(content, str) or not content:
-        raise LLMResponseFormatError(f'{provider} response missing text content')
-    return content
+    if isinstance(content, str) and content:
+        return content
+    if isinstance(content, list):
+        text_parts = [
+            part.get('text', '')
+            for part in content
+            if isinstance(part, dict) and isinstance(part.get('text'), str)
+        ]
+        merged = ''.join(text_parts).strip()
+        if merged:
+            return merged
+    alt_text = first_choice.get('text')
+    if isinstance(alt_text, str) and alt_text:
+        return alt_text
+    output_text = response.get('output_text')
+    if isinstance(output_text, str) and output_text:
+        return output_text
+    raise LLMResponseFormatError(f'{provider} response missing text content')
 
 
 def _first_choice_delta(provider: str, response: dict[str, Any]) -> dict[str, Any]:

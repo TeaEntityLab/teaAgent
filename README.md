@@ -67,7 +67,7 @@ teaagent agent run gpt "Summarize the test suite" --permission-mode read-only
 CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace Tools
                   ↕                              ↕
            LLM Adapters                  ApprovalPolicy
-           (12 providers)                 (5 permission modes)
+           (13 providers)                 (5 permission modes)
 ```
 
 - **AgentRunner**: Iterates between model decisions and tool executions within budget limits.

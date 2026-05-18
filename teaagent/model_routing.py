@@ -69,6 +69,14 @@ PROVIDER_CATEGORY_MODELS = {
         'search': 'opencodezen-go',
         'general': 'opencodezen-go',
     },
+    'opencodezen': {
+        'review': 'opencodezen',
+        'test': 'opencodezen',
+        'code': 'opencodezen',
+        'docs': 'opencodezen',
+        'search': 'opencodezen',
+        'general': 'opencodezen',
+    },
 }
 
 

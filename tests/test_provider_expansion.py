@@ -19,6 +19,7 @@ class TestProviderExpansion(unittest.TestCase):
         self.assertIn('grok', providers)
         self.assertIn('workers-ai', providers)
         self.assertIn('aigateway', providers)
+        self.assertIn('opencodezen', providers)
 
     def test_mistral_config(self) -> None:
         config = PROVIDER_CONFIGS['mistral']
@@ -41,7 +42,14 @@ class TestProviderExpansion(unittest.TestCase):
     def test_new_providers_use_openai_compatible_adapter(self) -> None:
         from teaagent.llm._adapters import OpenAICompatibleAdapter
 
-        for provider in ('mistral', 'deepseek', 'grok', 'workers-ai', 'aigateway'):
+        for provider in (
+            'mistral',
+            'deepseek',
+            'grok',
+            'workers-ai',
+            'aigateway',
+            'opencodezen',
+        ):
             adapter = create_llm_adapter(provider)
             self.assertIsInstance(
                 adapter,
@@ -50,8 +58,8 @@ class TestProviderExpansion(unittest.TestCase):
             )
 
     def test_total_provider_count(self) -> None:
-        """Verify we have at least 12 providers now."""
-        self.assertGreaterEqual(len(available_providers()), 12)
+        """Verify we have at least 13 providers now."""
+        self.assertGreaterEqual(len(available_providers()), 13)
 
 
 if __name__ == '__main__':

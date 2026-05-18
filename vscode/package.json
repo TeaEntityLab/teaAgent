@@ -146,6 +146,7 @@
             "openrouter",
             "ollama",
             "vllm",
+            "opencodezen",
             "opencodezen-go",
             "mistral",
             "deepseek",

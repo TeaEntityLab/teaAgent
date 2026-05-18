@@ -18,6 +18,7 @@ from teaagent import (
 )
 from teaagent.cli import main
 from teaagent.llm import LLMConfigurationError
+from teaagent.llm._types import LLMHTTPError
 
 
 class FakeTransport:
@@ -30,6 +31,21 @@ class FakeTransport:
             {'url': url, 'headers': headers, 'payload': payload, 'timeout': timeout}
         )
         return self.response
+
+
+class SequenceTransport:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = []
+
+    def post_json(self, url, headers, payload, *, timeout):
+        self.calls.append(
+            {'url': url, 'headers': headers, 'payload': payload, 'timeout': timeout}
+        )
+        current = self.responses.pop(0)
+        if isinstance(current, Exception):
+            raise current
+        return current
 
 
 class LLMAdapterTests(unittest.TestCase):
@@ -45,6 +61,7 @@ class LLMAdapterTests(unittest.TestCase):
                 'grok',
                 'mistral',
                 'ollama',
+                'opencodezen',
                 'opencodezen-go',
                 'openrouter',
                 'vllm',
@@ -109,6 +126,94 @@ class LLMAdapterTests(unittest.TestCase):
             )
 
         self.assertIn('response_format', transport.calls[0]['payload'])
+
+    def test_openai_adapter_fallbacks_when_response_format_not_supported(self) -> None:
+        transport = SequenceTransport(
+            [
+                LLMHTTPError(
+                    'HTTP 400: {"error":{"message":"This response_format type is unavailable now","type":"invalid_request_error"}}',
+                    status_code=400,
+                ),
+                {
+                    'choices': [
+                        {'message': {'content': '{"type":"final","content":"ok"}'}}
+                    ]
+                },
+            ]
+        )
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gpt', transport=transport, model='gpt-test')
+            response = adapter.complete(
+                LLMRequest(
+                    messages=[LLMMessage('user', 'hi')],
+                    response_format={
+                        'type': 'json_schema',
+                        'json_schema': {
+                            'name': 'x',
+                            'strict': True,
+                            'schema': {'type': 'object'},
+                        },
+                    },
+                )
+            )
+
+        self.assertEqual(response.content, '{"type":"final","content":"ok"}')
+        self.assertIn('response_format', transport.calls[0]['payload'])
+        self.assertNotIn('response_format', transport.calls[1]['payload'])
+
+    def test_opencodezen_go_ignores_response_format(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'OPENCODEZEN_API_KEY': 'key',
+                'OPENCODEZEN_BASE_URL': 'https://local.test/v1',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('opencodezen-go', transport=transport)
+            adapter.complete(
+                LLMRequest(
+                    messages=[LLMMessage('user', 'hi')],
+                    response_format={
+                        'type': 'json_schema',
+                        'json_schema': {
+                            'name': 'x',
+                            'strict': True,
+                            'schema': {'type': 'object'},
+                        },
+                    },
+                )
+            )
+
+        self.assertNotIn('response_format', transport.calls[0]['payload'])
+
+    def test_opencodezen_ignores_response_format(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'OPENCODEZEN_API_KEY': 'key',
+                'OPENCODEZEN_COMPAT_BASE_URL': 'https://compat.local.test/v1',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('opencodezen', transport=transport)
+            adapter.complete(
+                LLMRequest(
+                    messages=[LLMMessage('user', 'hi')],
+                    response_format={
+                        'type': 'json_schema',
+                        'json_schema': {
+                            'name': 'x',
+                            'strict': True,
+                            'schema': {'type': 'object'},
+                        },
+                    },
+                )
+            )
+
+        self.assertNotIn('response_format', transport.calls[0]['payload'])
 
     def test_openrouter_adapter_uses_openai_compatible_shape(self) -> None:
         transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
@@ -190,6 +295,24 @@ class LLMAdapterTests(unittest.TestCase):
             adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
 
         self.assertEqual(transport.calls[0]['payload']['model'], 'deepseek-v4-pro')
+
+    def test_opencodezen_is_openai_compatible_and_uses_its_api(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'OPENCODEZEN_API_KEY': 'key',
+                'OPENCODEZEN_COMPAT_BASE_URL': 'https://compat.local.test/v1',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('opencodezen', transport=transport)
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+        self.assertEqual(
+            transport.calls[0]['url'], 'https://compat.local.test/v1/chat/completions'
+        )
 
     def test_configuration_check_reports_missing_key(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
@@ -426,6 +549,30 @@ class LLMAdapterTests(unittest.TestCase):
 
             with self.assertRaises(LLMResponseFormatError):
                 adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+    def test_openai_adapter_accepts_message_content_parts_list(self) -> None:
+        transport = FakeTransport(
+            {
+                'choices': [
+                    {'message': {'content': [{'type': 'output_text', 'text': 'ok'}]}}
+                ]
+            }
+        )
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gpt', transport=transport, model='gpt-test')
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+
+    def test_openai_adapter_accepts_choice_text_fallback(self) -> None:
+        transport = FakeTransport(
+            {'choices': [{'message': {'content': ''}, 'text': 'ok'}]}
+        )
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gpt', transport=transport, model='gpt-test')
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
 
     def test_claude_adapter_rejects_malformed_response(self) -> None:
         transport = FakeTransport({'content': [{'type': 'tool_use'}]})

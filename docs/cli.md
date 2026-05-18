@@ -190,6 +190,7 @@ teaagent doctor model gemini
 teaagent doctor model openrouter
 teaagent doctor model ollama
 teaagent doctor model vllm
+teaagent doctor model opencodezen
 teaagent doctor model opencodezen-go
 teaagent doctor model mistral
 teaagent doctor model deepseek

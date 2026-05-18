@@ -42,7 +42,7 @@ teaagent --help
 
 ## API Key Setup
 
-TeaAgent supports 12 LLM providers. Set environment variables for the ones you want to use:
+TeaAgent supports 13 LLM providers. Set environment variables for the ones you want to use:
 
 | Provider  | Env Var                | Default Model          | Get Key                                          |
 |-----------|------------------------|------------------------|--------------------------------------------------|
@@ -52,6 +52,7 @@ TeaAgent supports 12 LLM providers. Set environment variables for the ones you w
 | openrouter| `OPENROUTER_API_KEY`   | openai/gpt-4o-mini     | https://openrouter.ai/settings/keys               |
 | ollama    | `OLLAMA_API_KEY` (optional) | llama3.2         | Local server (default `http://localhost:11434/v1`) |
 | vllm      | `VLLM_API_KEY` (optional) | meta-llama/Llama-3.1-8B-Instruct | Local server (default `http://localhost:8000/v1`) |
+| opencodezen | `OPENCODEZEN_API_KEY` | deepseek-v4-flash-free* | https://opencode.ai/settings                      |
 | opencodezen-go | `OPENCODEZEN_API_KEY` | deepseek-v4-flash* | https://opencode.ai/settings                      |
 | mistral   | `MISTRAL_API_KEY`      | mistral-large-latest | https://console.mistral.ai/api-keys/              |
 | deepseek  | `DEEPSEEK_API_KEY`     | deepseek-chat        | https://platform.deepseek.com/api-keys            |
@@ -59,7 +60,7 @@ TeaAgent supports 12 LLM providers. Set environment variables for the ones you w
 | workers-ai | `CLOUDFLARE_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID` when `WORKERS_AI_BASE_URL` is unset) | @cf/meta/llama-3.1-8b-instruct | https://dash.cloudflare.com/profile/api-tokens |
 | aigateway | `CLOUDFLARE_API_TOKEN` (+ `AIGATEWAY_BASE_URL` optional) | openai/gpt-4o-mini | https://dash.cloudflare.com/profile/api-tokens |
 
-\* `opencodezen-go` defaults to `deepseek-v4-flash`. You can still pass `--model` to pick another supported model.
+\* `opencodezen` defaults to `deepseek-v4-flash-free`, `opencodezen-go` defaults to `deepseek-v4-flash`. You can still pass `--model` to pick another supported model.
 
 ### Lazy Setup (Recommended)
 
@@ -152,6 +153,7 @@ teaagent doctor model gpt
 teaagent doctor model claude
 teaagent doctor model ollama
 teaagent doctor model vllm
+teaagent doctor model opencodezen
 teaagent doctor model opencodezen-go
 teaagent doctor model workers-ai
 teaagent doctor model gpt --wizard
@@ -284,7 +286,7 @@ teaagent> ask which ones are test files?
 | `session switch <id>` | Switch to a saved session |
 | `ask <task>` | Run an agent task |
 | `ask --clarify <task>` | Run with ambiguity check first |
-| `provider <name>` | Set LLM provider (gpt, claude, gemini, openrouter, ollama, vllm, opencodezen-go) |
+| `provider <name>` | Set LLM provider (gpt, claude, gemini, openrouter, ollama, vllm, opencodezen, opencodezen-go) |
 | `model <name>` | Override model name |
 | `permission <mode>` | Set permission mode |
 | `destructive on/off` | Toggle destructive tool access |
