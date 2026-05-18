@@ -134,14 +134,17 @@ def test_external_skill_package_with_extra_metadata_loads(tmp_path: Path) -> Non
     skill_dir = tmp_path / '.opencode' / 'skill' / 'community-style-skill'
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / 'SKILL.md').write_text(
-        '# Community Skill\nPrefer deterministic checks.\n', encoding='utf-8'
+        '---\nname: community-style-skill\ndescription: external package skill\n---\n\n# Community Skill\nPrefer deterministic checks.\n',
+        encoding='utf-8',
     )
     (skill_dir / 'metadata.json').write_text(
         json.dumps({'vendor': 'community', 'version': '1.0.0'}), encoding='utf-8'
     )
     (skill_dir / 'README.md').write_text('extra metadata docs', encoding='utf-8')
 
-    with patch('teaagent.skill_loader._USER_SKILL_DIR', tmp_path / '.missing-skills'):
+    with patch(
+        'teaagent.skill_loader._USER_SKILL_DIRS', [tmp_path / '.missing-skills']
+    ):
         skills = load_skills(tmp_path)
     assert len(skills) == 1
     assert skills[0].name == 'community-style-skill'

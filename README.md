@@ -278,8 +278,37 @@ client = MCPClientFactory.create_http(
 
 TeaAgent supports skill packages for reusable agent behaviors. Skills are discovered from:
 
-1. Project: `.opencode/skill/`
-2. User: `~/.config/opencode/skills/`
+1. Project: `.config/agent/skills/` (highest priority)
+2. Project: `.claude/skills/`
+3. Project: `.opencode/skill/`
+4. Project (legacy/plural alias): `.opencode/skills/`
+5. User: `~/.config/agent/skills/`
+6. User: `~/.claude/skills/`
+7. User: `~/.config/opencode/skills/`
+
+You can override the discovery order in `.teaagent/config.json`:
+
+```json
+{
+  "skill_search_dirs": [
+    ".config/agent/skills",
+    ".claude/skills",
+    ".opencode/skill"
+  ]
+}
+```
+
+You can also choose a source profile:
+
+```json
+{
+  "skill_source_profile": "default"
+}
+```
+
+- `default`: `.config/agent`, `.claude`, `.opencode`
+- `extended`: `default` plus `.codex`, `.gemini`, `.hermes`
+- `custom`: requires `skill_search_dirs` and only uses that list
 
 Built-in skills:
 - `code-review` - Code review and quality analysis

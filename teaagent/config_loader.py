@@ -67,6 +67,16 @@ CONFIG_KEYS: dict[str, dict[str, Any]] = {
         'default': False,
         'type': bool,
     },
+    'skill_search_dirs': {
+        'env': 'TEAAGENT_SKILL_SEARCH_DIRS',
+        'default': None,
+        'type': list,
+    },
+    'skill_source_profile': {
+        'env': 'TEAAGENT_SKILL_SOURCE_PROFILE',
+        'default': 'default',
+        'type': str,
+    },
 }
 
 
@@ -96,6 +106,21 @@ class ResolvedConfig:
 def _coerce(value: Any, typ: type) -> Any:
     if value is None:
         return None
+    if typ is list:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            if text.startswith('['):
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError:
+                    return [item.strip() for item in text.split(',') if item.strip()]
+                return parsed if isinstance(parsed, list) else [text]
+            return [item.strip() for item in text.split(',') if item.strip()]
+        return [value]
     if typ is int:
         return int(value)
     if typ is float:

@@ -5,7 +5,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
@@ -35,7 +35,11 @@ from teaagent.prompt import (
     parse_model_decision,
 )
 from teaagent.runner import AgentRunner, ApprovalHandler, Decision, RunResult
-from teaagent.skill_loader import SkillContent, load_skills
+from teaagent.skill_loader import (
+    SkillContent,
+    SkillSourceProfile,
+    load_skills_with_report,
+)
 from teaagent.subagents import SubagentManager, register_subagent_tools
 from teaagent.tools import ToolRegistry
 from teaagent.workspace_tools import (
@@ -67,6 +71,8 @@ class ChatAgentConfig:
     subagent_manager: Optional[SubagentManager] = None
     code_analysis_config: Optional[CodeAnalysisConfig] = None
     enable_git_tools: bool = False
+    skill_search_dirs: Optional[list[str]] = None
+    skill_source_profile: SkillSourceProfile = 'default'
     hook_registry: Optional[HookRegistry] = None
     auto_mode_config: Optional[AutoModeConfig] = None
 
@@ -107,6 +113,16 @@ class ChatAgentConfig:
             git_enabled = rc.get('git_tools_enabled')
             if isinstance(git_enabled, bool) and git_enabled:
                 profile_overrides['enable_git_tools'] = True
+        if 'skill_search_dirs' not in kwargs:
+            configured_skill_dirs = rc.get('skill_search_dirs')
+            if isinstance(configured_skill_dirs, list):
+                profile_overrides['skill_search_dirs'] = [
+                    str(item) for item in configured_skill_dirs
+                ]
+        if 'skill_source_profile' not in kwargs:
+            configured_profile = rc.get('skill_source_profile')
+            if configured_profile in {'default', 'extended', 'custom'}:
+                profile_overrides['skill_source_profile'] = configured_profile
 
         merged = {**profile_overrides, **kwargs}
         return cls(root=resolved_root, **merged)
@@ -224,11 +240,44 @@ def run_chat_agent(
         register_git_tools(tool_registry, GitToolConfig(root=config.root))
     if _registry_fresh:
         register_browser_tools(tool_registry)
+    run_id = uuid4().hex
     project_instructions = load_project_instructions(config.root)
     memories = memory_entries_to_prompt(
         MemoryCatalog(config.root).search(task, limit=config.memory_limit)
     )
-    active_skills = load_skills(config.root)
+    audit_logger = audit or AuditLogger()
+    if config.skill_source_profile == 'custom' and not config.skill_search_dirs:
+        raise ValueError('skill_source_profile=custom requires skill_search_dirs')
+    skill_report = load_skills_with_report(
+        config.root,
+        preferred_dirs=cast(Optional[list[str | Path]], config.skill_search_dirs),
+        source_profile=config.skill_source_profile,
+    )
+    active_skills = skill_report.skills
+    audit_logger.record(
+        'skill_load',
+        run_id,
+        searched_dirs=[str(path) for path in skill_report.searched_dirs],
+        loaded=[str(skill.path) for skill in active_skills],
+        skipped=[
+            {
+                'path': str(item.skill_path),
+                'reason': item.reason,
+                'findings': [
+                    {
+                        'severity': finding.severity,
+                        'message': finding.message,
+                    }
+                    for finding in (item.review.findings if item.review else [])
+                ],
+            }
+            for item in skill_report.skipped
+        ],
+        warnings=[
+            {'path': str(warning.skill_path), 'message': warning.message}
+            for warning in skill_report.warnings
+        ],
+    )
     runner_budget = RunBudget(
         max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls
     )
@@ -244,7 +293,6 @@ def run_chat_agent(
         chat_messages=config.chat_messages,
         skills=active_skills,
     )
-    audit_logger = audit or AuditLogger()
     runner = AgentRunner(
         registry=tool_registry,
         audit=audit_logger,
@@ -260,7 +308,6 @@ def run_chat_agent(
         cancel_token=config.cancel_token,
         auto_mode_config=config.auto_mode_config,
     )
-    run_id = uuid4().hex
     heartbeat: Optional[Heartbeat] = None
     if config.heartbeat_seconds > 0:
         heartbeat = Heartbeat(

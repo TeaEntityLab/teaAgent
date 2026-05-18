@@ -199,7 +199,16 @@ from teaagent.runner import (
     FinalAnswer,
     ToolRequest,
 )
-from teaagent.skill_loader import SkillContent, load_skills, skills_to_prompt_section
+from teaagent.skill_loader import (
+    SkillContent,
+    SkillLoadReport,
+    SkillLoadSkipped,
+    SkillLoadWarning,
+    discover_skill_search_dirs,
+    load_skills,
+    load_skills_with_report,
+    skills_to_prompt_section,
+)
 from teaagent.skill_review import SkillReviewResult, review_skill
 from teaagent.stateless_mcp import (
     StatelessMCPRequest,
@@ -369,12 +378,17 @@ __all__ = [
     'RunSummary',
     'SQLiteOAuthStore',
     'SkillContent',
+    'SkillLoadReport',
+    'SkillLoadSkipped',
+    'SkillLoadWarning',
     'SkillReviewResult',
     'SubagentDef',
     'SubagentManager',
     'SubagentSession',
     'load_file_policy',
     'load_skills',
+    'load_skills_with_report',
+    'discover_skill_search_dirs',
     'skills_to_prompt_section',
     'StatelessMCPRequest',
     'StatelessMCPResponse',

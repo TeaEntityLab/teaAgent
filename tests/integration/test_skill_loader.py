@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from teaagent.skill_loader import (
+    discover_skill_search_dirs,
     load_skills,
     skills_to_prompt_section,
 )
@@ -18,6 +19,8 @@ def _write_skill(parent: Path, name: str, content: str) -> Path:
     skill_dir = parent / name
     skill_dir.mkdir(parents=True, exist_ok=True)
     skill_file = skill_dir / 'SKILL.md'
+    if not content.startswith('---\n'):
+        content = f'---\nname: {name}\ndescription: test skill {name}\n---\n\n{content}'
     skill_file.write_text(content, encoding='utf-8')
     return skill_file
 
@@ -71,7 +74,7 @@ def test_load_skills_empty_when_no_project_dir(tmp_path, monkeypatch):
     # Monkeypatch the user-level skill dir to a non-existent path so user skills don't interfere
     import teaagent.skill_loader as sl
 
-    monkeypatch.setattr(sl, '_USER_SKILL_DIR', tmp_path / 'nonexistent_user_skills')
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [tmp_path / 'nonexistent_user_skills'])
     skills = load_skills(tmp_path)
     assert skills == []
 
@@ -80,7 +83,7 @@ def test_load_skills_skips_dirs_without_skill_md(tmp_path, monkeypatch):
     """Dirs without SKILL.md are skipped; user skills don't interfere."""
     import teaagent.skill_loader as sl
 
-    monkeypatch.setattr(sl, '_USER_SKILL_DIR', tmp_path / 'nonexistent_user_skills')
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [tmp_path / 'nonexistent_user_skills'])
 
     skill_dir = tmp_path / '.opencode' / 'skill'
     (skill_dir / 'no-skill-md').mkdir(parents=True, exist_ok=True)
@@ -124,3 +127,48 @@ def test_skills_injected_into_prompt_system(tmp_path):
         skills=skills,
     )
     assert 'Always generate docstrings.' in bundle.system
+
+
+def test_discover_skill_search_dirs_priority_order(tmp_path, monkeypatch):
+    import teaagent.skill_loader as sl
+
+    agent_dir = tmp_path / '.config' / 'agent' / 'skills'
+    claude_dir = tmp_path / '.claude' / 'skills'
+    opencode_dir = tmp_path / '.opencode' / 'skill'
+    for path in (agent_dir, claude_dir, opencode_dir):
+        path.mkdir(parents=True, exist_ok=True)
+    user_dir = tmp_path / 'user_skills'
+    user_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [user_dir])
+
+    dirs = discover_skill_search_dirs(tmp_path)
+    assert dirs[:3] == [agent_dir, claude_dir, opencode_dir]
+
+
+def test_preferred_dirs_override_default_discovery_order(tmp_path):
+    opencode_dir = tmp_path / '.opencode' / 'skill'
+    opencode_dir.mkdir(parents=True, exist_ok=True)
+    _write_skill(opencode_dir, 'shared', '# OpenCode\nfrom opencode')
+    custom_dir = tmp_path / 'custom-skills'
+    custom_dir.mkdir(parents=True, exist_ok=True)
+    _write_skill(custom_dir, 'shared', '# Custom\nfrom custom')
+
+    skills = load_skills(tmp_path, preferred_dirs=['custom-skills', '.opencode/skill'])
+    shared = [s for s in skills if s.name == 'shared']
+    assert len(shared) == 1
+    assert 'from custom' in shared[0].content
+
+
+def test_extended_profile_discovers_codex_dir(tmp_path, monkeypatch):
+    import teaagent.skill_loader as sl
+
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(sl, '_EXTENDED_USER_SKILL_DIRS', [])
+    codex_dir = tmp_path / '.codex' / 'skills'
+    codex_dir.mkdir(parents=True, exist_ok=True)
+    _write_skill(codex_dir, 'codex-skill', '# Codex\nfrom codex')
+
+    skills = load_skills(tmp_path, source_profile='extended')
+    found = [s for s in skills if s.name == 'codex-skill']
+    assert len(found) == 1
+    assert 'from codex' in found[0].content

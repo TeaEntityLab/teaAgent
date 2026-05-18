@@ -206,6 +206,8 @@ def test_config_keys_includes_known_keys():
     assert 'max_tool_calls' in CONFIG_KEYS
     assert 'model' in CONFIG_KEYS
     assert 'code_analysis_enabled' in CONFIG_KEYS
+    assert 'skill_search_dirs' in CONFIG_KEYS
+    assert 'skill_source_profile' in CONFIG_KEYS
 
 
 def test_chat_agent_config_from_root_enables_code_analysis_from_profile(tmp_path):
@@ -220,3 +222,50 @@ def test_chat_agent_config_from_root_enables_code_analysis_from_profile(tmp_path
     config = ChatAgentConfig.from_root(tmp_path)
     assert config.code_analysis_config is not None
     assert config.code_analysis_config.enabled is True
+
+
+def test_chat_agent_config_from_root_applies_skill_search_dirs_from_profile(tmp_path):
+    from teaagent.chat_agent import ChatAgentConfig
+
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_search_dirs': ['.config/agent/skills', '.opencode/skill']}),
+        encoding='utf-8',
+    )
+    config = ChatAgentConfig.from_root(tmp_path)
+    assert config.skill_search_dirs == ['.config/agent/skills', '.opencode/skill']
+
+
+def test_env_skill_search_dirs_supports_csv(tmp_path):
+    with patch.dict(
+        os.environ,
+        {'TEAAGENT_SKILL_SEARCH_DIRS': '.config/agent/skills,.opencode/skill'},
+    ):
+        rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    assert rc.get('skill_search_dirs') == ['.config/agent/skills', '.opencode/skill']
+
+
+def test_chat_agent_config_from_root_applies_skill_source_profile(tmp_path):
+    from teaagent.chat_agent import ChatAgentConfig
+
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_source_profile': 'extended'}),
+        encoding='utf-8',
+    )
+    config = ChatAgentConfig.from_root(tmp_path)
+    assert config.skill_source_profile == 'extended'
+
+
+def test_env_skill_source_profile_overrides_workspace(tmp_path):
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_source_profile': 'default'}),
+        encoding='utf-8',
+    )
+    with patch.dict(os.environ, {'TEAAGENT_SKILL_SOURCE_PROFILE': 'custom'}):
+        rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    assert rc.get('skill_source_profile') == 'custom'
