@@ -123,6 +123,9 @@ class ProviderConfig:
 
     def resolved_base_url(self) -> str:
         if self.name == 'workers-ai':
+            workers_base_url = os.environ.get('WORKERS_AI_BASE_URL', '').strip()
+            if workers_base_url:
+                return workers_base_url.rstrip('/')
             gateway_compat_url = os.environ.get('AIGATEWAY_BASE_URL', '').strip()
             if gateway_compat_url:
                 return gateway_compat_url.rstrip('/')
