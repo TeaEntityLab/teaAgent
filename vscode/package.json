@@ -150,7 +150,8 @@
             "mistral",
             "deepseek",
             "grok",
-            "workers-ai"
+            "workers-ai",
+            "aigateway"
           ],
           "description": "Default model provider for agent runs."
         },

@@ -195,6 +195,7 @@ teaagent doctor model mistral
 teaagent doctor model deepseek
 teaagent doctor model grok
 teaagent doctor model workers-ai
+teaagent doctor model aigateway
 teaagent doctor model gpt --wizard
 ```
 

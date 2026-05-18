@@ -42,7 +42,7 @@ teaagent --help
 
 ## API Key Setup
 
-TeaAgent supports 11 LLM providers. Set environment variables for the ones you want to use:
+TeaAgent supports 12 LLM providers. Set environment variables for the ones you want to use:
 
 | Provider  | Env Var                | Default Model          | Get Key                                          |
 |-----------|------------------------|------------------------|--------------------------------------------------|
@@ -57,6 +57,7 @@ TeaAgent supports 11 LLM providers. Set environment variables for the ones you w
 | deepseek  | `DEEPSEEK_API_KEY`     | deepseek-chat        | https://platform.deepseek.com/api-keys            |
 | grok      | `XAI_API_KEY`          | grok-3-latest        | https://console.x.ai/                             |
 | workers-ai | `CLOUDFLARE_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID` when `WORKERS_AI_BASE_URL` is unset) | @cf/meta/llama-3.1-8b-instruct | https://dash.cloudflare.com/profile/api-tokens |
+| aigateway | `CLOUDFLARE_API_TOKEN` (+ `AIGATEWAY_BASE_URL` optional) | openai/gpt-4o-mini | https://dash.cloudflare.com/profile/api-tokens |
 
 \* `opencodezen-go` defaults to `deepseek-v4-flash`. You can still pass `--model` to pick another supported model.
 
