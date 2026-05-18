@@ -138,9 +138,17 @@ class ProviderConfig:
             account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '').strip()
             if account_id:
                 base_url = base_url.replace('{ACCOUNT_ID}', account_id)
+        if '{GATEWAY_ID}' in base_url:
+            gateway_id = os.environ.get('CLOUDFLARE_GATEWAY_ID', '').strip()
+            if gateway_id:
+                base_url = base_url.replace('{GATEWAY_ID}', gateway_id)
         if '{ACCOUNT_ID}' in base_url:
             raise LLMConfigurationError(
                 f'{self.name} requires CLOUDFLARE_ACCOUNT_ID or {self.base_url_env}'
+            )
+        if '{GATEWAY_ID}' in base_url:
+            raise LLMConfigurationError(
+                f'{self.name} requires CLOUDFLARE_GATEWAY_ID or {self.base_url_env}'
             )
         return base_url.rstrip('/')
 

@@ -37,6 +37,7 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertEqual(
             available_providers(),
             [
+                'aigateway',
                 'claude',
                 'deepseek',
                 'gemini',
@@ -340,6 +341,25 @@ class LLMAdapterTests(unittest.TestCase):
             clear=True,
         ):
             adapter = create_llm_adapter('workers-ai', transport=transport)
+            response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
+
+        self.assertEqual(response.content, 'ok')
+        self.assertEqual(
+            transport.calls[0]['url'],
+            'https://gateway.ai.cloudflare.com/v1/acct/gw/compat/chat/completions',
+        )
+
+    def test_aigateway_uses_compat_base_url(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(
+            os.environ,
+            {
+                'CLOUDFLARE_API_TOKEN': 'cf-token',
+                'AIGATEWAY_BASE_URL': 'https://gateway.ai.cloudflare.com/v1/acct/gw/compat',
+            },
+            clear=True,
+        ):
+            adapter = create_llm_adapter('aigateway', transport=transport)
             response = adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
 
         self.assertEqual(response.content, 'ok')

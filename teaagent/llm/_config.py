@@ -94,6 +94,13 @@ PROVIDER_CONFIGS = {
         base_url='https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1',
         base_url_env='WORKERS_AI_BASE_URL',
     ),
+    'aigateway': ProviderConfig(
+        name='aigateway',
+        api_key_env='CLOUDFLARE_API_TOKEN',
+        default_model='openai/gpt-4o-mini',
+        base_url='https://gateway.ai.cloudflare.com/v1/{ACCOUNT_ID}/{GATEWAY_ID}/compat',
+        base_url_env='AIGATEWAY_BASE_URL',
+    ),
 }
 
 
@@ -151,6 +158,7 @@ PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
     'deepseek': 0.00014,
     'grok': 0.003,
     'workers-ai': 0.0005,
+    'aigateway': 0.0005,
 }
 
 PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
@@ -165,6 +173,7 @@ PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
     'deepseek': 0.00028,
     'grok': 0.015,
     'workers-ai': 0.0015,
+    'aigateway': 0.0015,
 }
 
 

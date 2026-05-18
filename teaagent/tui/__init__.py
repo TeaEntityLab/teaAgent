@@ -35,7 +35,7 @@ def default_adapter_factory(provider: str, model: Optional[str]) -> LLMAdapter:
 HELP_TEXT = """Commands:
   help                      Show this help.
   doctor                    Check GraphQLite runtime.
-  provider <name>           Set model provider: claude, gpt, gemini, openrouter, ollama, vllm, opencodezen-go.
+  provider <name>           Set model provider: claude, gpt, gemini, openrouter, ollama, vllm, opencodezen-go, workers-ai, aigateway.
   model <name|default>      Set or clear model override.
   route-model <on|off>      Enable or disable task-based model routing.
   route <task>              Preview model route for a task.

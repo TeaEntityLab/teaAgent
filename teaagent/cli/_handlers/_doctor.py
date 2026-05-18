@@ -35,7 +35,7 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
     if getattr(args, 'wizard', False):
         return _doctor_aigateway_wizard(args)
 
-    provider = 'workers-ai'
+    provider = 'aigateway'
     ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
     requested_mode = getattr(args, 'mode', 'workers-ai')
     compat_base_url = os.environ.get('AIGATEWAY_BASE_URL', '').strip()
@@ -100,8 +100,8 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
         else 'unrecognized'
     )
     next_steps = [
-        'teaagent doctor model workers-ai',
-        'teaagent model smoke workers-ai --prompt "Reply with exactly: ok"',
+        'teaagent doctor model aigateway',
+        'teaagent model smoke aigateway --prompt "Reply with exactly: ok"',
     ]
     if requested_mode == 'compat':
         next_steps.insert(
@@ -264,7 +264,7 @@ def doctor_env_order(args: argparse.Namespace) -> int:
         )
     next_steps.append('teaagent doctor aigateway')
     next_steps.append(
-        'teaagent model smoke workers-ai --prompt "Reply with exactly: ok"'
+        'teaagent model smoke aigateway --prompt "Reply with exactly: ok"'
     )
 
     payload = {
@@ -346,7 +346,7 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
     payload: dict[str, Any] = {
         'ok': ok,
         'mode': 'wizard',
-        'provider': 'workers-ai',
+        'provider': 'aigateway',
         'requested_mode': requested_mode,
         'configured': {
             'CLOUDFLARE_API_TOKEN': bool(api_token),
@@ -359,8 +359,8 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
         },
         'next_steps': [
             'teaagent doctor aigateway',
-            'teaagent doctor model workers-ai',
-            'teaagent model smoke workers-ai --prompt "Reply with exactly: ok"',
+            'teaagent doctor model aigateway',
+            'teaagent model smoke aigateway --prompt "Reply with exactly: ok"',
         ],
         'env_status': env_status,
     }

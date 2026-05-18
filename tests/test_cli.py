@@ -198,7 +198,7 @@ class CLITests(unittest.TestCase):
             payload = json.loads(output.getvalue())
             self.assertEqual(exit_code, 1)
             self.assertFalse(payload['ok'])
-            self.assertEqual(payload['provider'], 'workers-ai')
+            self.assertEqual(payload['provider'], 'aigateway')
             self.assertEqual(payload['mode'], 'unknown')
 
     def test_doctor_aigateway_reports_gateway_mode_when_configured(self) -> None:
@@ -217,7 +217,7 @@ class CLITests(unittest.TestCase):
             payload = json.loads(output.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertTrue(payload['ok'])
-            self.assertEqual(payload['provider'], 'workers-ai')
+            self.assertEqual(payload['provider'], 'aigateway')
             self.assertEqual(payload['mode'], 'gateway-workers-ai')
 
     def test_doctor_aigateway_compat_mode_reports_gateway_compat(self) -> None:
