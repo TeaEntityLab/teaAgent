@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -25,6 +26,32 @@ Rules:
 - Do not invent tool names or arguments.
 - Destructive tools may be blocked unless the user explicitly enables destructive actions.
 """
+
+DECISION_JSON_SCHEMA: dict[str, Any] = {
+    'type': 'object',
+    'oneOf': [
+        {
+            'type': 'object',
+            'properties': {
+                'type': {'const': 'tool'},
+                'tool_name': {'type': 'string'},
+                'arguments': {'type': 'object'},
+                'call_id': {'type': 'string'},
+            },
+            'required': ['type', 'tool_name', 'arguments'],
+            'additionalProperties': False,
+        },
+        {
+            'type': 'object',
+            'properties': {
+                'type': {'const': 'final'},
+                'content': {'type': 'string'},
+            },
+            'required': ['type', 'content'],
+            'additionalProperties': False,
+        },
+    ],
+}
 
 
 @dataclass(frozen=True)
@@ -122,7 +149,64 @@ def extract_json_object(text: str) -> dict[str, Any]:
         try:
             payload, _end = decoder.raw_decode(text, index)
         except json.JSONDecodeError:
-            continue
+            repaired = _try_repair_json_at(text, index)
+            if repaired is None:
+                continue
+            return repaired
         if isinstance(payload, dict):
             return payload
     raise ToolValidationError('model response did not contain a JSON object')
+
+
+def _try_repair_json_at(text: str, start: int) -> dict[str, Any] | None:
+    candidate = _slice_json_object_candidate(text, start)
+    if candidate is None:
+        return None
+    repaired = _repair_json_text(candidate)
+    try:
+        payload = json.loads(repaired)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(payload, dict):
+        return payload
+    return None
+
+
+def _slice_json_object_candidate(text: str, start: int) -> str | None:
+    depth = 0
+    in_string = False
+    escaped = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+                continue
+            if ch == '\\':
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+            if depth < 0:
+                return None
+    return None
+
+
+def _repair_json_text(candidate: str) -> str:
+    repaired = candidate
+    # Quote bare object keys: {type:"final"} -> {"type":"final"}
+    repaired = re.sub(
+        r'([{\[,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)(\s*:)', r'\1"\2"\3', repaired
+    )
+    # Remove trailing commas before object/array close.
+    repaired = re.sub(r',(\s*[}\]])', r'\1', repaired)
+    return repaired

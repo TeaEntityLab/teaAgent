@@ -59,6 +59,39 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(result.tool_calls, 1)
             self.assertEqual(result.final_answer.content, 'read hello.txt')
             self.assertIn('workspace_read_file', adapter.requests[0].system)
+            self.assertIsNotNone(adapter.requests[0].response_format)
+
+    def test_chat_agent_retries_on_invalid_decision_then_recovers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = FakeAdapter(
+                [
+                    'not-json',
+                    '{"type":"final","content":"done"}',
+                ]
+            )
+            result = run_chat_agent(
+                task='say done',
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp),
+            )
+            self.assertEqual(result.status, 'completed')
+            self.assertEqual(result.final_answer.content, 'done')
+            self.assertEqual(len(adapter.requests), 2)
+
+    def test_chat_agent_gracefully_degrades_after_parse_retries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = FakeAdapter(['bad', 'still bad', 'also bad'])
+            result = run_chat_agent(
+                task='say done',
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp),
+            )
+            self.assertEqual(result.status, 'completed')
+            self.assertIn('"status":"error"', result.final_answer.content)
+            self.assertEqual(
+                result.final_answer.metadata.get('decision_fallback'),
+                'invalid_model_decision_json',
+            )
 
     def test_chat_agent_can_use_code_analysis_tools_when_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

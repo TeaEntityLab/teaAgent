@@ -67,6 +67,10 @@ class ExtractJSONObjectTests(unittest.TestCase):
         result = extract_json_object('thinking "literal { brace" then {"ok": true}')
         self.assertEqual(result, {'ok': True})
 
+    def test_repairs_trailing_comma_and_unquoted_key(self) -> None:
+        result = extract_json_object('prefix {type:"final", content:"ok",} suffix')
+        self.assertEqual(result, {'type': 'final', 'content': 'ok'})
+
 
 class LoadProjectInstructionsTests(unittest.TestCase):
     def test_returns_empty_when_no_agents_md(self) -> None:

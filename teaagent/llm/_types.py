@@ -78,6 +78,7 @@ class LLMRequest:
     stream: bool = False
     on_chunk: Optional[Callable[[str], None]] = None
     tools: list[LLMToolDefinition] = field(default_factory=list)
+    response_format: Optional[dict[str, Any]] = None
 
 
 @dataclass(frozen=True)

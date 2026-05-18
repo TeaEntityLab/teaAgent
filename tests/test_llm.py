@@ -88,6 +88,26 @@ class LLMAdapterTests(unittest.TestCase):
             call['payload']['messages'][0], {'role': 'system', 'content': 'sys'}
         )
 
+    def test_gpt_adapter_forwards_response_format_when_provided(self) -> None:
+        transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'key'}, clear=True):
+            adapter = create_llm_adapter('gpt', transport=transport, model='gpt-test')
+            adapter.complete(
+                LLMRequest(
+                    messages=[LLMMessage('user', 'hi')],
+                    response_format={
+                        'type': 'json_schema',
+                        'json_schema': {
+                            'name': 'x',
+                            'strict': True,
+                            'schema': {'type': 'object'},
+                        },
+                    },
+                )
+            )
+
+        self.assertIn('response_format', transport.calls[0]['payload'])
+
     def test_openrouter_adapter_uses_openai_compatible_shape(self) -> None:
         transport = FakeTransport({'choices': [{'message': {'content': 'ok'}}]})
         with patch.dict(

@@ -20,6 +20,7 @@ from teaagent.code_analysis import (
     register_code_analysis_tools,
 )
 from teaagent.context import ContextCompactor
+from teaagent.errors import ToolValidationError
 from teaagent.heartbeat import Heartbeat
 from teaagent.hooks import HookRegistry
 from teaagent.llm import (
@@ -30,11 +31,18 @@ from teaagent.llm import (
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.prompt import (
+    DECISION_JSON_SCHEMA,
     assemble_agent_prompt,
     load_project_instructions,
     parse_model_decision,
 )
-from teaagent.runner import AgentRunner, ApprovalHandler, Decision, RunResult
+from teaagent.runner import (
+    AgentRunner,
+    ApprovalHandler,
+    Decision,
+    FinalAnswer,
+    RunResult,
+)
 from teaagent.skill_loader import (
     SkillContent,
     SkillSourceProfile,
@@ -153,6 +161,7 @@ class ModelDecisionEngine:
         self.on_chunk = on_chunk
         self.chat_messages = chat_messages
         self.skills = skills
+        self.max_parse_retries = 2
 
     def decide(self, context: dict) -> Decision:
         prompt = assemble_agent_prompt(
@@ -176,25 +185,52 @@ class ModelDecisionEngine:
 
         messages = list(self.chat_messages or [])
         messages.append(LLMMessage(role='user', content=prompt.user))
-
-        response = self.adapter.complete(
-            LLMRequest(
-                system=prompt.system,
-                messages=messages,
-                model=self.model,
-                stream=self.stream,
-                on_chunk=self.on_chunk,
+        for attempt in range(self.max_parse_retries + 1):
+            response = self.adapter.complete(
+                LLMRequest(
+                    system=prompt.system,
+                    messages=messages,
+                    model=self.model,
+                    stream=self.stream,
+                    on_chunk=self.on_chunk,
+                    response_format={
+                        'type': 'json_schema',
+                        'json_schema': {
+                            'name': 'teaagent_decision',
+                            'strict': True,
+                            'schema': DECISION_JSON_SCHEMA,
+                        },
+                    },
+                )
             )
+            previous_cost = context.get('_cost_cents', 0.0)
+            context['_cost_cents'] = previous_cost + response.estimated_cost_cents
+            context['_input_tokens'] = (
+                context.get('_input_tokens', 0) + response.input_tokens
+            )
+            context['_output_tokens'] = (
+                context.get('_output_tokens', 0) + response.output_tokens
+            )
+            try:
+                return parse_model_decision(response.content)
+            except ToolValidationError as exc:
+                if attempt >= self.max_parse_retries:
+                    break
+                messages.append(LLMMessage(role='assistant', content=response.content))
+                messages.append(
+                    LLMMessage(
+                        role='user',
+                        content=(
+                            'Your last output was invalid JSON decision.\n'
+                            f'Parser error: {exc}\n'
+                            'Repair it and reply with exactly one valid JSON object only.'
+                        ),
+                    )
+                )
+        return FinalAnswer(
+            content='{"status":"error","action":"wait","reason":"invalid_model_decision_json"}',
+            metadata={'decision_fallback': 'invalid_model_decision_json'},
         )
-        previous_cost = context.get('_cost_cents', 0.0)
-        context['_cost_cents'] = previous_cost + response.estimated_cost_cents
-        context['_input_tokens'] = (
-            context.get('_input_tokens', 0) + response.input_tokens
-        )
-        context['_output_tokens'] = (
-            context.get('_output_tokens', 0) + response.output_tokens
-        )
-        return parse_model_decision(response.content)
 
 
 def run_chat_agent(

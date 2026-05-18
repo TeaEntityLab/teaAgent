@@ -155,6 +155,8 @@ class OpenAICompatibleAdapter:
                 }
                 for t in request.tools
             ]
+        if request.response_format:
+            payload['response_format'] = request.response_format
         if request.stream:
             payload['stream'] = True
             return self._complete_streaming(request, model, payload)
