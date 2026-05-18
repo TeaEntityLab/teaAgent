@@ -214,7 +214,7 @@ then returns a step-by-step `next_steps` checklist.
 Boundary:
 - Workers AI = inference provider endpoint.
 - AI Gateway = optional routing/policy layer in front of Workers AI.
-- `WORKERS_AI_BASE_URL` may use either direct Workers AI (`.../ai/v1`) or AI Gateway compat (`https://gateway.ai.cloudflare.com/.../workers-ai/v1`).
+- `WORKERS_AI_BASE_URL` may use either direct Workers AI (`.../ai/v1`) or AI Gateway workers-ai provider route (`https://gateway.ai.cloudflare.com/.../workers-ai/v1`).
 
 Interactive setup wizard:
 
@@ -222,6 +222,7 @@ Interactive setup wizard:
 teaagent doctor aigateway --wizard
 teaagent doctor aigateway --mode compat --wizard
 teaagent doctor aigateway --wizard --write-env --root .
+teaagent doctor aigateway --mode compat --write-env --root .
 ```
 
 `--mode workers-ai` expects the provider route:

@@ -181,7 +181,7 @@ project-specific overrides last.
 Workers AI vs AI Gateway:
 - Workers AI is the model inference endpoint.
 - AI Gateway is an optional routing/policy layer in front of Workers AI.
-- `WORKERS_AI_BASE_URL` can point to either direct Workers AI (`.../ai/v1`) or AI Gateway compat (`https://gateway.ai.cloudflare.com/.../workers-ai/v1`).
+- `WORKERS_AI_BASE_URL` can point to either direct Workers AI (`.../ai/v1`) or AI Gateway workers-ai provider route (`https://gateway.ai.cloudflare.com/.../workers-ai/v1`).
 - For AI Gateway unified OpenAI-compatible routing, set `AIGATEWAY_BASE_URL=https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/compat` and use model names like `dynamic/default`.
 
 ### Environment Variables
