@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib
+import json
+import secrets
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Iterable, Optional, Protocol, runtime_checkable
 
 # Sentinel so callers can pass audit_logger=None without ambiguity.
 _AUDIT_UNSET = object()
@@ -108,6 +111,94 @@ _INSTALL_ANTHROPIC = 'pip install anthropic'
 _INSTALL_OPENAI = 'pip install openai'
 _INSTALL_ADK = 'pip install google-adk'
 _INSTALL_VERTEX = 'pip install google-cloud-aiplatform'
+
+
+def _format_vertex_output(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        for key in ('output', 'text', 'message', 'response', 'result', 'content'):
+            if key in value:
+                return _format_vertex_output(value[key])
+        return json.dumps(value, default=str)
+    if isinstance(value, list):
+        return '\n'.join(_format_vertex_output(item) for item in value)
+    return str(value)
+
+
+def _adk_events_to_text(events: Iterable[Any]) -> str:
+    parts: list[str] = []
+    for event in events:
+        if (
+            hasattr(event, 'is_final_response')
+            and callable(event.is_final_response)
+            and not event.is_final_response()
+        ):
+            continue
+        content = getattr(event, 'content', None)
+        if content is None:
+            continue
+        for part in getattr(content, 'parts', None) or []:
+            text = getattr(part, 'text', None)
+            if text:
+                parts.append(str(text))
+    if parts:
+        return '\n'.join(parts)
+    return ''
+
+
+def _load_adk_agent(*, agent_module: str, agent: Optional[Any] = None) -> Any:
+    if agent is not None:
+        return agent
+    module = importlib.import_module(agent_module)
+    loaded = getattr(module, 'root_agent', None)
+    if loaded is None and hasattr(module, 'get_agent'):
+        loaded = module.get_agent()
+    if loaded is None:
+        raise ValueError(
+            f'Module {agent_module!r} must define root_agent or get_agent()'
+        )
+    return loaded
+
+
+def _vertex_agent_resource_name(
+    agent_id: str, *, project_id: str, location: str
+) -> str:
+    if agent_id.startswith('projects/'):
+        return agent_id
+    return f'projects/{project_id}/locations/{location}/reasoningEngines/{agent_id}'
+
+
+def _vertex_query_engine(engine: Any, task: str, *, context: dict[str, Any]) -> Any:
+    user_id = str(context.get('user_id', 'teaagent'))
+    session_id = context.get('session_id')
+    adk_kwargs: dict[str, Any] = {'message': task, 'user_id': user_id}
+    if session_id is not None:
+        adk_kwargs['session_id'] = session_id
+
+    query = getattr(engine, 'query', None)
+    if callable(query):
+        for kwargs in (
+            adk_kwargs,
+            {'input': task},
+            {'input': {'message': task, 'user_id': user_id}},
+        ):
+            try:
+                return query(**kwargs)
+            except TypeError:
+                continue
+
+    stream_query = getattr(engine, 'stream_query', None)
+    if callable(stream_query):
+        try:
+            stream = stream_query(**adk_kwargs)
+        except TypeError:
+            stream = stream_query(input=task)
+        return list(stream)
+
+    raise RuntimeError(
+        'Agent Engine does not expose a supported query or stream_query method'
+    )
 
 
 class AnthropicManagedRuntime:
@@ -239,10 +330,14 @@ class OpenAIManagedRuntime:
 
 
 class GoogleADKRuntime:
+    """Run an ADK agent locally via ``google.adk.runners.Runner``."""
+
     def __init__(
         self,
         *,
         agent_name: str,
+        agent: Optional[Any] = None,
+        agent_module: Optional[str] = None,
         project_id: Optional[str] = None,
         location: str = 'us-central1',
     ) -> None:
@@ -254,21 +349,68 @@ class GoogleADKRuntime:
                 f'Install with: {_INSTALL_ADK}'
             ) from exc
         self._agent_name = agent_name
+        self._agent = agent
+        self._agent_module = agent_module
         self._project_id = project_id
         self._location = location
 
-    def run_task(
-        self, task: str, *, context: dict[str, Any]
-    ) -> str:  # pragma: no cover
-        raise NotImplementedError(
-            'GoogleADKRuntime.run_task: wire to google.adk runner'
+    def run_task(self, task: str, *, context: dict[str, Any]) -> str:
+        from google.adk.runners import Runner
+        from google.adk.sessions.in_memory_session_service import (
+            InMemorySessionService,
         )
+        from google.genai import types
 
-    def health_check(self) -> bool:  # pragma: no cover
-        return False
+        agent_module = context.get('agent_module', self._agent_module)
+        agent = context.get('agent', self._agent)
+        if agent is None and not agent_module:
+            raise ValueError(
+                'GoogleADKRuntime requires an agent: pass agent= or '
+                'agent_module= at construction, or provide agent/agent_module '
+                'in the run context'
+            )
+        if agent is None:
+            assert agent_module is not None
+            agent = _load_adk_agent(agent_module=str(agent_module), agent=None)
+
+        session_service = InMemorySessionService()
+        runner = Runner(
+            app_name=self._agent_name,
+            agent=agent,
+            session_service=session_service,
+        )
+        user_id = str(context.get('user_id', 'teaagent'))
+        session_id = str(context.get('session_id', secrets.token_hex(8)))
+        message = types.Content(
+            role='user',
+            parts=[types.Part(text=task)],
+        )
+        events = runner.run(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=message,
+        )
+        output = _adk_events_to_text(events)
+        if output:
+            return output
+        return ''
+
+    def health_check(self) -> bool:
+        try:
+            if self._agent is not None or self._agent_module:
+                if self._agent_module:
+                    _load_adk_agent(agent_module=self._agent_module, agent=self._agent)
+                return True
+            import google.adk  # noqa: F401
+
+            return True
+        except Exception:
+            return False
 
 
 class VertexAgentRuntime:
+    """Query a deployed Vertex AI Agent Engine (reasoning engine)."""
+
     def __init__(
         self,
         *,
@@ -286,13 +428,45 @@ class VertexAgentRuntime:
         self._agent_id = agent_id
         self._project_id = project_id
         self._location = location
+        self._engine: Any = None
 
-    def run_task(
-        self, task: str, *, context: dict[str, Any]
-    ) -> str:  # pragma: no cover
-        raise NotImplementedError(
-            'VertexAgentRuntime.run_task: wire to Vertex Agent Engine'
+    def _resolve_project_id(self, context: dict[str, Any]) -> str:
+        project_id = context.get('project_id', self._project_id)
+        if not project_id:
+            raise ValueError(
+                'VertexAgentRuntime requires project_id at construction or '
+                'in the run context'
+            )
+        return str(project_id)
+
+    def _get_engine(self, *, context: Optional[dict[str, Any]] = None) -> Any:
+        if self._engine is not None:
+            return self._engine
+        import vertexai
+        from vertexai import agent_engines
+
+        ctx = context or {}
+        project_id = self._resolve_project_id(ctx)
+        location = str(ctx.get('location', self._location))
+        vertexai.init(project=project_id, location=location)
+        resource_name = _vertex_agent_resource_name(
+            self._agent_id,
+            project_id=project_id,
+            location=location,
         )
+        self._engine = agent_engines.get(resource_name)
+        return self._engine
 
-    def health_check(self) -> bool:  # pragma: no cover
-        return False
+    def run_task(self, task: str, *, context: dict[str, Any]) -> str:
+        engine = self._get_engine(context=context)
+        raw = _vertex_query_engine(engine, task, context=context)
+        if isinstance(raw, list):
+            return '\n'.join(_format_vertex_output(item) for item in raw)
+        return _format_vertex_output(raw)
+
+    def health_check(self) -> bool:
+        try:
+            engine = self._get_engine()
+            return bool(getattr(engine, 'resource_name', None))
+        except Exception:
+            return False

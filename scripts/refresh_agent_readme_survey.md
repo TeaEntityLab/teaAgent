@@ -23,7 +23,7 @@ Last reviewed: **2026-05-21**
 - [x] ACP IDE adapter
 - [x] ANP governed federation boundary (`ANPGovernedService`)
 - [x] OAuth refresh-token rotation (ADR 0004, implemented 2026-05-22)
-- [ ] Google managed runtime (`GoogleADKRuntime`, `VertexAgentRuntime`)
+- [x] Google managed runtime (`GoogleADKRuntime`, `VertexAgentRuntime`)
 
 ## Next review trigger
 
