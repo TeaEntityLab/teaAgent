@@ -162,8 +162,8 @@ implements `chat()` returning an `LLMResponse`. Features include:
 TeaAgent treats ANP as an optional external federation surface through a
 bidirectional adapter boundary:
 
-- **Inbound** (`ANP -> TeaAgent`): network requests normalize into internal
-  execution/delegation flows and must still pass `ToolRegistry`,
+- **Inbound** (`ANP -> TeaAgent`): `ANPGovernedService` normalizes network
+  requests into `AgentRunner` tool execution and must still pass `ToolRegistry`,
   `ApprovalPolicy`, budget enforcement, and `AuditLogger`.
 - **Outbound** (`TeaAgent -> ANP`): selected tasks can be delegated to ANP
   peers through a typed client, then mapped back into internal result/audit

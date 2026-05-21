@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (minimum-scope draft).
+Accepted (PoC + governed execution boundary).
 
 ## Decision
 
@@ -93,19 +93,15 @@ Negative:
 - Introduces dual-path delegation behavior (local vs remote) that must be
   observable and deterministic.
 
-## Minimum Implementation Plan (PoC)
+## Post-Implementation (2026-05-21)
 
-1. Define `ANPInboundAdapter` and `ANPOutboundClient` protocol interfaces.
-2. Implement mapping layer:
-   - ANP task -> internal request model.
-   - internal result/error -> ANP response model.
-3. Add routing policy gate:
-   - local-first default, remote ANP delegation by explicit capability/route.
-4. Add audit/trace fields for ANP correlation IDs and peer endpoint identity.
-5. Add acceptance tests:
-   - inbound success/failure/approval-required.
-   - outbound delegation timeout/retry/fallback.
-   - invariant checks for audit + approval + budget enforcement.
+Implemented in `teaagent/anp_adapter.py`:
+
+- `ANPInboundAdapter`, `ANPOutboundClient`, and `ANPBidirectionalRouter` for mapping and local-first routing.
+- `ANPGovernedService` routes inbound tool requests through `AgentRunner` + `ToolRegistry` + `ApprovalPolicy` + `AuditLogger` + `RunBudget`.
+- Federation audit events: `anp_inbound_received`, `anp_inbound_completed`, `anp_outbound_started`, `anp_route_completed`, `anp_outbound_failed`.
+- Outbound delegation timeout via `ANPOutboundClient(timeout_seconds=...)`.
+- Acceptance coverage in `tests/acceptance/test_anp_adapter_flow.py` and `tests/test_anp_adapter.py`.
 
 ## Acceptance Criteria
 

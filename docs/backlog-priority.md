@@ -34,6 +34,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 | GraphQLite production deployment (`GraphQLitePersistentStore`, `GraphQLiteProductionConfig`, index strategy, migration integration, `graphqlite migrate` CLI, production deployment guide) | P2-r3 | `teaagent/graphqlite_production.py`, `docs/graphqlite-production.md`, `cli/_handlers/_misc.py`, `cli/_misc_parsers.py` |
 | IDE integration - VS Code extension (command palette, task provider, terminal profile, TeaAgent output channel) | P2-r3 | `vscode/package.json`, `vscode/src/extension.ts` |
 | Hosted doc site infrastructure (`pdoc` dependency, `scripts/build_docs.py` build script, class-level docstrings on core modules) | P2-r3 | `pyproject.toml`, `scripts/build_docs.py`, `teaagent/tools.py`, `teaagent/runner/_core.py`, `teaagent/budget.py`, `teaagent/policy.py`, `teaagent/memory.py` |
+| ANP bidirectional adapter governed federation (`ANPGovernedService`, audit correlation, approval/budget invariants) | P1 | `teaagent/anp_adapter.py`, `tests/acceptance/test_anp_adapter_flow.py`, `docs/adr/0007-anp-adapter-boundary.md` |
 
 ---
 
@@ -45,9 +46,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — Medium (P1)
 
-| Item | Why now | Acceptance target |
-|------|---------|-------------------|
-| ANP bidirectional adapter PoC (inbound/outbound federation boundary without core-runtime replacement) | Establish external agent-network interoperability while preserving TeaAgent governance invariants (ToolRegistry/ApprovalPolicy/Audit). | Add acceptance coverage for inbound mapping, outbound delegation timeout/fallback, and invariant checks that ANP paths cannot bypass approval/audit/budget enforcement. |
+*(No open P1 items in this track.)*
 
 ---
 

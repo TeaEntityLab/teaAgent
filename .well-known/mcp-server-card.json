@@ -1,8 +1,8 @@
 {
-  "name": "teaagent-p0-tools",
-  "description": "P0 placeholder metadata for future MCP server discovery.",
+  "name": "teaagent",
+  "description": "TeaAgent MCP tool server with streamable HTTP and stdio transports.",
   "version": "0.1.0",
-  "transport": "not-yet-exposed",
+  "transport": "streamable-http",
   "capabilities": {
     "tools": true,
     "stateless_ready": true,

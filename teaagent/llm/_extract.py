@@ -20,20 +20,35 @@ def _extract_openai_content(provider: str, response: dict[str, Any]) -> str:
     if isinstance(content, str) and content:
         return content
     if isinstance(content, list):
-        text_parts = [
-            part.get('text', '')
-            for part in content
-            if isinstance(part, dict) and isinstance(part.get('text'), str)
-        ]
+        text_parts: list[str] = []
+        for part in content:
+            if not isinstance(part, dict):
+                continue
+            text_value = part.get('text')
+            if isinstance(text_value, str) and text_value:
+                text_parts.append(text_value)
+                continue
+            if part.get('type') in {'text', 'output_text'}:
+                typed_text = part.get('text') or part.get('content')
+                if isinstance(typed_text, str) and typed_text:
+                    text_parts.append(typed_text)
         merged = ''.join(text_parts).strip()
         if merged:
             return merged
+    reasoning = message.get('reasoning_content')
+    if isinstance(reasoning, str) and reasoning:
+        return reasoning
     alt_text = first_choice.get('text')
     if isinstance(alt_text, str) and alt_text:
         return alt_text
     output_text = response.get('output_text')
     if isinstance(output_text, str) and output_text:
         return output_text
+    result = response.get('result')
+    if isinstance(result, dict):
+        nested = result.get('output_text') or result.get('content')
+        if isinstance(nested, str) and nested:
+            return nested
     raise LLMResponseFormatError(f'{provider} response missing text content')
 
 

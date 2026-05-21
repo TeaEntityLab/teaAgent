@@ -415,7 +415,9 @@ teaagent agent run gpt "do something"
 
 ### "opencodezen-go response missing text content"
 
-Use an explicit model when you want one of the higher-capability `opencodezen-go` variants:
+TeaAgent extracts text from standard `message.content`, content-part lists (`text` / `output_text` types), `choices[0].text`, top-level `output_text`, `message.reasoning_content`, and nested `result.output_text` shapes.
+
+If extraction still fails, use an explicit model when you want one of the higher-capability `opencodezen-go` variants:
 
 ```bash
 teaagent agent run --model deepseek-v4-flash opencodezen-go "your task"

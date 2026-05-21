@@ -1,13 +1,53 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
+from teaagent import (
+    AuditLogger,
+    RunBudget,
+    ToolAnnotations,
+    ToolRegistry,
+)
 from teaagent.anp_adapter import (
     ANPAdapterError,
     ANPBidirectionalRouter,
+    ANPGovernedService,
     ANPInboundAdapter,
     ANPOutboundClient,
 )
+from teaagent.errors import BudgetExceededError
+from teaagent.llm._extract import _extract_openai_content
+
+INPUT_SCHEMA = {
+    'type': 'object',
+    'properties': {'value': {'type': 'string'}},
+    'required': ['value'],
+}
+OUTPUT_SCHEMA = {
+    'type': 'object',
+    'properties': {'value': {'type': 'string'}},
+    'required': ['value'],
+}
+
+
+def _build_registry(*, destructive: bool = False) -> ToolRegistry:
+    registry = ToolRegistry()
+    registry.register(
+        name='pilot_echo',
+        description='Echo value for ANP acceptance.',
+        input_schema=INPUT_SCHEMA,
+        output_schema=OUTPUT_SCHEMA,
+        annotations=ToolAnnotations(
+            read_only=not destructive,
+            destructive=destructive,
+            idempotent=True,
+        ),
+        handler=lambda args: {'value': args['value']},
+    )
+    return registry
 
 
 def test_anp_inbound_to_local_execution_flow() -> None:
@@ -75,3 +115,65 @@ def test_anp_remote_route_requires_endpoint() -> None:
 
     with pytest.raises(ANPAdapterError):
         router.route(task='ship', route='remote')
+
+
+def test_anp_governed_inbound_destructive_requires_approval() -> None:
+    audit = AuditLogger()
+    service = ANPGovernedService(
+        registry=_build_registry(destructive=True), audit=audit
+    )
+
+    result = service.handle_inbound(
+        {
+            'task': 'mutate',
+            'correlation_id': 'accept-anp-1',
+            'peer_endpoint': 'http://peer',
+            'tool_request': {
+                'tool_name': 'pilot_echo',
+                'arguments': {'value': 'delete'},
+                'call_id': 'call-accept-1',
+            },
+        }
+    )
+
+    assert result['status'] == 'pending_approval'
+    assert result['approval']['call_id'] == 'call-accept-1'
+    federation_events = [
+        event for event in audit.events if event.event_type.startswith('anp_')
+    ]
+    assert federation_events
+    assert federation_events[0].payload['anp_correlation_id'] == 'accept-anp-1'
+    assert 'tool_call_pending_approval' in [e.event_type for e in audit.events]
+
+
+def test_anp_governed_outbound_budget_and_audit() -> None:
+    audit = AuditLogger()
+    service = ANPGovernedService(
+        registry=_build_registry(),
+        audit=audit,
+        budget=RunBudget(max_tool_calls=0),
+        outbound_client=ANPOutboundClient(
+            transport=lambda endpoint, task, context: {'output': 'remote'}
+        ),
+    )
+
+    with pytest.raises(BudgetExceededError):
+        service.route(
+            task='delegate',
+            route='remote',
+            remote_endpoint='http://anp-peer',
+            correlation_id='accept-anp-2',
+        )
+
+    assert 'anp_outbound_started' in [e.event_type for e in audit.events]
+
+
+def test_opencodezen_go_kimi_fixture_extracts_reasoning_content() -> None:
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / 'fixtures'
+        / 'opencodezen_go_kimi_response.json'
+    )
+    payload = json.loads(fixture.read_text(encoding='utf-8'))
+    content = _extract_openai_content('opencodezen-go', payload)
+    assert content == 'kimi reasoning trace omitted'

@@ -3,14 +3,21 @@ from __future__ import annotations
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
-_SCRIPT = (
-    Path(__file__).resolve().parents[1] / 'scripts' / 'validate_docs_consistency.py'
-)
-_SPEC = spec_from_file_location('validate_docs_consistency', _SCRIPT)
-assert _SPEC and _SPEC.loader
-_MODULE = module_from_spec(_SPEC)
-_SPEC.loader.exec_module(_MODULE)
-validate_docs_consistency = _MODULE.validate_docs_consistency
+_SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
+_VALIDATE_SCRIPT = _SCRIPTS / 'validate_docs_consistency.py'
+_TIER_SCRIPT = _SCRIPTS / 'run_acceptance_tier.py'
+
+_VALIDATE_SPEC = spec_from_file_location('validate_docs_consistency', _VALIDATE_SCRIPT)
+assert _VALIDATE_SPEC and _VALIDATE_SPEC.loader
+_VALIDATE_MODULE = module_from_spec(_VALIDATE_SPEC)
+_VALIDATE_SPEC.loader.exec_module(_VALIDATE_MODULE)
+validate_docs_consistency = _VALIDATE_MODULE.validate_docs_consistency
+
+_TIER_SPEC = spec_from_file_location('run_acceptance_tier', _TIER_SCRIPT)
+assert _TIER_SPEC and _TIER_SPEC.loader
+_TIER_MODULE = module_from_spec(_TIER_SPEC)
+_TIER_SPEC.loader.exec_module(_TIER_MODULE)
+render_tier_markdown = _TIER_MODULE.render_tier_markdown
 
 
 def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> None:
@@ -29,20 +36,11 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
     readme.write_text(
         '(2 providers)\nexport A_API_KEY=\nexport B_API_KEY=\n', encoding='utf-8'
     )
+    tier_block = render_tier_markdown()
     acceptance.write_text(
         '`2 passed`\n'
         '<!-- ACCEPTANCE_TIERS:START -->\n\n'
-        '## Acceptance Tiers (P0/P1/P2)\n\n'
-        'Use these tiers to control regression scope and release risk:\n\n'
-        '| Tier | Purpose | Representative acceptance flows |\n'
-        '|---|---|---|\n'
-        '| P0 | Safe first-run, policy boundaries, and core coding loop | `test_first_run_experience_flow.py`, `test_daily_cli.py`, `test_p0_slo_flow.py`, `test_plan_mode_read_only_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`, `test_policy_as_code_flow.py` |\n'
-        '| P1 | Recovery, continuity, and IDE/runtime surface reliability | `test_run_undo_acceptance_flow.py`, `test_session_resume_continuity_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`, `test_mcp_client_flow.py` |\n'
-        '| P2 | Ecosystem compatibility and extended operations | `test_backend_adapter_flow.py`, `test_external_tool_manifest_compatibility_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_ultrawork_flow.py`, `test_webhook_audit_flow.py` |\n\n'
-        'Recommended execution cadence:\n\n'
-        '1. Every PR: run all P0.\n'
-        '2. Before merge to `main`: run P0 + P1.\n'
-        '3. Before release: run full acceptance (P0 + P1 + P2).\n\n'
+        f'{tier_block}\n\n'
         '<!-- ACCEPTANCE_TIERS:END -->\n',
         encoding='utf-8',
     )

@@ -19,6 +19,7 @@ TIERS: dict[str, tuple[str, ...]] = {
         'test_session_resume_continuity_flow.py',
         'test_vscode_mcp_runtime_smoke_flow.py',
         'test_mcp_client_flow.py',
+        'test_anp_adapter_flow.py',
     ),
 }
 

@@ -7,8 +7,9 @@
 - Add new high-risk operations as destructive tools and require approval by exact `call_id`.
 - Keep model-provider integrations outside `AgentRunner`; inject decisions through the `decide` callable.
 
-## Deferred Integrations
+## Implemented Integrations
 
-- MCP transport should expose `ToolRegistry.mcp_metadata()` and route calls back through `ToolRegistry.execute()`.
-- OpenTelemetry should subscribe to `AuditLogger` events or replace the logger with a compatible sink.
-- External state should persist `context`, observations, and checkpoints between iterations.
+- MCP stdio and streamable HTTP transports expose `ToolRegistry.mcp_metadata()` and route calls through `ToolRegistry.execute()` (`teaagent/mcp_server.py`, `teaagent/mcp_http`).
+- OpenTelemetry hooks subscribe to audit events when the `telemetry` extra is installed (`teaagent/telemetry`).
+- External checkpoints persist `context`, observations, and run state via `CheckpointStore` (`teaagent/checkpoint.py`, `--checkpoint-store` CLI).
+- ANP federation uses `ANPGovernedService` so inbound tool calls still pass approval, audit, and budget enforcement (`teaagent/anp_adapter.py`).

@@ -574,6 +574,36 @@ class LLMAdapterTests(unittest.TestCase):
 
         self.assertEqual(response.content, 'ok')
 
+    def test_openai_adapter_accepts_reasoning_content_fallback(self) -> None:
+        from teaagent.llm._extract import _extract_openai_content
+
+        payload = {
+            'choices': [
+                {
+                    'message': {
+                        'content': None,
+                        'reasoning_content': 'assistant answer text',
+                    }
+                }
+            ]
+        }
+        self.assertEqual(
+            _extract_openai_content('opencodezen-go', payload),
+            'assistant answer text',
+        )
+
+    def test_openai_adapter_accepts_text_content_part_type(self) -> None:
+        from teaagent.llm._extract import _extract_openai_content
+
+        payload = {
+            'choices': [
+                {'message': {'content': [{'type': 'text', 'text': 'part text'}]}}
+            ]
+        }
+        self.assertEqual(
+            _extract_openai_content('opencodezen-go', payload), 'part text'
+        )
+
     def test_claude_adapter_rejects_malformed_response(self) -> None:
         transport = FakeTransport({'content': [{'type': 'tool_use'}]})
         with patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'key'}, clear=True):

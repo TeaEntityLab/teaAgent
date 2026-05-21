@@ -29,4 +29,4 @@ class LLMAdapter(Protocol):
 
 - `smoke`: provider returns non-empty content.
 - `contract`: exact content, system-prompt adherence, and token-budget reporting.
-- Future tiers: streaming, structured output, tool calling, latency budgets, safety/block taxonomy.
+- `STREAMING`, `STRUCTURED_OUTPUT`, `TOOL_CALLING`, `SAFETY`, and `LATENCY` tiers are implemented in `teaagent/llm_conformance` and exercised by `teaagent model conformance` plus unit tests under `tests/test_conformance_tiers.py`, `tests/test_tool_calling_conformance.py`, and `tests/test_latency_tier.py`.

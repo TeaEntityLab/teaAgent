@@ -4,6 +4,9 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added `ANPGovernedService` to wire ANP inbound tool calls through `AgentRunner` with federation audit events, outbound delegation timeouts, and budget enforcement; accepted ADR 0007.
+- Hardened OpenAI-compatible content extraction for `reasoning_content`, `text` content parts, and nested `result.output_text` (opencodezen-go/kimi-style payloads).
+- Refreshed MCP discovery card, provider-authoring conformance docs, ANP acceptance tier (P1), nightly smoke providers (`workers-ai`, `aigateway`), and `scripts/refresh_agent_readme_survey.md`.
 - Added 8-event Hook System (Claude Code compatible): `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact`, `Stop`, `SubagentStop`, `SessionEnd`. Includes `HookRegistry`, `permission_check_hook`, `lint_check_hook`, `run_tests_hook`, `mcp_tool_filter_hook`, and `PermissionMode` enum.
 - Added Three-Tier Memory System (Claude Code compatible): `MemoryHierarchy` with Project (`.teaagent/memory.jsonl`), Personal (`~/.config/teaagent/memory.jsonl`), and Auto-Memory (`.claude/MEMORY.md`) tiers.
 - Added Context Compaction with traffic light zones: Green (0-75%), Yellow (75-92%), Red (92%+). Implements `CompactionManager` with `should_compact()` and `check_and_compact()`.

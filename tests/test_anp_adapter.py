@@ -2,12 +2,49 @@ from __future__ import annotations
 
 import unittest
 
+from teaagent import (
+    ApprovalPolicy,
+    AuditLogger,
+    RunBudget,
+    ToolAnnotations,
+    ToolRegistry,
+)
 from teaagent.anp_adapter import (
     ANPAdapterError,
     ANPBidirectionalRouter,
+    ANPGovernedService,
     ANPInboundAdapter,
     ANPOutboundClient,
 )
+from teaagent.errors import BudgetExceededError
+
+INPUT_SCHEMA = {
+    'type': 'object',
+    'properties': {'value': {'type': 'string'}},
+    'required': ['value'],
+}
+OUTPUT_SCHEMA = {
+    'type': 'object',
+    'properties': {'value': {'type': 'string'}},
+    'required': ['value'],
+}
+
+
+def build_registry(*, destructive: bool = False) -> ToolRegistry:
+    registry = ToolRegistry()
+    registry.register(
+        name='pilot_echo',
+        description='Echo value for ANP governance tests.',
+        input_schema=INPUT_SCHEMA,
+        output_schema=OUTPUT_SCHEMA,
+        annotations=ToolAnnotations(
+            read_only=not destructive,
+            destructive=destructive,
+            idempotent=True,
+        ),
+        handler=lambda args: {'value': args['value']},
+    )
+    return registry
 
 
 class ANPInboundAdapterTests(unittest.TestCase):
@@ -94,6 +131,116 @@ class ANPBidirectionalRouterTests(unittest.TestCase):
         )
         with self.assertRaises(ANPAdapterError):
             router.route(task='run', route='remote')
+
+
+class ANPGovernedServiceTests(unittest.TestCase):
+    def test_inbound_destructive_tool_requires_approval(self) -> None:
+        audit = AuditLogger()
+        service = ANPGovernedService(
+            registry=build_registry(destructive=True),
+            audit=audit,
+        )
+        result = service.handle_inbound(
+            {
+                'task': 'delete file',
+                'correlation_id': 'anp-in-1',
+                'tool_request': {
+                    'tool_name': 'pilot_echo',
+                    'arguments': {'value': 'x'},
+                    'call_id': 'call-anp-1',
+                },
+            }
+        )
+
+        self.assertEqual(result['status'], 'pending_approval')
+        self.assertEqual(result['correlation_id'], 'anp-in-1')
+        self.assertEqual(result['approval']['call_id'], 'call-anp-1')
+        event_types = [event.event_type for event in audit.events]
+        self.assertIn('anp_inbound_received', event_types)
+        self.assertIn('tool_call_pending_approval', event_types)
+        self.assertIn('anp_inbound_completed', event_types)
+        inbound_completed = [
+            event
+            for event in audit.events
+            if event.event_type == 'anp_inbound_completed'
+        ][0]
+        self.assertTrue(inbound_completed.payload['approval_required'])
+
+    def test_inbound_tool_executes_through_registry(self) -> None:
+        audit = AuditLogger()
+        service = ANPGovernedService(
+            registry=build_registry(),
+            audit=audit,
+            approval_policy=ApprovalPolicy(approved_call_ids=frozenset({'call-ok'})),
+        )
+        result = service.handle_inbound(
+            {
+                'task': 'echo',
+                'correlation_id': 'anp-in-2',
+                'tool_request': {
+                    'tool_name': 'pilot_echo',
+                    'arguments': {'value': 'ok'},
+                    'call_id': 'call-ok',
+                },
+            }
+        )
+
+        self.assertEqual(result['status'], 'ok')
+        self.assertEqual(result['output'], "{'value': 'ok'}")
+        self.assertIn('tool_call_completed', [e.event_type for e in audit.events])
+
+    def test_outbound_delegation_enforces_budget(self) -> None:
+        audit = AuditLogger()
+
+        def remote_transport(
+            endpoint: str, task: str, context: dict[str, object]
+        ) -> dict[str, object]:
+            return {'output': f'remote:{task}'}
+
+        service = ANPGovernedService(
+            registry=build_registry(),
+            audit=audit,
+            budget=RunBudget(max_tool_calls=0),
+            outbound_client=ANPOutboundClient(transport=remote_transport),
+        )
+
+        with self.assertRaises(BudgetExceededError):
+            service.route(
+                task='delegate',
+                route='remote',
+                remote_endpoint='http://anp-peer',
+                correlation_id='anp-out-1',
+            )
+
+    def test_outbound_timeout_records_audit_failure(self) -> None:
+        audit = AuditLogger()
+
+        def slow_transport(
+            endpoint: str, task: str, context: dict[str, object]
+        ) -> dict[str, object]:
+            import time
+
+            time.sleep(0.5)
+            return {'output': 'late'}
+
+        service = ANPGovernedService(
+            registry=build_registry(),
+            audit=audit,
+            budget=RunBudget(max_tool_calls=2),
+            outbound_client=ANPOutboundClient(
+                transport=slow_transport, timeout_seconds=0.01
+            ),
+        )
+
+        with self.assertRaises(ANPAdapterError):
+            service.route(
+                task='slow',
+                route='remote',
+                remote_endpoint='http://anp-peer',
+                correlation_id='anp-out-2',
+            )
+
+        self.assertIn('anp_outbound_failed', [e.event_type for e in audit.events])
 
 
 if __name__ == '__main__':
