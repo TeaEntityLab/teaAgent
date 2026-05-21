@@ -37,6 +37,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
                 signing_key=args.oauth_signing_key,
                 issuer=args.oauth_issuer,
                 token_ttl=args.oauth_token_ttl,
+                refresh_token_ttl=args.oauth_refresh_token_ttl,
                 dpop_replay_ttl=args.oauth_dpop_replay_ttl,
                 key_ring=key_ring,
             )

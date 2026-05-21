@@ -22,7 +22,7 @@ Last reviewed: **2026-05-21**
 - [x] A2A discovery/delegation
 - [x] ACP IDE adapter
 - [x] ANP governed federation boundary (`ANPGovernedService`)
-- [ ] OAuth refresh-token rotation (deferred in ADR 0004)
+- [x] OAuth refresh-token rotation (ADR 0004, implemented 2026-05-22)
 - [ ] Google managed runtime (`GoogleADKRuntime`, `VertexAgentRuntime`)
 
 ## Next review trigger

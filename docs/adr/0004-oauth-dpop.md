@@ -31,8 +31,9 @@ verification (ES256/RS256).
   maintainability.
 - Internal state (clients, codes, nonces) is in-memory dicts. Multi-process
   or persistent deployments require an external store.
-- Key rotation, refresh tokens, and external client storage are deferred to
-  a future production-hardening ADR.
+- Key rotation and external client storage were deferred to ADR 0006 (now
+  implemented). Refresh-token rotation was deferred here and implemented
+  2026-05-22.
 - The `cryptography` import is conditional (`HAS_CRYPTOGRAPHY` flag);
 
 ## Post-Implementation (2026-05-10)
@@ -41,7 +42,10 @@ Key rotation and external client storage have been implemented:
 - `OAuthKeyRing.rotate` with configurable rotation overlap window, `key_for_validation` JWT `kid`-based lookup, and `--oauth-rotation-window` CLI (`teaagent/oauth21/_store.py`).
 - Cross-host persistence via `PostgreSQLOAuthStore` and `RedisOAuthStore` with atomic consume semantics (`teaagent/oauth21/_pg_store.py`, `teaagent/oauth21/_redis_store.py`).
 
-Refresh tokens remain deferred — the current OAuth flow uses access tokens with configurable duration only.
+Refresh-token rotation is implemented (2026-05-22):
+- Rotating refresh tokens issued on authorization-code exchange when `refresh_token_ttl > 0` (default 30 days; `--oauth-refresh-token-ttl` / `refresh_token_ttl=0` disables).
+- `refresh_token` grant at `/token` with one-time consume, new refresh token on each use, and family revocation on reuse detection.
+- Persisted in `OAuthStore` implementations (`InMemoryOAuthStore`, `SQLiteOAuthStore`, `PostgreSQLOAuthStore`, `RedisOAuthStore`).
 
 ## Alternatives Considered
 

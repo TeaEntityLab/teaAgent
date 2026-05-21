@@ -18,6 +18,7 @@ from teaagent.oauth21._store import InMemoryOAuthStore, OAuthKeyRing, OAuthStore
 from teaagent.oauth21._types import (
     _CODE_TTL_SECONDS,
     _DEFAULT_ACCESS_TOKEN_TTL,
+    _DEFAULT_REFRESH_TOKEN_TTL,
     _DPOP_PROOF_TYP,
     _NONCE_TTL_SECONDS,
     _PROOF_MAX_AGE_SECONDS,
@@ -32,6 +33,7 @@ from teaagent.oauth21._types import (
     OAuth21TokenClaims,
     OAuth21TokenResponse,
     _AuthorizationCode,
+    _RefreshToken,
 )
 
 
@@ -42,6 +44,7 @@ class OAuth21AuthorizationServer:
         issuer: str,
         *,
         token_ttl: int = _DEFAULT_ACCESS_TOKEN_TTL,
+        refresh_token_ttl: int = _DEFAULT_REFRESH_TOKEN_TTL,
         nonce_ttl: int = _NONCE_TTL_SECONDS,
         dpop_replay_ttl: int = _PROOF_MAX_AGE_SECONDS,
         store: Optional[OAuthStore] = None,
@@ -53,6 +56,7 @@ class OAuth21AuthorizationServer:
         self._key_ring = key_ring or OAuthKeyRing.single(self._key)
         self._issuer = issuer
         self._token_ttl = token_ttl
+        self._refresh_token_ttl = refresh_token_ttl
         self._nonce_ttl = nonce_ttl
         self._dpop_replay_ttl = dpop_replay_ttl
         self._store = store or InMemoryOAuthStore()
@@ -159,32 +163,58 @@ class OAuth21AuthorizationServer:
                 )
             cnf_jkt = self._validate_dpop_and_extract_jkt(dpop_proof_jwt)
 
-        now = int(time.time())
-        payload: dict[str, Any] = {
-            'iss': self._issuer,
-            'sub': auth_code.client_id,
-            'aud': self._issuer,
-            'iat': now,
-            'exp': now + self._token_ttl,
-            'jti': secrets.token_hex(16),
-            'scope': auth_code.scope,
-        }
-        if cnf_jkt:
-            payload['cnf'] = {'jkt': cnf_jkt}
-
-        token_type = _TOKEN_TYPE_DPOP if cnf_jkt else _TOKEN_TYPE_BEARER
-        access_token = create_jwt(
-            payload,
-            self._key_ring.active_key,
-            header_extra={'kid': self._key_ring.active_kid},
-        )
-
-        return OAuth21TokenResponse(
-            access_token=access_token,
-            token_type=token_type,
-            expires_in=self._token_ttl,
+        return self._issue_token_pair(
+            client_id=auth_code.client_id,
             scope=auth_code.scope,
+            cnf_jkt=cnf_jkt,
         )
+
+    def exchange_refresh_token(
+        self,
+        refresh_token: str,
+        *,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        dpop_proof_jwt: Optional[str] = None,
+    ) -> OAuth21TokenResponse:
+        if not refresh_token:
+            raise InvalidGrantError('refresh_token is required')
+        if client_id:
+            self._validate_client(client_id, client_secret)
+
+        record = self._consume_refresh_token(refresh_token)
+        if record is None:
+            raise InvalidGrantError('Unknown or invalid refresh token')
+        if client_id and record.client_id != client_id:
+            raise InvalidClientError('refresh_token was not issued to this client')
+
+        cnf_jkt: Optional[str] = None
+        if record.cnf_jkt is not None:
+            if dpop_proof_jwt is None:
+                raise InvalidDPoPError(
+                    'DPoP proof required for DPoP-bound refresh token'
+                )
+            if not HAS_CRYPTOGRAPHY:
+                raise InvalidDPoPError(
+                    'DPoP requires the cryptography library. '
+                    'Install with: pip install teaagent[oauth]'
+                )
+            cnf_jkt = self._validate_dpop_and_extract_jkt(dpop_proof_jwt)
+            if not hmac.compare_digest(cnf_jkt, record.cnf_jkt):
+                raise InvalidDPoPError('DPoP key does not match refresh token binding')
+
+        response = self._issue_token_pair(
+            client_id=record.client_id,
+            scope=record.scope,
+            cnf_jkt=cnf_jkt or record.cnf_jkt,
+            family_id=record.family_id,
+        )
+        self._store.record_refresh_reuse(
+            refresh_token,
+            record.family_id,
+            expires_at=record.expires_at,
+        )
+        return response
 
     def introspect_token(self, token: str) -> OAuth21TokenClaims:
         header, _ = decode_jwt_unsafe(token)
@@ -230,9 +260,79 @@ class OAuth21AuthorizationServer:
             'dpop_signing_alg_values_supported': (
                 ['ES256', 'ES384', 'ES512', 'RS256'] if HAS_CRYPTOGRAPHY else []
             ),
-            'grant_types_supported': ['authorization_code'],
+            'grant_types_supported': ['authorization_code', 'refresh_token'],
             'response_types_supported': ['code'],
         }
+
+    def _issue_token_pair(
+        self,
+        *,
+        client_id: str,
+        scope: str,
+        cnf_jkt: Optional[str] = None,
+        family_id: Optional[str] = None,
+    ) -> OAuth21TokenResponse:
+        now = int(time.time())
+        payload: dict[str, Any] = {
+            'iss': self._issuer,
+            'sub': client_id,
+            'aud': self._issuer,
+            'iat': now,
+            'exp': now + self._token_ttl,
+            'jti': secrets.token_hex(16),
+            'scope': scope,
+        }
+        if cnf_jkt:
+            payload['cnf'] = {'jkt': cnf_jkt}
+
+        token_type = _TOKEN_TYPE_DPOP if cnf_jkt else _TOKEN_TYPE_BEARER
+        access_token = create_jwt(
+            payload,
+            self._key_ring.active_key,
+            header_extra={'kid': self._key_ring.active_kid},
+        )
+
+        refresh_token_value: Optional[str] = None
+        if self._refresh_token_ttl > 0:
+            token_family = family_id or secrets.token_urlsafe(16)
+            refresh_record = _RefreshToken(
+                token=secrets.token_urlsafe(32),
+                client_id=client_id,
+                scope=scope,
+                expires_at=time.time() + self._refresh_token_ttl,
+                family_id=token_family,
+                cnf_jkt=cnf_jkt,
+            )
+            self._store.save_refresh_token(refresh_record)
+            refresh_token_value = refresh_record.token
+            self._prune_refresh_tokens()
+
+        return OAuth21TokenResponse(
+            access_token=access_token,
+            token_type=token_type,
+            expires_in=self._token_ttl,
+            scope=scope,
+            refresh_token=refresh_token_value,
+        )
+
+    def _consume_refresh_token(self, token: str) -> Optional[_RefreshToken]:
+        family_id = self._store.get_refresh_reuse_family_id(token)
+        if family_id is not None:
+            self._store.revoke_refresh_family(family_id)
+            raise InvalidGrantError(
+                'Refresh token reuse detected; token family revoked'
+            )
+
+        record = self._store.consume_refresh_token(token)
+        if record is None:
+            return None
+        if record.expires_at < time.time():
+            raise InvalidGrantError('Refresh token expired')
+        return record
+
+    def _prune_refresh_tokens(self) -> None:
+        now = time.time()
+        self._store.prune(now=now, code_ttl_cutoff=now, nonce_ttl=self._nonce_ttl)
 
     def _consume_code(self, code: str) -> _AuthorizationCode:
         auth_code = self._store.consume_code(code)

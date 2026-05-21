@@ -92,7 +92,7 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
             self.assertIsInstance(row[2], bytes)
             self.assertEqual(row[3], 'pbkdf2_sha256')
             self.assertNotEqual(row[1], b'secret-1')
-            self.assertEqual(schema_version, '2')
+            self.assertEqual(schema_version, '3')
 
     def test_hashed_client_secret_rejects_wrong_secret(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -200,6 +200,41 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
             store.prune(now=time.time(), code_ttl_cutoff=time.time(), nonce_ttl=300)
 
             self.assertIsNone(store.consume_code('expired'))
+
+    def test_refresh_token_rotation_persists_across_instances(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store_path = Path(tmp) / 'oauth.sqlite3'
+            verifier = generate_code_verifier()
+            challenge = compute_s256_challenge(verifier)
+
+            first = OAuth21AuthorizationServer(
+                signing_key=SIGNING_KEY,
+                issuer=ISSUER,
+                store=SQLiteOAuthStore(store_path),
+            )
+            first.register_client(
+                'client-1',
+                'secret-1',
+                ['https://client.example/callback'],
+            )
+            redirect_url, _ = first.create_authorization_code(
+                'client-1', 'https://client.example/callback', challenge
+            )
+            code = _code_from_redirect(redirect_url)
+            initial = first.exchange_code(
+                code=code, code_verifier=verifier, client_id='client-1'
+            )
+            assert initial.refresh_token is not None
+
+            second = OAuth21AuthorizationServer(
+                signing_key=SIGNING_KEY,
+                issuer=ISSUER,
+                store=SQLiteOAuthStore(store_path),
+            )
+            rotated = second.exchange_refresh_token(
+                initial.refresh_token, client_id='client-1'
+            )
+            self.assertIsNotNone(rotated.refresh_token)
 
 
 if __name__ == '__main__':

@@ -110,50 +110,74 @@ def _handle_oauth_token(
     grant_type = _first_param(params, 'grant_type')
     code = _first_param(params, 'code')
     code_verifier = _first_param(params, 'code_verifier')
+    refresh_token = _first_param(params, 'refresh_token')
     client_id = _first_param(params, 'client_id')
     client_secret = _first_param(params, 'client_secret')
     dpop_proof = handler.headers.get(_DPOP_HEADER)  # type: ignore[attr-defined]
-
-    if grant_type != 'authorization_code':
-        handler._send_json(  # type: ignore[attr-defined]
-            400,
-            {
-                'error': 'unsupported_grant_type',
-                'error_description': 'Only authorization_code is supported',
-            },
-        )
-        return
-    if not code:
-        handler._send_json(  # type: ignore[attr-defined]
-            400,
-            {
-                'error': 'invalid_request',
-                'error_description': 'code is required',
-            },
-        )
-        return
-    if not code_verifier:
-        handler._send_json(  # type: ignore[attr-defined]
-            400,
-            {
-                'error': 'invalid_request',
-                'error_description': 'code_verifier is required',
-            },
-        )
-        return
 
     extra_headers: dict[str, str] = {}
     dpop_nonce = oauth_server.generate_dpop_nonce()
     extra_headers[_DPOP_NONCE_HEADER] = dpop_nonce
 
-    try:
-        response = oauth_server.exchange_code(
-            code=code,
-            code_verifier=code_verifier,
-            client_id=client_id,
-            client_secret=client_secret,
-            dpop_proof_jwt=dpop_proof,
+    if grant_type == 'authorization_code':
+        if not code:
+            handler._send_json(  # type: ignore[attr-defined]
+                400,
+                {
+                    'error': 'invalid_request',
+                    'error_description': 'code is required',
+                },
+            )
+            return
+        if not code_verifier:
+            handler._send_json(  # type: ignore[attr-defined]
+                400,
+                {
+                    'error': 'invalid_request',
+                    'error_description': 'code_verifier is required',
+                },
+            )
+            return
+    elif grant_type == 'refresh_token':
+        if not refresh_token:
+            handler._send_json(  # type: ignore[attr-defined]
+                400,
+                {
+                    'error': 'invalid_request',
+                    'error_description': 'refresh_token is required',
+                },
+            )
+            return
+    else:
+        handler._send_json(  # type: ignore[attr-defined]
+            400,
+            {
+                'error': 'unsupported_grant_type',
+                'error_description': (
+                    'Supported grant types: authorization_code, refresh_token'
+                ),
+            },
         )
+        return
+
+    try:
+        if grant_type == 'authorization_code':
+            assert code is not None and code_verifier is not None
+            response = oauth_server.exchange_code(
+                code=code,
+                code_verifier=code_verifier,
+                client_id=client_id,
+                client_secret=client_secret,
+                dpop_proof_jwt=dpop_proof,
+            )
+        else:
+            assert refresh_token is not None
+            response = oauth_server.exchange_refresh_token(
+                refresh_token,
+                client_id=client_id,
+                client_secret=client_secret,
+                dpop_proof_jwt=dpop_proof,
+            )
     except OAuth21Error as exc:
         status_code = 400
         error_code = 'invalid_grant'
@@ -171,14 +195,16 @@ def _handle_oauth_token(
         )
         return
 
+    token_body: dict[str, object] = {
+        'access_token': response.access_token,
+        'token_type': response.token_type,
+        'expires_in': response.expires_in,
+        'scope': response.scope,
+    }
+    if response.refresh_token is not None:
+        token_body['refresh_token'] = response.refresh_token
     handler._send_json(  # type: ignore[attr-defined]
         200,
-        {
-            'access_token': response.access_token,
-            'token_type': response.token_type,
-            'expires_in': response.expires_in,
-            'scope': response.scope,
-            'refresh_token': response.refresh_token,
-        },
+        token_body,
         extra_headers=extra_headers,
     )

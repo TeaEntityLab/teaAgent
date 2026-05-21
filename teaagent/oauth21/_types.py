@@ -27,6 +27,7 @@ _DPOP_PROOF_TYP = 'dpop+jwt'
 
 _CODE_TTL_SECONDS = 600
 _DEFAULT_ACCESS_TOKEN_TTL = 3600
+_DEFAULT_REFRESH_TOKEN_TTL = 30 * 24 * 3600
 _NONCE_TTL_SECONDS = 300
 _PROOF_MAX_AGE_SECONDS = 60
 
@@ -71,6 +72,16 @@ class _AuthorizationCode:
     code_challenge_method: str
     expires_at: float
     scope: str
+
+
+@dataclass
+class _RefreshToken:
+    token: str
+    client_id: str
+    scope: str
+    expires_at: float
+    family_id: str
+    cnf_jkt: Optional[str] = None
 
 
 @dataclass(frozen=True)

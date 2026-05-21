@@ -10,7 +10,7 @@ from teaagent.oauth21._store import (
     _hash_client_secret,
     _hash_client_secret_with_salt,
 )
-from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode
+from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode, _RefreshToken
 
 try:
     import redis as _redis_mod
@@ -159,3 +159,68 @@ class RedisOAuthStore:
     def prune(self, *, now: float, code_ttl_cutoff: float, nonce_ttl: float) -> None:
         # Redis TTL handles expiration automatically; explicit prune is a no-op.
         pass
+
+    def save_refresh_token(self, record: _RefreshToken) -> None:
+        data = json.dumps(
+            {
+                'token': record.token,
+                'client_id': record.client_id,
+                'scope': record.scope,
+                'expires_at': record.expires_at,
+                'family_id': record.family_id,
+                'cnf_jkt': record.cnf_jkt,
+            }
+        )
+        ttl = max(1, int(record.expires_at - time.time()))
+        self._redis.set(self._k('refresh', record.token), data, ex=ttl)
+        self._redis.sadd(self._k('refresh_family', record.family_id), record.token)
+
+    def consume_refresh_token(self, token: str) -> Optional[_RefreshToken]:
+        raw = self._consume_script(keys=[self._k('refresh', token)])
+        if raw is None:
+            return None
+        data = json.loads(raw)
+        self._redis.srem(self._k('refresh_family', data['family_id']), token)
+        return _RefreshToken(
+            token=data['token'],
+            client_id=data['client_id'],
+            scope=data['scope'],
+            expires_at=float(data['expires_at']),
+            family_id=data['family_id'],
+            cnf_jkt=data.get('cnf_jkt'),
+        )
+
+    def record_refresh_reuse(
+        self, token: str, family_id: str, *, expires_at: float
+    ) -> None:
+        ttl = max(1, int(expires_at - time.time()))
+        self._redis.set(
+            self._k('refresh_reuse', token),
+            json.dumps({'family_id': family_id}),
+            ex=ttl,
+        )
+
+    def is_refresh_reused(self, token: str) -> bool:
+        return self.get_refresh_reuse_family_id(token) is not None
+
+    def get_refresh_reuse_family_id(self, token: str) -> Optional[str]:
+        raw = self._redis.get(self._k('refresh_reuse', token))
+        if raw is None:
+            return None
+        return json.loads(raw)['family_id']
+
+    def revoke_refresh_family(self, family_id: str) -> None:
+        family_key = self._k('refresh_family', family_id)
+        tokens = self._redis.smembers(family_key)
+        if tokens:
+            self._redis.delete(
+                *[self._k('refresh', token) for token in tokens],
+                family_key,
+            )
+        reuse_pattern = self._k('refresh_reuse', '*')
+        for key in self._redis.scan_iter(match=reuse_pattern):
+            raw = self._redis.get(key)
+            if raw is None:
+                continue
+            if json.loads(raw).get('family_id') == family_id:
+                self._redis.delete(key)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, Optional
 
@@ -9,7 +10,7 @@ from teaagent.oauth21._store import (
     _hash_client_secret,
     _hash_client_secret_with_salt,
 )
-from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode
+from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode, _RefreshToken
 
 try:
     import psycopg2
@@ -47,6 +48,27 @@ CREATE TABLE IF NOT EXISTS oauth_nonces (
     created_at DOUBLE PRECISION NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_oauth_nonces_created_at ON oauth_nonces (created_at);
+
+CREATE TABLE IF NOT EXISTS oauth_refresh_tokens (
+    token TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    expires_at DOUBLE PRECISION NOT NULL,
+    family_id TEXT NOT NULL,
+    cnf_jkt TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_tokens_expires_at
+    ON oauth_refresh_tokens (expires_at);
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_tokens_family_id
+    ON oauth_refresh_tokens (family_id);
+
+CREATE TABLE IF NOT EXISTS oauth_refresh_reuse (
+    token TEXT PRIMARY KEY,
+    family_id TEXT NOT NULL,
+    expires_at DOUBLE PRECISION NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_reuse_expires_at
+    ON oauth_refresh_reuse (expires_at);
 """
 
 
@@ -235,4 +257,95 @@ class PostgreSQLOAuthStore:
             cur.execute(
                 'DELETE FROM oauth_nonces WHERE %s - created_at > %s',
                 (now, nonce_ttl),
+            )
+            cur.execute(
+                'DELETE FROM oauth_refresh_tokens WHERE expires_at < %s', (now,)
+            )
+            cur.execute('DELETE FROM oauth_refresh_reuse WHERE expires_at < %s', (now,))
+
+    def save_refresh_token(self, record: _RefreshToken) -> None:
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                    INSERT INTO oauth_refresh_tokens
+                        (token, client_id, scope, expires_at, family_id, cnf_jkt)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (token) DO UPDATE
+                        SET expires_at = EXCLUDED.expires_at
+                    """,
+                (
+                    record.token,
+                    record.client_id,
+                    record.scope,
+                    record.expires_at,
+                    record.family_id,
+                    record.cnf_jkt,
+                ),
+            )
+
+    def consume_refresh_token(self, token: str) -> Optional[_RefreshToken]:
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                    DELETE FROM oauth_refresh_tokens WHERE token = %s
+                    RETURNING token, client_id, scope, expires_at, family_id, cnf_jkt
+                    """,
+                (token,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return _RefreshToken(
+            token=str(row[0]),
+            client_id=str(row[1]),
+            scope=str(row[2]),
+            expires_at=float(row[3]),
+            family_id=str(row[4]),
+            cnf_jkt=str(row[5]) if row[5] is not None else None,
+        )
+
+    def record_refresh_reuse(
+        self, token: str, family_id: str, *, expires_at: float
+    ) -> None:
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                    INSERT INTO oauth_refresh_reuse (token, family_id, expires_at)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (token) DO UPDATE
+                        SET family_id = EXCLUDED.family_id,
+                            expires_at = EXCLUDED.expires_at
+                    """,
+                (token, family_id, expires_at),
+            )
+
+    def is_refresh_reused(self, token: str) -> bool:
+        return self.get_refresh_reuse_family_id(token) is not None
+
+    def get_refresh_reuse_family_id(self, token: str) -> Optional[str]:
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                'SELECT family_id, expires_at FROM oauth_refresh_reuse WHERE token = %s',
+                (token,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        if float(row[1]) < time.time():
+            with self._conn() as conn, conn.cursor() as cur:
+                cur.execute(
+                    'DELETE FROM oauth_refresh_reuse WHERE token = %s', (token,)
+                )
+            return None
+        return str(row[0])
+
+    def revoke_refresh_family(self, family_id: str) -> None:
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                'DELETE FROM oauth_refresh_tokens WHERE family_id = %s',
+                (family_id,),
+            )
+            cur.execute(
+                'DELETE FROM oauth_refresh_reuse WHERE family_id = %s',
+                (family_id,),
             )

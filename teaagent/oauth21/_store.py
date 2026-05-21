@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Protocol
 
-from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode
+from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode, _RefreshToken
 
-_SQLITE_SCHEMA_VERSION = 2
+_SQLITE_SCHEMA_VERSION = 3
 _CLIENT_SECRET_KDF = 'pbkdf2_sha256'
 _CLIENT_SECRET_ITERATIONS = 210_000
 _CLIENT_SECRET_SALT_BYTES = 16
@@ -41,12 +41,28 @@ class OAuthStore(Protocol):
         self, *, now: float, code_ttl_cutoff: float, nonce_ttl: float
     ) -> None: ...
 
+    def save_refresh_token(self, record: _RefreshToken) -> None: ...
+
+    def consume_refresh_token(self, token: str) -> Optional[_RefreshToken]: ...
+
+    def record_refresh_reuse(
+        self, token: str, family_id: str, *, expires_at: float
+    ) -> None: ...
+
+    def is_refresh_reused(self, token: str) -> bool: ...
+
+    def get_refresh_reuse_family_id(self, token: str) -> Optional[str]: ...
+
+    def revoke_refresh_family(self, family_id: str) -> None: ...
+
 
 class InMemoryOAuthStore:
     def __init__(self) -> None:
         self.clients: dict[str, OAuth21Client] = {}
         self.codes: dict[str, _AuthorizationCode] = {}
         self.nonces: dict[str, float] = {}
+        self.refresh_tokens: dict[str, _RefreshToken] = {}
+        self.refresh_reuse: dict[str, tuple[str, float]] = {}
 
     def register_client(self, client: OAuth21Client) -> None:
         self.clients[client.client_id] = client
@@ -81,6 +97,46 @@ class InMemoryOAuthStore:
         ]
         for nonce in expired_nonces:
             del self.nonces[nonce]
+        expired_refresh = [
+            t for t, rec in self.refresh_tokens.items() if rec.expires_at < now
+        ]
+        for token in expired_refresh:
+            del self.refresh_tokens[token]
+        expired_reuse = [t for t, (_, exp) in self.refresh_reuse.items() if exp < now]
+        for token in expired_reuse:
+            del self.refresh_reuse[token]
+
+    def save_refresh_token(self, record: _RefreshToken) -> None:
+        self.refresh_tokens[record.token] = record
+
+    def consume_refresh_token(self, token: str) -> Optional[_RefreshToken]:
+        return self.refresh_tokens.pop(token, None)
+
+    def record_refresh_reuse(
+        self, token: str, family_id: str, *, expires_at: float
+    ) -> None:
+        self.refresh_reuse[token] = (family_id, expires_at)
+
+    def is_refresh_reused(self, token: str) -> bool:
+        return self.get_refresh_reuse_family_id(token) is not None
+
+    def get_refresh_reuse_family_id(self, token: str) -> Optional[str]:
+        entry = self.refresh_reuse.get(token)
+        if entry is None:
+            return None
+        family_id, expires_at = entry
+        if expires_at < time.time():
+            del self.refresh_reuse[token]
+            return None
+        return family_id
+
+    def revoke_refresh_family(self, family_id: str) -> None:
+        for token, record in list(self.refresh_tokens.items()):
+            if record.family_id == family_id:
+                del self.refresh_tokens[token]
+        for token, (fid, _) in list(self.refresh_reuse.items()):
+            if fid == family_id:
+                del self.refresh_reuse[token]
 
 
 class SQLiteOAuthStore:
@@ -239,6 +295,102 @@ class SQLiteOAuthStore:
                 'DELETE FROM oauth_nonces WHERE ? - created_at > ?',
                 (now, nonce_ttl),
             )
+            conn.execute(
+                'DELETE FROM oauth_refresh_tokens WHERE expires_at < ?',
+                (now,),
+            )
+            conn.execute(
+                'DELETE FROM oauth_refresh_reuse WHERE expires_at < ?',
+                (now,),
+            )
+
+    def save_refresh_token(self, record: _RefreshToken) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO oauth_refresh_tokens
+                    (token, client_id, scope, expires_at, family_id, cnf_jkt)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.token,
+                    record.client_id,
+                    record.scope,
+                    record.expires_at,
+                    record.family_id,
+                    record.cnf_jkt,
+                ),
+            )
+
+    def consume_refresh_token(self, token: str) -> Optional[_RefreshToken]:
+        with self._lock, self._connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            row = conn.execute(
+                """
+                SELECT token, client_id, scope, expires_at, family_id, cnf_jkt
+                FROM oauth_refresh_tokens
+                WHERE token = ?
+                """,
+                (token,),
+            ).fetchone()
+            if row is None:
+                return None
+            conn.execute(
+                'DELETE FROM oauth_refresh_tokens WHERE token = ?',
+                (token,),
+            )
+        return _RefreshToken(
+            token=str(row[0]),
+            client_id=str(row[1]),
+            scope=str(row[2]),
+            expires_at=float(row[3]),
+            family_id=str(row[4]),
+            cnf_jkt=str(row[5]) if row[5] is not None else None,
+        )
+
+    def record_refresh_reuse(
+        self, token: str, family_id: str, *, expires_at: float
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO oauth_refresh_reuse
+                    (token, family_id, expires_at)
+                VALUES (?, ?, ?)
+                """,
+                (token, family_id, expires_at),
+            )
+
+    def is_refresh_reused(self, token: str) -> bool:
+        return self.get_refresh_reuse_family_id(token) is not None
+
+    def get_refresh_reuse_family_id(self, token: str) -> Optional[str]:
+        with self._connect() as conn:
+            row = conn.execute(
+                'SELECT family_id, expires_at FROM oauth_refresh_reuse WHERE token = ?',
+                (token,),
+            ).fetchone()
+        if row is None:
+            return None
+        if float(row[1]) < time.time():
+            with self._connect() as conn:
+                conn.execute(
+                    'DELETE FROM oauth_refresh_reuse WHERE token = ?',
+                    (token,),
+                )
+            return None
+        return str(row[0])
+
+    def revoke_refresh_family(self, family_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM oauth_refresh_tokens WHERE family_id = ?',
+                (family_id,),
+            )
+            conn.execute(
+                'DELETE FROM oauth_refresh_reuse WHERE family_id = ?',
+                (family_id,),
+            )
 
     def _initialize(self) -> None:
         with self._connect() as conn:
@@ -275,6 +427,25 @@ class SQLiteOAuthStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_oauth_nonces_created_at
                     ON oauth_nonces(created_at);
+                CREATE TABLE IF NOT EXISTS oauth_refresh_tokens (
+                    token TEXT PRIMARY KEY,
+                    client_id TEXT NOT NULL,
+                    scope TEXT NOT NULL,
+                    expires_at REAL NOT NULL,
+                    family_id TEXT NOT NULL,
+                    cnf_jkt TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_oauth_refresh_tokens_expires_at
+                    ON oauth_refresh_tokens(expires_at);
+                CREATE INDEX IF NOT EXISTS idx_oauth_refresh_tokens_family_id
+                    ON oauth_refresh_tokens(family_id);
+                CREATE TABLE IF NOT EXISTS oauth_refresh_reuse (
+                    token TEXT PRIMARY KEY,
+                    family_id TEXT NOT NULL,
+                    expires_at REAL NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_oauth_refresh_reuse_expires_at
+                    ON oauth_refresh_reuse(expires_at);
                 """
             )
             self._migrate_clients(conn)

@@ -208,12 +208,84 @@ class AuthorizationServerTests(unittest.TestCase):
         self.assertTrue(len(token.access_token) > 0)
         self.assertEqual(token.expires_in, 3600)
         self.assertEqual(token.scope, 'mcp')
+        self.assertIsNotNone(token.refresh_token)
 
         # Introspect
         claims = self.as_.introspect_token(token.access_token)
         self.assertEqual(claims.sub, 'client-1')
         self.assertEqual(claims.iss, 'https://mcp.test')
         self.assertIsNone(claims.cnf_jkt)
+
+    def test_refresh_token_rotation(self) -> None:
+        verifier = generate_code_verifier()
+        challenge = compute_s256_challenge(verifier)
+        redirect_url, _ = self.as_.create_authorization_code(
+            client_id='client-1',
+            redirect_uri='https://app.test/callback',
+            code_challenge=challenge,
+        )
+        code = redirect_url.split('code=')[1].split('&')[0]
+        initial = self.as_.exchange_code(
+            code=code, code_verifier=verifier, client_id='client-1'
+        )
+        assert initial.refresh_token is not None
+
+        rotated = self.as_.exchange_refresh_token(
+            initial.refresh_token, client_id='client-1'
+        )
+        self.assertNotEqual(rotated.access_token, initial.access_token)
+        self.assertIsNotNone(rotated.refresh_token)
+        self.assertNotEqual(rotated.refresh_token, initial.refresh_token)
+
+        with self.assertRaises(InvalidGrantError):
+            self.as_.exchange_refresh_token(initial.refresh_token, client_id='client-1')
+
+    def test_refresh_token_reuse_revokes_family(self) -> None:
+        verifier = generate_code_verifier()
+        challenge = compute_s256_challenge(verifier)
+        redirect_url, _ = self.as_.create_authorization_code(
+            client_id='client-1',
+            redirect_uri='https://app.test/callback',
+            code_challenge=challenge,
+        )
+        code = redirect_url.split('code=')[1].split('&')[0]
+        initial = self.as_.exchange_code(
+            code=code, code_verifier=verifier, client_id='client-1'
+        )
+        assert initial.refresh_token is not None
+        first_rotation = self.as_.exchange_refresh_token(
+            initial.refresh_token, client_id='client-1'
+        )
+        assert first_rotation.refresh_token is not None
+
+        with self.assertRaises(InvalidGrantError) as ctx:
+            self.as_.exchange_refresh_token(initial.refresh_token, client_id='client-1')
+        self.assertIn('reuse', str(ctx.exception).lower())
+
+        with self.assertRaises(InvalidGrantError):
+            self.as_.exchange_refresh_token(
+                first_rotation.refresh_token, client_id='client-1'
+            )
+
+    def test_refresh_disabled_when_ttl_zero(self) -> None:
+        as_ = OAuth21AuthorizationServer(
+            signing_key=SIGNING_KEY,
+            issuer='https://mcp.test',
+            refresh_token_ttl=0,
+        )
+        as_.register_client('client-1', 'secret-1', ['https://app.test/callback'])
+        verifier = generate_code_verifier()
+        challenge = compute_s256_challenge(verifier)
+        redirect_url, _ = as_.create_authorization_code(
+            client_id='client-1',
+            redirect_uri='https://app.test/callback',
+            code_challenge=challenge,
+        )
+        code = redirect_url.split('code=')[1].split('&')[0]
+        token = as_.exchange_code(
+            code=code, code_verifier=verifier, client_id='client-1'
+        )
+        self.assertIsNone(token.refresh_token)
 
     def test_exchange_code_bad_verifier(self) -> None:
         verifier = generate_code_verifier()
@@ -283,6 +355,7 @@ class AuthorizationServerTests(unittest.TestCase):
         self.assertIn('authorization_endpoint', meta)
         self.assertIn('token_endpoint', meta)
         self.assertIn('S256', meta['code_challenge_methods_supported'])
+        self.assertIn('refresh_token', meta['grant_types_supported'])
 
     def test_no_state_in_authorization(self) -> None:
         verifier = generate_code_verifier()

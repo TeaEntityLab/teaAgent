@@ -82,6 +82,13 @@ def register(
         help='Access token TTL in seconds. Default 3600.',
     )
     serve.add_argument(
+        '--oauth-refresh-token-ttl',
+        type=int,
+        default=30 * 24 * 3600,
+        help='Refresh token TTL in seconds (rotated on each use). Set 0 to disable. '
+        'Default 2592000 (30 days).',
+    )
+    serve.add_argument(
         '--oauth-dpop-replay-ttl',
         type=int,
         default=60,
