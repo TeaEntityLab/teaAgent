@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from teaagent.llm import LLMAdapter
+from teaagent.subagent_run_context import get_parent_run_id
 from teaagent.subagents._manager import SubagentManager
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
@@ -28,7 +29,7 @@ def register_subagent_tools(
             return _subagent_error("subagent requires non-empty 'task'")
         return manager.run_subagent(
             task=task,
-            parent_run_id='',
+            parent_run_id=get_parent_run_id(),
             depth=depth,
             max_iterations=_as_int(args.get('max_iterations')),
             max_tool_calls=_as_int(args.get('max_tool_calls')),
@@ -56,7 +57,7 @@ def register_subagent_tools(
                 return _subagent_error("subagent requires non-empty 'task'")
             return manager.run_subagent(
                 task=task,
-                parent_run_id='',
+                parent_run_id=get_parent_run_id(),
                 depth=depth,
                 def_name=def_name,
                 max_iterations=_as_int(args.get('max_iterations')),
@@ -98,6 +99,16 @@ def _register(
                 'tool_calls': {'type': 'integer'},
                 'final_answer': {'type': 'string'},
                 'message': {'type': 'string'},
+                'lineage': {
+                    'type': 'object',
+                    'properties': {
+                        'parent_run_id': {'type': 'string'},
+                        'def_name': {'type': 'string'},
+                        'depth': {'type': 'integer'},
+                        'isolation': {'type': 'string'},
+                        'batch_index': {'type': 'integer'},
+                    },
+                },
             },
             'required': ['status'],
         },
@@ -141,6 +152,7 @@ def _register_batch(
             return {
                 'status': 'error',
                 'results': [],
+                'lineage': [],
                 'message': f'subagent depth {config.max_subagent_depth} reached',
             }
 
@@ -149,28 +161,34 @@ def _register_batch(
             return {
                 'status': 'error',
                 'results': [],
+                'lineage': [],
                 'message': "'tasks' must be a non-empty list of subagent task objects",
             }
 
         max_workers = min(_as_int(args.get('max_workers')) or 4, len(tasks))
+        parent_run_id = get_parent_run_id()
 
-        def _run_one(task_obj: dict) -> dict[str, Any]:
+        def _run_one(task_obj: dict, batch_index: int) -> dict[str, Any]:
             task = task_obj.get('task', '')
             if not isinstance(task, str) or not task.strip():
                 return _subagent_error("subagent requires non-empty 'task'")
             def_name = task_obj.get('def_name')
             return manager.run_subagent(
                 task=task,
-                parent_run_id='',
+                parent_run_id=parent_run_id,
                 depth=depth,
                 def_name=def_name if isinstance(def_name, str) else None,
                 max_iterations=_as_int(task_obj.get('max_iterations')),
                 max_tool_calls=_as_int(task_obj.get('max_tool_calls')),
+                batch_index=batch_index,
             )
 
         results: list[tuple[int, dict[str, Any]]] = []
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            futures = {pool.submit(_run_one, t): i for i, t in enumerate(tasks)}
+            futures = {
+                pool.submit(_run_one, task, index): index
+                for index, task in enumerate(tasks)
+            }
             for future in as_completed(futures):
                 idx = futures[future]
                 try:
@@ -182,9 +200,15 @@ def _register_batch(
         ordered = [r for _, r in results]
 
         ok_count = sum(1 for r in ordered if r.get('status') == 'completed')
+        lineage = [
+            entry
+            for entry in (r.get('lineage') for r in ordered)
+            if isinstance(entry, dict)
+        ]
         return {
             'status': 'completed' if ok_count == len(ordered) else 'partial',
             'results': ordered,
+            'lineage': lineage,
             'total': len(ordered),
             'completed': ok_count,
         }
@@ -231,14 +255,37 @@ def _register_batch(
                             'tool_calls': {'type': 'integer'},
                             'final_answer': {'type': 'string'},
                             'message': {'type': 'string'},
+                            'lineage': {
+                                'type': 'object',
+                                'properties': {
+                                    'parent_run_id': {'type': 'string'},
+                                    'def_name': {'type': 'string'},
+                                    'depth': {'type': 'integer'},
+                                    'isolation': {'type': 'string'},
+                                    'batch_index': {'type': 'integer'},
+                                },
+                            },
                         },
                     },
                 },
                 'total': {'type': 'integer'},
                 'completed': {'type': 'integer'},
                 'message': {'type': 'string'},
+                'lineage': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'parent_run_id': {'type': 'string'},
+                            'def_name': {'type': 'string'},
+                            'depth': {'type': 'integer'},
+                            'isolation': {'type': 'string'},
+                            'batch_index': {'type': 'integer'},
+                        },
+                    },
+                },
             },
-            'required': ['status', 'results'],
+            'required': ['status', 'results', 'lineage'],
         },
         annotations=ToolAnnotations(
             read_only=False, destructive=False, idempotent=False

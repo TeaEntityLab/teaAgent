@@ -19,6 +19,31 @@ class SubagentDef:
     max_depth: int = 1
 
 
+DEFAULT_SUBAGENT_ISOLATION = 'shared'
+
+
+@dataclass(frozen=True)
+class SubagentLineage:
+    """Parent-child run relationship for subagent delegation."""
+
+    parent_run_id: str
+    def_name: str
+    depth: int
+    isolation: str = DEFAULT_SUBAGENT_ISOLATION
+    batch_index: Optional[int] = None
+
+    def to_dict(self) -> dict[str, str | int]:
+        payload: dict[str, str | int] = {
+            'parent_run_id': self.parent_run_id,
+            'def_name': self.def_name,
+            'depth': self.depth,
+            'isolation': self.isolation,
+        }
+        if self.batch_index is not None:
+            payload['batch_index'] = self.batch_index
+        return payload
+
+
 @dataclass(frozen=True)
 class SubagentSession:
     session_id: str
@@ -26,7 +51,20 @@ class SubagentSession:
     parent_run_id: str
     status: str
     started_at: str
+    depth: int = 0
+    batch_index: Optional[int] = None
+    isolation: str = DEFAULT_SUBAGENT_ISOLATION
     completed_at: Optional[str] = None
     iterations: int = 0
     tool_calls: int = 0
     final_answer: str = ''
+
+    @property
+    def lineage(self) -> SubagentLineage:
+        return SubagentLineage(
+            parent_run_id=self.parent_run_id,
+            def_name=self.def_name,
+            depth=self.depth,
+            isolation=self.isolation,
+            batch_index=self.batch_index,
+        )

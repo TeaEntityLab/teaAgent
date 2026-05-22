@@ -1,10 +1,17 @@
 from teaagent.subagents._loader import load_subagent_defs
 from teaagent.subagents._manager import SubagentManager
 from teaagent.subagents._tools import register_subagent_tools
-from teaagent.subagents._types import SubagentDef, SubagentSession
+from teaagent.subagents._types import (
+    DEFAULT_SUBAGENT_ISOLATION,
+    SubagentDef,
+    SubagentLineage,
+    SubagentSession,
+)
 
 __all__ = [
+    'DEFAULT_SUBAGENT_ISOLATION',
     'SubagentDef',
+    'SubagentLineage',
     'SubagentSession',
     'SubagentManager',
     'load_subagent_defs',

@@ -39,7 +39,7 @@ governance-first story against the 2026-05-22 landscape survey. See
 | Differentiator | Priority | Backlog reference |
 |----------------|----------|-------------------|
 | Docs/provider architecture drift guard | P0 | Open — High |
-| Subagent lineage and isolation hardening | P1 | Open — Medium |
+| Subagent lineage and isolation hardening | P1 | Implemented (`test_subagent_lineage_flow.py`, `test_subagent_lineage.py`) |
 | Repo-map / context pack for coding runs | P1 | Open — Medium |
 | Mode and safety comparison matrix | P1 | Implemented (`docs/USAGE.md`, `validate_mode_safety_matrix`) |
 | Multi-surface launch recipes | P1 | Implemented (`docs/USAGE.md`, `test_surface_launch_recipes_flow.py`) |

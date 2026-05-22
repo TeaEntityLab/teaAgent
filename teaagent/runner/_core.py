@@ -18,6 +18,7 @@ from teaagent.errors import (
 )
 from teaagent.file_policy import FilePolicy
 from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.tools import ToolRegistry
 
 from ._types import ApprovalHandler, ApprovalRequest, DecisionFn, FinalAnswer, RunResult
@@ -233,9 +234,13 @@ class AgentRunner:
                     annotations=annotations,
                 )
                 try:
-                    result = self.registry.execute(
-                        decision.tool_name, decision.arguments
-                    )
+                    parent_token = bind_parent_run_id(current_run_id)
+                    try:
+                        result = self.registry.execute(
+                            decision.tool_name, decision.arguments
+                        )
+                    finally:
+                        reset_parent_run_id(parent_token)
                 except ToolExecutionError as exc:
                     tool_calls += 1
                     err_observation: dict[str, Any] = {

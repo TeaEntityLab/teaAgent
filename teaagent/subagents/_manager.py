@@ -8,7 +8,30 @@ from typing import Any, Optional
 from teaagent.llm import LLMAdapter
 from teaagent.run_store import RunStore
 from teaagent.subagents._loader import load_subagent_defs
-from teaagent.subagents._types import SubagentDef, SubagentSession
+from teaagent.subagents._types import (
+    DEFAULT_SUBAGENT_ISOLATION,
+    SubagentDef,
+    SubagentLineage,
+    SubagentSession,
+)
+
+
+def _lineage_or_none(
+    parent_run_id: str,
+    def_name: str,
+    depth: int,
+    batch_index: Optional[int],
+    isolation: str,
+) -> Optional[SubagentLineage]:
+    if not parent_run_id:
+        return None
+    return SubagentLineage(
+        parent_run_id=parent_run_id,
+        def_name=def_name,
+        depth=depth,
+        batch_index=batch_index,
+        isolation=isolation,
+    )
 
 
 class SubagentManager:
@@ -48,6 +71,8 @@ class SubagentManager:
         def_name: Optional[str] = None,
         max_iterations: Optional[int] = None,
         max_tool_calls: Optional[int] = None,
+        batch_index: Optional[int] = None,
+        isolation: str = DEFAULT_SUBAGENT_ISOLATION,
     ) -> dict[str, Any]:
         from teaagent.chat_agent import run_chat_agent
 
@@ -55,10 +80,26 @@ class SubagentManager:
         if def_name:
             sub_def = self.get_def(def_name)
             if sub_def is None:
-                return _error(f'unknown subagent: {def_name}')
+                return _error(
+                    f'unknown subagent: {def_name}',
+                    lineage=_lineage_or_none(
+                        parent_run_id,
+                        def_name,
+                        depth,
+                        batch_index,
+                        isolation,
+                    ),
+                )
             if depth >= sub_def.max_depth:
                 return _error(
-                    f"subagent '{sub_def.name}' max_depth {sub_def.max_depth} reached"
+                    f"subagent '{sub_def.name}' max_depth {sub_def.max_depth} reached",
+                    lineage=_lineage_or_none(
+                        parent_run_id,
+                        sub_def.name,
+                        depth + 1,
+                        batch_index,
+                        isolation,
+                    ),
                 )
 
         resolved_max_iterations = max_iterations or (
@@ -88,6 +129,16 @@ class SubagentManager:
         if sub_def and sub_def.system_prompt.strip():
             task_spec = f'[{sub_def.name} role]\n{sub_def.system_prompt.strip()}\n\n---\n\nTask: {task}'
 
+        child_depth = depth + 1
+        def_used = sub_def.name if sub_def else 'generic'
+        lineage = SubagentLineage(
+            parent_run_id=parent_run_id,
+            def_name=def_used,
+            depth=child_depth,
+            isolation=isolation,
+            batch_index=batch_index,
+        )
+
         registry = self._build_registry_for(sub_def)
         store = RunStore(self._root)
         sub_audit = store.audit_logger()
@@ -98,17 +149,25 @@ class SubagentManager:
             config=sub_config,
             audit=sub_audit,
             registry=registry,
-            depth=depth + 1,
+            depth=child_depth,
+            initial_context_extra={'subagent_lineage': lineage.to_dict()},
+        )
+        sub_audit.record(
+            'subagent_lineage',
+            sub_result.run_id,
+            **lineage.to_dict(),
         )
         store.logger_for_result(sub_result, sub_audit)
         completed_at = datetime.now(timezone.utc).isoformat()
-        def_used = sub_def.name if sub_def else 'generic'
         session = SubagentSession(
             session_id=sub_result.run_id,
             def_name=def_used,
             parent_run_id=parent_run_id,
             status=sub_result.status,
             started_at=started_at,
+            depth=child_depth,
+            batch_index=batch_index,
+            isolation=isolation,
             completed_at=completed_at,
             iterations=sub_result.iterations,
             tool_calls=sub_result.tool_calls,
@@ -117,14 +176,7 @@ class SubagentManager:
             ),
         )
         self._sessions[session.session_id] = session
-        return {
-            'run_id': session.session_id,
-            'status': session.status,
-            'iterations': session.iterations,
-            'tool_calls': session.tool_calls,
-            'final_answer': session.final_answer,
-            'message': '',
-        }
+        return _success(session)
 
     def _build_registry_for(self, sub_def: Optional[SubagentDef]) -> Any:
         if self._parent_registry is None:
@@ -159,8 +211,24 @@ def _normalize_name(name: str) -> str:
     return name.strip().lower().replace('_', '-').replace(' ', '-')
 
 
-def _error(message: str) -> dict[str, Any]:
+def _success(session: SubagentSession) -> dict[str, Any]:
     return {
+        'run_id': session.session_id,
+        'status': session.status,
+        'iterations': session.iterations,
+        'tool_calls': session.tool_calls,
+        'final_answer': session.final_answer,
+        'lineage': session.lineage.to_dict(),
+        'message': '',
+    }
+
+
+def _error(
+    message: str,
+    *,
+    lineage: Optional[SubagentLineage] = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
         'run_id': '',
         'status': 'error',
         'iterations': 0,
@@ -168,3 +236,6 @@ def _error(message: str) -> dict[str, Any]:
         'final_answer': '',
         'message': message,
     }
+    if lineage is not None:
+        payload['lineage'] = lineage.to_dict()
+    return payload

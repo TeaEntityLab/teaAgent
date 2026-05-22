@@ -502,6 +502,24 @@ teaagent agent run gpt "Plan and execute the cleanup" --subagent --max-subagent-
 
 Each sub-run is persisted under `.teaagent/runs/*.jsonl` with its own `run_id` so it can be inspected or resumed.
 
+### Lineage and isolation (default: shared workspace)
+
+Child runs record parent lineage on every `subagent` / `subagent_*` / `subagent_batch` result:
+
+| Field | Meaning |
+|-------|---------|
+| `parent_run_id` | Persisted parent run that invoked the tool |
+| `def_name` | Named subagent definition (`generic` when using `subagent`) |
+| `depth` | Child depth (`parent depth + 1`) |
+| `batch_index` | Position in `subagent_batch` (null for single delegation) |
+| `isolation` | `shared` today — same workspace root and tool registry inheritance |
+
+`subagent_batch` returns a top-level `lineage` array ordered by `batch_index`, parallel to `results`.
+
+Audit: child runs emit a `subagent_lineage` event in their JSONL; parent tool results embed the same `lineage` object.
+
+**Deferred:** `isolation = worktree | container` is not implemented yet. Future API may add optional isolation without breaking current callers.
+
 Inside TUI:
 
 ```text
