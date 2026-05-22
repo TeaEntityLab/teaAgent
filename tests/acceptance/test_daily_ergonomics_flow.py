@@ -37,8 +37,46 @@ def test_daily_ergonomics_smoke(tmp_path: Path) -> None:
     recipes = _run('recipes', 'list', cwd=tmp_path)
     assert recipes.returncode == 0
     payload = json.loads(recipes.stdout)
-    assert any(item['name'] == 'review-staged' for item in payload)
+    names = {item['name'] for item in payload}
+    assert 'review-staged' in names
+    assert 'fix-failing-test' in names
+    assert 'release-check' in names
+    recipe_run = _run(
+        'recipes',
+        'run',
+        'summarize-repo',
+        '--print-only',
+        '--root',
+        str(tmp_path),
+        cwd=tmp_path,
+    )
+    assert recipe_run.returncode == 0
     approval = _run('approval', 'list', '--root', str(tmp_path), cwd=tmp_path)
     assert approval.returncode == 0
     recall = _run('recall', '--root', str(tmp_path), '--limit', '3', cwd=tmp_path)
     assert recall.returncode == 0
+    session = _run('session', 'list', '--root', str(tmp_path), cwd=tmp_path)
+    assert session.returncode == 0
+    daily = _run(
+        'daily',
+        'readiness check',
+        '--root',
+        str(tmp_path),
+        '--dry-run',
+        cwd=tmp_path,
+    )
+    assert daily.returncode == 0, daily.stderr
+    run_dry = _run(
+        'run',
+        'smoke task',
+        '--root',
+        str(tmp_path),
+        '--dry-run',
+        cwd=tmp_path,
+    )
+    assert run_dry.returncode == 0, run_dry.stderr
+    journal = _run('journal', '--root', str(tmp_path), '--task', 'note', cwd=tmp_path)
+    assert journal.returncode == 0, journal.stderr
+    caps = _run('model', 'capabilities', cwd=tmp_path)
+    assert caps.returncode == 0
+    assert 'gpt' in caps.stdout

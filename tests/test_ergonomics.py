@@ -96,3 +96,41 @@ def test_top_level_shortcut_daily_argv() -> None:
     from teaagent.cli import _expand_argv
 
     assert _expand_argv(['daily', 'gpt']) == ['agent', 'daily', 'gpt']
+
+
+def test_normalize_providerless_run_task(tmp_path: Path) -> None:
+    import argparse
+
+    from teaagent.cli import _normalize_optional_provider_args
+
+    args = argparse.Namespace(
+        command='agent',
+        agent_command='run',
+        provider='fix the failing test',
+        task=None,
+        root=str(tmp_path),
+    )
+    _normalize_optional_provider_args(args)
+    assert args.provider is None
+    assert args.task == 'fix the failing test'
+
+
+def test_session_stream_yields_events(tmp_path: Path) -> None:
+    from teaagent.ergonomics.session_stream import stream_run_events
+    from teaagent.run_store import RunStore
+
+    store = RunStore(tmp_path)
+    audit = store.audit_logger('run-ergo-1')
+    audit.record('run_started', 'run-ergo-1', task='hello')
+    audit.record('run_completed', 'run-ergo-1', answer='done')
+    events = list(stream_run_events('run-ergo-1', root=tmp_path))
+    assert any(event.get('event_type') == 'run_started' for event in events)
+
+
+def test_model_capabilities_table() -> None:
+    from teaagent.model_capabilities import build_capability_table
+
+    rows = build_capability_table()
+    providers = {row['provider'] for row in rows}
+    assert 'gpt' in providers
+    assert all('default_model' in row for row in rows)

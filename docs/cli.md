@@ -54,6 +54,13 @@ First-time setup:
 
 ```bash
 teaagent init --root . --provider gpt --context-profile balanced
+
+After init, provider comes from config — two-word daily use:
+
+```bash
+teaagent daily "what to do today"
+teaagent run "fix the failing test" --dry-run
+```
 ```
 
 Top-level shortcuts (same as `agent` subcommands; provider comes from config when omitted):

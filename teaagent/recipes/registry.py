@@ -49,6 +49,66 @@ RECIPES: dict[str, Recipe] = {
         task_template='Perform a security-focused review of recently changed source files.',
         permission_mode='read-only',
     ),
+    'fix-failing-test': Recipe(
+        name='fix-failing-test',
+        description='Diagnose and fix the current failing test with minimal diff',
+        task_template=(
+            'Find the failing test output in this repo, identify the root cause, '
+            'and propose the smallest fix with tests passing.'
+        ),
+        permission_mode='workspace-write',
+        context_profile='balanced',
+    ),
+    'summarize-repo': Recipe(
+        name='summarize-repo',
+        description='High-level repo summary for onboarding or stand-up',
+        task_template=(
+            'Summarize this repository: purpose, main packages, how to run tests, '
+            'and the top three risks or gaps.'
+        ),
+        permission_mode='read-only',
+        context_profile='lean',
+    ),
+    'map-architecture': Recipe(
+        name='map-architecture',
+        description='Map major modules and data flow',
+        task_template=(
+            'Map the architecture of this codebase: entry points, core modules, '
+            'external integrations, and extension boundaries.'
+        ),
+        permission_mode='read-only',
+        context_profile='deep',
+    ),
+    'safe-cleanup': Recipe(
+        name='safe-cleanup',
+        description='Suggest safe dead-code and doc cleanup without applying',
+        task_template=(
+            'Identify low-risk cleanup opportunities (unused imports, stale docs, '
+            'duplicate helpers). Output a plan only; do not edit files.'
+        ),
+        permission_mode='read-only',
+        context_profile='balanced',
+    ),
+    'write-tests': Recipe(
+        name='write-tests',
+        description='Add focused tests for recent changes',
+        task_template=(
+            'Review recent changes and add focused unit or acceptance tests '
+            'for the highest-risk behavior gaps.'
+        ),
+        permission_mode='workspace-write',
+        context_profile='balanced',
+    ),
+    'release-check': Recipe(
+        name='release-check',
+        description='Pre-release checklist: docs drift, tests, competitive gate',
+        task_template=(
+            'Run a release checklist: scripts/refresh_competitive_docs.py --check, '
+            'note doc/provider drift, list risky diffs, and summarize blockers.'
+        ),
+        permission_mode='read-only',
+        context_profile='lean',
+    ),
 }
 
 

@@ -68,7 +68,13 @@ from ._misc import (
     workspace_openapi_command,
     workspace_tools_metadata,
 )
-from ._model import model_conformance, model_providers, model_route, model_smoke
+from ._model import (
+    model_capabilities,
+    model_conformance,
+    model_providers,
+    model_route,
+    model_smoke,
+)
 
 __all__ = [
     'agent_attach_command',
@@ -123,6 +129,7 @@ __all__ = [
     'memory_show_command',
     'model_conformance',
     'model_providers',
+    'model_capabilities',
     'model_route',
     'model_smoke',
     'start_tui',

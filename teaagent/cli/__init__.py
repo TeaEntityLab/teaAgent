@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Optional
 
@@ -48,6 +49,7 @@ from teaagent.cli._handlers import (
     memory_list_command,
     memory_search_command,
     memory_show_command,
+    model_capabilities,
     model_conformance,
     model_providers,
     model_route,
@@ -110,13 +112,16 @@ def main(
     _run_model_conformance: Any = None,
 ) -> int:
     parser = build_parser()
-    args = parser.parse_args(_expand_argv(argv))
+    raw_argv = argv if argv is not None else sys.argv[1:]
+    args = parser.parse_args(_expand_argv(raw_argv))
     args._adapter_factory = _adapter_factory or create_llm_adapter  # type: ignore[attr-defined]
     args._serve_mcp_http = _serve_mcp_http or serve_mcp_http  # type: ignore[attr-defined]
     args._check_graphqlite = _check_graphqlite or check_graphqlite_runtime  # type: ignore[attr-defined]
     args._check_llm = _check_llm or check_llm_configuration  # type: ignore[attr-defined]
     args._run_model_conformance = _run_model_conformance or run_model_conformance  # type: ignore[attr-defined]
     apply_config_defaults(args)
+    _normalize_optional_provider_args(args)
+    _require_provider_for_agent_commands(args)
     return args.func(args)
 
 
@@ -227,6 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers,
         {
             'providers': model_providers,
+            'capabilities': model_capabilities,
             'smoke': model_smoke,
             'conformance': model_conformance,
             'route': model_route,
@@ -240,6 +246,50 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+_AGENT_PROVIDER_COMMANDS = frozenset({'run', 'daily', 'resume', 'preflight'})
+
+
+def _normalize_optional_provider_args(args: argparse.Namespace) -> None:
+    if getattr(args, 'command', None) != 'agent':
+        return
+    agent_command = getattr(args, 'agent_command', None)
+    if agent_command not in _AGENT_PROVIDER_COMMANDS:
+        return
+    from teaagent.llm import available_providers
+
+    providers = set(available_providers())
+    provider = getattr(args, 'provider', None)
+    if not provider or provider in providers:
+        return
+    if agent_command == 'resume':
+        args.run_id = provider
+        args.provider = None
+        return
+    task = getattr(args, 'task', None)
+    if task:
+        raise SystemExit(f'unknown provider: {provider}')
+    args.task = provider
+    args.provider = None
+
+
+def _require_provider_for_agent_commands(args: argparse.Namespace) -> None:
+    if getattr(args, 'command', None) != 'agent':
+        return
+    if getattr(args, 'agent_command', None) not in _AGENT_PROVIDER_COMMANDS:
+        return
+    from teaagent.ergonomics.workspace_defaults import (
+        apply_workspace_defaults_to_namespace,
+    )
+    from teaagent.llm import available_providers
+
+    providers = set(available_providers())
+    if getattr(args, 'provider', None) and args.provider not in providers:
+        raise SystemExit(f'unknown provider: {args.provider}')
+    apply_workspace_defaults_to_namespace(
+        args, root=getattr(args, 'root', '.'), require_provider=True
+    )
 
 
 def apply_config_defaults(args: argparse.Namespace) -> None:

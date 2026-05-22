@@ -63,5 +63,12 @@ def model_route(args: argparse.Namespace) -> int:
     return 0
 
 
+def model_capabilities(_args: argparse.Namespace) -> int:
+    from teaagent.model_capabilities import build_capability_table
+
+    print_json(build_capability_table())
+    return 0
+
+
 def print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))

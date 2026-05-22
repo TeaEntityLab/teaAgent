@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 from typing import Callable
 
-from teaagent.llm import available_providers
 from teaagent.policy import PermissionMode
 
 
@@ -32,7 +31,11 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         description='Run one autonomous task with workspace tools.',
     )
     p.add_argument(
-        'provider', choices=available_providers(), help='Model provider to use.'
+        'provider',
+        nargs='?',
+        default=None,
+        metavar='provider',
+        help='Model provider (optional when set in .teaagent/config.toml).',
     )
     p.add_argument('task', help='Task for the agent to perform.')
     p.add_argument(
@@ -125,12 +128,17 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         help='Plan the run (preflight + token budget) without calling the model.',
     )
     p.add_argument(
+        '--background',
+        action='store_true',
+        help='Run detached; use agent attach <run_id> --follow to stream events.',
+    )
+    p.add_argument(
         '--context-profile',
         choices=['lean', 'balanced', 'deep'],
         default='balanced',
         help='Context budget profile for memory and replay limits.',
     )
-    p.set_defaults(func=handler)
+    p.set_defaults(func=handler, agent_command='run')
 
 
 def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -139,7 +147,11 @@ def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # 
         help='Summarize clarify, routing, memory, and tool state without calling a model.',
     )
     p.add_argument(
-        'provider', choices=available_providers(), help='Model provider to plan for.'
+        'provider',
+        nargs='?',
+        default=None,
+        metavar='provider',
+        help='Model provider (optional when set in .teaagent/config.toml).',
     )
     p.add_argument('task', help='Task to evaluate.')
     p.add_argument(
@@ -167,7 +179,7 @@ def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # 
         default='balanced',
         help='Read-only context budget profile for preflight evidence.',
     )
-    p.set_defaults(func=handler)
+    p.set_defaults(func=handler, agent_command='preflight')
 
 
 def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -176,7 +188,11 @@ def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type
         help='Show read-only daily readiness, run, health, and token budget summary.',
     )
     p.add_argument(
-        'provider', choices=available_providers(), help='Model provider to plan for.'
+        'provider',
+        nargs='?',
+        default=None,
+        metavar='provider',
+        help='Model provider (optional when set in .teaagent/config.toml).',
     )
     p.add_argument('task', nargs='?', default=None, help='Optional task to evaluate.')
     p.add_argument(
@@ -217,21 +233,26 @@ def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type
         action='store_true',
         help='Write .teaagent/daily/YYYY-MM-DD.md from the daily brief.',
     )
-    p.set_defaults(func=handler)
+    p.set_defaults(func=handler, agent_command='daily')
 
 
 def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subs.add_parser(
-        'attach', help='Attach to a background run (heartbeat snapshot).'
+        'attach', help='Attach to a run (heartbeat snapshot or live event stream).'
     )
     p.add_argument('run_id', help='Run id to attach.')
     p.add_argument('--root', default='.', help='Workspace root.')
+    p.add_argument(
+        '--follow',
+        action='store_true',
+        help='Stream new audit events until the run completes.',
+    )
     p.add_argument(
         '--notify',
         action='store_true',
         help='Emit a desktop notification with the current run status.',
     )
-    p.set_defaults(func=handler)
+    p.set_defaults(func=handler, agent_command='attach')
 
 
 def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -240,7 +261,11 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         help="Re-run a persisted run's task using the original recorded task.",
     )
     p.add_argument(
-        'provider', choices=available_providers(), help='Model provider to use.'
+        'provider',
+        nargs='?',
+        default=None,
+        metavar='provider',
+        help='Model provider (optional when set in .teaagent/config.toml).',
     )
     p.add_argument('run_id', help='Run id to resume.')
     p.add_argument(
@@ -315,7 +340,7 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         action='store_true',
         help='Truncate replayed observations when resuming very long runs.',
     )
-    p.set_defaults(func=handler)
+    p.set_defaults(func=handler, agent_command='resume')
 
 
 def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

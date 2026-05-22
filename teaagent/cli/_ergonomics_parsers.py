@@ -167,8 +167,9 @@ def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
         'journal', help='Write today daily markdown journal under .teaagent/daily/.'
     )
     p.add_argument('--root', default='.')
-    p.add_argument('provider', nargs='?', choices=available_providers(), default=None)
+    p.add_argument('provider', nargs='?', default=None, metavar='provider')
     p.add_argument('--task', default=None)
+    p.add_argument('--model', default=None)
     p.add_argument(
         '--permission-mode',
         choices=[mode.value for mode in PermissionMode],

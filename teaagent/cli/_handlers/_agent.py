@@ -17,6 +17,8 @@ from teaagent.runner import ApprovalRequest, RunResult
 
 
 def agent_run_task(args: argparse.Namespace) -> int:
+    if getattr(args, 'background', False):
+        return _start_background_run(args)
     task = _prepare_task(args, args.task)
     if getattr(args, 'dry_run', False):
         from teaagent.ergonomics.dry_run import build_dry_run_payload
@@ -284,6 +286,25 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
     return 0 if report.to_dict()['ready'] else 2
 
 
+def _start_background_run(args: argparse.Namespace) -> int:
+    from teaagent.ergonomics.background_run import (
+        BackgroundRunStore,
+        build_agent_run_command,
+    )
+
+    task = _prepare_task(args, args.task)
+    command = build_agent_run_command(args, task)
+    record = BackgroundRunStore(args.root).start(command)
+    payload = record.to_dict()
+    payload['status'] = 'background_started'
+    payload['attach'] = (
+        f'teaagent agent attach <run_id> --follow --root {args.root} '
+        '(run_id appears in log when the worker starts)'
+    )
+    print_json(payload)
+    return 0
+
+
 def agent_attach_command(args: argparse.Namespace) -> int:
     store = RunStore(args.root)
     try:
@@ -291,7 +312,32 @@ def agent_attach_command(args: argparse.Namespace) -> int:
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
-    print_json(heartbeat)
+    pending = store.pending_approval_for_run(args.run_id)
+    if getattr(args, 'follow', False):
+        from teaagent.ergonomics.session_stream import stream_run_events
+
+        print_json(
+            {
+                'run_id': args.run_id,
+                'heartbeat': heartbeat,
+                'pending_approval': pending,
+                'streaming': True,
+            }
+        )
+        for event in stream_run_events(args.run_id, root=args.root, follow=True):
+            print(json.dumps(event, ensure_ascii=False, sort_keys=True), flush=True)
+        if getattr(args, 'notify', False):
+            from teaagent.ergonomics.notify import notify
+
+            notify('TeaAgent', f'Run {args.run_id}: {heartbeat.get("status")}')
+        return 0
+    print_json(
+        {
+            'heartbeat': heartbeat,
+            'pending_approval': pending,
+            'event_count': len(store.show_run(args.run_id)),
+        }
+    )
     if getattr(args, 'notify', False):
         from teaagent.ergonomics.notify import notify
 

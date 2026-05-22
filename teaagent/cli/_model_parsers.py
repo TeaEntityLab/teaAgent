@@ -79,3 +79,9 @@ def register(
     )
     route.add_argument('--model', default=None, help='Explicit model override.')
     route.set_defaults(func=handlers['route'])
+
+    capabilities = subs.add_parser(
+        'capabilities',
+        help='Show per-provider model capability table (routing, cost, tools).',
+    )
+    capabilities.set_defaults(func=handlers['capabilities'])
