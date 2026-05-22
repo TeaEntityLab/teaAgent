@@ -59,34 +59,20 @@ _No open P0 items._
 
 ---
 
-## Open — Medium (P1, maintenance)
+## Ongoing maintenance (competitive refresh complete)
 
-| Item | Why now | Acceptance target |
-|------|---------|-------------------|
-| DeepWiki-backed agent landscape survey | Initial 2026-05-22 survey landed; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md`; `validate_docs_consistency.py` must pass. |
-| Subagent lineage and isolation | `shared`, `worktree`, and `container` isolation on `subagent`/`subagent_batch`. | Keep docs/tests aligned when adding new isolation modes or lineage fields. |
-| Repo-map / context pack | LSP hydration, hybrid/knowledge/GraphQLite read-only hits shipped. | Keep read-only guarantees; extend when adding new index backends. |
-| Mode and safety comparison matrix | Matrix in `docs/USAGE.md` with validator coverage (includes Subagent + Preflight cross-cutting rows). | Keep matrix in sync when permission modes, isolation modes, or rollback APIs change. |
-| Multi-surface launch recipes | Recipes in `docs/USAGE.md` with validator + smoke tests (subagent + preflight helpers documented). | Keep recipes current when CLI/IDE/MCP surfaces change. |
+Competitive-refresh feature work is shipped. Before minor releases or protocol ADRs, run:
 
----
+```bash
+python3 scripts/refresh_competitive_docs.py
+```
 
-## Open — Low (P2, maintenance)
+Then manually refresh [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md) when upstream signals change (see [docs/release-checklist.md](release-checklist.md)).
 
-| Item | Why now | Acceptance target |
-|------|---------|-------------------|
-| Plugin/skill compatibility catalog | Catalog documents skills, plugins, hooks, MCP, subagent isolation, and preflight context pack. | Update catalog when discovery paths, hook events, or delegation surfaces change. |
-| Competitive use-case dashboard | Dashboard reflects survey metadata. | Regenerate matrix/HTML after acceptance or survey updates. |
-| Periodic mainstream-agent refresh cadence | Release checklist exists. | Follow `docs/release-checklist.md` before each minor release. |
-
----
-
-## Recommended Execution Order (maintenance)
-
-1. DeepWiki survey refresh (before minor releases).
-2. Docs/provider drift guard (`validate_docs_consistency.py`).
-3. Mode/safety matrix and multi-surface recipes sync.
-4. Subagent lineage docs when isolation modes expand.
-5. Context pack enhancements (LSP symbols, live graph/RAG hits).
-6. Plugin/skill catalog updates when extension surfaces change.
-7. Regenerate use-case matrix and HTML dashboard after acceptance changes.
+| Cadence | What to keep in sync |
+|---------|----------------------|
+| Survey | `Last reviewed` date, source table, `docs/use-cases.md` differentiators |
+| Docs drift | `validate_docs_consistency.py` (providers, mode matrix, surface recipes, catalog) |
+| Coverage artifacts | `docs/acceptance.md` count, `docs/use-case-matrix.md`, `docs/use-case-matrix.html` via `refresh_competitive_docs.py` |
+| Extension surfaces | `docs/plugin-skill-catalog.md`, `docs/USAGE.md`, `docs/cli.md` when hooks, isolation modes, or preflight/context APIs change |
+| New index backends | `teaagent/context_pack.py` read-only graph evidence when adding search stores |

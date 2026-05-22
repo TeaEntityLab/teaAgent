@@ -7,11 +7,10 @@ Use before tagging a minor release or merging a federation/protocol ADR.
 1. Re-run [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md) against DeepWiki/upstream signals (Codex, Claude Code, OpenCode, OpenHands, Aider, LangGraph, CrewAI).
 2. Update `Last reviewed: **YYYY-MM-DD**` in the survey artifact.
 3. Sync [docs/backlog-priority.md](backlog-priority.md) and [docs/use-cases.md](use-cases.md) differentiator tables.
-4. Regenerate coverage artifacts:
-   - `python3 scripts/build_acceptance_status.py`
-   - `python3 scripts/build_use_case_matrix.py`
-   - `python3 scripts/render_use_case_dashboard.py`
-5. Run `python3 scripts/validate_docs_consistency.py`.
+4. Regenerate coverage artifacts (single command):
+   - `python3 scripts/refresh_competitive_docs.py`
+   - Or step-by-step: `build_acceptance_status.py`, `build_use_case_matrix.py`, `render_use_case_dashboard.py`
+5. `refresh_competitive_docs.py` runs `validate_docs_consistency.py` at the end (must pass).
 
 ## Provider and docs drift
 

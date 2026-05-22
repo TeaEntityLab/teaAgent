@@ -29,8 +29,8 @@ jobs:
       - name: Refresh acceptance status from acceptance tests
         run: python3 scripts/build_acceptance_status.py
 
-      - name: Generate use-case coverage matrix
-        run: python3 scripts/build_use_case_matrix.py
+      - name: Refresh competitive docs (matrix, dashboard, validation)
+        run: python3 scripts/refresh_competitive_docs.py
 
       - name: Sync acceptance tiers section
         run: python3 scripts/sync_acceptance_tiers_doc.py

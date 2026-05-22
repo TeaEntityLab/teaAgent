@@ -44,7 +44,7 @@ governance-first story against the 2026-05-22 landscape survey. See
 | Mode and safety comparison matrix | P1 | Implemented (`docs/USAGE.md`, `validate_mode_safety_matrix`) |
 | Multi-surface launch recipes | P1 | Implemented (`docs/USAGE.md`, `test_surface_launch_recipes_flow.py`) |
 | Plugin/skill compatibility catalog | P2 | Implemented (`docs/plugin-skill-catalog.md`, fixture-backed validator) |
-| Competitive use-case dashboard refresh | P2 | Implemented (`build_use_case_matrix.py`, `render_use_case_dashboard.py`) |
+| Competitive use-case dashboard refresh | P2 | Implemented (`refresh_competitive_docs.py`, matrix + HTML dashboard) |
 | Periodic mainstream-agent refresh cadence | P2 | Implemented (`docs/release-checklist.md`) |
 
 ## Requirement Baseline
@@ -112,7 +112,6 @@ governance-first story against the 2026-05-22 landscape survey. See
 
 Use these commands as the default claim-verification workflow before updating docs:
 
-1. `python3 scripts/build_acceptance_status.py`
-2. `python3 scripts/build_use_case_matrix.py`
-3. `python3 scripts/validate_docs_consistency.py`
-4. `python3 -m pytest tests/acceptance --collect-only -q`
+1. `python3 scripts/refresh_competitive_docs.py`
+2. `python3 -m pytest tests/acceptance --collect-only -q`
+3. Re-run [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md) when upstream agent signals change

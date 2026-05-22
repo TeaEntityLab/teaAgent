@@ -60,6 +60,11 @@ USE_CASE_META: dict[str, dict[str, str]] = {
         'rollback_path': 'N/A (read-only evidence)',
         'audit_criticality': 'low',
     },
+    'Subagent lineage and isolation': {
+        'blast_radius': 'medium',
+        'rollback_path': 'remove .teaagent/subagent-worktrees/ or subagent-containers/',
+        'audit_criticality': 'high',
+    },
     'End-to-end code-change loop': {
         'blast_radius': 'high',
         'rollback_path': 'git checkout -- .',
@@ -146,6 +151,14 @@ USE_CASES: dict[str, tuple[str, ...]] = {
         (
             'Repo-map / context pack (preflight)',
             ('test_context_pack_read_only_flow.py',),
+        ),
+        (
+            'Subagent lineage and isolation',
+            (
+                'test_subagent_lineage_flow.py',
+                'test_subagent_worktree_isolation_flow.py',
+                'test_subagent_container_isolation_flow.py',
+            ),
         ),
         (
             'End-to-end code-change loop',
