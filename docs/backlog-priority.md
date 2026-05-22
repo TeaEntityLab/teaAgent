@@ -52,7 +52,7 @@ _No open P0 items._
 | Mode and safety comparison matrix | `docs/USAGE.md` matrix maps permission modes, Plan/Auto/Code lanes, shell mutation, approvals, audit, and rollback; validator enforces every `PermissionMode` value and required topics. |
 | Multi-surface launch recipes | `docs/USAGE.md` “Choose Your Surface” table with CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed-runtime recipes; `validate_surface_recipes` + `test_surface_launch_recipes_flow.py` smoke local commands. |
 | Subagent lineage and isolation hardening | Child runs record lineage metadata; `isolation: shared` (default) or `worktree` (detached git worktree with cleanup); `worktree_path` in lineage; `subagent_batch` per-task isolation; `test_subagent_worktree_isolation_flow.py`. |
-| Repo-map / context pack for coding runs | `build_context_pack` on `agent preflight`; candidate files, memories, optional LSP symbols, hybrid index hits; `test_context_pack_read_only_flow.py`. |
+| Repo-map / context pack for coding runs | `build_context_pack` on `agent preflight`; candidate files, memories, optional LSP symbols, hybrid/knowledge/GraphQLite read-only hits; `test_context_pack_read_only_flow.py`. |
 | Plugin/skill compatibility catalog | `docs/plugin-skill-catalog.md` with fixture-backed `validate_plugin_skill_catalog`. |
 | Competitive use-case dashboard refresh | Matrix/HTML include survey review date and open P1/P2 gap counts via `build_use_case_matrix.py` + `render_use_case_dashboard.py`. |
 | Periodic mainstream-agent refresh cadence | `docs/release-checklist.md` requires survey refresh before minor releases or protocol ADRs. |
@@ -65,7 +65,7 @@ _No open P0 items._
 |------|---------|-------------------|
 | DeepWiki-backed agent landscape survey | Initial 2026-05-22 survey landed; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md`; `validate_docs_consistency.py` must pass. |
 | Subagent lineage and isolation | `shared` and `worktree` isolation on `subagent`/`subagent_batch`. | Keep docs/tests aligned when adding `container` isolation or new lineage fields. |
-| Repo-map / context pack | LSP hydration (when code analysis enabled) and hybrid index hits shipped. | Keep read-only guarantees; extend when adding GraphQLite/knowledge live hits. |
+| Repo-map / context pack | LSP hydration, hybrid/knowledge/GraphQLite read-only hits shipped. | Keep read-only guarantees; extend when adding new index backends. |
 | Mode and safety comparison matrix | Matrix in `docs/USAGE.md` with validator coverage. | Keep matrix in sync when permission modes or rollback APIs change. |
 | Multi-surface launch recipes | Recipes in `docs/USAGE.md` with validator + smoke tests. | Keep recipes current when CLI/IDE/MCP surfaces change. |
 

@@ -40,7 +40,7 @@ governance-first story against the 2026-05-22 landscape survey. See
 |----------------|----------|-------------------|
 | Docs/provider architecture drift guard | P0 | Implemented (`validate_docs_consistency.py`, `test_provider_matrix_consistency_flow.py`) |
 | Subagent lineage and isolation hardening | P1 | Implemented (`test_subagent_lineage_flow.py`, `test_subagent_worktree_isolation_flow.py`, `test_subagent_lineage.py`) |
-| Repo-map / context pack for coding runs | P1 | Implemented (`context_pack` on preflight, `test_context_pack_read_only_flow.py`) |
+| Repo-map / context pack for coding runs | P1 | Implemented (`context_pack` on preflight with hybrid/knowledge/GraphQLite read-only hits; `test_context_pack_read_only_flow.py`) |
 | Mode and safety comparison matrix | P1 | Implemented (`docs/USAGE.md`, `validate_mode_safety_matrix`) |
 | Multi-surface launch recipes | P1 | Implemented (`docs/USAGE.md`, `test_surface_launch_recipes_flow.py`) |
 | Plugin/skill compatibility catalog | P2 | Implemented (`docs/plugin-skill-catalog.md`, fixture-backed validator) |

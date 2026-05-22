@@ -14,7 +14,7 @@ Last reviewed: **2026-05-22**
 | Claude Code | https://deepwiki.com/anthropics/claude-code | Subagents, hooks, MCP, background sessions, permission modes, managed settings | `subagent`/`subagent_batch` with lineage + `worktree` isolation, hooks, permission modes, MCP, skills | `container` isolation deferred | P1 maintenance |
 | OpenCode | https://deepwiki.com/sst/opencode | Provider breadth, client-server, plugins, skills, MCP, desktop, VS Code | 13 providers, plugins/skills, MCP, ACP/VS Code, USAGE surface recipes | Client-server/desktop hosted docs remain thin | P2 maintenance |
 | OpenHands | https://deepwiki.com/OpenHands/OpenHands | SDK/CLI/GUI/cloud/enterprise, sandbox-decoupled V1 | Managed runtime stubs, MCP, audit, Code Mode | Hosted/cloud surface docs are stub-level only | P2 dashboard refresh |
-| Aider | https://deepwiki.com/Aider-AI/aider | Repo-map context, edit strategies, git workflow | Workspace tools, LSP/code-analysis, GraphQLite, preflight `context_pack` with LSP + hybrid hits | GraphQLite/knowledge live hits in context pack deferred | P1 maintenance |
+| Aider | https://deepwiki.com/Aider-AI/aider | Repo-map context, edit strategies, git workflow | Workspace tools, LSP/code-analysis, GraphQLite, preflight `context_pack` with LSP + hybrid/knowledge/GraphQLite read-only hits | Whole-repo map heuristics still thinner than Aider’s dedicated repo-map UX | P2 maintenance |
 | LangGraph | https://deepwiki.com/langchain-ai/langgraph | Graph state, checkpoints, durable execution | `CheckpointStore`, runner limits, audit chain | No graph-native orchestration (intentional harness boundary) | Document as non-goal |
 | CrewAI | https://deepwiki.com/crewAIInc/crewAI | Role-based crews, task delegation | A2A delegation, ANP governed federation | No multi-role crew DSL (intentional harness boundary) | Document as non-goal |
 
@@ -33,6 +33,7 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 - [x] Google managed runtime (`GoogleADKRuntime`, `VertexAgentRuntime`)
 - [x] Permission modes, Plan Mode, Auto Mode, Code Mode
 - [x] Provider/docs consistency acceptance (`test_provider_matrix_consistency_flow.py`)
+- [x] Preflight read-only `context_pack` (hybrid, `.teaagent/knowledge`, GraphQLite DB hits; `test_context_pack_read_only_flow.py`)
 
 ## Next differentiators (open)
 

@@ -55,6 +55,11 @@ USE_CASE_META: dict[str, dict[str, str]] = {
         'rollback_path': 'N/A (no mutations)',
         'audit_criticality': 'low',
     },
+    'Repo-map / context pack (preflight)': {
+        'blast_radius': 'low',
+        'rollback_path': 'N/A (read-only evidence)',
+        'audit_criticality': 'low',
+    },
     'End-to-end code-change loop': {
         'blast_radius': 'high',
         'rollback_path': 'git checkout -- .',
@@ -134,7 +139,14 @@ USE_CASES: dict[str, tuple[str, ...]] = {
                 'test_provider_matrix_consistency_flow.py',
             ),
         ),
-        ('Read-only planning mode', ('test_plan_mode_read_only_flow.py',)),
+        (
+            'Read-only planning mode',
+            ('test_plan_mode_read_only_flow.py', 'test_context_pack_read_only_flow.py'),
+        ),
+        (
+            'Repo-map / context pack (preflight)',
+            ('test_context_pack_read_only_flow.py',),
+        ),
         (
             'End-to-end code-change loop',
             ('test_workspace_edit_flow.py', 'test_agent_fix_test_review_flow.py'),

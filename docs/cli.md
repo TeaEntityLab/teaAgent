@@ -540,7 +540,7 @@ teaagent agent preflight gpt "review this patch for regressions in the test suit
 
 Exit code is `0` when the task is concrete enough and `2` when it still needs clarification. Pair with `--permission-mode workspace-write` or `--memory-limit 10` as needed.
 
-Preflight JSON includes a read-only `context_pack` (candidate files from task/`AGENTS.md` mentions, matching memories, LSP symbol hydration when code analysis is enabled, and hybrid/graph index hits when `.teaagent/hybrid_search.sqlite3` or other indexes exist) so planning runs can show *why this context* without workspace writes.
+Preflight JSON includes a read-only `context_pack` (candidate files from task/`AGENTS.md` mentions, matching memories, LSP symbol hydration when code analysis is enabled, and read-only graph hits from hybrid search, the `.teaagent/knowledge` collection marker, and `.teaagent/graphqlite.db` when present) so planning runs can show *why this context* without workspace writes. `context_pack.graph_rag.sources` lists per-backend hits; `hits` is the deduped union.
 
 Inside TUI:
 

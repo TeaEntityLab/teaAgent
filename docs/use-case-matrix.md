@@ -15,7 +15,8 @@ Open roadmap differentiators (P1/P2): **0** (see [docs/use-cases.md](use-cases.m
 | Memory continuity | yes | low | clear .teaagent/memory/ | low | `test_memory_auto_curation_flow.py` | - |
 | IDE-assisted workflows | yes | low | restart VSCode | low | `test_vscode_extension_mcp_boot_flow.py` | - |
 | Product onboarding and provider readiness | yes | low | re-run teaagent init | low | `test_first_run_experience_flow.py`, `test_model_smoke_gating_flow.py`, `test_live_provider_conformance_flow.py`, `test_provider_matrix_consistency_flow.py` | - |
-| Read-only planning mode | yes | low | N/A (no mutations) | low | `test_plan_mode_read_only_flow.py` | - |
+| Read-only planning mode | yes | low | N/A (no mutations) | low | `test_plan_mode_read_only_flow.py`, `test_context_pack_read_only_flow.py` | - |
+| Repo-map / context pack (preflight) | yes | low | N/A (read-only evidence) | low | `test_context_pack_read_only_flow.py` | - |
 | End-to-end code-change loop | yes | high | git checkout -- . | high | `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py` | - |
 | Reversible change recovery | yes | medium | teaagent agent undo | medium | `test_run_undo_acceptance_flow.py` | - |
 | Runtime IDE MCP smoke | yes | low | restart MCP server | medium | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` | - |
