@@ -34,6 +34,7 @@ def default_adapter_factory(provider: str, model: Optional[str]) -> LLMAdapter:
 
 HELP_TEXT = """Commands:
   help                      Show this help.
+  setup [write-env]         Guided first-session workspace setup (same as teaagent setup).
   doctor                    Check GraphQLite runtime.
   provider <name>           Set model provider: claude, gpt, gemini, openrouter, ollama, vllm, opencodezen-go, workers-ai, aigateway.
   model <name|default>      Set or clear model override.
@@ -112,9 +113,14 @@ class TeaAgentTUI:
         self._session_store: Optional[SessionStore] = None
         self._session: Optional['PromptSession'] = None
 
-    def run(self) -> int:
+    def run(self, *, run_setup: bool = False, setup_write_env: bool = False) -> int:
+        self._load_workspace_defaults()
         self._load_tui_state()
         self._print_header()
+        if run_setup:
+            from teaagent.tui._setup import run_tui_setup
+
+            run_tui_setup(self, write_env=setup_write_env)
 
         # Initialize prompt_toolkit session if available and no custom input_fn is provided
         if self.input_fn is None:
@@ -428,9 +434,30 @@ class TeaAgentTUI:
             self._store = GraphQLiteGraphStore(GraphQLiteConfig(database=self.database))
         return self._store
 
+    def _load_workspace_defaults(self) -> None:
+        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+        from teaagent.policy import parse_permission_mode
+
+        defaults = load_workspace_defaults(self.root)
+        provider = defaults.get('provider')
+        if isinstance(provider, str) and provider:
+            self.provider = provider
+        permission_mode = defaults.get('permission_mode')
+        if isinstance(permission_mode, str) and permission_mode:
+            self.permission_mode = parse_permission_mode(permission_mode)
+        heartbeat = defaults.get('heartbeat')
+        if isinstance(heartbeat, (int, float)):
+            self.heartbeat_seconds = float(heartbeat)
+
     def _print_header(self) -> None:
+        from teaagent.tui._setup import workspace_configured
+
         self.output_fn(f'TeaAgent TUI {__version__}')
         self.output_fn("Type 'help' for commands. Type 'exit' to quit.")
+        if not workspace_configured(self.root):
+            self.output_fn(
+                "Workspace not configured — type 'setup' or run 'teaagent setup'."
+            )
 
     def _prompt(self) -> str:
         destructive = '!' if self.allow_destructive else ''
@@ -452,6 +479,8 @@ def run_tui(
     permission_mode: PermissionMode = PermissionMode.PROMPT,
     chat: bool = False,
     input_fn: Optional[InputFn] = None,
+    run_setup: bool = False,
+    setup_write_env: bool = False,
 ) -> int:
     tui = TeaAgentTUI(
         database=database,
@@ -465,4 +494,4 @@ def run_tui(
     if chat:
         tui.chat = True
         tui._chat_explicit = True
-    return tui.run()
+    return tui.run(run_setup=run_setup, setup_write_env=setup_write_env)

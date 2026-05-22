@@ -23,7 +23,7 @@ teaagent agent run gpt "fix the failing test" --permission-mode workspace-write
 teaagent agent run gpt "refactor auth module" --permission-mode prompt --heartbeat 5
 ```
 
-Interactive loop (TUI): `teaagent tui --root . --permission-mode prompt`, then `daily <task>`, `preflight <task>`, `ask <task>`, `runs`, `resume <run_id>`.
+Interactive loop (TUI): `teaagent tui --setup --root .` (or type `setup` inside the REPL), then `daily <task>`, `preflight <task>`, `ask <task>`, `runs`, `resume <run_id>`.
 
 Full recipes, context profiles (`lean` / `balanced` / `deep`), and token guidance: [docs/USAGE.md#daily-use](docs/USAGE.md#daily-use).
 

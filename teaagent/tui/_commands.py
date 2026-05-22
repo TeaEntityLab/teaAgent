@@ -36,6 +36,19 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
     if action == 'help':
         tui.output_fn(tui.help_text.rstrip())
         return True
+    if action == 'setup':
+        from teaagent.tui._setup import run_tui_setup
+
+        write_env = 'write-env' in args
+        rest = [item for item in args if item != 'write-env']
+        provider: str | None = None
+        if rest:
+            if rest[0] not in available_providers():
+                tui.output_fn(f"error: unknown provider '{rest[0]}'")
+                return True
+            provider = rest[0]
+        run_tui_setup(tui, write_env=write_env, provider=provider)
+        return True
     if action == 'doctor':
         ok, message = check_graphqlite_runtime(tui.database)
         tui._print_json({'ok': ok, 'message': message})

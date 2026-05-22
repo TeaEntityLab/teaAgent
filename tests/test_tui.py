@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
 
@@ -785,6 +786,79 @@ class TUITests(unittest.TestCase):
 
             joined = '\n'.join(output)
             self.assertIn('failed:', joined)
+
+    def test_tui_setup_command_writes_workspace_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            state_path = Path(tmp) / '.teaagent' / 'tui_state.json'
+            with (
+                patch(
+                    'teaagent.tui._setup.check_llm_configuration',
+                    return_value=(True, 'configured'),
+                ),
+                patch.object(
+                    TeaAgentTUI, '_state_path', new_callable=PropertyMock
+                ) as mock_state_path,
+            ):
+                mock_state_path.return_value = state_path
+                tui = TeaAgentTUI(
+                    root=tmp,
+                    provider='gpt',
+                    input_fn=lambda _prompt: 'sk-tui-setup-key',
+                    output_fn=output.append,
+                )
+                self.assertTrue(tui.handle_command('setup write-env'))
+
+            cfg_path = Path(tmp) / '.teaagent' / 'config.json'
+            self.assertTrue(cfg_path.exists())
+            cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
+            self.assertEqual(cfg['provider'], 'gpt')
+            env_path = Path(tmp) / '.teaagent' / 'env'
+            self.assertTrue(env_path.exists())
+            payload = json.loads(next(line for line in output if line.startswith('{')))
+            self.assertEqual(payload['mode'], 'setup')
+            self.assertNotIn('sk-tui-setup-key', json.dumps(payload))
+            self.assertTrue(any('setup: ok' in line for line in output))
+
+    def test_tui_unconfigured_workspace_shows_setup_hint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            state_path = Path(tmp) / '.teaagent' / 'tui_state.json'
+            with patch.object(
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
+            ) as mock_state_path:
+                mock_state_path.return_value = state_path
+                tui = TeaAgentTUI(
+                    root=tmp,
+                    input_fn=lambda _prompt: 'exit',
+                    output_fn=output.append,
+                )
+                tui.run()
+            self.assertTrue(any("type 'setup'" in line.lower() for line in output[:5]))
+
+    def test_run_tui_setup_flag_runs_wizard_before_repl(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = Path(tmp) / '.teaagent' / 'tui_state.json'
+            with (
+                patch(
+                    'teaagent.tui._setup.run_tui_setup', return_value=True
+                ) as mock_setup,
+                patch.object(
+                    TeaAgentTUI, '_state_path', new_callable=PropertyMock
+                ) as mock_state_path,
+            ):
+                mock_state_path.return_value = state_path
+                from teaagent.tui import run_tui
+
+                run_tui(
+                    root=tmp,
+                    run_setup=True,
+                    setup_write_env=True,
+                    input_fn=lambda _prompt: 'exit',
+                )
+                mock_setup.assert_called_once()
+                _, kwargs = mock_setup.call_args
+                self.assertTrue(kwargs.get('write_env'))
 
     def test_run_tui_function(self) -> None:
 

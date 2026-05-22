@@ -187,9 +187,18 @@ Or without installing the console script:
 python3 -m teaagent.cli tui
 ```
 
-Inside the TUI:
+Run the guided setup wizard before the REPL (same flow as `teaagent setup`):
+
+```bash
+teaagent tui --setup --root . --write-env
+```
+
+Inside the TUI, type `setup` (optional `write-env`, optional provider name):
 
 ```text
+setup
+setup write-env
+setup gpt
 help
 doctor
 clarify Improve the CLI

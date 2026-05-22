@@ -32,6 +32,8 @@ def start_tui(args: argparse.Namespace) -> int:
         allow_destructive=args.allow_destructive,
         permission_mode=parse_permission_mode(args.permission_mode),
         chat=getattr(args, 'chat', False),
+        run_setup=getattr(args, 'setup', False),
+        setup_write_env=getattr(args, 'write_env', False),
     )
 
 

@@ -191,6 +191,16 @@ def _tui(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # 
         default=False,
         help='Start with chat mode enabled.',
     )
+    p.add_argument(
+        '--setup',
+        action='store_true',
+        help='Run the guided first-session setup wizard before the REPL.',
+    )
+    p.add_argument(
+        '--write-env',
+        action='store_true',
+        help='With --setup, also write .teaagent/env for the provider API key.',
+    )
     p.set_defaults(func=handler)
 
 
