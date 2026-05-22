@@ -6,6 +6,7 @@ selected without mutating the workspace.
 Acceptance criteria:
 - `agent preflight` includes a read-only `context_pack` with candidate files.
 - Context pack evidence is deterministic for known task path mentions.
+- Hybrid, knowledge, and GraphQLite indexes contribute read-only graph hits.
 - Read-only planning runs still block workspace writes (regression guard).
 """
 
@@ -21,8 +22,10 @@ from unittest.mock import patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.hybrid_search import LocalHybridSearchBackend
 from teaagent.memory import MemoryCatalog
+from tests.test_graphqlite_store import FakeGraphQLiteGraph
 
 
 def test_preflight_includes_read_only_context_pack_evidence() -> None:
@@ -79,6 +82,72 @@ def test_preflight_graph_rag_includes_hybrid_hits_when_indexed() -> None:
         assert graph['status'] == 'indexed'
         assert graph['reason'] == 'hybrid_search_read'
         assert len(graph['hits']) >= 1
+        assert 'hybrid' in graph['sources']
+
+
+def test_preflight_graph_rag_includes_knowledge_hits_when_marker_exists() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        doc = root / 'docs' / 'runner.md'
+        doc.parent.mkdir(parents=True)
+        doc.write_text('runner audit chain regressions in tests', encoding='utf-8')
+        task = 'review runner audit chain regressions in tests'
+        LocalHybridSearchBackend().index(
+            root=root, args={'include': 'docs/**', 'collection': 'knowledge'}
+        )
+        (root / '.teaagent').mkdir(exist_ok=True)
+        (root / '.teaagent' / 'knowledge').write_text(
+            json.dumps({'collection': 'knowledge'}), encoding='utf-8'
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(['agent', 'preflight', 'gpt', task, '--root', tmp])
+        payload = json.loads(output.getvalue())
+
+        assert code == 0
+        graph = payload['context_pack']['graph_rag']
+        assert graph['status'] == 'indexed'
+        assert len(graph['sources']['knowledge']['hits']) >= 1
+
+
+def test_preflight_graph_rag_includes_graphqlite_hits_when_db_exists() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        task = 'runner audit chain regressions in tests'
+        (root / '.teaagent').mkdir()
+        db_path = root / '.teaagent' / 'graphqlite.db'
+        db_path.write_text('', encoding='utf-8')
+
+        class RecordingGraph(FakeGraphQLiteGraph):
+            def query(self, cypher: str):
+                self.queries.append(cypher)
+                return [
+                    {
+                        'doc_id': 'doc-runner',
+                        'text': 'runner audit chain regressions in tests',
+                        'source': 'graph',
+                    }
+                ]
+
+        store = GraphQLiteGraphStore(
+            GraphQLiteConfig(database=str(db_path)),
+            graph_factory=RecordingGraph,
+        )
+
+        output = io.StringIO()
+        with (
+            patch('teaagent.graphqlite_store.GraphQLiteGraphStore', return_value=store),
+            redirect_stdout(output),
+        ):
+            code = main(['agent', 'preflight', 'gpt', task, '--root', tmp])
+        payload = json.loads(output.getvalue())
+
+        assert code == 0
+        graph = payload['context_pack']['graph_rag']
+        assert graph['status'] == 'indexed'
+        assert graph['reason'] == 'graphqlite_read'
+        assert len(graph['sources']['graphqlite']['hits']) >= 1
 
 
 def test_read_only_run_still_blocks_writes_with_context_pack_available() -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -172,6 +173,102 @@ def _symbol_hints(
     return hints
 
 
+_GRAPHQLITE_DOCUMENT_QUERY = 'MATCH (n:Document) RETURN n.doc_id AS doc_id, n.text AS text, n.source AS source LIMIT 100'
+
+
+def _knowledge_collection_name(root: Path) -> str:
+    marker = root / '.teaagent' / 'knowledge'
+    if marker.is_file():
+        try:
+            payload = json.loads(marker.read_text(encoding='utf-8'))
+            if isinstance(payload, dict):
+                name = payload.get('collection')
+                if isinstance(name, str) and name.strip():
+                    return name.strip()
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+    return 'knowledge'
+
+
+def _tag_hits(hits: list[dict[str, Any]], source: str) -> list[dict[str, Any]]:
+    tagged: list[dict[str, Any]] = []
+    for hit in hits:
+        entry = dict(hit)
+        entry['source'] = source
+        tagged.append(entry)
+    return tagged
+
+
+def _dedupe_hits(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    deduped: list[dict[str, Any]] = []
+    for hit in hits:
+        key = str(hit.get('path') or hit.get('doc_id') or hit.get('snippet', ''))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(hit)
+    return deduped
+
+
+def _graphqlite_hits(
+    root: Path, search_query: str, *, limit: int
+) -> list[dict[str, Any]]:
+    db_path = root / '.teaagent' / 'graphqlite.db'
+    if not db_path.is_file():
+        return []
+    tokens = [token.lower() for token in tokenize(search_query)]
+    try:
+        from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
+
+        store = GraphQLiteGraphStore(GraphQLiteConfig(database=str(db_path)))
+        rows = store.query(_GRAPHQLITE_DOCUMENT_QUERY)
+    except Exception:
+        return []
+    if not isinstance(rows, list):
+        return []
+
+    hits: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        text = str(row.get('text', ''))
+        lower = text.lower()
+        if tokens and not all(token in lower for token in tokens):
+            continue
+        doc_id = str(row.get('doc_id', ''))
+        hits.append(
+            {
+                'doc_id': doc_id,
+                'path': doc_id,
+                'snippet': text[:200],
+                'score': 1.0,
+                'source': 'graphqlite',
+                'backend': 'graphqlite',
+            }
+        )
+        if len(hits) >= limit:
+            break
+    return hits
+
+
+def _graph_rag_reason(
+    sources: dict[str, dict[str, Any]], hits: list[dict[str, Any]]
+) -> str:
+    if hits:
+        active = [name for name, payload in sources.items() if payload.get('hits')]
+        if len(active) == 1 and active[0] == 'hybrid':
+            return 'hybrid_search_read'
+        if len(active) == 1 and active[0] == 'knowledge':
+            return 'knowledge_search_read'
+        if len(active) == 1 and active[0] == 'graphqlite':
+            return 'graphqlite_read'
+        return 'multi_source_read'
+    if sources:
+        return 'indexed_search_empty'
+    return 'no_hybrid_index'
+
+
 def _graph_rag_evidence(
     root: Path,
     task: str,
@@ -190,6 +287,7 @@ def _graph_rag_evidence(
             'indexes': [],
             'query': task[:120],
             'hits': [],
+            'sources': {},
             'reason': 'no_index_present',
         }
 
@@ -199,41 +297,83 @@ def _graph_rag_evidence(
             'indexes': indexes,
             'query': task[:120],
             'hits': [],
+            'sources': {},
             'reason': 'search_disabled',
         }
 
     search_query = ' '.join(tokenize(task)[:12]) or task[:120]
+    sources: dict[str, dict[str, Any]] = {}
+    combined: list[dict[str, Any]] = []
+
     try:
-        result = search_if_indexed(root, search_query, limit=hit_limit)
+        hybrid_result = search_if_indexed(root, search_query, limit=hit_limit)
+        if hybrid_result is not None:
+            hybrid_hits = _tag_hits(hybrid_result.get('hits', []), 'hybrid')
+            sources['hybrid'] = {
+                'hits': hybrid_hits,
+                'backend': hybrid_result.get('backend', 'local'),
+                'collection': hybrid_result.get('collection', 'default'),
+                'reason': 'hybrid_search_read'
+                if hybrid_hits
+                else 'hybrid_search_empty',
+            }
+            combined.extend(hybrid_hits)
+
+        knowledge_marker = root / '.teaagent' / 'knowledge'
+        if knowledge_marker.exists() and hybrid_db.is_file():
+            collection = _knowledge_collection_name(root)
+            knowledge_result = search_if_indexed(
+                root, search_query, limit=hit_limit, collection=collection
+            )
+            if knowledge_result is not None:
+                knowledge_hits = _tag_hits(
+                    knowledge_result.get('hits', []), 'knowledge'
+                )
+                sources['knowledge'] = {
+                    'hits': knowledge_hits,
+                    'backend': knowledge_result.get('backend', 'local'),
+                    'collection': collection,
+                    'reason': (
+                        'knowledge_search_read'
+                        if knowledge_hits
+                        else 'knowledge_search_empty'
+                    ),
+                }
+                combined.extend(knowledge_hits)
+
+        graphqlite_hits = _graphqlite_hits(root, search_query, limit=hit_limit)
+        if graphqlite_hits:
+            sources['graphqlite'] = {
+                'hits': graphqlite_hits,
+                'backend': 'graphqlite',
+                'reason': 'graphqlite_read',
+            }
+            combined.extend(graphqlite_hits)
     except Exception as exc:
         return {
             'status': 'indexed',
             'indexes': indexes,
             'query': task[:120],
+            'search_query': search_query,
             'hits': [],
+            'sources': sources,
             'reason': f'search_failed:{exc.__class__.__name__}',
         }
 
-    if result is None:
-        return {
-            'status': 'indexed',
-            'indexes': indexes,
-            'query': task[:120],
-            'hits': [],
-            'reason': 'no_hybrid_index',
-        }
-
-    hits = result.get('hits', [])
-    return {
+    hits = _dedupe_hits(combined)[:hit_limit]
+    payload: dict[str, Any] = {
         'status': 'indexed',
         'indexes': indexes,
         'query': task[:120],
         'search_query': search_query,
         'hits': hits,
-        'backend': result.get('backend', 'local'),
-        'collection': result.get('collection', 'default'),
-        'reason': 'hybrid_search_read' if hits else 'hybrid_search_empty',
+        'sources': sources,
+        'reason': _graph_rag_reason(sources, hits),
     }
+    if hybrid_result := sources.get('hybrid'):
+        payload['backend'] = hybrid_result.get('backend', 'local')
+        payload['collection'] = hybrid_result.get('collection', 'default')
+    return payload
 
 
 def build_context_pack(

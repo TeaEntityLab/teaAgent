@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from teaagent.context_pack import build_context_pack
+from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.hybrid_search import LocalHybridSearchBackend, register_hybrid_backend
 from teaagent.memory import MemoryCatalog
+from tests.test_graphqlite_store import FakeGraphQLiteGraph
 
 
 class ContextPackTests(unittest.TestCase):
@@ -115,6 +118,74 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(len(symbols), 1)
             self.assertEqual(symbols[0]['reason'], 'lsp_document_symbols')
             self.assertEqual(symbols[0]['symbols'][0]['name'], 'run')
+
+    def test_context_pack_includes_knowledge_hits_when_marker_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'docs').mkdir()
+            doc = root / 'docs' / 'knowledge.md'
+            doc.write_text('runner audit chain regressions in tests', encoding='utf-8')
+            register_hybrid_backend('local', LocalHybridSearchBackend())
+            backend = LocalHybridSearchBackend()
+            backend.index(
+                root=root, args={'include': 'docs/**', 'collection': 'knowledge'}
+            )
+            (root / '.teaagent').mkdir(exist_ok=True)
+            (root / '.teaagent' / 'knowledge').write_text(
+                json.dumps({'collection': 'knowledge'}), encoding='utf-8'
+            )
+
+            pack = build_context_pack(
+                'review runner audit chain regressions in tests',
+                root=root,
+                search_graph=True,
+            )
+            graph = pack.to_dict()['graph_rag']
+            knowledge = graph['sources']['knowledge']
+
+            self.assertGreaterEqual(len(knowledge['hits']), 1)
+            self.assertEqual(knowledge['collection'], 'knowledge')
+            self.assertEqual(graph['hits'][0]['source'], 'knowledge')
+
+    def test_context_pack_includes_graphqlite_hits_when_db_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.teaagent').mkdir()
+            db_path = root / '.teaagent' / 'graphqlite.db'
+            db_path.write_text('', encoding='utf-8')
+
+            class RecordingGraph(FakeGraphQLiteGraph):
+                def query(self, cypher: str):
+                    self.queries.append(cypher)
+                    return [
+                        {
+                            'doc_id': 'doc-runner',
+                            'text': 'runner audit chain regressions in tests',
+                            'source': 'graph',
+                        }
+                    ]
+
+            store = GraphQLiteGraphStore(
+                GraphQLiteConfig(database=str(db_path)),
+                graph_factory=RecordingGraph,
+            )
+
+            with patch(
+                'teaagent.graphqlite_store.GraphQLiteGraphStore',
+                return_value=store,
+            ):
+                pack = build_context_pack(
+                    'runner audit chain regressions in tests',
+                    root=root,
+                    search_graph=True,
+                )
+
+            graph = pack.to_dict()['graph_rag']
+            graphqlite = graph['sources']['graphqlite']
+
+            self.assertGreaterEqual(len(graphqlite['hits']), 1)
+            self.assertEqual(graphqlite['hits'][0]['doc_id'], 'doc-runner')
+            self.assertEqual(graph['reason'], 'graphqlite_read')
 
 
 if __name__ == '__main__':
