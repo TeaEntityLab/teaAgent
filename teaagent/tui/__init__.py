@@ -58,6 +58,7 @@ HELP_TEXT = """Commands:
   approvals                 List approved call ids for this session.
   clarify <task>            Score task ambiguity without calling a model.
   preflight <task>          Show clarify, routing, memory, and tool plan without calling a model.
+  daily [task]              Show readiness, recent runs, harness health, and token budget.
   ask <task>                Run a model-driven agent task with workspace tools.
   ask --clarify <task>      Clarify first; stop if key details are missing.
   memory add <text>         Add a workspace memory entry.

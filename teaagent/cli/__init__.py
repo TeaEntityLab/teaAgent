@@ -8,6 +8,7 @@ from typing import Any, Optional
 from teaagent import __version__
 from teaagent.cli._handlers import (
     agent_card_command,
+    agent_daily_command,
     agent_preflight_command,
     agent_resume_command,
     agent_run_show,
@@ -158,6 +159,7 @@ def build_parser() -> argparse.ArgumentParser:
         {
             'run': agent_run_task,
             'preflight': agent_preflight_command,
+            'daily': agent_daily_command,
             'resume': agent_resume_command,
             'status': agent_status_command,
             'runs': agent_runs_list,

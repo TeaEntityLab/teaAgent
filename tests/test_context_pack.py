@@ -187,6 +187,32 @@ class ContextPackTests(unittest.TestCase):
             self.assertEqual(graphqlite['hits'][0]['doc_id'], 'doc-runner')
             self.assertEqual(graph['reason'], 'graphqlite_read')
 
+    def test_context_pack_candidate_quality_for_daily_usage_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for rel, text in {
+                'teaagent/preflight.py': 'def preflight():\n    return "ready"\n',
+                'teaagent/daily.py': 'def build_daily_brief():\n    return "brief"\n',
+                'teaagent/runner.py': 'def run():\n    return "run"\n',
+            }.items():
+                path = root / rel
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding='utf-8')
+            (root / 'AGENTS.md').write_text(
+                'Daily cockpit work should inspect teaagent/daily.py and teaagent/preflight.py.',
+                encoding='utf-8',
+            )
+
+            pack = build_context_pack(
+                'improve daily cockpit token budget in teaagent/daily.py and teaagent/preflight.py',
+                root=root,
+            )
+            paths = [entry['path'] for entry in pack.to_dict()['candidate_files']]
+
+            self.assertIn('teaagent/daily.py', paths)
+            self.assertIn('teaagent/preflight.py', paths)
+            self.assertLess(paths.index('teaagent/daily.py'), 3)
+
 
 if __name__ == '__main__':
     unittest.main()

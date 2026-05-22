@@ -15,6 +15,7 @@ def register(
     subs = agent.add_subparsers(dest='agent_command', required=True)
     _run(subs, handlers['run'])
     _preflight(subs, handlers['preflight'])
+    _daily(subs, handlers['daily'])
     _resume(subs, handlers['resume'])
     _status(subs, handlers['status'])
     _runs(subs, handlers['runs'])
@@ -146,6 +147,52 @@ def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # 
         type=int,
         default=5,
         help='Maximum matched memories to include.',
+    )
+    p.add_argument(
+        '--context-profile',
+        choices=['lean', 'balanced', 'deep'],
+        default='balanced',
+        help='Read-only context budget profile for preflight evidence.',
+    )
+    p.set_defaults(func=handler)
+
+
+def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+    p = subs.add_parser(
+        'daily',
+        help='Show read-only daily readiness, run, health, and token budget summary.',
+    )
+    p.add_argument(
+        'provider', choices=available_providers(), help='Model provider to plan for.'
+    )
+    p.add_argument('task', nargs='?', default=None, help='Optional task to evaluate.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument('--model', default=None, help='Override model name.')
+    p.add_argument(
+        '--route-model', action='store_true', help='Apply task category routing.'
+    )
+    p.add_argument(
+        '--permission-mode',
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help='Permission mode to report and recommend.',
+    )
+    p.add_argument(
+        '--memory-limit',
+        type=int,
+        default=None,
+        help='Override matched memories included by the selected context profile.',
+    )
+    p.add_argument(
+        '--runs-limit', type=int, default=5, help='Maximum recent runs to summarize.'
+    )
+    p.add_argument(
+        '--context-profile',
+        choices=['lean', 'balanced', 'deep'],
+        default='balanced',
+        help='Read-only context budget profile.',
     )
     p.set_defaults(func=handler)
 

@@ -81,6 +81,27 @@ class DailyTUIAcceptanceTests(unittest.TestCase):
                 (Path(tmp) / 'TODO.md').read_text(encoding='utf-8'), 'done'
             )
 
+    def test_daily_tui_command_reports_brief(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'README.md').write_text('hello teaagent', encoding='utf-8')
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+
+            self.assertTrue(tui.handle_command('permission read-only'))
+            self.assertTrue(tui.handle_command('daily summarize README.md'))
+
+            self.assertIn('daily: ready=True', '\n'.join(output))
+            payload = json.loads(output[-1])
+            self.assertTrue(payload['ready'])
+            self.assertEqual(payload['permission_mode'], 'read-only')
+            self.assertIn('token_budget', payload)
+            self.assertIn('harness_health', payload)
+
 
 if __name__ == '__main__':
     unittest.main()

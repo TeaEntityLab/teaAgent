@@ -1,5 +1,6 @@
 from ._agent import (
     agent_card_command,
+    agent_daily_command,
     agent_preflight_command,
     agent_resume_command,
     agent_run_show,
@@ -52,6 +53,7 @@ from ._model import model_conformance, model_providers, model_route, model_smoke
 
 __all__ = [
     'agent_card_command',
+    'agent_daily_command',
     'agent_preflight_command',
     'audit_serve_command',
     'doctor_migration_command',

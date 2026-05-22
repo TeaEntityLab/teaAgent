@@ -4,6 +4,7 @@ import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
+from teaagent.daily import build_daily_brief
 from teaagent.graphqlite_store import check_graphqlite_runtime
 from teaagent.intent import clarify_task
 from teaagent.llm import available_providers
@@ -274,6 +275,26 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             route=tui.route_model_enabled,
         )
         tui._print_json(report.to_dict())
+        return True
+    if action == 'daily':
+        task = ' '.join(args) if args else None
+        brief = build_daily_brief(
+            task=task,
+            root=tui.root,
+            provider=tui.provider,
+            model=tui.model,
+            permission_mode=tui.permission_mode,
+            route=tui.route_model_enabled,
+        )
+        payload = brief.to_dict()
+        tui.output_fn(
+            f'daily: ready={payload["ready"]} '
+            f'token={payload["token_budget"]["usage_level"]} '
+            f'runs={len(payload["recent_runs"])}'
+        )
+        for recommendation in payload['recommendations'][:1]:
+            tui.output_fn(f'next: {recommendation["command"]}')
+        tui._print_json(payload)
         return True
     if action == 'memory':
         tui._handle_memory(args)

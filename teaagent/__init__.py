@@ -77,6 +77,14 @@ from teaagent.config_loader import (
     load_workspace_config,
 )
 from teaagent.context import ContextCompactor
+from teaagent.daily import (
+    DailyBrief,
+    DailyRecommendation,
+    HarnessHealthReport,
+    RunRollup,
+    TokenBudgetReport,
+    build_daily_brief,
+)
 from teaagent.errors import RunCancelledError
 from teaagent.eval import EvalCase, EvalReport, run_eval
 from teaagent.eval_report import render_html_report
@@ -299,6 +307,8 @@ __all__ = [
     'ingest_code_relations_to_graph',
     'ContainerCodeModeBackend',
     'ContextCompactor',
+    'DailyBrief',
+    'DailyRecommendation',
     'DPoPValidationResult',
     'Decision',
     'DenyRule',
@@ -309,6 +319,7 @@ __all__ = [
     'FallbackKnowledgeBackend',
     'FinalAnswer',
     'GraphEdge',
+    'HarnessHealthReport',
     'GraphQLiteConfig',
     'GraphQLiteGraphStore',
     'GraphQLitePersistentStore',
@@ -379,6 +390,7 @@ __all__ = [
     'RunBudget',
     'RunCancelledError',
     'RunStore',
+    'RunRollup',
     'RunSummary',
     'SQLiteOAuthStore',
     'SkillContent',
@@ -398,6 +410,7 @@ __all__ = [
     'StatelessMCPResponse',
     'TelemetryConfig',
     'TelemetryNotAvailable',
+    'TokenBudgetReport',
     'ToolAnnotations',
     'ToolRateLimit',
     'ToolRegistry',
@@ -416,6 +429,7 @@ __all__ = [
     'assess_provider_portability',
     'available_providers',
     'build_aibom',
+    'build_daily_brief',
     'build_mcp_http_server',
     'build_task_spec',
     'build_workspace_tool_registry',

@@ -80,6 +80,41 @@ class DailyCLIAcceptanceTests(unittest.TestCase):
             self.assertEqual(run_payload['audit_summary']['approval_required'], False)
             self.assertEqual(show_code, 0)
             self.assertIn('run_completed', [event['event_type'] for event in events])
+            self.assertIn('token_budget', preflight_payload)
+            self.assertEqual(
+                preflight_payload['context_pack']['read_only'],
+                True,
+            )
+
+    def test_daily_cli_brief_is_read_only_and_reports_token_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'README.md').write_text('hello teaagent', encoding='utf-8')
+
+            daily_out = io.StringIO()
+            with redirect_stdout(daily_out):
+                daily_code = main(
+                    [
+                        'agent',
+                        'daily',
+                        'gpt',
+                        'Summarize README.md for onboarding',
+                        '--root',
+                        tmp,
+                        '--permission-mode',
+                        'read-only',
+                    ]
+                )
+            payload = json.loads(daily_out.getvalue())
+
+            self.assertEqual(daily_code, 0)
+            self.assertTrue(payload['ready'])
+            self.assertEqual(payload['permission_mode'], 'read-only')
+            self.assertIn('token_budget', payload)
+            self.assertIn('harness_health', payload)
+            self.assertEqual(payload['recent_runs'], [])
+            self.assertGreaterEqual(len(payload['recommendations']), 1)
+            self.assertFalse((root / 'TODO.md').exists())
 
     def test_daily_cli_prompt_approval_resume_is_auditable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

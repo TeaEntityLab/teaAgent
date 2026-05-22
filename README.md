@@ -82,6 +82,7 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Code Mode**: Restricted Python execution with AST validation and pluggable child-process or container backends.
 - **Telemetry**: OpenTelemetry spans plus audit-driven metrics sinks for run and tool lifecycle events.
 - **Heartbeat**: Background audit events for run liveness monitoring and hang detection.
+- **Daily Brief**: Read-only readiness cockpit with recent runs, pending approvals, harness warnings, and token/cost budget.
 - **Hook System**: 8-event lifecycle (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop, SubagentStop, SessionEnd) for extensibility.
 - **Plugin System**: Four extension points (Commands, Agents, Hooks, MCP Servers) compatible with Claude Code.
 - **Context Compaction**: Automatic context compression at 75-92% token usage (Claude Code compatible).
@@ -247,6 +248,9 @@ teaagent agent run gpt "Improve this project" --clarify
 # List runs
 teaagent agent runs
 
+# Daily readiness + token/cost budget
+teaagent agent daily gpt "Summarize the tests" --permission-mode read-only
+
 # Resume a run
 teaagent agent resume gpt <run_id>
 ```
@@ -389,6 +393,11 @@ Automatic context compression when token usage exceeds 75-92% (Claude Code traff
 - Green (0-75%): Normal operation
 - Yellow (75-92%): User hints
 - Red (92%+): Auto-compaction triggered
+
+`teaagent agent preflight` and `teaagent agent daily` expose a `token_budget`
+payload before any model call. The report estimates task, memory, context-pack,
+tool-metadata, recent-run replay, and output-reserve tokens, then labels the
+planned context as green/yellow/red when the model context window is known.
 
 ### ACP (Agent Client Protocol)
 

@@ -7,6 +7,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.context_pack import ContextPack, build_context_pack
+from teaagent.daily import (
+    TokenBudgetReport,
+    build_harness_health_report,
+    build_token_budget_report,
+    resolve_context_profile,
+)
 from teaagent.intent import ClarificationResult, clarify_task
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, route_model
@@ -25,6 +31,7 @@ class PreflightReport:
     memories: list[MemoryEntry]
     tool_count: int
     context_pack: ContextPack
+    token_budget: Optional[TokenBudgetReport] = None
     health: dict[str, Any] = field(
         default_factory=lambda: {'healthy': True, 'failures': []}
     )
@@ -40,6 +47,7 @@ class PreflightReport:
             'memories': [entry.to_dict() for entry in self.memories],
             'tool_count': self.tool_count,
             'context_pack': self.context_pack.to_dict(),
+            'token_budget': self.token_budget.to_dict() if self.token_budget else None,
             'health': self.health,
             'ready': not self.clarification.needs_clarification
             and self.health['healthy'],
@@ -87,22 +95,34 @@ def preflight(
     permission_mode: PermissionMode = PermissionMode.PROMPT,
     route: bool = False,
     memory_limit: int = 5,
+    context_profile: str = 'balanced',
 ) -> PreflightReport:
     root_path = Path(root)
+    profile = resolve_context_profile(context_profile, memory_limit=memory_limit)
     clarification = clarify_task(task)
     routing = route_model(task, provider=provider, model=model) if route else None
-    memories = MemoryCatalog(root_path).search(task, limit=memory_limit)
+    memories = MemoryCatalog(root_path).search(task, limit=profile.memory_limit)
     context_pack = build_context_pack(
         task,
         root=root_path,
-        memory_limit=memory_limit,
-        hydrate_lsp=True,
-        search_graph=True,
+        memory_limit=profile.memory_limit,
+        hydrate_lsp=profile.hydrate_lsp,
+        search_graph=profile.search_graph,
     )
     registry = build_workspace_tool_registry(root_path)
 
     health = check_env_health(
         root_path, critical_paths=[root_path / '.teaagent', root_path / '.git']
+    )
+    health['warnings'] = build_harness_health_report(root_path, health).warnings
+    token_budget = build_token_budget_report(
+        task=task,
+        provider=provider,
+        model=routing.model if routing else model,
+        context_pack=context_pack,
+        memories=memories,
+        tool_count=len(registry.mcp_metadata()),
+        profile=profile,
     )
 
     return PreflightReport(
@@ -115,5 +135,6 @@ def preflight(
         memories=memories,
         tool_count=len(registry.mcp_metadata()),
         context_pack=context_pack,
+        token_budget=token_budget,
         health=health,
     )

@@ -197,8 +197,15 @@ Related CLI helpers:
 ```bash
 teaagent agent card --root .          # AgentCard JSON for A2A discovery
 teaagent agent preflight gpt "task"   # Clarify/route/tools + read-only context_pack
+teaagent agent daily gpt "task"       # Daily readiness + token/cost budget cockpit
 teaagent agent run gpt "delegate" --subagent --max-subagent-depth 1 --root .
 ```
+
+Preflight and daily JSON include `token_budget` with green/yellow/red context
+pressure, estimated cost, and contributor breakdown. `agent daily` also rolls up
+recent runs, pending approvals, harness warnings, optional index availability, and
+the next safest command. `--context-profile lean|balanced|deep` tunes memory,
+LSP hydration, graph search, run replay, and output reserve for read-only planning.
 
 Preflight JSON includes `context_pack` (candidate files, memories, optional LSP symbols,
 and read-only graph hits). Subagent tools accept `isolation: shared` (default),
@@ -214,6 +221,7 @@ teaagent model providers
 teaagent agent card --root .
 teaagent workspace tools
 teaagent agent preflight gpt "list workspace tools" --root .
+teaagent agent daily gpt "list workspace tools" --root .
 ```
 
 VS Code extension (local build):

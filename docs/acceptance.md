@@ -34,8 +34,8 @@ directory.
 | `test_cancel_flow.py` | Graceful cancel | Thread-safe cancel token stops runs cleanly and keeps audit state intact |
 | `test_code_analysis_prompt_injection_flow.py` | Code-analysis prompt injection | Enabling code analysis injects `lsp_context` in model payload for code-path tasks without requiring external LSP binaries |
 | `test_cost_tracking_flow.py` | Cost and token tracking | Terminal results and `run_completed` audit events carry token and cost fields |
-| `test_daily_cli.py` | Daily CLI workflow | `agent preflight`, `agent run`, `agent show`, audit persistence, run-level audit summary |
-| `test_daily_tui.py` | Daily TUI workflow | Chat mode, memory injection, progress streaming, answer persistence in session history |
+| `test_daily_cli.py` | Daily CLI workflow | `agent daily`, `agent preflight`, `agent run`, `agent show`, token budget, harness health, audit persistence, run-level audit summary |
+| `test_daily_tui.py` | Daily TUI workflow | Daily cockpit command, chat mode, memory injection, progress streaming, answer persistence in session history |
 | `test_error_remediation_flow.py` | Error remediation hints | Core errors include actionable default hints and custom hint override support |
 | `test_external_tool_manifest_compatibility_flow.py` | External ecosystem compatibility | External MCP manifests and community skill packages remain compatible; invalid schemas fail with clear validation errors |
 | `test_first_run_experience_flow.py` | First-run onboarding | `init` bootstraps `.teaagent/config.json`, creates `AGENTS.md` when missing, preserves existing `AGENTS.md`, and returns actionable onboarding checklist |
@@ -108,7 +108,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`98 passed`.
+`100 passed`.
 
 <!-- ACCEPTANCE_TIERS:START -->
 

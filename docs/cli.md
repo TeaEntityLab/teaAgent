@@ -466,6 +466,10 @@ ask Long-running task
 status <run_id>
 ```
 
+`agent daily` uses the same persisted runs, pending approvals, heartbeat status,
+and optional checkpoint/run replay signals to provide a lightweight background
+session cockpit before starting or resuming work.
+
 ## MCP Server
 
 Serve the workspace tool pack to other MCP clients over stdio JSON-RPC:
@@ -529,23 +533,30 @@ subagent on
 ask Plan and execute the cleanup
 ```
 
-## Preflight
+## Preflight and Daily Brief
 
 Summarize clarification, routing, matching memories, permission state, and tool count without calling a model:
 
 ```bash
 teaagent agent preflight gpt "review this patch for regressions in the test suite" --route-model
+teaagent agent daily gpt "review this patch for regressions in the test suite" --context-profile balanced
 ```
 
 Exit code is `0` when the task is concrete enough and `2` when it still needs clarification. Pair with `--permission-mode workspace-write` or `--memory-limit 10` as needed.
 
 Preflight JSON includes a read-only `context_pack` (candidate files from task/`AGENTS.md` mentions, matching memories, LSP symbol hydration when code analysis is enabled, and read-only graph hits from hybrid search, the `.teaagent/knowledge` collection marker, and `.teaagent/graphqlite.db` when present) so planning runs can show *why this context* without workspace writes. `context_pack.graph_rag.sources` lists per-backend hits; `hits` is the deduped union.
 
+Both preflight and daily include `token_budget`: estimated input tokens, output reserve, green/yellow/red context pressure, estimated cost, and contributor breakdown for task text, memories, context pack, tool metadata, and recent-run replay. `agent daily` adds `harness_health`, `recent_runs`, and `recommendations` so daily work can start from a single read-only cockpit.
+
+Use `--context-profile lean|balanced|deep` to tune read-only context collection:
+`lean` minimizes context pressure, `balanced` is the default, and `deep` includes more memories plus a larger output reserve.
+
 Inside TUI:
 
 ```text
 route-model on
 preflight review this patch for regressions in the test suite
+daily review this patch for regressions in the test suite
 ```
 
 ## Agent Run

@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.code_analysis import CodeAnalysisConfig
+from teaagent.daily import build_daily_brief
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.policy import parse_permission_mode
@@ -232,9 +233,26 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
         permission_mode=parse_permission_mode(args.permission_mode),
         route=args.route_model,
         memory_limit=args.memory_limit,
+        context_profile=args.context_profile,
     )
     print_json(report.to_dict())
     return 0 if report.to_dict()['ready'] else 2
+
+
+def agent_daily_command(args: argparse.Namespace) -> int:
+    brief = build_daily_brief(
+        task=args.task,
+        root=args.root,
+        provider=args.provider,
+        model=args.model,
+        permission_mode=parse_permission_mode(args.permission_mode),
+        route=args.route_model,
+        memory_limit=args.memory_limit,
+        runs_limit=args.runs_limit,
+        context_profile=args.context_profile,
+    )
+    print_json(brief.to_dict())
+    return 0 if brief.ready else 2
 
 
 def agent_status_command(args: argparse.Namespace) -> int:
