@@ -12,6 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from teaagent.llm._config import PROVIDER_CONFIGS  # noqa: E402
+from teaagent.policy import PermissionMode  # noqa: E402
 
 TIER_START = '<!-- ACCEPTANCE_TIERS:START -->'
 TIER_END = '<!-- ACCEPTANCE_TIERS:END -->'
@@ -20,6 +21,17 @@ SURVEY_REVIEW_DATE = re.compile(
 )
 SURVEY_SOURCE_URL = re.compile(r'https://[^\s|)]+')
 SURVEY_BACKLOG_ACTION = re.compile(r'\bP[0-2](?:-[a-z0-9]+)?\b', re.IGNORECASE)
+MODE_MATRIX_START = '<!-- MODE_SAFETY_MATRIX:START -->'
+MODE_MATRIX_END = '<!-- MODE_SAFETY_MATRIX:END -->'
+MODE_MATRIX_REQUIRED_TOPICS = (
+    'Plan Mode',
+    'Auto Mode',
+    'Code Mode',
+    'shell mutate',
+    'Approvals',
+    'Audit',
+    'Rollback',
+)
 
 
 def _render_tier_markdown() -> str:
@@ -158,6 +170,30 @@ def validate_provider_docs_consistency(
     return errors
 
 
+def validate_mode_safety_matrix(usage_text: str) -> list[str]:
+    errors: list[str] = []
+    try:
+        matrix_block = _extract_marked_block(
+            usage_text, MODE_MATRIX_START, MODE_MATRIX_END
+        )
+    except ValueError as exc:
+        errors.append(str(exc))
+        return errors
+
+    lowered = matrix_block.lower()
+    for topic in MODE_MATRIX_REQUIRED_TOPICS:
+        if topic.lower() not in lowered:
+            errors.append(f'Mode/safety matrix missing required topic: {topic!r}.')
+
+    for mode in PermissionMode:
+        if f'`{mode.value}`' not in matrix_block:
+            errors.append(
+                f'Mode/safety matrix missing PermissionMode value: {mode.value!r}.'
+            )
+
+    return errors
+
+
 def validate_survey_doc(survey_text: str) -> list[str]:
     errors: list[str] = []
     if not SURVEY_REVIEW_DATE.search(survey_text):
@@ -187,6 +223,7 @@ def validate_docs_consistency(
     survey_path: Path | None = None,
     check_providers: bool = True,
     check_survey: bool = True,
+    check_mode_matrix: bool = True,
 ) -> list[str]:
     errors: list[str] = []
 
@@ -196,25 +233,33 @@ def validate_docs_consistency(
     acceptance_tests = _collect_acceptance_test_files(acceptance_tests_dir)
 
     architecture_path = architecture_path or (_REPO_ROOT / 'docs' / 'architecture.md')
-    usage_path = usage_path or (_REPO_ROOT / 'docs' / 'USAGE.md')
+    usage_doc_path = usage_path or (_REPO_ROOT / 'docs' / 'USAGE.md')
     survey_path = survey_path or (
         _REPO_ROOT / 'scripts' / 'refresh_agent_readme_survey.md'
     )
 
     if check_providers:
-        if architecture_path.is_file() and usage_path.is_file():
+        if architecture_path.is_file() and usage_doc_path.is_file():
             errors.extend(
                 validate_provider_docs_consistency(
                     readme_text=readme_text,
                     architecture_text=architecture_path.read_text(encoding='utf-8'),
-                    usage_text=usage_path.read_text(encoding='utf-8'),
+                    usage_text=usage_doc_path.read_text(encoding='utf-8'),
                 )
             )
         else:
             if not architecture_path.is_file():
                 errors.append(f'architecture doc not found: {architecture_path}')
-            if not usage_path.is_file():
-                errors.append(f'USAGE doc not found: {usage_path}')
+            if not usage_doc_path.is_file():
+                errors.append(f'USAGE doc not found: {usage_doc_path}')
+
+    if check_mode_matrix:
+        if usage_doc_path.is_file():
+            errors.extend(
+                validate_mode_safety_matrix(usage_doc_path.read_text(encoding='utf-8'))
+            )
+        else:
+            errors.append(f'USAGE doc not found: {usage_doc_path}')
 
     if check_survey:
         if survey_path.is_file():

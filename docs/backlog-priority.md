@@ -49,6 +49,7 @@ _No open P0 items._
 | Item | Notes |
 |------|-------|
 | Docs/provider architecture drift guard | `scripts/validate_docs_consistency.py` now checks README/USAGE/architecture counts against `PROVIDER_CONFIGS`, unique credential env vars (including shared `CLOUDFLARE_API_TOKEN` / `OPENCODEZEN_API_KEY`), and survey doc freshness; `docs/architecture.md` updated to 13 providers. |
+| Mode and safety comparison matrix | `docs/USAGE.md` matrix maps permission modes, Plan/Auto/Code lanes, shell mutation, approvals, audit, and rollback; validator enforces every `PermissionMode` value and required topics. |
 
 ---
 
@@ -59,7 +60,7 @@ _No open P0 items._
 | DeepWiki-backed agent landscape survey (maintenance) | Initial 2026-05-22 survey landed in `scripts/refresh_agent_readme_survey.md` with validator checks; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md` differentiator section; `validate_docs_consistency.py` must pass. |
 | Subagent lineage and isolation hardening | TeaAgent already has `subagent` and `subagent_batch`, but child runs currently do not expose strong parent lineage and default to shared-workspace semantics. Famous agent surfaces increasingly make background/subagent work auditable and bounded. | Child run records include parent run id, subagent definition name, depth, and batch index where applicable; `subagent_batch` returns ordered lineage metadata; docs state default shared-workspace behavior and explicitly defer worktree/container isolation; add unit tests around lineage and budget inheritance. |
 | Repo-map/context pack for coding runs | Aider-style repo maps and modern IDE agents make context selection visible. TeaAgent has LSP/code-analysis and GraphQLite pieces, but users do not yet get a clear "why this context" artifact during planning or preflight. | Add a read-only context-pack output path for planning/preflight that summarizes candidate files, symbols, memories, and graph/RAG hits without editing files; acceptance verifies read-only mode blocks writes and includes deterministic context evidence in the run payload. |
-| Mode and safety comparison matrix | Codex, Claude Code, and OpenCode all foreground modes, permissions, and sandbox expectations. TeaAgent has permission modes, Plan Mode, Auto Mode, Code Mode, MCP, and IDE flows, but the user-facing mental model is spread across docs. | Add a single matrix in `docs/USAGE.md` or `docs/cli.md` mapping permission modes, Plan Mode, Auto Mode, Code Mode, shell mutation, approvals, audit, and rollback; validation ensures every `PermissionMode` enum value is documented. |
+| Mode and safety comparison matrix (maintenance) | Matrix landed in `docs/USAGE.md` with validator coverage for all `PermissionMode` values and required safety topics. | Keep matrix in sync when permission modes, Plan/Auto/Code lanes, or rollback APIs change; `validate_docs_consistency.py` must pass. |
 | Multi-surface launch recipes | OpenHands/OpenCode-style product surfaces make it obvious how to start CLI, TUI, IDE, MCP, managed runtime, and federation workflows. TeaAgent supports many of these, but the current story is architecture-heavy. | Add a "Choose your surface" section with one-command recipes for CLI, TUI, VS Code, MCP HTTP, ACP, A2A, ANP, and managed runtime stubs; smoke-test docs examples where commands are local and non-networked. |
 
 ---
@@ -76,11 +77,11 @@ _No open P0 items._
 
 ## Recommended Execution Order (remaining)
 
-1. Mode and safety comparison matrix.
-2. Multi-surface launch recipes.
-3. Subagent lineage and isolation hardening.
-4. Repo-map/context pack for coding runs.
-5. Plugin/skill compatibility catalog.
-6. Competitive use-case dashboard refresh.
-7. Periodic mainstream-agent refresh cadence.
-8. DeepWiki survey maintenance (recurring).
+1. Multi-surface launch recipes.
+2. Subagent lineage and isolation hardening.
+3. Repo-map/context pack for coding runs.
+4. Plugin/skill compatibility catalog.
+5. Competitive use-case dashboard refresh.
+6. Periodic mainstream-agent refresh cadence.
+7. DeepWiki survey maintenance (recurring).
+8. Mode/safety matrix maintenance (recurring).

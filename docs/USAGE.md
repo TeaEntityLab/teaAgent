@@ -210,28 +210,77 @@ teaagent agent run --model gpt-4o gpt "explain the architecture"
 teaagent agent run --model gemini-2.0-flash gemini "search for TODO comments"
 ```
 
-### Permission Modes
+## Mode and Safety Comparison Matrix
 
-Control what the agent can do:
+TeaAgent layers **permission modes** (session policy), **execution lanes** (plan/auto/code),
+and **cross-cutting controls** (approvals, audit, rollback). Use this table to pick a safe
+default before enabling automation.
+
+<!-- MODE_SAFETY_MATRIX:START -->
+
+### Permission modes (`--permission-mode`)
+
+Session-scoped `ApprovalPolicy` gates destructive workspace tools. Non-destructive reads
+and inspect-only shell commands are always allowed unless Plan Mode or Auto Mode adds
+extra blocks.
+
+| Mode | File reads | File writes | Shell inspect | Shell mutate | Approvals | Audit | Rollback |
+|------|:----------:|:-----------:|:-------------:|:------------:|:---------:|:-----:|:--------:|
+| `read-only` | yes | no | yes | no | not needed (blocked) | per-run JSONL | `UndoJournal.restore()` when journal attached |
+| `workspace-write` | yes | yes (write/patch/hash-edit) | yes | no | not needed for allowed writes | per-run JSONL | `UndoJournal.restore()` when journal attached |
+| `prompt` *(default)* | yes | yes after approval/token | yes | yes after approval/token | HITL or `--approve-call-id` / `--allow-destructive` | per-run JSONL | `UndoJournal.restore()` when journal attached |
+| `allow` | yes | yes | yes | yes | session-wide allow destructive | per-run JSONL | `UndoJournal.restore()` when journal attached |
+| `danger-full-access` | yes | yes | yes | yes | same as `allow`; trusted automation only | per-run JSONL | `UndoJournal.restore()` when journal attached |
+
+CLI examples:
 
 ```bash
-# Read-only: inspect files, run safe commands (safest)
 teaagent agent run gpt "what does main.py do" --permission-mode read-only
-
-# Workspace-write: can create/edit files, but no shell mutation
 teaagent agent run gpt "create a README" --permission-mode workspace-write
-
-# Allow all destructive operations (use with caution)
-teaagent agent run gpt "run the tests and fix failures" --allow-destructive
+teaagent agent run gpt "run tests and patch failures" --permission-mode prompt --hitl-approval
+teaagent agent run gpt "approved automation" --permission-mode allow
 ```
 
-| Mode                  | File reads | File writes | Shell inspect | Shell mutate |
-|-----------------------|:----------:|:-----------:|:-------------:|:------------:|
-| `read-only`           | yes        | no          | yes           | no           |
-| `workspace-write`     | yes        | yes         | yes           | no           |
-| `prompt` *(default)*  | yes        | needs approval | yes        | needs approval |
-| `allow`               | yes        | yes         | yes           | yes          |
-| `danger-full-access`  | yes        | yes         | yes           | yes          |
+### Execution lanes (orthogonal to permission mode)
+
+| Lane | Purpose | Workspace file writes | Shell inspect | Shell mutate | Approvals | Audit | Rollback |
+|------|---------|:---------------------:|:-------------:|:------------:|:---------:|:-----:|:--------:|
+| **Plan Mode** | Read-only exploration before editing; CLI uses `--permission-mode read-only` and sets `run_mode: planning` in run metadata | no | yes | no | destructive tools blocked | per-run JSONL | N/A (no mutations) |
+| **Auto Mode** | Fully autonomous runs with hard budgets (`AutoModeConfig` on `ChatAgentConfig` / `AgentRunner`) | follows permission mode; default denies `workspace_run_shell_mutate` | follows permission mode | denied by default | auto-approves allowed tools; no HITL prompts | per-run JSONL + `auto_mode` summary metadata | `UndoJournal` if attached; optional `auto_commit` on success |
+| **Code Mode** | Restricted Python execution via `execute_code_mode()` — AST allow-list, no imports; separate from workspace agent tools | no (isolated sandbox) | no | no (not workspace shell) | not applicable (not workspace destructive tools) | `sandbox_profile_selected` / `sandbox_violation` events when `audit_logger` passed | revert sandbox side effects only; does not journal workspace files |
+
+- **Plan Mode** API: `teaagent.plan_mode.PlanMode` blocks writes/shell programmatically; CLI planning lane is `--permission-mode read-only`.
+- **Auto Mode** API: enable `AutoModeConfig(enabled=True)` with iteration/tool/cost/time ceilings.
+- **Code Mode** API: `execute_code_mode(..., profile=SandboxProfile.LOCAL|CI|PRODUCTION)` with child-process or container backends (see [architecture.md](architecture.md) and ADR 0003).
+
+### Cross-cutting controls
+
+| Control | What it does | When it applies |
+|---------|--------------|-----------------|
+| **Approvals** | `ApprovalPolicy` + optional HITL handler; destructive tools need `call_id` match in `prompt` mode | All workspace agent runs |
+| **Audit** | Hash-chained JSONL under `.teaagent/runs/<run_id>.jsonl` with secret redaction | Every agent run and tool call |
+| **Rollback** | `UndoJournal` audit sink captures pre-write bytes; `restore()` reverts touched paths (optional `.teaagent/undo.jsonl` persistence) | Workspace write tools during a run |
+
+Inspect audit and forensics:
+
+```bash
+teaagent agent show <run_id> --root .
+cat .teaagent/runs/<run_id>.jsonl
+```
+
+<!-- MODE_SAFETY_MATRIX:END -->
+
+### Permission Modes (quick reference)
+
+See the matrix above for the full comparison. Short defaults:
+
+| Mode | Behavior |
+|------|----------|
+| `read-only` | Blocks all destructive tools |
+| `workspace-write` | Allows file writes; blocks shell mutation |
+| `prompt` | Destructive tools pause for HITL approval or require an approval token |
+| `allow` | Allows destructive tools for the session |
+| `danger-full-access` | Full access; reserve for trusted automation |
 
 ## Chat Mode (TUI)
 

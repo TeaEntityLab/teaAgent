@@ -53,6 +53,7 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
         acceptance_tests_dir=acceptance_dir,
         check_providers=False,
         check_survey=False,
+        check_mode_matrix=False,
     )
     assert errors == []
 
@@ -81,6 +82,7 @@ def test_validate_docs_consistency_detects_mismatch(tmp_path: Path) -> None:
         acceptance_tests_dir=acceptance_dir,
         check_providers=False,
         check_survey=False,
+        check_mode_matrix=False,
     )
     assert len(errors) == 3
 
@@ -104,4 +106,11 @@ def test_validate_survey_doc_passes_for_repo_survey() -> None:
         encoding='utf-8'
     )
     errors = _VALIDATE_MODULE.validate_survey_doc(survey)
+    assert errors == []
+
+
+def test_validate_mode_safety_matrix_passes_for_repo_usage() -> None:
+    root = Path(__file__).resolve().parents[1]
+    usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_mode_safety_matrix(usage)
     assert errors == []

@@ -41,7 +41,7 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 | Docs/provider drift guard | README/USAGE/architecture/runtime provider registry must stay aligned; shared `CLOUDFLARE_API_TOKEN` / `OPENCODEZEN_API_KEY` must not false-positive validators | P0 |
 | Subagent lineage + isolation | Child runs need parent run id, depth, batch index; default shared workspace documented; worktree isolation deferred | P1 |
 | Repo-map / context pack | Surfacing candidate files/symbols/memories during planning without writes | P1 |
-| Mode and safety matrix | Single doc mapping permission modes, Plan/Auto/Code modes, approvals, rollback | P1 |
+| Mode and safety matrix | Single doc mapping permission modes, Plan/Auto/Code modes, approvals, rollback | Done (USAGE.md + validator) |
 | Multi-surface recipes | One-command paths for CLI, TUI, VS Code, MCP, ACP, A2A, ANP, managed runtime | P1 |
 | Plugin/skill catalog | Fixture-backed compatibility catalog for skills, hooks, MCP metadata | P2 |
 | Use-case dashboard refresh | Regenerate matrix from this survey with review date and open-gap counts | P2 |

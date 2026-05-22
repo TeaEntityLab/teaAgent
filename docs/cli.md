@@ -586,6 +586,8 @@ teaagent agent run gpt "Run tests and patch failures" --permission-mode prompt
 teaagent agent run gpt "Run approved automation" --permission-mode allow
 ```
 
+Mode and safety comparison matrix: see [USAGE.md — Mode and Safety Comparison Matrix](USAGE.md#mode-and-safety-comparison-matrix).
+
 Permission modes:
 
 - `read-only`: blocks every destructive tool.
