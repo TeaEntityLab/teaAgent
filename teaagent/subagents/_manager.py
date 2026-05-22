@@ -118,7 +118,7 @@ class SubagentManager:
         if normalized_isolation is None:
             return _error(
                 f'unsupported subagent isolation: {isolation!r}; '
-                f'use one of: shared, worktree',
+                f'use one of: shared, worktree, container',
                 lineage=_lineage_or_none(
                     parent_run_id,
                     def_name or 'generic',
@@ -172,8 +172,11 @@ class SubagentManager:
 
         child_depth = depth + 1
         worktree_rel: Optional[str] = None
+        container_rel: Optional[str] = None
         if iso_ctx.worktree_path is not None:
             worktree_rel = iso_ctx.worktree_path.relative_to(self._root).as_posix()
+        if iso_ctx.container_path is not None:
+            container_rel = iso_ctx.container_path.relative_to(self._root).as_posix()
         lineage = SubagentLineage(
             parent_run_id=parent_run_id,
             def_name=def_used,
@@ -181,6 +184,7 @@ class SubagentManager:
             isolation=isolation,
             batch_index=batch_index,
             worktree_path=worktree_rel,
+            container_path=container_rel,
         )
 
         registry = self._build_registry_for(sub_def)
@@ -214,6 +218,7 @@ class SubagentManager:
                 batch_index=batch_index,
                 isolation=isolation,
                 worktree_path=worktree_rel,
+                container_path=container_rel,
                 completed_at=completed_at,
                 iterations=sub_result.iterations,
                 tool_calls=sub_result.tool_calls,

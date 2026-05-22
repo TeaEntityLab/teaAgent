@@ -32,7 +32,7 @@ def register_subagent_tools(
         if isolation is None:
             return _subagent_error(
                 f'unsupported subagent isolation: {args.get("isolation")!r}; '
-                'use shared or worktree'
+                'use shared, worktree, or container'
             )
         return manager.run_subagent(
             task=task,
@@ -67,7 +67,7 @@ def register_subagent_tools(
             if isolation is None:
                 return _subagent_error(
                     f'unsupported subagent isolation: {args.get("isolation")!r}; '
-                    'use shared or worktree'
+                    'use shared, worktree, or container'
                 )
             return manager.run_subagent(
                 task=task,
@@ -104,7 +104,7 @@ def _register(
                 'max_tool_calls': {'type': 'integer'},
                 'isolation': {
                     'type': 'string',
-                    'description': 'Workspace isolation: shared (default) or worktree.',
+                    'description': 'Workspace isolation: shared (default), worktree, or container snapshot.',
                 },
             },
             'required': ['task'],
@@ -127,6 +127,7 @@ def _register(
                         'isolation': {'type': 'string'},
                         'batch_index': {'type': 'integer'},
                         'worktree_path': {'type': 'string'},
+                        'container_path': {'type': 'string'},
                     },
                 },
             },
@@ -197,7 +198,7 @@ def _register_batch(
             if isolation is None:
                 return _subagent_error(
                     f'unsupported subagent isolation: {task_obj.get("isolation")!r}; '
-                    'use shared or worktree'
+                    'use shared, worktree, or container'
                 )
             return manager.run_subagent(
                 task=task,
@@ -292,6 +293,7 @@ def _register_batch(
                                     'isolation': {'type': 'string'},
                                     'batch_index': {'type': 'integer'},
                                     'worktree_path': {'type': 'string'},
+                                    'container_path': {'type': 'string'},
                                 },
                             },
                         },
@@ -311,6 +313,7 @@ def _register_batch(
                             'isolation': {'type': 'string'},
                             'batch_index': {'type': 'integer'},
                             'worktree_path': {'type': 'string'},
+                            'container_path': {'type': 'string'},
                         },
                     },
                 },

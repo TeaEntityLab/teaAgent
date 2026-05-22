@@ -67,8 +67,9 @@ Built-in tools: `subagent`, `subagent_batch` (when `--subagent` is enabled on th
 
 | Field / arg | Meaning |
 |-------------|---------|
-| `isolation` | `shared` (default) or `worktree` (`container` rejected until implemented) |
+| `isolation` | `shared` (default), `worktree`, or `container` (workspace snapshot) |
 | `worktree_path` | Relative path under `.teaagent/subagent-worktrees/` when `isolation=worktree` |
+| `container_path` | Relative path under `.teaagent/subagent-containers/` when `isolation=container` |
 | Lineage | `parent_run_id`, `def_name`, `depth`, `batch_index`, `isolation` on tool results and child audit |
 
 Worktree isolation requires a git repository; the worktree is removed when the child run completes.

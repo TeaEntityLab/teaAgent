@@ -63,7 +63,7 @@ class SubagentIsolationTests(unittest.TestCase):
     def test_normalize_subagent_isolation_defaults_and_rejects_unknown(self) -> None:
         self.assertEqual(normalize_subagent_isolation(None), 'shared')
         self.assertEqual(normalize_subagent_isolation('worktree'), 'worktree')
-        self.assertIsNone(normalize_subagent_isolation('container'))
+        self.assertEqual(normalize_subagent_isolation('container'), 'container')
         self.assertIsNone(normalize_subagent_isolation('invalid'))
 
     def test_prepare_worktree_requires_git_repository(self) -> None:
@@ -137,6 +137,70 @@ class SubagentIsolationTests(unittest.TestCase):
             self.assertEqual(payload['lineage']['isolation'], 'worktree')
             self.assertIn('worktree_path', payload['lineage'])
             self.assertEqual(captured['child_root'].resolve(), worktree.resolve())
+
+    def test_prepare_container_creates_snapshot_and_cleans_up(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'src').mkdir()
+            (root / 'src' / 'app.py').write_text('print("hi")\n', encoding='utf-8')
+            (root / '.teaagent').mkdir()
+            (root / '.teaagent' / 'runs').mkdir()
+            (root / '.teaagent' / 'runs' / 'parent.jsonl').write_text(
+                'parent\n', encoding='utf-8'
+            )
+
+            ctx, error = prepare_subagent_isolation(
+                root, isolation='container', session_key='child-1'
+            )
+            self.assertEqual(error, '')
+            assert ctx is not None
+            self.assertTrue((ctx.child_root / 'src' / 'app.py').is_file())
+            self.assertFalse((ctx.child_root / '.teaagent' / 'runs').exists())
+            ctx.cleanup()
+            self.assertFalse(ctx.container_path.exists())
+
+    def test_run_subagent_container_uses_isolated_root(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.teaagent').mkdir()
+            container = root / '.teaagent' / 'subagent-containers' / 'child-1'
+            container.mkdir(parents=True)
+            config = ChatAgentConfig(root=root)
+            manager = SubagentManager(
+                root=root, parent_config=config, parent_adapter=MagicMock()
+            )
+            captured: dict[str, Path] = {}
+            iso_ctx = IsolationContext(
+                parent_root=root,
+                child_root=container,
+                isolation='container',
+                container_path=container,
+            )
+
+            def capture_run(**kwargs: object) -> RunResult:
+                cfg = kwargs['config']
+                captured['child_root'] = cfg.root  # type: ignore[attr-defined]
+                return _stub_result('child-ct')
+
+            with (
+                patch(
+                    'teaagent.subagents._manager.prepare_subagent_isolation',
+                    return_value=(iso_ctx, ''),
+                ),
+                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+                patch('teaagent.run_store.RunStore.logger_for_result'),
+            ):
+                payload = manager.run_subagent(
+                    task='inspect app',
+                    parent_run_id='parent-1',
+                    depth=0,
+                    isolation='container',
+                )
+
+            self.assertEqual(payload['status'], 'completed')
+            self.assertEqual(payload['lineage']['isolation'], 'container')
+            self.assertIn('container_path', payload['lineage'])
+            self.assertEqual(captured['child_root'].resolve(), container.resolve())
 
 
 if __name__ == '__main__':
