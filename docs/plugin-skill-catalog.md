@@ -61,6 +61,31 @@ Representative external manifests are validated in
 `tests/acceptance/test_external_tool_manifest_compatibility_flow.py` and
 `tests/fixtures/plugin_skill_catalog/external_mcp_tools.json`.
 
+## Subagent delegation and isolation
+
+Built-in tools: `subagent`, `subagent_batch` (when `--subagent` is enabled on the parent run).
+
+| Field / arg | Meaning |
+|-------------|---------|
+| `isolation` | `shared` (default) or `worktree` (`container` rejected until implemented) |
+| `worktree_path` | Relative path under `.teaagent/subagent-worktrees/` when `isolation=worktree` |
+| Lineage | `parent_run_id`, `def_name`, `depth`, `batch_index`, `isolation` on tool results and child audit |
+
+Worktree isolation requires a git repository; the worktree is removed when the child run completes.
+
+## Preflight context pack
+
+`teaagent agent preflight` embeds a read-only `context_pack` in JSON output:
+
+| Block | Source |
+|-------|--------|
+| `candidate_files` | Task and `AGENTS.md` path mentions |
+| `memories` | `.teaagent/memory/` catalog search |
+| `symbols` | LSP document symbols when code analysis is enabled, else file stats |
+| `graph_rag.sources` | Hybrid index, `.teaagent/knowledge` collection marker, `.teaagent/graphqlite.db` (read-only queries) |
+
+`graph_rag.hits` is the deduped union across sources. No workspace writes occur while building the pack.
+
 ## Fixture examples
 
 | Fixture | Purpose |

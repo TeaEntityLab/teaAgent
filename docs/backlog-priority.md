@@ -66,8 +66,8 @@ _No open P0 items._
 | DeepWiki-backed agent landscape survey | Initial 2026-05-22 survey landed; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md`; `validate_docs_consistency.py` must pass. |
 | Subagent lineage and isolation | `shared` and `worktree` isolation on `subagent`/`subagent_batch`. | Keep docs/tests aligned when adding `container` isolation or new lineage fields. |
 | Repo-map / context pack | LSP hydration, hybrid/knowledge/GraphQLite read-only hits shipped. | Keep read-only guarantees; extend when adding new index backends. |
-| Mode and safety comparison matrix | Matrix in `docs/USAGE.md` with validator coverage. | Keep matrix in sync when permission modes or rollback APIs change. |
-| Multi-surface launch recipes | Recipes in `docs/USAGE.md` with validator + smoke tests. | Keep recipes current when CLI/IDE/MCP surfaces change. |
+| Mode and safety comparison matrix | Matrix in `docs/USAGE.md` with validator coverage (includes Subagent + Preflight cross-cutting rows). | Keep matrix in sync when permission modes, isolation modes, or rollback APIs change. |
+| Multi-surface launch recipes | Recipes in `docs/USAGE.md` with validator + smoke tests (subagent + preflight helpers documented). | Keep recipes current when CLI/IDE/MCP surfaces change. |
 
 ---
 
@@ -75,7 +75,7 @@ _No open P0 items._
 
 | Item | Why now | Acceptance target |
 |------|---------|-------------------|
-| Plugin/skill compatibility catalog | Catalog and fixtures exist. | Update catalog when discovery paths or hook events change. |
+| Plugin/skill compatibility catalog | Catalog documents skills, plugins, hooks, MCP, subagent isolation, and preflight context pack. | Update catalog when discovery paths, hook events, or delegation surfaces change. |
 | Competitive use-case dashboard | Dashboard reflects survey metadata. | Regenerate matrix/HTML after acceptance or survey updates. |
 | Periodic mainstream-agent refresh cadence | Release checklist exists. | Follow `docs/release-checklist.md` before each minor release. |
 

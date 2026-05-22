@@ -196,8 +196,13 @@ Related CLI helpers:
 
 ```bash
 teaagent agent card --root .          # AgentCard JSON for A2A discovery
-teaagent agent preflight gpt "task"   # Clarify/route/tools without a model call
+teaagent agent preflight gpt "task"   # Clarify/route/tools + read-only context_pack
+teaagent agent run gpt "delegate" --subagent --max-subagent-depth 1 --root .
 ```
+
+Preflight JSON includes `context_pack` (candidate files, memories, optional LSP symbols,
+and read-only graph hits). Subagent tools accept `isolation: shared` (default) or
+`worktree` (detached git worktree under `.teaagent/subagent-worktrees/`).
 
 ### Smoke-check (local, no model API)
 
@@ -309,6 +314,8 @@ teaagent agent run gpt "approved automation" --permission-mode allow
 | **Approvals** | `ApprovalPolicy` + optional HITL handler; destructive tools need `call_id` match in `prompt` mode | All workspace agent runs |
 | **Audit** | Hash-chained JSONL under `.teaagent/runs/<run_id>.jsonl` with secret redaction | Every agent run and tool call |
 | **Rollback** | `UndoJournal` audit sink captures pre-write bytes; `restore()` reverts touched paths (optional `.teaagent/undo.jsonl` persistence) | Workspace write tools during a run |
+| **Subagent** | `subagent` / `subagent_batch` delegate child runs with lineage (`parent_run_id`, `depth`, `batch_index`, `isolation`, optional `worktree_path`); `shared` uses parent root, `worktree` uses a detached git worktree | Parent runs with `--subagent` and depth budget |
+| **Preflight** | `agent preflight` returns read-only `context_pack` evidence (paths, memories, optional LSP symbols, hybrid/knowledge/GraphQLite graph hits) without model calls or workspace writes | Planning and routing before `agent run` |
 
 Inspect audit and forensics:
 

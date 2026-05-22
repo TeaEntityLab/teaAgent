@@ -31,6 +31,8 @@ MODE_MATRIX_REQUIRED_TOPICS = (
     'Approvals',
     'Audit',
     'Rollback',
+    'Subagent',
+    'Preflight',
 )
 SURFACE_RECIPES_START = '<!-- SURFACE_RECIPES:START -->'
 SURFACE_RECIPES_END = '<!-- SURFACE_RECIPES:END -->'
@@ -58,6 +60,8 @@ CATALOG_REQUIRED_SECTIONS = (
     'Plugin discovery paths',
     'Hook events',
     'MCP tool metadata assumptions',
+    'Subagent delegation and isolation',
+    'Preflight context pack',
     'Fixture examples',
     'Known non-goals',
 )
