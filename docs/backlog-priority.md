@@ -56,6 +56,9 @@ _No open P0 items._
 | Plugin/skill compatibility catalog | `docs/plugin-skill-catalog.md` with fixture-backed `validate_plugin_skill_catalog`. |
 | Competitive use-case dashboard refresh | Matrix/HTML include survey review date and open P1/P2 gap counts via `build_use_case_matrix.py` + `render_use_case_dashboard.py`. |
 | Periodic mainstream-agent refresh cadence | `docs/release-checklist.md` requires survey refresh before minor releases or protocol ADRs. |
+| Everyday usage onboarding | README “Daily Use in 5 Commands”, USAGE daily section, cli recipe table, TUI `daily → preflight → ask → resume` flow. |
+| Agent cookbook (P2) | `docs/cookbook.md` indexes everyday recipes; extend when adding new task patterns. |
+| Everyday usage onboarding | README “Daily Use in 5 Commands”, USAGE daily section, cli recipe table, TUI `daily → preflight → ask → resume` flow. |
 
 ---
 

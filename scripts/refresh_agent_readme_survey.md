@@ -35,7 +35,7 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 - [x] Provider/docs consistency acceptance (`test_provider_matrix_consistency_flow.py`)
 - [x] Preflight read-only `context_pack` (hybrid, `.teaagent/knowledge`, GraphQLite DB hits; `test_context_pack_read_only_flow.py`)
 - [x] Subagent delegation with `shared` / `worktree` / `container` isolation and lineage audit (`test_subagent_*_isolation_flow.py`)
-- [x] Everyday usage docs: `agent daily` start ritual, task recipes, context profiles, TUI loop (README + USAGE + cli)
+- [x] Everyday usage docs: `agent daily` start ritual, task recipes, context profiles, TUI loop (README + USAGE + cli + cookbook)
 
 ## Competitive differentiators (implemented / maintenance)
 

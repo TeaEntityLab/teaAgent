@@ -80,7 +80,7 @@
   <main>
     <section class="summary">
       <h1>TeaAgent Use-case Coverage</h1>
-      <p>Covered: 16/16 (100.0%)</p>
+      <p>Covered: 17/17 (100.0%)</p>
       <p>Landscape survey reviewed: 2026-05-22 · Open P1/P2 differentiators: 0</p>
     </section>
     <table>
@@ -107,6 +107,7 @@
 <tr><td>Read-only planning mode</td><td class="yes">yes</td><td>low</td><td>N/A (no mutations)</td><td>low</td><td><code>`test_plan_mode_read_only_flow.py`, `test_context_pack_read_only_flow.py`</code></td><td><code>-</code></td></tr>
 <tr><td>Repo-map / context pack (preflight)</td><td class="yes">yes</td><td>low</td><td>N/A (read-only evidence)</td><td>low</td><td><code>`test_context_pack_read_only_flow.py`</code></td><td><code>-</code></td></tr>
 <tr><td>Subagent lineage and isolation</td><td class="yes">yes</td><td>medium</td><td>remove .teaagent/subagent-worktrees/ or subagent-containers/</td><td>high</td><td><code>`test_subagent_lineage_flow.py`, `test_subagent_worktree_isolation_flow.py`, `test_subagent_container_isolation_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Everyday agent cockpit (daily/preflight)</td><td class="yes">yes</td><td>low</td><td>N/A (read-only planning)</td><td>low</td><td><code>`test_daily_cli.py`, `test_daily_tui.py`</code></td><td><code>-</code></td></tr>
 <tr><td>End-to-end code-change loop</td><td class="yes">yes</td><td>high</td><td>git checkout -- .</td><td>high</td><td><code>`test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`</code></td><td><code>-</code></td></tr>
 <tr><td>Reversible change recovery</td><td class="yes">yes</td><td>medium</td><td>teaagent agent undo</td><td>medium</td><td><code>`test_run_undo_acceptance_flow.py`</code></td><td><code>-</code></td></tr>
 <tr><td>Runtime IDE MCP smoke</td><td class="yes">yes</td><td>low</td><td>restart MCP server</td><td>medium</td><td><code>`test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`</code></td><td><code>-</code></td></tr>
