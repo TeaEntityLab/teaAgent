@@ -4,6 +4,11 @@ import argparse
 import re
 from pathlib import Path
 
+_SURVEY_REVIEW_DATE = re.compile(
+    r'Last reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*', re.IGNORECASE
+)
+_OPEN_BACKLOG_MARKER = re.compile(r'^\|\s+[^|]+\s+\|\s+P[12]\s+\|\s+Open', re.MULTILINE)
+
 USE_CASE_META: dict[str, dict[str, str]] = {
     'Project instruction conformance': {
         'blast_radius': 'high',
@@ -155,11 +160,34 @@ def parse_acceptance_test_files(markdown: str) -> set[str]:
     return set(re.findall(r'`(test_[^`]+\.py)`', markdown))
 
 
-def build_matrix_markdown(available_tests: set[str]) -> str:
+def _survey_review_date(survey_path: Path) -> str:
+    if not survey_path.is_file():
+        return 'unknown'
+    match = _SURVEY_REVIEW_DATE.search(survey_path.read_text(encoding='utf-8'))
+    return match.group(1) if match else 'unknown'
+
+
+def _open_backlog_gap_count(use_cases_path: Path) -> int:
+    if not use_cases_path.is_file():
+        return 0
+    return len(_OPEN_BACKLOG_MARKER.findall(use_cases_path.read_text(encoding='utf-8')))
+
+
+def build_matrix_markdown(
+    available_tests: set[str],
+    *,
+    survey_review_date: str = 'unknown',
+    open_gap_count: int = 0,
+) -> str:
     lines = [
         '# Use-case Coverage Matrix',
         '',
         'Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.',
+        '',
+        f'Landscape survey reviewed: **{survey_review_date}** '
+        f'([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).',
+        f'Open roadmap differentiators (P1/P2): **{open_gap_count}** '
+        '(see [docs/use-cases.md](use-cases.md#next-differentiators-roadmap)).',
         '',
         '| Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |',
         '|---|---|---|---|---|---|---|',
@@ -184,9 +212,18 @@ def build_use_case_matrix(
     *,
     acceptance_path: Path,
     output_path: Path,
+    survey_path: Path,
+    use_cases_path: Path,
 ) -> None:
     available = parse_acceptance_test_files(acceptance_path.read_text(encoding='utf-8'))
-    output_path.write_text(build_matrix_markdown(available), encoding='utf-8')
+    output_path.write_text(
+        build_matrix_markdown(
+            available,
+            survey_review_date=_survey_review_date(survey_path),
+            open_gap_count=_open_backlog_gap_count(use_cases_path),
+        ),
+        encoding='utf-8',
+    )
 
 
 def main() -> int:
@@ -203,9 +240,22 @@ def main() -> int:
         default='docs/use-case-matrix.md',
         help='Path to generated use-case matrix markdown.',
     )
+    parser.add_argument(
+        '--survey-doc',
+        default='scripts/refresh_agent_readme_survey.md',
+        help='Landscape survey artifact for review date metadata.',
+    )
+    parser.add_argument(
+        '--use-cases-doc',
+        default='docs/use-cases.md',
+        help='Use-cases doc for open differentiator gap counts.',
+    )
     args = parser.parse_args()
     build_use_case_matrix(
-        acceptance_path=Path(args.acceptance_doc), output_path=Path(args.output)
+        acceptance_path=Path(args.acceptance_doc),
+        output_path=Path(args.output),
+        survey_path=Path(args.survey_doc),
+        use_cases_path=Path(args.use_cases_doc),
     )
     return 0
 

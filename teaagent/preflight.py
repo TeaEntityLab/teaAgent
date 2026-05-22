@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.context_pack import ContextPack, build_context_pack
 from teaagent.intent import ClarificationResult, clarify_task
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, route_model
@@ -23,6 +24,7 @@ class PreflightReport:
     routing: Optional[ModelRoute]
     memories: list[MemoryEntry]
     tool_count: int
+    context_pack: ContextPack
     health: dict[str, Any] = field(
         default_factory=lambda: {'healthy': True, 'failures': []}
     )
@@ -37,6 +39,7 @@ class PreflightReport:
             'routing': self.routing.to_dict() if self.routing else None,
             'memories': [entry.to_dict() for entry in self.memories],
             'tool_count': self.tool_count,
+            'context_pack': self.context_pack.to_dict(),
             'health': self.health,
             'ready': not self.clarification.needs_clarification
             and self.health['healthy'],
@@ -89,6 +92,7 @@ def preflight(
     clarification = clarify_task(task)
     routing = route_model(task, provider=provider, model=model) if route else None
     memories = MemoryCatalog(root_path).search(task, limit=memory_limit)
+    context_pack = build_context_pack(task, root=root_path, memory_limit=memory_limit)
     registry = build_workspace_tool_registry(root_path)
 
     health = check_env_health(
@@ -104,5 +108,6 @@ def preflight(
         routing=routing,
         memories=memories,
         tool_count=len(registry.mcp_metadata()),
+        context_pack=context_pack,
         health=health,
     )

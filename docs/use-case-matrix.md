@@ -2,6 +2,9 @@
 
 Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.
 
+Landscape survey reviewed: **2026-05-22** ([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).
+Open roadmap differentiators (P1/P2): **0** (see [docs/use-cases.md](use-cases.md#next-differentiators-roadmap)).
+
 | Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |
 |---|---|---|---|---|---|---|
 | Project instruction conformance | yes | high | git revert AGENTS.md | medium | `test_agents_md_injection_flow.py`, `test_first_run_experience_flow.py` | - |

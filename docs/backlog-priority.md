@@ -52,38 +52,41 @@ _No open P0 items._
 | Mode and safety comparison matrix | `docs/USAGE.md` matrix maps permission modes, Plan/Auto/Code lanes, shell mutation, approvals, audit, and rollback; validator enforces every `PermissionMode` value and required topics. |
 | Multi-surface launch recipes | `docs/USAGE.md` “Choose Your Surface” table with CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed-runtime recipes; `validate_surface_recipes` + `test_surface_launch_recipes_flow.py` smoke local commands. |
 | Subagent lineage and isolation hardening | Child runs record `parent_run_id`, `def_name`, `depth`, `batch_index`, and `isolation: shared`; `subagent_batch` returns ordered `lineage`; runner binds parent run context for tools. |
+| Repo-map / context pack for coding runs | `build_context_pack` on `agent preflight`; read-only candidate files, memories, symbol stats, graph/RAG index status; `test_context_pack_read_only_flow.py`. |
+| Plugin/skill compatibility catalog | `docs/plugin-skill-catalog.md` with fixture-backed `validate_plugin_skill_catalog`. |
+| Competitive use-case dashboard refresh | Matrix/HTML include survey review date and open P1/P2 gap counts via `build_use_case_matrix.py` + `render_use_case_dashboard.py`. |
+| Periodic mainstream-agent refresh cadence | `docs/release-checklist.md` requires survey refresh before minor releases or protocol ADRs. |
 
 ---
 
-## Open — Medium (P1)
+## Open — Medium (P1, maintenance)
 
 | Item | Why now | Acceptance target |
 |------|---------|-------------------|
-| DeepWiki-backed agent landscape survey (maintenance) | Initial 2026-05-22 survey landed in `scripts/refresh_agent_readme_survey.md` with validator checks; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md` differentiator section; `validate_docs_consistency.py` must pass. |
-| Subagent lineage and isolation (maintenance) | Lineage metadata on `subagent`/`subagent_batch` results and audit events; default `isolation: shared`. | Keep docs/tests aligned when adding `worktree`/`container` isolation or new lineage fields. |
-| Repo-map/context pack for coding runs | Aider-style repo maps and modern IDE agents make context selection visible. TeaAgent has LSP/code-analysis and GraphQLite pieces, but users do not yet get a clear "why this context" artifact during planning or preflight. | Add a read-only context-pack output path for planning/preflight that summarizes candidate files, symbols, memories, and graph/RAG hits without editing files; acceptance verifies read-only mode blocks writes and includes deterministic context evidence in the run payload. |
-| Mode and safety comparison matrix (maintenance) | Matrix landed in `docs/USAGE.md` with validator coverage for all `PermissionMode` values and required safety topics. | Keep matrix in sync when permission modes, Plan/Auto/Code lanes, or rollback APIs change; `validate_docs_consistency.py` must pass. |
-| Multi-surface launch recipes (maintenance) | Initial recipes in `docs/USAGE.md` with validator + acceptance smoke for local commands. | Keep recipes current when CLI/IDE/MCP surfaces change; `validate_docs_consistency.py` and `test_surface_launch_recipes_flow.py` must pass. |
+| DeepWiki-backed agent landscape survey | Initial 2026-05-22 survey landed; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md`; `validate_docs_consistency.py` must pass. |
+| Subagent lineage and isolation | Lineage on `subagent`/`subagent_batch`; default `isolation: shared`. | Keep docs/tests aligned when adding `worktree`/`container` isolation or new lineage fields. |
+| Repo-map / context pack | Preflight `context_pack` shipped; extend with LSP symbol hydration when needed. | Keep read-only guarantees; extend acceptance when adding live graph/RAG hits. |
+| Mode and safety comparison matrix | Matrix in `docs/USAGE.md` with validator coverage. | Keep matrix in sync when permission modes or rollback APIs change. |
+| Multi-surface launch recipes | Recipes in `docs/USAGE.md` with validator + smoke tests. | Keep recipes current when CLI/IDE/MCP surfaces change. |
 
 ---
 
-## Open — Low (P2)
+## Open — Low (P2, maintenance)
 
 | Item | Why now | Acceptance target |
 |------|---------|-------------------|
-| Plugin/skill compatibility catalog | Claude Code, OpenCode, and Codex ecosystems converge around skills, hooks, commands, MCP servers, and local instruction files. TeaAgent supports these pieces, but compatibility is easier to trust with a concrete catalog. | Document supported skill/plugin search paths, manifest expectations, hook events, MCP metadata assumptions, and known non-goals; add a fixture-backed docs check or acceptance assertion for the catalog examples. |
-| Competitive use-case dashboard refresh | `docs/use-case-matrix.html` is useful, but it should reflect the new landscape survey rather than only the original README baseline. | Regenerate the use-case matrix after the DeepWiki survey and include source-review date plus open-gap counts; verify with `python3 scripts/build_use_case_matrix.py` and `python3 scripts/validate_docs_consistency.py`. |
-| Periodic mainstream-agent refresh cadence | The old single backlog item remains valid, but should become a recurring release hygiene task after the richer survey exists. | Add a release checklist note requiring survey refresh before minor releases or protocol ADRs; ensure the survey artifact records reviewed sources and date. |
+| Plugin/skill compatibility catalog | Catalog and fixtures exist. | Update catalog when discovery paths or hook events change. |
+| Competitive use-case dashboard | Dashboard reflects survey metadata. | Regenerate matrix/HTML after acceptance or survey updates. |
+| Periodic mainstream-agent refresh cadence | Release checklist exists. | Follow `docs/release-checklist.md` before each minor release. |
 
 ---
 
-## Recommended Execution Order (remaining)
+## Recommended Execution Order (maintenance)
 
-1. Repo-map/context pack for coding runs.
-2. Plugin/skill compatibility catalog.
-3. Competitive use-case dashboard refresh.
-4. Periodic mainstream-agent refresh cadence.
-5. DeepWiki survey maintenance (recurring).
-6. Mode/safety matrix maintenance (recurring).
-7. Multi-surface recipes maintenance (recurring).
-8. Subagent lineage maintenance (recurring).
+1. DeepWiki survey refresh (before minor releases).
+2. Docs/provider drift guard (`validate_docs_consistency.py`).
+3. Mode/safety matrix and multi-surface recipes sync.
+4. Subagent lineage docs when isolation modes expand.
+5. Context pack enhancements (LSP symbols, live graph/RAG hits).
+6. Plugin/skill catalog updates when extension surfaces change.
+7. Regenerate use-case matrix and HTML dashboard after acceptance changes.

@@ -50,6 +50,22 @@ SURFACE_SMOKE_COMMANDS = (
     'teaagent workspace tools',
     'teaagent agent preflight',
 )
+CATALOG_REVIEW_DATE = re.compile(
+    r'Last reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*', re.IGNORECASE
+)
+CATALOG_REQUIRED_SECTIONS = (
+    'Skill discovery paths',
+    'Plugin discovery paths',
+    'Hook events',
+    'MCP tool metadata assumptions',
+    'Fixture examples',
+    'Known non-goals',
+)
+CATALOG_REQUIRED_FIXTURES = (
+    'tests/fixtures/plugin_skill_catalog/sample_skill/SKILL.md',
+    'tests/fixtures/plugin_skill_catalog/sample_plugin/plugin.json',
+    'tests/fixtures/plugin_skill_catalog/external_mcp_tools.json',
+)
 
 
 def _render_tier_markdown() -> str:
@@ -233,6 +249,23 @@ def validate_mode_safety_matrix(usage_text: str) -> list[str]:
     return errors
 
 
+def validate_plugin_skill_catalog(
+    catalog_text: str, *, repo_root: Path = _REPO_ROOT
+) -> list[str]:
+    errors: list[str] = []
+    if not CATALOG_REVIEW_DATE.search(catalog_text):
+        errors.append(
+            'Plugin/skill catalog missing review date: Last reviewed: **YYYY-MM-DD**.'
+        )
+    for section in CATALOG_REQUIRED_SECTIONS:
+        if section not in catalog_text:
+            errors.append(f'Plugin/skill catalog missing section: {section!r}.')
+    for rel_path in CATALOG_REQUIRED_FIXTURES:
+        if not (repo_root / rel_path).is_file():
+            errors.append(f'Plugin/skill catalog fixture missing: {rel_path}')
+    return errors
+
+
 def validate_survey_doc(survey_text: str) -> list[str]:
     errors: list[str] = []
     if not SURVEY_REVIEW_DATE.search(survey_text):
@@ -260,8 +293,10 @@ def validate_docs_consistency(
     architecture_path: Path | None = None,
     usage_path: Path | None = None,
     survey_path: Path | None = None,
+    catalog_path: Path | None = None,
     check_providers: bool = True,
     check_survey: bool = True,
+    check_catalog: bool = True,
     check_mode_matrix: bool = True,
     check_surface_recipes: bool = True,
 ) -> list[str]:
@@ -277,6 +312,7 @@ def validate_docs_consistency(
     survey_path = survey_path or (
         _REPO_ROOT / 'scripts' / 'refresh_agent_readme_survey.md'
     )
+    catalog_doc_path = catalog_path or (_REPO_ROOT / 'docs' / 'plugin-skill-catalog.md')
 
     if check_providers:
         if architecture_path.is_file() and usage_doc_path.is_file():
@@ -308,6 +344,16 @@ def validate_docs_consistency(
             errors.extend(validate_survey_doc(survey_path.read_text(encoding='utf-8')))
         else:
             errors.append(f'Survey doc not found: {survey_path}')
+
+    if check_catalog:
+        if catalog_doc_path.is_file():
+            errors.extend(
+                validate_plugin_skill_catalog(
+                    catalog_doc_path.read_text(encoding='utf-8')
+                )
+            )
+        else:
+            errors.append(f'Plugin/skill catalog not found: {catalog_doc_path}')
 
     try:
         status_count = _extract_acceptance_status_count(acceptance_text)
@@ -358,6 +404,7 @@ def main() -> int:
     parser.add_argument(
         '--survey-doc', default='scripts/refresh_agent_readme_survey.md'
     )
+    parser.add_argument('--catalog-doc', default='docs/plugin-skill-catalog.md')
     args = parser.parse_args()
 
     errors = validate_docs_consistency(
@@ -368,6 +415,7 @@ def main() -> int:
         architecture_path=Path(args.architecture_doc),
         usage_path=Path(args.usage_doc),
         survey_path=Path(args.survey_doc),
+        catalog_path=Path(args.catalog_doc),
     )
     if errors:
         for err in errors:

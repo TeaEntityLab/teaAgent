@@ -81,31 +81,35 @@
     <section class="summary">
       <h1>TeaAgent Use-case Coverage</h1>
       <p>Covered: 14/14 (100.0%)</p>
+      <p>Landscape survey reviewed: 2026-05-22 · Open P1/P2 differentiators: 0</p>
     </section>
     <table>
       <thead>
         <tr>
           <th>Use Case</th>
           <th>Covered</th>
+          <th>Blast Radius</th>
+          <th>Rollback Path</th>
+          <th>Audit Criticality</th>
           <th>Required Tests</th>
           <th>Missing Tests</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td>Project instruction conformance</td><td class="yes">yes</td><td><code>`test_agents_md_injection_flow.py`, `test_first_run_experience_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Safe autonomous coding run</td><td class="yes">yes</td><td><code>`test_daily_cli.py`, `test_daily_tui.py`, `test_policy_as_code_flow.py`, `test_workspace_edit_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Destructive-action governance</td><td class="yes">yes</td><td><code>`test_cancel_flow.py`, `test_daily_cli.py`, `test_policy_as_code_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Tool ecosystem extensibility</td><td class="yes">yes</td><td><code>`test_skill_install_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_mcp_client_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Reliability and forensics</td><td class="yes">yes</td><td><code>`test_audit_chain_integrity_flow.py`, `test_webhook_audit_flow.py`, `test_cost_tracking_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Memory continuity</td><td class="yes">yes</td><td><code>`test_memory_auto_curation_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>IDE-assisted workflows</td><td class="yes">yes</td><td><code>`test_vscode_extension_mcp_boot_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Product onboarding and provider readiness</td><td class="yes">yes</td><td><code>`test_first_run_experience_flow.py`, `test_model_smoke_gating_flow.py`, `test_live_provider_conformance_flow.py`, `test_provider_matrix_consistency_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Read-only planning mode</td><td class="yes">yes</td><td><code>`test_plan_mode_read_only_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>End-to-end code-change loop</td><td class="yes">yes</td><td><code>`test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Reversible change recovery</td><td class="yes">yes</td><td><code>`test_run_undo_acceptance_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Runtime IDE MCP smoke</td><td class="yes">yes</td><td><code>`test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>Session resume continuity</td><td class="yes">yes</td><td><code>`test_session_resume_continuity_flow.py`</code></td><td><code>-</code></td></tr>
-<tr><td>External ecosystem compatibility</td><td class="yes">yes</td><td><code>`test_external_tool_manifest_compatibility_flow.py`</code></td><td><code>-</code></td></tr>
+        <tr><td>Project instruction conformance</td><td class="yes">yes</td><td>high</td><td>git revert AGENTS.md</td><td>medium</td><td><code>`test_agents_md_injection_flow.py`, `test_first_run_experience_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Safe autonomous coding run</td><td class="yes">yes</td><td>high</td><td>teaagent agent undo</td><td>high</td><td><code>`test_daily_cli.py`, `test_daily_tui.py`, `test_policy_as_code_flow.py`, `test_workspace_edit_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Destructive-action governance</td><td class="yes">yes</td><td>critical</td><td>teaagent agent undo</td><td>critical</td><td><code>`test_cancel_flow.py`, `test_daily_cli.py`, `test_policy_as_code_flow.py`, `test_p0_slo_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Tool ecosystem extensibility</td><td class="yes">yes</td><td>medium</td><td>remove skill/MCP config</td><td>medium</td><td><code>`test_skill_install_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_mcp_client_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Reliability and forensics</td><td class="yes">yes</td><td>high</td><td>N/A (read-only verification)</td><td>critical</td><td><code>`test_audit_chain_integrity_flow.py`, `test_webhook_audit_flow.py`, `test_cost_tracking_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Memory continuity</td><td class="yes">yes</td><td>low</td><td>clear .teaagent/memory/</td><td>low</td><td><code>`test_memory_auto_curation_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>IDE-assisted workflows</td><td class="yes">yes</td><td>low</td><td>restart VSCode</td><td>low</td><td><code>`test_vscode_extension_mcp_boot_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Product onboarding and provider readiness</td><td class="yes">yes</td><td>low</td><td>re-run teaagent init</td><td>low</td><td><code>`test_first_run_experience_flow.py`, `test_model_smoke_gating_flow.py`, `test_live_provider_conformance_flow.py`, `test_provider_matrix_consistency_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Read-only planning mode</td><td class="yes">yes</td><td>low</td><td>N/A (no mutations)</td><td>low</td><td><code>`test_plan_mode_read_only_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>End-to-end code-change loop</td><td class="yes">yes</td><td>high</td><td>git checkout -- .</td><td>high</td><td><code>`test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Reversible change recovery</td><td class="yes">yes</td><td>medium</td><td>teaagent agent undo</td><td>medium</td><td><code>`test_run_undo_acceptance_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Runtime IDE MCP smoke</td><td class="yes">yes</td><td>low</td><td>restart MCP server</td><td>medium</td><td><code>`test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Session resume continuity</td><td class="yes">yes</td><td>medium</td><td>re-run original task</td><td>high</td><td><code>`test_session_resume_continuity_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>External ecosystem compatibility</td><td class="yes">yes</td><td>low</td><td>fix manifest/schema</td><td>low</td><td><code>`test_external_tool_manifest_compatibility_flow.py`</code></td><td><code>-</code></td></tr>
       </tbody>
     </table>
   </main>

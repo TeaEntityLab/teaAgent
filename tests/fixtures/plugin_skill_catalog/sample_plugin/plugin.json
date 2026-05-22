@@ -1,0 +1,8 @@
+{
+  "name": "sample-catalog-plugin",
+  "version": "0.0.1",
+  "type": "command",
+  "description": "Fixture plugin for catalog docs validation.",
+  "author": "teaagent",
+  "license": "MIT"
+}

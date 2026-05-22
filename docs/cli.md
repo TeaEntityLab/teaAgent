@@ -537,6 +537,8 @@ teaagent agent preflight gpt "review this patch for regressions in the test suit
 
 Exit code is `0` when the task is concrete enough and `2` when it still needs clarification. Pair with `--permission-mode workspace-write` or `--memory-limit 10` as needed.
 
+Preflight JSON includes a read-only `context_pack` (candidate files from task/`AGENTS.md` mentions, matching memories, file stats, and graph/RAG index status) so planning runs can show *why this context* without workspace writes.
+
 Inside TUI:
 
 ```text

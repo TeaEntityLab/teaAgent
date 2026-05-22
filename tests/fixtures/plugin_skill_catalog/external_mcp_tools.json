@@ -1,0 +1,16 @@
+[
+  {
+    "name": "catalog_read_docs",
+    "description": "Read-only external tool fixture.",
+    "input_schema": {
+      "type": "object",
+      "properties": {"path": {"type": "string"}},
+      "required": ["path"]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "vendorHint": "catalog-fixture"
+    }
+  }
+]

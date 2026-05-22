@@ -2,16 +2,38 @@ from __future__ import annotations
 
 import argparse
 import html
+import re
 from dataclasses import dataclass
 from pathlib import Path
+
+_SURVEY_DATE = re.compile(r'Landscape survey reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*')
+_OPEN_GAPS = re.compile(r'Open roadmap differentiators \(P1/P2\):\s*\*\*(\d+)\*\*')
 
 
 @dataclass(frozen=True)
 class MatrixRow:
     use_case: str
     covered: str
+    blast_radius: str
+    rollback_path: str
+    audit_criticality: str
     required_tests: str
     missing_tests: str
+
+
+@dataclass(frozen=True)
+class MatrixMeta:
+    survey_review_date: str
+    open_gap_count: str
+
+
+def parse_matrix_meta(markdown: str) -> MatrixMeta:
+    survey_match = _SURVEY_DATE.search(markdown)
+    gap_match = _OPEN_GAPS.search(markdown)
+    return MatrixMeta(
+        survey_review_date=survey_match.group(1) if survey_match else 'unknown',
+        open_gap_count=gap_match.group(1) if gap_match else '?',
+    )
 
 
 def parse_matrix_markdown(markdown: str) -> list[MatrixRow]:
@@ -23,20 +45,35 @@ def parse_matrix_markdown(markdown: str) -> list[MatrixRow]:
         if line.startswith('|---') or 'Use Case' in line:
             continue
         parts = [part.strip() for part in line.strip('|').split('|')]
-        if len(parts) != 4:
-            continue
-        rows.append(
-            MatrixRow(
-                use_case=parts[0],
-                covered=parts[1],
-                required_tests=parts[2],
-                missing_tests=parts[3],
+        if len(parts) == 7:
+            rows.append(
+                MatrixRow(
+                    use_case=parts[0],
+                    covered=parts[1],
+                    blast_radius=parts[2],
+                    rollback_path=parts[3],
+                    audit_criticality=parts[4],
+                    required_tests=parts[5],
+                    missing_tests=parts[6],
+                )
             )
-        )
+        elif len(parts) == 4:
+            rows.append(
+                MatrixRow(
+                    use_case=parts[0],
+                    covered=parts[1],
+                    blast_radius='—',
+                    rollback_path='—',
+                    audit_criticality='—',
+                    required_tests=parts[2],
+                    missing_tests=parts[3],
+                )
+            )
     return rows
 
 
-def render_html(rows: list[MatrixRow]) -> str:
+def render_html(rows: list[MatrixRow], *, meta: MatrixMeta | None = None) -> str:
+    meta = meta or MatrixMeta(survey_review_date='unknown', open_gap_count='?')
     total = len(rows)
     covered = sum(1 for row in rows if row.covered == 'yes')
     percent = 0.0 if total == 0 else (covered / total) * 100.0
@@ -46,6 +83,9 @@ def render_html(rows: list[MatrixRow]) -> str:
             '<tr>'
             f'<td>{html.escape(row.use_case)}</td>'
             f'<td class="{row.covered}">{html.escape(row.covered)}</td>'
+            f'<td>{html.escape(row.blast_radius)}</td>'
+            f'<td>{html.escape(row.rollback_path)}</td>'
+            f'<td>{html.escape(row.audit_criticality)}</td>'
             f'<td><code>{html.escape(row.required_tests)}</code></td>'
             f'<td><code>{html.escape(row.missing_tests)}</code></td>'
             '</tr>'
@@ -136,12 +176,16 @@ def render_html(rows: list[MatrixRow]) -> str:
     <section class="summary">
       <h1>TeaAgent Use-case Coverage</h1>
       <p>Covered: {covered}/{total} ({percent:.1f}%)</p>
+      <p>Landscape survey reviewed: {html.escape(meta.survey_review_date)} · Open P1/P2 differentiators: {html.escape(meta.open_gap_count)}</p>
     </section>
     <table>
       <thead>
         <tr>
           <th>Use Case</th>
           <th>Covered</th>
+          <th>Blast Radius</th>
+          <th>Rollback Path</th>
+          <th>Audit Criticality</th>
           <th>Required Tests</th>
           <th>Missing Tests</th>
         </tr>
@@ -157,8 +201,10 @@ def render_html(rows: list[MatrixRow]) -> str:
 
 
 def render_dashboard(*, matrix_path: Path, output_path: Path) -> None:
-    rows = parse_matrix_markdown(matrix_path.read_text(encoding='utf-8'))
-    output_path.write_text(render_html(rows), encoding='utf-8')
+    markdown = matrix_path.read_text(encoding='utf-8')
+    rows = parse_matrix_markdown(markdown)
+    meta = parse_matrix_meta(markdown)
+    output_path.write_text(render_html(rows, meta=meta), encoding='utf-8')
 
 
 def main() -> int:

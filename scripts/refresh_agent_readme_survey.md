@@ -10,11 +10,11 @@ Last reviewed: **2026-05-22**
 
 | Project | DeepWiki / upstream URL | Reviewed signals | TeaAgent parity | Gap / differentiator | Backlog action |
 |---------|-------------------------|------------------|-----------------|----------------------|----------------|
-| OpenAI Codex | https://deepwiki.com/openai/codex | Multi execution modes, sandboxing, MCP, IDE, cloud surfaces | Tool registry, MCP HTTP/stdio, Code Mode sandbox profiles, VS Code extension | Clearer mode/safety matrix across CLI/TUI/IDE | P1 mode/safety matrix |
-| Claude Code | https://deepwiki.com/anthropics/claude-code | Subagents, hooks, MCP, background sessions, permission modes, managed settings | `subagent`/`subagent_batch`, hooks, permission modes, MCP, skills | Parent-child run lineage and isolation modes not yet first-class | P1 subagent lineage |
-| OpenCode | https://deepwiki.com/sst/opencode | Provider breadth, client-server, plugins, skills, MCP, desktop, VS Code | 13 providers, plugins/skills, MCP, ACP/VS Code | Multi-surface launch recipes still architecture-heavy | P1 multi-surface recipes |
+| OpenAI Codex | https://deepwiki.com/openai/codex | Multi execution modes, sandboxing, MCP, IDE, cloud surfaces | Tool registry, MCP HTTP/stdio, Code Mode sandbox profiles, VS Code extension, USAGE mode/safety matrix | Hosted/cloud surface docs remain thin | P2 maintenance |
+| Claude Code | https://deepwiki.com/anthropics/claude-code | Subagents, hooks, MCP, background sessions, permission modes, managed settings | `subagent`/`subagent_batch` with lineage metadata, hooks, permission modes, MCP, skills | `worktree`/`container` isolation deferred | P1 maintenance |
+| OpenCode | https://deepwiki.com/sst/opencode | Provider breadth, client-server, plugins, skills, MCP, desktop, VS Code | 13 providers, plugins/skills, MCP, ACP/VS Code, USAGE surface recipes | Client-server/desktop hosted docs remain thin | P2 maintenance |
 | OpenHands | https://deepwiki.com/OpenHands/OpenHands | SDK/CLI/GUI/cloud/enterprise, sandbox-decoupled V1 | Managed runtime stubs, MCP, audit, Code Mode | Hosted/cloud surface docs are stub-level only | P2 dashboard refresh |
-| Aider | https://deepwiki.com/Aider-AI/aider | Repo-map context, edit strategies, git workflow | Workspace tools, LSP/code-analysis, GraphQLite | No read-only “why this context” pack for planning/preflight | P1 repo-map context pack |
+| Aider | https://deepwiki.com/Aider-AI/aider | Repo-map context, edit strategies, git workflow | Workspace tools, LSP/code-analysis, GraphQLite, preflight `context_pack` | Live LSP symbol hydration in context pack deferred | P1 maintenance |
 | LangGraph | https://deepwiki.com/langchain-ai/langgraph | Graph state, checkpoints, durable execution | `CheckpointStore`, runner limits, audit chain | No graph-native orchestration (intentional harness boundary) | Document as non-goal |
 | CrewAI | https://deepwiki.com/crewAIInc/crewAI | Role-based crews, task delegation | A2A delegation, ANP governed federation | No multi-role crew DSL (intentional harness boundary) | Document as non-goal |
 
@@ -38,14 +38,14 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 
 | Track | Why it matters | Backlog ID |
 |-------|----------------|------------|
-| Docs/provider drift guard | README/USAGE/architecture/runtime provider registry must stay aligned; shared `CLOUDFLARE_API_TOKEN` / `OPENCODEZEN_API_KEY` must not false-positive validators | P0 |
-| Subagent lineage + isolation | Child runs need parent run id, depth, batch index; default shared workspace documented; worktree isolation deferred | P1 |
-| Repo-map / context pack | Surfacing candidate files/symbols/memories during planning without writes | P1 |
-| Mode and safety matrix | Single doc mapping permission modes, Plan/Auto/Code modes, approvals, rollback | Done (USAGE.md + validator) |
-| Multi-surface recipes | One-command paths for CLI, TUI, VS Code, MCP, ACP, A2A, ANP, managed runtime | Done (USAGE.md + smoke tests) |
-| Plugin/skill catalog | Fixture-backed compatibility catalog for skills, hooks, MCP metadata | P2 |
-| Use-case dashboard refresh | Regenerate matrix from this survey with review date and open-gap counts | P2 |
-| Recurring survey cadence | Re-run before minor releases or new federation/protocol ADRs | P2 |
+| Docs/provider drift guard | README/USAGE/architecture/runtime provider registry aligned; shared credential env vars handled | Done |
+| Subagent lineage + isolation | Parent run id, depth, batch index; default `isolation: shared`; worktree deferred | Done (maintenance) |
+| Repo-map / context pack | Preflight `context_pack` surfaces candidate files/memories without writes | Done (maintenance) |
+| Mode and safety matrix | Permission modes, Plan/Auto/Code lanes, approvals, rollback | Done (maintenance) |
+| Multi-surface recipes | CLI, TUI, VS Code, MCP, ACP, A2A, ANP, managed runtime | Done (maintenance) |
+| Plugin/skill catalog | `docs/plugin-skill-catalog.md` + fixtures | Done (maintenance) |
+| Use-case dashboard refresh | Matrix/HTML include survey date and open-gap counts | Done (maintenance) |
+| Recurring survey cadence | `docs/release-checklist.md` | Done (maintenance) |
 
 ## Future API note (non-breaking)
 

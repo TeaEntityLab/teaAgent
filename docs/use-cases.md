@@ -38,14 +38,14 @@ governance-first story against the 2026-05-22 landscape survey. See
 
 | Differentiator | Priority | Backlog reference |
 |----------------|----------|-------------------|
-| Docs/provider architecture drift guard | P0 | Open — High |
+| Docs/provider architecture drift guard | P0 | Implemented (`validate_docs_consistency.py`, `test_provider_matrix_consistency_flow.py`) |
 | Subagent lineage and isolation hardening | P1 | Implemented (`test_subagent_lineage_flow.py`, `test_subagent_lineage.py`) |
-| Repo-map / context pack for coding runs | P1 | Open — Medium |
+| Repo-map / context pack for coding runs | P1 | Implemented (`context_pack` on preflight, `test_context_pack_read_only_flow.py`) |
 | Mode and safety comparison matrix | P1 | Implemented (`docs/USAGE.md`, `validate_mode_safety_matrix`) |
 | Multi-surface launch recipes | P1 | Implemented (`docs/USAGE.md`, `test_surface_launch_recipes_flow.py`) |
-| Plugin/skill compatibility catalog | P2 | Open — Low |
-| Competitive use-case dashboard refresh | P2 | Open — Low |
-| Periodic mainstream-agent refresh cadence | P2 | Open — Low |
+| Plugin/skill compatibility catalog | P2 | Implemented (`docs/plugin-skill-catalog.md`, fixture-backed validator) |
+| Competitive use-case dashboard refresh | P2 | Implemented (`build_use_case_matrix.py`, `render_use_case_dashboard.py`) |
+| Periodic mainstream-agent refresh cadence | P2 | Implemented (`docs/release-checklist.md`) |
 
 ## Requirement Baseline
 

@@ -102,6 +102,13 @@ def test_validate_provider_docs_consistency_passes_for_repo_docs() -> None:
     assert errors == []
 
 
+def test_validate_plugin_skill_catalog_passes_for_repo_catalog() -> None:
+    root = Path(__file__).resolve().parents[1]
+    catalog = (root / 'docs' / 'plugin-skill-catalog.md').read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_plugin_skill_catalog(catalog, repo_root=root)
+    assert errors == []
+
+
 def test_validate_survey_doc_passes_for_repo_survey() -> None:
     root = Path(__file__).resolve().parents[1]
     survey = (root / 'scripts' / 'refresh_agent_readme_survey.md').read_text(
