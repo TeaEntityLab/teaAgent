@@ -25,7 +25,7 @@ teaagent agent run gpt "refactor auth module" --permission-mode prompt --heartbe
 
 Interactive loop (TUI): `teaagent tui --root . --permission-mode prompt`, then `daily <task>`, `preflight <task>`, `ask <task>`, `runs`, `resume <run_id>`.
 
-Full recipes, context profiles (`lean` / `balanced` / `deep`), and token guidance: [docs/USAGE.md#daily-use](docs/USAGE.md#daily-use). Quick index: [docs/cookbook.md](docs/cookbook.md).
+Full recipes, context profiles (`lean` / `balanced` / `deep`), and token guidance: [docs/USAGE.md#daily-use](docs/USAGE.md#daily-use).
 
 ## Start Here
 

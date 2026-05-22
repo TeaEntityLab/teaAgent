@@ -44,6 +44,65 @@ _No open P0 items._
 
 ---
 
+## Open — Daily-use ergonomics (2026-05-22)
+
+Competitive parity is shipped; the next bar is **time-to-daily-habit**. The
+2026-05-22 deepwiki survey of Codex, Claude Code, OpenCode, OpenHands, and Aider
+showed those agents win daily users via low-friction defaults, persistent
+project preferences, and frictionless re-entry — not more capabilities. The
+items below close that ergonomics gap without expanding the harness boundary.
+
+### P1 — first daily session in under 60 seconds
+
+| Item | Why it matters | Likely files |
+|------|----------------|--------------|
+| `teaagent init --root .` one-shot project bootstrap | Today users run three separate `doctor` wizards (providers, project, mcp). A single chained init writing `.teaagent/env` + `.teaagent/config.toml` + stub `AGENTS.md` collapses minutes of setup into one command — matches `aider --install` / `opencode init` ergonomics. | `cli/_handlers/_doctor.py` (new `init` orchestrator), `teaagent/config_loader.py` |
+| Project defaults in `.teaagent/config.toml` | Persist `provider`, `context_profile`, `permission_mode`, `heartbeat`, `root`, `daily_cost_cap_cents`. Reduces `agent run gpt "..." --permission-mode workspace-write --context-profile balanced --root .` to `run "..."`. | `teaagent/config_loader.py`, `cli/_agent_parsers.py` |
+| Top-level shortcuts: `teaagent daily`, `teaagent run`, `teaagent ask`, `teaagent resume` | Aliases for `agent daily/run/ask/resume` that read provider from config. README "Daily Use in 5 Commands" already shows the muscle memory we want; CLI should match. | `cli/__init__.py`, `cli/_agent_parsers.py` |
+| Shell completion (`teaagent completion zsh\|bash\|fish`) | Autocomplete for commands, providers, permission modes, run-ids. Single biggest ergonomics win for terminal-first agents (Codex, opencode, crush all ship completion). | `cli/_handlers/_misc.py` (new `completion` handler) |
+| `--dry-run` on `agent run` / `agent daily` | Print assembled prompt + estimated cost + tool list without invoking the model. Builds trust before spending tokens; consistent with `token_budget` JSON contract already shipped. | `cli/_handlers/_agent.py`, `teaagent/daily.py` |
+
+### P1 — persistent daily habit
+
+| Item | Why it matters | Likely files |
+|------|----------------|--------------|
+| Persistent "today" digest at `.teaagent/daily/YYYY-MM-DD.md` | Daily brief is currently a one-shot stdout dump. Writing a markdown file lets users re-read it, share it, diff yesterday vs today, and pipe to mail/Slack. | `teaagent/daily.py`, new `teaagent/daily_journal.py` |
+| `teaagent yesterday` / `teaagent recall <N>` | Surface yesterday's runs/decisions/approvals from `RunStore` for stand-ups. Builds on existing run history; no new persistence. | `cli/_handlers/_agent.py`, `teaagent/run_store.py` |
+| `teaagent status --short` for shell prompt integration | One-line traffic-light: token-pressure colour + pending-approval count + active run id. Lets users see harness state without leaving their prompt. | `cli/_handlers/_agent.py`, `teaagent/daily.py` |
+| Desktop / system notifications on approval-needed and run-done | macOS `osascript`, Linux `notify-send`, Windows toast. Critical when running `prompt` mode in background; users currently must tail the audit log. | `teaagent/heartbeat.py`, new `teaagent/notify.py` |
+| Daily cost cap (`daily_cost_cap_cents` config + `--daily-cap` flag) | Budget reporter already estimates per-run cost. Add a per-day rollup that warns at 80% and blocks at 100% unless `--override-cap`. | `teaagent/budget.py`, `teaagent/config_loader.py` |
+
+### P1 — recipe-first workflow
+
+| Item | Why it matters | Likely files |
+|------|----------------|--------------|
+| Recipe registry + `teaagent recipes list\|run <name>` | The USAGE recipe table is documentation only. Promote each row (review-diff, fix-failing-test, summarize-repo, map-architecture, safe-cleanup) to a first-class recipe = SKILL with prompt template + permission mode + context profile. Users invoke `teaagent recipes run review-diff` without remembering 4 flags. | New `teaagent/recipes/`, `skills/recipes/*.md` |
+| Git hook recipes (`scripts/hooks/pre-commit`, `prepare-commit-msg`, `pre-push`) | Drop-in hooks that call `agent run --permission-mode read-only` to review staged diffs and optionally inject a commit-message draft. Mirrors what Aider users hand-roll today. | `scripts/hooks/`, `docs/USAGE.md` |
+| `teaagent ci review` headless PR review | Reads `GITHUB_BASE_REF`/`GITHUB_HEAD_REF` (or `git diff origin/main...HEAD`), runs read-only review, prints markdown comment to stdout. Pairs with a one-file GitHub Action recipe. | `cli/_handlers/_agent.py`, `examples/github-action.yml` |
+
+### P2 — passive / always-on surfaces
+
+| Item | Why it matters | Likely files |
+|------|----------------|--------------|
+| Background sessions: `agent run --background` + `agent attach <run_id>` + `agent sessions` | Already flagged in `refresh_agent_readme_survey.md` as a P2 maintenance gap. Long-running `prompt` runs need to survive a closed terminal so daily users don't lose context. | `runner/_core.py`, `teaagent/heartbeat.py`, new `cli/_handlers/_sessions.py` |
+| `teaagent watch --interval 6h` cron-friendly daily brief | Headless variant of `agent daily` that emits JSON/markdown on a schedule. Pairs with cron/launchd/systemd timers for morning email. | `cli/_handlers/_agent.py`, `teaagent/daily.py` |
+| First-launch greeting / version-change "what's new" | One-time stdout banner per version listing new providers, new recipes, deprecations. Cuts docs hunting for users who upgrade weekly. | `cli/__init__.py`, new `teaagent/whats_new.py` |
+| Raycast extension / macOS Shortcuts recipes | One-keystroke launch of daily/preflight/run from anywhere. Bigger payoff per LoC than a new IDE plugin. | `examples/raycast/`, `examples/shortcuts/` |
+| JetBrains + Zed + Neovim recipes over existing ACP / MCP HTTP | ACP and MCP HTTP transports already exist; ship a one-page recipe per IDE plus a minimal Neovim plugin in `examples/`. Most users live in one of these three editors. | `examples/jetbrains/`, `examples/zed/`, `examples/nvim/` |
+| Chat-surface bridge (Slack / Discord / Telegram) — opt-in skill | Daily brief + `prompt`-mode runs via chat. Ship as a skill that wraps `mcp serve --http` rather than baking into the core. | `skills/chat-bridge/`, `docs/USAGE.md` |
+
+### Cross-cutting process
+
+| Process | Why it matters | Trigger |
+|---------|----------------|---------|
+| Re-run `refresh_agent_readme_survey.md` whenever a new ergonomics item ships | Keeps deepwiki survey honest; confirms the gap we just closed wasn't simultaneously closed in two competitor agents (which would shift priorities). | Before merging any P1 daily-use item |
+| Add an "ergonomics smoke" acceptance flow (`test_daily_ergonomics_flow.py`) | One end-to-end test that runs `init` → `daily` → `recipes run review-diff` → `yesterday` to prevent silent regressions in the daily path. | After `init` + recipe registry land |
+| Track time-to-first-useful-run in `docs/use-case-matrix.md` | Numeric KPI (seconds from `pip install -e .` to first `agent daily` exit). Surveyed agents implicitly compete on this; we should measure it. | After `init` lands |
+
+Implementation order recommendation: **`init` → config defaults → top-level shortcuts → shell completion → recipe registry**. Each unlocks the next; together they collapse the daily entry from a 5-flag command to two words.
+
+---
+
 ## Recently completed (competitive refresh, 2026-05-22)
 
 | Item | Notes |
@@ -56,8 +115,6 @@ _No open P0 items._
 | Plugin/skill compatibility catalog | `docs/plugin-skill-catalog.md` with fixture-backed `validate_plugin_skill_catalog`. |
 | Competitive use-case dashboard refresh | Matrix/HTML include survey review date and open P1/P2 gap counts via `build_use_case_matrix.py` + `render_use_case_dashboard.py`. |
 | Periodic mainstream-agent refresh cadence | `docs/release-checklist.md` requires survey refresh before minor releases or protocol ADRs. |
-| Everyday usage onboarding | README “Daily Use in 5 Commands”, USAGE daily section, cli recipe table, TUI `daily → preflight → ask → resume` flow. |
-| Agent cookbook (P2) | `docs/cookbook.md` indexes everyday recipes; extend when adding new task patterns. |
 | Everyday usage onboarding | README “Daily Use in 5 Commands”, USAGE daily section, cli recipe table, TUI `daily → preflight → ask → resume` flow. |
 
 ---

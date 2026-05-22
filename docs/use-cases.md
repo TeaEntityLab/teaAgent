@@ -46,7 +46,6 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Plugin/skill compatibility catalog | P2 | Implemented (`docs/plugin-skill-catalog.md`, fixture-backed validator) |
 | Competitive use-case dashboard refresh | P2 | Implemented (`refresh_competitive_docs.py`, matrix + HTML dashboard) |
 | Periodic mainstream-agent refresh cadence | P2 | Implemented (`docs/release-checklist.md`) |
-| Everyday usage onboarding | P1 | Implemented ([USAGE.md#daily-use](USAGE.md#daily-use), [docs/cookbook.md](cookbook.md)) |
 
 ## Requirement Baseline
 

@@ -65,11 +65,6 @@ USE_CASE_META: dict[str, dict[str, str]] = {
         'rollback_path': 'remove .teaagent/subagent-worktrees/ or subagent-containers/',
         'audit_criticality': 'high',
     },
-    'Everyday agent cockpit (daily/preflight)': {
-        'blast_radius': 'low',
-        'rollback_path': 'N/A (read-only planning)',
-        'audit_criticality': 'low',
-    },
     'End-to-end code-change loop': {
         'blast_radius': 'high',
         'rollback_path': 'git checkout -- .',
@@ -164,10 +159,6 @@ USE_CASES: dict[str, tuple[str, ...]] = {
                 'test_subagent_worktree_isolation_flow.py',
                 'test_subagent_container_isolation_flow.py',
             ),
-        ),
-        (
-            'Everyday agent cockpit (daily/preflight)',
-            ('test_daily_cli.py', 'test_daily_tui.py'),
         ),
         (
             'End-to-end code-change loop',

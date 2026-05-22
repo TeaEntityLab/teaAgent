@@ -280,7 +280,7 @@ polling the model.
 | Scripting, CI, copy/paste recipes | Multi-turn chat, memory, approvals in one session |
 | You want JSON from `daily` / `preflight` | You want `daily` → `ask` → `resume` without leaving the terminal |
 
-See [cli.md](cli.md#preflight-and-daily-brief) for flags and JSON fields. Copy-paste recipe index: [cookbook.md](cookbook.md).
+See [cli.md](cli.md#preflight-and-daily-brief) for flags and JSON fields.
 
 ## Choose Your Surface
 

@@ -12,7 +12,6 @@ Use before tagging a minor release or merging a federation/protocol ADR.
 5. Regenerate coverage artifacts only when the check reports drift:
    - `python3 scripts/refresh_competitive_docs.py`
    - Or step-by-step: `build_acceptance_status.py`, `build_use_case_matrix.py`, `render_use_case_dashboard.py`
-   - Everyday recipes: keep [docs/cookbook.md](cookbook.md) aligned with [USAGE.md](USAGE.md#daily-use)
 6. `refresh_competitive_docs.py` runs `validate_docs_consistency.py` at the end (must pass).
 
 ## Provider and docs drift
