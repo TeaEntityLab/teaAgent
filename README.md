@@ -303,9 +303,14 @@ You can also enable this by workspace config:
 }
 ```
 
-### Streaming Progress
+### Streaming (live feedback)
 
-The TUI `progress on` command streams audit events (iteration, tool calls, completion) during agent runs. The LLM adapter supports streaming via the `stream` parameter on `LLMRequest`.
+TeaAgent exposes two live streams:
+
+1. **Agent progress** — iteration and tool-call lines (`progress on` in TUI; `teaagent agent run … --progress` on CLI; default on when stderr is a TTY).
+2. **Model text** — user-visible answer text only (`stream on` in TUI; `--stream` on CLI; filters out structured decision JSON).
+
+For scripts and IDE integrations, use **`--json-stream`** to emit normalized NDJSON events (`text_delta`, `tool_call_started`, …) on stdout, then attach with `teaagent agent attach <run_id> --follow --json-stream`.
 
 ### MCP Server
 

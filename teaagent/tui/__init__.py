@@ -98,7 +98,7 @@ class TeaAgentTUI:
         self.root = Path(root).resolve()
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
-        self.progress = False
+        self.progress = True
         self.stream = False
         self.subagent = False
         self.heartbeat_seconds = 0.0
@@ -280,6 +280,7 @@ class TeaAgentTUI:
                 heartbeat_seconds=self.heartbeat_seconds,
                 stream=self.stream,
                 on_chunk=self._stream_chunk if self.stream else None,
+                stream_text_only=True,
                 approval_handler=self._approval_handler,
                 chat_messages=chat_messages,
             ),
@@ -354,19 +355,11 @@ class TeaAgentTUI:
         return payload
 
     def _progress_sink(self, event: AuditEvent) -> None:
-        payload = event.payload or {}
-        if event.event_type == 'iteration_started':
-            self.output_fn(f'  iter {payload.get("iteration")}')
-        elif event.event_type == 'tool_call_started':
-            self.output_fn(
-                f'  tool: {payload.get("tool_name")} ({payload.get("call_id")})'
-            )
-        elif event.event_type == 'tool_call_completed':
-            self.output_fn(f'  tool ok: {payload.get("tool_name")}')
-        elif event.event_type == 'run_failed':
-            self.output_fn(
-                f'  failed: {payload.get("category")}: {payload.get("message")}'
-            )
+        from teaagent.streaming.events import format_progress_line
+
+        line = format_progress_line(event)
+        if line:
+            self.output_fn(line)
 
     def _stream_chunk(self, chunk: str) -> None:
         self.output_fn(chunk, end='')

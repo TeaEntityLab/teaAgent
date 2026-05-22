@@ -68,7 +68,11 @@ class DailyTUIAcceptanceTests(unittest.TestCase):
             )
 
             self.assertTrue(tui.handle_command('ask create TODO.md'))
-            approval_payload = json.loads(output[1])
+            approval_payload = next(
+                json.loads(line)
+                for line in output
+                if line.strip().startswith('{') and 'approval_required' in line
+            )
             result_payload = json.loads(output[-1])
 
             self.assertEqual(approval_payload['status'], 'approval_required')

@@ -183,6 +183,13 @@ def _execute_agent_task(
 
         checkpoint_store = SQLiteCheckpointStore(checkpoint_path)
     resolved_permission_mode = parse_permission_mode(args.permission_mode)
+    from teaagent.streaming.handlers import (
+        adapter_supports_streaming,
+        build_run_stream_handlers,
+    )
+
+    stream_handlers = build_run_stream_handlers(args, audit)
+    use_stream = stream_handlers.stream and adapter_supports_streaming(adapter)
     result = run_chat_agent(
         task=task,
         adapter=adapter,
@@ -199,6 +206,9 @@ def _execute_agent_task(
             heartbeat_seconds=args.heartbeat,
             approval_handler=approval_handler,
             checkpoint_store=checkpoint_store,
+            stream=use_stream,
+            on_chunk=stream_handlers.on_chunk,
+            stream_text_only=stream_handlers.stream_text_only,
             code_analysis_config=(
                 CodeAnalysisConfig.from_root(args.root, enabled=True)
                 if getattr(args, 'code_analysis', False)
@@ -232,7 +242,12 @@ def _execute_agent_task(
             payload['resume_compaction'] = initial_context_extra['resume_compaction']
         if auto_approved_call_id is not None:
             payload['auto_approved_call_id'] = auto_approved_call_id
-    print_json(payload)
+    if getattr(args, 'json_stream', False):
+        from teaagent.streaming.events import StreamEvent, emit_stream_event
+
+        emit_stream_event(StreamEvent('run_result', payload))
+    else:
+        print_json(payload)
     if getattr(args, 'notify', False):
         from teaagent.ergonomics.notify import notify
 
@@ -369,16 +384,38 @@ def agent_attach_command(args: argparse.Namespace) -> int:
         return agent_resume_command(resume_args)
     if getattr(args, 'follow', False):
         from teaagent.ergonomics.session_stream import stream_run_events
-
-        print_json(
-            {
-                'run_id': args.run_id,
-                'heartbeat': heartbeat,
-                'pending_approval': pending,
-                'streaming': True,
-            }
+        from teaagent.streaming.events import (
+            StreamEvent,
+            audit_dict_to_stream_event,
+            emit_stream_event,
         )
+
+        if not getattr(args, 'json_stream', False):
+            print_json(
+                {
+                    'run_id': args.run_id,
+                    'heartbeat': heartbeat,
+                    'pending_approval': pending,
+                    'streaming': True,
+                }
+            )
+        else:
+            emit_stream_event(
+                StreamEvent(
+                    'attach_started',
+                    {
+                        'run_id': args.run_id,
+                        'heartbeat': heartbeat,
+                        'pending_approval': pending,
+                    },
+                )
+            )
         for event in stream_run_events(args.run_id, root=args.root, follow=True):
+            if getattr(args, 'json_stream', False):
+                mapped = audit_dict_to_stream_event(event)
+                if mapped is not None:
+                    emit_stream_event(mapped)
+                continue
             print(json.dumps(event, ensure_ascii=False, sort_keys=True), flush=True)
         if getattr(args, 'notify', False):
             from teaagent.ergonomics.notify import notify

@@ -592,7 +592,8 @@ teaagent> ask which ones are test files?
 | `permission <mode>` | Set permission mode |
 | `destructive on/off` | Toggle destructive tool access |
 | `route-model on/off` | Toggle automatic model routing |
-| `progress on/off` | Toggle audit event streaming |
+| `progress on/off` | Toggle audit event streaming (default **on**) |
+| `stream on/off` | Stream user-visible final-answer text (not raw decision JSON) |
 | `root <path>` | Set workspace root directory |
 | `runs` | List persisted agent runs |
 | `show <run_id>` | Show a run detail |

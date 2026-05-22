@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterator
 from typing import Any, Optional
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
@@ -13,6 +14,7 @@ from teaagent.llm._extract import (
     _first_choice_delta,
 )
 from teaagent.llm._retry import DEFAULT_RETRY_CONFIG, LLMRetryConfig, _call_with_retry
+from teaagent.llm._sse import consume_sse_json_chunks
 from teaagent.llm._transport import UrllibHTTPTransport, build_ssl_context_from_env
 from teaagent.llm._types import (
     HTTPTransport,
@@ -204,52 +206,43 @@ class OpenAICompatibleAdapter:
             self.retry_config,
         )
 
+    def _iter_streaming_lines(self, payload: dict[str, Any]) -> Iterator[bytes]:
+        if self._streaming_lines is not None:
+            for line in self._streaming_lines:
+                yield line if isinstance(line, bytes) else line.encode('utf-8')
+            return
+        body = json.dumps(payload).encode('utf-8')
+        url = f'{self.config.resolved_base_url()}/chat/completions'
+        headers = {
+            'content-type': 'application/json',
+            'user-agent': 'TeaAgent',
+            **self._headers(),
+        }
+        req = urllib_request.Request(url, data=body, headers=headers, method='POST')
+        try:
+            ssl_context = build_ssl_context_from_env()
+            request_kwargs: dict[str, Any] = {'timeout': self.timeout}
+            if ssl_context is not None:
+                request_kwargs['context'] = ssl_context
+            with urllib_request.urlopen(req, **request_kwargs) as resp:
+                yield from resp
+        except HTTPError as exc:
+            detail = exc.read().decode('utf-8', errors='replace')
+            raise LLMHTTPError(
+                f'HTTP {exc.code}: {detail}', status_code=exc.code
+            ) from exc
+        except URLError as exc:
+            raise LLMHTTPError(f'HTTP request failed: {exc.reason}') from exc
+
     def _complete_streaming(
         self, request: LLMRequest, model: str, payload: dict[str, Any]
     ) -> LLMResponse:
         chunks: list[str] = []
         input_tokens = 0
         output_tokens = 0
-        if self._streaming_lines is not None:
-            lines = self._streaming_lines
-        else:
-            body = json.dumps(payload).encode('utf-8')
-            url = f'{self.config.resolved_base_url()}/chat/completions'
-            headers = {
-                'content-type': 'application/json',
-                'user-agent': 'TeaAgent',
-                **self._headers(),
-            }
-            req = urllib_request.Request(url, data=body, headers=headers, method='POST')
-            try:
-                ssl_context = build_ssl_context_from_env()
-                request_kwargs: dict[str, Any] = {'timeout': self.timeout}
-                if ssl_context is not None:
-                    request_kwargs['context'] = ssl_context
-                with urllib_request.urlopen(req, **request_kwargs) as resp:
-                    lines = list(resp)
-            except HTTPError as exc:
-                detail = exc.read().decode('utf-8', errors='replace')
-                raise LLMHTTPError(
-                    f'HTTP {exc.code}: {detail}', status_code=exc.code
-                ) from exc
-            except URLError as exc:
-                raise LLMHTTPError(f'HTTP request failed: {exc.reason}') from exc
-        for raw_line in lines:
-            line = (
-                raw_line.decode('utf-8', errors='replace').strip()
-                if isinstance(raw_line, bytes)
-                else str(raw_line).strip()
-            )
-            if not line.startswith('data: '):
-                continue
-            data = line[6:]
-            if data == '[DONE]':
-                break
-            try:
-                parsed = json.loads(data)
-            except json.JSONDecodeError:
-                continue
+
+        def _handle(parsed: dict[str, Any]) -> None:
+            nonlocal input_tokens, output_tokens
             usage = parsed.get('usage')
             if usage:
                 input_tokens = usage.get('prompt_tokens', 0)
@@ -258,7 +251,13 @@ class OpenAICompatibleAdapter:
             chunk = delta.get('content', '')
             if chunk and request.on_chunk:
                 request.on_chunk(chunk)
-            chunks.append(chunk)
+            if chunk:
+                chunks.append(chunk)
+
+        consume_sse_json_chunks(
+            self._iter_streaming_lines(payload),
+            on_data=_handle,
+        )
         return LLMResponse(
             provider=self.provider,
             model=model,
@@ -314,6 +313,34 @@ def _supports_response_format_fallback(exc: LLMHTTPError) -> bool:
     )
 
 
+def _iter_http_post_lines(
+    *,
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+    timeout: int,
+) -> Iterator[bytes]:
+    body = json.dumps(payload).encode('utf-8')
+    req = urllib_request.Request(
+        url,
+        data=body,
+        headers={**headers, 'content-type': 'application/json'},
+        method='POST',
+    )
+    try:
+        ssl_context = build_ssl_context_from_env()
+        request_kwargs: dict[str, Any] = {'timeout': timeout}
+        if ssl_context is not None:
+            request_kwargs['context'] = ssl_context
+        with urllib_request.urlopen(req, **request_kwargs) as resp:
+            yield from resp
+    except HTTPError as exc:
+        detail = exc.read().decode('utf-8', errors='replace')
+        raise LLMHTTPError(f'HTTP {exc.code}: {detail}', status_code=exc.code) from exc
+    except URLError as exc:
+        raise LLMHTTPError(f'HTTP request failed: {exc.reason}') from exc
+
+
 class ClaudeAdapter:
     provider = 'claude'
 
@@ -324,11 +351,13 @@ class ClaudeAdapter:
         transport: Optional[HTTPTransport] = None,
         timeout: int = 60,
         retry_config: Optional[LLMRetryConfig] = None,
+        streaming_lines: Optional[list[bytes]] = None,
     ) -> None:
         self.config = config
         self.transport = transport or UrllibHTTPTransport()
         self.timeout = timeout
         self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
+        self._streaming_lines = streaming_lines
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self.config.resolved_model()
@@ -352,6 +381,9 @@ class ClaudeAdapter:
                 }
                 for t in request.tools
             ]
+        if request.stream:
+            payload['stream'] = True
+            return self._complete_streaming(request, model, payload)
         response = _call_with_retry(
             self.provider,
             lambda: self.transport.post_json(
@@ -378,6 +410,69 @@ class ClaudeAdapter:
             tool_calls=tool_calls,
         )
 
+    def _iter_streaming_lines(self, payload: dict[str, Any]) -> Iterator[bytes]:
+        if self._streaming_lines is not None:
+            for line in self._streaming_lines:
+                yield line if isinstance(line, bytes) else line.encode('utf-8')
+            return
+        yield from _iter_http_post_lines(
+            url=f'{self.config.resolved_base_url()}/messages',
+            headers={
+                'x-api-key': self.config.resolved_api_key(),
+                'anthropic-version': '2023-06-01',
+            },
+            payload=payload,
+            timeout=self.timeout,
+        )
+
+    def _complete_streaming(
+        self, request: LLMRequest, model: str, payload: dict[str, Any]
+    ) -> LLMResponse:
+        chunks: list[str] = []
+        input_tokens = 0
+        output_tokens = 0
+
+        def _handle(parsed: dict[str, Any]) -> None:
+            nonlocal input_tokens, output_tokens
+            event_type = parsed.get('type', '')
+            usage = parsed.get('usage')
+            if isinstance(usage, dict):
+                input_tokens = usage.get('input_tokens', input_tokens)
+                output_tokens = usage.get('output_tokens', output_tokens)
+            text = ''
+            if event_type == 'content_block_delta' or event_type == 'message_delta':
+                delta = parsed.get('delta', {})
+                if isinstance(delta, dict):
+                    text = str(delta.get('text', ''))
+            if text and request.on_chunk:
+                request.on_chunk(text)
+            if text:
+                chunks.append(text)
+
+        consume_sse_json_chunks(self._iter_streaming_lines(payload), on_data=_handle)
+        return LLMResponse(
+            provider=self.provider,
+            model=model,
+            content=''.join(chunks),
+            raw={},
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+
+
+def _extract_gemini_stream_text(parsed: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for candidate in parsed.get('candidates', []):
+        if not isinstance(candidate, dict):
+            continue
+        content = candidate.get('content', {})
+        if not isinstance(content, dict):
+            continue
+        for part in content.get('parts', []):
+            if isinstance(part, dict) and isinstance(part.get('text'), str):
+                parts.append(part['text'])
+    return ''.join(parts)
+
 
 class GeminiAdapter:
     provider = 'gemini'
@@ -389,11 +484,13 @@ class GeminiAdapter:
         transport: Optional[HTTPTransport] = None,
         timeout: int = 60,
         retry_config: Optional[LLMRetryConfig] = None,
+        streaming_lines: Optional[list[bytes]] = None,
     ) -> None:
         self.config = config
         self.transport = transport or UrllibHTTPTransport()
         self.timeout = timeout
         self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
+        self._streaming_lines = streaming_lines
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self.config.resolved_model()
@@ -423,6 +520,8 @@ class GeminiAdapter:
                 }
                 for t in request.tools
             ]
+        if request.stream:
+            return self._complete_streaming(request, model, payload)
         response = _call_with_retry(
             self.provider,
             lambda: self.transport.post_json(
@@ -446,4 +545,54 @@ class GeminiAdapter:
             output_tokens=metadata.get('candidatesTokenCount', 0),
             tool_calls=tool_calls,
             safety=safety,
+        )
+
+    def _iter_streaming_lines(
+        self, model: str, payload: dict[str, Any]
+    ) -> Iterator[bytes]:
+        if self._streaming_lines is not None:
+            for line in self._streaming_lines:
+                yield line if isinstance(line, bytes) else line.encode('utf-8')
+            return
+        url = (
+            f'{self.config.resolved_base_url()}/models/{model}:streamGenerateContent'
+            f'?key={self.config.resolved_api_key()}&alt=sse'
+        )
+        yield from _iter_http_post_lines(
+            url=url,
+            headers={},
+            payload=payload,
+            timeout=self.timeout,
+        )
+
+    def _complete_streaming(
+        self, request: LLMRequest, model: str, payload: dict[str, Any]
+    ) -> LLMResponse:
+        chunks: list[str] = []
+        input_tokens = 0
+        output_tokens = 0
+
+        def _handle(parsed: dict[str, Any]) -> None:
+            nonlocal input_tokens, output_tokens
+            metadata = parsed.get('usageMetadata', {})
+            if isinstance(metadata, dict):
+                input_tokens = metadata.get('promptTokenCount', input_tokens)
+                output_tokens = metadata.get('candidatesTokenCount', output_tokens)
+            text = _extract_gemini_stream_text(parsed)
+            if text and request.on_chunk:
+                request.on_chunk(text)
+            if text:
+                chunks.append(text)
+
+        consume_sse_json_chunks(
+            self._iter_streaming_lines(model, payload),
+            on_data=_handle,
+        )
+        return LLMResponse(
+            provider=self.provider,
+            model=model,
+            content=''.join(chunks),
+            raw={},
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )

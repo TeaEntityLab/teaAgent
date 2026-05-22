@@ -176,7 +176,12 @@ class TUITests(unittest.TestCase):
 
             self.assertTrue(tui.handle_command('ask write file'))
 
-            self.assertEqual(json.loads(output[1])['status'], 'approval_required')
+            approval_payload = next(
+                json.loads(line)
+                for line in output
+                if line.strip().startswith('{') and 'approval_required' in line
+            )
+            self.assertEqual(approval_payload['status'], 'approval_required')
             self.assertIn('approval: approved write-1', output)
             payload = json.loads(output[-1])
             self.assertEqual(payload['status'], 'completed')

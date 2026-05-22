@@ -138,6 +138,32 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         help='Run detached; use agent attach <run_id> --follow to stream events.',
     )
     p.add_argument(
+        '--progress',
+        action='store_true',
+        default=None,
+        help='Stream brief progress lines to stderr during the run (default: on when stderr is a TTY).',
+    )
+    p.add_argument(
+        '--no-progress',
+        action='store_true',
+        help='Disable progress lines even on a TTY.',
+    )
+    p.add_argument(
+        '--stream',
+        action='store_true',
+        help='Stream user-visible model text during the run (final-answer content only).',
+    )
+    p.add_argument(
+        '--stream-raw',
+        action='store_true',
+        help='With --stream, emit raw model tokens (includes structured decision JSON).',
+    )
+    p.add_argument(
+        '--json-stream',
+        action='store_true',
+        help='Emit NDJSON stream events (progress and text deltas) on stdout.',
+    )
+    p.add_argument(
         '--context-profile',
         choices=['lean', 'balanced', 'deep'],
         default='balanced',
@@ -258,6 +284,11 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         help='Stream new audit events until the run completes.',
     )
     p.add_argument(
+        '--json-stream',
+        action='store_true',
+        help='Emit normalized NDJSON stream events instead of raw audit rows.',
+    )
+    p.add_argument(
         '--resume',
         action='store_true',
         help='Resume a paused run after snapshot (auto-approve pending destructive call).',
@@ -355,6 +386,22 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         action=argparse.BooleanOptionalAction,
         default=None,
         help='Truncate replayed observations when resuming long runs (default from config).',
+    )
+    p.add_argument(
+        '--progress',
+        action='store_true',
+        default=None,
+        help='Stream progress to stderr.',
+    )
+    p.add_argument('--no-progress', action='store_true', help='Disable progress lines.')
+    p.add_argument(
+        '--stream', action='store_true', help='Stream user-visible model text.'
+    )
+    p.add_argument('--stream-raw', action='store_true', help='Stream raw model tokens.')
+    p.add_argument(
+        '--json-stream',
+        action='store_true',
+        help='Emit NDJSON stream events on stdout.',
     )
     p.set_defaults(func=handler, agent_command='resume')
 

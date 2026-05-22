@@ -72,6 +72,7 @@ class ChatAgentConfig:
     heartbeat_seconds: float = 0.0
     stream: bool = False
     on_chunk: Optional[Callable[[str], None]] = None
+    stream_text_only: bool = True
     approval_handler: Optional[ApprovalHandler] = None
     checkpoint_store: Any = None
     chat_messages: Optional[list[LLMMessage]] = None
@@ -148,6 +149,7 @@ class ModelDecisionEngine:
         task_spec: Optional[str] = None,
         stream: bool = False,
         on_chunk: Optional[Callable[[str], None]] = None,
+        stream_text_only: bool = True,
         chat_messages: Optional[list[LLMMessage]] = None,
         skills: Optional[list[SkillContent]] = None,
     ) -> None:
@@ -159,6 +161,7 @@ class ModelDecisionEngine:
         self.task_spec = task_spec
         self.stream = stream
         self.on_chunk = on_chunk
+        self.stream_text_only = stream_text_only
         self.chat_messages = chat_messages
         self.skills = skills
         self.max_parse_retries = 2
@@ -185,14 +188,19 @@ class ModelDecisionEngine:
 
         messages = list(self.chat_messages or [])
         messages.append(LLMMessage(role='user', content=prompt.user))
+        on_chunk = self.on_chunk
+        if self.stream and self.stream_text_only and on_chunk is not None:
+            from teaagent.streaming.content_filter import DecisionContentStreamer
+
+            on_chunk = DecisionContentStreamer(on_chunk).feed
         for attempt in range(self.max_parse_retries + 1):
             response = self.adapter.complete(
                 LLMRequest(
                     system=prompt.system,
                     messages=messages,
                     model=self.model,
-                    stream=self.stream,
-                    on_chunk=self.on_chunk,
+                    stream=self.stream and on_chunk is not None,
+                    on_chunk=on_chunk,
                     response_format={
                         'type': 'json_schema',
                         'json_schema': {
@@ -326,6 +334,7 @@ def run_chat_agent(
         task_spec=task_spec,
         stream=config.stream,
         on_chunk=config.on_chunk,
+        stream_text_only=config.stream_text_only,
         chat_messages=config.chat_messages,
         skills=active_skills,
     )

@@ -49,7 +49,7 @@ def test_streaming_on_chunk_fires(tmp_path):
     result = run_chat_agent(task='hello', adapter=adapter, config=config)
     assert result.status == 'completed'
     assert len(chunks) > 0, 'on_chunk callbacks must have fired'
-    assert ''.join(chunks).startswith('{"type":"final"')
+    assert ''.join(chunks) == 'streaming response'
 
 
 def test_streaming_audit_events_recorded(tmp_path):

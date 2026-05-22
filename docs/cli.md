@@ -104,6 +104,24 @@ teaagent agent daily gpt --write-journal
 teaagent watch --interval 30
 ```
 
+### Live streaming
+
+| Flag | Effect |
+|------|--------|
+| `--progress` | Emit iteration/tool progress lines to stderr (default on when stderr is a TTY). |
+| `--no-progress` | Disable progress lines. |
+| `--stream` | Stream user-visible final-answer text (filters structured decision JSON). |
+| `--stream-raw` | With `--stream`, emit raw model tokens. |
+| `--json-stream` | Emit normalized NDJSON events on stdout (`text_delta`, `tool_call_started`, …). |
+
+TUI equivalents: `progress on/off` (default **on**), `stream on/off`.
+
+```bash
+teaagent agent run gpt "fix the failing test" --progress --stream
+teaagent agent run gpt "long task" --json-stream 2>/dev/null | jq -c '.type'
+teaagent agent attach <run_id> --follow --json-stream
+```
+
 ### Background runs and attach
 
 Detached runs use `agent run --background` (writes under `.teaagent/background/`). Use `teaagent background list` and `teaagent background show <background_id>` for PID liveness, log path, and run ID parsed from worker stdout. Attach always targets the **audit run id** (not the background id):
