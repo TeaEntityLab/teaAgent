@@ -14,6 +14,7 @@ A beginner-friendly walkthrough from installation to your first agent run and ch
 - [Installation](#installation)
 - [API Key Setup](#api-key-setup)
 - [Verify Your Setup](#verify-your-setup)
+- [Choose Your Surface](#choose-your-surface)
 - [Agent Mode (CLI)](#agent-mode-cli)
 - [Chat Mode (TUI)](#chat-mode-tui)
 - [Handling Approvals](#handling-approvals)
@@ -171,6 +172,54 @@ Send a test prompt:
 ```bash
 teaagent model smoke gpt --prompt "Reply with exactly: ok"
 ```
+
+## Choose Your Surface
+
+Pick one entry point for how you work with TeaAgent. Each surface shares the same
+tool registry, permission modes, and audit model — only the transport changes.
+
+<!-- SURFACE_RECIPES:START -->
+
+| Surface | Best for | One-command recipe |
+|---------|----------|-------------------|
+| **CLI agent** | Scripts, CI, single-shot tasks | `teaagent agent run gpt "Summarize tests" --permission-mode read-only --root .` |
+| **TUI** | Interactive multi-turn chat in the terminal | `teaagent tui --root . --permission-mode prompt` |
+| **VS Code** | Palette commands, integrated terminal, MCP attach | Open `vscode/` in the editor → Command Palette → **TeaAgent: Run Agent** or **TeaAgent: Start MCP Server** (runs `teaagent mcp serve --http`) |
+| **MCP (stdio)** | Desktop MCP clients over stdin/stdout | `teaagent mcp serve --root .` |
+| **MCP (HTTP)** | Loopback HTTP clients (IDE, browser tools) | `teaagent mcp serve --http --port 7330 --root .` |
+| **ACP** | IDE Agent Client Protocol (stdio JSON-RPC lines) | Python API: `run_acp_server(tool_registry, agent_runner)` — see `teaagent/acp_adapter.py` |
+| **A2A** | Federated discovery + remote task delegation | Python API: `A2ADiscoveryServer(card, port=7331)` serves `/.well-known/agent.json` and `POST /a2a/task` |
+| **ANP** | Governed cross-organization federation | Python API: `ANPGovernedService(...)` inbound/outbound with approval + audit — see [ADR 0007](adr/0007-anp-adapter-boundary.md) |
+| **Managed runtime** | Provider-hosted agent backends (stubs) | Python API: `ManagedAgentRunner(runtime).run(task, audit_logger=audit)` — see `teaagent/managed_runtime.py` |
+
+Related CLI helpers:
+
+```bash
+teaagent agent card --root .          # AgentCard JSON for A2A discovery
+teaagent agent preflight gpt "task"   # Clarify/route/tools without a model call
+```
+
+### Smoke-check (local, no model API)
+
+Verify install and workspace wiring without network calls:
+
+```bash
+teaagent model providers
+teaagent agent card --root .
+teaagent workspace tools
+teaagent agent preflight gpt "list workspace tools" --root .
+```
+
+VS Code extension (local build):
+
+```bash
+cd vscode && npm install && npm run compile
+# Command Palette → TeaAgent: Run Doctor
+```
+
+See also: [CLI reference](cli.md), [architecture](architecture.md), [examples/README.md](../examples/README.md).
+
+<!-- SURFACE_RECIPES:END -->
 
 ## Agent Mode (CLI)
 

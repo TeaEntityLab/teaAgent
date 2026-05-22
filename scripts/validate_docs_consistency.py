@@ -32,6 +32,24 @@ MODE_MATRIX_REQUIRED_TOPICS = (
     'Audit',
     'Rollback',
 )
+SURFACE_RECIPES_START = '<!-- SURFACE_RECIPES:START -->'
+SURFACE_RECIPES_END = '<!-- SURFACE_RECIPES:END -->'
+SURFACE_RECIPES_REQUIRED = (
+    'CLI',
+    'TUI',
+    'VS Code',
+    'MCP',
+    'ACP',
+    'A2A',
+    'ANP',
+    'Managed runtime',
+)
+SURFACE_SMOKE_COMMANDS = (
+    'teaagent model providers',
+    'teaagent agent card',
+    'teaagent workspace tools',
+    'teaagent agent preflight',
+)
 
 
 def _render_tier_markdown() -> str:
@@ -170,6 +188,27 @@ def validate_provider_docs_consistency(
     return errors
 
 
+def validate_surface_recipes(usage_text: str) -> list[str]:
+    errors: list[str] = []
+    try:
+        block = _extract_marked_block(
+            usage_text, SURFACE_RECIPES_START, SURFACE_RECIPES_END
+        )
+    except ValueError as exc:
+        errors.append(str(exc))
+        return errors
+
+    for surface in SURFACE_RECIPES_REQUIRED:
+        if surface not in block:
+            errors.append(f'Surface recipes missing required surface: {surface!r}.')
+
+    for command in SURFACE_SMOKE_COMMANDS:
+        if command not in usage_text:
+            errors.append(f'Surface recipes missing smoke-check command: {command!r}.')
+
+    return errors
+
+
 def validate_mode_safety_matrix(usage_text: str) -> list[str]:
     errors: list[str] = []
     try:
@@ -224,6 +263,7 @@ def validate_docs_consistency(
     check_providers: bool = True,
     check_survey: bool = True,
     check_mode_matrix: bool = True,
+    check_surface_recipes: bool = True,
 ) -> list[str]:
     errors: list[str] = []
 
@@ -253,11 +293,13 @@ def validate_docs_consistency(
             if not usage_doc_path.is_file():
                 errors.append(f'USAGE doc not found: {usage_doc_path}')
 
-    if check_mode_matrix:
+    if check_mode_matrix or check_surface_recipes:
         if usage_doc_path.is_file():
-            errors.extend(
-                validate_mode_safety_matrix(usage_doc_path.read_text(encoding='utf-8'))
-            )
+            usage_text = usage_doc_path.read_text(encoding='utf-8')
+            if check_mode_matrix:
+                errors.extend(validate_mode_safety_matrix(usage_text))
+            if check_surface_recipes:
+                errors.extend(validate_surface_recipes(usage_text))
         else:
             errors.append(f'USAGE doc not found: {usage_doc_path}')
 

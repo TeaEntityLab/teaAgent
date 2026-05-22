@@ -1,5 +1,7 @@
 # TeaAgent CLI
 
+Choose your surface: [USAGE.md — Choose Your Surface](USAGE.md#choose-your-surface) (CLI, TUI, VS Code, MCP, ACP, A2A, ANP, managed runtime).
+
 ## Install
 
 For local development, install the package in editable mode:

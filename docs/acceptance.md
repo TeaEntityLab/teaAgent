@@ -51,6 +51,7 @@ directory.
 | `test_remote_mcp_consumption_flow.py` | Remote MCP tool consumption | Remote tool registration, annotation propagation, prefix filtering, shared rate limits, proxied calls |
 | `test_run_undo_acceptance_flow.py` | Reversible change recovery | Undo journal captures pre-write state and restores modified/new files to pre-run workspace state |
 | `test_session_resume_continuity_flow.py` | Session resume continuity | Pending-approval resume replays observations from checkpoint/store, preserves audit lineage, and auto-curates memory on completion |
+| `test_surface_launch_recipes_flow.py` | Multi-surface launch recipes | USAGE surface table covers CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed runtime; documented local smoke commands run without network |
 | `test_skill_install_flow.py` | Skill discovery and injection | Skill discovery, prompt injection, multi-skill loading, project override precedence, model-decision prompt wiring |
 | `test_ultrawork_flow.py` | Long-running worker | Worker start, list, show, log tail, and stop lifecycle |
 | `test_vscode_extension_mcp_boot_flow.py` | VSCode MCP boot flow | Extension manifest command contribution, source command wiring for MCP HTTP server, permission mode enum parity |
@@ -103,7 +104,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`88 passed`.
+`90 passed`.
 
 <!-- ACCEPTANCE_TIERS:START -->
 

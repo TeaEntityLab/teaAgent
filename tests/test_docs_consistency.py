@@ -54,6 +54,7 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
         check_providers=False,
         check_survey=False,
         check_mode_matrix=False,
+        check_surface_recipes=False,
     )
     assert errors == []
 
@@ -83,6 +84,7 @@ def test_validate_docs_consistency_detects_mismatch(tmp_path: Path) -> None:
         check_providers=False,
         check_survey=False,
         check_mode_matrix=False,
+        check_surface_recipes=False,
     )
     assert len(errors) == 3
 
@@ -113,4 +115,11 @@ def test_validate_mode_safety_matrix_passes_for_repo_usage() -> None:
     root = Path(__file__).resolve().parents[1]
     usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
     errors = _VALIDATE_MODULE.validate_mode_safety_matrix(usage)
+    assert errors == []
+
+
+def test_validate_surface_recipes_passes_for_repo_usage() -> None:
+    root = Path(__file__).resolve().parents[1]
+    usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_surface_recipes(usage)
     assert errors == []

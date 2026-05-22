@@ -42,7 +42,7 @@ governance-first story against the 2026-05-22 landscape survey. See
 | Subagent lineage and isolation hardening | P1 | Open — Medium |
 | Repo-map / context pack for coding runs | P1 | Open — Medium |
 | Mode and safety comparison matrix | P1 | Implemented (`docs/USAGE.md`, `validate_mode_safety_matrix`) |
-| Multi-surface launch recipes | P1 | Open — Medium |
+| Multi-surface launch recipes | P1 | Implemented (`docs/USAGE.md`, `test_surface_launch_recipes_flow.py`) |
 | Plugin/skill compatibility catalog | P2 | Open — Low |
 | Competitive use-case dashboard refresh | P2 | Open — Low |
 | Periodic mainstream-agent refresh cadence | P2 | Open — Low |
