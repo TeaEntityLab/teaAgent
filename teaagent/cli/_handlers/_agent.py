@@ -17,7 +17,35 @@ from teaagent.runner import ApprovalRequest, RunResult
 
 
 def agent_run_task(args: argparse.Namespace) -> int:
-    return _execute_agent_task(args, args.task)
+    task = _prepare_task(args, args.task)
+    if getattr(args, 'dry_run', False):
+        from teaagent.ergonomics.dry_run import build_dry_run_payload
+
+        print_json(
+            build_dry_run_payload(
+                task=task,
+                root=args.root,
+                provider=args.provider,
+                model=args.model,
+                permission_mode=parse_permission_mode(args.permission_mode),
+                route=args.route_model,
+                context_profile=getattr(args, 'context_profile', 'balanced'),
+            )
+        )
+        return 0
+    return _execute_agent_task(args, task)
+
+
+def _prepare_task(args: argparse.Namespace, task: str) -> str:
+    from teaagent.ergonomics.context_inject import expand_at_references
+    from teaagent.ergonomics.daily_cost import check_daily_cost_cap
+    from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+
+    expanded, _refs = expand_at_references(task, root=args.root)
+    defaults = load_workspace_defaults(args.root)
+    cap = int(defaults.get('daily_cost_cap_cents') or 0)
+    check_daily_cost_cap(args.root, cap)
+    return expanded
 
 
 def agent_resume_command(args: argparse.Namespace) -> int:
@@ -46,6 +74,14 @@ def agent_resume_command(args: argparse.Namespace) -> int:
             }
         else:
             initial_observations = store.observations_for_run(args.run_id)
+            if getattr(args, 'auto_compact', False) and len(initial_observations) > 40:
+                initial_observations = initial_observations[-20:]
+                initial_context_extra = {
+                    'resume_compaction': {
+                        'truncated': True,
+                        'kept_observations': 20,
+                    }
+                }
         pending = store.pending_approval_for_run(args.run_id)
         if pending and pending['call_id'] not in args.approve_call_id:
             args.approve_call_id = list(args.approve_call_id) + [pending['call_id']]
@@ -175,6 +211,10 @@ def _execute_agent_task(
         if auto_approved_call_id is not None:
             payload['auto_approved_call_id'] = auto_approved_call_id
     print_json(payload)
+    if getattr(args, 'notify', False):
+        from teaagent.ergonomics.notify import notify
+
+        notify('TeaAgent', f'Run {result.run_id} {result.status}')
     return 0 if result.status == 'completed' else 1
 
 
@@ -208,6 +248,11 @@ def run_result_payload(
 
 
 def cli_approval_handler(request: ApprovalRequest) -> bool:
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+    store = ApprovalPresetStore('.')
+    if store.is_allowed(request.tool_name, permission_mode='prompt'):
+        return True
     print(
         json.dumps(
             {'status': 'approval_required', 'approval': request.to_dict()},
@@ -239,7 +284,40 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
     return 0 if report.to_dict()['ready'] else 2
 
 
+def agent_attach_command(args: argparse.Namespace) -> int:
+    store = RunStore(args.root)
+    try:
+        heartbeat = store.heartbeat_for_run(args.run_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print_json(heartbeat)
+    if getattr(args, 'notify', False):
+        from teaagent.ergonomics.notify import notify
+
+        notify('TeaAgent', f'Run {args.run_id}: {heartbeat.get("status")}')
+    return 0
+
+
 def agent_daily_command(args: argparse.Namespace) -> int:
+    if getattr(args, 'dry_run', False):
+        task = args.task or 'daily readiness check'
+        from teaagent.ergonomics.dry_run import build_dry_run_payload
+
+        print_json(
+            build_dry_run_payload(
+                task=task,
+                root=args.root,
+                provider=args.provider,
+                model=args.model,
+                permission_mode=parse_permission_mode(args.permission_mode),
+                route=args.route_model,
+                memory_limit=args.memory_limit,
+                context_profile=args.context_profile,
+                runs_limit=args.runs_limit,
+            )
+        )
+        return 0
     brief = build_daily_brief(
         task=args.task,
         root=args.root,
@@ -251,7 +329,17 @@ def agent_daily_command(args: argparse.Namespace) -> int:
         runs_limit=args.runs_limit,
         context_profile=args.context_profile,
     )
-    print_json(brief.to_dict())
+    if getattr(args, 'write_journal', False):
+        from teaagent.ergonomics.daily_journal import write_daily_journal
+
+        write_daily_journal(brief, root=args.root)
+    from teaagent.ergonomics.whats_new import whats_new_banner
+
+    banner = whats_new_banner(args.root)
+    payload = brief.to_dict()
+    if banner:
+        payload['whats_new'] = banner
+    print_json(payload)
     return 0 if brief.ready else 2
 
 

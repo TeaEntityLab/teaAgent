@@ -98,6 +98,24 @@ def _init(
         action='store_true',
         help='Also write .teaagent/env export line for the selected provider API key.',
     )
+    p.add_argument(
+        '--context-profile',
+        choices=['lean', 'balanced', 'deep'],
+        default='balanced',
+        help='Default context profile written to config.',
+    )
+    p.add_argument(
+        '--heartbeat',
+        type=float,
+        default=0.0,
+        help='Default heartbeat interval (seconds) written to config.',
+    )
+    p.add_argument(
+        '--daily-cost-cap-cents',
+        type=int,
+        default=0,
+        help='Daily estimated cost cap in cents (0 disables).',
+    )
     p.set_defaults(func=handler)
 
 

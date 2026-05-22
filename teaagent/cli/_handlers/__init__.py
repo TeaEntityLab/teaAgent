@@ -1,4 +1,5 @@
 from ._agent import (
+    agent_attach_command,
     agent_card_command,
     agent_daily_command,
     agent_preflight_command,
@@ -24,6 +25,24 @@ from ._doctor import (
     doctor_model,
     doctor_project,
     doctor_providers,
+)
+from ._ergonomics import (
+    approval_audit_command,
+    approval_deny_command,
+    approval_grant_command,
+    approval_list_command,
+    ci_review_command,
+    daily_journal_command,
+    guidance_command,
+    recall_command,
+    recipes_list_command,
+    recipes_run_command,
+    session_list_command,
+    session_resume_command,
+    session_show_command,
+    status_short_command,
+    watch_command,
+    yesterday_command,
 )
 from ._mcp import mcp_serve_command
 from ._memory import (
@@ -52,7 +71,24 @@ from ._misc import (
 from ._model import model_conformance, model_providers, model_route, model_smoke
 
 __all__ = [
+    'agent_attach_command',
     'agent_card_command',
+    'approval_audit_command',
+    'approval_deny_command',
+    'approval_grant_command',
+    'approval_list_command',
+    'ci_review_command',
+    'daily_journal_command',
+    'guidance_command',
+    'recall_command',
+    'recipes_list_command',
+    'recipes_run_command',
+    'session_list_command',
+    'session_resume_command',
+    'session_show_command',
+    'status_short_command',
+    'watch_command',
+    'yesterday_command',
     'agent_daily_command',
     'agent_preflight_command',
     'audit_serve_command',

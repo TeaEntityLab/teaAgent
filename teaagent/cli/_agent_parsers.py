@@ -21,6 +21,8 @@ def register(
     _runs(subs, handlers['runs'])
     _show(subs, handlers['show'])
     _card(subs, handlers['card'])
+    if 'attach' in handlers:
+        _attach(subs, handlers['attach'])
 
 
 def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -117,6 +119,17 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         metavar='PATH',
         help='SQLite path for run checkpoint storage. Saves context after each tool call.',
     )
+    p.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Plan the run (preflight + token budget) without calling the model.',
+    )
+    p.add_argument(
+        '--context-profile',
+        choices=['lean', 'balanced', 'deep'],
+        default='balanced',
+        help='Context budget profile for memory and replay limits.',
+    )
     p.set_defaults(func=handler)
 
 
@@ -193,6 +206,30 @@ def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type
         choices=['lean', 'balanced', 'deep'],
         default='balanced',
         help='Read-only context budget profile.',
+    )
+    p.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Emit preflight and token budget without persisting a journal run.',
+    )
+    p.add_argument(
+        '--write-journal',
+        action='store_true',
+        help='Write .teaagent/daily/YYYY-MM-DD.md from the daily brief.',
+    )
+    p.set_defaults(func=handler)
+
+
+def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+    p = subs.add_parser(
+        'attach', help='Attach to a background run (heartbeat snapshot).'
+    )
+    p.add_argument('run_id', help='Run id to attach.')
+    p.add_argument('--root', default='.', help='Workspace root.')
+    p.add_argument(
+        '--notify',
+        action='store_true',
+        help='Emit a desktop notification with the current run status.',
     )
     p.set_defaults(func=handler)
 
@@ -272,6 +309,11 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         default=None,
         metavar='PATH',
         help='SQLite path for checkpoint storage. Used to restore compacted context on resume.',
+    )
+    p.add_argument(
+        '--auto-compact',
+        action='store_true',
+        help='Truncate replayed observations when resuming very long runs.',
     )
     p.set_defaults(func=handler)
 

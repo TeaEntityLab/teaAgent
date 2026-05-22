@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from teaagent import __version__
 from teaagent.cli._handlers import (
+    agent_attach_command,
     agent_card_command,
     agent_daily_command,
     agent_preflight_command,
@@ -15,13 +16,19 @@ from teaagent.cli._handlers import (
     agent_run_task,
     agent_runs_list,
     agent_status_command,
+    approval_audit_command,
+    approval_deny_command,
+    approval_grant_command,
+    approval_list_command,
     audit_list_command,
     audit_prune_command,
     audit_serve_command,
     audit_show_command,
+    ci_review_command,
     clarify_command,
     completion_command,
     configure_command,
+    daily_journal_command,
     doctor_aigateway,
     doctor_all,
     doctor_env_order,
@@ -34,6 +41,7 @@ from teaagent.cli._handlers import (
     graphqlite_migrate,
     graphqlite_query,
     graphqlite_smoke,
+    guidance_command,
     init_command,
     mcp_serve_command,
     memory_add_command,
@@ -44,14 +52,23 @@ from teaagent.cli._handlers import (
     model_providers,
     model_route,
     model_smoke,
+    recall_command,
+    recipes_list_command,
+    recipes_run_command,
+    session_list_command,
+    session_resume_command,
+    session_show_command,
     start_tui,
+    status_short_command,
     ultrawork_list_command,
     ultrawork_logs_command,
     ultrawork_show_command,
     ultrawork_start_command,
     ultrawork_stop_command,
+    watch_command,
     workspace_openapi_command,
     workspace_tools_metadata,
+    yesterday_command,
 )
 from teaagent.graphqlite_store import (
     check_graphqlite_runtime,
@@ -66,6 +83,22 @@ from teaagent.llm_conformance import (
 from teaagent.mcp_http import serve_mcp_http
 from teaagent.policy import PermissionMode
 
+_TOP_LEVEL_SHORTCUTS: dict[str, list[str]] = {
+    'daily': ['agent', 'daily'],
+    'run': ['agent', 'run'],
+    'ask': ['agent', 'run'],
+    'resume': ['agent', 'resume'],
+}
+
+
+def _expand_argv(argv: Optional[list[str]]) -> Optional[list[str]]:
+    if not argv:
+        return argv
+    head = argv[0]
+    if head in _TOP_LEVEL_SHORTCUTS:
+        return _TOP_LEVEL_SHORTCUTS[head] + list(argv[1:])
+    return argv
+
 
 def main(
     argv: Optional[list[str]] = None,
@@ -77,7 +110,7 @@ def main(
     _run_model_conformance: Any = None,
 ) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(_expand_argv(argv))
     args._adapter_factory = _adapter_factory or create_llm_adapter  # type: ignore[attr-defined]
     args._serve_mcp_http = _serve_mcp_http or serve_mcp_http  # type: ignore[attr-defined]
     args._check_graphqlite = _check_graphqlite or check_graphqlite_runtime  # type: ignore[attr-defined]
@@ -89,6 +122,7 @@ def main(
 
 def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._agent_parsers import register as register_agent
+    from teaagent.cli._ergonomics_parsers import register as register_ergonomics
     from teaagent.cli._mcp_parsers import register as register_mcp
     from teaagent.cli._memory_parsers import register as register_memory
     from teaagent.cli._misc_parsers import register as register_misc
@@ -165,6 +199,28 @@ def build_parser() -> argparse.ArgumentParser:
             'runs': agent_runs_list,
             'show': agent_run_show,
             'card': agent_card_command,
+            'attach': agent_attach_command,
+        },
+    )
+    register_ergonomics(
+        subparsers,
+        {
+            'yesterday': yesterday_command,
+            'recall': recall_command,
+            'status_short': status_short_command,
+            'session_list': session_list_command,
+            'session_show': session_show_command,
+            'session_resume': session_resume_command,
+            'recipes_list': recipes_list_command,
+            'recipes_run': recipes_run_command,
+            'approval_list': approval_list_command,
+            'approval_grant': approval_grant_command,
+            'approval_deny': approval_deny_command,
+            'approval_audit': approval_audit_command,
+            'guidance': guidance_command,
+            'ci_review': ci_review_command,
+            'watch': watch_command,
+            'daily_journal': daily_journal_command,
         },
     )
     register_model(
@@ -189,10 +245,24 @@ def build_parser() -> argparse.ArgumentParser:
 def apply_config_defaults(args: argparse.Namespace) -> None:
     if getattr(args, 'command', None) == 'init':
         return
+    from teaagent.ergonomics.workspace_defaults import (
+        apply_workspace_defaults_to_namespace,
+        load_workspace_defaults,
+    )
+
+    root = getattr(args, 'root', '.')
     config_path = resolve_config_path(getattr(args, 'config', None))
     if config_path is None:
+        apply_workspace_defaults_to_namespace(args, root=root)
         return
-    data = json.loads(config_path.read_text(encoding='utf-8'))
+    if config_path.suffix == '.toml':
+        data = {
+            k: v
+            for k, v in load_workspace_defaults(root).items()
+            if v is not None and k != 'root'
+        }
+    else:
+        data = json.loads(config_path.read_text(encoding='utf-8'))
     if not isinstance(data, dict):
         raise SystemExit('--config must contain a JSON object')
     profile = getattr(args, 'profile', None)
@@ -226,5 +296,8 @@ def apply_config_defaults(args: argparse.Namespace) -> None:
 def resolve_config_path(explicit: Optional[str]) -> Optional[Path]:
     if explicit:
         return Path(explicit)
-    candidate = Path('.teaagent') / 'config.json'
-    return candidate if candidate.is_file() else None
+    json_candidate = Path('.teaagent') / 'config.json'
+    if json_candidate.is_file():
+        return json_candidate
+    toml_candidate = Path('.teaagent') / 'config.toml'
+    return toml_candidate if toml_candidate.is_file() else None

@@ -47,6 +47,40 @@ Profiles can override top-level defaults:
 teaagent --profile ci model smoke gpt
 ```
 
+Workspace defaults also load from `.teaagent/config.toml` when `config.json` is absent
+(`provider`, `context_profile`, `heartbeat`, `daily_cost_cap_cents`, and related keys).
+
+First-time setup:
+
+```bash
+teaagent init --root . --provider gpt --context-profile balanced
+```
+
+Top-level shortcuts (same as `agent` subcommands; provider comes from config when omitted):
+
+```bash
+teaagent daily gpt
+teaagent run gpt "summarize repo"
+teaagent resume gpt <run_id>
+```
+
+Daily ergonomics:
+
+```bash
+teaagent status                    # one-line token/approval/run status
+teaagent yesterday                 # runs from the previous calendar day
+teaagent recall --limit 5
+teaagent session list
+teaagent recipes list
+teaagent recipes run review-staged --print-only
+teaagent ci review --provider gpt
+teaagent approval grant workspace_write_file --scope session
+teaagent guidance
+teaagent agent run gpt "read @README.md" --dry-run
+teaagent agent daily gpt --write-journal
+teaagent watch --interval 30
+```
+
 Print shell completion snippets:
 
 ```bash

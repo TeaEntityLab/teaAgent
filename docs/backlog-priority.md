@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-22
+Last updated: 2026-05-22 (daily-use ergonomics revised)
 
 ---
 
@@ -46,11 +46,22 @@ _No open P0 items._
 
 ## Open — Daily-use ergonomics (2026-05-22)
 
-Competitive parity is shipped; the next bar is **time-to-daily-habit**. The
-2026-05-22 deepwiki survey of Codex, Claude Code, OpenCode, OpenHands, and Aider
-showed those agents win daily users via low-friction defaults, persistent
-project preferences, and frictionless re-entry — not more capabilities. The
-items below close that ergonomics gap without expanding the harness boundary.
+Surveyed agents (deepwiki, 2026-05-22):
+- **Batch 1**: Aider, OpenCode, Codex, Cline, Continue, OpenHands
+- **Batch 2**: Goose, Crush, Gemini CLI, Roo Code, Plandex, Sourcegraph Amp/Cody
+
+Cross-cutting patterns from both surveys (present in 3+ agents):
+- **One-command start** — every tool has an obvious single entry (`aider`, `opencode`, `codex`, `goose session`, `crush`, `gemini`, `plandex`).
+- **Safe-by-default** — approvals/sandboxing/checkpoints are standard; explicit opt-ins for speed (`--yolo`, `auto-approve`).
+- **Resume is first-class** — history, continue, resume, fork, reconnectable streams show up in **every** surveyed agent.
+- **Explicit approval ladder** — per-turn, per-session, smart-approve; not just a binary safe/unsafe.
+- **Multi-surface UX** — CLI + TUI + IDE + MCP + background/remote is the common stack.
+- **Recipe workflows beat generic chat** — refactor/test/docs/review/security are packaged as commands/modes, not ad-hoc prompts.
+- **Context injection surfaces** — `@` file refs, editor selections, git/diagnostic/terminal state pulled in naturally.
+
+Competitive parity is shipped; the next bar is **time-to-daily-habit** plus
+**session continuity**. The items below close that ergonomics gap without
+expanding the harness boundary.
 
 ### P1 — first daily session in under 60 seconds
 
@@ -59,7 +70,7 @@ items below close that ergonomics gap without expanding the harness boundary.
 | `teaagent init --root .` one-shot project bootstrap | Today users run three separate `doctor` wizards (providers, project, mcp). A single chained init writing `.teaagent/env` + `.teaagent/config.toml` + stub `AGENTS.md` collapses minutes of setup into one command — matches `aider --install` / `opencode init` ergonomics. | `cli/_handlers/_doctor.py` (new `init` orchestrator), `teaagent/config_loader.py` |
 | Project defaults in `.teaagent/config.toml` | Persist `provider`, `context_profile`, `permission_mode`, `heartbeat`, `root`, `daily_cost_cap_cents`. Reduces `agent run gpt "..." --permission-mode workspace-write --context-profile balanced --root .` to `run "..."`. | `teaagent/config_loader.py`, `cli/_agent_parsers.py` |
 | Top-level shortcuts: `teaagent daily`, `teaagent run`, `teaagent ask`, `teaagent resume` | Aliases for `agent daily/run/ask/resume` that read provider from config. README "Daily Use in 5 Commands" already shows the muscle memory we want; CLI should match. | `cli/__init__.py`, `cli/_agent_parsers.py` |
-| Shell completion (`teaagent completion zsh\|bash\|fish`) | Autocomplete for commands, providers, permission modes, run-ids. Single biggest ergonomics win for terminal-first agents (Codex, opencode, crush all ship completion). | `cli/_handlers/_misc.py` (new `completion` handler) |
+| Shell completion (`teaagent completion zsh\|bash\|fish`) | Autocomplete for commands, providers, permission modes, run-ids. Single biggest ergonomics win for terminal-first agents (Codex, opencode, crush, Goose all ship completion). | `cli/_handlers/_misc.py` (new `completion` handler) |
 | `--dry-run` on `agent run` / `agent daily` | Print assembled prompt + estimated cost + tool list without invoking the model. Builds trust before spending tokens; consistent with `token_budget` JSON contract already shipped. | `cli/_handlers/_agent.py`, `teaagent/daily.py` |
 
 ### P1 — persistent daily habit
@@ -72,20 +83,30 @@ items below close that ergonomics gap without expanding the harness boundary.
 | Desktop / system notifications on approval-needed and run-done | macOS `osascript`, Linux `notify-send`, Windows toast. Critical when running `prompt` mode in background; users currently must tail the audit log. | `teaagent/heartbeat.py`, new `teaagent/notify.py` |
 | Daily cost cap (`daily_cost_cap_cents` config + `--daily-cap` flag) | Budget reporter already estimates per-run cost. Add a per-day rollup that warns at 80% and blocks at 100% unless `--override-cap`. | `teaagent/budget.py`, `teaagent/config_loader.py` |
 
+### P1 — session continuity (upgraded from P2, all surveyed agents agree)
+
+| Item | Why it matters | Likely files |
+|------|----------------|--------------|
+| Session browser: `teaagent session list/show/resume` | Every surveyed agent ships first-class session resume/fork. TeaAgent run store already persists runs; add a session layer that lists recent sessions, shows context/status, and resumes by ID with restored context + pending approvals. Aider's auto-commit, Codex's resume/fork threads, Crush's background streams, and Plandex's `ps/connect` all converge on this. | New `cli/_handlers/_sessions.py`, `teaagent/run_store.py` |
+| Background/attach: `agent run --background` + `agent attach <id>` | Long-running `prompt` runs need to survive a closed terminal. Detached run returns an ID; `attach` streams live events; run continues after client exits. Goose (`schedule add`), Crush (`ps → connect`), Plandex (`--bg → connect`), and OpenHands (V1 sessions) all support this as a daily-use feature — not a power-user option. | `runner/_core.py`, `teaagent/heartbeat.py`, new `teaagent/session_stream.py` |
+| Approval presets + audit trail | Per-tool + per-mode allow/deny with session-persistent grants ("allow once / session / always deny"). Clear audit trail showing action/path/diff for every approval decision. Codex's approval policies, Cline's checkpoints, and Goose's `smart_approve` all converge on persistent approval state as a daily-safety baseline. | `teaagent/policy.py`, `teaagent/audit.py`, `cli/_handlers/_agent.py` |
+
 ### P1 — recipe-first workflow
 
 | Item | Why it matters | Likely files |
 |------|----------------|--------------|
-| Recipe registry + `teaagent recipes list\|run <name>` | The USAGE recipe table is documentation only. Promote each row (review-diff, fix-failing-test, summarize-repo, map-architecture, safe-cleanup) to a first-class recipe = SKILL with prompt template + permission mode + context profile. Users invoke `teaagent recipes run review-diff` without remembering 4 flags. | New `teaagent/recipes/`, `skills/recipes/*.md` |
+| Recipe registry + `teaagent recipes list\|run <name>` | The USAGE recipe table is documentation only. Promote each row (review-diff, fix-failing-test, summarize-repo, map-architecture, safe-cleanup) to a first-class recipe = SKILL with prompt template + permission mode + context profile. Users invoke `teaagent recipes run review-diff` without remembering 4 flags. Surveyed agents (Roo Code modes, Cody `/explain`, Cline's plan/act split) all package workflows as first-class commands. | New `teaagent/recipes/`, `skills/recipes/*.md` |
 | Git hook recipes (`scripts/hooks/pre-commit`, `prepare-commit-msg`, `pre-push`) | Drop-in hooks that call `agent run --permission-mode read-only` to review staged diffs and optionally inject a commit-message draft. Mirrors what Aider users hand-roll today. | `scripts/hooks/`, `docs/USAGE.md` |
 | `teaagent ci review` headless PR review | Reads `GITHUB_BASE_REF`/`GITHUB_HEAD_REF` (or `git diff origin/main...HEAD`), runs read-only review, prints markdown comment to stdout. Pairs with a one-file GitHub Action recipe. | `cli/_handlers/_agent.py`, `examples/github-action.yml` |
+| Editor context injection (`@`-mentions, selection, git diff, diagnostics) | Roo Code's context menus, Gemini CLI's `@file`, and Cody's `/explain` all surface editor state directly into prompts. ACP already transports IDE state; expose a TUI `@` system + CLI flag for injecting file/selection/diff/diagnostic/terminal-output blocks into the prompt preamble. | `teaagent/context_pack.py`, `cli/_agent_parsers.py`, `teaagent/acp_adapter.py` |
 
 ### P2 — passive / always-on surfaces
 
 | Item | Why it matters | Likely files |
 |------|----------------|--------------|
-| Background sessions: `agent run --background` + `agent attach <run_id>` + `agent sessions` | Already flagged in `refresh_agent_readme_survey.md` as a P2 maintenance gap. Long-running `prompt` runs need to survive a closed terminal so daily users don't lose context. | `runner/_core.py`, `teaagent/heartbeat.py`, new `cli/_handlers/_sessions.py` |
 | `teaagent watch --interval 6h` cron-friendly daily brief | Headless variant of `agent daily` that emits JSON/markdown on a schedule. Pairs with cron/launchd/systemd timers for morning email. | `cli/_handlers/_agent.py`, `teaagent/daily.py` |
+| Auto-compaction summaries for long resumed runs | Long runs should automatically summarize old turns when resumed. Manual compact exists; automated summaries on resume + resumption-context trimming match Gemini CLI and Codex's rollout-replay compaction patterns. | `teaagent/context.py`, `teaagent/daily.py` |
+| Workspace guidance file convention | Standardized project-instructions file (`.teaagent/guide.md` or `AGENTS.md`) auto-loaded and honored by preflight/run. Gemini CLI ships `GEMINI.md`, OpenHands has `.openhands_instructions`. TeaAgent reads `AGENTS.md` in system prompt but should document the convention and support per-subdir overrides. | `teaagent/config_loader.py`, `docs/USAGE.md` |
 | First-launch greeting / version-change "what's new" | One-time stdout banner per version listing new providers, new recipes, deprecations. Cuts docs hunting for users who upgrade weekly. | `cli/__init__.py`, new `teaagent/whats_new.py` |
 | Raycast extension / macOS Shortcuts recipes | One-keystroke launch of daily/preflight/run from anywhere. Bigger payoff per LoC than a new IDE plugin. | `examples/raycast/`, `examples/shortcuts/` |
 | JetBrains + Zed + Neovim recipes over existing ACP / MCP HTTP | ACP and MCP HTTP transports already exist; ship a one-page recipe per IDE plus a minimal Neovim plugin in `examples/`. Most users live in one of these three editors. | `examples/jetbrains/`, `examples/zed/`, `examples/nvim/` |
@@ -99,7 +120,7 @@ items below close that ergonomics gap without expanding the harness boundary.
 | Add an "ergonomics smoke" acceptance flow (`test_daily_ergonomics_flow.py`) | One end-to-end test that runs `init` → `daily` → `recipes run review-diff` → `yesterday` to prevent silent regressions in the daily path. | After `init` + recipe registry land |
 | Track time-to-first-useful-run in `docs/use-case-matrix.md` | Numeric KPI (seconds from `pip install -e .` to first `agent daily` exit). Surveyed agents implicitly compete on this; we should measure it. | After `init` lands |
 
-Implementation order recommendation: **`init` → config defaults → top-level shortcuts → shell completion → recipe registry**. Each unlocks the next; together they collapse the daily entry from a 5-flag command to two words.
+Implementation order recommendation: **`init` → config defaults → top-level shortcuts → shell completion → session continuation (resume/fork + background/attach + approval presets) → recipe registry**. Each unlocks the next; together they collapse the daily entry from a 5-flag command to two words, with full session continuity throughout the day.
 
 ---
 

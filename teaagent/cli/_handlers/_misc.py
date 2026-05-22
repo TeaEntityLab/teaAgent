@@ -139,17 +139,25 @@ def workspace_openapi_command(args: argparse.Namespace) -> int:
 
 
 def completion_command(args: argparse.Namespace) -> int:
+    from teaagent.llm import available_providers
+
+    top = (
+        'agent approval audit ci clarify completion configure daily doctor guidance '
+        'graphqlite init journal mcp memory model recall recipes session status tui '
+        'ultrawork watch workspace yesterday run ask resume'
+    )
+    providers = ' '.join(available_providers())
     if args.shell == 'bash':
-        print(
-            'complete -W "agent audit clarify completion configure doctor graphqlite init mcp memory model tui ultrawork workspace" teaagent'
-        )
+        print(f'complete -W "{top}" teaagent')
+        print(f'complete -W "{providers}" teaagent agent run')
     elif args.shell == 'zsh':
         print(
-            '#compdef teaagent\n_arguments "1: :((agent audit clarify completion configure doctor graphqlite init mcp memory model tui ultrawork workspace))"'
+            f'#compdef teaagent\n_arguments "1: :(({top}))"\n_arguments "*:provider:(({providers}))"'
         )
     else:
+        print(f'complete -c teaagent -f -a "{top}"')
         print(
-            'complete -c teaagent -f -a "agent audit clarify completion configure doctor graphqlite init mcp memory model tui ultrawork workspace"'
+            f'complete -c teaagent -n "__fish_seen_subcommand_from agent run" -a "{providers}"'
         )
     return 0
 
@@ -177,9 +185,28 @@ def init_command(args: argparse.Namespace) -> int:
         'permission_mode': args.permission_mode,
         'max_iterations': int(args.max_iterations),
         'max_tool_calls': int(args.max_tool_calls),
+        'context_profile': getattr(args, 'context_profile', 'balanced'),
+        'heartbeat': float(getattr(args, 'heartbeat', 0.0)),
+        'daily_cost_cap_cents': int(getattr(args, 'daily_cost_cap_cents', 0)),
     }
     cfg_path = tea_dir / 'config.json'
     cfg_path.write_text(json.dumps(config, sort_keys=True, indent=2), encoding='utf-8')
+    toml_path = tea_dir / 'config.toml'
+    toml_path.write_text(
+        '\n'.join(
+            [
+                f'provider = "{provider}"',
+                f'permission_mode = "{args.permission_mode}"',
+                f'max_iterations = {int(args.max_iterations)}',
+                f'max_tool_calls = {int(args.max_tool_calls)}',
+                f'context_profile = "{config["context_profile"]}"',
+                f'heartbeat = {config["heartbeat"]}',
+                f'daily_cost_cap_cents = {config["daily_cost_cap_cents"]}',
+                '',
+            ]
+        ),
+        encoding='utf-8',
+    )
     agents_md_path = root / 'AGENTS.md'
     agents_md_status = 'existing'
     if not agents_md_path.exists():
@@ -202,6 +229,7 @@ def init_command(args: argparse.Namespace) -> int:
         'ok': True,
         'root': str(root),
         'config_path': str(cfg_path),
+        'config_toml_path': str(toml_path),
         'agents_md_path': str(agents_md_path),
         'agents_md_status': agents_md_status,
         'provider': provider,
