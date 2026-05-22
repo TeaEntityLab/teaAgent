@@ -126,10 +126,10 @@ def _run_id_from_log(log_path: Path) -> Optional[str]:
             payload = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(payload, dict) and payload.get('run_id'):
-            return str(payload['run_id'])
-        if isinstance(payload, dict) and payload.get('status') == 'completed':
-            return payload.get('run_id')  # type: ignore[return-value]
+        if isinstance(payload, dict):
+            run_id = payload.get('run_id')
+            if isinstance(run_id, str) and run_id:
+                return run_id
     return None
 
 

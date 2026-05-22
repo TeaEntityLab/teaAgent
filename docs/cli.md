@@ -54,13 +54,13 @@ First-time setup:
 
 ```bash
 teaagent init --root . --provider gpt --context-profile balanced
+```
 
 After init, provider comes from config — two-word daily use:
 
 ```bash
 teaagent daily "what to do today"
 teaagent run "fix the failing test" --dry-run
-```
 ```
 
 Top-level shortcuts (same as `agent` subcommands; provider comes from config when omitted):
@@ -91,6 +91,19 @@ teaagent agent run gpt "read @README.md" --dry-run
 teaagent agent daily gpt --write-journal
 teaagent watch --interval 30
 ```
+
+### Background runs and attach
+
+Detached runs use `agent run --background` (writes under `.teaagent/background/`). Use `teaagent background list` and `teaagent background show <background_id>` for PID liveness, log path, and run ID parsed from worker stdout. Attach always targets the **audit run id** (not the background id):
+
+```bash
+teaagent agent run "long task" --background --root .
+teaagent background list --root .
+teaagent agent attach <run_id> --follow --root .
+teaagent agent attach <run_id> --resume --root .
+```
+
+Git hook recipe: [examples/ergonomics/git-pre-commit-recipe.sh](../examples/ergonomics/git-pre-commit-recipe.sh).
 
 Print shell completion snippets:
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -107,6 +108,22 @@ def _compare_generated_file(*, expected: Path, actual: Path) -> list[str]:
     return [f'{rel} is out of date; run: python3 scripts/refresh_competitive_docs.py']
 
 
+def check_ergonomics_kpi(repo_root: Path) -> list[str]:
+    kpi_path = repo_root / 'docs' / 'ergonomics-kpi.json'
+    if not kpi_path.is_file():
+        return [
+            'docs/ergonomics-kpi.json missing; run: '
+            'python3 scripts/measure_time_to_first_run.py --write docs/ergonomics-kpi.json'
+        ]
+    try:
+        data = json.loads(kpi_path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f'docs/ergonomics-kpi.json invalid: {exc}']
+    if not isinstance(data.get('seconds'), (int, float)):
+        return ['docs/ergonomics-kpi.json must include numeric "seconds"']
+    return []
+
+
 def check_competitive_docs(
     *,
     acceptance_doc: Path,
@@ -143,6 +160,7 @@ def check_competitive_docs(
         errors.extend(
             _compare_generated_file(expected=dashboard_output, actual=tmp_dashboard)
         )
+        errors.extend(check_ergonomics_kpi(_REPO_ROOT))
         return errors
 
 

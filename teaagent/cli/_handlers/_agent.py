@@ -219,6 +219,8 @@ def _execute_agent_task(
         payload['task'] = task
         if initial_observations:
             payload['replayed_observations'] = len(initial_observations)
+        if initial_context_extra and initial_context_extra.get('resume_compaction'):
+            payload['resume_compaction'] = initial_context_extra['resume_compaction']
         if auto_approved_call_id is not None:
             payload['auto_approved_call_id'] = auto_approved_call_id
     print_json(payload)

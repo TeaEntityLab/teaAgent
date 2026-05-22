@@ -1,5 +1,5 @@
 {
   "ok": true,
   "path": "pip install -e . \u2192 teaagent init \u2192 teaagent daily --dry-run",
-  "seconds": 0.348
+  "seconds": 0.312
 }

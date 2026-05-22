@@ -38,9 +38,18 @@ def test_daily_ergonomics_smoke(tmp_path: Path) -> None:
     assert recipes.returncode == 0
     payload = json.loads(recipes.stdout)
     names = {item['name'] for item in payload}
-    assert 'review-staged' in names
-    assert 'fix-failing-test' in names
-    assert 'release-check' in names
+    required = {
+        'review-staged',
+        'fix-failing-test',
+        'summarize-repo',
+        'map-architecture',
+        'safe-cleanup',
+        'write-tests',
+        'release-check',
+        'docs-drift',
+        'security-pass',
+    }
+    assert required <= names
     recipe_run = _run(
         'recipes',
         'run',
@@ -51,6 +60,9 @@ def test_daily_ergonomics_smoke(tmp_path: Path) -> None:
         cwd=tmp_path,
     )
     assert recipe_run.returncode == 0
+    recipe_payload = json.loads(recipe_run.stdout)
+    assert recipe_payload['permission_mode'] == 'read-only'
+    assert recipe_payload['context_profile'] == 'lean'
     approval = _run('approval', 'list', '--root', str(tmp_path), cwd=tmp_path)
     assert approval.returncode == 0
     recall = _run('recall', '--root', str(tmp_path), '--limit', '3', cwd=tmp_path)

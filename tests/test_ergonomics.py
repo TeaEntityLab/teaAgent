@@ -162,6 +162,21 @@ def test_merge_acp_context_blocks() -> None:
     assert meta
 
 
+def test_model_capabilities_match_providers() -> None:
+    from teaagent.llm import available_providers
+    from teaagent.model_capabilities import build_capability_table
+
+    table_providers = {row['provider'] for row in build_capability_table()}
+    assert table_providers == set(available_providers())
+
+
+def test_provider_required_without_init(tmp_path: Path) -> None:
+    from teaagent.cli import main
+
+    code = main(['agent', 'run', 'task without provider', '--root', str(tmp_path)])
+    assert code != 0
+
+
 def test_resolve_auto_compact_defaults(tmp_path: Path) -> None:
     import argparse
 
