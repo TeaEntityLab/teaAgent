@@ -13,15 +13,16 @@ _MODULE = module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = _MODULE
 _SPEC.loader.exec_module(_MODULE)
 parse_matrix_markdown = _MODULE.parse_matrix_markdown
+parse_matrix_meta = _MODULE.parse_matrix_meta
 render_html = _MODULE.render_html
 
 
 def test_parse_matrix_markdown_extracts_rows() -> None:
     markdown = """
-| Use Case | Covered | Required Tests | Missing Tests |
-|---|---|---|---|
-| Foo | yes | `test_a.py` | - |
-| Bar | no | `test_b.py` | `test_b.py` |
+| Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |
+|---|---|---|---|---|---|---|
+| Foo | yes | low | N/A | low | `test_a.py` | - |
+| Bar | no | high | undo | high | `test_b.py` | `test_b.py` |
 """
     rows = parse_matrix_markdown(markdown)
     assert len(rows) == 2
@@ -32,12 +33,15 @@ def test_parse_matrix_markdown_extracts_rows() -> None:
 
 def test_render_html_includes_coverage_summary() -> None:
     markdown = """
-| Use Case | Covered | Required Tests | Missing Tests |
-|---|---|---|---|
-| Foo | yes | `test_a.py` | - |
-| Bar | no | `test_b.py` | `test_b.py` |
+Landscape survey reviewed: **2026-05-22**
+Open roadmap differentiators (P1/P2): **2**
+| Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |
+|---|---|---|---|---|---|---|
+| Foo | yes | low | N/A | low | `test_a.py` | - |
+| Bar | no | high | undo | high | `test_b.py` | `test_b.py` |
 """
     rows = parse_matrix_markdown(markdown)
-    rendered = render_html(rows)
+    meta = parse_matrix_meta(markdown)
+    rendered = render_html(rows, meta=meta)
     assert 'Covered: 1/2 (50.0%)' in rendered
     assert 'TeaAgent Use-case Coverage' in rendered

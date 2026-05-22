@@ -21,6 +21,7 @@ from unittest.mock import patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from teaagent.hybrid_search import LocalHybridSearchBackend
 from teaagent.memory import MemoryCatalog
 
 
@@ -55,6 +56,29 @@ def test_preflight_includes_read_only_context_pack_evidence() -> None:
         assert any(entry['exists'] for entry in context_pack['candidate_files'])
         assert len(context_pack['memories']) >= 1
         assert context_pack['graph_rag']['status'] in {'indexed', 'not_indexed'}
+
+
+def test_preflight_graph_rag_includes_hybrid_hits_when_indexed() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        doc = root / 'teaagent' / 'runner.py'
+        doc.parent.mkdir(parents=True)
+        doc.write_text('runner audit chain regressions in tests', encoding='utf-8')
+        task = 'review teaagent/runner.py audit chain regressions in tests'
+        LocalHybridSearchBackend().index(
+            root=root, args={'include': 'teaagent/**', 'collection': 'default'}
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(['agent', 'preflight', 'gpt', task, '--root', tmp])
+        payload = json.loads(output.getvalue())
+
+        assert code == 0
+        graph = payload['context_pack']['graph_rag']
+        assert graph['status'] == 'indexed'
+        assert graph['reason'] == 'hybrid_search_read'
+        assert len(graph['hits']) >= 1
 
 
 def test_read_only_run_still_blocks_writes_with_context_pack_available() -> None:

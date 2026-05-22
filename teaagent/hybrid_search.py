@@ -210,6 +210,32 @@ def _snippet_from_text(text: str, query: str, *, max_chars: int = 200) -> str:
     return text[start:end]
 
 
+def indexed_db_path(root: Path, *, db_name: str = 'hybrid_search.sqlite3') -> Path:
+    """Return the hybrid index DB path without creating directories."""
+    return Path(root).resolve() / '.teaagent' / db_name
+
+
+def search_if_indexed(
+    root: Path,
+    query: str,
+    *,
+    limit: int = 5,
+    collection: str = 'default',
+    db_name: str = 'hybrid_search.sqlite3',
+) -> dict[str, Any] | None:
+    """Run a read-only hybrid search when an index database already exists."""
+    db_path = indexed_db_path(root, db_name=db_name)
+    if not db_path.is_file():
+        return None
+    backend = get_hybrid_backend('local')
+    if isinstance(backend, LocalHybridSearchBackend) and backend.db_name != db_name:
+        backend = LocalHybridSearchBackend(db_name=db_name)
+    return backend.search(
+        root=Path(root).resolve(),
+        args={'query': query, 'limit': limit, 'collection': collection},
+    )
+
+
 def _db_path(root: Path, name: str) -> Path:
     state_dir = root / '.teaagent'
     state_dir.mkdir(parents=True, exist_ok=True)

@@ -20,7 +20,9 @@ def test_parse_acceptance_test_files_extracts_test_names() -> None:
 
 def test_build_matrix_marks_missing_tests() -> None:
     available = {'test_agents_md_injection_flow.py'}
-    matrix = build_matrix_markdown(available)
+    matrix = build_matrix_markdown(
+        available, survey_review_date='2026-05-22', open_gap_count=0
+    )
     assert 'Project instruction conformance' in matrix
     assert 'no' in matrix.split('Project instruction conformance')[1].split('|')[1]
     assert '`test_first_run_experience_flow.py`' in matrix
@@ -31,6 +33,8 @@ def test_build_matrix_marks_covered_use_case() -> None:
         'test_agents_md_injection_flow.py',
         'test_first_run_experience_flow.py',
     }
-    matrix = build_matrix_markdown(available)
+    matrix = build_matrix_markdown(
+        available, survey_review_date='2026-05-22', open_gap_count=0
+    )
     assert 'Project instruction conformance' in matrix
     assert 'yes' in matrix.split('Project instruction conformance')[1].split('|')[1]

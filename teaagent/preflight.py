@@ -92,7 +92,13 @@ def preflight(
     clarification = clarify_task(task)
     routing = route_model(task, provider=provider, model=model) if route else None
     memories = MemoryCatalog(root_path).search(task, limit=memory_limit)
-    context_pack = build_context_pack(task, root=root_path, memory_limit=memory_limit)
+    context_pack = build_context_pack(
+        task,
+        root=root_path,
+        memory_limit=memory_limit,
+        hydrate_lsp=True,
+        search_graph=True,
+    )
     registry = build_workspace_tool_registry(root_path)
 
     health = check_env_health(
