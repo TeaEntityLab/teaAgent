@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
+import tempfile
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -88,9 +90,70 @@ def refresh_competitive_docs(
     return errors
 
 
-def main() -> int:
+def _compare_generated_file(*, expected: Path, actual: Path) -> list[str]:
+    if not expected.is_file():
+        return [f'Generated docs check target missing: {expected}']
+    if not actual.is_file():
+        return [f'Generated docs check output missing: {actual}']
+    expected_text = expected.read_text(encoding='utf-8')
+    actual_text = actual.read_text(encoding='utf-8')
+    if expected_text == actual_text:
+        return []
+    rel = (
+        expected.relative_to(_REPO_ROOT)
+        if expected.is_relative_to(_REPO_ROOT)
+        else expected
+    )
+    return [f'{rel} is out of date; run: python3 scripts/refresh_competitive_docs.py']
+
+
+def check_competitive_docs(
+    *,
+    acceptance_doc: Path,
+    acceptance_tests_dir: Path,
+    matrix_output: Path,
+    dashboard_output: Path,
+    survey_doc: Path,
+    use_cases_doc: Path,
+    acceptance_source: str,
+) -> list[str]:
+    """Generate docs in a tempdir and compare without mutating tracked files."""
+    with tempfile.TemporaryDirectory(prefix='teaagent-competitive-docs-') as raw_tmp:
+        tmp = Path(raw_tmp)
+        tmp_acceptance = tmp / acceptance_doc.name
+        tmp_matrix = tmp / matrix_output.name
+        tmp_dashboard = tmp / dashboard_output.name
+        shutil.copy2(acceptance_doc, tmp_acceptance)
+
+        errors = refresh_competitive_docs(
+            acceptance_doc=tmp_acceptance,
+            acceptance_tests_dir=acceptance_tests_dir,
+            matrix_output=tmp_matrix,
+            dashboard_output=tmp_dashboard,
+            survey_doc=survey_doc,
+            use_cases_doc=use_cases_doc,
+            acceptance_source=acceptance_source,
+        )
+        errors.extend(
+            _compare_generated_file(expected=acceptance_doc, actual=tmp_acceptance)
+        )
+        errors.extend(
+            _compare_generated_file(expected=matrix_output, actual=tmp_matrix)
+        )
+        errors.extend(
+            _compare_generated_file(expected=dashboard_output, actual=tmp_dashboard)
+        )
+        return errors
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description='Run competitive-docs refresh steps from docs/release-checklist.md.'
+    )
+    parser.add_argument(
+        '--check',
+        action='store_true',
+        help='Generate into a temporary directory and fail if tracked docs are stale.',
     )
     parser.add_argument('--acceptance-doc', default='docs/acceptance.md')
     parser.add_argument('--acceptance-tests-dir', default='tests/acceptance')
@@ -106,22 +169,31 @@ def main() -> int:
         default='collect',
         help='How to count acceptance tests for docs/acceptance.md status.',
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    errors = refresh_competitive_docs(
-        acceptance_doc=_REPO_ROOT / args.acceptance_doc,
-        acceptance_tests_dir=_REPO_ROOT / args.acceptance_tests_dir,
-        matrix_output=_REPO_ROOT / args.matrix_output,
-        dashboard_output=_REPO_ROOT / args.dashboard_output,
-        survey_doc=_REPO_ROOT / args.survey_doc,
-        use_cases_doc=_REPO_ROOT / args.use_cases_doc,
-        acceptance_source=args.acceptance_source,
+    inputs = {
+        'acceptance_doc': _REPO_ROOT / args.acceptance_doc,
+        'acceptance_tests_dir': _REPO_ROOT / args.acceptance_tests_dir,
+        'matrix_output': _REPO_ROOT / args.matrix_output,
+        'dashboard_output': _REPO_ROOT / args.dashboard_output,
+        'survey_doc': _REPO_ROOT / args.survey_doc,
+        'use_cases_doc': _REPO_ROOT / args.use_cases_doc,
+        'acceptance_source': args.acceptance_source,
+    }
+    errors = (
+        check_competitive_docs(**inputs)
+        if args.check
+        else refresh_competitive_docs(**inputs)
     )
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
         return 1
-    print('Competitive docs refresh passed.')
+    print(
+        'Competitive docs check passed.'
+        if args.check
+        else 'Competitive docs refresh passed.'
+    )
     return 0
 
 

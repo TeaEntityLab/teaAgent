@@ -36,7 +36,7 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 - [x] Preflight read-only `context_pack` (hybrid, `.teaagent/knowledge`, GraphQLite DB hits; `test_context_pack_read_only_flow.py`)
 - [x] Subagent delegation with `shared` / `worktree` / `container` isolation and lineage audit (`test_subagent_*_isolation_flow.py`)
 
-## Next differentiators (open)
+## Competitive differentiators (implemented / maintenance)
 
 | Track | Why it matters | Backlog ID |
 |-------|----------------|------------|
@@ -49,10 +49,19 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 | Use-case dashboard refresh | Matrix/HTML include survey date and open-gap counts | Done (maintenance) |
 | Recurring survey cadence | `docs/release-checklist.md` | Done (maintenance) |
 
-## Future API note (non-breaking)
+## Current API note (non-breaking)
 
-`subagent` / `subagent_batch` should record parent-child run lineage and later
-accept `isolation = shared | worktree | container` (filesystem snapshot under `.teaagent/subagent-containers/`).
+`subagent` / `subagent_batch` record parent-child run lineage and accept
+`isolation = shared | worktree | container` (filesystem snapshot under
+`.teaagent/subagent-containers/`). Keep these fields additive-compatible for
+future subagent tooling.
+
+## Future research / P2 maintenance
+
+- Hosted/cloud surface docs for managed-runtime deployments.
+- Background-session story across CLI/TUI/IDE surfaces.
+- Desktop/client-server packaging guidance.
+- Repo-map quality evaluation against larger real-world repositories.
 
 ## Next review trigger
 

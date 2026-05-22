@@ -212,7 +212,7 @@ def build_matrix_markdown(
         f'Landscape survey reviewed: **{survey_review_date}** '
         f'([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).',
         f'Open roadmap differentiators (P1/P2): **{open_gap_count}** '
-        '(see [docs/use-cases.md](use-cases.md#next-differentiators-roadmap)).',
+        '(see [docs/use-cases.md](use-cases.md#competitive-differentiators-implemented--maintenance)).',
         '',
         '| Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |',
         '|---|---|---|---|---|---|---|',

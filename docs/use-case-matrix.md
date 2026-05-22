@@ -3,7 +3,7 @@
 Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.
 
 Landscape survey reviewed: **2026-05-22** ([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).
-Open roadmap differentiators (P1/P2): **0** (see [docs/use-cases.md](use-cases.md#next-differentiators-roadmap)).
+Open roadmap differentiators (P1/P2): **0** (see [docs/use-cases.md](use-cases.md#competitive-differentiators-implemented--maintenance)).
 
 | Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |
 |---|---|---|---|---|---|---|

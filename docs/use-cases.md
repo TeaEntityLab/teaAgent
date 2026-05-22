@@ -30,11 +30,11 @@ governance, audit, and portable protocol surfaces.
 | IDE surface (VS Code) | Implemented | `test_vscode_extension_mcp_boot_flow.py` |
 | Federation (A2A, ANP) | Implemented | `test_anp_adapter_flow.py`, A2A acceptance flows |
 
-## Next differentiators (roadmap)
+## Competitive Differentiators (Implemented / Maintenance)
 
-These items are intentionally **not** full parity gaps; they sharpen TeaAgent’s
-governance-first story against the 2026-05-22 landscape survey. See
-[docs/backlog-priority.md](backlog-priority.md) for acceptance targets.
+These items are intentionally **not** full parity gaps. They are shipped
+differentiators from the 2026-05-22 landscape survey that now need release
+hygiene, drift checks, and periodic review rather than feature buildout.
 
 | Differentiator | Priority | Backlog reference |
 |----------------|----------|-------------------|
@@ -85,7 +85,7 @@ governance-first story against the 2026-05-22 landscape survey. See
 | Plan mode exploration | Explore codebases in read-only mode without modifications. | low | N/A | low | `test_plan_mode_read_only_flow.py` | Implemented |
 | Plugin extensibility | Add custom Commands, Agents, or MCP integrations. | medium | remove plugin | low | `test_plugins.py` | Implemented |
 
-## Planned Market-Standard Use Cases
+## Implemented Market-Standard Use Cases
 
 | Use Case | User Goal | Blast Radius | Rollback Path | Audit Criticality | Required Acceptance Coverage | Priority | Status |
 |---|---|---|---|---|---|---|---|
@@ -97,7 +97,7 @@ governance-first story against the 2026-05-22 landscape survey. See
 | Session resume continuity | Resume a paused or completed run and preserve task, observations, memory, and audit context. | `test_session_resume_continuity_flow.py` | P1 | Implemented |
 | External ecosystem compatibility | Validate representative MCP manifests, skill metadata, and tool annotations against TeaAgent's registry contract. | `test_external_tool_manifest_compatibility_flow.py` | P2 | Implemented |
 
-## Todo Plan
+## Completed Delivery Plan
 
 1. Completed (P0): Provider/docs consistency acceptance (`test_provider_matrix_consistency_flow.py`).
 2. Completed (P0): Read-only planning acceptance (`test_plan_mode_read_only_flow.py`).

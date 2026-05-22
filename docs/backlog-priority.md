@@ -73,6 +73,7 @@ Then manually refresh [scripts/refresh_agent_readme_survey.md](../scripts/refres
 |---------|----------------------|
 | Survey | `Last reviewed` date, source table, `docs/use-cases.md` differentiators |
 | Docs drift | `validate_docs_consistency.py` (providers, mode matrix, surface recipes, catalog) |
-| Coverage artifacts | `docs/acceptance.md` count, `docs/use-case-matrix.md`, `docs/use-case-matrix.html` via `refresh_competitive_docs.py` |
+| Coverage artifacts | `docs/acceptance.md` count, `docs/use-case-matrix.md`, `docs/use-case-matrix.html` via `refresh_competitive_docs.py --check` (CI/review) and `refresh_competitive_docs.py` (intentional regeneration) |
 | Extension surfaces | `docs/plugin-skill-catalog.md`, `docs/USAGE.md`, `docs/cli.md` when hooks, isolation modes, or preflight/context APIs change |
 | New index backends | `teaagent/context_pack.py` read-only graph evidence when adding search stores |
+| Strategic P2 research | hosted/cloud surface docs, background sessions, desktop/client-server packaging, repo-map quality evaluation |
