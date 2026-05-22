@@ -31,7 +31,7 @@ def status_short_command(args: argparse.Namespace) -> int:
     defaults = load_workspace_defaults(args.root)
     provider = args.provider or defaults.get('provider')
     if not provider:
-        print('teaagent:? provider unset (run teaagent init)', file=sys.stderr)
+        print('teaagent:? provider unset (run teaagent setup)', file=sys.stderr)
         return 1
     line = build_status_short(
         root=args.root,

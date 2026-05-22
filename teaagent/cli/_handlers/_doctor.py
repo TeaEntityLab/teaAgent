@@ -4,13 +4,16 @@ import argparse
 import getpass
 import json
 import os
-import shlex
-import subprocess
 from pathlib import Path
 from typing import Any
 
 from teaagent.llm import available_providers
 from teaagent.llm._config import PROVIDER_CONFIGS
+from teaagent.wizard import (
+    merge_env_exports,
+    read_keychain_secret,
+    redact_wizard_payload,
+)
 
 
 def doctor_graphqlite(args: argparse.Namespace) -> int:
@@ -149,7 +152,7 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
             updates[base_url_key] = base_url
         if extra_headers:
             updates['WORKERS_AI_EXTRA_HEADERS'] = extra_headers
-        _merge_env_exports(
+        merge_env_exports(
             env_file,
             updates,
             '# Updated by `teaagent doctor aigateway --write-env`.',
@@ -169,7 +172,7 @@ def doctor_providers(args: argparse.Namespace) -> int:
     for provider in available_providers():
         ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
         env_name = PROVIDER_CONFIGS[provider].api_key_env
-        keychain_present = bool(_read_keychain_secret(env_name))
+        keychain_present = bool(read_keychain_secret(env_name))
         results.append(
             {
                 'provider': provider,
@@ -201,7 +204,7 @@ def doctor_project(args: argparse.Namespace) -> int:
         'mode': 'checklist',
         'root': root,
         'next_steps': [
-            f'teaagent init --root {root}',
+            f'teaagent setup --root {root}',
             'teaagent doctor providers',
             'teaagent doctor all',
             f'teaagent mcp serve --http --port 7330 --root {root}',
@@ -289,7 +292,7 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
     if not api_token:
         api_token = os.environ.get('CLOUDFLARE_API_TOKEN', '').strip()
     if not api_token:
-        api_token = _read_keychain_secret('CLOUDFLARE_API_TOKEN')
+        api_token = read_keychain_secret('CLOUDFLARE_API_TOKEN')
     auth_enabled = input('Authenticated Gateway enabled? [y/N]: ').strip().lower() in (
         'y',
         'yes',
@@ -334,7 +337,7 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
             updates['WORKERS_AI_EXTRA_HEADERS'] = json.dumps(
                 {'cf-aig-authorization': f'Bearer {gateway_token}'}
             )
-        _merge_env_exports(
+        merge_env_exports(
             env_file,
             updates,
             '# Updated by `teaagent doctor aigateway --wizard`.',
@@ -370,30 +373,6 @@ def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
-def _read_keychain_secret(env_var: str) -> str:
-    service = f'teaagent/{env_var}'
-    try:
-        proc = subprocess.run(
-            [
-                'security',
-                'find-generic-password',
-                '-a',
-                os.environ.get('USER', ''),
-                '-s',
-                service,
-                '-w',
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except Exception:
-        return ''
-    if proc.returncode != 0:
-        return ''
-    return proc.stdout.strip()
-
-
 def _doctor_model_wizard(args: argparse.Namespace) -> int:
     provider = args.provider
     config = PROVIDER_CONFIGS[provider]
@@ -405,7 +384,7 @@ def _doctor_model_wizard(args: argparse.Namespace) -> int:
         key = os.environ.get(env_name, '').strip()
         token_source = 'env'
     if not key:
-        key = _read_keychain_secret(env_name)
+        key = read_keychain_secret(env_name)
         token_source = 'keychain' if key else 'missing'
     if key:
         os.environ[env_name] = key
@@ -424,7 +403,7 @@ def _doctor_model_wizard(args: argparse.Namespace) -> int:
         updates = {env_name: key}
         if config.base_url_env and base_url_value:
             updates[config.base_url_env] = base_url_value
-        _merge_env_exports(
+        merge_env_exports(
             env_file,
             updates,
             f'# Updated by `teaagent doctor model {provider} --wizard`.',
@@ -458,7 +437,7 @@ def _doctor_providers_wizard(args: argparse.Namespace) -> int:
     configured = []
     skipped = []
     auto_resolved = []
-    env_exports: list[str] = []
+    env_updates: dict[str, str] = {}
     for provider in selected:
         ok, _message = args._check_llm(provider)  # type: ignore[attr-defined]
         env_name = PROVIDER_CONFIGS[provider].api_key_env
@@ -473,14 +452,14 @@ def _doctor_providers_wizard(args: argparse.Namespace) -> int:
             key = os.environ.get(env_name, '').strip()
             source = 'env'
         if not key:
-            key = _read_keychain_secret(env_name)
+            key = read_keychain_secret(env_name)
             source = 'keychain' if key else 'missing'
         if not key:
             skipped.append({'provider': provider, 'reason': 'missing'})
             continue
         os.environ[env_name] = key
         configured.append(provider)
-        env_exports.append(f'export {env_name}={key}')
+        env_updates[env_name] = key
         if source != 'prompt':
             auto_resolved.append({'provider': provider, 'source': source})
 
@@ -489,13 +468,9 @@ def _doctor_providers_wizard(args: argparse.Namespace) -> int:
     if getattr(args, 'write_env', False):
         root = Path(getattr(args, 'root', '.')).resolve()
         env_file = root / '.teaagent' / 'env'
-        updates: dict[str, str] = {}
-        for export_line in env_exports:
-            name, _, value = export_line.partition('=')
-            updates[name.replace('export ', '', 1)] = value
-        _merge_env_exports(
+        merge_env_exports(
             env_file,
-            updates,
+            env_updates,
             '# Updated by `teaagent doctor providers --wizard`.',
         )
         env_status = 'written'
@@ -551,7 +526,7 @@ def _doctor_project_wizard(args: argparse.Namespace) -> int:
         'provider': provider,
         'permission_mode': permission_mode,
         'next_steps': [
-            f'teaagent init --root {root} --provider {provider} --permission-mode {permission_mode}',
+            f'teaagent setup --root {root} --provider {provider} --permission-mode {permission_mode}',
             f'teaagent doctor model {provider}',
             f'teaagent agent run {provider} "Summarize this repository" --root {root} --permission-mode read-only',
             f'teaagent mcp serve --http --port 7330 --root {root}',
@@ -586,40 +561,6 @@ def _doctor_mcp_wizard(args: argparse.Namespace) -> int:
     }
     print_json(payload)
     return 0
-
-
-def _merge_env_exports(env_file: Path, updates: dict[str, str], header: str) -> None:
-    env_file.parent.mkdir(parents=True, exist_ok=True)
-    existing = _read_existing_exports(env_file)
-    merged = {**existing, **{k: v for k, v in updates.items() if v}}
-
-    lines = [header]
-    for key in sorted(merged.keys()):
-        lines.append(f'export {key}={shlex.quote(merged[key])}')
-    env_file.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-
-
-def _read_existing_exports(env_file: Path) -> dict[str, str]:
-    if not env_file.is_file():
-        return {}
-    exports: dict[str, str] = {}
-    for raw_line in env_file.read_text(encoding='utf-8').splitlines():
-        line = raw_line.strip()
-        if not line.startswith('export '):
-            continue
-        assignment = line[len('export ') :]
-        key, sep, value = assignment.partition('=')
-        if not sep:
-            continue
-        key = key.strip()
-        value = value.strip()
-        if not key:
-            continue
-        try:
-            exports[key] = shlex.split(value)[0] if value else ''
-        except ValueError:
-            exports[key] = value.strip('"\'')
-    return exports
 
 
 def doctor_all(args: argparse.Namespace) -> int:
@@ -661,4 +602,6 @@ def doctor_migration_command(args: argparse.Namespace) -> int:
 
 
 def print_json(value: Any) -> None:
+    if isinstance(value, dict) and value.get('mode') in {'wizard', 'setup'}:
+        value = redact_wizard_payload(value)
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))

@@ -108,7 +108,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`101 passed`.
+`104 passed`.
 
 <!-- ACCEPTANCE_TIERS:START -->
 

@@ -12,6 +12,7 @@ def register(
     handlers: dict[str, Callable],
 ) -> None:
     _init(subparsers, handlers.get('init'))
+    _setup(subparsers, handlers.get('setup'))
     _clarify(subparsers, handlers['clarify'])
     _tui(subparsers, handlers['tui'])
     _configure(subparsers, handlers.get('configure'))
@@ -52,15 +53,7 @@ def register(
     _workspace(subparsers, handlers['workspace_tools'], handlers['workspace_openapi'])
 
 
-def _init(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
-    handler: Optional[Callable] = None,
-) -> None:
-    p = subparsers.add_parser(
-        'init',
-        help='Initialize workspace TeaAgent config (first-time wizard).',
-        description='Create .teaagent/config.json and optionally .teaagent/env for provider keys.',
-    )
+def _add_workspace_bootstrap_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
@@ -116,6 +109,39 @@ def _init(
         default=0,
         help='Daily estimated cost cap in cents (0 disables).',
     )
+
+
+def _init(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Optional[Callable] = None,
+) -> None:
+    p = subparsers.add_parser(
+        'init',
+        help='Initialize workspace TeaAgent config (legacy bootstrap).',
+        description='Create .teaagent/config.json and optionally .teaagent/env for provider keys.',
+    )
+    _add_workspace_bootstrap_args(p)
+    p.add_argument(
+        '--wizard',
+        action='store_true',
+        help='Run the guided first-session setup flow (same as `teaagent setup`).',
+    )
+    p.set_defaults(func=handler)
+
+
+def _setup(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Optional[Callable] = None,
+) -> None:
+    p = subparsers.add_parser(
+        'setup',
+        help='Guided first-session setup (recommended).',
+        description=(
+            'Configure provider, workspace defaults, AGENTS.md, env order checks, '
+            'and return a safe next command.'
+        ),
+    )
+    _add_workspace_bootstrap_args(p)
     p.set_defaults(func=handler)
 
 

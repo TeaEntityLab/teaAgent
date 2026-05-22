@@ -62,6 +62,7 @@ from teaagent.cli._handlers import (
     session_list_command,
     session_resume_command,
     session_show_command,
+    setup_command,
     start_tui,
     status_short_command,
     ultrawork_list_command,
@@ -179,6 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
             'workspace_openapi': workspace_openapi_command,
             'completion': completion_command,
             'init': init_command,
+            'setup': setup_command,
             'audit_list': audit_list_command,
             'audit_show': audit_show_command,
             'audit_prune': audit_prune_command,
@@ -297,7 +299,7 @@ def _require_provider_for_agent_commands(args: argparse.Namespace) -> None:
 
 
 def apply_config_defaults(args: argparse.Namespace) -> None:
-    if getattr(args, 'command', None) == 'init':
+    if getattr(args, 'command', None) in {'init', 'setup'}:
         return
     from teaagent.ergonomics.workspace_defaults import (
         apply_workspace_defaults_to_namespace,

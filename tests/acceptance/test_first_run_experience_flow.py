@@ -88,6 +88,6 @@ def test_first_run_init_returns_onboarding_checklist(tmp_path: Path) -> None:
     checklist = payload.get('next_steps')
     assert isinstance(checklist, list)
     assert len(checklist) >= 3
-    assert any('doctor model gpt' in step for step in checklist)
-    assert any('agent run gpt' in step and 'read-only' in step for step in checklist)
-    assert any('mcp serve --http --port 7330' in step for step in checklist)
+    assert any('teaagent setup' in step for step in checklist)
+    assert any('daily' in step and 'dry-run' in step for step in checklist)
+    assert any('doctor mcp' in step and 'wizard' in step for step in checklist)

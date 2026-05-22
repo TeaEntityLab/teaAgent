@@ -130,6 +130,54 @@ class CLITests(unittest.TestCase):
             )
             self.assertEqual(cfg['provider'], 'gpt')
 
+    def test_setup_writes_workspace_and_redacts_stdout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        'setup',
+                        '--root',
+                        tmp,
+                        '--provider',
+                        'gpt',
+                        '--api-key',
+                        'sk-setup-cli',
+                        '--permission-mode',
+                        'read-only',
+                        '--write-env',
+                    ]
+                )
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(output.getvalue())
+            self.assertTrue(payload['ok'])
+            self.assertEqual(payload['mode'], 'setup')
+            self.assertIn('safe_command', payload)
+            self.assertIn('checks', payload)
+            self.assertNotIn('sk-setup-cli', output.getvalue())
+            self.assertTrue((Path(tmp) / '.teaagent' / 'config.json').exists())
+
+    def test_init_wizard_delegates_to_setup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        'init',
+                        '--wizard',
+                        '--root',
+                        tmp,
+                        '--provider',
+                        'gpt',
+                        '--api-key',
+                        'sk-wizard-delegate',
+                    ]
+                )
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(output.getvalue())
+            self.assertEqual(payload['mode'], 'setup')
+            self.assertIn('files_written', payload)
+
     def test_doctor_graphqlite_outputs_json(self) -> None:
         output = io.StringIO()
 
@@ -178,7 +226,7 @@ class CLITests(unittest.TestCase):
         with (
             patch('teaagent.cli._handlers._doctor.getpass.getpass', return_value=''),
             patch('teaagent.cli._handlers._doctor.input', return_value=''),
-            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            patch('teaagent.wizard.subprocess.run') as security_run,
             patch.dict(os.environ, {}, clear=True),
             redirect_stdout(output),
         ):
@@ -359,7 +407,7 @@ class CLITests(unittest.TestCase):
                 'teaagent.cli._handlers._doctor.getpass.getpass',
                 return_value='',
             ),
-            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            patch('teaagent.wizard.subprocess.run') as security_run,
             patch.dict(os.environ, {}, clear=True),
             redirect_stdout(output),
         ):
@@ -376,7 +424,7 @@ class CLITests(unittest.TestCase):
         output = io.StringIO()
         with (
             patch('teaagent.cli.check_llm_configuration', return_value=(True, 'ok')),
-            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            patch('teaagent.wizard.subprocess.run') as security_run,
             redirect_stdout(output),
         ):
             security_run.return_value.returncode = 1
@@ -450,7 +498,7 @@ class CLITests(unittest.TestCase):
         output = io.StringIO()
         with (
             patch('teaagent.cli._handlers._doctor.getpass.getpass', return_value=''),
-            patch('teaagent.cli._handlers._doctor.subprocess.run') as security_run,
+            patch('teaagent.wizard.subprocess.run') as security_run,
             patch.dict(os.environ, {'OPENAI_API_KEY': ''}, clear=True),
             redirect_stdout(output),
         ):

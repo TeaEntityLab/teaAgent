@@ -53,11 +53,14 @@ pip install -e ".[tui]"
 ### 2. First Run
 
 ```bash
-# Verify provider setup
-teaagent doctor model gpt
+# Guided workspace setup (writes .teaagent/config.json, optional .teaagent/env)
+teaagent setup --root . --provider gpt --permission-mode read-only --write-env
 
-# Safe read-only first task
-teaagent agent run gpt "Summarize the test suite" --permission-mode read-only
+# Safe providerless dry-run after setup
+teaagent daily "summarize this repo" --dry-run --root .
+
+# Safe read-only first task (provider from config when omitted)
+teaagent agent run "Summarize the test suite" --permission-mode read-only
 ```
 
 ### 3. Permission Modes

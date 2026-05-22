@@ -79,7 +79,7 @@ def apply_workspace_defaults_to_namespace(
         provider = defaults.get('provider')
         if not provider:
             raise SystemExit(
-                'provider required: run `teaagent init` or pass provider on the command line'
+                'provider required: run `teaagent setup` or pass provider on the command line'
             )
         args.provider = provider
     for key, value in defaults.items():
