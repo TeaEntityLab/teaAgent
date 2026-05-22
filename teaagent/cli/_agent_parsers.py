@@ -128,6 +128,11 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         help='Plan the run (preflight + token budget) without calling the model.',
     )
     p.add_argument(
+        '--human',
+        action='store_true',
+        help='With --dry-run, print a beginner-friendly summary instead of JSON.',
+    )
+    p.add_argument(
         '--background',
         action='store_true',
         help='Run detached; use agent attach <run_id> --follow to stream events.',
@@ -227,6 +232,11 @@ def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type
         '--dry-run',
         action='store_true',
         help='Emit preflight and token budget without persisting a journal run.',
+    )
+    p.add_argument(
+        '--human',
+        action='store_true',
+        help='Print a beginner-friendly readiness summary instead of JSON.',
     )
     p.add_argument(
         '--write-journal',

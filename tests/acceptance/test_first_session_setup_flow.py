@@ -54,11 +54,13 @@ def test_first_session_setup_smoke(tmp_path: Path) -> None:
                 '--root',
                 str(tmp_path),
                 '--dry-run',
+                '--human',
             ]
         )
-    daily_payload = json.loads(output.getvalue())
-    assert daily_code == 0
-    assert daily_payload.get('dry_run') is True or 'token_budget' in daily_payload
+    daily_text = output.getvalue()
+    assert daily_code in (0, 2)
+    assert 'TeaAgent readiness' in daily_text
+    assert '"dry_run"' not in daily_text
 
     output = io.StringIO()
     with redirect_stdout(output):

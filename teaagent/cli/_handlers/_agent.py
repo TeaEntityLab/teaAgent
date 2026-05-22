@@ -16,6 +16,15 @@ from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalRequest, RunResult
 
 
+def _emit_readiness_payload(args: argparse.Namespace, payload: dict[str, Any]) -> None:
+    if getattr(args, 'human', False):
+        from teaagent.ergonomics.human_output import format_readiness_summary
+
+        print(format_readiness_summary(payload, root=args.root))
+        return
+    print_json(payload)
+
+
 def agent_run_task(args: argparse.Namespace) -> int:
     if getattr(args, 'background', False):
         return _start_background_run(args)
@@ -23,18 +32,18 @@ def agent_run_task(args: argparse.Namespace) -> int:
     if getattr(args, 'dry_run', False):
         from teaagent.ergonomics.dry_run import build_dry_run_payload
 
-        print_json(
-            build_dry_run_payload(
-                task=task,
-                root=args.root,
-                provider=args.provider,
-                model=args.model,
-                permission_mode=parse_permission_mode(args.permission_mode),
-                route=args.route_model,
-                context_profile=getattr(args, 'context_profile', 'balanced'),
-            )
+        payload = build_dry_run_payload(
+            task=task,
+            root=args.root,
+            provider=args.provider,
+            model=args.model,
+            permission_mode=parse_permission_mode(args.permission_mode),
+            route=args.route_model,
+            context_profile=getattr(args, 'context_profile', 'balanced'),
         )
-        return 0
+        _emit_readiness_payload(args, payload)
+        ready = payload.get('would_invoke_model', False)
+        return 0 if ready or not getattr(args, 'human', False) else 2
     return _execute_agent_task(args, task)
 
 
@@ -395,20 +404,20 @@ def agent_daily_command(args: argparse.Namespace) -> int:
         task = args.task or 'daily readiness check'
         from teaagent.ergonomics.dry_run import build_dry_run_payload
 
-        print_json(
-            build_dry_run_payload(
-                task=task,
-                root=args.root,
-                provider=args.provider,
-                model=args.model,
-                permission_mode=parse_permission_mode(args.permission_mode),
-                route=args.route_model,
-                memory_limit=args.memory_limit,
-                context_profile=args.context_profile,
-                runs_limit=args.runs_limit,
-            )
+        payload = build_dry_run_payload(
+            task=task,
+            root=args.root,
+            provider=args.provider,
+            model=args.model,
+            permission_mode=parse_permission_mode(args.permission_mode),
+            route=args.route_model,
+            memory_limit=args.memory_limit,
+            context_profile=args.context_profile,
+            runs_limit=args.runs_limit,
         )
-        return 0
+        _emit_readiness_payload(args, payload)
+        ready = payload.get('would_invoke_model', False)
+        return 0 if ready or not getattr(args, 'human', False) else 2
     brief = build_daily_brief(
         task=args.task,
         root=args.root,
@@ -430,7 +439,12 @@ def agent_daily_command(args: argparse.Namespace) -> int:
     payload = brief.to_dict()
     if banner:
         payload['whats_new'] = banner
-    print_json(payload)
+    if getattr(args, 'human', False):
+        from teaagent.ergonomics.human_output import format_readiness_summary
+
+        print(format_readiness_summary(payload, root=args.root, title='TeaAgent daily'))
+    else:
+        print_json(payload)
     return 0 if brief.ready else 2
 
 

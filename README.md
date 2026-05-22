@@ -2,30 +2,37 @@
 
 Governance-first agent harness for autonomous coding tasks. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
 
-## Daily Use in 5 Commands
+## Golden path (first hour)
 
-Start every session with a read-only cockpit (readiness, token pressure, recent runs, next safe command):
-
-```bash
-teaagent agent daily gpt "what I want to do today" --permission-mode read-only --root .
-```
-
-Then pick a mode and run:
+One canonical flow for new users. Everything else in this README is **advanced** — see [docs/USAGE.md](docs/USAGE.md) for the full walkthrough and recovery recipes.
 
 ```bash
-# Inspect (safe default)
-teaagent agent run gpt "summarize the test suite" --permission-mode read-only
+pip install -e .
 
-# Edit (bounded writes)
-teaagent agent run gpt "fix the failing test" --permission-mode workspace-write
+# 1. Configure workspace (provider + safety defaults)
+teaagent setup --root . --provider gpt --permission-mode read-only --write-env
 
-# Autonomous (approvals on destructive tools)
-teaagent agent run gpt "refactor auth module" --permission-mode prompt --heartbeat 5
+# 2. Inspect readiness without calling a model
+teaagent daily "summarize this repo" --dry-run --root . --human
+
+# 3. First read-only task (provider comes from .teaagent/config.json)
+teaagent run "summarize the test suite" --permission-mode read-only --root .
 ```
 
-Interactive loop (TUI): `teaagent tui --setup --root .` (or type `setup` inside the REPL), then `daily <task>`, `preflight <task>`, `ask <task>`, `runs`, `resume <run_id>`.
+**Advanced (recovery only):** `teaagent doctor model`, `teaagent doctor providers`, manual `~/.teaagent/providers_env.zsh`, legacy `teaagent init`, Keychain helpers — [docs/USAGE.md#recovery-recipes](docs/USAGE.md#recovery-recipes).
 
-Full recipes, context profiles (`lean` / `balanced` / `deep`), and token guidance: [docs/USAGE.md#daily-use](docs/USAGE.md#daily-use).
+## Daily use (after setup)
+
+Read-only cockpit each session:
+
+```bash
+teaagent daily "what I want to do today" --human
+teaagent run "summarize the test suite" --permission-mode read-only
+```
+
+Edit or autonomous modes, TUI, recipes, and context profiles: [docs/USAGE.md#daily-use](docs/USAGE.md#daily-use).
+
+Interactive loop: `teaagent tui --setup --root .`, then `daily`, `preflight`, `ask`, `runs`, `resume`.
 
 ## Start Here
 
@@ -52,16 +59,7 @@ pip install -e ".[tui]"
 
 ### 2. First Run
 
-```bash
-# Guided workspace setup (writes .teaagent/config.json, optional .teaagent/env)
-teaagent setup --root . --provider gpt --permission-mode read-only --write-env
-
-# Safe providerless dry-run after setup
-teaagent daily "summarize this repo" --dry-run --root .
-
-# Safe read-only first task (provider from config when omitted)
-teaagent agent run "Summarize the test suite" --permission-mode read-only
-```
+Same as the [golden path](#golden-path-first-hour) above. Prefer `--human` on `daily` for readable readiness; omit it when scripting (JSON default).
 
 ### 3. Permission Modes
 

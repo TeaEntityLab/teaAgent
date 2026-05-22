@@ -9,8 +9,86 @@ last_audit: 2026-05-17
 
 A beginner-friendly walkthrough from installation to your first agent run and chat session.
 
+**Docs map:** This file is the guided walkthrough. [README.md](../README.md) is the short golden path. [cli.md](cli.md) is the command reference.
+
+## Golden path
+
+Copy this sequence for a new repository (replace `gpt` with your provider):
+
+```bash
+pip install -e .
+teaagent setup --root . --provider gpt --permission-mode read-only --write-env
+teaagent daily "summarize this repo" --dry-run --root . --human
+teaagent run "summarize the test suite" --permission-mode read-only --root .
+```
+
+- Use `--human` on `daily` and `setup` for readable summaries; omit it for JSON (automation default).
+- After setup, `provider` is optional on `daily`, `run`, and top-level shortcuts when `.teaagent/config.json` exists.
+
+**Advanced paths** (not part of the golden path): `teaagent init`, `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
+
+## Setup model
+
+TeaAgent matches common agent-setup practice in five layers:
+
+| Layer | What it is | TeaAgent surface |
+|-------|------------|------------------|
+| Project bearings | Durable repo rules | `AGENTS.md` (created or preserved by `teaagent setup`) |
+| Safety boundary | What tools may do | Permission modes: `read-only`, `workspace-write`, `prompt`, `allow` |
+| Visibility | Context, cost, readiness | `teaagent daily`, `teaagent preflight`, `--human` summaries |
+| Capabilities | Extra tools | Skills, plugins, `teaagent mcp serve`, workspace tools |
+| Continuity | What happened last time | Audit log, `teaagent runs`, `teaagent resume` |
+
+Typical progression: **setup → daily (readiness) → read-only run → workspace-write or prompt when editing**.
+
+## Recovery recipes
+
+### Provider missing or wrong
+
+```bash
+teaagent setup --root . --provider gpt --write-env
+teaagent doctor model gpt
+```
+
+### Workspace not configured
+
+```bash
+teaagent setup --root . --permission-mode read-only
+# or inside TUI: setup write-env
+```
+
+### Daily dry-run says not ready
+
+```bash
+teaagent daily "readiness" --dry-run --human --root .
+```
+
+Read **Blocking** vs **Warning** vs **Info** in the output. Permission errors on `.git` in a sandbox are often informational — retry in a writable temp directory:
+
+```bash
+teaagent setup --root /tmp/teaagent-try --provider gpt --api-key "$OPENAI_API_KEY"
+teaagent daily "readiness" --dry-run --human --root /tmp/teaagent-try
+```
+
+### Need MCP or IDE tools
+
+```bash
+teaagent doctor mcp --wizard --root .
+teaagent mcp serve --http --port 7330 --root .
+```
+
+### Prefer TUI over CLI
+
+```bash
+teaagent tui --setup --root .
+# then: setup write-env | daily | ask | runs
+```
+
 ## Table of Contents
 
+- [Golden path](#golden-path)
+- [Setup model](#setup-model)
+- [Recovery recipes](#recovery-recipes)
 - [Installation](#installation)
 - [API Key Setup](#api-key-setup)
 - [Verify Your Setup](#verify-your-setup)

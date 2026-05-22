@@ -170,7 +170,13 @@ def setup_command(args: argparse.Namespace) -> int:
         args,
         check_llm=check_llm_configuration,
     )
-    print_json(result.to_dict())
+    payload = result.to_dict()
+    if getattr(args, 'human', False):
+        from teaagent.ergonomics.human_output import format_setup_summary
+
+        print(format_setup_summary(payload, root=args.root))
+    else:
+        print_json(payload)
     return 0 if result.ok else 1
 
 

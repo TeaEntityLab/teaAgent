@@ -50,13 +50,17 @@ teaagent --profile ci model smoke gpt
 Workspace defaults also load from `.teaagent/config.toml` when `config.json` is absent
 (`provider`, `context_profile`, `heartbeat`, `daily_cost_cap_cents`, and related keys).
 
-First-time setup (recommended):
+Golden path (recommended for new users):
 
 ```bash
 teaagent setup --root . --provider gpt --api-key "$OPENAI_API_KEY" --permission-mode read-only --write-env
+teaagent daily "summarize this repo" --dry-run --root . --human
+teaagent run "summarize the test suite" --permission-mode read-only --root .
 ```
 
-Legacy bootstrap (`init`) and composable doctor wizards remain for advanced flows:
+Human-readable readiness (`--human`) prints blocking / warning / info items with next commands. JSON remains the default for scripting.
+
+Legacy bootstrap (`init`) and composable doctor wizards remain for **advanced / recovery** flows:
 
 ```bash
 teaagent init --wizard --root . --provider gpt

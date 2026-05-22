@@ -109,6 +109,11 @@ def _add_workspace_bootstrap_args(p: argparse.ArgumentParser) -> None:
         default=0,
         help='Daily estimated cost cap in cents (0 disables).',
     )
+    p.add_argument(
+        '--human',
+        action='store_true',
+        help='Print a beginner-friendly summary instead of JSON.',
+    )
 
 
 def _init(

@@ -130,6 +130,61 @@ class CLITests(unittest.TestCase):
             )
             self.assertEqual(cfg['provider'], 'gpt')
 
+    def test_daily_dry_run_human_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            setup_out = io.StringIO()
+            with redirect_stdout(setup_out):
+                main(
+                    [
+                        'setup',
+                        '--root',
+                        tmp,
+                        '--provider',
+                        'gpt',
+                        '--api-key',
+                        'sk-human-daily',
+                        '--permission-mode',
+                        'read-only',
+                    ]
+                )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        'daily',
+                        'readiness',
+                        '--root',
+                        tmp,
+                        '--dry-run',
+                        '--human',
+                    ]
+                )
+            text = output.getvalue()
+            self.assertIn('TeaAgent readiness', text)
+            self.assertNotIn('"dry_run"', text)
+            self.assertIn(exit_code, (0, 2))
+
+    def test_setup_human_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        'setup',
+                        '--root',
+                        tmp,
+                        '--provider',
+                        'gpt',
+                        '--api-key',
+                        'sk-human-setup',
+                        '--human',
+                    ]
+                )
+            text = output.getvalue()
+            self.assertEqual(exit_code, 0)
+            self.assertIn('TeaAgent setup', text)
+            self.assertNotIn('"mode"', text)
+
     def test_setup_writes_workspace_and_redacts_stdout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()

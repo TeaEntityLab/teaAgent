@@ -314,11 +314,17 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             route=tui.route_model_enabled,
         )
         payload = brief.to_dict()
+        from teaagent.ergonomics.human_output import format_readiness_summary
+
         tui.output_fn(
             f'daily: ready={payload["ready"]} '
             f'token={payload["token_budget"]["usage_level"]} '
             f'runs={len(payload["recent_runs"])}'
         )
+        for line in format_readiness_summary(
+            payload, root=str(tui.root), title='TeaAgent daily'
+        ).splitlines():
+            tui.output_fn(line)
         for recommendation in payload['recommendations'][:1]:
             tui.output_fn(f'next: {recommendation["command"]}')
         tui._print_json(payload)
