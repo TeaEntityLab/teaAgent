@@ -115,6 +115,18 @@ def test_normalize_providerless_run_task(tmp_path: Path) -> None:
     assert args.task == 'fix the failing test'
 
 
+def test_attach_follow_exits_on_terminal_run(tmp_path: Path) -> None:
+    from teaagent.ergonomics.session_stream import stream_run_events
+    from teaagent.run_store import RunStore
+
+    store = RunStore(tmp_path)
+    audit = store.audit_logger('run-attach-1')
+    audit.record('run_started', 'run-attach-1', task='hello')
+    audit.record('run_completed', 'run-attach-1', answer='done')
+    events = list(stream_run_events('run-attach-1', root=tmp_path, follow=True))
+    assert any(e.get('event_type') == 'run_completed' for e in events)
+
+
 def test_session_stream_yields_events(tmp_path: Path) -> None:
     from teaagent.ergonomics.session_stream import stream_run_events
     from teaagent.run_store import RunStore

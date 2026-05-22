@@ -44,3 +44,28 @@ def test_background_start_echo_command(tmp_path: Path) -> None:
     shown = store.get(record.background_id)
     assert shown['label'] == 'echo-smoke'
     assert 'log_path' in shown
+
+
+def test_background_show_includes_run_id_from_log(tmp_path: Path) -> None:
+    store = BackgroundRunStore(tmp_path)
+    bg_id = 'show01'
+    log_path = store.dir / f'{bg_id}.log'
+    log_path.write_text(
+        json.dumps({'run_id': 'run-from-log', 'status': 'completed'}) + '\n',
+        encoding='utf-8',
+    )
+    (store.dir / f'{bg_id}.json').write_text(
+        json.dumps(
+            {
+                'background_id': bg_id,
+                'pid': 2_147_483_646,
+                'command': ['noop'],
+                'started_at': '2026-05-22T00:00:00+00:00',
+                'log_path': str(log_path),
+            }
+        ),
+        encoding='utf-8',
+    )
+    shown = store.get(bg_id)
+    assert shown['run_id'] == 'run-from-log'
+    assert shown['alive'] is False
