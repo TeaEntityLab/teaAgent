@@ -374,7 +374,7 @@ tool registry, permission modes, and audit model — only the transport changes.
 | **VS Code** | Palette commands, integrated terminal, MCP attach | Open `vscode/` in the editor → Command Palette → **TeaAgent: Run Agent** or **TeaAgent: Start MCP Server** (runs `teaagent mcp serve --http`) |
 | **MCP (stdio)** | Desktop MCP clients over stdin/stdout | `teaagent mcp serve --root .` |
 | **MCP (HTTP)** | Loopback HTTP clients (IDE, browser tools) | `teaagent mcp serve --http --port 7330 --root .` |
-| **ACP** | IDE Agent Client Protocol (stdio JSON-RPC lines) | Python API: `run_acp_server(tool_registry, agent_runner)` — see `teaagent/acp_adapter.py` |
+| **ACP** | IDE Agent Client Protocol (stdio JSON-RPC lines) | `run_acp_server(...)` emits `session/update` progress (tool calls, text chunks) during `session/prompt`; see `teaagent/acp_adapter.py` |
 | **A2A** | Federated discovery + remote task delegation | Python API: `A2ADiscoveryServer(card, port=7331)` serves `/.well-known/agent.json` and `POST /a2a/task` |
 | **ANP** | Governed cross-organization federation | Python API: `ANPGovernedService(...)` inbound/outbound with approval + audit — see [ADR 0007](adr/0007-anp-adapter-boundary.md) |
 | **Managed runtime** | Provider-hosted agent backends (stubs) | Python API: `ManagedAgentRunner(runtime).run(task, audit_logger=audit)` — see `teaagent/managed_runtime.py` |

@@ -208,6 +208,24 @@ class TestACPServer(unittest.TestCase):
         self.assertIsNone(resp.error)
         self.assertIn('selection', resp.result['prompt'])
 
+    def test_progress_audit_sink_emits_session_update(self) -> None:
+        self.server.initialize({})
+        emitted: list[dict] = []
+        self.server.set_notification_sink(emitted.append, session_id='sess-1')
+        sink = self.server.progress_audit_sink('sess-1')
+        from teaagent.audit import AuditEvent
+
+        sink(
+            AuditEvent(
+                event_type='tool_call_started',
+                run_id='r1',
+                payload={'tool_name': 'read_file', 'call_id': 'c1'},
+            )
+        )
+        self.assertEqual(len(emitted), 1)
+        self.assertEqual(emitted[0]['method'], 'session/update')
+        self.assertEqual(emitted[0]['params']['sessionId'], 'sess-1')
+
     def test_handle_request_shutdown(self) -> None:
         self.server.initialize({})
         req = ACPRequest(id='4', method='shutdown')

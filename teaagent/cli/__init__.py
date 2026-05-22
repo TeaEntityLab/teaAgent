@@ -90,8 +90,6 @@ from teaagent.policy import PermissionMode
 
 _TOP_LEVEL_SHORTCUTS: dict[str, list[str]] = {
     'daily': ['agent', 'daily'],
-    'run': ['agent', 'run'],
-    'ask': ['agent', 'run'],
     'resume': ['agent', 'resume'],
 }
 
@@ -197,6 +195,9 @@ def build_parser() -> argparse.ArgumentParser:
             'show': memory_show_command,
         },
     )
+    from teaagent.cli._agent_parsers import register_top_level_agent_aliases
+
+    register_top_level_agent_aliases(subparsers, agent_run_task)
     register_agent(
         subparsers,
         {
@@ -258,11 +259,16 @@ _AGENT_PROVIDER_COMMANDS = frozenset({'run', 'daily', 'resume', 'preflight'})
 
 
 def _normalize_optional_provider_args(args: argparse.Namespace) -> None:
-    if getattr(args, 'command', None) != 'agent':
+    command = getattr(args, 'command', None)
+    agent_command: Optional[str]
+    if command in {'run', 'ask'}:
+        agent_command = 'run'
+    elif command != 'agent':
         return
-    agent_command = getattr(args, 'agent_command', None)
-    if agent_command not in _AGENT_PROVIDER_COMMANDS:
-        return
+    else:
+        agent_command = getattr(args, 'agent_command', None)
+        if agent_command not in _AGENT_PROVIDER_COMMANDS:
+            return
     from teaagent.llm import available_providers
 
     providers = set(available_providers())
@@ -281,10 +287,16 @@ def _normalize_optional_provider_args(args: argparse.Namespace) -> None:
 
 
 def _require_provider_for_agent_commands(args: argparse.Namespace) -> None:
-    if getattr(args, 'command', None) != 'agent':
+    command = getattr(args, 'command', None)
+    agent_command: Optional[str]
+    if command in {'run', 'ask'}:
+        agent_command = 'run'
+    elif command != 'agent':
         return
-    if getattr(args, 'agent_command', None) not in _AGENT_PROVIDER_COMMANDS:
-        return
+    else:
+        agent_command = getattr(args, 'agent_command', None)
+        if agent_command not in _AGENT_PROVIDER_COMMANDS:
+            return
     from teaagent.ergonomics.workspace_defaults import (
         apply_workspace_defaults_to_namespace,
     )

@@ -24,12 +24,7 @@ def register(
         _attach(subs, handlers['attach'])
 
 
-def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
-    p = subs.add_parser(
-        'run',
-        help='Run one autonomous task with workspace tools.',
-        description='Run one autonomous task with workspace tools.',
-    )
+def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         'provider',
         nargs='?',
@@ -169,7 +164,38 @@ def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: 
         default='balanced',
         help='Context budget profile for memory and replay limits.',
     )
+
+
+def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+    p = subs.add_parser(
+        'run',
+        help='Run one autonomous task with workspace tools.',
+        description='Run one autonomous task with workspace tools.',
+    )
+    add_agent_run_arguments(p)
     p.set_defaults(func=handler, agent_command='run')
+
+
+def register_top_level_agent_aliases(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+) -> None:
+    """Register ``teaagent run`` and ``teaagent ask`` with the same flags as ``agent run``."""
+    run = subparsers.add_parser(
+        'run',
+        help='Run one autonomous task (alias for agent run).',
+        description='Run one autonomous task with workspace tools.',
+    )
+    add_agent_run_arguments(run)
+    run.set_defaults(func=handler, command='agent', agent_command='run')
+
+    ask = subparsers.add_parser(
+        'ask',
+        help='Run one agent task (alias for agent run).',
+        description='Run one autonomous task with workspace tools.',
+    )
+    add_agent_run_arguments(ask)
+    ask.set_defaults(func=handler, command='agent', agent_command='run')
 
 
 def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

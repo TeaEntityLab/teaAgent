@@ -11,10 +11,20 @@ from unittest.mock import patch
 
 from conftest import FakeAdapter
 
-from teaagent.cli import main
+from teaagent.cli import build_parser, main
 
 
 class CLITests(unittest.TestCase):
+    def test_top_level_run_parser_exposes_stream_flags(self) -> None:
+        parser = build_parser()
+        with self.assertRaises(SystemExit):
+            parser.parse_args(['run', '--help'])
+        run = parser.parse_args(['run', 'gpt', 'hello', '--stream', '--no-progress'])
+        self.assertTrue(run.stream)
+        self.assertTrue(run.no_progress)
+        self.assertEqual(run.command, 'agent')
+        self.assertEqual(run.agent_command, 'run')
+
     def test_agent_run_code_analysis_flag_enables_tools(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()

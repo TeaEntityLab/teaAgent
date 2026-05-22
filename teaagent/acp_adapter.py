@@ -77,15 +77,24 @@ class ACPServer:
     - initialize: Handshake and capability negotiation
     - tools/list: List available tools
     - tools/call: Execute a tool
+    - session/prompt: Run one agent task with ``session/update`` progress
     - completion: Request completion from agent
     - tools/cancel: Cancel a running tool
     """
 
-    def __init__(self, tool_registry: Any, agent_runner: Any) -> None:
+    def __init__(
+        self,
+        tool_registry: Any,
+        agent_runner: Any,
+        *,
+        notify: Optional[Any] = None,
+    ) -> None:
         self._tool_registry = tool_registry
         self._agent_runner = agent_runner
         self._initialized = False
         self._capabilities: dict[str, Any] = {}
+        self._notify = notify
+        self._active_session_id: Optional[str] = None
 
     def initialize(self, params: dict[str, Any]) -> dict[str, Any]:
         """Initialize ACP connection."""
@@ -107,6 +116,118 @@ class ACPServer:
         if not self._initialized:
             raise ACPError('Server not initialized')
         return self._tool_registry.mcp_metadata().get('tools', [])
+
+    def set_notification_sink(
+        self, sink: Any, *, session_id: Optional[str] = None
+    ) -> None:
+        """Register a callback for ACP ``session/update`` notifications."""
+        self._notify = sink
+        if session_id is not None:
+            self._active_session_id = session_id
+
+    def emit_session_update(self, session_id: str, update: dict[str, Any]) -> None:
+        if self._notify is None:
+            return
+        from teaagent.acp_progress import build_session_update_notification
+
+        self._notify(build_session_update_notification(session_id, update))
+
+    def progress_audit_sink(self, session_id: str) -> Any:
+        from teaagent.acp_progress import audit_sink_for_acp_progress
+
+        if self._notify is None:
+            raise ACPError('ACP notification sink is not configured')
+        return audit_sink_for_acp_progress(session_id, self._notify)
+
+    def session_prompt(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Run one agent task and stream progress via ``session/update``."""
+        if not self._initialized:
+            raise ACPError('Server not initialized')
+        session_id = str(
+            params.get('sessionId')
+            or params.get('session_id')
+            or self._active_session_id
+            or ''
+        )
+        if not session_id:
+            raise ACPError('sessionId is required')
+        prompt = str(params.get('prompt') or params.get('task') or '')
+        if not prompt:
+            raise ACPError('prompt is required')
+        root = str(params.get('root') or '.')
+        provider = params.get('provider')
+        model = params.get('model')
+        from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+        from teaagent.llm import create_llm_adapter
+        from teaagent.policy import parse_permission_mode
+        from teaagent.run_store import RunStore
+        from teaagent.streaming.handlers import adapter_supports_streaming
+
+        defaults = load_workspace_defaults(root)
+        provider = provider or defaults.get('provider')
+        if not provider:
+            raise ACPError('provider is required (param or .teaagent config)')
+        model = model or defaults.get('model')
+        permission_mode = parse_permission_mode(
+            params.get('permission_mode') or defaults.get('permission_mode') or 'prompt'
+        )
+        stream_requested = bool(params.get('stream', True))
+        store = RunStore(root)
+        audit = store.audit_logger()
+        if self._notify is not None:
+            audit.add_sink(self.progress_audit_sink(session_id))
+
+        on_chunk = None
+        if stream_requested and self._notify is not None:
+            from teaagent.acp_progress import text_sink_for_acp_progress
+            from teaagent.streaming.content_filter import DecisionContentStreamer
+
+            on_chunk = DecisionContentStreamer(
+                text_sink_for_acp_progress(session_id, self._notify)
+            ).feed
+
+        adapter = create_llm_adapter(provider, model=model)
+        use_stream = (
+            stream_requested
+            and on_chunk is not None
+            and adapter_supports_streaming(adapter)
+        )
+        result = run_chat_agent(
+            task=prompt,
+            adapter=adapter,
+            config=ChatAgentConfig.from_root(
+                root,
+                model=model,
+                permission_mode=permission_mode,
+                stream=use_stream,
+                on_chunk=on_chunk,
+                stream_text_only=True,
+            ),
+            audit=audit,
+        )
+        store.logger_for_result(result, audit)
+        if self._notify is not None:
+            self.emit_session_update(
+                session_id,
+                {
+                    'sessionUpdate': 'agent_message_chunk',
+                    'content': {
+                        'type': 'text',
+                        'text': (
+                            result.final_answer.content
+                            if result.final_answer
+                            else f'[{result.status}]'
+                        ),
+                    },
+                },
+            )
+        return {
+            'sessionId': session_id,
+            'runId': result.run_id,
+            'status': result.status,
+            'stopReason': 'completed' if result.status == 'completed' else 'failed',
+        }
 
     def call_tool(self, params: dict[str, Any]) -> dict[str, Any]:
         """Execute a tool call."""
@@ -153,6 +274,8 @@ class ACPServer:
                     blocks = []
                 merged, injections = merge_acp_context_blocks(task, blocks)
                 result = {'prompt': merged, 'context_blocks': injections}
+            elif method == 'session/prompt':
+                result = self.session_prompt(params)
             elif method == 'shutdown':
                 result = None
                 self._initialized = False
@@ -194,21 +317,32 @@ class ACPClient:
         return response.get('result')
 
 
-def create_acp_server(tool_registry: Any, agent_runner: Any) -> ACPServer:
+def create_acp_server(
+    tool_registry: Any,
+    agent_runner: Any,
+    *,
+    notify: Optional[Any] = None,
+) -> ACPServer:
     """Factory function to create ACP server."""
-    return ACPServer(tool_registry, agent_runner)
+    return ACPServer(tool_registry, agent_runner, notify=notify)
 
 
 def run_acp_server(tool_registry: Any, agent_runner: Any) -> None:
     """Run ACP server with stdio transport."""
-    server = ACPServer(tool_registry, agent_runner)
+    from teaagent.acp_progress import default_acp_emitter
+
+    notify = default_acp_emitter(lambda line: print(line, file=sys.stdout, flush=True))
+    server = ACPServer(tool_registry, agent_runner, notify=notify)
 
     for line in sys.stdin:
         try:
             request_data = json.loads(line.strip())
+            if 'method' in request_data and 'id' not in request_data:
+                continue
             request = ACPRequest(**request_data)
             response = server.handle_request(request)
-            print(json.dumps(response.__dict__), file=sys.stdout)
+            payload = {k: v for k, v in response.__dict__.items() if v is not None}
+            print(json.dumps(payload, ensure_ascii=False), file=sys.stdout)
             sys.stdout.flush()
         except json.JSONDecodeError:
             continue

@@ -116,6 +116,10 @@ teaagent watch --interval 30
 
 TUI equivalents: `progress on/off` (default **on**), `stream on/off`.
 
+Top-level aliases expose the same flags: `teaagent run gpt "task" --stream` (equivalent to `teaagent agent run ...`).
+
+`teaagent agent attach <run_id> --follow` tails the audit JSONL with native directory watch on Linux (inotify) and fast stat-based follow elsewhere.
+
 ```bash
 teaagent agent run gpt "fix the failing test" --progress --stream
 teaagent agent run gpt "long task" --json-stream 2>/dev/null | jq -c '.type'
