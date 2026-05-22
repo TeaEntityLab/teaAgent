@@ -14,6 +14,7 @@ A beginner-friendly walkthrough from installation to your first agent run and ch
 - [Installation](#installation)
 - [API Key Setup](#api-key-setup)
 - [Verify Your Setup](#verify-your-setup)
+- [Daily Use](#daily-use)
 - [Choose Your Surface](#choose-your-surface)
 - [Agent Mode (CLI)](#agent-mode-cli)
 - [Chat Mode (TUI)](#chat-mode-tui)
@@ -172,6 +173,114 @@ Send a test prompt:
 ```bash
 teaagent model smoke gpt --prompt "Reply with exactly: ok"
 ```
+
+## Daily Use
+
+Use this section as the everyday entry point. Competitive agent products converge on the
+same habit: a **simple start ritual**, **visible safety/cost/context state**, **reliable
+resume**, and **short task recipes** — not a larger framework.
+
+### Start here every morning
+
+Recommended first command (read-only, no model call):
+
+```bash
+teaagent agent daily gpt "what I want to do today" --permission-mode read-only --root .
+```
+
+`agent daily` returns harness health, recent runs, pending approvals, token budget
+(green/yellow/red pressure), read-only `context_pack` evidence, and `recommendations`
+with the next safest command. Follow with `agent preflight` when you need routing and
+clarification only, or `agent run` when you are ready to execute.
+
+### Safe defaults
+
+- Default to **`read-only`** for exploration, architecture questions, and code review.
+- Use **`workspace-write`** when you intend to edit files but still want shell mutation blocked.
+- Use **`prompt`** for day-to-day autonomous work; approve destructive tools explicitly.
+- Reserve **`allow`** / **`danger-full-access`** for trusted automation only.
+- Prefer **`agent daily`** and **`--context-profile lean`** when token pressure is yellow/red.
+
+### Three everyday modes
+
+| Mode | Permission flag | When to use |
+|------|-----------------|-------------|
+| **Inspect** | `--permission-mode read-only` | Summaries, diffs, architecture, preflight/daily checks |
+| **Edit** | `--permission-mode workspace-write` | Patch files, docs, tests; no shell mutation |
+| **Autonomous** | `--permission-mode prompt --heartbeat 5` | Multi-step fixes with approvals and liveness signals |
+
+### Everyday task recipes
+
+| Task | Suggested flow |
+|------|----------------|
+| **Summarize repo** | `agent daily gpt "summarize repo" --context-profile lean` → `agent run gpt "..." --permission-mode read-only` |
+| **Review diff** | `agent daily gpt "review my changes" --context-profile balanced` → `agent run gpt "review unstaged diff" --permission-mode read-only` |
+| **Fix failing test** | `agent preflight gpt "fix failing test X"` → `agent run gpt "..." --permission-mode workspace-write` |
+| **Write docs** | `agent run gpt "update README for daily workflow" --permission-mode workspace-write` |
+| **Inspect architecture** | `agent daily gpt "map auth flow" --context-profile deep` → read-only `agent run` |
+| **Resume previous run** | `agent daily gpt "continue auth refactor"` → `agent status <run_id>` → `agent resume gpt <run_id>` |
+| **Safe cleanup** | `agent run gpt "list temp files to remove" --permission-mode read-only` → `prompt` only if deletes are needed |
+
+CLI examples:
+
+```bash
+teaagent agent daily gpt "review auth flow" --context-profile lean
+teaagent agent daily gpt "plan test fix" --context-profile balanced
+teaagent agent daily gpt "map subsystem boundaries" --context-profile deep
+teaagent agent preflight gpt "fix tests/test_foo.py" --route-model
+teaagent agent run gpt "fix tests/test_foo.py" --permission-mode workspace-write
+```
+
+### Token balancing (`--context-profile`)
+
+| Profile | Best for | Effect |
+|---------|----------|--------|
+| `lean` | Quick checks, status, small questions | Fewer memories, no LSP/graph search, smaller output reserve |
+| `balanced` | Normal daily work (default) | Standard memory + context pack + recent-run replay |
+| `deep` | Architecture / research sessions | More memories, LSP hydration, graph search, larger output reserve |
+
+`token_budget` in daily/preflight JSON shows estimated input tokens, cost, and which
+contributors dominate (task, memories, context pack, tools, replay).
+
+### TUI-first interactive loop
+
+```bash
+teaagent tui --root . --permission-mode prompt
+```
+
+Then at the prompt:
+
+```text
+daily what I want to do today
+preflight review this patch for regressions
+ask summarize the test suite
+runs
+show <run_id>
+resume <run_id>
+status <run_id>
+```
+
+Order of operations: **`daily`** (cockpit) → **`preflight`** (clarify/route/tools) → **`ask`** (run) → **`runs` / `resume`** (continuity).
+
+### Long-running and background work
+
+```bash
+teaagent agent run gpt "long refactor" --permission-mode prompt --heartbeat 5 --root .
+teaagent agent status <run_id> --root .
+teaagent agent resume gpt <run_id> --root .
+```
+
+Heartbeat events land in the run audit log so observers can confirm liveness without
+polling the model.
+
+### CLI vs TUI
+
+| Prefer CLI when | Prefer TUI when |
+|-----------------|-----------------|
+| Scripting, CI, copy/paste recipes | Multi-turn chat, memory, approvals in one session |
+| You want JSON from `daily` / `preflight` | You want `daily` → `ask` → `resume` without leaving the terminal |
+
+See [cli.md](cli.md#preflight-and-daily-brief) for flags and JSON fields.
 
 ## Choose Your Surface
 

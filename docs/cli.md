@@ -535,11 +535,18 @@ ask Plan and execute the cleanup
 
 ## Preflight and Daily Brief
 
+**Daily start ritual (recommended):** run `agent daily` read-only before every session to see
+readiness, token pressure, recent runs, pending approvals, and the next safe command. Use
+`agent preflight` when you only need clarification/routing without the full cockpit rollup.
+
 Summarize clarification, routing, matching memories, permission state, and tool count without calling a model:
 
 ```bash
+teaagent agent daily gpt "what I want to do today" --permission-mode read-only --root .
 teaagent agent preflight gpt "review this patch for regressions in the test suite" --route-model
 teaagent agent daily gpt "review this patch for regressions in the test suite" --context-profile balanced
+teaagent agent daily gpt "quick status check" --context-profile lean
+teaagent agent daily gpt "map auth and session flow" --context-profile deep
 ```
 
 Exit code is `0` when the task is concrete enough and `2` when it still needs clarification. Pair with `--permission-mode workspace-write` or `--memory-limit 10` as needed.
@@ -555,9 +562,26 @@ Inside TUI:
 
 ```text
 route-model on
+daily what I want to do today
 preflight review this patch for regressions in the test suite
-daily review this patch for regressions in the test suite
+ask summarize the test suite
+runs
+resume <run_id>
 ```
+
+### Everyday task recipes
+
+| Task | Example |
+|------|---------|
+| Summarize repo | `teaagent agent daily gpt "summarize repo" --context-profile lean` then read-only `agent run` |
+| Review diff | `teaagent agent daily gpt "review diff" --context-profile balanced` |
+| Fix failing test | `teaagent agent preflight gpt "fix test_foo"` → `agent run ... --permission-mode workspace-write` |
+| Write docs | `teaagent agent run gpt "update USAGE daily section" --permission-mode workspace-write` |
+| Inspect architecture | `teaagent agent daily gpt "auth flow" --context-profile deep` |
+| Resume previous run | `teaagent agent status <run_id>` → `teaagent agent resume gpt <run_id>` |
+| Safe cleanup | read-only `agent run` first; use `prompt` only if destructive deletes are required |
+
+See [USAGE.md#daily-use](USAGE.md#daily-use) for Inspect/Edit/Autonomous modes and TUI workflow.
 
 ## Agent Run
 

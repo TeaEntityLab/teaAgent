@@ -2,6 +2,31 @@
 
 Governance-first agent harness for autonomous coding tasks. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
 
+## Daily Use in 5 Commands
+
+Start every session with a read-only cockpit (readiness, token pressure, recent runs, next safe command):
+
+```bash
+teaagent agent daily gpt "what I want to do today" --permission-mode read-only --root .
+```
+
+Then pick a mode and run:
+
+```bash
+# Inspect (safe default)
+teaagent agent run gpt "summarize the test suite" --permission-mode read-only
+
+# Edit (bounded writes)
+teaagent agent run gpt "fix the failing test" --permission-mode workspace-write
+
+# Autonomous (approvals on destructive tools)
+teaagent agent run gpt "refactor auth module" --permission-mode prompt --heartbeat 5
+```
+
+Interactive loop (TUI): `teaagent tui --root . --permission-mode prompt`, then `daily <task>`, `preflight <task>`, `ask <task>`, `runs`, `resume <run_id>`.
+
+Full recipes, context profiles (`lean` / `balanced` / `deep`), and token guidance: [docs/USAGE.md#daily-use](docs/USAGE.md#daily-use).
+
 ## Start Here
 
 ### 1. Install
