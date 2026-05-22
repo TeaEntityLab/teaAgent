@@ -3,11 +3,23 @@ from __future__ import annotations
 import argparse
 import re
 import subprocess
+import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from teaagent.llm._config import PROVIDER_CONFIGS  # noqa: E402
+
 TIER_START = '<!-- ACCEPTANCE_TIERS:START -->'
 TIER_END = '<!-- ACCEPTANCE_TIERS:END -->'
+SURVEY_REVIEW_DATE = re.compile(
+    r'Last reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*', re.IGNORECASE
+)
+SURVEY_SOURCE_URL = re.compile(r'https://[^\s|)]+')
+SURVEY_BACKLOG_ACTION = re.compile(r'\bP[0-2](?:-[a-z0-9]+)?\b', re.IGNORECASE)
 
 
 def _render_tier_markdown() -> str:
@@ -27,8 +39,28 @@ def _extract_provider_count(readme_text: str) -> int:
     return int(match.group(1))
 
 
-def _extract_provider_env_vars(readme_text: str) -> set[str]:
-    return set(re.findall(r'export\s+([A-Z0-9_]+_API_KEY)=', readme_text))
+def _extract_readme_credential_env_vars(readme_text: str) -> set[str]:
+    return set(re.findall(r'export\s+([A-Z0-9_]+)=', readme_text))
+
+
+def _expected_provider_credential_env_vars() -> set[str]:
+    return {cfg.api_key_env for cfg in PROVIDER_CONFIGS.values()}
+
+
+def _extract_architecture_provider_count(architecture_text: str) -> int | None:
+    match = re.search(
+        r'across\s+(\d+)\s+registered\s+providers', architecture_text, re.IGNORECASE
+    )
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _extract_usage_provider_count(usage_text: str) -> int | None:
+    match = re.search(r'supports\s+(\d+)\s+LLM providers', usage_text, re.IGNORECASE)
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 def _extract_acceptance_status_count(acceptance_text: str) -> int:
@@ -71,12 +103,90 @@ def _extract_marked_block(text: str, start: str, end: str) -> str:
     return body.strip()
 
 
+def validate_provider_docs_consistency(
+    *,
+    readme_text: str,
+    architecture_text: str,
+    usage_text: str,
+) -> list[str]:
+    errors: list[str] = []
+    runtime_count = len(PROVIDER_CONFIGS)
+    expected_env_vars = _expected_provider_credential_env_vars()
+    readme_env_vars = _extract_readme_credential_env_vars(readme_text)
+
+    try:
+        readme_provider_count = _extract_provider_count(readme_text)
+    except ValueError as exc:
+        errors.append(str(exc))
+        readme_provider_count = 0
+    if readme_provider_count and readme_provider_count != runtime_count:
+        errors.append(
+            'README provider count mismatch: '
+            f'(readme={readme_provider_count}, runtime={runtime_count}).'
+        )
+
+    missing_env_vars = sorted(expected_env_vars - readme_env_vars)
+    if missing_env_vars:
+        errors.append(
+            'README missing provider credential env vars: '
+            + ', '.join(missing_env_vars)
+        )
+
+    architecture_count = _extract_architecture_provider_count(architecture_text)
+    if architecture_count is None:
+        errors.append(
+            'architecture.md missing provider count marker '
+            "'across N registered providers'."
+        )
+    elif architecture_count != runtime_count:
+        errors.append(
+            'architecture.md provider count mismatch: '
+            f'(architecture={architecture_count}, runtime={runtime_count}).'
+        )
+
+    usage_count = _extract_usage_provider_count(usage_text)
+    if usage_count is None:
+        errors.append(
+            "USAGE.md missing provider count marker 'supports N LLM providers'."
+        )
+    elif usage_count != runtime_count:
+        errors.append(
+            'USAGE.md provider count mismatch: '
+            f'(usage={usage_count}, runtime={runtime_count}).'
+        )
+
+    return errors
+
+
+def validate_survey_doc(survey_text: str) -> list[str]:
+    errors: list[str] = []
+    if not SURVEY_REVIEW_DATE.search(survey_text):
+        errors.append(
+            'Survey missing review date marker: Last reviewed: **YYYY-MM-DD**.'
+        )
+    source_urls = SURVEY_SOURCE_URL.findall(survey_text)
+    if len(source_urls) < 5:
+        errors.append(
+            f'Survey needs at least five source URLs (found {len(source_urls)}).'
+        )
+    if not SURVEY_BACKLOG_ACTION.search(survey_text):
+        errors.append(
+            'Survey needs at least one mapped backlog action (P0/P1/P2 item).'
+        )
+    return errors
+
+
 def validate_docs_consistency(
     *,
     readme_path: Path,
     acceptance_doc_path: Path,
     use_case_matrix_path: Path,
     acceptance_tests_dir: Path,
+    architecture_path: Path | None = None,
+    usage_path: Path | None = None,
+    survey_path: Path | None = None,
+    check_providers: bool = True,
+    check_survey: bool = True,
 ) -> list[str]:
     errors: list[str] = []
 
@@ -85,17 +195,32 @@ def validate_docs_consistency(
     matrix_text = use_case_matrix_path.read_text(encoding='utf-8')
     acceptance_tests = _collect_acceptance_test_files(acceptance_tests_dir)
 
-    try:
-        provider_count = _extract_provider_count(readme_text)
-    except ValueError as exc:
-        errors.append(str(exc))
-        provider_count = 0
-    provider_env_count = len(_extract_provider_env_vars(readme_text))
-    if provider_count and provider_count != provider_env_count:
-        errors.append(
-            'README provider mismatch: '
-            f'(providers={provider_count}, env_vars={provider_env_count}).'
-        )
+    architecture_path = architecture_path or (_REPO_ROOT / 'docs' / 'architecture.md')
+    usage_path = usage_path or (_REPO_ROOT / 'docs' / 'USAGE.md')
+    survey_path = survey_path or (
+        _REPO_ROOT / 'scripts' / 'refresh_agent_readme_survey.md'
+    )
+
+    if check_providers:
+        if architecture_path.is_file() and usage_path.is_file():
+            errors.extend(
+                validate_provider_docs_consistency(
+                    readme_text=readme_text,
+                    architecture_text=architecture_path.read_text(encoding='utf-8'),
+                    usage_text=usage_path.read_text(encoding='utf-8'),
+                )
+            )
+        else:
+            if not architecture_path.is_file():
+                errors.append(f'architecture doc not found: {architecture_path}')
+            if not usage_path.is_file():
+                errors.append(f'USAGE doc not found: {usage_path}')
+
+    if check_survey:
+        if survey_path.is_file():
+            errors.extend(validate_survey_doc(survey_path.read_text(encoding='utf-8')))
+        else:
+            errors.append(f'Survey doc not found: {survey_path}')
 
     try:
         status_count = _extract_acceptance_status_count(acceptance_text)
@@ -141,6 +266,11 @@ def main() -> int:
     parser.add_argument('--acceptance-doc', default='docs/acceptance.md')
     parser.add_argument('--use-case-matrix', default='docs/use-case-matrix.md')
     parser.add_argument('--acceptance-tests-dir', default='tests/acceptance')
+    parser.add_argument('--architecture-doc', default='docs/architecture.md')
+    parser.add_argument('--usage-doc', default='docs/USAGE.md')
+    parser.add_argument(
+        '--survey-doc', default='scripts/refresh_agent_readme_survey.md'
+    )
     args = parser.parse_args()
 
     errors = validate_docs_consistency(
@@ -148,6 +278,9 @@ def main() -> int:
         acceptance_doc_path=Path(args.acceptance_doc),
         use_case_matrix_path=Path(args.use_case_matrix),
         acceptance_tests_dir=Path(args.acceptance_tests_dir),
+        architecture_path=Path(args.architecture_doc),
+        usage_path=Path(args.usage_doc),
+        survey_path=Path(args.survey_doc),
     )
     if errors:
         for err in errors:

@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-16
+Last updated: 2026-05-22
 
 ---
 
@@ -40,13 +40,27 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — High (P0)
 
-*(No open P0 items in this track.)*
+_No open P0 items._
+
+---
+
+## Recently completed (competitive refresh, 2026-05-22)
+
+| Item | Notes |
+|------|-------|
+| Docs/provider architecture drift guard | `scripts/validate_docs_consistency.py` now checks README/USAGE/architecture counts against `PROVIDER_CONFIGS`, unique credential env vars (including shared `CLOUDFLARE_API_TOKEN` / `OPENCODEZEN_API_KEY`), and survey doc freshness; `docs/architecture.md` updated to 13 providers. |
 
 ---
 
 ## Open — Medium (P1)
 
-*(No open P1 items in this track.)*
+| Item | Why now | Acceptance target |
+|------|---------|-------------------|
+| DeepWiki-backed agent landscape survey (maintenance) | Initial 2026-05-22 survey landed in `scripts/refresh_agent_readme_survey.md` with validator checks; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md` differentiator section; `validate_docs_consistency.py` must pass. |
+| Subagent lineage and isolation hardening | TeaAgent already has `subagent` and `subagent_batch`, but child runs currently do not expose strong parent lineage and default to shared-workspace semantics. Famous agent surfaces increasingly make background/subagent work auditable and bounded. | Child run records include parent run id, subagent definition name, depth, and batch index where applicable; `subagent_batch` returns ordered lineage metadata; docs state default shared-workspace behavior and explicitly defer worktree/container isolation; add unit tests around lineage and budget inheritance. |
+| Repo-map/context pack for coding runs | Aider-style repo maps and modern IDE agents make context selection visible. TeaAgent has LSP/code-analysis and GraphQLite pieces, but users do not yet get a clear "why this context" artifact during planning or preflight. | Add a read-only context-pack output path for planning/preflight that summarizes candidate files, symbols, memories, and graph/RAG hits without editing files; acceptance verifies read-only mode blocks writes and includes deterministic context evidence in the run payload. |
+| Mode and safety comparison matrix | Codex, Claude Code, and OpenCode all foreground modes, permissions, and sandbox expectations. TeaAgent has permission modes, Plan Mode, Auto Mode, Code Mode, MCP, and IDE flows, but the user-facing mental model is spread across docs. | Add a single matrix in `docs/USAGE.md` or `docs/cli.md` mapping permission modes, Plan Mode, Auto Mode, Code Mode, shell mutation, approvals, audit, and rollback; validation ensures every `PermissionMode` enum value is documented. |
+| Multi-surface launch recipes | OpenHands/OpenCode-style product surfaces make it obvious how to start CLI, TUI, IDE, MCP, managed runtime, and federation workflows. TeaAgent supports many of these, but the current story is architecture-heavy. | Add a "Choose your surface" section with one-command recipes for CLI, TUI, VS Code, MCP HTTP, ACP, A2A, ANP, and managed runtime stubs; smoke-test docs examples where commands are local and non-networked. |
 
 ---
 
@@ -54,10 +68,19 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 | Item | Why now | Acceptance target |
 |------|---------|-------------------|
-| Periodic mainstream-agent README refresh | Agent conventions are moving quickly; roadmap claims should be refreshed from official READMEs before major planning cycles. | Add a manual checklist or script-backed note that records reviewed sources and date. |
+| Plugin/skill compatibility catalog | Claude Code, OpenCode, and Codex ecosystems converge around skills, hooks, commands, MCP servers, and local instruction files. TeaAgent supports these pieces, but compatibility is easier to trust with a concrete catalog. | Document supported skill/plugin search paths, manifest expectations, hook events, MCP metadata assumptions, and known non-goals; add a fixture-backed docs check or acceptance assertion for the catalog examples. |
+| Competitive use-case dashboard refresh | `docs/use-case-matrix.html` is useful, but it should reflect the new landscape survey rather than only the original README baseline. | Regenerate the use-case matrix after the DeepWiki survey and include source-review date plus open-gap counts; verify with `python3 scripts/build_use_case_matrix.py` and `python3 scripts/validate_docs_consistency.py`. |
+| Periodic mainstream-agent refresh cadence | The old single backlog item remains valid, but should become a recurring release hygiene task after the richer survey exists. | Add a release checklist note requiring survey refresh before minor releases or protocol ADRs; ensure the survey artifact records reviewed sources and date. |
 
 ---
 
 ## Recommended Execution Order (remaining)
 
-1. Periodic mainstream-agent README refresh.
+1. Mode and safety comparison matrix.
+2. Multi-surface launch recipes.
+3. Subagent lineage and isolation hardening.
+4. Repo-map/context pack for coding runs.
+5. Plugin/skill compatibility catalog.
+6. Competitive use-case dashboard refresh.
+7. Periodic mainstream-agent refresh cadence.
+8. DeepWiki survey maintenance (recurring).

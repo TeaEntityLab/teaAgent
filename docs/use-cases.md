@@ -7,6 +7,46 @@ from market-standard product gaps that still need acceptance tests.
 
 Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 
+Landscape survey (reviewed 2026-05-22):
+[scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)
+
+## Implemented parity (competitive baseline)
+
+Mainstream coding-agent expectations from Codex, Claude Code, OpenCode, OpenHands,
+and Aider are largely covered by acceptance flows today. TeaAgent does not need
+to replicate framework-native graph/crew orchestration; the harness focuses on
+governance, audit, and portable protocol surfaces.
+
+| Area | Status | Primary evidence |
+|------|--------|------------------|
+| Terminal-first CLI/TUI | Implemented | `test_daily_cli.py`, `test_daily_tui.py` |
+| First-run onboarding + provider readiness | Implemented | `test_first_run_experience_flow.py`, `test_provider_matrix_consistency_flow.py` |
+| Repo instructions (`AGENTS.md`) | Implemented | `test_agents_md_injection_flow.py` |
+| Read-only planning | Implemented | `test_plan_mode_read_only_flow.py` |
+| Edit/test/diff loop + undo | Implemented | `test_workspace_edit_flow.py`, `test_run_undo_acceptance_flow.py` |
+| Permission modes + policy | Implemented | `test_policy_as_code_flow.py`, `test_cancel_flow.py` |
+| MCP + skills/plugins + hooks | Implemented | `test_remote_mcp_consumption_flow.py`, `test_skill_install_flow.py`, `test_hooks.py` |
+| Memory + session continuity | Implemented | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` |
+| IDE surface (VS Code) | Implemented | `test_vscode_extension_mcp_boot_flow.py` |
+| Federation (A2A, ANP) | Implemented | `test_anp_adapter_flow.py`, A2A acceptance flows |
+
+## Next differentiators (roadmap)
+
+These items are intentionally **not** full parity gaps; they sharpen TeaAgent’s
+governance-first story against the 2026-05-22 landscape survey. See
+[docs/backlog-priority.md](backlog-priority.md) for acceptance targets.
+
+| Differentiator | Priority | Backlog reference |
+|----------------|----------|-------------------|
+| Docs/provider architecture drift guard | P0 | Open — High |
+| Subagent lineage and isolation hardening | P1 | Open — Medium |
+| Repo-map / context pack for coding runs | P1 | Open — Medium |
+| Mode and safety comparison matrix | P1 | Open — Medium |
+| Multi-surface launch recipes | P1 | Open — Medium |
+| Plugin/skill compatibility catalog | P2 | Open — Low |
+| Competitive use-case dashboard refresh | P2 | Open — Low |
+| Periodic mainstream-agent refresh cadence | P2 | Open — Low |
+
 ## Requirement Baseline
 
 | Requirement | Mainstream signal | TeaAgent status | Verification evidence |

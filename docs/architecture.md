@@ -149,9 +149,13 @@ The HTTP server enforces:
 
 ### 8. LLM Integration
 
-`teaagent.llm` provides a unified adapter layer (`LLMAdapter`) across five
-providers: OpenAI, Anthropic, Gemini, OpenRouter, and OpenCodeZen. Each adapter
-implements `chat()` returning an `LLMResponse`. Features include:
+`teaagent.llm` provides a unified adapter layer (`LLMAdapter`) across 13
+registered providers in `PROVIDER_CONFIGS`: `claude`, `gpt`, `gemini`,
+`openrouter`, `ollama`, `vllm`, `opencodezen`, `opencodezen-go`, `mistral`,
+`deepseek`, `grok`, `workers-ai`, and `aigateway`. Credential env vars are
+unique per provider key except shared `CLOUDFLARE_API_TOKEN` (workers-ai and
+aigateway) and shared `OPENCODEZEN_API_KEY` (both OpenCodeZen adapters). Each
+adapter implements `chat()` returning an `LLMResponse`. Features include:
 
 - Configurable exponential-backoff retry (`LLMRetryConfig`).
 - Cost budget pre-flight.

@@ -51,6 +51,8 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
         acceptance_doc_path=acceptance,
         use_case_matrix_path=matrix,
         acceptance_tests_dir=acceptance_dir,
+        check_providers=False,
+        check_survey=False,
     )
     assert errors == []
 
@@ -77,5 +79,29 @@ def test_validate_docs_consistency_detects_mismatch(tmp_path: Path) -> None:
         acceptance_doc_path=acceptance,
         use_case_matrix_path=matrix,
         acceptance_tests_dir=acceptance_dir,
+        check_providers=False,
+        check_survey=False,
     )
-    assert len(errors) == 4
+    assert len(errors) == 3
+
+
+def test_validate_provider_docs_consistency_passes_for_repo_docs() -> None:
+    root = Path(__file__).resolve().parents[1]
+    readme = (root / 'README.md').read_text(encoding='utf-8')
+    architecture = (root / 'docs' / 'architecture.md').read_text(encoding='utf-8')
+    usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_provider_docs_consistency(
+        readme_text=readme,
+        architecture_text=architecture,
+        usage_text=usage,
+    )
+    assert errors == []
+
+
+def test_validate_survey_doc_passes_for_repo_survey() -> None:
+    root = Path(__file__).resolve().parents[1]
+    survey = (root / 'scripts' / 'refresh_agent_readme_survey.md').read_text(
+        encoding='utf-8'
+    )
+    errors = _VALIDATE_MODULE.validate_survey_doc(survey)
+    assert errors == []
