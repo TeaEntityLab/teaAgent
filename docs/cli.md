@@ -80,6 +80,10 @@ teaagent recall --limit 5
 teaagent session list
 teaagent recipes list
 teaagent recipes run review-staged --print-only
+teaagent background list
+teaagent agent attach <run_id> --follow
+teaagent agent attach <run_id> --resume
+teaagent model capabilities --per-model --provider gpt
 teaagent ci review --provider gpt
 teaagent approval grant workspace_write_file --scope session
 teaagent guidance

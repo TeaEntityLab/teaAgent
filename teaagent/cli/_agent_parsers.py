@@ -248,6 +248,11 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         help='Stream new audit events until the run completes.',
     )
     p.add_argument(
+        '--resume',
+        action='store_true',
+        help='Resume a paused run after snapshot (auto-approve pending destructive call).',
+    )
+    p.add_argument(
         '--notify',
         action='store_true',
         help='Emit a desktop notification with the current run status.',
@@ -337,8 +342,9 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
     )
     p.add_argument(
         '--auto-compact',
-        action='store_true',
-        help='Truncate replayed observations when resuming very long runs.',
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help='Truncate replayed observations when resuming long runs (default from config).',
     )
     p.set_defaults(func=handler, agent_command='resume')
 

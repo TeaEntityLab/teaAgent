@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-22 (daily-use ergonomics revised)
+Last updated: 2026-05-22 (daily-use ergonomics complete)
 
 ---
 
@@ -35,6 +35,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 | IDE integration - VS Code extension (command palette, task provider, terminal profile, TeaAgent output channel) | P2-r3 | `vscode/package.json`, `vscode/src/extension.ts` |
 | Hosted doc site infrastructure (`pdoc` dependency, `scripts/build_docs.py` build script, class-level docstrings on core modules) | P2-r3 | `pyproject.toml`, `scripts/build_docs.py`, `teaagent/tools.py`, `teaagent/runner/_core.py`, `teaagent/budget.py`, `teaagent/policy.py`, `teaagent/memory.py` |
 | ANP bidirectional adapter governed federation (`ANPGovernedService`, audit correlation, approval/budget invariants) | P1 | `teaagent/anp_adapter.py`, `tests/acceptance/test_anp_adapter_flow.py`, `docs/adr/0007-anp-adapter-boundary.md` |
+| Daily-use ergonomics (init, providerless CLI, recipes, sessions, background/attach, model capabilities, KPI) | P1 | `teaagent/ergonomics/`, `teaagent/recipes/`, `scripts/measure_time_to_first_run.py`, `examples/ergonomics/` |
 
 ---
 
@@ -44,26 +45,9 @@ _No open P0 items._
 
 ---
 
-## Open — Daily-use ergonomics (re-baselined 2026-05-22)
+## Open — Daily-use ergonomics
 
-Survey reference: [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md) (deepwiki, 2026-05-22).
-
-**Shipped in-repo (no longer open):** `teaagent init`, `.teaagent/config.toml` defaults, top-level `daily`/`run`/`ask`/`resume` argv shortcuts, `completion`, `--dry-run`, daily journal + `journal`, `yesterday`/`recall`, `status --short`, `notify`, daily cost cap, `session list/show/resume`, approval presets + `approval` CLI, recipe registry + expanded recipes, `ci review`, `@` context injection, `watch`, `guidance`, `whats_new`, providerless `agent run`/`daily` after init, `agent run --background`, `agent attach --follow`, `model capabilities` table, ergonomics acceptance smoke (`test_daily_ergonomics_flow.py`). See `teaagent/ergonomics/`, `teaagent/recipes/`, `examples/ergonomics/`.
-
-**Remaining gaps (honest):**
-
-| Item | Priority | Notes |
-|------|----------|-------|
-| Providerless top-level `teaagent run`/`daily` without `agent` prefix | P1 | Argv expansion works; document and keep acceptance coverage. |
-| Richer background attach (HITL resume from attach, unified `background list`) | P1 | `--background` + `--follow` shipped; still weaker than Crush/Plandex reconnect UX. |
-| Editor/TUI `@` picker and ACP selection blocks | P1 | CLI `@file` injection shipped; IDE/TUI surfaces still thin. |
-| Per-model (not just per-provider) capability metadata | P2 | `teaagent model capabilities` is provider-level; extend toward Aider-style per-model table. |
-| Auto-compaction on resume (default-on policy) | P2 | `--auto-compact` exists; not default-on. |
-| Time-to-first-useful-run KPI in use-case matrix | P2 | Measure `pip install -e .` → `teaagent daily` without provider flags. |
-| Raycast / Shortcuts / extra IDE one-pagers | P2 | `examples/ergonomics/` started; not full productized extensions. |
-| Chat bridge skill (Slack/Discord/Telegram) | P2 | Opt-in skill only; not core. |
-
-Implementation order from here: **KPI measurement → attach/HITL polish → per-model capabilities → passive surfaces**.
+_All items from the 2026-05-22 ergonomics tranche are shipped._ Future work is strategic (hosted surfaces, repo-map quality eval) under ongoing maintenance below.
 
 ---
 
@@ -101,3 +85,4 @@ Then manually refresh [scripts/refresh_agent_readme_survey.md](../scripts/refres
 | Extension surfaces | `docs/plugin-skill-catalog.md`, `docs/USAGE.md`, `docs/cli.md` when hooks, isolation modes, or preflight/context APIs change |
 | New index backends | `teaagent/context_pack.py` read-only graph evidence when adding search stores |
 | Strategic P2 research | hosted/cloud surface docs, background sessions, desktop/client-server packaging, repo-map quality evaluation |
+| Ergonomics KPI | `python3 scripts/measure_time_to_first_run.py --write docs/ergonomics-kpi.json` before regenerating the use-case matrix |

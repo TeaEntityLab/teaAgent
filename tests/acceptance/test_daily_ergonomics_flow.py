@@ -77,6 +77,10 @@ def test_daily_ergonomics_smoke(tmp_path: Path) -> None:
     assert run_dry.returncode == 0, run_dry.stderr
     journal = _run('journal', '--root', str(tmp_path), '--task', 'note', cwd=tmp_path)
     assert journal.returncode == 0, journal.stderr
-    caps = _run('model', 'capabilities', cwd=tmp_path)
+    caps = _run(
+        'model', 'capabilities', '--per-model', '--provider', 'gpt', cwd=tmp_path
+    )
     assert caps.returncode == 0
     assert 'gpt' in caps.stdout
+    background = _run('background', 'list', '--root', str(tmp_path), cwd=tmp_path)
+    assert background.returncode == 0

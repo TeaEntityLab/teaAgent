@@ -142,7 +142,7 @@ def completion_command(args: argparse.Namespace) -> int:
     from teaagent.llm import available_providers
 
     top = (
-        'agent approval audit ci clarify completion configure daily doctor guidance '
+        'agent approval audit background ci clarify completion configure daily doctor guidance '
         'graphqlite init journal mcp memory model recall recipes session status tui '
         'ultrawork watch workspace yesterday run ask resume'
     )
@@ -188,6 +188,7 @@ def init_command(args: argparse.Namespace) -> int:
         'context_profile': getattr(args, 'context_profile', 'balanced'),
         'heartbeat': float(getattr(args, 'heartbeat', 0.0)),
         'daily_cost_cap_cents': int(getattr(args, 'daily_cost_cap_cents', 0)),
+        'auto_compact_on_resume': True,
     }
     cfg_path = tea_dir / 'config.json'
     cfg_path.write_text(json.dumps(config, sort_keys=True, indent=2), encoding='utf-8')
@@ -202,11 +203,13 @@ def init_command(args: argparse.Namespace) -> int:
                 f'context_profile = "{config["context_profile"]}"',
                 f'heartbeat = {config["heartbeat"]}',
                 f'daily_cost_cap_cents = {config["daily_cost_cap_cents"]}',
+                'auto_compact_on_resume = true',
                 '',
             ]
         ),
         encoding='utf-8',
     )
+    config['auto_compact_on_resume'] = True
     agents_md_path = root / 'AGENTS.md'
     agents_md_status = 'existing'
     if not agents_md_path.exists():

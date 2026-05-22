@@ -50,6 +50,15 @@ def _prepare_task(args: argparse.Namespace, task: str) -> str:
     return expanded
 
 
+def _resolve_auto_compact(args: argparse.Namespace) -> bool:
+    if getattr(args, 'auto_compact', None) is not None:
+        return bool(args.auto_compact)
+    from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+
+    defaults = load_workspace_defaults(getattr(args, 'root', '.'))
+    return bool(defaults.get('auto_compact_on_resume', True))
+
+
 def agent_resume_command(args: argparse.Namespace) -> int:
     store = RunStore(args.root)
     try:
@@ -76,7 +85,7 @@ def agent_resume_command(args: argparse.Namespace) -> int:
             }
         else:
             initial_observations = store.observations_for_run(args.run_id)
-            if getattr(args, 'auto_compact', False) and len(initial_observations) > 40:
+            if _resolve_auto_compact(args) and len(initial_observations) > 40:
                 initial_observations = initial_observations[-20:]
                 initial_context_extra = {
                     'resume_compaction': {
@@ -313,6 +322,40 @@ def agent_attach_command(args: argparse.Namespace) -> int:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
     pending = store.pending_approval_for_run(args.run_id)
+    if getattr(args, 'resume', False):
+        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+
+        defaults = load_workspace_defaults(args.root)
+        provider = defaults.get('provider')
+        if not provider:
+            print_json({'status': 'error', 'message': 'provider required for --resume'})
+            return 1
+        resume_args = argparse.Namespace(
+            run_id=args.run_id,
+            root=args.root,
+            provider=provider,
+            model=defaults.get('model'),
+            fresh_restart=False,
+            approve_call_id=[],
+            clarify=False,
+            route_model=False,
+            max_iterations=int(defaults.get('max_iterations', 10)),
+            max_tool_calls=int(defaults.get('max_tool_calls', 10)),
+            allow_destructive=False,
+            hitl_approval=False,
+            permission_mode=defaults.get('permission_mode', 'prompt'),
+            subagent=False,
+            max_subagent_depth=1,
+            heartbeat=float(defaults.get('heartbeat', 0.0)),
+            code_analysis=False,
+            telemetry_otlp_endpoint=None,
+            telemetry_service_name='teaagent',
+            telemetry_console=False,
+            checkpoint_store=None,
+            auto_compact=None,
+            _adapter_factory=getattr(args, '_adapter_factory', None),
+        )
+        return agent_resume_command(resume_args)
     if getattr(args, 'follow', False):
         from teaagent.ergonomics.session_stream import stream_run_events
 

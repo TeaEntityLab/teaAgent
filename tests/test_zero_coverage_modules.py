@@ -192,6 +192,22 @@ class TestACPServer(unittest.TestCase):
         resp = self.server.handle_request(req)
         self.assertIsNone(resp.error)
 
+    def test_handle_request_prompt_assemble(self) -> None:
+        self.server.initialize({})
+        req = ACPRequest(
+            id='3b',
+            method='prompt/assemble',
+            params={
+                'prompt': 'Review',
+                'contextBlocks': [
+                    {'type': 'selection', 'label': 'a.py', 'content': 'code'}
+                ],
+            },
+        )
+        resp = self.server.handle_request(req)
+        self.assertIsNone(resp.error)
+        self.assertIn('selection', resp.result['prompt'])
+
     def test_handle_request_shutdown(self) -> None:
         self.server.initialize({})
         req = ACPRequest(id='4', method='shutdown')

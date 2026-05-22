@@ -128,9 +128,44 @@ def test_session_stream_yields_events(tmp_path: Path) -> None:
 
 
 def test_model_capabilities_table() -> None:
-    from teaagent.model_capabilities import build_capability_table
+    from teaagent.model_capabilities import (
+        build_capability_table,
+        build_model_capability_table,
+    )
 
     rows = build_capability_table()
     providers = {row['provider'] for row in rows}
     assert 'gpt' in providers
     assert all('default_model' in row for row in rows)
+    model_rows = build_model_capability_table(provider='gpt')
+    assert model_rows
+    assert all(row['model'] for row in model_rows)
+
+
+def test_list_at_candidates(tmp_path: Path) -> None:
+    from teaagent.ergonomics.context_inject import list_at_candidates
+
+    (tmp_path / 'src').mkdir()
+    (tmp_path / 'src' / 'main.py').write_text('x = 1\n', encoding='utf-8')
+    paths = list_at_candidates(tmp_path, prefix='src/')
+    assert 'src/main.py' in paths
+
+
+def test_merge_acp_context_blocks() -> None:
+    from teaagent.ergonomics.context_inject import merge_acp_context_blocks
+
+    merged, meta = merge_acp_context_blocks(
+        'Review this',
+        [{'type': 'selection', 'label': 'foo.py', 'content': 'def foo(): pass'}],
+    )
+    assert 'selection' in merged
+    assert meta
+
+
+def test_resolve_auto_compact_defaults(tmp_path: Path) -> None:
+    import argparse
+
+    from teaagent.cli._handlers._agent import _resolve_auto_compact
+
+    args = argparse.Namespace(auto_compact=None, root=str(tmp_path))
+    assert _resolve_auto_compact(args) is True

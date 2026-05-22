@@ -46,6 +46,24 @@ def status_short_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def background_list_command(args: argparse.Namespace) -> int:
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
+    print_json(BackgroundRunStore(args.root).list())
+    return 0
+
+
+def background_show_command(args: argparse.Namespace) -> int:
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
+    try:
+        print_json(BackgroundRunStore(args.root).get(args.background_id))
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    return 0
+
+
 def session_list_command(args: argparse.Namespace) -> int:
     store = RunStore(args.root)
     rows = []
@@ -101,6 +119,7 @@ def session_resume_command(args: argparse.Namespace) -> int:
         telemetry_service_name='teaagent',
         telemetry_console=False,
         checkpoint_store=None,
+        auto_compact=None,
         _adapter_factory=getattr(args, '_adapter_factory', None),
     )
     defaults = load_workspace_defaults(args.root)

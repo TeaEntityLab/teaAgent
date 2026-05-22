@@ -68,6 +68,7 @@ HELP_TEXT = """Commands:
   runs                      List recent persisted agent runs.
   show <run_id>             Show one persisted run record.
   resume <run_id>           Re-run the original task from a persisted run id.
+  context list [prefix]     List workspace files for @-mentions in tasks.
   use <database>            Switch database path. Use :memory: for in-memory.
   smoke                     Create a SmokeTest node and query it.
   query <cypher>            Execute a Cypher query.
@@ -225,6 +226,9 @@ class TeaAgentTUI:
         clarify_first: bool = False,
         initial_observations: Optional[list[dict[str, Any]]] = None,
     ) -> None:
+        from teaagent.ergonomics.context_inject import expand_at_references
+
+        task, _refs = expand_at_references(task, root=self.root)
         task_spec = None
         if clarify_first:
             clarification = clarify_task(task)

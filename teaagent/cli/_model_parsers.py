@@ -82,6 +82,18 @@ def register(
 
     capabilities = subs.add_parser(
         'capabilities',
-        help='Show per-provider model capability table (routing, cost, tools).',
+        help='Show model capability table (per-provider or per-model).',
+    )
+    capabilities.add_argument(
+        '--provider',
+        choices=available_providers(),
+        default=None,
+        help='Filter to one provider.',
+    )
+    capabilities.add_argument('--model', default=None, help='Filter to one model name.')
+    capabilities.add_argument(
+        '--per-model',
+        action='store_true',
+        help='Emit one row per routed model (default when --model is set).',
     )
     capabilities.set_defaults(func=handlers['capabilities'])

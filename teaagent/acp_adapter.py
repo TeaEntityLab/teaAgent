@@ -142,6 +142,17 @@ class ACPServer:
                 result = self.list_tools()
             elif method == 'tools/call':
                 result = self.call_tool(params)
+            elif method == 'prompt/assemble':
+                from teaagent.ergonomics.context_inject import merge_acp_context_blocks
+
+                task = str(params.get('prompt', params.get('task', '')))
+                blocks = (
+                    params.get('contextBlocks') or params.get('context_blocks') or []
+                )
+                if not isinstance(blocks, list):
+                    blocks = []
+                merged, injections = merge_acp_context_blocks(task, blocks)
+                result = {'prompt': merged, 'context_blocks': injections}
             elif method == 'shutdown':
                 result = None
                 self._initialized = False

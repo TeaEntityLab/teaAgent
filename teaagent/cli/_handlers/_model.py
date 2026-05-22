@@ -63,9 +63,20 @@ def model_route(args: argparse.Namespace) -> int:
     return 0
 
 
-def model_capabilities(_args: argparse.Namespace) -> int:
-    from teaagent.model_capabilities import build_capability_table
+def model_capabilities(args: argparse.Namespace) -> int:
+    from teaagent.model_capabilities import (
+        build_capability_table,
+        build_model_capability_table,
+    )
 
+    if getattr(args, 'per_model', False) or getattr(args, 'model', None):
+        print_json(
+            build_model_capability_table(
+                provider=getattr(args, 'provider', None),
+                model=getattr(args, 'model', None),
+            )
+        )
+        return 0
     print_json(build_capability_table())
     return 0
 

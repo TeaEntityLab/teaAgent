@@ -14,6 +14,13 @@ def register(
     _yesterday(subparsers, handlers['yesterday'])
     _recall(subparsers, handlers['recall'])
     _status_short(subparsers, handlers['status_short'])
+    _background(
+        subparsers,
+        {
+            'background_list': handlers['background_list'],
+            'background_show': handlers['background_show'],
+        },
+    )
     _session(subparsers, handlers)
     _recipes(subparsers, handlers)
     _approval(subparsers, handlers)
@@ -53,6 +60,22 @@ def _status_short(subparsers: argparse._SubParsersAction, handler: Callable) -> 
         default=None,
     )
     p.set_defaults(func=handler, command='status')
+
+
+def _background(
+    subparsers: argparse._SubParsersAction, handlers: dict[str, Callable]
+) -> None:  # type: ignore[type-arg]
+    background = subparsers.add_parser(
+        'background', help='List detached agent runs started with --background.'
+    )
+    subs = background.add_subparsers(dest='background_command', required=True)
+    lst = subs.add_parser('list')
+    lst.add_argument('--root', default='.')
+    lst.set_defaults(func=handlers['background_list'], command='background')
+    show = subs.add_parser('show')
+    show.add_argument('background_id')
+    show.add_argument('--root', default='.')
+    show.set_defaults(func=handlers['background_show'], command='background')
 
 
 def _session(

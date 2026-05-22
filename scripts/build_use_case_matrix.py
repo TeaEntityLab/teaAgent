@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 
@@ -192,6 +193,24 @@ def _survey_review_date(survey_path: Path) -> str:
     return match.group(1) if match else 'unknown'
 
 
+def _ergonomics_kpi_line(repo_root: Path) -> str:
+    kpi_path = repo_root / 'docs' / 'ergonomics-kpi.json'
+    if not kpi_path.is_file():
+        return ''
+    try:
+        data = json.loads(kpi_path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return ''
+    seconds = data.get('seconds')
+    path = data.get('path', '')
+    if seconds is None:
+        return ''
+    return (
+        f'Time-to-first-useful-run: **{seconds}s** ({path}). '
+        f'Refresh with `python3 scripts/measure_time_to_first_run.py --write docs/ergonomics-kpi.json`.'
+    )
+
+
 def _open_backlog_gap_count(use_cases_path: Path) -> int:
     if not use_cases_path.is_file():
         return 0
@@ -203,6 +222,7 @@ def build_matrix_markdown(
     *,
     survey_review_date: str = 'unknown',
     open_gap_count: int = 0,
+    repo_root: Path | None = None,
 ) -> str:
     lines = [
         '# Use-case Coverage Matrix',
@@ -213,10 +233,19 @@ def build_matrix_markdown(
         f'([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).',
         f'Open roadmap differentiators (P1/P2): **{open_gap_count}** '
         '(see [docs/use-cases.md](use-cases.md#competitive-differentiators-implemented--maintenance)).',
-        '',
-        '| Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |',
-        '|---|---|---|---|---|---|---|',
     ]
+    if repo_root is not None:
+        kpi = _ergonomics_kpi_line(repo_root)
+        if kpi:
+            lines.append('')
+            lines.append(kpi)
+    lines.extend(
+        [
+            '',
+            '| Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |',
+            '|---|---|---|---|---|---|---|',
+        ]
+    )
     for use_case, required in USE_CASES.items():
         meta = USE_CASE_META.get(use_case, {})
         missing = [name for name in required if name not in available_tests]
@@ -239,13 +268,16 @@ def build_use_case_matrix(
     output_path: Path,
     survey_path: Path,
     use_cases_path: Path,
+    repo_root: Path | None = None,
 ) -> None:
     available = parse_acceptance_test_files(acceptance_path.read_text(encoding='utf-8'))
+    repo_root = repo_root or Path(__file__).resolve().parents[1]
     output_path.write_text(
         build_matrix_markdown(
             available,
             survey_review_date=_survey_review_date(survey_path),
             open_gap_count=_open_backlog_gap_count(use_cases_path),
+            repo_root=repo_root,
         ),
         encoding='utf-8',
     )

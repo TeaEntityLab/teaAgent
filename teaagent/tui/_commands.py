@@ -262,12 +262,22 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui._print_json(clarify_task(' '.join(args)).to_dict())
         return True
+    if action == 'context':
+        from teaagent.ergonomics.context_inject import list_at_candidates
+
+        prefix = args[0] if args else ''
+        paths = list_at_candidates(tui.root, prefix=prefix)
+        tui._print_json({'prefix': prefix or None, 'paths': paths})
+        return True
     if action == 'preflight':
         if not args:
             tui.output_fn('error: preflight requires a task')
             return True
+        from teaagent.ergonomics.context_inject import expand_at_references
+
+        task, _refs = expand_at_references(' '.join(args), root=tui.root)
         report = preflight(
-            ' '.join(args),
+            task,
             root=tui.root,
             provider=tui.provider,
             model=tui.model,
@@ -277,9 +287,13 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         tui._print_json(report.to_dict())
         return True
     if action == 'daily':
-        task = ' '.join(args) if args else None
+        from teaagent.ergonomics.context_inject import expand_at_references
+
+        daily_task: str | None = ' '.join(args) if args else None
+        if daily_task:
+            daily_task, _refs = expand_at_references(daily_task, root=tui.root)
         brief = build_daily_brief(
-            task=task,
+            task=daily_task,
             root=tui.root,
             provider=tui.provider,
             model=tui.model,
