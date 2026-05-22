@@ -512,13 +512,16 @@ Child runs record parent lineage on every `subagent` / `subagent_*` / `subagent_
 | `def_name` | Named subagent definition (`generic` when using `subagent`) |
 | `depth` | Child depth (`parent depth + 1`) |
 | `batch_index` | Position in `subagent_batch` (null for single delegation) |
-| `isolation` | `shared` today — same workspace root and tool registry inheritance |
+| `isolation` | `shared` (default) or `worktree` (detached git worktree under `.teaagent/subagent-worktrees/`) |
+| `worktree_path` | Relative worktree path when `isolation=worktree` (audit metadata) |
+
+Pass `isolation` on `subagent` or per task in `subagent_batch`. Worktree mode requires a git repository and removes the worktree when the child completes.
 
 `subagent_batch` returns a top-level `lineage` array ordered by `batch_index`, parallel to `results`.
 
 Audit: child runs emit a `subagent_lineage` event in their JSONL; parent tool results embed the same `lineage` object.
 
-**Deferred:** `isolation = worktree | container` is not implemented yet. Future API may add optional isolation without breaking current callers.
+**Deferred:** `isolation = container` is not implemented yet.
 
 Inside TUI:
 

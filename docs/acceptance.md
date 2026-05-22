@@ -53,6 +53,7 @@ directory.
 | `test_session_resume_continuity_flow.py` | Session resume continuity | Pending-approval resume replays observations from checkpoint/store, preserves audit lineage, and auto-curates memory on completion |
 | `test_surface_launch_recipes_flow.py` | Multi-surface launch recipes | USAGE surface table covers CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed runtime; documented local smoke commands run without network |
 | `test_subagent_lineage_flow.py` | Subagent lineage and isolation | Child runs record parent lineage metadata; batch returns ordered lineage; default shared-workspace isolation documented |
+| `test_subagent_worktree_isolation_flow.py` | Subagent worktree isolation | `isolation=worktree` uses a detached git worktree, records `worktree_path` in lineage, and cleans up after completion |
 | `test_context_pack_read_only_flow.py` | Read-only context pack | Preflight returns read-only `context_pack` with hybrid hits when indexed; read-only runs still block workspace writes |
 | `test_skill_install_flow.py` | Skill discovery and injection | Skill discovery, prompt injection, multi-skill loading, project override precedence, model-decision prompt wiring |
 | `test_ultrawork_flow.py` | Long-running worker | Worker start, list, show, log tail, and stop lifecycle |

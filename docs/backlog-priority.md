@@ -51,7 +51,7 @@ _No open P0 items._
 | Docs/provider architecture drift guard | `scripts/validate_docs_consistency.py` now checks README/USAGE/architecture counts against `PROVIDER_CONFIGS`, unique credential env vars (including shared `CLOUDFLARE_API_TOKEN` / `OPENCODEZEN_API_KEY`), and survey doc freshness; `docs/architecture.md` updated to 13 providers. |
 | Mode and safety comparison matrix | `docs/USAGE.md` matrix maps permission modes, Plan/Auto/Code lanes, shell mutation, approvals, audit, and rollback; validator enforces every `PermissionMode` value and required topics. |
 | Multi-surface launch recipes | `docs/USAGE.md` “Choose Your Surface” table with CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed-runtime recipes; `validate_surface_recipes` + `test_surface_launch_recipes_flow.py` smoke local commands. |
-| Subagent lineage and isolation hardening | Child runs record `parent_run_id`, `def_name`, `depth`, `batch_index`, and `isolation: shared`; `subagent_batch` returns ordered `lineage`; runner binds parent run context for tools. |
+| Subagent lineage and isolation hardening | Child runs record lineage metadata; `isolation: shared` (default) or `worktree` (git worktree under `.teaagent/subagent-worktrees/`); `subagent_batch` returns ordered `lineage`; runner binds parent run context. |
 | Repo-map / context pack for coding runs | `build_context_pack` on `agent preflight`; candidate files, memories, optional LSP symbols, hybrid index hits; `test_context_pack_read_only_flow.py`. |
 | Plugin/skill compatibility catalog | `docs/plugin-skill-catalog.md` with fixture-backed `validate_plugin_skill_catalog`. |
 | Competitive use-case dashboard refresh | Matrix/HTML include survey review date and open P1/P2 gap counts via `build_use_case_matrix.py` + `render_use_case_dashboard.py`. |
@@ -64,7 +64,7 @@ _No open P0 items._
 | Item | Why now | Acceptance target |
 |------|---------|-------------------|
 | DeepWiki-backed agent landscape survey | Initial 2026-05-22 survey landed; keep refreshing before minor releases. | Re-run survey when Codex/Claude Code/OpenCode/OpenHands/Aider signals change; update review date, source table, and `docs/use-cases.md`; `validate_docs_consistency.py` must pass. |
-| Subagent lineage and isolation | Lineage on `subagent`/`subagent_batch`; default `isolation: shared`. | Keep docs/tests aligned when adding `worktree`/`container` isolation or new lineage fields. |
+| Subagent lineage and isolation | `shared` and `worktree` isolation on `subagent`/`subagent_batch`. | Keep docs/tests aligned when adding `container` isolation or new lineage fields. |
 | Repo-map / context pack | LSP hydration (when code analysis enabled) and hybrid index hits shipped. | Keep read-only guarantees; extend when adding GraphQLite/knowledge live hits. |
 | Mode and safety comparison matrix | Matrix in `docs/USAGE.md` with validator coverage. | Keep matrix in sync when permission modes or rollback APIs change. |
 | Multi-surface launch recipes | Recipes in `docs/USAGE.md` with validator + smoke tests. | Keep recipes current when CLI/IDE/MCP surfaces change. |

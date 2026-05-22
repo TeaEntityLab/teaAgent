@@ -7,6 +7,11 @@ from typing import Any, Optional
 
 from teaagent.llm import LLMAdapter
 from teaagent.run_store import RunStore
+from teaagent.subagents._isolation import (
+    new_isolation_session_key,
+    normalize_subagent_isolation,
+    prepare_subagent_isolation,
+)
 from teaagent.subagents._loader import load_subagent_defs
 from teaagent.subagents._types import (
     DEFAULT_SUBAGENT_ISOLATION,
@@ -109,8 +114,44 @@ class SubagentManager:
             sub_def.max_tool_calls if sub_def else 5
         )
 
+        normalized_isolation = normalize_subagent_isolation(isolation)
+        if normalized_isolation is None:
+            return _error(
+                f'unsupported subagent isolation: {isolation!r}; '
+                f'use one of: shared, worktree',
+                lineage=_lineage_or_none(
+                    parent_run_id,
+                    def_name or 'generic',
+                    depth + 1,
+                    batch_index,
+                    DEFAULT_SUBAGENT_ISOLATION,
+                ),
+            )
+        isolation = normalized_isolation
+
+        def_used = sub_def.name if sub_def else 'generic'
+        iso_ctx, iso_error = prepare_subagent_isolation(
+            self._root,
+            isolation=isolation,
+            session_key=new_isolation_session_key(
+                parent_run_id=parent_run_id, def_name=def_used
+            ),
+        )
+        if iso_ctx is None:
+            return _error(
+                iso_error,
+                lineage=_lineage_or_none(
+                    parent_run_id,
+                    def_used,
+                    depth + 1,
+                    batch_index,
+                    isolation,
+                ),
+            )
+
         sub_config = replace(
             self._parent_config,
+            root=iso_ctx.child_root,
             max_iterations=int(resolved_max_iterations),
             max_tool_calls=int(resolved_max_tool_calls),
             model=(
@@ -130,53 +171,60 @@ class SubagentManager:
             task_spec = f'[{sub_def.name} role]\n{sub_def.system_prompt.strip()}\n\n---\n\nTask: {task}'
 
         child_depth = depth + 1
-        def_used = sub_def.name if sub_def else 'generic'
+        worktree_rel: Optional[str] = None
+        if iso_ctx.worktree_path is not None:
+            worktree_rel = iso_ctx.worktree_path.relative_to(self._root).as_posix()
         lineage = SubagentLineage(
             parent_run_id=parent_run_id,
             def_name=def_used,
             depth=child_depth,
             isolation=isolation,
             batch_index=batch_index,
+            worktree_path=worktree_rel,
         )
 
         registry = self._build_registry_for(sub_def)
-        store = RunStore(self._root)
+        store = RunStore(iso_ctx.child_root)
         sub_audit = store.audit_logger()
         started_at = datetime.now(timezone.utc).isoformat()
-        sub_result = run_chat_agent(
-            task=task_spec,
-            adapter=self._parent_adapter,
-            config=sub_config,
-            audit=sub_audit,
-            registry=registry,
-            depth=child_depth,
-            initial_context_extra={'subagent_lineage': lineage.to_dict()},
-        )
-        sub_audit.record(
-            'subagent_lineage',
-            sub_result.run_id,
-            **lineage.to_dict(),
-        )
-        store.logger_for_result(sub_result, sub_audit)
-        completed_at = datetime.now(timezone.utc).isoformat()
-        session = SubagentSession(
-            session_id=sub_result.run_id,
-            def_name=def_used,
-            parent_run_id=parent_run_id,
-            status=sub_result.status,
-            started_at=started_at,
-            depth=child_depth,
-            batch_index=batch_index,
-            isolation=isolation,
-            completed_at=completed_at,
-            iterations=sub_result.iterations,
-            tool_calls=sub_result.tool_calls,
-            final_answer=(
-                sub_result.final_answer.content if sub_result.final_answer else ''
-            ),
-        )
-        self._sessions[session.session_id] = session
-        return _success(session)
+        try:
+            sub_result = run_chat_agent(
+                task=task_spec,
+                adapter=self._parent_adapter,
+                config=sub_config,
+                audit=sub_audit,
+                registry=registry,
+                depth=child_depth,
+                initial_context_extra={'subagent_lineage': lineage.to_dict()},
+            )
+            sub_audit.record(
+                'subagent_lineage',
+                sub_result.run_id,
+                **lineage.to_dict(),
+            )
+            store.logger_for_result(sub_result, sub_audit)
+            completed_at = datetime.now(timezone.utc).isoformat()
+            session = SubagentSession(
+                session_id=sub_result.run_id,
+                def_name=def_used,
+                parent_run_id=parent_run_id,
+                status=sub_result.status,
+                started_at=started_at,
+                depth=child_depth,
+                batch_index=batch_index,
+                isolation=isolation,
+                worktree_path=worktree_rel,
+                completed_at=completed_at,
+                iterations=sub_result.iterations,
+                tool_calls=sub_result.tool_calls,
+                final_answer=(
+                    sub_result.final_answer.content if sub_result.final_answer else ''
+                ),
+            )
+            self._sessions[session.session_id] = session
+            return _success(session)
+        finally:
+            iso_ctx.cleanup()
 
     def _build_registry_for(self, sub_def: Optional[SubagentDef]) -> Any:
         if self._parent_registry is None:

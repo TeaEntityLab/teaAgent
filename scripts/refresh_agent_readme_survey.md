@@ -11,7 +11,7 @@ Last reviewed: **2026-05-22**
 | Project | DeepWiki / upstream URL | Reviewed signals | TeaAgent parity | Gap / differentiator | Backlog action |
 |---------|-------------------------|------------------|-----------------|----------------------|----------------|
 | OpenAI Codex | https://deepwiki.com/openai/codex | Multi execution modes, sandboxing, MCP, IDE, cloud surfaces | Tool registry, MCP HTTP/stdio, Code Mode sandbox profiles, VS Code extension, USAGE mode/safety matrix | Hosted/cloud surface docs remain thin | P2 maintenance |
-| Claude Code | https://deepwiki.com/anthropics/claude-code | Subagents, hooks, MCP, background sessions, permission modes, managed settings | `subagent`/`subagent_batch` with lineage metadata, hooks, permission modes, MCP, skills | `worktree`/`container` isolation deferred | P1 maintenance |
+| Claude Code | https://deepwiki.com/anthropics/claude-code | Subagents, hooks, MCP, background sessions, permission modes, managed settings | `subagent`/`subagent_batch` with lineage + `worktree` isolation, hooks, permission modes, MCP, skills | `container` isolation deferred | P1 maintenance |
 | OpenCode | https://deepwiki.com/sst/opencode | Provider breadth, client-server, plugins, skills, MCP, desktop, VS Code | 13 providers, plugins/skills, MCP, ACP/VS Code, USAGE surface recipes | Client-server/desktop hosted docs remain thin | P2 maintenance |
 | OpenHands | https://deepwiki.com/OpenHands/OpenHands | SDK/CLI/GUI/cloud/enterprise, sandbox-decoupled V1 | Managed runtime stubs, MCP, audit, Code Mode | Hosted/cloud surface docs are stub-level only | P2 dashboard refresh |
 | Aider | https://deepwiki.com/Aider-AI/aider | Repo-map context, edit strategies, git workflow | Workspace tools, LSP/code-analysis, GraphQLite, preflight `context_pack` with LSP + hybrid hits | GraphQLite/knowledge live hits in context pack deferred | P1 maintenance |
@@ -39,7 +39,7 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 | Track | Why it matters | Backlog ID |
 |-------|----------------|------------|
 | Docs/provider drift guard | README/USAGE/architecture/runtime provider registry aligned; shared credential env vars handled | Done |
-| Subagent lineage + isolation | Parent run id, depth, batch index; default `isolation: shared`; worktree deferred | Done (maintenance) |
+| Subagent lineage + isolation | Parent run id, depth, batch index; `isolation: shared` or `worktree` | Done (maintenance) |
 | Repo-map / context pack | Preflight `context_pack` surfaces candidate files/memories without writes | Done (maintenance) |
 | Mode and safety matrix | Permission modes, Plan/Auto/Code lanes, approvals, rollback | Done (maintenance) |
 | Multi-surface recipes | CLI, TUI, VS Code, MCP, ACP, A2A, ANP, managed runtime | Done (maintenance) |
@@ -50,7 +50,7 @@ Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
 ## Future API note (non-breaking)
 
 `subagent` / `subagent_batch` should record parent-child run lineage and later
-accept `isolation = shared | worktree` without breaking current callers.
+accept `isolation = shared | worktree` (implemented); `container` remains future work.
 
 ## Next review trigger
 

@@ -5,6 +5,7 @@ from typing import Any
 
 from teaagent.llm import LLMAdapter
 from teaagent.subagent_run_context import get_parent_run_id
+from teaagent.subagents._isolation import normalize_subagent_isolation
 from teaagent.subagents._manager import SubagentManager
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
@@ -27,12 +28,19 @@ def register_subagent_tools(
         task = args.get('task')
         if not isinstance(task, str) or not task.strip():
             return _subagent_error("subagent requires non-empty 'task'")
+        isolation = normalize_subagent_isolation(args.get('isolation'))
+        if isolation is None:
+            return _subagent_error(
+                f'unsupported subagent isolation: {args.get("isolation")!r}; '
+                'use shared or worktree'
+            )
         return manager.run_subagent(
             task=task,
             parent_run_id=get_parent_run_id(),
             depth=depth,
             max_iterations=_as_int(args.get('max_iterations')),
             max_tool_calls=_as_int(args.get('max_tool_calls')),
+            isolation=isolation,
         )
 
     _register(
@@ -55,6 +63,12 @@ def register_subagent_tools(
             task = args.get('task')
             if not isinstance(task, str) or not task.strip():
                 return _subagent_error("subagent requires non-empty 'task'")
+            isolation = normalize_subagent_isolation(args.get('isolation'))
+            if isolation is None:
+                return _subagent_error(
+                    f'unsupported subagent isolation: {args.get("isolation")!r}; '
+                    'use shared or worktree'
+                )
             return manager.run_subagent(
                 task=task,
                 parent_run_id=get_parent_run_id(),
@@ -62,6 +76,7 @@ def register_subagent_tools(
                 def_name=def_name,
                 max_iterations=_as_int(args.get('max_iterations')),
                 max_tool_calls=_as_int(args.get('max_tool_calls')),
+                isolation=isolation,
             )
 
         _register(
@@ -87,6 +102,10 @@ def _register(
                 'task': {'type': 'string'},
                 'max_iterations': {'type': 'integer'},
                 'max_tool_calls': {'type': 'integer'},
+                'isolation': {
+                    'type': 'string',
+                    'description': 'Workspace isolation: shared (default) or worktree.',
+                },
             },
             'required': ['task'],
         },
@@ -107,6 +126,7 @@ def _register(
                         'depth': {'type': 'integer'},
                         'isolation': {'type': 'string'},
                         'batch_index': {'type': 'integer'},
+                        'worktree_path': {'type': 'string'},
                     },
                 },
             },
@@ -173,6 +193,12 @@ def _register_batch(
             if not isinstance(task, str) or not task.strip():
                 return _subagent_error("subagent requires non-empty 'task'")
             def_name = task_obj.get('def_name')
+            isolation = normalize_subagent_isolation(task_obj.get('isolation'))
+            if isolation is None:
+                return _subagent_error(
+                    f'unsupported subagent isolation: {task_obj.get("isolation")!r}; '
+                    'use shared or worktree'
+                )
             return manager.run_subagent(
                 task=task,
                 parent_run_id=parent_run_id,
@@ -181,6 +207,7 @@ def _register_batch(
                 max_iterations=_as_int(task_obj.get('max_iterations')),
                 max_tool_calls=_as_int(task_obj.get('max_tool_calls')),
                 batch_index=batch_index,
+                isolation=isolation,
             )
 
         results: list[tuple[int, dict[str, Any]]] = []
@@ -229,6 +256,7 @@ def _register_batch(
                             'def_name': {'type': 'string'},
                             'max_iterations': {'type': 'integer'},
                             'max_tool_calls': {'type': 'integer'},
+                            'isolation': {'type': 'string'},
                         },
                         'required': ['task'],
                     },
@@ -263,6 +291,7 @@ def _register_batch(
                                     'depth': {'type': 'integer'},
                                     'isolation': {'type': 'string'},
                                     'batch_index': {'type': 'integer'},
+                                    'worktree_path': {'type': 'string'},
                                 },
                             },
                         },
@@ -281,6 +310,7 @@ def _register_batch(
                             'depth': {'type': 'integer'},
                             'isolation': {'type': 'string'},
                             'batch_index': {'type': 'integer'},
+                            'worktree_path': {'type': 'string'},
                         },
                     },
                 },

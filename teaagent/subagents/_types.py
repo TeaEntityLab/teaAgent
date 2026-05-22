@@ -31,6 +31,7 @@ class SubagentLineage:
     depth: int
     isolation: str = DEFAULT_SUBAGENT_ISOLATION
     batch_index: Optional[int] = None
+    worktree_path: Optional[str] = None
 
     def to_dict(self) -> dict[str, str | int]:
         payload: dict[str, str | int] = {
@@ -41,6 +42,8 @@ class SubagentLineage:
         }
         if self.batch_index is not None:
             payload['batch_index'] = self.batch_index
+        if self.worktree_path is not None:
+            payload['worktree_path'] = self.worktree_path
         return payload
 
 
@@ -54,6 +57,7 @@ class SubagentSession:
     depth: int = 0
     batch_index: Optional[int] = None
     isolation: str = DEFAULT_SUBAGENT_ISOLATION
+    worktree_path: Optional[str] = None
     completed_at: Optional[str] = None
     iterations: int = 0
     tool_calls: int = 0
@@ -67,4 +71,5 @@ class SubagentSession:
             depth=self.depth,
             isolation=self.isolation,
             batch_index=self.batch_index,
+            worktree_path=self.worktree_path,
         )
