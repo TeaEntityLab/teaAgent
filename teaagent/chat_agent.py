@@ -193,6 +193,7 @@ class ModelDecisionEngine:
             from teaagent.streaming.content_filter import DecisionContentStreamer
 
             on_chunk = DecisionContentStreamer(on_chunk).feed
+        last_response_content = ''
         for attempt in range(self.max_parse_retries + 1):
             response = self.adapter.complete(
                 LLMRequest(
@@ -211,6 +212,7 @@ class ModelDecisionEngine:
                     },
                 )
             )
+            last_response_content = response.content
             previous_cost = context.get('_cost_cents', 0.0)
             context['_cost_cents'] = previous_cost + response.estimated_cost_cents
             context['_input_tokens'] = (
@@ -235,10 +237,86 @@ class ModelDecisionEngine:
                         ),
                     )
                 )
+        fallback = _plain_text_answer_fallback(context, last_response_content)
+        if fallback is not None:
+            return fallback
         return FinalAnswer(
             content='{"status":"error","action":"wait","reason":"invalid_model_decision_json"}',
             metadata={'decision_fallback': 'invalid_model_decision_json'},
         )
+
+
+def _plain_text_answer_fallback(
+    context: dict, response_content: str
+) -> Optional[FinalAnswer]:
+    if context.get('observations'):
+        return None
+    task = str(context.get('task', ''))
+    if not _looks_like_simple_answer_task(task):
+        return None
+    answer = response_content.strip()
+    if not _looks_like_plain_text_answer(answer):
+        return None
+    return FinalAnswer(
+        content=answer,
+        metadata={'decision_fallback': 'plain_text_final_answer'},
+    )
+
+
+def _looks_like_simple_answer_task(task: str) -> bool:
+    normalized = ' '.join(task.lower().strip().split())
+    if not normalized:
+        return False
+    workspace_markers = (
+        'file',
+        'repo',
+        'workspace',
+        'project',
+        'read ',
+        'write ',
+        'edit ',
+        'modify ',
+        'fix ',
+        'debug ',
+        'run ',
+        'test ',
+        'commit',
+        'src/',
+        'tests/',
+        '.py',
+        '.md',
+        '.json',
+        '.toml',
+        '.yaml',
+        '.yml',
+    )
+    if any(marker in normalized for marker in workspace_markers):
+        return False
+    question_starts = (
+        'what ',
+        'who ',
+        'when ',
+        'where ',
+        'why ',
+        'how ',
+        'can you tell me',
+        'could you tell me',
+        'tell me ',
+        'explain ',
+        'describe ',
+        'summarize ',
+    )
+    return normalized.endswith('?') or normalized.startswith(question_starts)
+
+
+def _looks_like_plain_text_answer(answer: str) -> bool:
+    if len(answer) < 20:
+        return False
+    stripped = answer.lstrip()
+    if stripped.startswith(('{', '[', '```')):
+        return False
+    words = answer.split()
+    return len(words) >= 4
 
 
 def run_chat_agent(

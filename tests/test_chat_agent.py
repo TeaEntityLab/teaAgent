@@ -93,6 +93,45 @@ class ChatAgentTests(unittest.TestCase):
                 'invalid_model_decision_json',
             )
 
+    def test_chat_agent_accepts_plain_text_for_simple_question_after_parse_retries(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            answer = (
+                'Cloudflare is a cloud platform that provides CDN, security, '
+                'DNS, developer, and edge-computing services.'
+            )
+            adapter = FakeAdapter([answer, answer, answer])
+            result = run_chat_agent(
+                task='can you tell me about cloudflare',
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp),
+            )
+
+            self.assertEqual(result.status, 'completed')
+            self.assertEqual(result.final_answer.content, answer)
+            self.assertEqual(
+                result.final_answer.metadata.get('decision_fallback'),
+                'plain_text_final_answer',
+            )
+
+    def test_chat_agent_rejects_plain_text_fallback_for_workspace_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            answer = 'I need to inspect the workspace before I can answer this.'
+            adapter = FakeAdapter([answer, answer, answer])
+            result = run_chat_agent(
+                task='read note.txt',
+                adapter=adapter,
+                config=ChatAgentConfig.from_root(tmp),
+            )
+
+            self.assertEqual(result.status, 'completed')
+            self.assertIn('"status":"error"', result.final_answer.content)
+            self.assertEqual(
+                result.final_answer.metadata.get('decision_fallback'),
+                'invalid_model_decision_json',
+            )
+
     def test_chat_agent_can_use_code_analysis_tools_when_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             adapter = FakeAdapter(
