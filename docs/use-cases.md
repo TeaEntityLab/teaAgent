@@ -7,7 +7,7 @@ from market-standard product gaps that still need acceptance tests.
 
 Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 
-Landscape survey (reviewed 2026-05-22):
+Landscape survey (reviewed 2026-05-24):
 [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)
 
 ## Implemented parity (competitive baseline)
@@ -67,6 +67,10 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Context compaction | Claude Code triggers auto-compaction at 75-92% token usage. | Implemented. | `test_preflight.py` |
 | Plugin system | Claude Code supports Commands/Agents/Hooks/MCP extension points. | Implemented. | `test_plugins.py` |
 | ACP IDE integration | Protocol for VS Code, Zed, JetBrains integration. | Implemented. | `test_vscode_*_flow.py` |
+| Read-before-write mtime guard | OpenCode and Codex enforce concurrent modification detection on writes. | Implemented. | `test_mtime_read_before_write_flow.py` |
+| Protected path enforcement | Codex automatically protects `.git`/`.codex`/`.agents` directories. | Implemented. | `test_protected_paths_flow.py` |
+| Declarative sub-agent definitions | Claude Code uses `.claude/agents/*.md` frontmatter; Codex uses config for thread/agent topology. | Implemented. | `test_subagent_definitions_flow.py` |
+| Semantic code navigation (LSP) | OpenCode integrates LSP for diagnostics, definitions, and references. | Implemented. | `test_code_analysis_lsp_flow.py`, `test_code_analysis_prompt_injection_flow.py` |
 
 ## Current Core Use Cases
 
@@ -84,6 +88,10 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Context auto-compaction | Automatically compress context when approaching token limits. | low | N/A | low | `test_preflight.py` | Implemented |
 | Plan mode exploration | Explore codebases in read-only mode without modifications. | low | N/A | low | `test_plan_mode_read_only_flow.py` | Implemented |
 | Plugin extensibility | Add custom Commands, Agents, or MCP integrations. | medium | remove plugin | low | `test_plugins.py` | Implemented |
+| LSP code analysis | Navigate codebases with semantic tools (definitions, references, diagnostics, symbols). | low | N/A | low | `test_code_analysis_lsp_flow.py`, `test_code_analysis_prompt_injection_flow.py` | Implemented |
+| Declarative sub-agent management | Define sub-agents via YAML/JSON/Markdown files with isolation, background, and tool restrictions. | medium | remove .teaagent/subagents/ | medium | `test_subagent_definitions_flow.py`, `test_subagent_lineage_flow.py` | Implemented |
+| Concurrent modification safety | Prevent silent data loss when files are modified between read and write. | high | N/A | medium | `test_mtime_read_before_write_flow.py` | Implemented |
+| Protected path enforcement | Block accidental writes to .git/ and .teaagent/ by default. | high | N/A | medium | `test_protected_paths_flow.py` | Implemented |
 
 ## Implemented Market-Standard Use Cases
 
@@ -96,6 +104,10 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Runtime IDE MCP smoke | Start the workspace MCP endpoint from the VSCode command and verify an MCP client can attach. | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` | P1 | Implemented |
 | Session resume continuity | Resume a paused or completed run and preserve task, observations, memory, and audit context. | `test_session_resume_continuity_flow.py` | P1 | Implemented |
 | External ecosystem compatibility | Validate representative MCP manifests, skill metadata, and tool annotations against TeaAgent's registry contract. | `test_external_tool_manifest_compatibility_flow.py` | P2 | Implemented |
+| Semantic code navigation (LSP) | Navigate codebases with go-to-definition, find-references, diagnostics, and document symbols via LSP-backed tools. | `test_code_analysis_lsp_flow.py` | P0 | Implemented |
+| Concurrent modification safety | Prevent silent data loss by rejecting writes when files were modified between read and write. | `test_mtime_read_before_write_flow.py` | P0 | Implemented |
+| Protected path enforcement | Block accidental writes to `.git/` and `.teaagent/` with built-in default deny rules. | `test_protected_paths_flow.py` | P1 | Implemented |
+| Declarative sub-agent orchestration | Define agent roles in `.teaagent/subagents/*.md` (Markdown frontmatter) mirroring Claude Code's `.claude/agents/` convention. | `test_subagent_definitions_flow.py` | P1 | Implemented |
 
 ## Completed Delivery Plan
 
@@ -107,6 +119,12 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 6. Completed (P1): Session resume continuity acceptance (`test_session_resume_continuity_flow.py`).
 7. Completed (P2): External ecosystem compatibility acceptance (`test_external_tool_manifest_compatibility_flow.py`).
 8. Completed (P2): Published rendered dashboard at `docs/use-case-matrix.html`.
+9. Completed (P0): LSP code analysis acceptance (`test_code_analysis_lsp_flow.py`).
+10. Completed (P0): mtime read-before-write guard (`test_mtime_read_before_write_flow.py`).
+11. Completed (P0): Protected paths default deny rules (`test_protected_paths_flow.py`).
+12. Completed (P1): Declarative sub-agent definitions with Markdown frontmatter (`test_subagent_definitions_flow.py`).
+13. Completed (P1): Context compaction latency SLO (`test_context_compaction_slo_flow.py`).
+14. Completed (P1): Hook lifecycle acceptance elevation (`test_hook_lifecycle_flow.py`).
 
 ## Evidence Commands
 

@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-22 (daily-use ergonomics complete)
+Last updated: 2026-05-24 (competitive gap closure complete)
 
 ---
 
@@ -36,6 +36,14 @@ Items below were deferred at baseline and have since been implemented in-repo.
 | Hosted doc site infrastructure (`pdoc` dependency, `scripts/build_docs.py` build script, class-level docstrings on core modules) | P2-r3 | `pyproject.toml`, `scripts/build_docs.py`, `teaagent/tools.py`, `teaagent/runner/_core.py`, `teaagent/budget.py`, `teaagent/policy.py`, `teaagent/memory.py` |
 | ANP bidirectional adapter governed federation (`ANPGovernedService`, audit correlation, approval/budget invariants) | P1 | `teaagent/anp_adapter.py`, `tests/acceptance/test_anp_adapter_flow.py`, `docs/adr/0007-anp-adapter-boundary.md` |
 | Daily-use ergonomics (init, providerless CLI, recipes, sessions, background/attach, model capabilities, KPI) | P1 | `teaagent/ergonomics/`, `teaagent/recipes/`, `scripts/measure_time_to_first_run.py`, `examples/ergonomics/` |
+| mtime read-before-write concurrent modification guard (`workspace_write_file` rejects overwrites on mtime mismatch; `workspace_read_file` returns `mtime`; backward compatible) | P0 | `teaagent/workspace_tools/_files.py`, `tests/acceptance/test_mtime_read_before_write_flow.py` |
+| Protected paths default deny rules (`.git/*` and `.teaagent/*` blocked by default in `FilePolicy`; `load_file_policy(include_protected_dirs=)` gating) | P0 | `teaagent/file_policy.py`, `tests/acceptance/test_protected_paths_flow.py` |
+| LSP code analysis acceptance (7 tests covering tool registration, tree-sitter relations, candidate path extraction, config enablement) | P0 | `tests/acceptance/test_code_analysis_lsp_flow.py` |
+| Declarative sub-agent definitions with Markdown frontmatter (`.md` file support matching Claude Code `.claude/agents/*.md` convention; `isolation`/`background`/`disallowed_tools`/`effort` fields on `SubagentDef`) | P1 | `teaagent/subagents/_types.py`, `teaagent/subagents/_loader.py`, `tests/acceptance/test_subagent_definitions_flow.py` |
+| Context compaction latency SLO (traffic-light zoning boundary tests; compaction preserves recent observations; latency < 100ms SLO) | P1 | `teaagent/context.py`, `tests/acceptance/test_context_compaction_slo_flow.py` |
+| Hook lifecycle acceptance elevation (16 tests: PreToolUse veto, PostToolUse chaining, permission_check_hook deny/allow/patterns, all 8 Claude Code events, registry enabled flag) | P1 | `tests/acceptance/test_hook_lifecycle_flow.py` |
+| Architecture comparison matrix documenting TeaAgent vs Claude Code/Codex/OpenCode feature coverage | P2 | `docs/architecture.md` |
+| Use-case matrix updated with LSP, sub-agent orchestration, mtime guard, and protected paths entries | P2 | `docs/use-cases.md`, `docs/use-case-matrix.md` |
 
 ---
 

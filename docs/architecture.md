@@ -337,3 +337,63 @@ Methods:
 - `tools/call` - Execute a tool
 - `completion` - Request agent completion
 - `tools/cancel` - Cancel running tool
+
+## Mainstream Framework Comparison
+
+TeaAgent is a governance-first agent harness. This section documents how it
+compares to the four mainstream coding-agent frameworks surveyed in
+[scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md),
+last refreshed 2026-05-24.
+
+### Feature Coverage Matrix
+
+| Capability | TeaAgent | Claude Code | Codex | OpenCode |
+|---|---|---|---|---|
+| Terminal-first CLI/TUI | ✅ | ✅ `claude` CLI | ✅ `codex` TUI | ✅ `opencode` TUI |
+| Multi-provider LLM | ✅ 14 providers | ❌ Anthropic only | ❌ OpenAI only | ✅ 11+ providers |
+| Permission modes | ✅ 5 modes | ✅ deny/ask/allow | ✅ 4 sandbox policies | ✅ 3 approval modes |
+| Hook system (8 events) | ✅ Claude Code compatible | ✅ 8+ events | ✅ 7+ events | — |
+| MCP server / client | ✅ stdio + HTTP | ✅ | ✅ codex-mcp-server | ✅ stdio + SSE |
+| Skills / plugins | ✅ 4 extension points | ✅ Plugin marketplace | ✅ Skills + Plugins | — |
+| Sub-agent isolation | ✅ 3 modes (shared/worktree/container) | ✅ 2 modes (shared/worktree) | ✅ Thread manager | — |
+| Context compaction | ✅ 75-92% traffic light | ✅ 98% auto | ✅ History compaction | ✅ Auto-compact |
+| Three-tier memory | ✅ Project/Personal/Auto | ✅ CLAUDE.md files | ✅ 2-phase extraction | — |
+| Audit / governance | ✅ JSONL hash chain | — | — | — |
+| Undo / rollback | ✅ Undo journal | — | — | ✅ File history |
+| Read-before-write mtime guard | ✅ since v0.2 | — | ✅ (via Edit tool) | ✅ mtime check |
+| Protected paths (.git/.teaagent) | ✅ default deny rules | — | ✅ .git/.codex/.agents | — |
+| IDE integration | ✅ ACP + VS Code ext | ✅ VS Code ext | ✅ App Server (Zed/VS Code) | — |
+| Session resume | ✅ RunStore JSONL | ✅ rollout files | ✅ rollout + fork | ✅ SQLite |
+| OAuth / security | ✅ OAuth 2.1 + DPoP | — | ✅ OAuth for MCP | — |
+| Telemetry | ✅ OTEL spans + metrics | ✅ OTEL spans | ✅ OTEL | — |
+| Cloud / background tasks | ✅ Ultrawork + BackgroundRun | ✅ background sessions | ✅ Cloud Tasks | — |
+| Acceptance test coverage | ✅ 104+ AT, P0/P1/P2 tiers | — | ✅ test suite | — |
+| Declarative agent definitions | ✅ YAML/JSON/Markdown | ✅ .claude/agents/*.md | ✅ config.toml | — |
+
+### TeaAgent Differentiators
+
+- **Governance-first**: Every tool call, decision, and error is recorded in an
+  immutable JSONL audit log with hash-chain integrity. No other framework
+  provides this level of auditability.
+- **Multi-protocol surface**: MCP + ACP + A2A + ANP — more integration
+  protocols than any single mainstream framework.
+- **Cross-provider**: 14 LLM adapters vs. 1 per vendor framework.
+- **Policy-as-code**: Declarative deny rules in `policy.yaml` that cannot be
+  bypassed, even in `danger-full-access` mode.
+- **Built-in undo**: Automatic pre-write snapshots with user-facing
+  `teaagent agent undo` command.
+
+### Alignment Gaps (Addressed)
+
+These gaps identified in the 2026-05-24 competitive analysis have been closed:
+
+- **LSP integration** → Code analysis tools (`code_definition`, `code_references`,
+  `code_diagnostics`, `code_symbols`, `code_tree_sitter_relations`) registered
+  when `code_analysis_enabled: true`.
+- **Read-before-write mtime guard** → `workspace_write_file` accepts
+  `expected_mtime` and rejects overwrites on concurrent modification.
+- **Protected paths** → `.git/*` and `.teaagent/*` are blocked by default
+  through built-in `FilePolicy` deny rules.
+- **Declarative sub-agent definitions** → YAML/JSON/Markdown frontmatter files
+  in `.teaagent/subagents/` with `isolation`, `background`, `disallowed_tools`,
+  and `effort` fields.
