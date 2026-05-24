@@ -50,6 +50,13 @@ class AutomationSpec:
     acceptance_criteria: str = ''
     collector_command: str = ''
     no_agent: bool = False
+    allowed_toolsets: tuple[str, ...] = ()
+    requires_subagent: bool = False
+    max_cost_cents: int = 0
+    max_runtime_seconds: int = 0
+    delivery: str = 'background_log'
+    context_from: str = ''
+    provenance_digest: str = ''
     created_at: str = ''
     updated_at: str = ''
 
@@ -103,6 +110,14 @@ class AutomationSpec:
             acceptance_criteria=str(payload.get('acceptance_criteria', '')).strip(),
             collector_command=str(payload.get('collector_command', '')).strip(),
             no_agent=bool(payload.get('no_agent', False)),
+            allowed_toolsets=_parse_selected_skills(payload.get('allowed_toolsets')),
+            requires_subagent=bool(payload.get('requires_subagent', False)),
+            max_cost_cents=int(payload.get('max_cost_cents', 0) or 0),
+            max_runtime_seconds=int(payload.get('max_runtime_seconds', 0) or 0),
+            delivery=str(payload.get('delivery', 'background_log')).strip()
+            or 'background_log',
+            context_from=str(payload.get('context_from', '')).strip(),
+            provenance_digest=str(payload.get('provenance_digest', '')).strip(),
             created_at=str(payload.get('created_at', '')),
             updated_at=str(payload.get('updated_at', '')),
         )
@@ -191,6 +206,13 @@ class AutomationStore:
         acceptance_criteria: str = '',
         collector_command: str = '',
         no_agent: bool = False,
+        allowed_toolsets: Optional[builtins.list[str]] = None,
+        requires_subagent: bool = False,
+        max_cost_cents: int = 0,
+        max_runtime_seconds: int = 0,
+        delivery: str = 'background_log',
+        context_from: str = '',
+        provenance_digest: str = '',
         enabled: bool = True,
     ) -> AutomationSpec:
         if not name.strip():
@@ -217,6 +239,13 @@ class AutomationStore:
             acceptance_criteria=acceptance_criteria.strip(),
             collector_command=collector_command.strip(),
             no_agent=no_agent,
+            allowed_toolsets=tuple(allowed_toolsets or ()),
+            requires_subagent=requires_subagent,
+            max_cost_cents=max_cost_cents,
+            max_runtime_seconds=max_runtime_seconds,
+            delivery=delivery.strip() or 'background_log',
+            context_from=context_from.strip(),
+            provenance_digest=provenance_digest.strip(),
             created_at=now,
             updated_at=now,
         )
@@ -238,6 +267,13 @@ class AutomationStore:
         acceptance_criteria: str = '',
         collector_command: str = '',
         no_agent: bool = False,
+        allowed_toolsets: Optional[builtins.list[str]] = None,
+        requires_subagent: bool = False,
+        max_cost_cents: int = 0,
+        max_runtime_seconds: int = 0,
+        delivery: str = 'background_log',
+        context_from: str = '',
+        provenance_digest: str = '',
     ) -> AutomationSpec:
         spec = self.draft(
             name=name,
@@ -254,6 +290,13 @@ class AutomationStore:
             acceptance_criteria=acceptance_criteria,
             collector_command=collector_command,
             no_agent=no_agent,
+            allowed_toolsets=allowed_toolsets,
+            requires_subagent=requires_subagent,
+            max_cost_cents=max_cost_cents,
+            max_runtime_seconds=max_runtime_seconds,
+            delivery=delivery,
+            context_from=context_from,
+            provenance_digest=provenance_digest,
             enabled=True,
         )
         atomic_write_text(

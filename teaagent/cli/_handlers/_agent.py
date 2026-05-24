@@ -517,17 +517,20 @@ def automation_status_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def automation_add_command(args: argparse.Namespace) -> int:
-    from teaagent.automation_ticket import (
-        build_automation_dry_run_payload,
-        validate_automation_spec,
-    )
+def _automation_draft_from_args(
+    args: argparse.Namespace,
+    *,
+    name: str,
+    task: str,
+    schedule: str,
+) -> AutomationSpec:
+    from teaagent.automation_ticket import compute_automation_provenance_digest
 
     draft = AutomationSpec(
         automation_id='',
-        name=args.name,
-        task=args.task,
-        schedule=args.schedule,
+        name=name,
+        task=task,
+        schedule=schedule,
         provider=args.provider,
         model=args.model,
         permission_mode=args.permission_mode,
@@ -539,6 +542,83 @@ def automation_add_command(args: argparse.Namespace) -> int:
         acceptance_criteria=str(getattr(args, 'acceptance_criteria', '')).strip(),
         collector_command=str(getattr(args, 'collector_command', '')).strip(),
         no_agent=bool(getattr(args, 'no_agent', False)),
+        allowed_toolsets=tuple(getattr(args, 'allowed_toolset', None) or ()),
+        requires_subagent=bool(getattr(args, 'requires_subagent', False)),
+        max_cost_cents=int(getattr(args, 'max_cost_cents', 0) or 0),
+        max_runtime_seconds=int(getattr(args, 'max_runtime_seconds', 0) or 0),
+        delivery=str(getattr(args, 'delivery', 'background_log')),
+        context_from=str(getattr(args, 'context_from', '')).strip(),
+    )
+    digest = compute_automation_provenance_digest(draft)
+    return AutomationSpec(**{**draft.to_dict(), 'provenance_digest': digest})
+
+
+def _automation_create_kwargs_from_args(
+    args: argparse.Namespace, draft: AutomationSpec
+) -> dict[str, Any]:
+    return {
+        'name': args.name,
+        'task': args.task,
+        'schedule': args.schedule,
+        'provider': args.provider,
+        'model': args.model,
+        'permission_mode': args.permission_mode,
+        'context_profile': args.context_profile,
+        'max_iterations': args.max_iterations,
+        'max_tool_calls': args.max_tool_calls,
+        'auto_propose_skill': bool(getattr(args, 'auto_propose_skill', False)),
+        'selected_skills': list(draft.selected_skills),
+        'acceptance_criteria': draft.acceptance_criteria,
+        'collector_command': draft.collector_command,
+        'no_agent': draft.no_agent,
+        'allowed_toolsets': list(draft.allowed_toolsets),
+        'requires_subagent': draft.requires_subagent,
+        'max_cost_cents': draft.max_cost_cents,
+        'max_runtime_seconds': draft.max_runtime_seconds,
+        'delivery': draft.delivery,
+        'context_from': draft.context_from,
+        'provenance_digest': draft.provenance_digest,
+    }
+
+
+def automation_template_command(args: argparse.Namespace) -> int:
+    from teaagent.automation_templates import get_automation_template
+    from teaagent.automation_ticket import build_automation_dry_run_payload
+
+    if not getattr(args, 'dry_run', False):
+        print_json(
+            {
+                'status': 'error',
+                'message': 'automation template requires --dry-run (no model invocation)',
+            }
+        )
+        return 1
+    try:
+        template = get_automation_template(args.template_name)
+    except KeyError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    spec = template.to_spec()
+    payload = build_automation_dry_run_payload(
+        spec,
+        root=args.root,
+        human=bool(getattr(args, 'human', False)),
+        template=template.name,
+    )
+    print_json(payload)
+    if payload['ticket']['errors']:
+        return 1
+    return 0
+
+
+def automation_add_command(args: argparse.Namespace) -> int:
+    from teaagent.automation_ticket import (
+        build_automation_dry_run_payload,
+        validate_automation_spec,
+    )
+
+    draft = _automation_draft_from_args(
+        args, name=args.name, task=args.task, schedule=args.schedule
     )
     if draft.no_agent and not draft.collector_command:
         print_json(
@@ -582,22 +662,7 @@ def automation_add_command(args: argparse.Namespace) -> int:
         source_kind=source_kind,
         attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
     )
-    create_kwargs = {
-        'name': args.name,
-        'task': args.task,
-        'schedule': args.schedule,
-        'provider': args.provider,
-        'model': args.model,
-        'permission_mode': args.permission_mode,
-        'context_profile': args.context_profile,
-        'max_iterations': args.max_iterations,
-        'max_tool_calls': args.max_tool_calls,
-        'auto_propose_skill': bool(getattr(args, 'auto_propose_skill', False)),
-        'selected_skills': list(draft.selected_skills),
-        'acceptance_criteria': draft.acceptance_criteria,
-        'collector_command': draft.collector_command,
-        'no_agent': draft.no_agent,
-    }
+    create_kwargs = _automation_create_kwargs_from_args(args, draft)
     if gate.quarantine:
         spec = store.draft(**create_kwargs, enabled=False)
         store.create_quarantined(spec, provenance=gate.to_dict())

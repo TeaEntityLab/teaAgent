@@ -36,6 +36,7 @@ def register(
                 'tick': handlers['automation_tick'],
                 'serve': handlers['automation_serve'],
                 'status': handlers['automation_status'],
+                'template': handlers['automation_template'],
             },
         )
 
@@ -554,6 +555,29 @@ def _automation(
         help='One-shot owner attestation after reviewing an untrusted web/message payload.',
     )
     add.set_defaults(func=handlers['add'], agent_command='automation')
+    _add_automation_v2_arguments(add)
+
+    template = commands.add_parser(
+        'template',
+        help='Dry-run a built-in automation template (repo-watch, ...).',
+    )
+    template.add_argument(
+        'template_name',
+        help='Template name (for example repo-watch).',
+    )
+    template.add_argument('--root', default='.', help='Workspace root.')
+    template.add_argument(
+        '--dry-run',
+        action='store_true',
+        default=True,
+        help='Validate the template ticket without creating or invoking a model.',
+    )
+    template.add_argument(
+        '--human',
+        action='store_true',
+        help='Include a readable checklist in the JSON payload.',
+    )
+    template.set_defaults(func=handlers['template'], agent_command='automation')
 
     status = commands.add_parser(
         'status', help='Show automation health and last output.'
@@ -612,6 +636,44 @@ def _automation(
         help='Stop after N ticks (0 means run forever).',
     )
     serve.set_defaults(func=handlers['serve'], agent_command='automation')
+
+
+def _add_automation_v2_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        '--allowed-toolset',
+        action='append',
+        default=[],
+        metavar='NAME',
+        help='Explicit allowed toolset (repeatable). Defaults from --permission-mode.',
+    )
+    parser.add_argument(
+        '--requires-subagent',
+        action='store_true',
+        help='Record that this automation expects subagent delegation.',
+    )
+    parser.add_argument(
+        '--max-cost-cents',
+        type=int,
+        default=0,
+        help='Per-tick spend cap in cents (0 means unset).',
+    )
+    parser.add_argument(
+        '--max-runtime-seconds',
+        type=int,
+        default=0,
+        help='Per-tick wall-clock cap in seconds (0 means unset).',
+    )
+    parser.add_argument(
+        '--delivery',
+        choices=['background_log', 'webhook', 'none'],
+        default='background_log',
+        help='Where automation output is delivered.',
+    )
+    parser.add_argument(
+        '--context-from',
+        default='',
+        help='Optional upstream automation id for future chained context.',
+    )
 
 
 def _runs(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
