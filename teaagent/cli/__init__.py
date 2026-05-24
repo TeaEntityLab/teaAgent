@@ -75,6 +75,7 @@ from teaagent.cli._handlers import (
     session_resume_command,
     session_show_command,
     setup_command,
+    skill_candidate_eval_command,
     skill_candidate_install_command,
     skill_candidate_list_command,
     skill_candidate_propose_command,
@@ -218,6 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers,
         {
             'candidate_propose': skill_candidate_propose_command,
+            'candidate_eval': skill_candidate_eval_command,
             'candidate_list': skill_candidate_list_command,
             'candidate_show': skill_candidate_show_command,
             'candidate_review': skill_candidate_review_command,

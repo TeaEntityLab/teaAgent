@@ -152,7 +152,9 @@ def test_skill_candidate_review_blocks_unsafe_pattern(tmp_path: Path) -> None:
                 'Unsafe generated skill',
             ]
         )
-    candidate_id = json.loads(propose_out.getvalue())['candidate']['candidate_id']
+    propose_payload = json.loads(propose_out.getvalue())
+    assert propose_payload['status'] == 'eval_failed'
+    candidate_id = propose_payload['candidate']['candidate_id']
 
     review_out = io.StringIO()
     with redirect_stdout(review_out):
@@ -168,4 +170,4 @@ def test_skill_candidate_review_blocks_unsafe_pattern(tmp_path: Path) -> None:
         )
     assert review_code == 0
     reviewed = json.loads(review_out.getvalue())
-    assert reviewed['status'] == 'review_failed'
+    assert reviewed['status'] in {'eval_failed', 'review_failed'}

@@ -58,6 +58,13 @@ def register(
     show.add_argument('--root', default='.', help='Workspace root.')
     show.set_defaults(func=handlers['candidate_show'])
 
+    eval_cmd = candidate_subs.add_parser(
+        'eval', help='Run offline eval checks on a skill candidate.'
+    )
+    eval_cmd.add_argument('candidate_id')
+    eval_cmd.add_argument('--root', default='.', help='Workspace root.')
+    eval_cmd.set_defaults(func=handlers['candidate_eval'])
+
     review = candidate_subs.add_parser('review', help='Review one candidate.')
     review.add_argument('candidate_id')
     review.add_argument('--root', default='.', help='Workspace root.')

@@ -38,8 +38,9 @@ def skill_explain_command(args: argparse.Namespace) -> int:
 
 
 def skill_candidate_propose_command(args: argparse.Namespace) -> int:
+    store = SkillCandidateStore(args.root)
     try:
-        row = SkillCandidateStore(args.root).create_from_run(
+        row = store.create_from_run(
             run_id=args.from_run,
             name=args.name,
             description=args.description,
@@ -47,8 +48,36 @@ def skill_candidate_propose_command(args: argparse.Namespace) -> int:
     except (FileNotFoundError, ValueError) as exc:
         _print_json({'status': 'error', 'message': str(exc)})
         return 1
-    _print_json({'status': 'proposed', 'candidate': row.to_dict()})
-    return 0
+    from teaagent.skill_eval import load_eval_report
+
+    eval_report = load_eval_report(store.candidate_dir(row.candidate_id))
+    status = 'proposed' if row.status == 'proposed' else 'eval_failed'
+    payload: dict[str, object] = {'status': status, 'candidate': row.to_dict()}
+    if eval_report is not None:
+        payload['eval'] = eval_report.to_dict()
+    _print_json(payload)
+    return 0 if status == 'proposed' else 2
+
+
+def skill_candidate_eval_command(args: argparse.Namespace) -> int:
+    store = SkillCandidateStore(args.root)
+    try:
+        row = store.run_offline_eval(args.candidate_id)
+    except FileNotFoundError as exc:
+        _print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    from teaagent.skill_eval import load_eval_report
+
+    eval_report = load_eval_report(store.candidate_dir(args.candidate_id))
+    passed = bool(eval_report and eval_report.passed)
+    _print_json(
+        {
+            'status': 'eval_passed' if passed else 'eval_failed',
+            'candidate': row.to_dict(),
+            'eval': eval_report.to_dict() if eval_report else {},
+        }
+    )
+    return 0 if passed else 2
 
 
 def skill_candidate_list_command(args: argparse.Namespace) -> int:

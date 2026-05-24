@@ -17,6 +17,7 @@ from teaagent.skill_candidate_artifacts import (
     validate_candidate_artifacts,
     write_candidate_artifacts,
 )
+from teaagent.skill_eval import load_eval_report, run_offline_eval, write_eval_report
 from teaagent.skill_review import review_skill
 from teaagent.storage import atomic_write_text
 
@@ -70,6 +71,9 @@ class SkillCandidateStore:
 
     def skill_path(self, candidate_id: str) -> Path:
         return self._skill(candidate_id)
+
+    def candidate_dir(self, candidate_id: str) -> Path:
+        return self._dir(candidate_id)
 
     def create_from_run(
         self, *, run_id: str, name: str, description: str
@@ -129,7 +133,16 @@ class SkillCandidateStore:
             content_digest=gate.content_digest,
         )
         atomic_write_text(self._meta(candidate_id), json.dumps(candidate.to_dict()))
-        return candidate
+        return self.run_offline_eval(candidate_id)
+
+    def run_offline_eval(self, candidate_id: str) -> SkillCandidate:
+        candidate_dir = self._dir(candidate_id)
+        report = run_offline_eval(candidate_dir)
+        write_eval_report(candidate_dir, report)
+        if report.passed:
+            return self.show(candidate_id)
+        summary = '; '.join(report.failures[:3]) or 'offline eval failed'
+        return self.set_review(candidate_id, status='eval_failed', summary=summary)
 
     def set_review(
         self, candidate_id: str, *, status: str, summary: str
@@ -150,6 +163,12 @@ class SkillCandidateStore:
 
     def review(self, candidate_id: str) -> SkillCandidate:
         candidate_dir = self._dir(candidate_id)
+        eval_report = load_eval_report(candidate_dir)
+        if eval_report is None or not eval_report.passed:
+            refreshed = self.run_offline_eval(candidate_id)
+            eval_report = load_eval_report(candidate_dir)
+            if eval_report is None or not eval_report.passed:
+                return refreshed
         artifact_errors = validate_candidate_artifacts(candidate_dir)
         if artifact_errors:
             summary = '; '.join(artifact_errors[:3])
@@ -182,6 +201,9 @@ class SkillCandidateStore:
         candidate = self.show(candidate_id)
         if candidate.status not in {'review_passed', 'installed'}:
             raise ValueError('candidate must pass review before install')
+        eval_report = load_eval_report(self._dir(candidate_id))
+        if eval_report is None or not eval_report.passed:
+            raise ValueError('candidate must pass offline eval before install')
         candidate_dir = self._dir(candidate_id)
         artifact_errors = validate_candidate_artifacts(candidate_dir)
         if artifact_errors:

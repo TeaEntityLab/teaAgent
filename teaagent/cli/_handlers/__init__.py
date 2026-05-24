@@ -91,6 +91,7 @@ from ._model import (
     model_smoke,
 )
 from ._skill import (
+    skill_candidate_eval_command,
     skill_candidate_install_command,
     skill_candidate_list_command,
     skill_candidate_propose_command,
@@ -182,6 +183,7 @@ __all__ = [
     'skill_explain_command',
     'skill_candidate_list_command',
     'skill_candidate_propose_command',
+    'skill_candidate_eval_command',
     'skill_candidate_review_command',
     'skill_candidate_show_command',
 ]

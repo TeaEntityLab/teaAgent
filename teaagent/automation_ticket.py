@@ -195,7 +195,8 @@ def validate_automation_spec(
         )
     if spec.requires_subagent:
         warnings.append(
-            'requires_subagent is set but automation runs currently disable subagents'
+            'requires_subagent enables the subagent tool on automation agent ticks '
+            '(max depth 1)'
         )
     errors.extend(validate_context_from(spec, root=root, store=AutomationStore(root)))
     upstream_handoff_preview = ''

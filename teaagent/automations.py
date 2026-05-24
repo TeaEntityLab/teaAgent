@@ -433,6 +433,7 @@ def build_automation_status(
     store: Optional[AutomationStore] = None,
 ) -> dict[str, Any]:
     """Summarize automation health for CLI status output."""
+    from teaagent.automation_observability import enrich_automation_status_row
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
     automation_store = store or AutomationStore(root)
@@ -451,30 +452,19 @@ def build_automation_status(
                             encoding='utf-8', errors='replace'
                         ).splitlines()
                         log_tail = '\n'.join(lines[-20:])
-        rows.append(
-            {
-                'automation_id': spec.automation_id,
-                'name': spec.name,
-                'enabled': spec.enabled,
-                'next_run_at': spec.next_run_at,
-                'last_status': spec.last_status,
-                'last_run_id': spec.last_run_id,
-                'running_background_id': spec.running_background_id,
-                'collector_command': spec.collector_command,
-                'no_agent': spec.no_agent,
-                'selected_skills': list(spec.selected_skills),
-                'log_tail': log_tail,
-            }
-        )
+        rows.append(enrich_automation_status_row(root, spec, log_tail=log_tail))
     enabled = [row for row in rows if row['enabled']]
     due = automation_store.due()
     running = [row for row in rows if row['running_background_id']]
+    quarantined = automation_store.list_quarantined()
     return {
         'automation_count': len(rows),
         'enabled_count': len(enabled),
         'due_count': len(due),
         'running_count': len(running),
+        'quarantined_count': len(quarantined),
         'automations': rows,
+        'quarantined': quarantined,
     }
 
 

@@ -32,4 +32,7 @@ def test_automation_status_lists_automations(tmp_path: Path) -> None:
     assert code == 0
     payload = json.loads(status_out.getvalue())
     assert payload['automation_count'] == 1
-    assert payload['automations'][0]['name'] == 'status-job'
+    row = payload['automations'][0]
+    assert row['name'] == 'status-job'
+    assert 'token_contributors' in row
+    assert 'prompt_ledger' in row
