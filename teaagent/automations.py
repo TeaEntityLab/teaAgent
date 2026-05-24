@@ -321,11 +321,79 @@ class AutomationStore:
         )
         return spec
 
+    def list_quarantined(self) -> builtins.list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for path in sorted(self.quarantine_dir.glob('*.json')):
+            try:
+                payload = json.loads(path.read_text(encoding='utf-8'))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict) and payload.get('automation_id'):
+                rows.append(payload)
+        return sorted(
+            rows, key=lambda row: str(row.get('created_at', '')), reverse=True
+        )
+
+    def show_quarantined(self, automation_id: str) -> dict[str, Any]:
+        path = self._quarantine_path(automation_id)
+        if not path.exists():
+            raise FileNotFoundError(
+                f"quarantined automation '{automation_id}' not found"
+            )
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        if not isinstance(payload, dict):
+            raise ValueError(f"invalid quarantine payload for '{automation_id}'")
+        return payload
+
+    def promote_quarantined(
+        self,
+        automation_id: str,
+        *,
+        attested: bool = False,
+    ) -> AutomationSpec:
+        payload = dict(self.show_quarantined(automation_id))
+        provenance = payload.pop('provenance', None)
+        payload.pop('quarantine', None)
+        if isinstance(provenance, dict):
+            source_kind = str(provenance.get('source_kind', '')).strip()
+            if (
+                source_kind == 'web_message'
+                and not attested
+                and not provenance.get('attested')
+            ):
+                raise ValueError(
+                    'quarantined automation from web_message requires '
+                    '--i-attest-untrusted-write after human review'
+                )
+        spec = AutomationSpec.from_dict(payload)
+        if self._spec_path(automation_id).exists():
+            raise ValueError(
+                f"active automation '{automation_id}' already exists; delete it first"
+            )
+        promoted = AutomationSpec(
+            **{
+                **spec.to_dict(),
+                'enabled': True,
+                'next_run_at': compute_next_run_at(spec.schedule),
+                'updated_at': iso_utc(utc_now()),
+            }
+        )
+        atomic_write_text(
+            self._spec_path(automation_id), json.dumps(promoted.to_dict())
+        )
+        self._quarantine_path(automation_id).unlink(missing_ok=True)
+        return promoted
+
     def delete(self, automation_id: str) -> None:
         path = self._spec_path(automation_id)
-        if not path.exists():
-            raise FileNotFoundError(f"automation '{automation_id}' not found")
-        path.unlink()
+        quarantine_path = self._quarantine_path(automation_id)
+        if path.exists():
+            path.unlink()
+            return
+        if quarantine_path.exists():
+            quarantine_path.unlink(missing_ok=True)
+            return
+        raise FileNotFoundError(f"automation '{automation_id}' not found")
 
     def update(self, spec: AutomationSpec) -> AutomationSpec:
         updated = AutomationSpec(**{**spec.to_dict(), 'updated_at': iso_utc(utc_now())})

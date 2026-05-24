@@ -172,6 +172,9 @@ def build_agent_run_command(args: Any, task: str) -> list[str]:
         cmd.append('--code-analysis')
     if getattr(args, 'context_profile', None):
         cmd.extend(['--context-profile', args.context_profile])
+    max_cost = int(getattr(args, 'max_estimated_cost_cents', 0) or 0)
+    if max_cost > 0:
+        cmd.extend(['--max-estimated-cost-cents', str(max_cost)])
     if getattr(args, 'skill_index_only', False):
         cmd.append('--skill-index-only')
     selected_skills = getattr(args, 'selected_skills', None)

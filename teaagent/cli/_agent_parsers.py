@@ -37,6 +37,7 @@ def register(
                 'serve': handlers['automation_serve'],
                 'status': handlers['automation_status'],
                 'template': handlers['automation_template'],
+                'promote': handlers['automation_promote'],
             },
         )
 
@@ -63,6 +64,12 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         '--max-iterations', type=int, default=10, help='Maximum agent loop iterations.'
     )
     p.add_argument('--max-tool-calls', type=int, default=10, help='Maximum tool calls.')
+    p.add_argument(
+        '--max-estimated-cost-cents',
+        type=int,
+        default=0,
+        help='Abort the run when estimated cost exceeds this cap (0 uses default budget).',
+    )
     p.add_argument(
         '--clarify',
         action='store_true',
@@ -588,7 +595,24 @@ def _automation(
 
     lst = commands.add_parser('list', help='List automations.')
     lst.add_argument('--root', default='.', help='Workspace root.')
+    lst.add_argument(
+        '--quarantined',
+        action='store_true',
+        help='List quarantined automations awaiting promote.',
+    )
     lst.set_defaults(func=handlers['list'], agent_command='automation')
+
+    promote = commands.add_parser(
+        'promote', help='Promote a quarantined automation to the active schedule.'
+    )
+    promote.add_argument('automation_id')
+    promote.add_argument('--root', default='.', help='Workspace root.')
+    promote.add_argument(
+        '--i-attest-untrusted-write',
+        action='store_true',
+        help='Required when the quarantined automation came from an untrusted web/message source.',
+    )
+    promote.set_defaults(func=handlers['promote'], agent_command='automation')
 
     show = commands.add_parser('show', help='Show one automation.')
     show.add_argument('automation_id')
@@ -672,7 +696,7 @@ def _add_automation_v2_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--context-from',
         default='',
-        help='Optional upstream automation id for future chained context.',
+        help='Upstream automation id whose handoff is injected into the agent task.',
     )
 
 

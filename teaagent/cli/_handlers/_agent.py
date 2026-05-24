@@ -6,6 +6,7 @@ import json
 import signal
 import sys
 import time
+from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.automations import (
@@ -220,6 +221,9 @@ def _execute_agent_task(
             args.root,
             max_iterations=args.max_iterations,
             max_tool_calls=args.max_tool_calls,
+            max_estimated_cost_cents=int(
+                getattr(args, 'max_estimated_cost_cents', 0) or 0
+            ),
             allow_destructive=args.allow_destructive,
             model=selected_model,
             permission_mode=resolved_permission_mode,
@@ -371,6 +375,7 @@ def _start_automation_background_run(
     *,
     root: str,
     spec: AutomationSpec,
+    task: Optional[str] = None,
 ) -> dict[str, Any]:
     from teaagent.ergonomics.background_run import (
         BackgroundRunStore,
@@ -394,8 +399,9 @@ def _start_automation_background_run(
         code_analysis=False,
         context_profile=spec.context_profile,
         selected_skills=list(spec.selected_skills),
+        max_estimated_cost_cents=spec.max_cost_cents,
     )
-    command = build_agent_run_command(run_args, spec.task)
+    command = build_agent_run_command(run_args, task or spec.task)
     record = BackgroundRunStore(root).start(
         command, label=f'automation:{spec.automation_id}:{spec.name}'
     )
@@ -415,6 +421,10 @@ def _automation_is_running(root: str, background_id: Optional[str]) -> bool:
 
 
 def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
+    from teaagent.automation_chain import (
+        persist_automation_handoff,
+        resolve_chained_task,
+    )
     from teaagent.automation_collector import run_collector_command
 
     store = AutomationStore(root)
@@ -426,10 +436,18 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
             'running_background_id': spec.running_background_id,
         }
     collector_payload: Optional[dict[str, Any]] = None
+    collector_summary = ''
     if spec.collector_command.strip():
         collector_payload = run_collector_command(
             spec.collector_command, root=root
         ).to_dict()
+        collector_summary = str(collector_payload.get('summary', '') or '')
+        persist_automation_handoff(
+            root,
+            spec,
+            collector_summary=collector_summary,
+            summary=collector_summary,
+        )
         if not collector_payload['wake_agent']:
             updated = store.update(
                 AutomationSpec(
@@ -469,7 +487,10 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
                 'collector': collector_payload,
                 'next_run_at': updated.next_run_at,
             }
-    record = _start_automation_background_run(root=root, spec=spec)
+    agent_task, _handoff = resolve_chained_task(
+        root, spec, collector_summary=collector_summary
+    )
+    record = _start_automation_background_run(root=root, spec=spec, task=agent_task)
     updated = AutomationSpec(
         **{
             **spec.to_dict(),
@@ -490,6 +511,8 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
     }
     if collector_payload is not None:
         result['collector'] = collector_payload
+    if _handoff is not None:
+        result['context_from_handoff'] = _handoff.to_dict()
     return result
 
 
@@ -689,8 +712,26 @@ def automation_add_command(args: argparse.Namespace) -> int:
 
 
 def automation_list_command(args: argparse.Namespace) -> int:
-    specs = [spec.to_dict() for spec in AutomationStore(args.root).list()]
+    store = AutomationStore(args.root)
+    if getattr(args, 'quarantined', False):
+        print_json(store.list_quarantined())
+        return 0
+    specs = [spec.to_dict() for spec in store.list()]
     print_json(specs)
+    return 0
+
+
+def automation_promote_command(args: argparse.Namespace) -> int:
+    store = AutomationStore(args.root)
+    try:
+        spec = store.promote_quarantined(
+            args.automation_id,
+            attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print_json({'status': 'promoted', 'automation': spec.to_dict()})
     return 0
 
 
@@ -824,6 +865,7 @@ def automation_serve_command(args: argparse.Namespace) -> int:
 
 
 def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
+    from teaagent.automation_chain import persist_automation_handoff
     from teaagent.automation_limits import cost_cap_exceeded, enforce_runtime_cap
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
@@ -883,8 +925,22 @@ def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
                     )
         if not alive:
             next_state['running_background_id'] = None
+        refreshed = spec
         if next_state:
-            store.update(AutomationSpec(**{**spec.to_dict(), **next_state}))
+            refreshed = store.update(AutomationSpec(**{**spec.to_dict(), **next_state}))
+        log_tail = ''
+        log_path = bg.get('log_path')
+        if isinstance(log_path, str):
+            path = Path(log_path)
+            if path.is_file():
+                lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+                log_tail = '\n'.join(lines[-20:])
+        persist_automation_handoff(
+            root,
+            refreshed,
+            log_tail=log_tail,
+            summary=str(refreshed.last_status or ''),
+        )
 
 
 def _automation_health(store: AutomationStore) -> dict[str, int]:

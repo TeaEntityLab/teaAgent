@@ -6,7 +6,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from teaagent.automations import AutomationSpec
+from teaagent.automation_chain import validate_context_from
+from teaagent.automations import AutomationSpec, AutomationStore
 from teaagent.provenance_gate import PersistenceSubstrate, canonical_content_digest
 from teaagent.skill_loader import (
     discover_skill_index,
@@ -65,6 +66,7 @@ class AutomationTicketReport:
     delivery: str
     context_from: str
     provenance_digest: str
+    upstream_handoff_preview: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -83,6 +85,7 @@ class AutomationTicketReport:
             'delivery': self.delivery,
             'context_from': self.context_from,
             'provenance_digest': self.provenance_digest,
+            'upstream_handoff_preview': self.upstream_handoff_preview,
             'ready': not self.errors,
         }
 
@@ -188,11 +191,21 @@ def validate_automation_spec(
         warnings.append(
             'requires_subagent is set but automation runs currently disable subagents'
         )
-    if spec.context_from:
-        warnings.append(
-            'context_from is recorded for future chained automations; '
-            'chaining is not executed yet'
-        )
+    errors.extend(validate_context_from(spec, root=root, store=AutomationStore(root)))
+    upstream_handoff_preview = ''
+    if spec.context_from.strip():
+        from teaagent.automation_chain import load_automation_handoff
+
+        handoff = load_automation_handoff(root, spec.context_from.strip())
+        if handoff is None:
+            warnings.append(
+                f'context_from {spec.context_from.strip()} has no handoff file yet; '
+                'run the upstream automation once before the downstream tick'
+            )
+        else:
+            from teaagent.automation_chain import handoff_preview
+
+            upstream_handoff_preview = handoff_preview(handoff)
     if not spec.max_cost_cents:
         warnings.append(
             'max_cost_cents is unset; add --max-cost-cents to cap spend per tick'
@@ -224,6 +237,7 @@ def validate_automation_spec(
         delivery=delivery,
         context_from=spec.context_from,
         provenance_digest=provenance_digest,
+        upstream_handoff_preview=upstream_handoff_preview,
     )
 
 
@@ -253,6 +267,8 @@ def format_automation_ticket_human(
         lines.extend(['', 'Acceptance criteria:', spec.acceptance_criteria.strip()])
     if spec.context_from.strip():
         lines.extend(['', 'Context from:', spec.context_from.strip()])
+    if report.upstream_handoff_preview:
+        lines.extend(['', 'Upstream handoff preview:', report.upstream_handoff_preview])
     if spec.collector_command.strip():
         lines.extend(['', 'Collector command:', spec.collector_command.strip()])
     if report.warnings:

@@ -65,6 +65,7 @@ class ChatAgentConfig:
     root: Path
     max_iterations: int = 10
     max_tool_calls: int = 10
+    max_estimated_cost_cents: int = 0
     allow_destructive: bool = False
     model: Optional[str] = None
     permission_mode: PermissionMode = PermissionMode.PROMPT
@@ -427,8 +428,15 @@ def run_chat_agent(
             for warning in skill_report.warnings
         ],
     )
+    cost_cap = (
+        config.max_estimated_cost_cents
+        if config.max_estimated_cost_cents > 0
+        else RunBudget().max_estimated_cost_cents
+    )
     runner_budget = RunBudget(
-        max_iterations=config.max_iterations, max_tool_calls=config.max_tool_calls
+        max_iterations=config.max_iterations,
+        max_tool_calls=config.max_tool_calls,
+        max_estimated_cost_cents=cost_cap,
     )
     engine = ModelDecisionEngine(
         adapter=adapter,
