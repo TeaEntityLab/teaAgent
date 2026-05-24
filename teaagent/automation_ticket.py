@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from teaagent.automation_chain import validate_context_from
+from teaagent.automation_delivery import resolve_automation_webhook_url
 from teaagent.automations import AutomationSpec, AutomationStore
 from teaagent.provenance_gate import PersistenceSubstrate, canonical_content_digest
 from teaagent.skill_loader import (
@@ -186,6 +187,11 @@ def validate_automation_spec(
     if delivery not in ALLOWED_DELIVERY_MODES:
         errors.append(
             f'delivery must be one of {", ".join(sorted(ALLOWED_DELIVERY_MODES))}'
+        )
+    if delivery == 'webhook' and not resolve_automation_webhook_url(root):
+        errors.append(
+            'delivery=webhook requires automation_webhook_url in '
+            '.teaagent/config.toml or TEAAGENT_AUTOMATION_WEBHOOK_URL'
         )
     if spec.requires_subagent:
         warnings.append(

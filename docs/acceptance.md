@@ -99,6 +99,7 @@ directory.
 | `test_schema_migration_live.py` | Migration ordering, idempotency, data survival, version tracking |
 | `test_automation_context_from_chain_flow.py` | context_from injects upstream handoff summary into downstream automation agent task |
 | `test_automation_promote_quarantined_flow.py` | Promote quarantined automations after owner attestation |
+| `test_automation_webhook_delivery_flow.py` | delivery=webhook posts tick results to workspace automation_webhook_url |
 | `test_automation_budget_caps_flow.py` | Automation reconcile terminates over-max runtime and records runtime_cap_exceeded |
 | `test_automation_template_dry_run_human_flow.py` | Built-in repo-watch template dry-run emits human checklist with provenance digest and toolsets |
 | `test_skill_activation_explain_flow.py` | Skill explain reports load reason, duplicate shadowing, and zero tokens for no-auto-skills |
@@ -121,7 +122,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`180 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
+`181 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

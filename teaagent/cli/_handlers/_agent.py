@@ -426,6 +426,7 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
         resolve_chained_task,
     )
     from teaagent.automation_collector import run_collector_command
+    from teaagent.automation_delivery import deliver_automation_tick
 
     store = AutomationStore(root)
     if _automation_is_running(root, spec.running_background_id):
@@ -458,6 +459,12 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
                     }
                 )
             )
+            deliver_automation_tick(
+                root,
+                updated,
+                status='skipped_no_wake',
+                collector=collector_payload,
+            )
             return {
                 'automation_id': spec.automation_id,
                 'name': spec.name,
@@ -479,6 +486,12 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
                         'next_run_at': compute_next_run_at(spec.schedule),
                     }
                 )
+            )
+            deliver_automation_tick(
+                root,
+                updated,
+                status=status,
+                collector=collector_payload,
             )
             return {
                 'automation_id': spec.automation_id,
@@ -866,6 +879,7 @@ def automation_serve_command(args: argparse.Namespace) -> int:
 
 def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
     from teaagent.automation_chain import persist_automation_handoff
+    from teaagent.automation_delivery import deliver_automation_tick
     from teaagent.automation_limits import cost_cap_exceeded, enforce_runtime_cap
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
@@ -941,6 +955,14 @@ def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
             log_tail=log_tail,
             summary=str(refreshed.last_status or ''),
         )
+        if not alive:
+            deliver_automation_tick(
+                root,
+                refreshed,
+                status=str(refreshed.last_status or 'completed'),
+                log_tail=log_tail,
+                run_id=run_id,
+            )
 
 
 def _automation_health(store: AutomationStore) -> dict[str, int]:

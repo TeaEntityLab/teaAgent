@@ -68,6 +68,8 @@ def load_workspace_defaults(root: str | Path = '.') -> dict[str, Any]:
         merged['daily_cost_cap_cents'] = int(
             os.environ['TEAAGENT_DAILY_COST_CAP_CENTS']
         )
+    if os.environ.get('TEAAGENT_AUTOMATION_WEBHOOK_URL'):
+        merged['automation_webhook_url'] = os.environ['TEAAGENT_AUTOMATION_WEBHOOK_URL']
     return merged
 
 
