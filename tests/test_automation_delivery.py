@@ -7,7 +7,9 @@ from threading import Thread
 
 from teaagent.automation_delivery import (
     deliver_automation_tick,
+    resolve_automation_webhook_secret,
     resolve_automation_webhook_url,
+    sign_webhook_body,
 )
 from teaagent.automation_ticket import validate_automation_spec
 from teaagent.automations import AutomationStore
@@ -15,11 +17,13 @@ from teaagent.automations import AutomationStore
 
 class _CaptureHandler(BaseHTTPRequestHandler):
     captured: list[dict[str, object]] = []
+    signatures: list[str | None] = []
 
     def do_POST(self) -> None:  # noqa: N802
         length = int(self.headers.get('Content-Length', '0'))
         body = self.rfile.read(length)
         _CaptureHandler.captured.append(json.loads(body.decode('utf-8')))
+        _CaptureHandler.signatures.append(self.headers.get('X-TeaAgent-Signature-256'))
         self.send_response(204)
         self.end_headers()
 
@@ -61,13 +65,25 @@ def test_dry_run_errors_when_webhook_delivery_without_url(tmp_path: Path) -> Non
     assert any('automation_webhook_url' in err for err in report.errors)
 
 
+def test_sign_webhook_body_matches_audit_sink_convention() -> None:
+    body = b'{"event":"automation_tick"}'
+    assert sign_webhook_body('secret', body) == sign_webhook_body('secret', body)
+    assert sign_webhook_body('secret', body).startswith('sha256=')
+
+
 def test_deliver_automation_tick_posts_json(tmp_path: Path) -> None:
     _CaptureHandler.captured.clear()
+    _CaptureHandler.signatures.clear()
     server, url = _start_server()
     try:
         config = tmp_path / '.teaagent' / 'config.toml'
         config.parent.mkdir(parents=True)
-        config.write_text(f'automation_webhook_url = "{url}"\n', encoding='utf-8')
+        config.write_text(
+            f'automation_webhook_url = "{url}"\n'
+            'automation_webhook_secret = "test-secret"\n',
+            encoding='utf-8',
+        )
+        assert resolve_automation_webhook_secret(tmp_path) == 'test-secret'
         spec = AutomationStore(tmp_path).draft(
             name='hook-job',
             task='Summarize repo changes with explicit output path notes.txt',
@@ -86,5 +102,9 @@ def test_deliver_automation_tick_posts_json(tmp_path: Path) -> None:
         assert delivered is True
         assert _CaptureHandler.captured[-1]['status'] == 'collector_ok'
         assert _CaptureHandler.captured[-1]['event'] == 'automation_tick'
+        sig = _CaptureHandler.signatures[-1]
+        assert sig is not None
+        assert sig.startswith('sha256=')
+        assert len(sig) > len('sha256=')
     finally:
         server.shutdown()

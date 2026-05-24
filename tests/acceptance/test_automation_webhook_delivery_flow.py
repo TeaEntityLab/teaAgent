@@ -15,11 +15,13 @@ from teaagent.cli import main
 
 class _HookHandler(BaseHTTPRequestHandler):
     payloads: list[dict[str, object]] = []
+    signatures: list[str | None] = []
 
     def do_POST(self) -> None:  # noqa: N802
         length = int(self.headers.get('Content-Length', '0'))
         body = self.rfile.read(length)
         _HookHandler.payloads.append(json.loads(body.decode('utf-8')))
+        _HookHandler.signatures.append(self.headers.get('X-TeaAgent-Signature-256'))
         self.send_response(204)
         self.end_headers()
 
@@ -36,7 +38,11 @@ def test_automation_webhook_delivery_flow(tmp_path: Path) -> None:
 
     config = tmp_path / '.teaagent' / 'config.toml'
     config.parent.mkdir(parents=True)
-    config.write_text(f'automation_webhook_url = "{hook_url}"\n', encoding='utf-8')
+    config.write_text(
+        f'automation_webhook_url = "{hook_url}"\n'
+        'automation_webhook_secret = "acceptance-hmac-secret"\n',
+        encoding='utf-8',
+    )
 
     collector = tmp_path / 'collector.py'
     collector.write_text(
@@ -81,4 +87,6 @@ def test_automation_webhook_delivery_flow(tmp_path: Path) -> None:
     assert last['automation_id'] == automation_id
     assert last['status'] == 'skipped_no_wake'
     assert last['collector']['summary'] == 'no changes'
+    assert _HookHandler.signatures[-1] is not None
+    assert str(_HookHandler.signatures[-1]).startswith('sha256=')
     server.shutdown()

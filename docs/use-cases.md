@@ -79,6 +79,8 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Protected path enforcement | Codex automatically protects `.git`/`.codex`/`.agents` directories. | Implemented. | `test_protected_paths_flow.py` |
 | Declarative sub-agent definitions | Claude Code uses `.claude/agents/*.md` frontmatter; Codex uses config for thread/agent topology. | Implemented. | `test_subagent_definitions_flow.py` |
 | Semantic code navigation (LSP) | OpenCode integrates LSP for diagnostics, definitions, and references. | Implemented. | `test_code_analysis_lsp_flow.py`, `test_code_analysis_prompt_injection_flow.py` |
+| Persistent automation (cron-style) | Hermes-style scheduled agents with collectors, provenance quarantine, and webhook delivery. | Implemented. | `test_automation_wake_agent_gate_skips_unchanged_flow.py`, `test_automation_promote_quarantined_flow.py`, `test_automation_webhook_delivery_flow.py`, `test_automation_status_observability_flow.py` |
+| Self-generated skills (quarantine pipeline) | Agent proposes skill candidates with artifacts, offline eval, and human review before install. | Implemented. | `test_skill_candidate_flow.py`, `test_skill_candidate_contract_policy_provenance_flow.py`, `test_skill_candidate_offline_eval_flow.py` |
 
 ## Current Core Use Cases
 
@@ -116,6 +118,8 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Concurrent modification safety | Prevent silent data loss by rejecting writes when files were modified between read and write. | `test_mtime_read_before_write_flow.py` | P0 | Implemented |
 | Protected path enforcement | Block accidental writes to `.git/` and `.teaagent/` with built-in default deny rules. | `test_protected_paths_flow.py` | P1 | Implemented |
 | Declarative sub-agent orchestration | Define agent roles in `.teaagent/subagents/*.md` (Markdown frontmatter) mirroring Claude Code's `.claude/agents/` convention. | `test_subagent_definitions_flow.py` | P1 | Implemented |
+| Persistent automation / cron agent | Schedule repo watchers and script-first collectors with provenance gates and optional webhook delivery. | `test_automation_wake_agent_gate_skips_unchanged_flow.py`, `test_automation_context_from_chain_flow.py`, `test_automation_webhook_delivery_flow.py` | P2 | Implemented |
+| Self-generated skill candidates | Propose skills from completed runs; offline eval + review before install to active skill dirs. | `test_skill_candidate_flow.py`, `test_skill_candidate_offline_eval_flow.py`, `test_skill_activation_explain_flow.py` | P2 | Implemented |
 
 ## Completed Delivery Plan
 
@@ -133,6 +137,9 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 12. Completed (P1): Declarative sub-agent definitions with Markdown frontmatter (`test_subagent_definitions_flow.py`).
 13. Completed (P1): Context compaction latency SLO (`test_context_compaction_slo_flow.py`).
 14. Completed (P1): Hook lifecycle acceptance elevation (`test_hook_lifecycle_flow.py`).
+15. Completed (P2): Persistent automation with collectors, quarantine, promote, and webhook delivery.
+16. Completed (P2): Self-generated skill candidate pipeline with offline eval and provenance artifacts.
+17. Completed (P2): Automation status observability (prompt ledger, token contributors, gate reasons).
 
 ## Partial / Planned Gaps
 
@@ -144,8 +151,6 @@ They are **not** claimed as done — each has a concrete next action.
 | Background/cloud surface docs | Codex Cloud Tasks, Claude Code background sessions | **Partial** — `UltraworkStore` and `BackgroundRunStore` exist but surface docs are thin | Write hosted deployment guide + background session walkthrough | P2 |
 | Desktop/client-server packaging | OpenCode desktop, Codex app server | **Planned** — no docs or packaging guidance | Document desktop launch recipes in USAGE.md | P2 |
 | Repo-map quality benchmark | Aider repo-map, OpenCode LSP | **Partial** — `context_pack` exists but no quality eval against large repos | Write repo-map accuracy evaluation script + benchmark dataset | P2 |
-| Persistent automation / cron-style agent | Hermes cron scheduling, agent-created skills | **Planned** — cron hooks exist but no user-facing persistent agent | Add Hermes-style persistent agent use-case and demo | P2 |
-| Self-generated skills | Hermes agent-created skills | **Planned** — skills system exists but no agent-created skill pipeline | Document skill-creation workflow, add acceptance for agent-authored skill definitions | P2 |
 
 ## Evidence Commands
 

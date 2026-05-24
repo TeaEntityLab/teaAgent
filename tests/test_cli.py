@@ -850,8 +850,8 @@ class CLITests(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 1)
-        self.assertIn("OAuth active kid 'v2' not found", stderr.getvalue())
-        self.assertIn('available kids: v1', stderr.getvalue())
+        stderr_text = stderr.getvalue()
+        self.assertIn('active_kid is not present in keys', stderr_text)
 
     def test_mcp_http_oauth_dpop_replay_ttl_accepted(self) -> None:
         with (

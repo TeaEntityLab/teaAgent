@@ -80,3 +80,7 @@ def test_create_from_run_writes_eval_report(tmp_path: Path) -> None:
     assert report is not None
     assert report.passed
     assert row.status == 'proposed'
+    dataset = SkillCandidateStore(tmp_path).candidate_dir(row.candidate_id) / (
+        'eval_dataset.json'
+    )
+    assert dataset.is_file()

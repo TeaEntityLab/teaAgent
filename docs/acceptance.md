@@ -97,10 +97,12 @@ directory.
 | `test_run_undo.py` | Pre-write capture, file deletion/restore, path traversal guard |
 | `test_runner_cost_tracking.py` | `RunResult` cost fields and audit event cost fields |
 | `test_schema_migration_live.py` | Migration ordering, idempotency, data survival, version tracking |
+| `test_automation_wake_agent_gate_skips_unchanged_flow.py` | Collector wake_agent=false skips LLM run and saves tokens |
 | `test_automation_context_from_chain_flow.py` | context_from injects upstream handoff summary into downstream automation agent task |
 | `test_automation_promote_quarantined_flow.py` | Promote quarantined automations after owner attestation |
 | `test_automation_webhook_delivery_flow.py` | delivery=webhook posts tick results to workspace automation_webhook_url |
 | `test_automation_status_observability_flow.py` | automation status shows prompt ledger, token contributors, and gate reasons |
+| `test_skill_candidate_flow.py` | Propose, review, and install skill candidates from completed runs |
 | `test_skill_candidate_offline_eval_flow.py` | Offline eval gates skill candidates before review/install |
 | `test_automation_budget_caps_flow.py` | Automation reconcile terminates over-max runtime and records runtime_cap_exceeded |
 | `test_automation_template_dry_run_human_flow.py` | Built-in repo-watch template dry-run emits human checklist with provenance digest and toolsets |

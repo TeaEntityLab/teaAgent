@@ -29,6 +29,8 @@ _SENSITIVE_KEY_MARKERS = (
 
 
 def _is_sensitive_key(key: str) -> bool:
+    if key in {'token_source'}:
+        return False
     lowered = key.lower()
     return any(marker in lowered for marker in _SENSITIVE_KEY_MARKERS)
 

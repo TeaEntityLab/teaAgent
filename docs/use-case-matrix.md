@@ -3,7 +3,7 @@
 Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.
 
 Landscape survey reviewed: **2026-05-24** ([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).
-Open partial/planned gaps (P1/P2): **5** (see [docs/use-cases.md](use-cases.md#partial--planned-gaps)).
+Open partial/planned gaps (P1/P2): **3** (see [docs/use-cases.md](use-cases.md#partial--planned-gaps)).
 
 Time-to-first-useful-run: **0.312s** (pip install -e . → teaagent init → teaagent daily --dry-run). Refresh with `python3 scripts/measure_time_to_first_run.py --write docs/ergonomics-kpi.json`.
 
@@ -25,3 +25,5 @@ Time-to-first-useful-run: **0.312s** (pip install -e . → teaagent init → tea
 | Runtime IDE MCP smoke | yes | low | restart MCP server | medium | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` | - |
 | Session resume continuity | yes | medium | re-run original task | high | `test_session_resume_continuity_flow.py` | - |
 | External ecosystem compatibility | yes | low | fix manifest/schema | low | `test_external_tool_manifest_compatibility_flow.py` | - |
+| Persistent automation / cron agent | yes | medium | teaagent agent automation pause/delete | high | `test_automation_wake_agent_gate_skips_unchanged_flow.py`, `test_automation_promote_quarantined_flow.py`, `test_automation_webhook_delivery_flow.py`, `test_automation_status_observability_flow.py` | - |
+| Self-generated skill candidates | yes | medium | remove skill candidate or installed skill dir | high | `test_skill_candidate_flow.py`, `test_skill_candidate_contract_policy_provenance_flow.py`, `test_skill_candidate_offline_eval_flow.py` | - |

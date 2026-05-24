@@ -94,6 +94,16 @@ USE_CASE_META: dict[str, dict[str, str]] = {
         'rollback_path': 'fix manifest/schema',
         'audit_criticality': 'low',
     },
+    'Persistent automation / cron agent': {
+        'blast_radius': 'medium',
+        'rollback_path': 'teaagent agent automation pause/delete',
+        'audit_criticality': 'high',
+    },
+    'Self-generated skill candidates': {
+        'blast_radius': 'medium',
+        'rollback_path': 'remove skill candidate or installed skill dir',
+        'audit_criticality': 'high',
+    },
 }
 
 USE_CASES: dict[str, tuple[str, ...]] = {
@@ -180,6 +190,23 @@ USE_CASES: dict[str, tuple[str, ...]] = {
         (
             'External ecosystem compatibility',
             ('test_external_tool_manifest_compatibility_flow.py',),
+        ),
+        (
+            'Persistent automation / cron agent',
+            (
+                'test_automation_wake_agent_gate_skips_unchanged_flow.py',
+                'test_automation_promote_quarantined_flow.py',
+                'test_automation_webhook_delivery_flow.py',
+                'test_automation_status_observability_flow.py',
+            ),
+        ),
+        (
+            'Self-generated skill candidates',
+            (
+                'test_skill_candidate_flow.py',
+                'test_skill_candidate_contract_policy_provenance_flow.py',
+                'test_skill_candidate_offline_eval_flow.py',
+            ),
         ),
     ]
 }

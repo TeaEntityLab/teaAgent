@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import urllib.error
 import urllib.request
@@ -12,6 +14,7 @@ from teaagent.automations import AutomationSpec
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
 
 _AUTOMATION_WEBHOOK_ENV = 'TEAAGENT_AUTOMATION_WEBHOOK_URL'
+_AUTOMATION_WEBHOOK_SECRET_ENV = 'TEAAGENT_AUTOMATION_WEBHOOK_SECRET'
 
 
 def resolve_automation_webhook_url(root: str | Path = '.') -> Optional[str]:
@@ -25,6 +28,25 @@ def resolve_automation_webhook_url(root: str | Path = '.') -> Optional[str]:
     if url is None or not str(url).strip():
         return None
     return str(url).strip()
+
+
+def resolve_automation_webhook_secret(root: str | Path = '.') -> Optional[str]:
+    """Return the shared secret for HMAC signing, if configured."""
+    defaults = load_workspace_defaults(root)
+    secret = defaults.get('automation_webhook_secret')
+    if secret is None or not str(secret).strip():
+        import os
+
+        secret = os.environ.get(_AUTOMATION_WEBHOOK_SECRET_ENV)
+    if secret is None or not str(secret).strip():
+        return None
+    return str(secret).strip()
+
+
+def sign_webhook_body(secret: str, body: bytes) -> str:
+    """GitHub-style HMAC-SHA256 signature header value."""
+    digest = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).hexdigest()
+    return f'sha256={digest}'
 
 
 def deliver_automation_tick(
@@ -60,13 +82,18 @@ def deliver_automation_tick(
     }
     try:
         body = json.dumps(payload).encode('utf-8')
+        headers = {
+            'Content-Type': 'application/json',
+            'Content-Length': str(len(body)),
+            'User-Agent': 'TeaAgent-AutomationWebhook/1',
+        }
+        secret = resolve_automation_webhook_secret(root)
+        if secret:
+            headers['X-TeaAgent-Signature-256'] = sign_webhook_body(secret, body)
         req = urllib.request.Request(
             url,
             data=body,
-            headers={
-                'Content-Type': 'application/json',
-                'Content-Length': str(len(body)),
-            },
+            headers=headers,
             method='POST',
         )
         urllib.request.urlopen(req, timeout=5).close()

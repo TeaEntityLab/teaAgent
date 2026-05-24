@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from teaagent.skill_candidate_artifacts import validate_candidate_artifacts
+from teaagent.skill_eval_dataset import run_eval_dataset_checks
 from teaagent.skill_review import review_skill
 from teaagent.storage import atomic_write_text
 
@@ -113,6 +114,10 @@ def run_offline_eval(
             failures.append('REFERENCE.md too short for offline eval')
     else:
         failures.append('missing REFERENCE.md')
+
+    dataset_checks, dataset_failures = run_eval_dataset_checks(candidate_dir)
+    checks.extend(dataset_checks)
+    failures.extend(dataset_failures)
 
     passed = not failures
     return SkillEvalReport(

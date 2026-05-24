@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from teaagent.automation_chain import validate_context_from
-from teaagent.automation_delivery import resolve_automation_webhook_url
+from teaagent.automation_delivery import (
+    resolve_automation_webhook_secret,
+    resolve_automation_webhook_url,
+)
 from teaagent.automations import AutomationSpec, AutomationStore
 from teaagent.provenance_gate import PersistenceSubstrate, canonical_content_digest
 from teaagent.skill_loader import (
@@ -192,6 +195,15 @@ def validate_automation_spec(
         errors.append(
             'delivery=webhook requires automation_webhook_url in '
             '.teaagent/config.toml or TEAAGENT_AUTOMATION_WEBHOOK_URL'
+        )
+    if (
+        delivery == 'webhook'
+        and resolve_automation_webhook_url(root)
+        and not resolve_automation_webhook_secret(root)
+    ):
+        warnings.append(
+            'delivery=webhook has no automation_webhook_secret; '
+            'set TEAAGENT_AUTOMATION_WEBHOOK_SECRET for HMAC verification'
         )
     if spec.requires_subagent:
         warnings.append(

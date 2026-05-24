@@ -80,8 +80,8 @@
   <main>
     <section class="summary">
       <h1>TeaAgent Use-case Coverage</h1>
-      <p>Covered: 16/16 (100.0%)</p>
-      <p>Landscape survey reviewed: 2026-05-24 · Open partial/planned gaps (P1/P2): 5</p>
+      <p>Covered: 18/18 (100.0%)</p>
+      <p>Landscape survey reviewed: 2026-05-24 · Open partial/planned gaps (P1/P2): 3</p>
     </section>
     <table>
       <thead>
@@ -112,6 +112,8 @@
 <tr><td>Runtime IDE MCP smoke</td><td class="yes">yes</td><td>low</td><td>restart MCP server</td><td>medium</td><td><code>`test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`</code></td><td><code>-</code></td></tr>
 <tr><td>Session resume continuity</td><td class="yes">yes</td><td>medium</td><td>re-run original task</td><td>high</td><td><code>`test_session_resume_continuity_flow.py`</code></td><td><code>-</code></td></tr>
 <tr><td>External ecosystem compatibility</td><td class="yes">yes</td><td>low</td><td>fix manifest/schema</td><td>low</td><td><code>`test_external_tool_manifest_compatibility_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Persistent automation / cron agent</td><td class="yes">yes</td><td>medium</td><td>teaagent agent automation pause/delete</td><td>high</td><td><code>`test_automation_wake_agent_gate_skips_unchanged_flow.py`, `test_automation_promote_quarantined_flow.py`, `test_automation_webhook_delivery_flow.py`, `test_automation_status_observability_flow.py`</code></td><td><code>-</code></td></tr>
+<tr><td>Self-generated skill candidates</td><td class="yes">yes</td><td>medium</td><td>remove skill candidate or installed skill dir</td><td>high</td><td><code>`test_skill_candidate_flow.py`, `test_skill_candidate_contract_policy_provenance_flow.py`, `test_skill_candidate_offline_eval_flow.py`</code></td><td><code>-</code></td></tr>
       </tbody>
     </table>
   </main>

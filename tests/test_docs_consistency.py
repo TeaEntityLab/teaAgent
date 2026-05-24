@@ -172,7 +172,7 @@ def test_validate_matrix_open_gap_count_detects_stale_matrix() -> None:
     root = Path(__file__).resolve().parents[1]
     matrix = (root / 'docs' / 'use-case-matrix.md').read_text(encoding='utf-8')
     stale = matrix.replace(
-        'Open partial/planned gaps (P1/P2): **5**',
+        'Open partial/planned gaps (P1/P2): **3**',
         'Open partial/planned gaps (P1/P2): **0**',
         1,
     )
@@ -187,4 +187,4 @@ def test_open_partial_planned_gap_count_matches_use_cases_section() -> None:
     root = Path(__file__).resolve().parents[1]
     build_matrix = _VALIDATE_MODULE._load_build_use_case_matrix_module()
     count = build_matrix._open_backlog_gap_count(root / 'docs' / 'use-cases.md')
-    assert count == 5
+    assert count == 3

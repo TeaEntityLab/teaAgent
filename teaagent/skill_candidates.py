@@ -18,6 +18,7 @@ from teaagent.skill_candidate_artifacts import (
     write_candidate_artifacts,
 )
 from teaagent.skill_eval import load_eval_report, run_offline_eval, write_eval_report
+from teaagent.skill_eval_dataset import write_default_eval_dataset
 from teaagent.skill_review import review_skill
 from teaagent.storage import atomic_write_text
 
@@ -131,6 +132,12 @@ class SkillCandidateStore:
             created_at=now,
             source_kind=gate.source_kind.value,
             content_digest=gate.content_digest,
+        )
+        write_default_eval_dataset(
+            target_dir,
+            task=task,
+            final_answer=final_answer,
+            skill_name=name.strip(),
         )
         atomic_write_text(self._meta(candidate_id), json.dumps(candidate.to_dict()))
         return self.run_offline_eval(candidate_id)

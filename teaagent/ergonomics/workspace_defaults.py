@@ -70,6 +70,10 @@ def load_workspace_defaults(root: str | Path = '.') -> dict[str, Any]:
         )
     if os.environ.get('TEAAGENT_AUTOMATION_WEBHOOK_URL'):
         merged['automation_webhook_url'] = os.environ['TEAAGENT_AUTOMATION_WEBHOOK_URL']
+    if os.environ.get('TEAAGENT_AUTOMATION_WEBHOOK_SECRET'):
+        merged['automation_webhook_secret'] = os.environ[
+            'TEAAGENT_AUTOMATION_WEBHOOK_SECRET'
+        ]
     return merged
 
 
