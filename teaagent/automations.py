@@ -49,6 +49,7 @@ class AutomationSpec:
     selected_skills: tuple[str, ...] = ()
     acceptance_criteria: str = ''
     collector_command: str = ''
+    collector_command_digest: str = ''
     no_agent: bool = False
     allowed_toolsets: tuple[str, ...] = ()
     requires_subagent: bool = False
@@ -109,6 +110,9 @@ class AutomationSpec:
             selected_skills=_parse_selected_skills(payload.get('selected_skills')),
             acceptance_criteria=str(payload.get('acceptance_criteria', '')).strip(),
             collector_command=str(payload.get('collector_command', '')).strip(),
+            collector_command_digest=str(
+                payload.get('collector_command_digest', '')
+            ).strip(),
             no_agent=bool(payload.get('no_agent', False)),
             allowed_toolsets=_parse_selected_skills(payload.get('allowed_toolsets')),
             requires_subagent=bool(payload.get('requires_subagent', False)),
@@ -205,6 +209,7 @@ class AutomationStore:
         selected_skills: Optional[builtins.list[str]] = None,
         acceptance_criteria: str = '',
         collector_command: str = '',
+        collector_command_digest: str = '',
         no_agent: bool = False,
         allowed_toolsets: Optional[builtins.list[str]] = None,
         requires_subagent: bool = False,
@@ -238,6 +243,7 @@ class AutomationStore:
             selected_skills=tuple(selected_skills or ()),
             acceptance_criteria=acceptance_criteria.strip(),
             collector_command=collector_command.strip(),
+            collector_command_digest=collector_command_digest.strip(),
             no_agent=no_agent,
             allowed_toolsets=tuple(allowed_toolsets or ()),
             requires_subagent=requires_subagent,
@@ -266,6 +272,7 @@ class AutomationStore:
         selected_skills: Optional[builtins.list[str]] = None,
         acceptance_criteria: str = '',
         collector_command: str = '',
+        collector_command_digest: str = '',
         no_agent: bool = False,
         allowed_toolsets: Optional[builtins.list[str]] = None,
         requires_subagent: bool = False,
@@ -289,6 +296,7 @@ class AutomationStore:
             selected_skills=selected_skills,
             acceptance_criteria=acceptance_criteria,
             collector_command=collector_command,
+            collector_command_digest=collector_command_digest,
             no_agent=no_agent,
             allowed_toolsets=allowed_toolsets,
             requires_subagent=requires_subagent,
@@ -299,6 +307,25 @@ class AutomationStore:
             provenance_digest=provenance_digest,
             enabled=True,
         )
+        if spec.collector_command.strip() and not spec.collector_command_digest:
+            from teaagent.automation_collector import compute_collector_command_digest
+
+            collector_digest, _errors = compute_collector_command_digest(
+                spec.collector_command,
+                root=self.root,
+            )
+            spec = AutomationSpec(
+                **{**spec.to_dict(), 'collector_command_digest': collector_digest}
+            )
+        if not spec.provenance_digest:
+            from teaagent.automation_ticket import compute_automation_provenance_digest
+
+            spec = AutomationSpec(
+                **{
+                    **spec.to_dict(),
+                    'provenance_digest': compute_automation_provenance_digest(spec),
+                }
+            )
         atomic_write_text(
             self._spec_path(spec.automation_id), json.dumps(spec.to_dict())
         )

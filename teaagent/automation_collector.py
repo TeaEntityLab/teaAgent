@@ -7,6 +7,8 @@ import re
 import shlex
 import subprocess
 from dataclasses import dataclass
+from hashlib import sha256
+from importlib.util import find_spec
 from pathlib import Path
 from time import monotonic
 from typing import Any, Optional
@@ -125,6 +127,76 @@ def validate_collector_command(command: str) -> list[str]:
             'collector_command must not embed remote URLs; fetch data in a reviewed local script'
         ]
     return []
+
+
+def compute_collector_command_digest(
+    command: str,
+    *,
+    root: str | Path,
+) -> tuple[str, list[str]]:
+    """Return a stable digest for the local script/module executed by a collector."""
+    errors = validate_collector_command(command)
+    text = command.strip()
+    if errors or not text:
+        return '', errors
+    try:
+        argv = shlex.split(text)
+    except ValueError as exc:
+        return '', [f'collector_command is not parseable: {exc}']
+    target, target_errors = _collector_digest_target(argv, root=Path(root).resolve())
+    if target_errors:
+        return '', target_errors
+    if target is None:
+        return '', []
+    if not target.is_file():
+        return '', [f'collector_command script not found: {target}']
+    digest = sha256(target.read_bytes()).hexdigest()
+    return f'sha256:{digest}', []
+
+
+def _collector_digest_target(
+    argv: list[str], *, root: Path
+) -> tuple[Optional[Path], list[str]]:
+    if not argv:
+        return None, []
+    executable = Path(argv[0]).name.lower()
+    if executable.startswith('python'):
+        return _python_digest_target(argv, root=root)
+    first = Path(argv[0])
+    if first.is_absolute() or '/' in argv[0]:
+        return _resolve_local_path(first, root=root), []
+    return None, []
+
+
+def _python_digest_target(
+    argv: list[str], *, root: Path
+) -> tuple[Optional[Path], list[str]]:
+    if len(argv) < 2:
+        return None, []
+    target = argv[1]
+    if target == '-m':
+        if len(argv) < 3 or not argv[2].strip():
+            return None, ['collector_command python -m requires a module name']
+        try:
+            spec = find_spec(argv[2])
+        except (ImportError, AttributeError, ValueError) as exc:
+            return None, [
+                f'collector_command module {argv[2]!r} cannot be resolved: {exc}'
+            ]
+        if spec is None or not spec.origin:
+            return None, [f'collector_command module {argv[2]!r} cannot be resolved']
+        if spec.origin in {'built-in', 'namespace'}:
+            return None, []
+        return Path(spec.origin).resolve(), []
+    if target.startswith('-'):
+        return None, []
+    return _resolve_local_path(Path(target), root=root), []
+
+
+def _resolve_local_path(path: Path, *, root: Path) -> Path:
+    if path.is_absolute():
+        return path.resolve()
+    return (root / path).resolve()
 
 
 def parse_collector_payload(stdout: str) -> tuple[bool, str, Optional[str]]:

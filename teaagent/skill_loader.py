@@ -31,6 +31,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional
 
+from teaagent.skill_candidate_artifacts import (
+    REQUIRED_CANDIDATE_ARTIFACTS,
+    validate_candidate_artifacts,
+)
 from teaagent.skill_review import SkillReviewResult, review_skill
 
 _PROJECT_SKILL_DIRS = [
@@ -312,6 +316,17 @@ def load_skills_with_report(
                 continue  # first occurrence (project > user) wins
             if selected_names is not None and name not in selected_names:
                 continue
+            artifact_errors = _installed_candidate_artifact_errors(entry)
+            if artifact_errors:
+                skipped.append(
+                    SkillLoadSkipped(
+                        skill_name=name,
+                        skill_path=skill_file,
+                        reason='installed skill provenance validation failed: '
+                        + '; '.join(artifact_errors[:3]),
+                    )
+                )
+                continue
             review = review_skill(skill_file)
             if not review.passed:
                 skipped.append(
@@ -352,6 +367,14 @@ def load_skills_with_report(
     return SkillLoadReport(
         skills=results, searched_dirs=skill_dirs, warnings=warnings, skipped=skipped
     )
+
+
+def _installed_candidate_artifact_errors(skill_dir: Path) -> list[str]:
+    artifact_names = set(REQUIRED_CANDIDATE_ARTIFACTS) - {_SKILL_FILENAME}
+    present = {path.name for path in skill_dir.iterdir() if path.name in artifact_names}
+    if not present:
+        return []
+    return validate_candidate_artifacts(skill_dir)
 
 
 def skill_index_to_prompt_section(entries: list[SkillIndexEntry]) -> str:

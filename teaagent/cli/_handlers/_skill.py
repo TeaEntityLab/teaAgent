@@ -116,7 +116,11 @@ def skill_candidate_review_command(args: argparse.Namespace) -> int:
 def skill_candidate_install_command(args: argparse.Namespace) -> int:
     store = SkillCandidateStore(args.root)
     try:
-        payload = store.install(args.candidate_id, scope=args.scope)
+        payload = store.install(
+            args.candidate_id,
+            scope=args.scope,
+            attested_personal=bool(getattr(args, 'i_attest_personal_install', False)),
+        )
     except (FileNotFoundError, ValueError) as exc:
         _print_json({'status': 'error', 'message': str(exc)})
         return 1

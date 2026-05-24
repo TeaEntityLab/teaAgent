@@ -836,6 +836,19 @@ teaagent agent automation serve --interval-seconds 30 --max-ticks 10 --root .
 `serve` emits one JSON health snapshot per tick with `uptime_seconds` and
 `health` (`automation_count`, `enabled_count`, `due_count`, `running_count`).
 
+Automation tickets are designed for fresh sessions. Add `--acceptance-criteria`
+before production scheduling; each tick wraps the task with the criteria,
+permission/tool limits, selected skills, cost/runtime caps, and a reminder not
+to rely on prior chat history. Use `--skill NAME` for explicit skill loading
+and `--requires-subagent` when a tick intentionally needs delegation.
+
+Script-first collectors use `--collector-command` and are checked twice: at
+add/dry-run time and immediately before every tick. Shell/network wrappers and
+inline interpreters are blocked, local script/module content is sealed with a
+`collector_command_digest`, and changed scripts fail with `integrity_failed`
+instead of waking an agent. `--context-from` handoffs and log tails are injected
+as untrusted data and truncated/redacted before prompt use.
+
 ## Skill Candidates
 
 Use candidate quarantine for agent-authored skills before installing into active skill paths:
@@ -846,7 +859,13 @@ teaagent skill candidate list --root .
 teaagent skill candidate show <candidate_id> --root .
 teaagent skill candidate review <candidate_id> --root .
 teaagent skill candidate install <candidate_id> --scope project --root .
+teaagent skill candidate install <candidate_id> --scope personal --i-attest-personal-install --root .
 ```
 
 Candidates are stored under `.teaagent/skill-candidates/<candidate_id>/`.
-Install requires passing review first.
+Install requires passing offline eval and review first. Candidate bundles carry
+`SKILL.md`, `REFERENCE.md`, `tool_call_contract.json`, `cost_profile.json`,
+`interaction_policy.json`, and `provenance.json`; active skills with these
+sidecars are skipped at load time if their provenance digest no longer matches.
+Personal installs require explicit attestation and record install scope/time in
+`provenance.json`.

@@ -4,6 +4,7 @@ import json
 import sys
 
 from teaagent.automation_collector import (
+    compute_collector_command_digest,
     parse_collector_payload,
     run_collector_command,
     validate_collector_command,
@@ -70,3 +71,24 @@ def test_validate_collector_command_blocks_shell_and_network_wrappers() -> None:
     assert validate_collector_command('curl https://example.com/feed.json')
     assert validate_collector_command('python3 -c "print(1)"')
     assert not validate_collector_command('python3 scripts/collector.py')
+
+
+def test_collector_command_digest_tracks_local_script_content(tmp_path) -> None:
+    script = tmp_path / 'collector.py'
+    script.write_text('print("one")\n', encoding='utf-8')
+
+    first, errors = compute_collector_command_digest(
+        f'{sys.executable} collector.py',
+        root=tmp_path,
+    )
+    assert errors == []
+    assert first.startswith('sha256:')
+
+    script.write_text('print("two")\n', encoding='utf-8')
+    second, errors = compute_collector_command_digest(
+        f'{sys.executable} collector.py',
+        root=tmp_path,
+    )
+    assert errors == []
+    assert second.startswith('sha256:')
+    assert second != first

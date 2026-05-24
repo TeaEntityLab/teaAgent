@@ -76,4 +76,9 @@ def register(
     install.add_argument('candidate_id')
     install.add_argument('--root', default='.', help='Workspace root.')
     install.add_argument('--scope', choices=['project', 'personal'], default='project')
+    install.add_argument(
+        '--i-attest-personal-install',
+        action='store_true',
+        help='Required when installing a reviewed candidate into personal skills.',
+    )
     install.set_defaults(func=handlers['candidate_install'])

@@ -15,6 +15,7 @@ from teaagent.skill_candidate_artifacts import (
     REQUIRED_CANDIDATE_ARTIFACTS,
     write_candidate_artifacts,
 )
+from teaagent.skill_loader import load_skills_with_report
 
 
 def _propose_candidate(tmp_path: Path) -> str:
@@ -196,3 +197,87 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
     assert (skill_dir / 'SKILL.md').exists()
     assert (skill_dir / 'REFERENCE.md').exists()
     assert (skill_dir / 'provenance.json').exists()
+    (skill_dir / 'SKILL.md').write_text(
+        '---\nname: test-first\ndescription: Test-first workflow\n---\n\nTampered.\n',
+        encoding='utf-8',
+    )
+    report = load_skills_with_report(tmp_path, selected_names=frozenset({'test-first'}))
+    assert report.skills == []
+    assert any('provenance validation failed' in item.reason for item in report.skipped)
+
+
+def test_personal_skill_candidate_install_requires_attestation(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv('HOME', str(tmp_path / 'home'))
+    candidate_id = _propose_candidate(tmp_path)
+    candidate_dir = tmp_path / '.teaagent' / 'skill-candidates' / candidate_id
+    write_candidate_artifacts(
+        candidate_dir,
+        name='test-first',
+        description='Test-first workflow',
+        source_run_id='run-repair',
+        task='testing workflow',
+        final_answer='Write tests before implementation.',
+        created_at='2026-05-24T00:00:00Z',
+    )
+    review_out = io.StringIO()
+    with redirect_stdout(review_out):
+        assert (
+            main(
+                [
+                    'skill',
+                    'candidate',
+                    'review',
+                    candidate_id,
+                    '--root',
+                    str(tmp_path),
+                ]
+            )
+            == 0
+        )
+
+    blocked_out = io.StringIO()
+    with redirect_stdout(blocked_out):
+        blocked_code = main(
+            [
+                'skill',
+                'candidate',
+                'install',
+                candidate_id,
+                '--scope',
+                'personal',
+                '--root',
+                str(tmp_path),
+            ]
+        )
+    assert blocked_code == 1
+    assert 'i-attest-personal-install' in blocked_out.getvalue()
+
+    install_out = io.StringIO()
+    with redirect_stdout(install_out):
+        assert (
+            main(
+                [
+                    'skill',
+                    'candidate',
+                    'install',
+                    candidate_id,
+                    '--scope',
+                    'personal',
+                    '--i-attest-personal-install',
+                    '--root',
+                    str(tmp_path),
+                ]
+            )
+            == 0
+        )
+    payload = json.loads(install_out.getvalue())
+    provenance = json.loads(
+        (Path(payload['installed_path']).parent / 'provenance.json').read_text(
+            encoding='utf-8'
+        )
+    )
+    assert provenance['install_scope'] == 'personal'
+    assert provenance['personal_install_attested'] is True

@@ -428,8 +428,35 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
     )
     from teaagent.automation_collector import run_collector_command
     from teaagent.automation_delivery import deliver_automation_tick
+    from teaagent.automation_ticket import (
+        compose_self_contained_automation_task,
+        validate_automation_runtime_integrity,
+    )
 
     store = AutomationStore(root)
+    integrity_errors = validate_automation_runtime_integrity(spec, root=root)
+    if integrity_errors:
+        updated = store.update(
+            AutomationSpec(
+                **{
+                    **spec.to_dict(),
+                    'last_status': 'integrity_failed',
+                    'next_run_at': compute_next_run_at(spec.schedule),
+                }
+            )
+        )
+        deliver_automation_tick(
+            root,
+            updated,
+            status='integrity_failed',
+        )
+        return {
+            'automation_id': spec.automation_id,
+            'name': spec.name,
+            'status': 'integrity_failed',
+            'errors': integrity_errors,
+            'next_run_at': updated.next_run_at,
+        }
     if _automation_is_running(root, spec.running_background_id):
         return {
             'automation_id': spec.automation_id,
@@ -530,6 +557,11 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
     agent_task, _handoff = resolve_chained_task(
         root, spec, collector_summary=collector_summary
     )
+    agent_task = compose_self_contained_automation_task(
+        spec,
+        task=agent_task,
+        collector_summary=collector_summary,
+    )
     record = _start_automation_background_run(root=root, spec=spec, task=agent_task)
     updated = AutomationSpec(
         **{
@@ -587,7 +619,13 @@ def _automation_draft_from_args(
     task: str,
     schedule: str,
 ) -> AutomationSpec:
+    from teaagent.automation_collector import compute_collector_command_digest
     from teaagent.automation_ticket import compute_automation_provenance_digest
+
+    collector_digest, _collector_errors = compute_collector_command_digest(
+        str(getattr(args, 'collector_command', '')).strip(),
+        root=getattr(args, 'root', '.'),
+    )
 
     draft = AutomationSpec(
         automation_id='',
@@ -604,6 +642,7 @@ def _automation_draft_from_args(
         selected_skills=tuple(getattr(args, 'skill', None) or ()),
         acceptance_criteria=str(getattr(args, 'acceptance_criteria', '')).strip(),
         collector_command=str(getattr(args, 'collector_command', '')).strip(),
+        collector_command_digest=collector_digest,
         no_agent=bool(getattr(args, 'no_agent', False)),
         allowed_toolsets=tuple(getattr(args, 'allowed_toolset', None) or ()),
         requires_subagent=bool(getattr(args, 'requires_subagent', False)),
@@ -633,6 +672,7 @@ def _automation_create_kwargs_from_args(
         'selected_skills': list(draft.selected_skills),
         'acceptance_criteria': draft.acceptance_criteria,
         'collector_command': draft.collector_command,
+        'collector_command_digest': draft.collector_command_digest,
         'no_agent': draft.no_agent,
         'allowed_toolsets': list(draft.allowed_toolsets),
         'requires_subagent': draft.requires_subagent,

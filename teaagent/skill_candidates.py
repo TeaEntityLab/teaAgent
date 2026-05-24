@@ -214,7 +214,13 @@ class SkillCandidateStore:
             summary = f'passed_with_warnings: {"; ".join(warnings[:3])}'
         return self.set_review(candidate_id, status='review_passed', summary=summary)
 
-    def install(self, candidate_id: str, *, scope: str) -> dict[str, Any]:
+    def install(
+        self,
+        candidate_id: str,
+        *,
+        scope: str,
+        attested_personal: bool = False,
+    ) -> dict[str, Any]:
         candidate = self.show(candidate_id)
         if candidate.status not in {'review_passed', 'installed'}:
             raise ValueError('candidate must pass review before install')
@@ -232,6 +238,10 @@ class SkillCandidateStore:
         if scope == 'project':
             dest_dir = self.root / '.config' / 'agent' / 'skills' / candidate.name
         elif scope == 'personal':
+            if not attested_personal:
+                raise ValueError(
+                    'personal skill install requires --i-attest-personal-install'
+                )
             dest_dir = Path.home() / '.config' / 'agent' / 'skills' / candidate.name
         else:
             raise ValueError("scope must be 'project' or 'personal'")
@@ -239,6 +249,11 @@ class SkillCandidateStore:
             candidate_dir,
             dest_dir,
             skill_md_text=src.read_text(encoding='utf-8'),
+        )
+        _record_installed_provenance(
+            dest_dir,
+            scope=scope,
+            personal_attested=attested_personal,
         )
         dest = dest_dir / 'SKILL.md'
         updated = self.set_review(
@@ -249,6 +264,31 @@ class SkillCandidateStore:
             'installed_path': str(dest),
             'installed_paths': installed_paths,
         }
+
+
+def _record_installed_provenance(
+    dest_dir: Path,
+    *,
+    scope: str,
+    personal_attested: bool,
+) -> None:
+    provenance_path = dest_dir / 'provenance.json'
+    try:
+        payload = json.loads(provenance_path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(payload, dict):
+        return
+    from teaagent.audit import utc_now
+
+    payload.update(
+        {
+            'installed_at': utc_now(),
+            'install_scope': scope,
+            'personal_install_attested': personal_attested,
+        }
+    )
+    atomic_write_text(provenance_path, json.dumps(payload, indent=2) + '\n')
 
 
 def _render_skill_markdown(

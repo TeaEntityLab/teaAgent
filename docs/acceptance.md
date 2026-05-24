@@ -126,7 +126,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`184 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
+`187 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
 
 <!-- ACCEPTANCE_TIERS:START -->
 
