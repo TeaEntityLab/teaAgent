@@ -100,16 +100,36 @@ def resolve_allowed_toolsets(spec: AutomationSpec) -> tuple[str, ...]:
     return _PERMISSION_MODE_TOOLSETS.get(spec.permission_mode, ('read-only',))
 
 
+def automation_provenance_payload(spec: AutomationSpec) -> dict[str, Any]:
+    """Return all durable automation fields that shape authority or execution."""
+    return {
+        'name': spec.name,
+        'task': spec.task,
+        'schedule': spec.schedule,
+        'provider': spec.provider,
+        'model': spec.model,
+        'permission_mode': spec.permission_mode,
+        'context_profile': spec.context_profile,
+        'max_iterations': spec.max_iterations,
+        'max_tool_calls': spec.max_tool_calls,
+        'auto_propose_skill': spec.auto_propose_skill,
+        'selected_skills': list(spec.selected_skills),
+        'acceptance_criteria': spec.acceptance_criteria,
+        'collector_command': spec.collector_command,
+        'no_agent': spec.no_agent,
+        'allowed_toolsets': list(resolve_allowed_toolsets(spec)),
+        'requires_subagent': spec.requires_subagent,
+        'max_cost_cents': spec.max_cost_cents,
+        'max_runtime_seconds': spec.max_runtime_seconds,
+        'delivery': spec.delivery,
+        'context_from': spec.context_from,
+    }
+
+
 def compute_automation_provenance_digest(spec: AutomationSpec) -> str:
     return canonical_content_digest(
         substrate=PersistenceSubstrate.AUTOMATION,
-        payload={
-            'name': spec.name,
-            'task': spec.task,
-            'schedule': spec.schedule,
-            'acceptance_criteria': spec.acceptance_criteria,
-            'allowed_toolsets': list(resolve_allowed_toolsets(spec)),
-        },
+        payload=automation_provenance_payload(spec),
     )
 
 

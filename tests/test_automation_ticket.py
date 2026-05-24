@@ -68,6 +68,24 @@ def test_compute_automation_provenance_digest_is_stable() -> None:
     assert first.startswith('sha256:')
 
 
+def test_compute_automation_provenance_digest_covers_authority_fields() -> None:
+    baseline = compute_automation_provenance_digest(_spec())
+    variants = [
+        _spec(collector_command='python3 collector.py'),
+        _spec(no_agent=True),
+        _spec(delivery='none'),
+        _spec(selected_skills=('security-review',)),
+        _spec(context_from='upstream-1'),
+        _spec(max_cost_cents=42),
+        _spec(max_runtime_seconds=60),
+        _spec(requires_subagent=True),
+        _spec(permission_mode='allow'),
+    ]
+    assert all(
+        compute_automation_provenance_digest(item) != baseline for item in variants
+    )
+
+
 def test_unknown_allowed_toolset_fails_dry_run(tmp_path: Path) -> None:
     payload = build_automation_dry_run_payload(
         _spec(allowed_toolsets=('not-a-real-toolset',)),

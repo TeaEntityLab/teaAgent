@@ -450,6 +450,32 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
             collector_summary=collector_summary,
             summary=collector_summary,
         )
+        if (
+            collector_payload.get('timed_out')
+            or int(collector_payload['exit_code']) != 0
+        ):
+            updated = store.update(
+                AutomationSpec(
+                    **{
+                        **spec.to_dict(),
+                        'last_status': 'collector_failed',
+                        'next_run_at': compute_next_run_at(spec.schedule),
+                    }
+                )
+            )
+            deliver_automation_tick(
+                root,
+                updated,
+                status='collector_failed',
+                collector=collector_payload,
+            )
+            return {
+                'automation_id': spec.automation_id,
+                'name': spec.name,
+                'status': 'collector_failed',
+                'collector': collector_payload,
+                'next_run_at': updated.next_run_at,
+            }
         if not collector_payload['wake_agent']:
             updated = store.update(
                 AutomationSpec(
@@ -650,6 +676,7 @@ def automation_template_command(args: argparse.Namespace) -> int:
 
 def automation_add_command(args: argparse.Namespace) -> int:
     from teaagent.automation_ticket import (
+        automation_provenance_payload,
         build_automation_dry_run_payload,
         validate_automation_spec,
     )
@@ -691,11 +718,7 @@ def automation_add_command(args: argparse.Namespace) -> int:
     source_kind = parse_source_kind(getattr(args, 'write_source', None))
     gate = evaluate_persistent_write(
         substrate=PersistenceSubstrate.AUTOMATION,
-        payload={
-            'name': draft.name,
-            'task': draft.task,
-            'schedule': draft.schedule,
-        },
+        payload=automation_provenance_payload(draft),
         source_kind=source_kind,
         attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
     )

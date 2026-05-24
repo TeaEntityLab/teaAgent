@@ -354,7 +354,22 @@ class AutomationStore:
         payload = dict(self.show_quarantined(automation_id))
         provenance = payload.pop('provenance', None)
         payload.pop('quarantine', None)
+        spec = AutomationSpec.from_dict(payload)
+        from teaagent.automation_ticket import compute_automation_provenance_digest
+
+        expected_digest = compute_automation_provenance_digest(spec)
+        if spec.provenance_digest and spec.provenance_digest != expected_digest:
+            raise ValueError(
+                'quarantined automation provenance_digest does not match payload; '
+                'review the candidate and recreate it'
+            )
         if isinstance(provenance, dict):
+            content_digest = str(provenance.get('content_digest', '')).strip()
+            if content_digest and content_digest != expected_digest:
+                raise ValueError(
+                    'quarantined automation provenance content_digest does not match '
+                    'payload; review the candidate and recreate it'
+                )
             source_kind = str(provenance.get('source_kind', '')).strip()
             if (
                 source_kind == 'web_message'
@@ -365,7 +380,6 @@ class AutomationStore:
                     'quarantined automation from web_message requires '
                     '--i-attest-untrusted-write after human review'
                 )
-        spec = AutomationSpec.from_dict(payload)
         if self._spec_path(automation_id).exists():
             raise ValueError(
                 f"active automation '{automation_id}' already exists; delete it first"
