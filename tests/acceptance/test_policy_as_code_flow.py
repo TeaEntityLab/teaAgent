@@ -56,8 +56,10 @@ def test_policy_yaml_loaded_from_workspace(tmp_path):
         encoding='utf-8',
     )
     policy = load_file_policy(tmp_path)
-    assert len(policy.rules) == 1
-    assert policy.rules[0].id == 'block-rm'
+    user_rule_ids = [r.id for r in policy.rules if r.id == 'block-rm']
+    assert len(user_rule_ids) == 1
+    all_ids = [r.id for r in policy.rules]
+    assert 'block-rm' in all_ids
 
 
 def test_deny_rule_blocks_matching_tool_in_runner(tmp_path):

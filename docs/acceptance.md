@@ -33,6 +33,7 @@ directory.
 | `test_audit_chain_integrity_flow.py` | Audit log integrity | JSONL parseability, unique event IDs, redaction, disk/in-memory event parity, restricted file permissions |
 | `test_cancel_flow.py` | Graceful cancel | Thread-safe cancel token stops runs cleanly and keeps audit state intact |
 | `test_code_analysis_prompt_injection_flow.py` | Code-analysis prompt injection | Enabling code analysis injects `lsp_context` in model payload for code-path tasks without requiring external LSP binaries |
+| `test_code_analysis_lsp_flow.py` | LSP code-analysis tool registration and context enrichment | Code analysis tools registered when enabled, tree-sitter relation extraction, candidate path detection, config enablement, read-only annotations |
 | `test_cost_tracking_flow.py` | Cost and token tracking | Terminal results and `run_completed` audit events carry token and cost fields |
 | `test_daily_cli.py` | Daily CLI workflow | `agent daily`, `agent preflight`, `agent run`, `agent show`, token budget, harness health, audit persistence, run-level audit summary |
 | `test_daily_tui.py` | Daily TUI workflow | Daily cockpit command, chat mode, memory injection, progress streaming, answer persistence in session history |
@@ -44,10 +45,12 @@ directory.
 | `test_managed_runtime_flow.py` | Managed runtime | Tool metadata context, workspace/request forwarding, managed-task audit events, trace metadata |
 | `test_mcp_client_flow.py` | MCP client compatibility | Bearer auth, session lifecycle, `tools/list`, `tools/call`, session close |
 | `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task/outcome/last-tool context, deduplicate identical summaries, and skip pending-approval runs |
+| `test_mtime_read_before_write_flow.py` | mtime concurrent modification guard | `workspace_read_file` returns mtime; `workspace_write_file` with `expected_mtime` rejects overwrites when file was modified since read; writes without mtime are backward compatible |
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
 | `test_p0_slo_flow.py` | P0 operational SLO guardrails | Local run/pending-approval/resume latency stays within budget and heartbeat status exposes liveness ticks |
 | `test_plan_mode_read_only_flow.py` | Read-only planning mode | Read-only runs complete with planning metadata for inspect tasks and block file writes/shell mutation |
-| `test_policy_as_code_flow.py` | Policy-as-code deny rules | Workspace `policy.yaml`, deny enforcement, non-match pass-through, `danger-full-access` independence, argument matching |
+| `test_policy_as_code_flow.py` | Policy-as-code deny rules | Workspace `policy.yaml`, deny enforcement, non-match pass-through, `danger-full-access` independence, argument matching, built-in protected directory rules |
+| `test_protected_paths_flow.py` | Protected paths (.git, .teaagent) default deny | Built-in rules block writes to `.git/*` and `.teaagent/*` by default, prepended before user rules, can be disabled via `include_protected_dirs=False` |
 | `test_remote_mcp_consumption_flow.py` | Remote MCP tool consumption | Remote tool registration, annotation propagation, prefix filtering, shared rate limits, proxied calls |
 | `test_run_undo_acceptance_flow.py` | Reversible change recovery | Undo journal captures pre-write state and restores modified/new files to pre-run workspace state |
 | `test_session_resume_continuity_flow.py` | Session resume continuity | Pending-approval resume replays observations from checkpoint/store, preserves audit lineage, and auto-curates memory on completion |
@@ -108,7 +111,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`104 passed`.
+`125 passed` (89 prior + 6 mtime + 8 protected paths + 7 LSP + 1 modified policy + 3 prior).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

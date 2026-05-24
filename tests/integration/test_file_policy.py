@@ -89,7 +89,7 @@ def test_file_policy_first_match_wins():
 
 def test_load_file_policy_no_file(tmp_path):
     policy = load_file_policy(tmp_path)
-    assert policy.rules == []
+    assert [r.id for r in policy.rules] == ['protect-git-dir', 'protect-teaagent-dir']
     assert policy.source_path is None
 
 
@@ -99,8 +99,9 @@ def test_load_file_policy_from_workspace_root(tmp_path):
         encoding='utf-8',
     )
     policy = load_file_policy(tmp_path)
-    assert len(policy.rules) == 1
-    assert policy.rules[0].id == 'block-all'
+    ids = [r.id for r in policy.rules]
+    assert ids[:2] == ['protect-git-dir', 'protect-teaagent-dir']
+    assert policy.rules[-1].id == 'block-all'
 
 
 def test_load_file_policy_from_teaagent_dir(tmp_path):
@@ -111,8 +112,9 @@ def test_load_file_policy_from_teaagent_dir(tmp_path):
         encoding='utf-8',
     )
     policy = load_file_policy(tmp_path)
-    assert len(policy.rules) == 1
-    assert policy.rules[0].id == 'inner'
+    ids = [r.id for r in policy.rules]
+    assert ids[:2] == ['protect-git-dir', 'protect-teaagent-dir']
+    assert policy.rules[-1].id == 'inner'
 
 
 def test_load_file_policy_json_format(tmp_path):
@@ -131,7 +133,9 @@ def test_load_file_policy_json_format(tmp_path):
     }
     (tmp_path / 'policy.json').write_text(json.dumps(data), encoding='utf-8')
     policy = load_file_policy(tmp_path)
-    assert policy.rules[0].id == 'json-rule'
+    ids = [r.id for r in policy.rules]
+    assert ids[:2] == ['protect-git-dir', 'protect-teaagent-dir']
+    assert policy.rules[-1].id == 'json-rule'
 
 
 def test_file_policy_integrated_with_agent_runner(tmp_path):

@@ -50,7 +50,12 @@ def register_workspace_tools(
             required=['path'],
         ),
         output_schema=object_schema(
-            {'path': 'string', 'content': 'string', 'truncated': 'boolean'},
+            {
+                'path': 'string',
+                'content': 'string',
+                'truncated': 'boolean',
+                'mtime': 'number',
+            },
             required=['path', 'content', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
@@ -58,13 +63,22 @@ def register_workspace_tools(
     )
     registry.register(
         name='workspace_write_file',
-        description='Write a UTF-8 text file inside the workspace root.',
+        description='Write a UTF-8 text file inside the workspace root. If expected_mtime is provided and the file exists, the write is rejected if the file was modified since that mtime (concurrent modification guard).',
         input_schema=object_schema(
-            {'path': 'string', 'content': 'string', 'create_dirs': 'boolean'},
+            {
+                'path': 'string',
+                'content': 'string',
+                'create_dirs': 'boolean',
+                'expected_mtime': 'number',
+            },
             required=['path', 'content'],
         ),
         output_schema=object_schema(
-            {'path': 'string', 'bytes_written': 'integer'},
+            {
+                'path': 'string',
+                'bytes_written': 'integer',
+                'mtime': 'number',
+            },
             required=['path', 'bytes_written'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=True),
@@ -78,7 +92,12 @@ def register_workspace_tools(
             required=['path'],
         ),
         output_schema=object_schema(
-            {'path': 'string', 'content': 'string', 'truncated': 'boolean'},
+            {
+                'path': 'string',
+                'content': 'string',
+                'truncated': 'boolean',
+                'mtime': 'number',
+            },
             required=['path', 'content', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
@@ -340,10 +359,12 @@ def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
     max_bytes = non_negative_int_arg(args, 'max_bytes', default=config.max_read_bytes)
     data = path.read_bytes()
     truncated = len(data) > max_bytes
+    stat = path.stat()
     return {
         'path': relative_path(config, path),
         'content': data[:max_bytes].decode('utf-8', errors='replace'),
         'truncated': truncated,
+        'mtime': stat.st_mtime,
     }
 
 
@@ -364,10 +385,21 @@ def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
         path.parent.mkdir(parents=True, exist_ok=True)
     content = args['content']
     assert_write_size_allowed(config, content)
+    expected_mtime = args.get('expected_mtime')
+    if expected_mtime is not None and path.exists():
+        actual_mtime = path.stat().st_mtime
+        if abs(actual_mtime - float(expected_mtime)) > 0.001:
+            raise ValueError(
+                f'file {relative_path(config, path)} was modified since last read '
+                f'(expected_mtime={expected_mtime}, actual_mtime={actual_mtime:.6f}). '
+                f'Re-read the file before writing.'
+            )
     path.write_text(content, encoding='utf-8')
+    stat = path.stat()
     return {
         'path': relative_path(config, path),
         'bytes_written': len(content.encode('utf-8')),
+        'mtime': stat.st_mtime,
     }
 
 

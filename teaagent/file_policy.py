@@ -118,6 +118,25 @@ class FilePolicy:
                 raise ToolPermissionError(reason)
 
 
+def build_protected_dir_rules() -> list[DenyRule]:
+    return [
+        DenyRule(
+            id='protect-git-dir',
+            tool_pattern='workspace_write_file',
+            argument_pattern={'path': '.git/*'},
+            description='Block writes inside .git directory',
+            message='Writes to .git/ are blocked by default to protect repository integrity.',
+        ),
+        DenyRule(
+            id='protect-teaagent-dir',
+            tool_pattern='workspace_write_file',
+            argument_pattern={'path': '.teaagent/*'},
+            description='Block writes inside .teaagent directory',
+            message='Writes to .teaagent/ are blocked by default to protect agent configuration.',
+        ),
+    ]
+
+
 def _parse_rules(raw_rules: list[Any]) -> list[DenyRule]:
     rules: list[DenyRule] = []
     for entry in raw_rules:
@@ -252,6 +271,7 @@ def load_file_policy(
     root: str | Path,
     *,
     filename: Optional[str] = None,
+    include_protected_dirs: bool = True,
 ) -> FilePolicy:
     """Discover and load a policy file under *root*.
 
@@ -261,16 +281,26 @@ def load_file_policy(
 
     Returns an empty ``FilePolicy`` (no rules) when no file is found.
 
+    When *include_protected_dirs* is True (the default), rules blocking writes
+    to ``.git/`` and ``.teaagent/`` directories are prepended to any
+    user-defined rules so they cannot be overridden.
+
     Parameters
     ----------
     root:
         Workspace root directory.
     filename:
         Override the filename to search for instead of the defaults.
+    include_protected_dirs:
+        Whether to include built-in rules protecting ``.git/`` and
+        ``.teaagent/`` from writes.  Defaults to True.
     """
     root_path = Path(root).resolve()
     search_names = (filename,) if filename else _POLICY_FILENAMES
     search_dirs = [root_path / '.teaagent', root_path]
+
+    user_rules: list[DenyRule] = []
+    source_path: Optional[Path] = None
 
     for search_dir in search_dirs:
         for name in search_names:
@@ -283,7 +313,17 @@ def load_file_policy(
                         f'unsupported policy version {version!r} in {candidate}'
                     )
                 raw_rules = data.get('rules', [])
-                rules = _parse_rules(raw_rules if isinstance(raw_rules, list) else [])
-                return FilePolicy(rules=rules, source_path=candidate)
+                user_rules = _parse_rules(
+                    raw_rules if isinstance(raw_rules, list) else []
+                )
+                source_path = candidate
+                break
+        if source_path:
+            break
 
-    return FilePolicy()
+    if include_protected_dirs:
+        all_rules = build_protected_dir_rules() + user_rules
+    else:
+        all_rules = user_rules
+
+    return FilePolicy(rules=all_rules, source_path=source_path)
