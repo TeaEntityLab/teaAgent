@@ -45,7 +45,9 @@ from teaagent.runner import (
 )
 from teaagent.skill_loader import (
     SkillContent,
+    SkillIndexEntry,
     SkillSourceProfile,
+    discover_skill_index,
     estimate_skill_prompt_tokens,
     load_skills_with_report,
 )
@@ -84,6 +86,7 @@ class ChatAgentConfig:
     skill_search_dirs: Optional[list[str]] = None
     skill_source_profile: SkillSourceProfile = 'default'
     selected_skills: Optional[frozenset[str]] = None
+    skill_prompt_mode: str = 'eager'
     hook_registry: Optional[HookRegistry] = None
     auto_mode_config: Optional[AutoModeConfig] = None
 
@@ -154,6 +157,7 @@ class ModelDecisionEngine:
         stream_text_only: bool = True,
         chat_messages: Optional[list[LLMMessage]] = None,
         skills: Optional[list[SkillContent]] = None,
+        skill_index: Optional[list[SkillIndexEntry]] = None,
     ) -> None:
         self.adapter = adapter
         self.registry = registry
@@ -166,6 +170,7 @@ class ModelDecisionEngine:
         self.stream_text_only = stream_text_only
         self.chat_messages = chat_messages
         self.skills = skills
+        self.skill_index = skill_index
         self.max_parse_retries = 2
 
     def decide(self, context: dict) -> Decision:
@@ -176,6 +181,7 @@ class ModelDecisionEngine:
             project_instructions=self.project_instructions,
             task_spec=self.task_spec,
             skills=self.skills,
+            skill_index=self.skill_index,
         )
 
         if self.budget is not None and self.model:
@@ -372,17 +378,33 @@ def run_chat_agent(
     audit_logger = audit or AuditLogger()
     if config.skill_source_profile == 'custom' and not config.skill_search_dirs:
         raise ValueError('skill_source_profile=custom requires skill_search_dirs')
-    skill_report = load_skills_with_report(
-        config.root,
-        preferred_dirs=cast(Optional[list[str | Path]], config.skill_search_dirs),
-        source_profile=config.skill_source_profile,
-        selected_names=config.selected_skills,
-    )
+    skill_index_entries: list[SkillIndexEntry] = []
+    if config.skill_prompt_mode == 'index_only':
+        skill_index_entries = discover_skill_index(
+            config.root,
+            preferred_dirs=cast(Optional[list[str | Path]], config.skill_search_dirs),
+            source_profile=config.skill_source_profile,
+        )
+        skill_report = load_skills_with_report(
+            config.root,
+            preferred_dirs=cast(Optional[list[str | Path]], config.skill_search_dirs),
+            source_profile=config.skill_source_profile,
+            selected_names=frozenset(),
+        )
+    else:
+        skill_report = load_skills_with_report(
+            config.root,
+            preferred_dirs=cast(Optional[list[str | Path]], config.skill_search_dirs),
+            source_profile=config.skill_source_profile,
+            selected_names=config.selected_skills,
+        )
     active_skills = skill_report.skills
     audit_logger.record(
         'skill_load',
         run_id,
+        skill_prompt_mode=config.skill_prompt_mode,
         selected_skills=sorted(config.selected_skills or ()),
+        skill_index_count=len(skill_index_entries),
         searched_dirs=[str(path) for path in skill_report.searched_dirs],
         loaded=[str(skill.path) for skill in active_skills],
         estimated_skill_tokens=estimate_skill_prompt_tokens(active_skills),
@@ -420,6 +442,7 @@ def run_chat_agent(
         stream_text_only=config.stream_text_only,
         chat_messages=config.chat_messages,
         skills=active_skills,
+        skill_index=skill_index_entries or None,
     )
     runner = AgentRunner(
         registry=tool_registry,

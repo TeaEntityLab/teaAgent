@@ -8,7 +8,12 @@ from typing import Any, Optional
 
 from teaagent.errors import ToolValidationError
 from teaagent.runner import FinalAnswer, ToolRequest
-from teaagent.skill_loader import SkillContent, skills_to_prompt_section
+from teaagent.skill_loader import (
+    SkillContent,
+    SkillIndexEntry,
+    skill_index_to_prompt_section,
+    skills_to_prompt_section,
+)
 from teaagent.tools import ToolRegistry
 
 DECISION_INSTRUCTIONS = """You are TeaAgent, a coding-agent harness.
@@ -68,6 +73,7 @@ def assemble_agent_prompt(
     project_instructions: Optional[str] = None,
     task_spec: Optional[str] = None,
     skills: Optional[list[SkillContent]] = None,
+    skill_index: Optional[list[SkillIndexEntry]] = None,
 ) -> PromptBundle:
     system_parts = [
         DECISION_INSTRUCTIONS,
@@ -77,6 +83,10 @@ def assemble_agent_prompt(
     if project_instructions:
         system_parts.append('Project instructions:')
         system_parts.append(project_instructions)
+    if skill_index:
+        index_section = skill_index_to_prompt_section(skill_index)
+        if index_section:
+            system_parts.append(index_section)
     if skills:
         skill_section = skills_to_prompt_section(skills)
         if skill_section:

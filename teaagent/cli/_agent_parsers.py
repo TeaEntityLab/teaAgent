@@ -35,6 +35,7 @@ def register(
                 'run': handlers['automation_run'],
                 'tick': handlers['automation_tick'],
                 'serve': handlers['automation_serve'],
+                'status': handlers['automation_status'],
             },
         )
 
@@ -190,6 +191,11 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         '--no-auto-skills',
         action='store_true',
         help='Do not eager-load discovered skills into the system prompt.',
+    )
+    p.add_argument(
+        '--skill-index-only',
+        action='store_true',
+        help='Inject skill metadata index only (no SKILL.md bodies in the prompt).',
     )
 
 
@@ -526,7 +532,24 @@ def _automation(
         action='store_true',
         help='With --dry-run, include a readable checklist in the JSON payload.',
     )
+    add.add_argument(
+        '--collector-command',
+        default='',
+        help='Shell command run before the agent; stdout JSON may set wake_agent=false.',
+    )
+    add.add_argument(
+        '--no-agent',
+        action='store_true',
+        help='Run collector_command only; never invoke the LLM (requires --collector-command).',
+    )
     add.set_defaults(func=handlers['add'], agent_command='automation')
+
+    status = commands.add_parser(
+        'status', help='Show automation health and last output.'
+    )
+    status.add_argument('automation_id', nargs='?', default=None)
+    status.add_argument('--root', default='.', help='Workspace root.')
+    status.set_defaults(func=handlers['status'], agent_command='automation')
 
     lst = commands.add_parser('list', help='List automations.')
     lst.add_argument('--root', default='.', help='Workspace root.')

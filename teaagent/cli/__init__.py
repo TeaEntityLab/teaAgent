@@ -33,6 +33,7 @@ from teaagent.cli._handlers import (
     automation_run_command,
     automation_serve_command,
     automation_show_command,
+    automation_status_command,
     automation_tick_command,
     background_list_command,
     background_show_command,
@@ -244,6 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
             'automation_run': automation_run_command,
             'automation_tick': automation_tick_command,
             'automation_serve': automation_serve_command,
+            'automation_status': automation_status_command,
         },
     )
     register_ergonomics(

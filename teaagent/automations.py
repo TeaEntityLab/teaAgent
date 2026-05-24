@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import contextlib
 import json
 import re
 from dataclasses import asdict, dataclass
@@ -47,6 +48,8 @@ class AutomationSpec:
     auto_propose_skill: bool = False
     selected_skills: tuple[str, ...] = ()
     acceptance_criteria: str = ''
+    collector_command: str = ''
+    no_agent: bool = False
     created_at: str = ''
     updated_at: str = ''
 
@@ -98,6 +101,8 @@ class AutomationSpec:
             auto_propose_skill=bool(payload.get('auto_propose_skill', False)),
             selected_skills=_parse_selected_skills(payload.get('selected_skills')),
             acceptance_criteria=str(payload.get('acceptance_criteria', '')).strip(),
+            collector_command=str(payload.get('collector_command', '')).strip(),
+            no_agent=bool(payload.get('no_agent', False)),
             created_at=str(payload.get('created_at', '')),
             updated_at=str(payload.get('updated_at', '')),
         )
@@ -179,6 +184,8 @@ class AutomationStore:
         auto_propose_skill: bool = False,
         selected_skills: Optional[builtins.list[str]] = None,
         acceptance_criteria: str = '',
+        collector_command: str = '',
+        no_agent: bool = False,
     ) -> AutomationSpec:
         if not name.strip():
             raise ValueError('automation name cannot be empty')
@@ -202,6 +209,8 @@ class AutomationStore:
             auto_propose_skill=auto_propose_skill,
             selected_skills=tuple(selected_skills or ()),
             acceptance_criteria=acceptance_criteria.strip(),
+            collector_command=collector_command.strip(),
+            no_agent=no_agent,
             created_at=now,
             updated_at=now,
         )
@@ -246,6 +255,57 @@ class AutomationStore:
             if due_at <= current:
                 ready.append(spec)
         return ready
+
+
+def build_automation_status(
+    root: str | Path,
+    *,
+    store: Optional[AutomationStore] = None,
+) -> dict[str, Any]:
+    """Summarize automation health for CLI status output."""
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
+    automation_store = store or AutomationStore(root)
+    bg_store = BackgroundRunStore(root)
+    rows: list[dict[str, Any]] = []
+    for spec in automation_store.list():
+        log_tail = ''
+        if spec.running_background_id:
+            with contextlib.suppress(FileNotFoundError, OSError):
+                bg = bg_store.get(spec.running_background_id)
+                log_path = bg.get('log_path')
+                if isinstance(log_path, str):
+                    path = Path(log_path)
+                    if path.is_file():
+                        lines = path.read_text(
+                            encoding='utf-8', errors='replace'
+                        ).splitlines()
+                        log_tail = '\n'.join(lines[-20:])
+        rows.append(
+            {
+                'automation_id': spec.automation_id,
+                'name': spec.name,
+                'enabled': spec.enabled,
+                'next_run_at': spec.next_run_at,
+                'last_status': spec.last_status,
+                'last_run_id': spec.last_run_id,
+                'running_background_id': spec.running_background_id,
+                'collector_command': spec.collector_command,
+                'no_agent': spec.no_agent,
+                'selected_skills': list(spec.selected_skills),
+                'log_tail': log_tail,
+            }
+        )
+    enabled = [row for row in rows if row['enabled']]
+    due = automation_store.due()
+    running = [row for row in rows if row['running_background_id']]
+    return {
+        'automation_count': len(rows),
+        'enabled_count': len(enabled),
+        'due_count': len(due),
+        'running_count': len(running),
+        'automations': rows,
+    }
 
 
 class AutomationTickLock:

@@ -238,6 +238,9 @@ def _execute_agent_task(
                 else None
             ),
             selected_skills=_resolve_selected_skills(args),
+            skill_prompt_mode=(
+                'index_only' if getattr(args, 'skill_index_only', False) else 'eager'
+            ),
         ),
         audit=audit,
         task_spec=task_spec,
@@ -412,6 +415,8 @@ def _automation_is_running(root: str, background_id: Optional[str]) -> bool:
 
 
 def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
+    from teaagent.automation_collector import run_collector_command
+
     store = AutomationStore(root)
     if _automation_is_running(root, spec.running_background_id):
         return {
@@ -420,6 +425,50 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
             'status': 'skipped_running',
             'running_background_id': spec.running_background_id,
         }
+    collector_payload: Optional[dict[str, Any]] = None
+    if spec.collector_command.strip():
+        collector_payload = run_collector_command(
+            spec.collector_command, root=root
+        ).to_dict()
+        if not collector_payload['wake_agent']:
+            updated = store.update(
+                AutomationSpec(
+                    **{
+                        **spec.to_dict(),
+                        'last_status': 'skipped_no_wake',
+                        'next_run_at': compute_next_run_at(spec.schedule),
+                    }
+                )
+            )
+            return {
+                'automation_id': spec.automation_id,
+                'name': spec.name,
+                'status': 'skipped_no_wake',
+                'collector': collector_payload,
+                'next_run_at': updated.next_run_at,
+            }
+        if spec.no_agent:
+            status = (
+                'collector_failed'
+                if int(collector_payload['exit_code']) != 0
+                else 'collector_ok'
+            )
+            updated = store.update(
+                AutomationSpec(
+                    **{
+                        **spec.to_dict(),
+                        'last_status': status,
+                        'next_run_at': compute_next_run_at(spec.schedule),
+                    }
+                )
+            )
+            return {
+                'automation_id': spec.automation_id,
+                'name': spec.name,
+                'status': status,
+                'collector': collector_payload,
+                'next_run_at': updated.next_run_at,
+            }
     record = _start_automation_background_run(root=root, spec=spec)
     updated = AutomationSpec(
         **{
@@ -430,7 +479,7 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
         }
     )
     store.update(updated)
-    return {
+    result = {
         'automation_id': spec.automation_id,
         'name': spec.name,
         'status': 'background_started',
@@ -439,6 +488,33 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
         'log_path': record['log_path'],
         'next_run_at': updated.next_run_at,
     }
+    if collector_payload is not None:
+        result['collector'] = collector_payload
+    return result
+
+
+def automation_status_command(args: argparse.Namespace) -> int:
+    from teaagent.automations import build_automation_status
+
+    payload = build_automation_status(args.root)
+    if getattr(args, 'automation_id', None):
+        matches = [
+            row
+            for row in payload['automations']
+            if row['automation_id'] == args.automation_id
+        ]
+        if not matches:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f"automation '{args.automation_id}' not found",
+                }
+            )
+            return 1
+        print_json({'status': 'ok', 'automation': matches[0]})
+        return 0
+    print_json({'status': 'ok', **payload})
+    return 0
 
 
 def automation_add_command(args: argparse.Namespace) -> int:
@@ -461,7 +537,17 @@ def automation_add_command(args: argparse.Namespace) -> int:
         auto_propose_skill=bool(getattr(args, 'auto_propose_skill', False)),
         selected_skills=tuple(getattr(args, 'skill', None) or ()),
         acceptance_criteria=str(getattr(args, 'acceptance_criteria', '')).strip(),
+        collector_command=str(getattr(args, 'collector_command', '')).strip(),
+        no_agent=bool(getattr(args, 'no_agent', False)),
     )
+    if draft.no_agent and not draft.collector_command:
+        print_json(
+            {
+                'status': 'error',
+                'errors': ['no_agent requires --collector-command'],
+            }
+        )
+        return 1
     if getattr(args, 'dry_run', False):
         payload = build_automation_dry_run_payload(
             draft, root=args.root, human=bool(getattr(args, 'human', False))
@@ -491,6 +577,8 @@ def automation_add_command(args: argparse.Namespace) -> int:
         auto_propose_skill=bool(getattr(args, 'auto_propose_skill', False)),
         selected_skills=list(draft.selected_skills),
         acceptance_criteria=draft.acceptance_criteria,
+        collector_command=draft.collector_command,
+        no_agent=draft.no_agent,
     )
     print_json(
         {'status': 'created', 'automation': spec.to_dict(), 'warnings': report.warnings}

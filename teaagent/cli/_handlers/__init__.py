@@ -16,6 +16,7 @@ from ._agent import (
     automation_run_command,
     automation_serve_command,
     automation_show_command,
+    automation_status_command,
     automation_tick_command,
 )
 from ._audit import (
@@ -138,6 +139,7 @@ __all__ = [
     'automation_run_command',
     'automation_serve_command',
     'automation_show_command',
+    'automation_status_command',
     'automation_tick_command',
     'audit_list_command',
     'audit_prune_command',

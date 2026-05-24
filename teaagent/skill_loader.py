@@ -354,6 +354,18 @@ def load_skills_with_report(
     )
 
 
+def skill_index_to_prompt_section(entries: list[SkillIndexEntry]) -> str:
+    """Render discoverable skill metadata without loading SKILL.md bodies."""
+    if not entries:
+        return ''
+    lines = [
+        'Available skills (metadata only — use --skill NAME to load full instructions):'
+    ]
+    for entry in entries:
+        lines.append(f'- {entry.name}: {entry.summary}')
+    return '\n\n'.join(lines)
+
+
 def estimate_skill_prompt_tokens(skills: list[SkillContent]) -> int:
     """Rough token estimate for skills injected into the system prompt."""
     if not skills:
