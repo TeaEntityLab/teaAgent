@@ -7,6 +7,11 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.run_store import RunStore
+from teaagent.skill_candidate_artifacts import (
+    install_artifact_bundle,
+    validate_candidate_artifacts,
+    write_candidate_artifacts,
+)
 from teaagent.skill_review import review_skill
 from teaagent.storage import atomic_write_text
 
@@ -98,6 +103,15 @@ class SkillCandidateStore:
             final_answer=final_answer,
         )
         atomic_write_text(self._skill(candidate_id), skill_text)
+        write_candidate_artifacts(
+            target_dir,
+            name=name.strip(),
+            description=description.strip(),
+            source_run_id=run_id,
+            task=task,
+            final_answer=final_answer,
+            created_at=now,
+        )
         atomic_write_text(self._meta(candidate_id), json.dumps(candidate.to_dict()))
         return candidate
 
@@ -119,6 +133,13 @@ class SkillCandidateStore:
         return updated
 
     def review(self, candidate_id: str) -> SkillCandidate:
+        candidate_dir = self._dir(candidate_id)
+        artifact_errors = validate_candidate_artifacts(candidate_dir)
+        if artifact_errors:
+            summary = '; '.join(artifact_errors[:3])
+            return self.set_review(
+                candidate_id, status='review_failed', summary=summary
+            )
         skill_path = self.skill_path(candidate_id)
         result = review_skill(skill_path)
         errors = [
@@ -145,6 +166,10 @@ class SkillCandidateStore:
         candidate = self.show(candidate_id)
         if candidate.status not in {'review_passed', 'installed'}:
             raise ValueError('candidate must pass review before install')
+        candidate_dir = self._dir(candidate_id)
+        artifact_errors = validate_candidate_artifacts(candidate_dir)
+        if artifact_errors:
+            raise ValueError('; '.join(artifact_errors))
         src = self.skill_path(candidate_id)
         if scope == 'project':
             dest_dir = self.root / '.config' / 'agent' / 'skills' / candidate.name
@@ -152,13 +177,20 @@ class SkillCandidateStore:
             dest_dir = Path.home() / '.config' / 'agent' / 'skills' / candidate.name
         else:
             raise ValueError("scope must be 'project' or 'personal'")
-        dest_dir.mkdir(parents=True, exist_ok=True)
+        installed_paths = install_artifact_bundle(
+            candidate_dir,
+            dest_dir,
+            skill_md_text=src.read_text(encoding='utf-8'),
+        )
         dest = dest_dir / 'SKILL.md'
-        atomic_write_text(dest, src.read_text(encoding='utf-8'))
         updated = self.set_review(
             candidate_id, status='installed', summary=f'installed:{scope}:{dest}'
         )
-        return {'candidate': updated.to_dict(), 'installed_path': str(dest)}
+        return {
+            'candidate': updated.to_dict(),
+            'installed_path': str(dest),
+            'installed_paths': installed_paths,
+        }
 
 
 def _render_skill_markdown(
