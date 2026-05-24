@@ -61,7 +61,7 @@ class _MockMCPHandler(BaseHTTPRequestHandler):
             session = 'sess-1'
         elif method == 'tools/list':
             resp = {'jsonrpc': '2.0', 'id': body.get('id'), 'result': {'tools': _TOOLS}}
-            session = self.headers.get('Mcp-Session-Id', 'sess-1')
+            session = self.headers.get('Mcp-Session-Id', 'sess-1').replace('\r', '').replace('\n', '')
         elif method == 'tools/call':
             name = body.get('params', {}).get('name', '')
             resp = {
@@ -72,7 +72,7 @@ class _MockMCPHandler(BaseHTTPRequestHandler):
                     'isError': False,
                 },
             }
-            session = self.headers.get('Mcp-Session-Id', 'sess-1')
+            session = self.headers.get('Mcp-Session-Id', 'sess-1').replace('\r', '').replace('\n', '')
         else:
             self.send_response(404)
             self.end_headers()
