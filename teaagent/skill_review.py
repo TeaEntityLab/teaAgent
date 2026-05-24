@@ -8,6 +8,12 @@ EXTERNAL_COMMAND_PATTERNS = (
     re.compile(r'\b(curl|wget|ssh|scp|nc)\b'),
     re.compile(r'https?://'),
 )
+BLOCKLIST_PATTERNS = (
+    re.compile(r'ignore\s+(all\s+)?(previous|prior)\s+instructions', re.IGNORECASE),
+    re.compile(r'print\s+all\s+environment\s+variables', re.IGNORECASE),
+    re.compile(r'\b(export|echo)\s+.*(api[_-]?key|token|secret|password)\b', re.IGNORECASE),
+    re.compile(r'\brm\s+-rf\b', re.IGNORECASE),
+)
 
 
 @dataclass(frozen=True)
@@ -74,4 +80,13 @@ def review_skill(
                 'Long skill should reference REFERENCE.md for Progressive Disclosure',
             )
         )
+    for pattern in BLOCKLIST_PATTERNS:
+        if pattern.search(text):
+            findings.append(
+                SkillReviewFinding(
+                    'error',
+                    'SKILL.md contains blocked instruction pattern (potential unsafe persistence)',
+                )
+            )
+            break
     return SkillReviewResult(skill_path=skill_file, findings=findings)
