@@ -824,6 +824,7 @@ def automation_serve_command(args: argparse.Namespace) -> int:
 
 
 def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
+    from teaagent.automation_limits import cost_cap_exceeded, enforce_runtime_cap
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
     bg_store = BackgroundRunStore(root)
@@ -844,6 +845,11 @@ def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
             )
             store.update(updated)
             continue
+        runtime_capped = enforce_runtime_cap(
+            bg, max_runtime_seconds=spec.max_runtime_seconds
+        )
+        if runtime_capped:
+            bg = bg_store.get(spec.running_background_id)
         run_id = bg.get('run_id') if isinstance(bg.get('run_id'), str) else None
         alive = bool(bg.get('alive'))
         next_state: dict[str, Any] = {}
@@ -854,10 +860,19 @@ def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
                 status = str(heartbeat.get('status', 'running'))
             except FileNotFoundError:
                 status = 'running'
-            next_state['last_status'] = status
+            if runtime_capped and not alive:
+                next_state['last_status'] = 'runtime_cap_exceeded'
+            elif (
+                not alive
+                and status == 'completed'
+                and cost_cap_exceeded(root, spec, run_id=run_id)
+            ):
+                next_state['last_status'] = 'cost_cap_exceeded'
+            else:
+                next_state['last_status'] = status
             if (
                 spec.auto_propose_skill
-                and status == 'completed'
+                and next_state['last_status'] == 'completed'
                 and spec.last_run_id != run_id
             ):
                 with contextlib.suppress(FileNotFoundError, ValueError):

@@ -97,7 +97,9 @@ directory.
 | `test_run_undo.py` | Pre-write capture, file deletion/restore, path traversal guard |
 | `test_runner_cost_tracking.py` | `RunResult` cost fields and audit event cost fields |
 | `test_schema_migration_live.py` | Migration ordering, idempotency, data survival, version tracking |
+| `test_automation_budget_caps_flow.py` | Automation reconcile terminates over-max runtime and records runtime_cap_exceeded |
 | `test_automation_template_dry_run_human_flow.py` | Built-in repo-watch template dry-run emits human checklist with provenance digest and toolsets |
+| `test_skill_activation_explain_flow.py` | Skill explain reports load reason, duplicate shadowing, and zero tokens for no-auto-skills |
 | `test_provenance_gate_blocks_untrusted_skill_or_cron_write_flow.py` | Untrusted web/message writes quarantine automations and memory unless owner-attested |
 | `test_skill_candidate_contract_policy_provenance_flow.py` | Agent-created skill candidates require contract/policy/provenance artifacts before install |
 | `test_skill_loader.py` | Skill discovery, deduplication, cap enforcement, prompt injection |
@@ -117,7 +119,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`176 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
+`178 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

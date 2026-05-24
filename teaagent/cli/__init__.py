@@ -79,6 +79,7 @@ from teaagent.cli._handlers import (
     skill_candidate_propose_command,
     skill_candidate_review_command,
     skill_candidate_show_command,
+    skill_explain_command,
     start_tui,
     status_short_command,
     ultrawork_list_command,
@@ -220,6 +221,7 @@ def build_parser() -> argparse.ArgumentParser:
             'candidate_show': skill_candidate_show_command,
             'candidate_review': skill_candidate_review_command,
             'candidate_install': skill_candidate_install_command,
+            'explain': skill_explain_command,
         },
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases

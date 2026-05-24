@@ -11,6 +11,30 @@ def register(
     skill = subparsers.add_parser('skill', help='Manage skill candidates and installs.')
     subs = skill.add_subparsers(dest='skill_command', required=True)
 
+    explain = subs.add_parser(
+        'explain',
+        help='Show which skills load, shadow duplicates, and token contribution.',
+    )
+    explain.add_argument('--root', default='.', help='Workspace root.')
+    explain.add_argument(
+        '--skill',
+        action='append',
+        default=[],
+        metavar='NAME',
+        help='Explicit skill names (same as agent run --skill).',
+    )
+    explain.add_argument(
+        '--no-auto-skills',
+        action='store_true',
+        help='Match automation default: load no skills.',
+    )
+    explain.add_argument(
+        '--skill-index-only',
+        action='store_true',
+        help='Match agent run --skill-index-only (metadata only, zero skill tokens).',
+    )
+    explain.set_defaults(func=handlers['explain'])
+
     candidate = subs.add_parser('candidate', help='Skill candidate workflow.')
     candidate_subs = candidate.add_subparsers(
         dest='skill_candidate_command', required=True
