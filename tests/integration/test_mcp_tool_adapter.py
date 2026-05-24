@@ -38,6 +38,10 @@ _FAKE_TOOLS = [
 ]
 
 
+def _sanitize_header_value(value: Any) -> str:
+    return str(value).replace('\r', '').replace('\n', '')
+
+
 class _FakeMCPHandler(BaseHTTPRequestHandler):
     def log_message(self, *args: Any) -> None:  # suppress server logs in tests
         pass
@@ -60,7 +64,9 @@ class _FakeMCPHandler(BaseHTTPRequestHandler):
                 'id': body.get('id'),
                 'result': {'tools': _FAKE_TOOLS},
             }
-            session_id = self.headers.get('Mcp-Session-Id', 'test-session-1')
+            session_id = _sanitize_header_value(
+                self.headers.get('Mcp-Session-Id', 'test-session-1')
+            )
         elif method == 'tools/call':
             tool_name = body.get('params', {}).get('name', '')
             resp = {
@@ -71,7 +77,9 @@ class _FakeMCPHandler(BaseHTTPRequestHandler):
                     'isError': False,
                 },
             }
-            session_id = self.headers.get('Mcp-Session-Id', 'test-session-1')
+            session_id = _sanitize_header_value(
+                self.headers.get('Mcp-Session-Id', 'test-session-1')
+            )
         else:
             self.send_response(404)
             self.end_headers()
