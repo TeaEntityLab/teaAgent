@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from teaagent.provenance_gate import (
+    PersistenceSubstrate,
+    ProvenanceSourceKind,
+    evaluate_persistent_write,
+)
 from teaagent.run_store import RunStore
 from teaagent.skill_candidate_artifacts import (
     install_artifact_bundle,
@@ -103,6 +108,15 @@ class SkillCandidateStore:
             final_answer=final_answer,
         )
         atomic_write_text(self._skill(candidate_id), skill_text)
+        gate = evaluate_persistent_write(
+            substrate=PersistenceSubstrate.SKILL_CANDIDATE,
+            payload={
+                'name': name.strip(),
+                'description': description.strip(),
+                'task': task,
+            },
+            source_kind=ProvenanceSourceKind.AGENT_RUN,
+        )
         write_candidate_artifacts(
             target_dir,
             name=name.strip(),
@@ -111,6 +125,8 @@ class SkillCandidateStore:
             task=task,
             final_answer=final_answer,
             created_at=now,
+            source_kind=gate.source_kind.value,
+            content_digest=gate.content_digest,
         )
         atomic_write_text(self._meta(candidate_id), json.dumps(candidate.to_dict()))
         return candidate

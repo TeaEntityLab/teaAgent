@@ -5,11 +5,38 @@ import json
 from typing import Any
 
 from teaagent.memory import MemoryCatalog
+from teaagent.provenance_gate import (
+    PersistenceSubstrate,
+    evaluate_persistent_write,
+    parse_source_kind,
+)
 
 
 def memory_add_command(args: argparse.Namespace) -> int:
-    entry = MemoryCatalog(args.root).add(args.content, tags=tuple(args.tag))
-    print_json(entry.to_dict())
+    catalog = MemoryCatalog(args.root)
+    source_kind = parse_source_kind(getattr(args, 'write_source', None))
+    gate = evaluate_persistent_write(
+        substrate=PersistenceSubstrate.MEMORY,
+        payload={'content': args.content, 'tags': list(args.tag)},
+        source_kind=source_kind,
+        attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
+    )
+    if gate.quarantine:
+        entry = catalog.add_quarantined(
+            args.content,
+            tags=tuple(args.tag),
+            provenance=gate.to_dict(),
+        )
+        print_json(
+            {
+                'status': 'quarantined',
+                'memory': entry.to_dict(),
+                'provenance': gate.to_dict(),
+            }
+        )
+        return 0
+    entry = catalog.add(args.content, tags=tuple(args.tag))
+    print_json({'status': 'created', 'memory': entry.to_dict()})
     return 0
 
 

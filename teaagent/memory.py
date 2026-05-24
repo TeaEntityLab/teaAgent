@@ -37,6 +37,7 @@ class MemoryCatalog:
     def __init__(self, root: str | Path = '.') -> None:
         self.root = Path(root).resolve()
         self.path = self.root / '.teaagent' / 'memory.jsonl'
+        self.quarantine_path = self.root / '.teaagent' / 'memory-quarantine.jsonl'
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def add(self, content: str, *, tags: tuple[str, ...] = ()) -> MemoryEntry:
@@ -46,6 +47,26 @@ class MemoryCatalog:
         if not entry.content:
             raise ValueError('memory content cannot be empty')
         append_jsonl_line(self.path, json.dumps(entry.to_dict(), sort_keys=True))
+        return entry
+
+    def add_quarantined(
+        self,
+        content: str,
+        *,
+        tags: tuple[str, ...] = (),
+        provenance: dict[str, Any],
+    ) -> MemoryEntry:
+        entry = MemoryEntry(
+            memory_id=uuid4().hex, content=content.strip(), tags=normalize_tags(tags)
+        )
+        if not entry.content:
+            raise ValueError('memory content cannot be empty')
+        row = {
+            **entry.to_dict(),
+            'quarantine': True,
+            'provenance': provenance,
+        }
+        append_jsonl_line(self.quarantine_path, json.dumps(row, sort_keys=True))
         return entry
 
     def list(self, *, limit: int = 20) -> List[MemoryEntry]:

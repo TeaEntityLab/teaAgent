@@ -65,7 +65,8 @@ class MemoryCatalogTests(unittest.TestCase):
                         tmp,
                     ]
                 )
-            memory_id = json.loads(add_output.getvalue())['memory_id']
+            add_payload = json.loads(add_output.getvalue())
+            memory_id = add_payload['memory']['memory_id']
             with redirect_stdout(list_output):
                 list_code = main(['memory', 'list', '--root', tmp])
             with redirect_stdout(search_output):

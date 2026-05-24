@@ -143,10 +143,15 @@ class AutomationStore:
     def __init__(self, root: str | Path = '.') -> None:
         self.root = Path(root).resolve()
         self.dir = self.root / '.teaagent' / 'automations'
+        self.quarantine_dir = self.root / '.teaagent' / 'automations-quarantine'
         self.dir.mkdir(parents=True, exist_ok=True)
+        self.quarantine_dir.mkdir(parents=True, exist_ok=True)
 
     def _spec_path(self, automation_id: str) -> Path:
         return self.dir / f'{automation_id}.json'
+
+    def _quarantine_path(self, automation_id: str) -> Path:
+        return self.quarantine_dir / f'{automation_id}.json'
 
     def list(self) -> list[AutomationSpec]:
         specs: list[AutomationSpec] = []
@@ -169,6 +174,53 @@ class AutomationStore:
         payload = json.loads(path.read_text(encoding='utf-8'))
         return AutomationSpec.from_dict(payload)
 
+    def draft(
+        self,
+        *,
+        name: str,
+        task: str,
+        schedule: str,
+        provider: Optional[str],
+        model: Optional[str],
+        permission_mode: str,
+        context_profile: str,
+        max_iterations: int,
+        max_tool_calls: int,
+        auto_propose_skill: bool = False,
+        selected_skills: Optional[builtins.list[str]] = None,
+        acceptance_criteria: str = '',
+        collector_command: str = '',
+        no_agent: bool = False,
+        enabled: bool = True,
+    ) -> AutomationSpec:
+        if not name.strip():
+            raise ValueError('automation name cannot be empty')
+        if not task.strip():
+            raise ValueError('automation task cannot be empty')
+        next_run_at = compute_next_run_at(schedule) if enabled else None
+        now = iso_utc(utc_now())
+        return AutomationSpec(
+            automation_id=uuid4().hex,
+            name=name.strip(),
+            task=task.strip(),
+            schedule=schedule.strip(),
+            provider=provider,
+            model=model,
+            permission_mode=permission_mode,
+            context_profile=context_profile,
+            enabled=enabled,
+            max_iterations=max_iterations,
+            max_tool_calls=max_tool_calls,
+            next_run_at=next_run_at,
+            auto_propose_skill=auto_propose_skill,
+            selected_skills=tuple(selected_skills or ()),
+            acceptance_criteria=acceptance_criteria.strip(),
+            collector_command=collector_command.strip(),
+            no_agent=no_agent,
+            created_at=now,
+            updated_at=now,
+        )
+
     def create(
         self,
         *,
@@ -187,35 +239,42 @@ class AutomationStore:
         collector_command: str = '',
         no_agent: bool = False,
     ) -> AutomationSpec:
-        if not name.strip():
-            raise ValueError('automation name cannot be empty')
-        if not task.strip():
-            raise ValueError('automation task cannot be empty')
-        next_run_at = compute_next_run_at(schedule)
-        now = iso_utc(utc_now())
-        spec = AutomationSpec(
-            automation_id=uuid4().hex,
-            name=name.strip(),
-            task=task.strip(),
-            schedule=schedule.strip(),
+        spec = self.draft(
+            name=name,
+            task=task,
+            schedule=schedule,
             provider=provider,
             model=model,
             permission_mode=permission_mode,
             context_profile=context_profile,
-            enabled=True,
             max_iterations=max_iterations,
             max_tool_calls=max_tool_calls,
-            next_run_at=next_run_at,
             auto_propose_skill=auto_propose_skill,
-            selected_skills=tuple(selected_skills or ()),
-            acceptance_criteria=acceptance_criteria.strip(),
-            collector_command=collector_command.strip(),
+            selected_skills=selected_skills,
+            acceptance_criteria=acceptance_criteria,
+            collector_command=collector_command,
             no_agent=no_agent,
-            created_at=now,
-            updated_at=now,
+            enabled=True,
         )
         atomic_write_text(
             self._spec_path(spec.automation_id), json.dumps(spec.to_dict())
+        )
+        return spec
+
+    def create_quarantined(
+        self,
+        spec: AutomationSpec,
+        *,
+        provenance: dict[str, Any],
+    ) -> AutomationSpec:
+        payload = {
+            **spec.to_dict(),
+            'enabled': False,
+            'quarantine': True,
+            'provenance': provenance,
+        }
+        atomic_write_text(
+            self._quarantine_path(spec.automation_id), json.dumps(payload)
         )
         return spec
 

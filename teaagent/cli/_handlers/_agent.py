@@ -564,24 +564,61 @@ def automation_add_command(args: argparse.Namespace) -> int:
         )
         return 1
 
-    spec = AutomationStore(args.root).create(
-        name=args.name,
-        task=args.task,
-        schedule=args.schedule,
-        provider=args.provider,
-        model=args.model,
-        permission_mode=args.permission_mode,
-        context_profile=args.context_profile,
-        max_iterations=args.max_iterations,
-        max_tool_calls=args.max_tool_calls,
-        auto_propose_skill=bool(getattr(args, 'auto_propose_skill', False)),
-        selected_skills=list(draft.selected_skills),
-        acceptance_criteria=draft.acceptance_criteria,
-        collector_command=draft.collector_command,
-        no_agent=draft.no_agent,
+    from teaagent.provenance_gate import (
+        PersistenceSubstrate,
+        evaluate_persistent_write,
+        parse_source_kind,
     )
+
+    store = AutomationStore(args.root)
+    source_kind = parse_source_kind(getattr(args, 'write_source', None))
+    gate = evaluate_persistent_write(
+        substrate=PersistenceSubstrate.AUTOMATION,
+        payload={
+            'name': draft.name,
+            'task': draft.task,
+            'schedule': draft.schedule,
+        },
+        source_kind=source_kind,
+        attested=bool(getattr(args, 'i_attest_untrusted_write', False)),
+    )
+    create_kwargs = {
+        'name': args.name,
+        'task': args.task,
+        'schedule': args.schedule,
+        'provider': args.provider,
+        'model': args.model,
+        'permission_mode': args.permission_mode,
+        'context_profile': args.context_profile,
+        'max_iterations': args.max_iterations,
+        'max_tool_calls': args.max_tool_calls,
+        'auto_propose_skill': bool(getattr(args, 'auto_propose_skill', False)),
+        'selected_skills': list(draft.selected_skills),
+        'acceptance_criteria': draft.acceptance_criteria,
+        'collector_command': draft.collector_command,
+        'no_agent': draft.no_agent,
+    }
+    if gate.quarantine:
+        spec = store.draft(**create_kwargs, enabled=False)
+        store.create_quarantined(spec, provenance=gate.to_dict())
+        print_json(
+            {
+                'status': 'quarantined',
+                'automation': spec.to_dict(),
+                'provenance': gate.to_dict(),
+                'warnings': report.warnings,
+            }
+        )
+        return 0
+
+    spec = store.create(**create_kwargs)
     print_json(
-        {'status': 'created', 'automation': spec.to_dict(), 'warnings': report.warnings}
+        {
+            'status': 'created',
+            'automation': spec.to_dict(),
+            'provenance': gate.to_dict(),
+            'warnings': report.warnings,
+        }
     )
     return 0
 

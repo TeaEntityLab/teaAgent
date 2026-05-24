@@ -542,6 +542,17 @@ def _automation(
         action='store_true',
         help='Run collector_command only; never invoke the LLM (requires --collector-command).',
     )
+    add.add_argument(
+        '--write-source',
+        choices=['local', 'agent_run', 'web_message'],
+        default='local',
+        help='Provenance source for this automation write (web_message quarantines unless attested).',
+    )
+    add.add_argument(
+        '--i-attest-untrusted-write',
+        action='store_true',
+        help='One-shot owner attestation after reviewing an untrusted web/message payload.',
+    )
     add.set_defaults(func=handlers['add'], agent_command='automation')
 
     status = commands.add_parser(

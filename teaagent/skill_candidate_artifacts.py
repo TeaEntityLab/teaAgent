@@ -58,9 +58,11 @@ def write_candidate_artifacts(
     task: str,
     final_answer: str,
     created_at: str,
+    source_kind: str = 'agent_run',
+    content_digest: str | None = None,
 ) -> None:
     candidate_dir.mkdir(parents=True, exist_ok=True)
-    digest = _content_digest(task=task, final_answer=final_answer)
+    digest = content_digest or _content_digest(task=task, final_answer=final_answer)
     atomic_write_text(
         candidate_dir / 'REFERENCE.md',
         _render_reference_markdown(
@@ -116,6 +118,7 @@ def write_candidate_artifacts(
             {
                 'schema_version': 1,
                 'source_run_id': source_run_id,
+                'source_kind': source_kind,
                 'source_task': task.strip(),
                 'created_at': created_at,
                 'content_digest': digest,

@@ -19,6 +19,17 @@ def register(
     add.add_argument(
         '--tag', action='append', default=[], help='Tag to attach. Can be repeated.'
     )
+    add.add_argument(
+        '--write-source',
+        choices=['local', 'agent_run', 'web_message'],
+        default='local',
+        help='Provenance source for this memory write (web_message quarantines unless attested).',
+    )
+    add.add_argument(
+        '--i-attest-untrusted-write',
+        action='store_true',
+        help='One-shot owner attestation after reviewing an untrusted web/message payload.',
+    )
     add.set_defaults(func=handlers['add'])
 
     lst = subs.add_parser('list', help='List recent memory entries.')
