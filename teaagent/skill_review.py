@@ -11,7 +11,9 @@ EXTERNAL_COMMAND_PATTERNS = (
 BLOCKLIST_PATTERNS = (
     re.compile(r'ignore\s+(all\s+)?(previous|prior)\s+instructions', re.IGNORECASE),
     re.compile(r'print\s+all\s+environment\s+variables', re.IGNORECASE),
-    re.compile(r'\b(export|echo)\s+.*(api[_-]?key|token|secret|password)\b', re.IGNORECASE),
+    re.compile(
+        r'\b(export|echo)\s+.*(api[_-]?key|token|secret|password)\b', re.IGNORECASE
+    ),
     re.compile(r'\brm\s+-rf\b', re.IGNORECASE),
 )
 

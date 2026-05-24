@@ -509,14 +509,20 @@ def automation_tick_command(args: argparse.Namespace) -> int:
 def _automation_tick(root: str, *, dry_run: bool) -> dict[str, Any]:
     store = AutomationStore(root)
     _reconcile_automation_runs(root, store)
+    health = _automation_health(store)
     if dry_run:
         due = [spec.to_dict() for spec in store.due()]
-        return {'status': 'dry_run', 'due': due, 'count': len(due)}
+        return {'status': 'dry_run', 'due': due, 'count': len(due), 'health': health}
     results: list[dict[str, Any]] = []
     with AutomationTickLock(root):
         for spec in store.due():
             results.append(_run_automation_once(root, spec))
-    return {'status': 'ok', 'executed': results, 'count': len(results)}
+    return {
+        'status': 'ok',
+        'executed': results,
+        'count': len(results),
+        'health': health,
+    }
 
 
 def automation_serve_command(args: argparse.Namespace) -> int:
@@ -530,6 +536,7 @@ def automation_serve_command(args: argparse.Namespace) -> int:
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
     tick_count = 0
+    started_at = time.monotonic()
     max_ticks = int(getattr(args, 'max_ticks', 0))
     interval = float(getattr(args, 'interval_seconds', 30.0))
     try:
@@ -550,6 +557,8 @@ def automation_serve_command(args: argparse.Namespace) -> int:
                     'status': 'serve_tick',
                     'tick': tick_count,
                     'executed_count': payload.get('count', 0),
+                    'uptime_seconds': round(time.monotonic() - started_at, 1),
+                    'health': payload.get('health', {}),
                     'last_tick': payload,
                 }
             )
@@ -559,6 +568,7 @@ def automation_serve_command(args: argparse.Namespace) -> int:
                         'status': 'stopped',
                         'reason': 'max_ticks',
                         'ticks_completed': tick_count,
+                        'uptime_seconds': round(time.monotonic() - started_at, 1),
                     }
                 )
                 return 0
@@ -615,6 +625,19 @@ def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
             next_state['running_background_id'] = None
         if next_state:
             store.update(AutomationSpec(**{**spec.to_dict(), **next_state}))
+
+
+def _automation_health(store: AutomationStore) -> dict[str, int]:
+    specs = store.list()
+    enabled = [spec for spec in specs if spec.enabled]
+    due_ready = store.due()
+    running = [spec for spec in specs if spec.running_background_id]
+    return {
+        'automation_count': len(specs),
+        'enabled_count': len(enabled),
+        'due_count': len(due_ready),
+        'running_count': len(running),
+    }
 
 
 def agent_attach_command(args: argparse.Namespace) -> int:

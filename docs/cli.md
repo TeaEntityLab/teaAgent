@@ -833,6 +833,8 @@ teaagent agent automation serve --interval-seconds 30 --max-ticks 10 --root .
 ```
 
 `tick` enforces a lock (`.teaagent/automations/.tick.lock`) to avoid duplicate scheduling in concurrent invocations.
+`serve` emits one JSON health snapshot per tick with `uptime_seconds` and
+`health` (`automation_count`, `enabled_count`, `due_count`, `running_count`).
 
 ## Skill Candidates
 

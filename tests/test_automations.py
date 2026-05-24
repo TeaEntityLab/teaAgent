@@ -112,3 +112,34 @@ def test_automation_run_skips_when_background_alive(tmp_path: Path) -> None:
     assert code == 0
     payload = json.loads(out.getvalue())
     assert payload['status'] == 'skipped_running'
+
+
+def test_automation_serve_emits_health_snapshot(tmp_path: Path) -> None:
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(
+            [
+                'agent',
+                'automation',
+                'serve',
+                '--max-ticks',
+                '1',
+                '--interval-seconds',
+                '0.01',
+                '--root',
+                str(tmp_path),
+            ]
+        )
+    assert code == 0
+    lines = [line for line in out.getvalue().splitlines() if line.strip()]
+    assert len(lines) == 2
+    tick_payload = json.loads(lines[0])
+    assert tick_payload['status'] == 'serve_tick'
+    assert 'uptime_seconds' in tick_payload
+    health = tick_payload['health']
+    assert set(health.keys()) == {
+        'automation_count',
+        'enabled_count',
+        'due_count',
+        'running_count',
+    }
