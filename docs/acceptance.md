@@ -33,6 +33,7 @@ directory.
 | `test_audit_chain_integrity_flow.py` | Audit log integrity | JSONL parseability, unique event IDs, redaction, disk/in-memory event parity, restricted file permissions |
 | `test_cancel_flow.py` | Graceful cancel | Thread-safe cancel token stops runs cleanly and keeps audit state intact |
 | `test_code_analysis_prompt_injection_flow.py` | Code-analysis prompt injection | Enabling code analysis injects `lsp_context` in model payload for code-path tasks without requiring external LSP binaries |
+| `test_subagent_definitions_flow.py` | Declarative sub-agent definitions | YAML/JSON/Markdown frontmatter loading, `isolation`/`background`/`disallowed_tools`/`effort` fields, Claude Code `.md` convention compatibility |
 | `test_code_analysis_lsp_flow.py` | LSP code-analysis tool registration and context enrichment | Code analysis tools registered when enabled, tree-sitter relation extraction, candidate path detection, config enablement, read-only annotations |
 | `test_cost_tracking_flow.py` | Cost and token tracking | Terminal results and `run_completed` audit events carry token and cost fields |
 | `test_daily_cli.py` | Daily CLI workflow | `agent daily`, `agent preflight`, `agent run`, `agent show`, token budget, harness health, audit persistence, run-level audit summary |
@@ -54,11 +55,13 @@ directory.
 | `test_remote_mcp_consumption_flow.py` | Remote MCP tool consumption | Remote tool registration, annotation propagation, prefix filtering, shared rate limits, proxied calls |
 | `test_run_undo_acceptance_flow.py` | Reversible change recovery | Undo journal captures pre-write state and restores modified/new files to pre-run workspace state |
 | `test_session_resume_continuity_flow.py` | Session resume continuity | Pending-approval resume replays observations from checkpoint/store, preserves audit lineage, and auto-curates memory on completion |
+| `test_hook_lifecycle_flow.py` | Hook lifecycle acceptance (elevated from integration) | PreToolUse veto via HookError, PostToolUse result chaining, multi-hook ordering, permission_check_hook deny/allow/patterns, registry enabled flag, all 8 Claude Code hook events |
 | `test_surface_launch_recipes_flow.py` | Multi-surface launch recipes | USAGE surface table covers CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed runtime; documented local smoke commands run without network |
 | `test_subagent_lineage_flow.py` | Subagent lineage and isolation | Child runs record parent lineage metadata; batch returns ordered lineage; default shared-workspace isolation documented |
 | `test_subagent_worktree_isolation_flow.py` | Subagent worktree isolation | `isolation=worktree` uses a detached git worktree, records `worktree_path` in lineage, and cleans up after completion |
 | `test_subagent_container_isolation_flow.py` | Subagent container isolation | `isolation=container` uses a gitignore-respecting workspace snapshot, records `container_path` in lineage, and cleans up after completion |
 | `test_context_pack_read_only_flow.py` | Read-only context pack | Preflight returns read-only `context_pack` with hybrid/knowledge/GraphQLite hits when indexed; read-only runs still block workspace writes |
+| `test_context_compaction_slo_flow.py` | Context compaction latency SLO | Traffic-light zoning (green 0-75%, yellow 75-92%, red 92%+), should_compact thresholds, CompactionResult preserves recent observations, compaction latency < 100ms SLO |
 | `test_skill_install_flow.py` | Skill discovery and injection | Skill discovery, prompt injection, multi-skill loading, project override precedence, model-decision prompt wiring |
 | `test_ultrawork_flow.py` | Long-running worker | Worker start, list, show, log tail, and stop lifecycle |
 | `test_vscode_extension_mcp_boot_flow.py` | VSCode MCP boot flow | Extension manifest command contribution, source command wiring for MCP HTTP server, permission mode enum parity |
@@ -111,7 +114,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`125 passed` (89 prior + 6 mtime + 8 protected paths + 7 LSP + 1 modified policy + 3 prior).
+`162 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

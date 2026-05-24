@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,8 @@ from teaagent.policy import parse_permission_mode
 from teaagent.subagents._types import SubagentDef
 
 SUBAGENTS_DIR = '.teaagent/subagents'
+_SUPPORTED_SUFFIXES = {'.yaml', '.yml', '.json', '.md'}
+_FRONTMATTER_RE = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
 
 
 def load_subagent_defs(root: Path) -> dict[str, SubagentDef]:
@@ -16,9 +19,12 @@ def load_subagent_defs(root: Path) -> dict[str, SubagentDef]:
         return {}
     defs: dict[str, SubagentDef] = {}
     for f in sorted(subagent_dir.iterdir()):
-        if not f.is_file() or f.suffix.lower() not in {'.yaml', '.yml', '.json'}:
+        if not f.is_file() or f.suffix.lower() not in _SUPPORTED_SUFFIXES:
             continue
-        data = _load_data_file(f)
+        if f.suffix.lower() == '.md':
+            data = _load_markdown_frontmatter(f)
+        else:
+            data = _load_data_file(f)
         if not isinstance(data, dict):
             continue
         name = data.get('name')
@@ -34,10 +40,22 @@ def load_subagent_defs(root: Path) -> dict[str, SubagentDef]:
             names = [str(item).strip() for item in tools if str(item).strip()]
             if names:
                 tool_whitelist = frozenset(names)
+        disallowed = data.get('disallowed_tools', data.get('disallowedTools'))
+        disallowed_tools = None
+        if isinstance(disallowed, list):
+            dnames = [str(item).strip() for item in disallowed if str(item).strip()]
+            if dnames:
+                disallowed_tools = frozenset(dnames)
+        isolation = str(data.get('isolation', 'shared'))
+        background = bool(data.get('background', False))
+        effort = data.get('effort')
+        system_prompt = str(data.get('system_prompt', ''))
+        if not system_prompt:
+            system_prompt = str(data.get('prompt', ''))
         defs[name] = SubagentDef(
             name=name,
             description=str(data.get('description', '')),
-            system_prompt=str(data.get('system_prompt', '')),
+            system_prompt=system_prompt,
             model=(
                 str(data['model']) if 'model' in data and data.get('model') else None
             ),
@@ -45,9 +63,37 @@ def load_subagent_defs(root: Path) -> dict[str, SubagentDef]:
             max_iterations=int(data.get('max_iterations', 5)),
             max_tool_calls=int(data.get('max_tool_calls', 8)),
             tool_whitelist=tool_whitelist,
+            disallowed_tools=disallowed_tools,
             max_depth=int(data.get('max_depth', 1)),
+            isolation=isolation,
+            background=background,
+            effort=effort,
         )
     return defs
+
+
+def _load_markdown_frontmatter(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding='utf-8')
+    match = _FRONTMATTER_RE.match(text)
+    if not match:
+        frontmatter_text = ''
+        body = text
+    else:
+        frontmatter_text = match.group(1)
+        body = text[match.end() :]
+    data: dict[str, Any] = {}
+    if frontmatter_text:
+        try:
+            import yaml  # type: ignore[import-untyped]
+
+            parsed = yaml.safe_load(frontmatter_text)
+        except ModuleNotFoundError:
+            parsed = _load_simple_yaml(frontmatter_text)
+        if isinstance(parsed, dict):
+            data.update(parsed)
+    if 'system_prompt' not in data and body.strip():
+        data['system_prompt'] = body.strip()
+    return data
 
 
 def _load_data_file(path: Path) -> Any:

@@ -5,6 +5,8 @@ from typing import Optional
 
 from teaagent.policy import PermissionMode
 
+DEFAULT_SUBAGENT_ISOLATION = 'shared'
+
 
 @dataclass(frozen=True)
 class SubagentDef:
@@ -16,10 +18,11 @@ class SubagentDef:
     max_iterations: int = 5
     max_tool_calls: int = 8
     tool_whitelist: Optional[frozenset[str]] = None
+    disallowed_tools: Optional[frozenset[str]] = None
     max_depth: int = 1
-
-
-DEFAULT_SUBAGENT_ISOLATION = 'shared'
+    isolation: str = DEFAULT_SUBAGENT_ISOLATION
+    background: bool = False
+    effort: Optional[str] = None
 
 
 @dataclass(frozen=True)
