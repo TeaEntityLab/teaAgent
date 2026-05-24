@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import urllib.error
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from threading import Thread
+
+import pytest
 
 from teaagent.automation_delivery import (
     deliver_automation_tick,
@@ -39,6 +42,13 @@ def _start_server() -> tuple[HTTPServer, str]:
     return server, f'http://{host}:{port}/hook'
 
 
+def test_resolve_automation_webhook_url_from_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv('TEAAGENT_AUTOMATION_WEBHOOK_URL', 'https://env.example/hook')
+    assert resolve_automation_webhook_url(tmp_path) == 'https://env.example/hook'
+
+
 def test_resolve_automation_webhook_url_from_config(tmp_path: Path) -> None:
     config = tmp_path / '.teaagent' / 'config.toml'
     config.parent.mkdir(parents=True)
@@ -46,6 +56,29 @@ def test_resolve_automation_webhook_url_from_config(tmp_path: Path) -> None:
         'automation_webhook_url = "https://example.com/hook"\n', encoding='utf-8'
     )
     assert resolve_automation_webhook_url(tmp_path) == 'https://example.com/hook'
+
+
+def test_deliver_skips_non_webhook_delivery(tmp_path: Path) -> None:
+    spec = AutomationStore(tmp_path).draft(
+        name='bg',
+        task='Summarize repo changes with explicit output path notes.txt',
+        schedule='every 30m',
+        provider=None,
+        model=None,
+        permission_mode='read-only',
+        context_profile='lean',
+        max_iterations=3,
+        max_tool_calls=3,
+        delivery='background_log',
+    )
+    assert deliver_automation_tick(tmp_path, spec, status='ok') is False
+
+
+def test_resolve_webhook_secret_from_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv('TEAAGENT_AUTOMATION_WEBHOOK_SECRET', 'from-env')
+    assert resolve_automation_webhook_secret(tmp_path) == 'from-env'
 
 
 def test_dry_run_errors_when_webhook_delivery_without_url(tmp_path: Path) -> None:
@@ -108,3 +141,62 @@ def test_deliver_automation_tick_posts_json(tmp_path: Path) -> None:
         assert len(sig) > len('sha256=')
     finally:
         server.shutdown()
+
+
+def test_deliver_webhook_returns_false_without_url(tmp_path: Path) -> None:
+    spec = AutomationStore(tmp_path).draft(
+        name='hook-job',
+        task='Summarize repo changes with explicit output path notes.txt',
+        schedule='every 30m',
+        provider=None,
+        model=None,
+        permission_mode='read-only',
+        context_profile='lean',
+        max_iterations=3,
+        max_tool_calls=3,
+        delivery='webhook',
+    )
+    assert deliver_automation_tick(tmp_path, spec, status='ok') is False
+
+
+def test_deliver_webhook_raises_on_network_error(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        'automation_webhook_url = "http://127.0.0.1:1/"\n', encoding='utf-8'
+    )
+    spec = AutomationStore(tmp_path).draft(
+        name='hook-job',
+        task='Summarize repo changes with explicit output path notes.txt',
+        schedule='every 30m',
+        provider=None,
+        model=None,
+        permission_mode='read-only',
+        context_profile='lean',
+        max_iterations=3,
+        max_tool_calls=3,
+        delivery='webhook',
+    )
+    with pytest.raises(urllib.error.URLError):
+        deliver_automation_tick(tmp_path, spec, status='failed', raise_on_error=True)
+
+
+def test_deliver_webhook_swallows_network_error_by_default(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        'automation_webhook_url = "http://127.0.0.1:1/"\n', encoding='utf-8'
+    )
+    spec = AutomationStore(tmp_path).draft(
+        name='hook-job',
+        task='Summarize repo changes with explicit output path notes.txt',
+        schedule='every 30m',
+        provider=None,
+        model=None,
+        permission_mode='read-only',
+        context_profile='lean',
+        max_iterations=3,
+        max_tool_calls=3,
+        delivery='webhook',
+    )
+    assert deliver_automation_tick(tmp_path, spec, status='failed') is True

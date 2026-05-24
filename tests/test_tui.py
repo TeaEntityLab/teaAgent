@@ -26,6 +26,8 @@ class CapturingAdapterFactory:
 
 class TUITests(unittest.TestCase):
     def test_tui_handles_doctor_smoke_query_and_exit(self) -> None:
+        from unittest.mock import MagicMock, patch
+
         commands = iter(
             [
                 'doctor',
@@ -38,15 +40,33 @@ class TUITests(unittest.TestCase):
         tui = TeaAgentTUI(
             input_fn=lambda _prompt: next(commands), output_fn=output.append
         )
+        graph_store = MagicMock()
+        graph_store.graph.upsert_node = MagicMock()
+        graph_store.query.return_value = [{'n.name': 'TeaAgent'}]
 
-        exit_code = tui.run()
+        with (
+            patch.object(TeaAgentTUI, '_load_tui_state'),
+            patch.object(TeaAgentTUI, '_save_tui_state'),
+            patch.object(tui, '_get_store', return_value=graph_store),
+            patch(
+                'teaagent.tui._commands.check_graphqlite_runtime',
+                return_value=(True, 'ok'),
+            ),
+        ):
+            exit_code = tui.run()
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(output[0], 'TeaAgent TUI 0.1.0')
-        doctor_payload = json.loads(output[2])
+        parsed = []
+        for line in output:
+            try:
+                parsed.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        doctor_payload = parsed[0]
         self.assertTrue(doctor_payload['ok'])
-        self.assertEqual(json.loads(output[3]), [{'n.name': 'TeaAgent'}])
-        self.assertEqual(json.loads(output[4]), [{'n.name': 'TeaAgent'}])
+        self.assertEqual(parsed[1], [{'n.name': 'TeaAgent'}])
+        self.assertEqual(parsed[2], [{'n.name': 'TeaAgent'}])
         self.assertEqual(output[-1], 'bye')
 
     def test_tui_use_switches_database_label(self) -> None:

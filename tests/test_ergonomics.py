@@ -182,11 +182,16 @@ def test_model_capabilities_match_providers() -> None:
     assert table_providers == set(available_providers())
 
 
-def test_provider_required_without_init(tmp_path: Path) -> None:
+def test_provider_required_without_init(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from teaagent.cli import main
 
-    code = main(['agent', 'run', 'task without provider', '--root', str(tmp_path)])
-    assert code != 0
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv('TEAAGENT_PROVIDER', raising=False)
+    monkeypatch.delenv('TEAAGENT_MODEL', raising=False)
+    with pytest.raises(SystemExit):
+        main(['agent', 'run', 'task without provider', '--root', str(tmp_path)])
 
 
 def test_resolve_auto_compact_defaults(tmp_path: Path) -> None:

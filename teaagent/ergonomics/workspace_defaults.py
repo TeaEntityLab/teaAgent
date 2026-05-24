@@ -8,7 +8,10 @@ from typing import Any
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - py3.10
-    tomllib = None  # type: ignore[assignment]
+    try:
+        import tomli as tomllib  # type: ignore[no-redef, unused-ignore]
+    except ModuleNotFoundError:
+        tomllib = None  # type: ignore[assignment,misc]
 
 DEFAULT_KEYS = {
     'provider': None,
@@ -24,14 +27,46 @@ DEFAULT_KEYS = {
 }
 
 
+def _parse_flat_toml(text: str) -> dict[str, Any]:
+    """Parse flat ``key = value`` TOML used by ``.teaagent/config.toml`` (py3.10 fallback)."""
+    result: dict[str, Any] = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+        if '=' not in stripped:
+            continue
+        key, _, raw = stripped.partition('=')
+        key = key.strip()
+        raw = raw.strip()
+        if (raw.startswith('"') and raw.endswith('"')) or (
+            raw.startswith("'") and raw.endswith("'")
+        ):
+            result[key] = raw[1:-1]
+        elif raw == 'true':
+            result[key] = True
+        elif raw == 'false':
+            result[key] = False
+        else:
+            try:
+                result[key] = int(raw) if '.' not in raw else float(raw)
+            except ValueError:
+                result[key] = raw
+    return result
+
+
 def _read_toml(path: Path) -> dict[str, Any]:
-    if tomllib is None:
-        return {}
     try:
-        data = tomllib.loads(path.read_text(encoding='utf-8'))
-    except (OSError, ValueError):
+        text = path.read_text(encoding='utf-8')
+    except OSError:
         return {}
-    return data if isinstance(data, dict) else {}
+    if tomllib is not None:
+        try:
+            data = tomllib.loads(text)
+        except ValueError:
+            return {}
+        return data if isinstance(data, dict) else {}
+    return _parse_flat_toml(text)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
