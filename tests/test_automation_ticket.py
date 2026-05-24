@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from teaagent.automation_ticket import (
+    build_automation_dry_run_payload,
+    validate_automation_spec,
+    validate_automation_task,
+)
+from teaagent.automations import AutomationSpec
+
+
+def _spec(**overrides: object) -> AutomationSpec:
+    base = {
+        'automation_id': 'a1',
+        'name': 'doc-check',
+        'task': 'Run scripts/refresh_competitive_docs.py --check and report drift.',
+        'schedule': 'every 30m',
+        'acceptance_criteria': 'Command exits 0 and prints Competitive docs check passed.',
+        'selected_skills': (),
+    }
+    base.update(overrides)
+    return AutomationSpec.from_dict(base)
+
+
+def test_validate_automation_task_rejects_vague_prompt() -> None:
+    errors = validate_automation_task('照你知道的做，延續上次對話')
+    assert errors
+
+
+def test_validate_automation_spec_requires_acceptance_criteria_on_dry_run(
+    tmp_path: Path,
+) -> None:
+    spec = _spec(acceptance_criteria='')
+    report = validate_automation_spec(
+        spec, root=str(tmp_path), require_acceptance_criteria=True
+    )
+    assert any('acceptance_criteria' in err for err in report.errors)
+
+
+def test_build_automation_dry_run_payload_marks_ready(tmp_path: Path) -> None:
+    payload = build_automation_dry_run_payload(_spec(), root=str(tmp_path))
+    assert payload['ticket']['ready'] is True
+    assert payload['ticket']['estimated_skill_tokens'] == 0
+
+
+def test_unknown_selected_skill_fails_dry_run(tmp_path: Path) -> None:
+    payload = build_automation_dry_run_payload(
+        _spec(selected_skills=('missing-skill',)),
+        root=str(tmp_path),
+    )
+    assert payload['ticket']['ready'] is False
+    assert any('unknown selected_skills' in err for err in payload['ticket']['errors'])

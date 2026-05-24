@@ -46,6 +46,7 @@ from teaagent.runner import (
 from teaagent.skill_loader import (
     SkillContent,
     SkillSourceProfile,
+    estimate_skill_prompt_tokens,
     load_skills_with_report,
 )
 from teaagent.subagents import SubagentManager, register_subagent_tools
@@ -82,6 +83,7 @@ class ChatAgentConfig:
     enable_git_tools: bool = False
     skill_search_dirs: Optional[list[str]] = None
     skill_source_profile: SkillSourceProfile = 'default'
+    selected_skills: Optional[frozenset[str]] = None
     hook_registry: Optional[HookRegistry] = None
     auto_mode_config: Optional[AutoModeConfig] = None
 
@@ -374,13 +376,16 @@ def run_chat_agent(
         config.root,
         preferred_dirs=cast(Optional[list[str | Path]], config.skill_search_dirs),
         source_profile=config.skill_source_profile,
+        selected_names=config.selected_skills,
     )
     active_skills = skill_report.skills
     audit_logger.record(
         'skill_load',
         run_id,
+        selected_skills=sorted(config.selected_skills or ()),
         searched_dirs=[str(path) for path in skill_report.searched_dirs],
         loaded=[str(skill.path) for skill in active_skills],
+        estimated_skill_tokens=estimate_skill_prompt_tokens(active_skills),
         skipped=[
             {
                 'path': str(item.skill_path),

@@ -45,6 +45,8 @@ class AutomationSpec:
     last_status: Optional[str] = None
     running_background_id: Optional[str] = None
     auto_propose_skill: bool = False
+    selected_skills: tuple[str, ...] = ()
+    acceptance_criteria: str = ''
     created_at: str = ''
     updated_at: str = ''
 
@@ -94,9 +96,20 @@ class AutomationSpec:
                 else None
             ),
             auto_propose_skill=bool(payload.get('auto_propose_skill', False)),
+            selected_skills=_parse_selected_skills(payload.get('selected_skills')),
+            acceptance_criteria=str(payload.get('acceptance_criteria', '')).strip(),
             created_at=str(payload.get('created_at', '')),
             updated_at=str(payload.get('updated_at', '')),
         )
+
+
+def _parse_selected_skills(raw: Any) -> tuple[str, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, (list, tuple)):
+        return ()
+    names = [str(item).strip() for item in raw if str(item).strip()]
+    return tuple(names)
 
 
 def compute_next_run_at(schedule: str, *, now: Optional[datetime] = None) -> str:
@@ -164,6 +177,8 @@ class AutomationStore:
         max_iterations: int,
         max_tool_calls: int,
         auto_propose_skill: bool = False,
+        selected_skills: Optional[builtins.list[str]] = None,
+        acceptance_criteria: str = '',
     ) -> AutomationSpec:
         if not name.strip():
             raise ValueError('automation name cannot be empty')
@@ -185,6 +200,8 @@ class AutomationStore:
             max_tool_calls=max_tool_calls,
             next_run_at=next_run_at,
             auto_propose_skill=auto_propose_skill,
+            selected_skills=tuple(selected_skills or ()),
+            acceptance_criteria=acceptance_criteria.strip(),
             created_at=now,
             updated_at=now,
         )

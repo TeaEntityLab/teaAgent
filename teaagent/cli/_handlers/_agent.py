@@ -26,6 +26,19 @@ from teaagent.runner import ApprovalRequest, RunResult
 from teaagent.skill_candidates import SkillCandidateStore
 
 
+def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
+    if getattr(args, 'no_auto_skills', False):
+        return frozenset()
+    names = [
+        str(item).strip()
+        for item in (getattr(args, 'skill', None) or [])
+        if str(item).strip()
+    ]
+    if names:
+        return frozenset(names)
+    return None
+
+
 def _emit_readiness_payload(args: argparse.Namespace, payload: dict[str, Any]) -> None:
     if getattr(args, 'human', False):
         from teaagent.ergonomics.human_output import format_readiness_summary
@@ -224,6 +237,7 @@ def _execute_agent_task(
                 if getattr(args, 'code_analysis', False)
                 else None
             ),
+            selected_skills=_resolve_selected_skills(args),
         ),
         audit=audit,
         task_spec=task_spec,
@@ -376,6 +390,7 @@ def _start_automation_background_run(
         heartbeat=0.0,
         code_analysis=False,
         context_profile=spec.context_profile,
+        selected_skills=list(spec.selected_skills),
     )
     command = build_agent_run_command(run_args, spec.task)
     record = BackgroundRunStore(root).start(
@@ -427,6 +442,42 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
 
 
 def automation_add_command(args: argparse.Namespace) -> int:
+    from teaagent.automation_ticket import (
+        build_automation_dry_run_payload,
+        validate_automation_spec,
+    )
+
+    draft = AutomationSpec(
+        automation_id='',
+        name=args.name,
+        task=args.task,
+        schedule=args.schedule,
+        provider=args.provider,
+        model=args.model,
+        permission_mode=args.permission_mode,
+        context_profile=args.context_profile,
+        max_iterations=args.max_iterations,
+        max_tool_calls=args.max_tool_calls,
+        auto_propose_skill=bool(getattr(args, 'auto_propose_skill', False)),
+        selected_skills=tuple(getattr(args, 'skill', None) or ()),
+        acceptance_criteria=str(getattr(args, 'acceptance_criteria', '')).strip(),
+    )
+    if getattr(args, 'dry_run', False):
+        payload = build_automation_dry_run_payload(
+            draft, root=args.root, human=bool(getattr(args, 'human', False))
+        )
+        print_json(payload)
+        if payload['ticket']['errors']:
+            return 1
+        return 0
+
+    report = validate_automation_spec(draft, root=args.root)
+    if report.errors:
+        print_json(
+            {'status': 'error', 'errors': report.errors, 'warnings': report.warnings}
+        )
+        return 1
+
     spec = AutomationStore(args.root).create(
         name=args.name,
         task=args.task,
@@ -438,8 +489,12 @@ def automation_add_command(args: argparse.Namespace) -> int:
         max_iterations=args.max_iterations,
         max_tool_calls=args.max_tool_calls,
         auto_propose_skill=bool(getattr(args, 'auto_propose_skill', False)),
+        selected_skills=list(draft.selected_skills),
+        acceptance_criteria=draft.acceptance_criteria,
     )
-    print_json({'status': 'created', 'automation': spec.to_dict()})
+    print_json(
+        {'status': 'created', 'automation': spec.to_dict(), 'warnings': report.warnings}
+    )
     return 0
 
 

@@ -172,4 +172,11 @@ def build_agent_run_command(args: Any, task: str) -> list[str]:
         cmd.append('--code-analysis')
     if getattr(args, 'context_profile', None):
         cmd.extend(['--context-profile', args.context_profile])
+    selected_skills = getattr(args, 'selected_skills', None)
+    if selected_skills is not None:
+        if not selected_skills:
+            cmd.append('--no-auto-skills')
+        else:
+            for skill_name in selected_skills:
+                cmd.extend(['--skill', skill_name])
     return cmd

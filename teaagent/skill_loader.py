@@ -68,6 +68,15 @@ class SkillContent:
 
 
 @dataclass(frozen=True)
+class SkillIndexEntry:
+    """Metadata for a discoverable skill without eager prompt injection."""
+
+    name: str
+    path: Path
+    summary: str
+
+
+@dataclass(frozen=True)
 class SkillLoadWarning:
     skill_name: str
     skill_path: Path
@@ -165,6 +174,72 @@ def load_skills(
     ).skills
 
 
+def _skill_summary(skill_file: Path) -> str:
+    try:
+        text = skill_file.read_text(encoding='utf-8', errors='replace')
+    except OSError:
+        return ''
+    body = text
+    if body.startswith('---'):
+        end = body.find('\n---', 3)
+        if end != -1:
+            body = body[end + 4 :]
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith('#'):
+            return stripped[:160]
+    return ''
+
+
+def discover_skill_index(
+    root: str | Path,
+    *,
+    extra_skill_dirs: Optional[list[Path]] = None,
+    max_skills: int = 20,
+    preferred_dirs: Optional[list[str | Path]] = None,
+    source_profile: SkillSourceProfile = 'default',
+) -> list[SkillIndexEntry]:
+    """List discoverable skills without loading full SKILL.md bodies."""
+    skill_dirs = discover_skill_search_dirs(
+        root,
+        extra_skill_dirs=extra_skill_dirs,
+        preferred_dirs=preferred_dirs,
+        source_profile=source_profile,
+    )
+    seen_names: set[str] = set()
+    entries: list[SkillIndexEntry] = []
+    for skill_dir in skill_dirs:
+        if len(entries) >= max_skills:
+            break
+        try:
+            children = sorted(skill_dir.iterdir())
+        except OSError:
+            continue
+        for entry in children:
+            if len(entries) >= max_skills:
+                break
+            if not entry.is_dir():
+                continue
+            skill_file = entry / _SKILL_FILENAME
+            if not skill_file.is_file():
+                continue
+            name = entry.name
+            if name in seen_names:
+                continue
+            review = review_skill(skill_file)
+            if not review.passed:
+                continue
+            entries.append(
+                SkillIndexEntry(
+                    name=name,
+                    path=skill_file,
+                    summary=_skill_summary(skill_file) or '(no summary)',
+                )
+            )
+            seen_names.add(name)
+    return entries
+
+
 def load_skills_with_report(
     root: str | Path,
     *,
@@ -172,6 +247,7 @@ def load_skills_with_report(
     max_skills: int = 20,
     preferred_dirs: Optional[list[str | Path]] = None,
     source_profile: SkillSourceProfile = 'default',
+    selected_names: Optional[frozenset[str]] = None,
 ) -> SkillLoadReport:
     """Discover and load all SKILL.md files reachable from *root*.
 
@@ -188,7 +264,22 @@ def load_skills_with_report(
     -------
     list[SkillContent]
         Loaded skills, deduplicated by name (first occurrence wins).
+
+    selected_names:
+        When ``frozenset()`` (empty), load no skills. When a non-empty set, load
+        only those skill names. When ``None``, preserve eager discovery (default).
     """
+    if selected_names is not None and not selected_names:
+        skill_dirs = discover_skill_search_dirs(
+            root,
+            extra_skill_dirs=extra_skill_dirs,
+            preferred_dirs=preferred_dirs,
+            source_profile=source_profile,
+        )
+        return SkillLoadReport(
+            skills=[], searched_dirs=skill_dirs, warnings=[], skipped=[]
+        )
+
     skill_dirs = discover_skill_search_dirs(
         root,
         extra_skill_dirs=extra_skill_dirs,
@@ -219,6 +310,8 @@ def load_skills_with_report(
             name = entry.name
             if name in seen_names:
                 continue  # first occurrence (project > user) wins
+            if selected_names is not None and name not in selected_names:
+                continue
             review = review_skill(skill_file)
             if not review.passed:
                 skipped.append(
@@ -259,6 +352,13 @@ def load_skills_with_report(
     return SkillLoadReport(
         skills=results, searched_dirs=skill_dirs, warnings=warnings, skipped=skipped
     )
+
+
+def estimate_skill_prompt_tokens(skills: list[SkillContent]) -> int:
+    """Rough token estimate for skills injected into the system prompt."""
+    if not skills:
+        return 0
+    return max(1, len(skills_to_prompt_section(skills)) // 4)
 
 
 def skills_to_prompt_section(skills: list[SkillContent]) -> str:

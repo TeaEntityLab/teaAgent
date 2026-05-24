@@ -179,6 +179,18 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         default='balanced',
         help='Context budget profile for memory and replay limits.',
     )
+    p.add_argument(
+        '--skill',
+        action='append',
+        default=[],
+        metavar='NAME',
+        help='Load only this skill by name (repeatable).',
+    )
+    p.add_argument(
+        '--no-auto-skills',
+        action='store_true',
+        help='Do not eager-load discovered skills into the system prompt.',
+    )
 
 
 def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -491,6 +503,28 @@ def _automation(
         '--auto-propose-skill',
         action='store_true',
         help='After a completed run, auto-propose a skill candidate from the run summary.',
+    )
+    add.add_argument(
+        '--acceptance-criteria',
+        default='',
+        help='Observable pass/fail checks for the scheduled task (required for --dry-run).',
+    )
+    add.add_argument(
+        '--skill',
+        action='append',
+        default=[],
+        metavar='NAME',
+        help='Explicit skill names to load for each automation run (default: none).',
+    )
+    add.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Validate the automation ticket without creating or invoking a model.',
+    )
+    add.add_argument(
+        '--human',
+        action='store_true',
+        help='With --dry-run, include a readable checklist in the JSON payload.',
     )
     add.set_defaults(func=handlers['add'], agent_command='automation')
 
