@@ -51,6 +51,13 @@ _EXTERNAL_TOOLS = [
 
 
 class _ExternalMCPHandler(BaseHTTPRequestHandler):
+    @staticmethod
+    def _safe_header_value(value: str | None, default: str = 'sess-ext-1') -> str:
+        if not value:
+            return default
+        sanitized = value.replace('\r', '').replace('\n', '')
+        return sanitized or default
+
     def log_message(self, *args: Any) -> None:
         pass
 
@@ -68,7 +75,7 @@ class _ExternalMCPHandler(BaseHTTPRequestHandler):
                 'id': body.get('id'),
                 'result': {'tools': _EXTERNAL_TOOLS},
             }
-            session_id = self.headers.get('Mcp-Session-Id', 'sess-ext-1')
+            session_id = self._safe_header_value(self.headers.get('Mcp-Session-Id'))
         elif method == 'tools/call':
             tool_name = body.get('params', {}).get('name', '')
             response = {
@@ -79,7 +86,7 @@ class _ExternalMCPHandler(BaseHTTPRequestHandler):
                     'isError': False,
                 },
             }
-            session_id = self.headers.get('Mcp-Session-Id', 'sess-ext-1')
+            session_id = self._safe_header_value(self.headers.get('Mcp-Session-Id'))
         else:
             self.send_response(404)
             self.end_headers()
