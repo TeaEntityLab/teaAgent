@@ -118,6 +118,35 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
         )
     assert json.loads(review_out.getvalue())['status'] == 'review_passed'
 
+    (candidate_dir / 'SKILL.md').write_text(
+        '---\nname: test-first\ndescription: Test-first workflow\n---\n\n'
+        '# Context\n- Source task: testing workflow\n\n'
+        '# Instructions\nChanged after review.\n',
+        encoding='utf-8',
+    )
+    install_out = io.StringIO()
+    with redirect_stdout(install_out):
+        tampered_code = main(
+            [
+                'skill',
+                'candidate',
+                'install',
+                candidate_id,
+                '--scope',
+                'project',
+                '--root',
+                str(tmp_path),
+            ]
+        )
+    assert tampered_code == 1
+    assert 'content_digest' in install_out.getvalue()
+
+    (candidate_dir / 'SKILL.md').write_text(
+        '---\nname: test-first\ndescription: Test-first workflow\n---\n\n'
+        '# Context\n- Source task: testing workflow\n\n'
+        '# Instructions\nWrite tests before implementation.\n',
+        encoding='utf-8',
+    )
     (candidate_dir / 'interaction_policy.json').unlink()
     install_out = io.StringIO()
     with redirect_stdout(install_out):

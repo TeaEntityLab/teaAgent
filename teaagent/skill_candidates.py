@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -13,6 +14,7 @@ from teaagent.provenance_gate import (
 )
 from teaagent.run_store import RunStore
 from teaagent.skill_candidate_artifacts import (
+    candidate_bundle_digest,
     install_artifact_bundle,
     validate_candidate_artifacts,
     write_candidate_artifacts,
@@ -171,7 +173,15 @@ class SkillCandidateStore:
     def review(self, candidate_id: str) -> SkillCandidate:
         candidate_dir = self._dir(candidate_id)
         eval_report = load_eval_report(candidate_dir)
-        if eval_report is None or not eval_report.passed:
+        current_digest = ''
+        with contextlib.suppress(Exception):
+            current_digest = candidate_bundle_digest(candidate_dir)
+        if (
+            eval_report is None
+            or not eval_report.passed
+            or not eval_report.content_digest
+            or eval_report.content_digest != current_digest
+        ):
             refreshed = self.run_offline_eval(candidate_id)
             eval_report = load_eval_report(candidate_dir)
             if eval_report is None or not eval_report.passed:
@@ -215,6 +225,9 @@ class SkillCandidateStore:
         artifact_errors = validate_candidate_artifacts(candidate_dir)
         if artifact_errors:
             raise ValueError('; '.join(artifact_errors))
+        current_digest = candidate_bundle_digest(candidate_dir)
+        if eval_report.content_digest != current_digest:
+            raise ValueError('candidate changed since offline eval; rerun eval')
         src = self.skill_path(candidate_id)
         if scope == 'project':
             dest_dir = self.root / '.config' / 'agent' / 'skills' / candidate.name

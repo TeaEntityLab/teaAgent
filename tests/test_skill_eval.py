@@ -10,6 +10,10 @@ from teaagent.skill_eval import load_eval_report, run_offline_eval
 def test_offline_eval_passes_valid_bundle(tmp_path: Path) -> None:
     candidate_dir = tmp_path / 'cand'
     candidate_dir.mkdir()
+    (candidate_dir / 'SKILL.md').write_text(
+        '---\nname: eval-skill\ndescription: test\n---\n\n# Instructions\nDo the thing.\n',
+        encoding='utf-8',
+    )
     write_candidate_artifacts(
         candidate_dir,
         name='eval-skill',
@@ -20,18 +24,16 @@ def test_offline_eval_passes_valid_bundle(tmp_path: Path) -> None:
         created_at='2026-05-24T00:00:00+00:00',
         content_digest='abc123',
     )
-    (candidate_dir / 'SKILL.md').write_text(
-        '---\nname: eval-skill\ndescription: test\n---\n\n# Instructions\nDo the thing.\n',
-        encoding='utf-8',
-    )
     report = run_offline_eval(candidate_dir)
     assert report.passed
     assert not report.failures
+    assert report.content_digest.startswith('sha256:')
 
 
 def test_offline_eval_fails_oversized_skill(tmp_path: Path) -> None:
     candidate_dir = tmp_path / 'cand'
     candidate_dir.mkdir()
+    (candidate_dir / 'SKILL.md').write_text('x' * 40_000, encoding='utf-8')
     write_candidate_artifacts(
         candidate_dir,
         name='big',
@@ -41,7 +43,6 @@ def test_offline_eval_fails_oversized_skill(tmp_path: Path) -> None:
         final_answer='y' * 100,
         created_at='2026-05-24T00:00:00+00:00',
     )
-    (candidate_dir / 'SKILL.md').write_text('x' * 40_000, encoding='utf-8')
     report = run_offline_eval(candidate_dir, max_skill_bytes=1000)
     assert not report.passed
     assert any('exceeds max size' in item for item in report.failures)

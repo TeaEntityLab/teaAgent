@@ -39,6 +39,10 @@ def test_validate_reports_missing_artifacts(tmp_path: Path) -> None:
 
 
 def test_validate_reports_invalid_json(tmp_path: Path) -> None:
+    (tmp_path / 'SKILL.md').write_text(
+        '---\nname: demo\ndescription: Demo\n---\n',
+        encoding='utf-8',
+    )
     write_candidate_artifacts(
         tmp_path,
         name='demo',
@@ -51,3 +55,47 @@ def test_validate_reports_invalid_json(tmp_path: Path) -> None:
     (tmp_path / 'cost_profile.json').write_text('{not json', encoding='utf-8')
     errors = validate_candidate_artifacts(tmp_path)
     assert any('cost_profile.json' in item for item in errors)
+
+
+def test_validate_reports_candidate_bundle_tamper(tmp_path: Path) -> None:
+    (tmp_path / 'SKILL.md').write_text(
+        '---\nname: demo\ndescription: Demo\n---\n\nSafe instruction.\n',
+        encoding='utf-8',
+    )
+    write_candidate_artifacts(
+        tmp_path,
+        name='demo',
+        description='Demo',
+        source_run_id='run-1',
+        task='t',
+        final_answer='a',
+        created_at='2026-05-24T00:00:00Z',
+    )
+    (tmp_path / 'SKILL.md').write_text(
+        '---\nname: demo\ndescription: Demo\n---\n\nChanged after eval.\n',
+        encoding='utf-8',
+    )
+    errors = validate_candidate_artifacts(tmp_path)
+    assert any('content_digest' in item for item in errors)
+
+
+def test_validate_reports_policy_escalation(tmp_path: Path) -> None:
+    (tmp_path / 'SKILL.md').write_text(
+        '---\nname: demo\ndescription: Demo\n---\n',
+        encoding='utf-8',
+    )
+    write_candidate_artifacts(
+        tmp_path,
+        name='demo',
+        description='Demo',
+        source_run_id='run-1',
+        task='t',
+        final_answer='a',
+        created_at='2026-05-24T00:00:00Z',
+    )
+    policy = json.loads((tmp_path / 'interaction_policy.json').read_text())
+    policy['auto_invoke'] = True
+    (tmp_path / 'interaction_policy.json').write_text(json.dumps(policy))
+
+    errors = validate_candidate_artifacts(tmp_path)
+    assert any('auto_invoke' in item for item in errors)

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from teaagent.automation_chain import validate_context_from
+from teaagent.automation_collector import validate_collector_command
 from teaagent.automation_delivery import (
     resolve_automation_webhook_secret,
     resolve_automation_webhook_url,
@@ -173,6 +174,7 @@ def validate_automation_spec(
         warnings.append(
             'acceptance_criteria is empty; add --acceptance-criteria before enabling production schedules'
         )
+    errors.extend(validate_collector_command(spec.collector_command))
 
     index = discover_skill_index(root)
     index_names = {entry.name for entry in index}

@@ -43,11 +43,7 @@ _TEMPLATES: dict[str, AutomationTemplate] = {
                 'If wake_agent is false, no LLM run is started and no tokens are consumed. '
                 'If wake_agent is true, automation-output.txt contains a non-empty summary.'
             ),
-            'collector_command': (
-                'python3 -c "import json,subprocess,sys;'
-                "line=subprocess.check_output(['git','log','-1','--oneline'],text=True).strip();"
-                "print(json.dumps({'wake_agent':bool(line),'summary':line or 'no commits'}))\""
-            ),
+            'collector_command': ('python3 -m teaagent.collectors.repo_watch'),
             'allowed_toolsets': ['read-only'],
             'max_cost_cents': 25,
             'max_runtime_seconds': 300,

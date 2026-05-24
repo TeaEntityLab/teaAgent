@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from teaagent.skill_candidate_artifacts import validate_candidate_artifacts
+from teaagent.skill_candidate_artifacts import (
+    candidate_bundle_digest,
+    validate_candidate_artifacts,
+)
 from teaagent.skill_eval_dataset import run_eval_dataset_checks
 from teaagent.skill_review import review_skill
 from teaagent.storage import atomic_write_text
@@ -20,12 +23,14 @@ class SkillEvalReport:
     passed: bool
     checks: tuple[str, ...]
     failures: tuple[str, ...]
+    content_digest: str = ''
 
     def to_dict(self) -> dict[str, Any]:
         return {
             'passed': self.passed,
             'checks': list(self.checks),
             'failures': list(self.failures),
+            'content_digest': self.content_digest,
         }
 
     @classmethod
@@ -34,6 +39,7 @@ class SkillEvalReport:
             passed=bool(payload.get('passed')),
             checks=tuple(str(item) for item in (payload.get('checks') or ())),
             failures=tuple(str(item) for item in (payload.get('failures') or ())),
+            content_digest=str(payload.get('content_digest', '') or ''),
         )
 
 
@@ -119,9 +125,15 @@ def run_offline_eval(
     checks.extend(dataset_checks)
     failures.extend(dataset_failures)
 
+    checks.append('bundle_digest')
+    content_digest = ''
+    if not failures:
+        content_digest = candidate_bundle_digest(candidate_dir)
+
     passed = not failures
     return SkillEvalReport(
         passed=passed,
         checks=tuple(checks),
         failures=tuple(failures),
+        content_digest=content_digest,
     )

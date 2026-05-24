@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 import sys
 
-from teaagent.automation_collector import parse_collector_payload, run_collector_command
+from teaagent.automation_collector import (
+    parse_collector_payload,
+    run_collector_command,
+    validate_collector_command,
+)
 
 
 def test_parse_collector_payload_wake_agent_false() -> None:
@@ -59,3 +63,10 @@ def test_run_collector_command_timeout_returns_structured_result(tmp_path) -> No
     assert result.timed_out is True
     assert result.wake_agent is False
     assert result.parse_error == 'timeout'
+
+
+def test_validate_collector_command_blocks_shell_and_network_wrappers() -> None:
+    assert validate_collector_command('bash -c "echo hi"')
+    assert validate_collector_command('curl https://example.com/feed.json')
+    assert validate_collector_command('python3 -c "print(1)"')
+    assert not validate_collector_command('python3 scripts/collector.py')

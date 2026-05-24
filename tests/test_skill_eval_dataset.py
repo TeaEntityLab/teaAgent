@@ -12,6 +12,11 @@ from teaagent.skill_eval_dataset import (
 
 
 def _write_bundle(candidate_dir: Path) -> None:
+    (candidate_dir / 'SKILL.md').write_text(
+        '---\nname: eval-ds\ndescription: dataset checks\n---\n\n# Instructions\n'
+        'Always run pytest before committing.\n',
+        encoding='utf-8',
+    )
     write_candidate_artifacts(
         candidate_dir,
         name='eval-ds',
@@ -20,11 +25,6 @@ def _write_bundle(candidate_dir: Path) -> None:
         task='Write pytest workflow instructions for the repository.',
         final_answer='Always run pytest before committing and document failures clearly.',
         created_at='2026-05-24T00:00:00+00:00',
-    )
-    (candidate_dir / 'SKILL.md').write_text(
-        '---\nname: eval-ds\ndescription: dataset checks\n---\n\n# Instructions\n'
-        'Always run pytest before committing.\n',
-        encoding='utf-8',
     )
 
 

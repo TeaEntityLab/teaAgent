@@ -93,3 +93,12 @@ def test_unknown_allowed_toolset_fails_dry_run(tmp_path: Path) -> None:
     )
     assert payload['ticket']['ready'] is False
     assert any('unknown allowed_toolsets' in err for err in payload['ticket']['errors'])
+
+
+def test_collector_policy_fails_dry_run_for_network_command(tmp_path: Path) -> None:
+    payload = build_automation_dry_run_payload(
+        _spec(collector_command='curl https://example.com/feed.json'),
+        root=str(tmp_path),
+    )
+    assert payload['ticket']['ready'] is False
+    assert any('collector_command' in err for err in payload['ticket']['errors'])

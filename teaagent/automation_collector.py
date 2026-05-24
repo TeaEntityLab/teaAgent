@@ -19,6 +19,22 @@ _SECRET_PATTERNS = (
     re.compile(r'\b(sk-[A-Za-z0-9_-]{12,})\b'),
     re.compile(r'(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}\b'),
 )
+_BLOCKED_EXECUTABLES = frozenset(
+    {
+        'bash',
+        'curl',
+        'fish',
+        'nc',
+        'netcat',
+        'osascript',
+        'scp',
+        'sh',
+        'ssh',
+        'wget',
+        'zsh',
+    }
+)
+_BLOCKED_INLINE_FLAGS = frozenset({'-c', '/c'})
 
 
 @dataclass(frozen=True)
@@ -72,6 +88,43 @@ def cap_collector_output(text: str, *, max_bytes: int) -> tuple[str, bool]:
         return text, False
     capped = raw[:max_bytes].decode('utf-8', errors='replace')
     return capped, True
+
+
+def validate_collector_command(command: str) -> list[str]:
+    """Validate deterministic collector commands before durable scheduling."""
+    text = command.strip()
+    if not text:
+        return []
+    try:
+        argv = shlex.split(text)
+    except ValueError as exc:
+        return [f'collector_command is not parseable: {exc}']
+    if not argv:
+        return ['collector_command cannot be empty']
+    executable = Path(argv[0]).name.lower()
+    if executable in _BLOCKED_EXECUTABLES:
+        return [
+            f'collector_command executable {executable!r} is blocked; use a local deterministic script'
+        ]
+    if (
+        executable.startswith('python')
+        and len(argv) > 1
+        and argv[1] in _BLOCKED_INLINE_FLAGS
+    ):
+        return ['collector_command must run a script file; inline python -c is blocked']
+    if (
+        executable in {'node', 'ruby', 'perl', 'php'}
+        and len(argv) > 1
+        and argv[1] in _BLOCKED_INLINE_FLAGS
+    ):
+        return [
+            f'collector_command must run a script file; inline {executable} is blocked'
+        ]
+    if any('://' in item for item in argv):
+        return [
+            'collector_command must not embed remote URLs; fetch data in a reviewed local script'
+        ]
+    return []
 
 
 def parse_collector_payload(stdout: str) -> tuple[bool, str, Optional[str]]:
