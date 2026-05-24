@@ -15,6 +15,38 @@ from teaagent.wizard import (
     redact_wizard_payload,
 )
 
+_REDACTED = '***REDACTED***'
+_SENSITIVE_KEY_MARKERS = (
+    'token',
+    'password',
+    'passwd',
+    'secret',
+    'api_key',
+    'apikey',
+    'authorization',
+    'auth',
+)
+
+
+def _is_sensitive_key(key: str) -> bool:
+    lowered = key.lower()
+    return any(marker in lowered for marker in _SENSITIVE_KEY_MARKERS)
+
+
+def _redact_sensitive_fields(value: Any) -> Any:
+    if isinstance(value, dict):
+        redacted: dict[Any, Any] = {}
+        for k, v in value.items():
+            key_str = str(k)
+            if _is_sensitive_key(key_str):
+                redacted[k] = _REDACTED
+            else:
+                redacted[k] = _redact_sensitive_fields(v)
+        return redacted
+    if isinstance(value, list):
+        return [_redact_sensitive_fields(item) for item in value]
+    return value
+
 
 def doctor_graphqlite(args: argparse.Namespace) -> int:
     ok, message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
@@ -604,4 +636,5 @@ def doctor_migration_command(args: argparse.Namespace) -> int:
 def print_json(value: Any) -> None:
     if isinstance(value, dict) and value.get('mode') in {'wizard', 'setup'}:
         value = redact_wizard_payload(value)
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))
+    safe_value = _redact_sensitive_fields(value)
+    print(json.dumps(safe_value, ensure_ascii=False, sort_keys=True))
