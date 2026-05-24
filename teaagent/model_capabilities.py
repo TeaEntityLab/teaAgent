@@ -128,7 +128,7 @@ def build_capability_table() -> list[dict[str, Any]]:
             {
                 'provider': name,
                 'default_model': config.default_model,
-                'api_key_env': config.api_key_env,
+                'api_key_env': '[REDACTED]',
                 'base_url_env': config.base_url_env,
                 **caps,
             }
