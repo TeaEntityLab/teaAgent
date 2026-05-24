@@ -385,3 +385,236 @@ def skills_to_prompt_section(skills: list[SkillContent]) -> str:
         parts.append(f'--- skill: {skill.name} ---')
         parts.append(skill.content.strip())
     return '\n\n'.join(parts)
+
+
+@dataclass(frozen=True)
+class SkillLoadedRecord:
+    name: str
+    path: Path
+    source_dir: Path
+    estimated_tokens: int
+    reason: str
+
+
+@dataclass(frozen=True)
+class SkillShadowRecord:
+    name: str
+    winner_path: Path
+    shadowed_path: Path
+    winner_source: str
+    shadowed_source: str
+
+
+@dataclass(frozen=True)
+class SkillActivationExplain:
+    selection_mode: Literal['eager', 'selected', 'index_only', 'none']
+    selected_names: tuple[str, ...]
+    loaded: tuple[SkillLoadedRecord, ...]
+    shadowed: tuple[SkillShadowRecord, ...]
+    skipped: tuple[SkillLoadSkipped, ...]
+    warnings: tuple[SkillLoadWarning, ...]
+    searched_dirs: tuple[Path, ...]
+    estimated_skill_tokens: int
+    index_count: int
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            'selection_mode': self.selection_mode,
+            'selected_names': list(self.selected_names),
+            'loaded': [
+                {
+                    'name': item.name,
+                    'path': str(item.path),
+                    'source_dir': str(item.source_dir),
+                    'estimated_tokens': item.estimated_tokens,
+                    'reason': item.reason,
+                }
+                for item in self.loaded
+            ],
+            'shadowed': [
+                {
+                    'name': item.name,
+                    'winner_path': str(item.winner_path),
+                    'shadowed_path': str(item.shadowed_path),
+                    'winner_source': item.winner_source,
+                    'shadowed_source': item.shadowed_source,
+                }
+                for item in self.shadowed
+            ],
+            'skipped': [
+                {
+                    'name': item.skill_name,
+                    'path': str(item.skill_path),
+                    'reason': item.reason,
+                }
+                for item in self.skipped
+            ],
+            'warnings': [
+                {
+                    'name': item.skill_name,
+                    'path': str(item.skill_path),
+                    'message': item.message,
+                }
+                for item in self.warnings
+            ],
+            'searched_dirs': [str(path) for path in self.searched_dirs],
+            'estimated_skill_tokens': self.estimated_skill_tokens,
+            'index_count': self.index_count,
+        }
+
+
+def _discover_skill_name_paths(
+    skill_dirs: list[Path],
+) -> dict[str, list[tuple[Path, Path]]]:
+    """Map skill name to all discoverable paths in search order."""
+    by_name: dict[str, list[tuple[Path, Path]]] = {}
+    for skill_dir in skill_dirs:
+        try:
+            entries = sorted(skill_dir.iterdir())
+        except OSError:
+            continue
+        for entry in entries:
+            if not entry.is_dir():
+                continue
+            skill_file = entry / _SKILL_FILENAME
+            if not skill_file.is_file():
+                continue
+            by_name.setdefault(entry.name, []).append((skill_file, skill_dir))
+    return by_name
+
+
+def _shadow_records(
+    by_name: dict[str, list[tuple[Path, Path]]],
+) -> tuple[SkillShadowRecord, ...]:
+    rows: list[SkillShadowRecord] = []
+    for name, paths in sorted(by_name.items()):
+        if len(paths) < 2:
+            continue
+        winner_path, winner_source = paths[0]
+        for shadowed_path, shadowed_source in paths[1:]:
+            rows.append(
+                SkillShadowRecord(
+                    name=name,
+                    winner_path=winner_path,
+                    shadowed_path=shadowed_path,
+                    winner_source=str(winner_source),
+                    shadowed_source=str(shadowed_source),
+                )
+            )
+    return tuple(rows)
+
+
+def explain_skill_activation(
+    root: str | Path,
+    *,
+    selected_names: Optional[frozenset[str]] = None,
+    skill_prompt_mode: Literal['eager', 'index_only'] = 'eager',
+    extra_skill_dirs: Optional[list[Path]] = None,
+    preferred_dirs: Optional[list[str | Path]] = None,
+    source_profile: SkillSourceProfile = 'default',
+) -> SkillActivationExplain:
+    """Explain which skills load, which are shadowed, and token contribution."""
+    skill_dirs = discover_skill_search_dirs(
+        root,
+        extra_skill_dirs=extra_skill_dirs,
+        preferred_dirs=preferred_dirs,
+        source_profile=source_profile,
+    )
+    by_name = _discover_skill_name_paths(skill_dirs)
+    shadowed = _shadow_records(by_name)
+
+    if skill_prompt_mode == 'index_only':
+        index = discover_skill_index(
+            root,
+            extra_skill_dirs=extra_skill_dirs,
+            preferred_dirs=preferred_dirs,
+            source_profile=source_profile,
+        )
+        report = load_skills_with_report(
+            root,
+            extra_skill_dirs=extra_skill_dirs,
+            preferred_dirs=preferred_dirs,
+            source_profile=source_profile,
+            selected_names=frozenset(),
+        )
+        return SkillActivationExplain(
+            selection_mode='index_only',
+            selected_names=(),
+            loaded=(),
+            shadowed=shadowed,
+            skipped=tuple(report.skipped),
+            warnings=tuple(report.warnings),
+            searched_dirs=tuple(report.searched_dirs),
+            estimated_skill_tokens=0,
+            index_count=len(index),
+        )
+
+    if selected_names is not None and not selected_names:
+        report = load_skills_with_report(
+            root,
+            extra_skill_dirs=extra_skill_dirs,
+            preferred_dirs=preferred_dirs,
+            source_profile=source_profile,
+            selected_names=frozenset(),
+        )
+        return SkillActivationExplain(
+            selection_mode='none',
+            selected_names=(),
+            loaded=(),
+            shadowed=shadowed,
+            skipped=tuple(report.skipped),
+            warnings=tuple(report.warnings),
+            searched_dirs=tuple(report.searched_dirs),
+            estimated_skill_tokens=0,
+            index_count=0,
+        )
+
+    if selected_names is not None:
+        report = load_skills_with_report(
+            root,
+            extra_skill_dirs=extra_skill_dirs,
+            preferred_dirs=preferred_dirs,
+            source_profile=source_profile,
+            selected_names=selected_names,
+        )
+        mode: Literal['eager', 'selected', 'index_only', 'none'] = 'selected'
+        names = tuple(sorted(selected_names))
+    else:
+        report = load_skills_with_report(
+            root,
+            extra_skill_dirs=extra_skill_dirs,
+            preferred_dirs=preferred_dirs,
+            source_profile=source_profile,
+            selected_names=None,
+        )
+        mode = 'eager'
+        names = ()
+
+    loaded_rows: list[SkillLoadedRecord] = []
+    for skill in report.skills:
+        source_dir = skill.path.parent.parent
+        loaded_rows.append(
+            SkillLoadedRecord(
+                name=skill.name,
+                path=skill.path,
+                source_dir=source_dir,
+                estimated_tokens=max(1, len(skill.content) // 4),
+                reason=(
+                    f'selected explicitly (--skill {skill.name})'
+                    if mode == 'selected'
+                    else 'first match in search order (eager load)'
+                ),
+            )
+        )
+    total = estimate_skill_prompt_tokens(report.skills)
+    return SkillActivationExplain(
+        selection_mode=mode,
+        selected_names=names,
+        loaded=tuple(loaded_rows),
+        shadowed=shadowed,
+        skipped=tuple(report.skipped),
+        warnings=tuple(report.warnings),
+        searched_dirs=tuple(report.searched_dirs),
+        estimated_skill_tokens=total,
+        index_count=0,
+    )

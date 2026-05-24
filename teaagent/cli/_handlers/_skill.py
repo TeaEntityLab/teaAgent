@@ -1,15 +1,40 @@
 from __future__ import annotations
 
 import argparse
-from typing import Any
+from typing import Any, Literal
 
 from teaagent.skill_candidates import SkillCandidateStore
+from teaagent.skill_loader import explain_skill_activation
 
 
 def _print_json(value: Any) -> None:
     import json
 
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))
+
+
+def skill_explain_command(args: argparse.Namespace) -> int:
+    prompt_mode: Literal['eager', 'index_only'] = (
+        'index_only' if getattr(args, 'skill_index_only', False) else 'eager'
+    )
+    if getattr(args, 'no_auto_skills', False) or getattr(
+        args, 'skill_index_only', False
+    ):
+        selected: frozenset[str] | None = frozenset()
+    else:
+        names = [
+            str(item).strip()
+            for item in (getattr(args, 'skill', None) or [])
+            if str(item).strip()
+        ]
+        selected = frozenset(names) if names else None
+    report = explain_skill_activation(
+        args.root,
+        selected_names=selected,
+        skill_prompt_mode=prompt_mode,
+    )
+    _print_json({'status': 'ok', 'activation': report.to_dict()})
+    return 0
 
 
 def skill_candidate_propose_command(args: argparse.Namespace) -> int:
