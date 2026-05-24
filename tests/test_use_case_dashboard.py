@@ -34,7 +34,7 @@ def test_parse_matrix_markdown_extracts_rows() -> None:
 def test_render_html_includes_coverage_summary() -> None:
     markdown = """
 Landscape survey reviewed: **2026-05-22**
-Open roadmap differentiators (P1/P2): **2**
+Open partial/planned gaps (P1/P2): **2**
 | Use Case | Covered | Blast Radius | Rollback Path | Audit Criticality | Required Tests | Missing Tests |
 |---|---|---|---|---|---|---|
 | Foo | yes | low | N/A | low | `test_a.py` | - |

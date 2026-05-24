@@ -10,6 +10,14 @@ Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 Landscape survey (reviewed 2026-05-24):
 [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)
 
+## Status Key
+
+| Label | Meaning |
+|-------|---------|
+| **Implemented** | Shipped with acceptance test coverage. |
+| **Partial** | Implemented but missing surface docs, acceptance tests, or production hardening. |
+| **Planned** | Identified gap; no implementation yet. |
+
 ## Implemented parity (competitive baseline)
 
 Mainstream coding-agent expectations from Codex, Claude Code, OpenCode, OpenHands,
@@ -33,7 +41,7 @@ governance, audit, and portable protocol surfaces.
 ## Competitive Differentiators (Implemented / Maintenance)
 
 These items are intentionally **not** full parity gaps. They are shipped
-differentiators from the 2026-05-22 landscape survey that now need release
+differentiators from the 2026-05-24 landscape survey that now need release
 hygiene, drift checks, and periodic review rather than feature buildout.
 
 | Differentiator | Priority | Backlog reference |
@@ -125,6 +133,19 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 12. Completed (P1): Declarative sub-agent definitions with Markdown frontmatter (`test_subagent_definitions_flow.py`).
 13. Completed (P1): Context compaction latency SLO (`test_context_compaction_slo_flow.py`).
 14. Completed (P1): Hook lifecycle acceptance elevation (`test_hook_lifecycle_flow.py`).
+
+## Partial / Planned Gaps
+
+These items are tracked as open gaps from the 2026-05-24 landscape survey.
+They are **not** claimed as done — each has a concrete next action.
+
+| Gap | Source agent(s) | Current state | Next action | Priority |
+|-----|----------------|---------------|-------------|----------|
+| Background/cloud surface docs | Codex Cloud Tasks, Claude Code background sessions | **Partial** — `UltraworkStore` and `BackgroundRunStore` exist but surface docs are thin | Write hosted deployment guide + background session walkthrough | P2 |
+| Desktop/client-server packaging | OpenCode desktop, Codex app server | **Planned** — no docs or packaging guidance | Document desktop launch recipes in USAGE.md | P2 |
+| Repo-map quality benchmark | Aider repo-map, OpenCode LSP | **Partial** — `context_pack` exists but no quality eval against large repos | Write repo-map accuracy evaluation script + benchmark dataset | P2 |
+| Persistent automation / cron-style agent | Hermes cron scheduling, agent-created skills | **Planned** — cron hooks exist but no user-facing persistent agent | Add Hermes-style persistent agent use-case and demo | P2 |
+| Self-generated skills | Hermes agent-created skills | **Planned** — skills system exists but no agent-created skill pipeline | Document skill-creation workflow, add acceptance for agent-authored skill definitions | P2 |
 
 ## Evidence Commands
 

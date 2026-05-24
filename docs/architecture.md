@@ -350,7 +350,7 @@ last refreshed 2026-05-24.
 | Capability | TeaAgent | Claude Code | Codex | OpenCode |
 |---|---|---|---|---|
 | Terminal-first CLI/TUI | ✅ | ✅ `claude` CLI | ✅ `codex` TUI | ✅ `opencode` TUI |
-| Multi-provider LLM | ✅ 14 providers | ❌ Anthropic only | ❌ OpenAI only | ✅ 11+ providers |
+| Multi-provider LLM | ✅ 13 providers | ❌ Anthropic only | ❌ OpenAI only | ✅ 11+ providers |
 | Permission modes | ✅ 5 modes | ✅ deny/ask/allow | ✅ 4 sandbox policies | ✅ 3 approval modes |
 | Hook system (8 events) | ✅ Claude Code compatible | ✅ 8+ events | ✅ 7+ events | — |
 | MCP server / client | ✅ stdio + HTTP | ✅ | ✅ codex-mcp-server | ✅ stdio + SSE |
@@ -377,7 +377,7 @@ last refreshed 2026-05-24.
   provides this level of auditability.
 - **Multi-protocol surface**: MCP + ACP + A2A + ANP — more integration
   protocols than any single mainstream framework.
-- **Cross-provider**: 14 LLM adapters vs. 1 per vendor framework.
+- **Cross-provider**: 13 LLM providers vs. 1 per vendor framework.
 - **Policy-as-code**: Declarative deny rules in `policy.yaml` that cannot be
   bypassed, even in `danger-full-access` mode.
 - **Built-in undo**: Automatic pre-write snapshots with user-facing

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _SURVEY_DATE = re.compile(r'Landscape survey reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*')
-_OPEN_GAPS = re.compile(r'Open roadmap differentiators \(P1/P2\):\s*\*\*(\d+)\*\*')
+_OPEN_GAPS = re.compile(r'Open partial/planned gaps \(P1/P2\):\s*\*\*(\d+)\*\*')
 
 
 @dataclass(frozen=True)
@@ -176,7 +176,7 @@ def render_html(rows: list[MatrixRow], *, meta: MatrixMeta | None = None) -> str
     <section class="summary">
       <h1>TeaAgent Use-case Coverage</h1>
       <p>Covered: {covered}/{total} ({percent:.1f}%)</p>
-      <p>Landscape survey reviewed: {html.escape(meta.survey_review_date)} · Open P1/P2 differentiators: {html.escape(meta.open_gap_count)}</p>
+      <p>Landscape survey reviewed: {html.escape(meta.survey_review_date)} · Open partial/planned gaps (P1/P2): {html.escape(meta.open_gap_count)}</p>
     </section>
     <table>
       <thead>

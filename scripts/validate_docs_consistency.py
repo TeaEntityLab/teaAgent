@@ -21,6 +21,27 @@ SURVEY_REVIEW_DATE = re.compile(
 )
 SURVEY_SOURCE_URL = re.compile(r'https://[^\s|)]+')
 SURVEY_BACKLOG_ACTION = re.compile(r'\bP[0-2](?:-[a-z0-9]+)?\b', re.IGNORECASE)
+COMPARISON_MATRIX_PROVIDER = re.compile(
+    r'Multi-provider LLM\s*\|\s*✅\s*(\d+)\s*providers', re.IGNORECASE
+)
+ARCHITECTURE_LLM_ADAPTER_COUNT = re.compile(
+    r'(\d+)\s+LLM\s+(?:adapters|providers)\b', re.IGNORECASE
+)
+USE_CASES_SURVEY_REVIEWED = re.compile(
+    r'Landscape survey \(reviewed (\d{4}-\d{2}-\d{2})\)', re.IGNORECASE
+)
+USE_CASES_DIFFERENTIATOR_SURVEY = re.compile(
+    r'from the (\d{4}-\d{2}-\d{2}) landscape survey', re.IGNORECASE
+)
+ARCHITECTURE_SURVEY_REFRESHED = re.compile(
+    r'last refreshed (\d{4}-\d{2}-\d{2})', re.IGNORECASE
+)
+MATRIX_OPEN_GAP_COUNT = re.compile(
+    r'Open partial/planned gaps \(P1/P2\):\s*\*\*(\d+)\*\*', re.IGNORECASE
+)
+MATRIX_SURVEY_DATE = re.compile(
+    r'Landscape survey reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*', re.IGNORECASE
+)
 MODE_MATRIX_START = '<!-- MODE_SAFETY_MATRIX:START -->'
 MODE_MATRIX_END = '<!-- MODE_SAFETY_MATRIX:END -->'
 MODE_MATRIX_REQUIRED_TOPICS = (
@@ -205,7 +226,128 @@ def validate_provider_docs_consistency(
             f'(usage={usage_count}, runtime={runtime_count}).'
         )
 
+    comparison_match = COMPARISON_MATRIX_PROVIDER.search(architecture_text)
+    if comparison_match:
+        matrix_count = int(comparison_match.group(1))
+        if matrix_count != runtime_count:
+            errors.append(
+                'architecture.md comparison matrix provider count mismatch: '
+                f'(matrix={matrix_count}, runtime={runtime_count}).'
+            )
+
+    for match in ARCHITECTURE_LLM_ADAPTER_COUNT.finditer(architecture_text):
+        mentioned = int(match.group(1))
+        if mentioned != runtime_count:
+            errors.append(
+                'architecture.md provider count mismatch: '
+                f"found '{match.group(0)}' but runtime has {runtime_count} providers."
+            )
+
     return errors
+
+
+def validate_date_coherence(
+    *,
+    survey_text: str,
+    matrix_text: str,
+    catalog_text: str,
+    use_cases_text: str = '',
+    architecture_text: str = '',
+) -> list[str]:
+    """Validate that all review dates reference the same value."""
+    errors: list[str] = []
+    dates: dict[str, str] = {}
+
+    survey_match = SURVEY_REVIEW_DATE.search(survey_text)
+    if survey_match:
+        dates['survey'] = survey_match.group(1)
+    else:
+        errors.append('Survey doc missing review date.')
+
+    matrix_match = MATRIX_SURVEY_DATE.search(matrix_text)
+    if matrix_match:
+        dates['use-case-matrix'] = matrix_match.group(1)
+    else:
+        errors.append('Use-case matrix missing review date.')
+
+    catalog_match = CATALOG_REVIEW_DATE.search(catalog_text)
+    if catalog_match:
+        dates['plugin-skill-catalog'] = catalog_match.group(1)
+    else:
+        errors.append('Plugin-skill catalog missing review date.')
+
+    if use_cases_text:
+        reviewed = USE_CASES_SURVEY_REVIEWED.search(use_cases_text)
+        if reviewed:
+            dates['use-cases-header'] = reviewed.group(1)
+        else:
+            errors.append(
+                'use-cases.md missing landscape survey date '
+                '(Landscape survey (reviewed YYYY-MM-DD)).'
+            )
+        differentiator = USE_CASES_DIFFERENTIATOR_SURVEY.search(use_cases_text)
+        if differentiator:
+            dates['use-cases-differentiators'] = differentiator.group(1)
+        else:
+            errors.append(
+                'use-cases.md missing differentiator survey date '
+                '(from the YYYY-MM-DD landscape survey).'
+            )
+
+    if architecture_text:
+        refreshed = ARCHITECTURE_SURVEY_REFRESHED.search(architecture_text)
+        if refreshed:
+            dates['architecture-comparison'] = refreshed.group(1)
+        else:
+            errors.append(
+                'architecture.md comparison section missing survey refresh date '
+                '(last refreshed YYYY-MM-DD).'
+            )
+
+    if len(set(dates.values())) > 1:
+        errors.append(
+            f'Date drift detected: {dates}. '
+            f'All review dates should reference the last survey refresh date.'
+        )
+
+    return errors
+
+
+def validate_matrix_open_gap_count(
+    *,
+    matrix_text: str,
+    use_cases_path: Path,
+) -> list[str]:
+    errors: list[str] = []
+    if not use_cases_path.is_file():
+        return errors
+    build_matrix = _load_build_use_case_matrix_module()
+    expected = build_matrix._open_backlog_gap_count(use_cases_path)
+    match = MATRIX_OPEN_GAP_COUNT.search(matrix_text)
+    if not match:
+        errors.append(
+            'use-case-matrix.md missing open gap count marker '
+            "'Open partial/planned gaps (P1/P2): **N**'."
+        )
+        return errors
+    actual = int(match.group(1))
+    if actual != expected:
+        errors.append(
+            'use-case-matrix.md open gap count mismatch: '
+            f'(matrix={actual}, use-cases={expected}). '
+            'Run: python3 scripts/refresh_competitive_docs.py'
+        )
+    return errors
+
+
+def _load_build_use_case_matrix_module():
+    script = Path(__file__).with_name('build_use_case_matrix.py')
+    spec = spec_from_file_location('build_use_case_matrix', script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f'Unable to load {script}')
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def validate_surface_recipes(usage_text: str) -> list[str]:
@@ -277,9 +419,9 @@ def validate_survey_doc(survey_text: str) -> list[str]:
             'Survey missing review date marker: Last reviewed: **YYYY-MM-DD**.'
         )
     source_urls = SURVEY_SOURCE_URL.findall(survey_text)
-    if len(source_urls) < 5:
+    if len(source_urls) < 8:
         errors.append(
-            f'Survey needs at least five source URLs (found {len(source_urls)}).'
+            f'Survey needs at least eight source URLs (found {len(source_urls)}).'
         )
     if not SURVEY_BACKLOG_ACTION.search(survey_text):
         errors.append(
@@ -298,6 +440,7 @@ def validate_docs_consistency(
     usage_path: Path | None = None,
     survey_path: Path | None = None,
     catalog_path: Path | None = None,
+    use_cases_path: Path | None = None,
     check_providers: bool = True,
     check_survey: bool = True,
     check_catalog: bool = True,
@@ -317,13 +460,24 @@ def validate_docs_consistency(
         _REPO_ROOT / 'scripts' / 'refresh_agent_readme_survey.md'
     )
     catalog_doc_path = catalog_path or (_REPO_ROOT / 'docs' / 'plugin-skill-catalog.md')
+    use_cases_doc_path = use_cases_path or (_REPO_ROOT / 'docs' / 'use-cases.md')
+    architecture_text = (
+        architecture_path.read_text(encoding='utf-8')
+        if architecture_path.is_file()
+        else ''
+    )
+    use_cases_text = (
+        use_cases_doc_path.read_text(encoding='utf-8')
+        if use_cases_doc_path.is_file()
+        else ''
+    )
 
     if check_providers:
         if architecture_path.is_file() and usage_doc_path.is_file():
             errors.extend(
                 validate_provider_docs_consistency(
                     readme_text=readme_text,
-                    architecture_text=architecture_path.read_text(encoding='utf-8'),
+                    architecture_text=architecture_text,
                     usage_text=usage_doc_path.read_text(encoding='utf-8'),
                 )
             )
@@ -351,13 +505,33 @@ def validate_docs_consistency(
 
     if check_catalog:
         if catalog_doc_path.is_file():
-            errors.extend(
-                validate_plugin_skill_catalog(
-                    catalog_doc_path.read_text(encoding='utf-8')
-                )
-            )
+            catalog_text = catalog_doc_path.read_text(encoding='utf-8')
+            errors.extend(validate_plugin_skill_catalog(catalog_text))
         else:
             errors.append(f'Plugin/skill catalog not found: {catalog_doc_path}')
+
+    if check_survey:
+        errors.extend(
+            validate_date_coherence(
+                survey_text=survey_path.read_text(encoding='utf-8')
+                if survey_path.is_file()
+                else '',
+                matrix_text=matrix_text,
+                catalog_text=catalog_doc_path.read_text(encoding='utf-8')
+                if catalog_doc_path.is_file()
+                else '',
+                use_cases_text=use_cases_text,
+                architecture_text=architecture_text,
+            )
+        )
+
+    if check_survey and use_cases_doc_path.is_file():
+        errors.extend(
+            validate_matrix_open_gap_count(
+                matrix_text=matrix_text,
+                use_cases_path=use_cases_doc_path,
+            )
+        )
 
     try:
         status_count = _extract_acceptance_status_count(acceptance_text)

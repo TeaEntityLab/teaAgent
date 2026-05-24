@@ -86,7 +86,7 @@ def test_validate_docs_consistency_detects_mismatch(tmp_path: Path) -> None:
         check_mode_matrix=False,
         check_surface_recipes=False,
     )
-    assert len(errors) == 3
+    assert len(errors) == 3  # status, tier sync, uncovered matrix row
 
 
 def test_validate_provider_docs_consistency_passes_for_repo_docs() -> None:
@@ -130,3 +130,61 @@ def test_validate_surface_recipes_passes_for_repo_usage() -> None:
     usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
     errors = _VALIDATE_MODULE.validate_surface_recipes(usage)
     assert errors == []
+
+
+def test_validate_provider_docs_detects_stale_llm_adapter_count() -> None:
+    root = Path(__file__).resolve().parents[1]
+    readme = (root / 'README.md').read_text(encoding='utf-8')
+    architecture = (root / 'docs' / 'architecture.md').read_text(encoding='utf-8')
+    usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
+    stale = architecture.replace('13 LLM providers', '14 LLM adapters', 1)
+    errors = _VALIDATE_MODULE.validate_provider_docs_consistency(
+        readme_text=readme,
+        architecture_text=stale,
+        usage_text=usage,
+    )
+    assert any('14 LLM adapters' in err for err in errors)
+
+
+def test_validate_date_coherence_detects_use_cases_survey_drift() -> None:
+    root = Path(__file__).resolve().parents[1]
+    survey = (root / 'scripts' / 'refresh_agent_readme_survey.md').read_text(
+        encoding='utf-8'
+    )
+    matrix = (root / 'docs' / 'use-case-matrix.md').read_text(encoding='utf-8')
+    catalog = (root / 'docs' / 'plugin-skill-catalog.md').read_text(encoding='utf-8')
+    use_cases = (root / 'docs' / 'use-cases.md').read_text(encoding='utf-8')
+    architecture = (root / 'docs' / 'architecture.md').read_text(encoding='utf-8')
+    stale = use_cases.replace(
+        '2026-05-24 landscape survey', '2026-05-22 landscape survey', 1
+    )
+    errors = _VALIDATE_MODULE.validate_date_coherence(
+        survey_text=survey,
+        matrix_text=matrix,
+        catalog_text=catalog,
+        use_cases_text=stale,
+        architecture_text=architecture,
+    )
+    assert any('Date drift detected' in err for err in errors)
+
+
+def test_validate_matrix_open_gap_count_detects_stale_matrix() -> None:
+    root = Path(__file__).resolve().parents[1]
+    matrix = (root / 'docs' / 'use-case-matrix.md').read_text(encoding='utf-8')
+    stale = matrix.replace(
+        'Open partial/planned gaps (P1/P2): **5**',
+        'Open partial/planned gaps (P1/P2): **0**',
+        1,
+    )
+    errors = _VALIDATE_MODULE.validate_matrix_open_gap_count(
+        matrix_text=stale,
+        use_cases_path=root / 'docs' / 'use-cases.md',
+    )
+    assert any('open gap count mismatch' in err for err in errors)
+
+
+def test_open_partial_planned_gap_count_matches_use_cases_section() -> None:
+    root = Path(__file__).resolve().parents[1]
+    build_matrix = _VALIDATE_MODULE._load_build_use_case_matrix_module()
+    count = build_matrix._open_backlog_gap_count(root / 'docs' / 'use-cases.md')
+    assert count == 5

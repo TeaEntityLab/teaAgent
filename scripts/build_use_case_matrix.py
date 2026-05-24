@@ -9,6 +9,9 @@ _SURVEY_REVIEW_DATE = re.compile(
     r'Last reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*', re.IGNORECASE
 )
 _OPEN_BACKLOG_MARKER = re.compile(r'^\|\s+[^|]+\s+\|\s+P[12]\s+\|\s+Open', re.MULTILINE)
+_PARTIAL_PLANNED_GAP_ROW = re.compile(
+    r'^\| [^|]+\|(?:[^|]*\|){3} (P[12]) \|', re.MULTILINE
+)
 
 USE_CASE_META: dict[str, dict[str, str]] = {
     'Project instruction conformance': {
@@ -214,7 +217,16 @@ def _ergonomics_kpi_line(repo_root: Path) -> str:
 def _open_backlog_gap_count(use_cases_path: Path) -> int:
     if not use_cases_path.is_file():
         return 0
-    return len(_OPEN_BACKLOG_MARKER.findall(use_cases_path.read_text(encoding='utf-8')))
+    text = use_cases_path.read_text(encoding='utf-8')
+    marker = '## Partial / Planned Gaps'
+    start = text.find(marker)
+    if start == -1:
+        return len(_OPEN_BACKLOG_MARKER.findall(text))
+    section = text[start:]
+    end = section.find('\n## ', len(marker))
+    if end != -1:
+        section = section[:end]
+    return len(_PARTIAL_PLANNED_GAP_ROW.findall(section))
 
 
 def build_matrix_markdown(
@@ -231,8 +243,8 @@ def build_matrix_markdown(
         '',
         f'Landscape survey reviewed: **{survey_review_date}** '
         f'([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).',
-        f'Open roadmap differentiators (P1/P2): **{open_gap_count}** '
-        '(see [docs/use-cases.md](use-cases.md#competitive-differentiators-implemented--maintenance)).',
+        f'Open partial/planned gaps (P1/P2): **{open_gap_count}** '
+        '(see [docs/use-cases.md](use-cases.md#partial--planned-gaps)).',
     ]
     if repo_root is not None:
         kpi = _ergonomics_kpi_line(repo_root)
