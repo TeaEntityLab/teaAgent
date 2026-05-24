@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import signal
 import sys
+import time
 from typing import Any, Optional
 
+from teaagent.automations import (
+    AutomationSpec,
+    AutomationStore,
+    AutomationTickLock,
+    compute_next_run_at,
+)
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.daily import build_daily_brief
@@ -14,6 +23,7 @@ from teaagent.policy import parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalRequest, RunResult
+from teaagent.skill_candidates import SkillCandidateStore
 
 
 def _emit_readiness_payload(args: argparse.Namespace, payload: dict[str, Any]) -> None:
@@ -338,6 +348,273 @@ def _start_background_run(args: argparse.Namespace) -> int:
     )
     print_json(payload)
     return 0
+
+
+def _start_automation_background_run(
+    *,
+    root: str,
+    spec: AutomationSpec,
+) -> dict[str, Any]:
+    from teaagent.ergonomics.background_run import (
+        BackgroundRunStore,
+        build_agent_run_command,
+    )
+
+    run_args = argparse.Namespace(
+        root=root,
+        provider=spec.provider,
+        model=spec.model,
+        route_model=False,
+        max_iterations=spec.max_iterations,
+        max_tool_calls=spec.max_tool_calls,
+        clarify=False,
+        allow_destructive=False,
+        approve_call_id=[],
+        hitl_approval=False,
+        permission_mode=spec.permission_mode,
+        subagent=False,
+        heartbeat=0.0,
+        code_analysis=False,
+        context_profile=spec.context_profile,
+    )
+    command = build_agent_run_command(run_args, spec.task)
+    record = BackgroundRunStore(root).start(
+        command, label=f'automation:{spec.automation_id}:{spec.name}'
+    )
+    return record.to_dict()
+
+
+def _automation_is_running(root: str, background_id: Optional[str]) -> bool:
+    if not background_id:
+        return False
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
+    try:
+        row = BackgroundRunStore(root).get(background_id)
+    except FileNotFoundError:
+        return False
+    return bool(row.get('alive'))
+
+
+def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
+    store = AutomationStore(root)
+    if _automation_is_running(root, spec.running_background_id):
+        return {
+            'automation_id': spec.automation_id,
+            'name': spec.name,
+            'status': 'skipped_running',
+            'running_background_id': spec.running_background_id,
+        }
+    record = _start_automation_background_run(root=root, spec=spec)
+    updated = AutomationSpec(
+        **{
+            **spec.to_dict(),
+            'running_background_id': record['background_id'],
+            'last_status': 'background_started',
+            'next_run_at': compute_next_run_at(spec.schedule),
+        }
+    )
+    store.update(updated)
+    return {
+        'automation_id': spec.automation_id,
+        'name': spec.name,
+        'status': 'background_started',
+        'background_id': record['background_id'],
+        'pid': record['pid'],
+        'log_path': record['log_path'],
+        'next_run_at': updated.next_run_at,
+    }
+
+
+def automation_add_command(args: argparse.Namespace) -> int:
+    spec = AutomationStore(args.root).create(
+        name=args.name,
+        task=args.task,
+        schedule=args.schedule,
+        provider=args.provider,
+        model=args.model,
+        permission_mode=args.permission_mode,
+        context_profile=args.context_profile,
+        max_iterations=args.max_iterations,
+        max_tool_calls=args.max_tool_calls,
+        auto_propose_skill=bool(getattr(args, 'auto_propose_skill', False)),
+    )
+    print_json({'status': 'created', 'automation': spec.to_dict()})
+    return 0
+
+
+def automation_list_command(args: argparse.Namespace) -> int:
+    specs = [spec.to_dict() for spec in AutomationStore(args.root).list()]
+    print_json(specs)
+    return 0
+
+
+def automation_show_command(args: argparse.Namespace) -> int:
+    try:
+        spec = AutomationStore(args.root).show(args.automation_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print_json(spec.to_dict())
+    return 0
+
+
+def automation_pause_command(args: argparse.Namespace) -> int:
+    try:
+        spec = AutomationStore(args.root).set_enabled(args.automation_id, False)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print_json({'status': 'paused', 'automation': spec.to_dict()})
+    return 0
+
+
+def automation_resume_command(args: argparse.Namespace) -> int:
+    try:
+        spec = AutomationStore(args.root).set_enabled(args.automation_id, True)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print_json({'status': 'resumed', 'automation': spec.to_dict()})
+    return 0
+
+
+def automation_delete_command(args: argparse.Namespace) -> int:
+    try:
+        AutomationStore(args.root).delete(args.automation_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print_json({'status': 'deleted', 'automation_id': args.automation_id})
+    return 0
+
+
+def automation_run_command(args: argparse.Namespace) -> int:
+    try:
+        spec = AutomationStore(args.root).show(args.automation_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    payload = _run_automation_once(args.root, spec)
+    print_json(payload)
+    return 0
+
+
+def automation_tick_command(args: argparse.Namespace) -> int:
+    payload = _automation_tick(args.root, dry_run=bool(getattr(args, 'dry_run', False)))
+    print_json(payload)
+    return 0
+
+
+def _automation_tick(root: str, *, dry_run: bool) -> dict[str, Any]:
+    store = AutomationStore(root)
+    _reconcile_automation_runs(root, store)
+    if dry_run:
+        due = [spec.to_dict() for spec in store.due()]
+        return {'status': 'dry_run', 'due': due, 'count': len(due)}
+    results: list[dict[str, Any]] = []
+    with AutomationTickLock(root):
+        for spec in store.due():
+            results.append(_run_automation_once(root, spec))
+    return {'status': 'ok', 'executed': results, 'count': len(results)}
+
+
+def automation_serve_command(args: argparse.Namespace) -> int:
+    stop_requested = {'value': False}
+
+    def _handle_signal(_sig: int, _frame: Any) -> None:
+        stop_requested['value'] = True
+
+    old_int = signal.getsignal(signal.SIGINT)
+    old_term = signal.getsignal(signal.SIGTERM)
+    signal.signal(signal.SIGINT, _handle_signal)
+    signal.signal(signal.SIGTERM, _handle_signal)
+    tick_count = 0
+    max_ticks = int(getattr(args, 'max_ticks', 0))
+    interval = float(getattr(args, 'interval_seconds', 30.0))
+    try:
+        while True:
+            if stop_requested['value']:
+                print_json(
+                    {
+                        'status': 'stopped',
+                        'reason': 'signal',
+                        'ticks_completed': tick_count,
+                    }
+                )
+                return 0
+            payload = _automation_tick(args.root, dry_run=False)
+            tick_count += 1
+            print_json(
+                {
+                    'status': 'serve_tick',
+                    'tick': tick_count,
+                    'executed_count': payload.get('count', 0),
+                    'last_tick': payload,
+                }
+            )
+            if max_ticks > 0 and tick_count >= max_ticks:
+                print_json(
+                    {
+                        'status': 'stopped',
+                        'reason': 'max_ticks',
+                        'ticks_completed': tick_count,
+                    }
+                )
+                return 0
+            time.sleep(interval)
+    finally:
+        signal.signal(signal.SIGINT, old_int)
+        signal.signal(signal.SIGTERM, old_term)
+
+
+def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
+    bg_store = BackgroundRunStore(root)
+    run_store = RunStore(root)
+    candidate_store = SkillCandidateStore(root)
+    for spec in store.list():
+        if not spec.running_background_id:
+            continue
+        try:
+            bg = bg_store.get(spec.running_background_id)
+        except FileNotFoundError:
+            updated = AutomationSpec(
+                **{
+                    **spec.to_dict(),
+                    'running_background_id': None,
+                    'last_status': 'background_missing',
+                }
+            )
+            store.update(updated)
+            continue
+        run_id = bg.get('run_id') if isinstance(bg.get('run_id'), str) else None
+        alive = bool(bg.get('alive'))
+        next_state: dict[str, Any] = {}
+        if run_id:
+            next_state['last_run_id'] = run_id
+            try:
+                heartbeat = run_store.heartbeat_for_run(run_id)
+                status = str(heartbeat.get('status', 'running'))
+            except FileNotFoundError:
+                status = 'running'
+            next_state['last_status'] = status
+            if (
+                spec.auto_propose_skill
+                and status == 'completed'
+                and spec.last_run_id != run_id
+            ):
+                with contextlib.suppress(FileNotFoundError, ValueError):
+                    candidate_store.create_from_run(
+                        run_id=run_id,
+                        name=f'{spec.name}-auto',
+                        description=f'Auto-proposed from automation {spec.name}',
+                    )
+        if not alive:
+            next_state['running_background_id'] = None
+        if next_state:
+            store.update(AutomationSpec(**{**spec.to_dict(), **next_state}))
 
 
 def agent_attach_command(args: argparse.Namespace) -> int:

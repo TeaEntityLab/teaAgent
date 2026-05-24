@@ -22,6 +22,21 @@ def register(
     _card(subs, handlers['card'])
     if 'attach' in handlers:
         _attach(subs, handlers['attach'])
+    if 'automation_add' in handlers:
+        _automation(
+            subs,
+            {
+                'add': handlers['automation_add'],
+                'list': handlers['automation_list'],
+                'show': handlers['automation_show'],
+                'pause': handlers['automation_pause'],
+                'resume': handlers['automation_resume'],
+                'delete': handlers['automation_delete'],
+                'run': handlers['automation_run'],
+                'tick': handlers['automation_tick'],
+                'serve': handlers['automation_serve'],
+            },
+        )
 
 
 def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
@@ -439,6 +454,96 @@ def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
     p.set_defaults(func=handler)
+
+
+def _automation(
+    subs: argparse._SubParsersAction, handlers: dict[str, Callable]
+) -> None:  # type: ignore[type-arg]
+    automation = subs.add_parser('automation', help='Manage persistent automations.')
+    commands = automation.add_subparsers(dest='automation_command', required=True)
+
+    add = commands.add_parser('add', help='Create a scheduled automation.')
+    add.add_argument('name', help='Human readable automation name.')
+    add.add_argument('task', help='Task prompt to run on schedule.')
+    add.add_argument(
+        '--schedule',
+        required=True,
+        help="Schedule expression: 'every 30m', 'every 2h', or 'daily HH:MM'.",
+    )
+    add.add_argument('--root', default='.', help='Workspace root.')
+    add.add_argument('--provider', default=None, help='Provider override.')
+    add.add_argument('--model', default=None, help='Model override.')
+    add.add_argument(
+        '--permission-mode',
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.READ_ONLY.value,
+        help='Permission mode used for automation runs.',
+    )
+    add.add_argument(
+        '--context-profile',
+        choices=['lean', 'balanced', 'deep'],
+        default='balanced',
+        help='Context profile for automation runs.',
+    )
+    add.add_argument('--max-iterations', type=int, default=10)
+    add.add_argument('--max-tool-calls', type=int, default=10)
+    add.add_argument(
+        '--auto-propose-skill',
+        action='store_true',
+        help='After a completed run, auto-propose a skill candidate from the run summary.',
+    )
+    add.set_defaults(func=handlers['add'], agent_command='automation')
+
+    lst = commands.add_parser('list', help='List automations.')
+    lst.add_argument('--root', default='.', help='Workspace root.')
+    lst.set_defaults(func=handlers['list'], agent_command='automation')
+
+    show = commands.add_parser('show', help='Show one automation.')
+    show.add_argument('automation_id')
+    show.add_argument('--root', default='.', help='Workspace root.')
+    show.set_defaults(func=handlers['show'], agent_command='automation')
+
+    pause = commands.add_parser('pause', help='Pause an automation.')
+    pause.add_argument('automation_id')
+    pause.add_argument('--root', default='.', help='Workspace root.')
+    pause.set_defaults(func=handlers['pause'], agent_command='automation')
+
+    resume = commands.add_parser('resume', help='Resume an automation.')
+    resume.add_argument('automation_id')
+    resume.add_argument('--root', default='.', help='Workspace root.')
+    resume.set_defaults(func=handlers['resume'], agent_command='automation')
+
+    delete = commands.add_parser('delete', help='Delete an automation.')
+    delete.add_argument('automation_id')
+    delete.add_argument('--root', default='.', help='Workspace root.')
+    delete.set_defaults(func=handlers['delete'], agent_command='automation')
+
+    run = commands.add_parser('run', help='Run an automation immediately.')
+    run.add_argument('automation_id')
+    run.add_argument('--root', default='.', help='Workspace root.')
+    run.set_defaults(func=handlers['run'], agent_command='automation')
+
+    tick = commands.add_parser('tick', help='Run all due automations once.')
+    tick.add_argument('--root', default='.', help='Workspace root.')
+    tick.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='List due automations without starting background runs.',
+    )
+    tick.set_defaults(func=handlers['tick'], agent_command='automation')
+
+    serve = commands.add_parser(
+        'serve', help='Run periodic automation ticks in a lightweight loop.'
+    )
+    serve.add_argument('--root', default='.', help='Workspace root.')
+    serve.add_argument('--interval-seconds', type=float, default=30.0)
+    serve.add_argument(
+        '--max-ticks',
+        type=int,
+        default=0,
+        help='Stop after N ticks (0 means run forever).',
+    )
+    serve.set_defaults(func=handlers['serve'], agent_command='automation')
 
 
 def _runs(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

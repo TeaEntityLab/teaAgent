@@ -798,3 +798,53 @@ runs
 show <run_id>
 resume <run_id>
 ```
+
+## Agent Automation
+
+Create persistent scheduled automations (stored under `.teaagent/automations/*.json`):
+
+```bash
+teaagent agent automation add daily-brief "Summarize open TODOs" --schedule "daily 09:00" --root .
+teaagent agent automation add lint-sweep "Check docs consistency" --schedule "every 2h" --root . --auto-propose-skill
+```
+
+List and inspect:
+
+```bash
+teaagent agent automation list --root .
+teaagent agent automation show <automation_id> --root .
+```
+
+Control lifecycle:
+
+```bash
+teaagent agent automation pause <automation_id> --root .
+teaagent agent automation resume <automation_id> --root .
+teaagent agent automation delete <automation_id> --root .
+```
+
+Execute runs:
+
+```bash
+teaagent agent automation run <automation_id> --root .
+teaagent agent automation tick --root .
+teaagent agent automation tick --dry-run --root .
+teaagent agent automation serve --interval-seconds 30 --max-ticks 10 --root .
+```
+
+`tick` enforces a lock (`.teaagent/automations/.tick.lock`) to avoid duplicate scheduling in concurrent invocations.
+
+## Skill Candidates
+
+Use candidate quarantine for agent-authored skills before installing into active skill paths:
+
+```bash
+teaagent skill candidate propose --from-run <run_id> --name test-first --description "Generate test-first plans" --root .
+teaagent skill candidate list --root .
+teaagent skill candidate show <candidate_id> --root .
+teaagent skill candidate review <candidate_id> --root .
+teaagent skill candidate install <candidate_id> --scope project --root .
+```
+
+Candidates are stored under `.teaagent/skill-candidates/<candidate_id>/`.
+Install requires passing review first.

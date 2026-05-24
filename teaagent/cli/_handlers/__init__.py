@@ -8,6 +8,15 @@ from ._agent import (
     agent_run_task,
     agent_runs_list,
     agent_status_command,
+    automation_add_command,
+    automation_delete_command,
+    automation_list_command,
+    automation_pause_command,
+    automation_resume_command,
+    automation_run_command,
+    automation_serve_command,
+    automation_show_command,
+    automation_tick_command,
 )
 from ._audit import (
     audit_list_command,
@@ -78,6 +87,13 @@ from ._model import (
     model_route,
     model_smoke,
 )
+from ._skill import (
+    skill_candidate_install_command,
+    skill_candidate_list_command,
+    skill_candidate_propose_command,
+    skill_candidate_review_command,
+    skill_candidate_show_command,
+)
 
 __all__ = [
     'agent_attach_command',
@@ -114,6 +130,15 @@ __all__ = [
     'agent_run_task',
     'agent_runs_list',
     'agent_status_command',
+    'automation_add_command',
+    'automation_delete_command',
+    'automation_list_command',
+    'automation_pause_command',
+    'automation_resume_command',
+    'automation_run_command',
+    'automation_serve_command',
+    'automation_show_command',
+    'automation_tick_command',
     'audit_list_command',
     'audit_prune_command',
     'audit_show_command',
@@ -146,4 +171,9 @@ __all__ = [
     'ultrawork_stop_command',
     'workspace_openapi_command',
     'workspace_tools_metadata',
+    'skill_candidate_install_command',
+    'skill_candidate_list_command',
+    'skill_candidate_propose_command',
+    'skill_candidate_review_command',
+    'skill_candidate_show_command',
 ]

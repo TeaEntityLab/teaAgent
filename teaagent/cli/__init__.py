@@ -25,6 +25,15 @@ from teaagent.cli._handlers import (
     audit_prune_command,
     audit_serve_command,
     audit_show_command,
+    automation_add_command,
+    automation_delete_command,
+    automation_list_command,
+    automation_pause_command,
+    automation_resume_command,
+    automation_run_command,
+    automation_serve_command,
+    automation_show_command,
+    automation_tick_command,
     background_list_command,
     background_show_command,
     ci_review_command,
@@ -63,6 +72,11 @@ from teaagent.cli._handlers import (
     session_resume_command,
     session_show_command,
     setup_command,
+    skill_candidate_install_command,
+    skill_candidate_list_command,
+    skill_candidate_propose_command,
+    skill_candidate_review_command,
+    skill_candidate_show_command,
     start_tui,
     status_short_command,
     ultrawork_list_command,
@@ -133,6 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._memory_parsers import register as register_memory
     from teaagent.cli._misc_parsers import register as register_misc
     from teaagent.cli._model_parsers import register as register_model
+    from teaagent.cli._skill_parsers import register as register_skill
 
     parser = argparse.ArgumentParser(
         prog='teaagent', description='TeaAgent harness utilities.'
@@ -195,6 +210,16 @@ def build_parser() -> argparse.ArgumentParser:
             'show': memory_show_command,
         },
     )
+    register_skill(
+        subparsers,
+        {
+            'candidate_propose': skill_candidate_propose_command,
+            'candidate_list': skill_candidate_list_command,
+            'candidate_show': skill_candidate_show_command,
+            'candidate_review': skill_candidate_review_command,
+            'candidate_install': skill_candidate_install_command,
+        },
+    )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases
 
     register_top_level_agent_aliases(subparsers, agent_run_task)
@@ -210,6 +235,15 @@ def build_parser() -> argparse.ArgumentParser:
             'show': agent_run_show,
             'card': agent_card_command,
             'attach': agent_attach_command,
+            'automation_add': automation_add_command,
+            'automation_list': automation_list_command,
+            'automation_show': automation_show_command,
+            'automation_pause': automation_pause_command,
+            'automation_resume': automation_resume_command,
+            'automation_delete': automation_delete_command,
+            'automation_run': automation_run_command,
+            'automation_tick': automation_tick_command,
+            'automation_serve': automation_serve_command,
         },
     )
     register_ergonomics(
