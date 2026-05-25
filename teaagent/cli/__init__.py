@@ -45,6 +45,11 @@ from teaagent.cli._handlers import (
     background_show_command,
     ci_review_command,
     clarify_command,
+    cloud_cancel_command,
+    cloud_capabilities_command,
+    cloud_list_command,
+    cloud_show_command,
+    cloud_submit_command,
     completion_command,
     configure_command,
     daily_journal_command,
@@ -57,6 +62,8 @@ from teaagent.cli._handlers import (
     doctor_model,
     doctor_project,
     doctor_providers,
+    gateway_list_command,
+    gateway_start_command,
     graphqlite_migrate,
     graphqlite_query,
     graphqlite_smoke,
@@ -86,6 +93,10 @@ from teaagent.cli._handlers import (
     skill_candidate_review_command,
     skill_candidate_show_command,
     skill_explain_command,
+    skill_install_marketplace_command,
+    skill_marketplace_list_command,
+    skill_publish_command,
+    skill_search_command,
     start_tui,
     status_short_command,
     ultrawork_list_command,
@@ -151,7 +162,9 @@ def main(
 
 def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._agent_parsers import register as register_agent
+    from teaagent.cli._cloud_parsers import register as register_cloud
     from teaagent.cli._ergonomics_parsers import register as register_ergonomics
+    from teaagent.cli._gateway_parsers import register as register_gateway
     from teaagent.cli._mcp_parsers import register as register_mcp
     from teaagent.cli._memory_parsers import register as register_memory
     from teaagent.cli._misc_parsers import register as register_misc
@@ -229,6 +242,10 @@ def build_parser() -> argparse.ArgumentParser:
             'candidate_review': skill_candidate_review_command,
             'candidate_install': skill_candidate_install_command,
             'explain': skill_explain_command,
+            'publish': skill_publish_command,
+            'search': skill_search_command,
+            'marketplace-list': skill_marketplace_list_command,
+            'install-from-marketplace': skill_install_marketplace_command,
         },
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases
@@ -301,6 +318,23 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers,
         {
             'serve': mcp_serve_command,
+        },
+    )
+    register_cloud(
+        subparsers,
+        {
+            'submit': cloud_submit_command,
+            'list': cloud_list_command,
+            'show': cloud_show_command,
+            'cancel': cloud_cancel_command,
+            'capabilities': cloud_capabilities_command,
+        },
+    )
+    register_gateway(
+        subparsers,
+        {
+            'start': gateway_start_command,
+            'list': gateway_list_command,
         },
     )
 

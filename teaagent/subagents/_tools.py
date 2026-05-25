@@ -7,6 +7,7 @@ from teaagent.llm import LLMAdapter
 from teaagent.subagent_run_context import get_parent_run_id
 from teaagent.subagents._isolation import normalize_subagent_isolation
 from teaagent.subagents._manager import SubagentManager
+from teaagent.subagents._team_orchestrator import TeamOrchestrator
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
 
@@ -88,6 +89,54 @@ def register_subagent_tools(
         )
 
     _register_batch(registry, manager, depth, config)
+    _register_team_tool(registry, manager)
+
+
+def _register_team_tool(
+    registry: ToolRegistry,
+    manager: SubagentManager,
+) -> None:
+    """Register the ``team`` tool for agent team orchestration."""
+
+    orchestrator = TeamOrchestrator(
+        root=manager._root,
+        subagent_manager=manager,
+    )
+
+    def execute_team(args: dict[str, Any]) -> dict[str, Any]:
+        task = args.get('task', '')
+        if not isinstance(task, str) or not task.strip():
+            return {'status': 'error', 'message': "team requires non-empty 'task'"}
+        team_name = args.get('team_name', '')
+        return orchestrator.run_team(
+            task=task, team_name=team_name, parent_run_id=get_parent_run_id(),
+        )
+
+    registry.register(
+        name='team',
+        description='Run a multi-agent team: lead agent coordinates specialist subagents in parallel.',
+        input_schema={
+            'type': 'object',
+            'properties': {
+                'task': {'type': 'string', 'description': 'Task for the agent team.'},
+                'team_name': {'type': 'string', 'description': 'Team definition name from .teaagent/teams/.'},
+            },
+            'required': ['task', 'team_name'],
+        },
+        output_schema={
+            'type': 'object',
+            'properties': {
+                'status': {'type': 'string'},
+                'team': {'type': 'string'},
+                'specialist_count': {'type': 'integer'},
+                'output': {'type': 'string'},
+                'message': {'type': 'string'},
+            },
+            'required': ['status'],
+        },
+        annotations=ToolAnnotations(read_only=False, destructive=False, idempotent=False),
+        handler=execute_team,
+    )
 
 
 def _register(

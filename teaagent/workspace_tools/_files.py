@@ -353,6 +353,18 @@ def register_workspace_tools(
         handler=lambda args: run_shell(config, args),
     )
 
+    _register_browser_tools_if_available(registry)
+
+
+def _register_browser_tools_if_available(registry: ToolRegistry) -> None:
+    """Register browser automation tools when Playwright is installed."""
+    try:
+        from teaagent.browser_tools import HAS_PLAYWRIGHT, register_browser_tools
+        if HAS_PLAYWRIGHT:
+            register_browser_tools(registry)
+    except ImportError:
+        pass
+
 
 def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args['path'])

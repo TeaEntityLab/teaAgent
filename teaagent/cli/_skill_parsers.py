@@ -82,3 +82,42 @@ def register(
         help='Required when installing a reviewed candidate into personal skills.',
     )
     install.set_defaults(func=handlers['candidate_install'])
+
+    publish = subs.add_parser(
+        'publish', help='Publish a skill to the local marketplace registry.'
+    )
+    publish.add_argument('name', help='Skill name.')
+    publish.add_argument('--description', default='', help='Skill description.')
+    publish.add_argument('--version', default='0.1.0', help='Skill version.')
+    publish.add_argument('--author', default='', help='Author name.')
+    publish.add_argument('--skill-path', default='', help='Path to SKILL.md.')
+    publish.add_argument('--tags', action='append', default=[], help='Tags. Repeatable.')
+    publish.add_argument('--json', action='store_true', help='Output as JSON.')
+    publish.add_argument('--root', default='.', help='Workspace root.')
+    publish.set_defaults(func=handlers['publish'])
+
+    search = subs.add_parser(
+        'search', help='Search the local marketplace registry for skills.'
+    )
+    search.add_argument('query', nargs='?', default='', help='Search query.')
+    search.add_argument('--tag', default=None, help='Filter by tag.')
+    search.add_argument('--limit', type=int, default=20, help='Max results.')
+    search.add_argument('--json', action='store_true', help='Output as JSON.')
+    search.add_argument('--root', default='.', help='Workspace root.')
+    search.set_defaults(func=handlers['search'])
+
+    mkt_list = subs.add_parser(
+        'marketplace-list', help='List all published skills in local marketplace.'
+    )
+    mkt_list.add_argument('--limit', type=int, default=50, help='Max results.')
+    mkt_list.add_argument('--json', action='store_true', help='Output as JSON.')
+    mkt_list.add_argument('--root', default='.', help='Workspace root.')
+    mkt_list.set_defaults(func=handlers['marketplace-list'])
+
+    install_mkt = subs.add_parser(
+        'install-from-marketplace',
+        help='Install a skill from the remote agentskills.io marketplace.',
+    )
+    install_mkt.add_argument('name', help='Skill name to search and install.')
+    install_mkt.add_argument('--root', default='.', help='Workspace root.')
+    install_mkt.set_defaults(func=handlers['install-from-marketplace'])

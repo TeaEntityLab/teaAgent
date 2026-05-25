@@ -31,6 +31,13 @@ from ._audit import (
     audit_serve_command,
     audit_show_command,
 )
+from ._cloud import (
+    cloud_cancel_command,
+    cloud_capabilities_command,
+    cloud_list_command,
+    cloud_show_command,
+    cloud_submit_command,
+)
 from ._doctor import (
     doctor_aigateway,
     doctor_all,
@@ -61,6 +68,16 @@ from ._ergonomics import (
     status_short_command,
     watch_command,
     yesterday_command,
+)
+from ._gateway import (
+    gateway_list_command,
+    gateway_start_command,
+)
+from ._marketplace import (
+    skill_install_marketplace_command,
+    skill_marketplace_list_command,
+    skill_publish_command,
+    skill_search_command,
 )
 from ._mcp import mcp_serve_command
 from ._memory import (
@@ -194,4 +211,15 @@ __all__ = [
     'skill_candidate_eval_command',
     'skill_candidate_review_command',
     'skill_candidate_show_command',
+    'cloud_submit_command',
+    'cloud_list_command',
+    'cloud_show_command',
+    'cloud_cancel_command',
+    'cloud_capabilities_command',
+    'gateway_start_command',
+    'gateway_list_command',
+    'skill_publish_command',
+    'skill_search_command',
+    'skill_marketplace_list_command',
+    'skill_install_marketplace_command',
 ]
