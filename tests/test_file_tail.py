@@ -38,3 +38,15 @@ def test_iter_jsonl_tail_follows_appended_lines() -> None:
         assert len(seen) >= 2
         assert seen[0]['event_type'] == 'iteration_started'
         assert seen[-1]['event_type'] == 'run_completed'
+
+
+def test_iter_jsonl_tail_reads_existing_lines_without_follow(tmp_path: Path) -> None:
+    path = tmp_path / 'events.jsonl'
+    path.write_text(
+        json.dumps({'event_type': 'run_started', 'n': 1}) + '\n'
+        'not-json\n' + json.dumps({'event_type': 'run_completed', 'n': 2}) + '\n',
+        encoding='utf-8',
+    )
+    events = list(iter_jsonl_tail(path, follow=False, use_inotify=False))
+    assert len(events) == 2
+    assert events[0]['event_type'] == 'run_started'

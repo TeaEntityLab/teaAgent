@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import subprocess
 import sys
 from contextlib import redirect_stdout
@@ -13,6 +14,13 @@ from unittest.mock import patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+
+_GIT_ENV = {
+    'GIT_AUTHOR_NAME': 'TeaAgent Acceptance',
+    'GIT_AUTHOR_EMAIL': 'teaagent@acceptance.test',
+    'GIT_COMMITTER_NAME': 'TeaAgent Acceptance',
+    'GIT_COMMITTER_EMAIL': 'teaagent@acceptance.test',
+}
 
 
 def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
@@ -35,6 +43,7 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
         cwd=tmp_path,
         check=True,
         capture_output=True,
+        env={**os.environ, **_GIT_ENV},
     )
 
     with redirect_stdout(io.StringIO()):

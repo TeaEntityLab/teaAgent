@@ -851,7 +851,7 @@ class CLITests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         stderr_text = stderr.getvalue()
-        self.assertIn('active_kid is not present in keys', stderr_text)
+        self.assertIn('Invalid OAuth key ring configuration', stderr_text)
 
     def test_mcp_http_oauth_dpop_replay_ttl_accepted(self) -> None:
         with (

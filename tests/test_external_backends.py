@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from teaagent.external_backends import (
+    CxCliAdapter,
     FallbackKnowledgeBackend,
+    LocalKnowledgeAdapter,
     get_code_parse_backend,
     get_knowledge_backend,
     register_code_parse_backend,
@@ -93,3 +98,56 @@ def test_knowledge_backend_registry_roundtrip():
     backend = get_knowledge_backend('ok_roundtrip')
 
     assert backend.health(root=Path('.'))['ok'] is True
+
+
+def test_register_knowledge_backend_rejects_empty_name() -> None:
+    with pytest.raises(ValueError, match='non-empty'):
+        register_knowledge_backend('  ', _OkKnowledge())
+
+
+def test_get_unknown_knowledge_backend_raises() -> None:
+    with pytest.raises(ValueError, match='unknown knowledge'):
+        get_knowledge_backend('definitely-missing-backend-name')
+
+
+def test_fallback_health_reports_primary_failure(tmp_path: Path) -> None:
+    register_knowledge_backend('primary_fail_h', _FailKnowledge())
+    register_knowledge_backend('fallback_ok_h', _OkKnowledge())
+    backend = FallbackKnowledgeBackend(
+        primary='primary_fail_h', fallback='fallback_ok_h'
+    )
+    report = backend.health(root=tmp_path)
+    assert len(report['backends']) == 2
+    assert report['backends'][0]['ok'] is False
+
+
+def test_fallback_index_and_get_use_fallback(tmp_path: Path) -> None:
+    register_knowledge_backend('primary_fail_ix', _FailKnowledge())
+    register_knowledge_backend('fallback_ok_ix', _OkKnowledge())
+    backend = FallbackKnowledgeBackend(
+        primary='primary_fail_ix', fallback='fallback_ok_ix'
+    )
+    indexed = backend.index(root=tmp_path, args={'collection': 'c'})
+    assert indexed['fallback_used'] is True
+    got = backend.get(root=tmp_path, args={'path': 'x'})
+    assert got['action'] == 'get'
+
+
+def test_cx_cli_adapter_parses_json_and_raw_output(tmp_path: Path) -> None:
+    adapter = CxCliAdapter(binary='echo')
+    with patch('teaagent.external_backends.subprocess.run') as run:
+        run.return_value = MagicMock(returncode=0, stdout='{"ok": true}', stderr='')
+        health = adapter.health(root=tmp_path)
+        assert health['ok'] is True
+        run.return_value = MagicMock(returncode=0, stdout='plain-text', stderr='')
+        overview = adapter.overview(root=tmp_path, args={'path': 'teaagent/cli.py'})
+        assert overview['raw'] == 'plain-text'
+
+
+def test_local_knowledge_adapter_reads_file(tmp_path: Path) -> None:
+    doc = tmp_path / 'note.txt'
+    doc.write_text('local knowledge', encoding='utf-8')
+    adapter = LocalKnowledgeAdapter()
+    payload = adapter.get(root=tmp_path, args={'path': 'note.txt'})
+    assert payload['content'] == 'local knowledge'
+    assert adapter.health(root=tmp_path)['ok'] is True
