@@ -36,13 +36,21 @@ directory.
 | `test_subagent_definitions_flow.py` | Declarative sub-agent definitions | YAML/JSON/Markdown frontmatter loading, `isolation`/`background`/`disallowed_tools`/`effort` fields, Claude Code `.md` convention compatibility |
 | `test_code_analysis_lsp_flow.py` | LSP code-analysis tool registration and context enrichment | Code analysis tools registered when enabled, tree-sitter relation extraction, candidate path detection, config enablement, read-only annotations |
 | `test_cost_tracking_flow.py` | Cost and token tracking | Terminal results and `run_completed` audit events carry token and cost fields |
+| `test_automation_foreground_parity_flow.py` | Automation vs foreground argv parity | Cron/background `build_agent_run_command` matches manual run for skills, subagent, caps, and permission flags |
+| `test_background_attach_resume_notify_flow.py` | Background attach and notify | `BackgroundRunStore` lifecycle, log `run_id`, session stream, `agent attach --notify` desktop hook |
+| `test_cli_tui_surface_parity_flow.py` | CLI/TUI daily parity | `agent daily` JSON matches TUI `daily` payload fields; `session list` after setup |
 | `test_daily_cli.py` | Daily CLI workflow | `agent daily`, `agent preflight`, `agent run`, `agent show`, token budget, harness health, audit persistence, run-level audit summary |
 | `test_daily_tui.py` | Daily TUI workflow | Daily cockpit command, chat mode, memory injection, progress streaming, answer persistence in session history |
+| `test_desktop_client_server_session_flow.py` | Desktop client-server session | MCP HTTP initialize/list/call/close plus CLI `session list` after setup |
+| `test_docs_acceptance_count_accuracy.py` | Docs acceptance count accuracy | `docs/acceptance.md` passed count matches pytest collection; architecture avoids stale `104+ AT` |
+| `test_error_recovery_common_misuse_flow.py` | Common misuse recovery | Provider-missing exit, error hints, read-only write blocks, adapter failure surfaces context |
 | `test_error_remediation_flow.py` | Error remediation hints | Core errors include actionable default hints and custom hint override support |
 | `test_external_tool_manifest_compatibility_flow.py` | External ecosystem compatibility | External MCP manifests and community skill packages remain compatible; invalid schemas fail with clear validation errors |
+| `test_first_hour_e2e_flow.py` | First-hour e2e loop | `setup` → `daily` → `preflight` → `run` → pytest pass → audit `show` → git recovery |
 | `test_first_run_experience_flow.py` | First-run onboarding | `init` bootstraps `.teaagent/config.json`, creates `AGENTS.md` when missing, preserves existing `AGENTS.md`, and returns actionable onboarding checklist |
 | `test_provider_matrix_consistency_flow.py` | Provider/docs consistency | Runtime provider registry matches README/USAGE provider count, API key env vars, default model table, and CLI `model providers` output |
 | `test_live_provider_conformance_flow.py` | Live provider conformance | Live checks are skipped unless an explicit environment gate is set |
+| `test_managed_runtime_cloud_task_flow.py` | Managed cloud task stub | Stub runtime health/run/poll/cancel with managed-task audit success and failure events |
 | `test_managed_runtime_flow.py` | Managed runtime | Tool metadata context, workspace/request forwarding, managed-task audit events, trace metadata |
 | `test_mcp_client_flow.py` | MCP client compatibility | Bearer auth, session lifecycle, `tools/list`, `tools/call`, session close |
 | `test_memory_auto_curation_flow.py` | Memory auto-curation | Completed runs append curated memory with task/outcome/last-tool context, deduplicate identical summaries, and skip pending-approval runs |
@@ -50,14 +58,17 @@ directory.
 | `test_model_smoke_gating_flow.py` | Hosted-provider smoke gating | Live smoke calls are skipped unless CI explicitly sets the gate |
 | `test_p0_slo_flow.py` | P0 operational SLO guardrails | Local run/pending-approval/resume latency stays within budget and heartbeat status exposes liveness ticks |
 | `test_plan_mode_read_only_flow.py` | Read-only planning mode | Read-only runs complete with planning metadata for inspect tasks and block file writes/shell mutation |
+| `test_plugin_install_security_flow.py` | Plugin/skill install security | Candidate artifact contract, provenance validation, offline eval/review gates before install |
 | `test_policy_as_code_flow.py` | Policy-as-code deny rules | Workspace `policy.yaml`, deny enforcement, non-match pass-through, `danger-full-access` independence, argument matching, built-in protected directory rules |
 | `test_protected_paths_flow.py` | Protected paths (.git, .teaagent) default deny | Built-in rules block writes to `.git/*` and `.teaagent/*` by default, prepended before user rules, can be disabled via `include_protected_dirs=False` |
 | `test_remote_mcp_consumption_flow.py` | Remote MCP tool consumption | Remote tool registration, annotation propagation, prefix filtering, shared rate limits, proxied calls |
+| `test_repo_map_quality_large_repo_flow.py` | Large-repo repo-map SLO | Preflight `context_pack` hits target file in 40-module fixture within latency budget |
 | `test_run_undo_acceptance_flow.py` | Reversible change recovery | Undo journal captures pre-write state and restores modified/new files to pre-run workspace state |
 | `test_session_resume_continuity_flow.py` | Session resume continuity | Pending-approval resume replays observations from checkpoint/store, preserves audit lineage, and auto-curates memory on completion |
 | `test_hook_lifecycle_flow.py` | Hook lifecycle acceptance (elevated from integration) | PreToolUse veto via HookError, PostToolUse result chaining, multi-hook ordering, permission_check_hook deny/allow/patterns, registry enabled flag, all 8 Claude Code hook events |
 | `test_surface_launch_recipes_flow.py` | Multi-surface launch recipes | USAGE surface table covers CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed runtime; documented local smoke commands run without network |
 | `test_subagent_lineage_flow.py` | Subagent lineage and isolation | Child runs record parent lineage metadata; batch returns ordered lineage; default shared-workspace isolation documented |
+| `test_subagent_parallel_worktree_merge_flow.py` | Parallel subagent worktree merge | Two worktree-isolated children expose lineage for parent review before merge |
 | `test_subagent_worktree_isolation_flow.py` | Subagent worktree isolation | `isolation=worktree` uses a detached git worktree, records `worktree_path` in lineage, and cleans up after completion |
 | `test_subagent_container_isolation_flow.py` | Subagent container isolation | `isolation=container` uses a gitignore-respecting workspace snapshot, records `container_path` in lineage, and cleans up after completion |
 | `test_context_pack_read_only_flow.py` | Read-only context pack | Preflight returns read-only `context_pack` with hybrid/knowledge/GraphQLite hits when indexed; read-only runs still block workspace writes |
@@ -126,7 +137,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`187 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
+`206 passed` (89 prior + 21 Phase 1 + 37 Phase 2 + adjustments).
 
 <!-- ACCEPTANCE_TIERS:START -->
 
@@ -136,9 +147,9 @@ Use these tiers to control regression scope and release risk:
 
 | Tier | Purpose | Representative acceptance flows |
 |---|---|---|
-| P0 | Safe first-run, policy boundaries, and core coding loop | `test_first_run_experience_flow.py`, `test_daily_cli.py`, `test_p0_slo_flow.py`, `test_plan_mode_read_only_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`, `test_policy_as_code_flow.py` |
-| P1 | Recovery, continuity, and IDE/runtime surface reliability | `test_run_undo_acceptance_flow.py`, `test_session_resume_continuity_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`, `test_mcp_client_flow.py`, `test_anp_adapter_flow.py` |
-| P2 | Ecosystem compatibility and extended operations | `test_backend_adapter_flow.py`, `test_external_tool_manifest_compatibility_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_ultrawork_flow.py`, `test_webhook_audit_flow.py` |
+| P0 | Safe first-run, policy boundaries, and core coding loop | `test_first_run_experience_flow.py`, `test_first_hour_e2e_flow.py`, `test_error_recovery_common_misuse_flow.py`, `test_docs_acceptance_count_accuracy.py`, `test_daily_cli.py`, `test_p0_slo_flow.py`, `test_plan_mode_read_only_flow.py`, `test_workspace_edit_flow.py`, `test_agent_fix_test_review_flow.py`, `test_policy_as_code_flow.py` |
+| P1 | Recovery, continuity, and IDE/runtime surface reliability | `test_run_undo_acceptance_flow.py`, `test_session_resume_continuity_flow.py`, `test_background_attach_resume_notify_flow.py`, `test_automation_foreground_parity_flow.py`, `test_subagent_parallel_worktree_merge_flow.py`, `test_cli_tui_surface_parity_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py`, `test_mcp_client_flow.py`, `test_anp_adapter_flow.py` |
+| P2 | Ecosystem compatibility and extended operations | `test_backend_adapter_flow.py`, `test_desktop_client_server_session_flow.py`, `test_external_tool_manifest_compatibility_flow.py`, `test_managed_runtime_cloud_task_flow.py`, `test_plugin_install_security_flow.py`, `test_remote_mcp_consumption_flow.py`, `test_repo_map_quality_large_repo_flow.py`, `test_ultrawork_flow.py`, `test_webhook_audit_flow.py` |
 
 Recommended execution cadence:
 

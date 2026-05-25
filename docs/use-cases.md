@@ -141,16 +141,36 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 16. Completed (P2): Self-generated skill candidate pipeline with offline eval and provenance artifacts.
 17. Completed (P2): Automation status observability (prompt ledger, token contributors, gate reasons).
 
-## Partial / Planned Gaps
+## Known productization gaps
+
+TeaAgent ships strong **governance/protocol** acceptance coverage. The items below are
+**not** release-grade product surfaces yet — they have harness primitives and acceptance
+stories, but docs/packaging/ops still lag mainstream daily agents.
+
+| Gap | Acceptance flow (regression guard) | Priority |
+|-----|-----------------------------------|----------|
+| First-hour e2e loop | `test_first_hour_e2e_flow.py` | P0 |
+| Actionable error recovery | `test_error_recovery_common_misuse_flow.py` | P0 |
+| Docs acceptance count accuracy | `test_docs_acceptance_count_accuracy.py` | P0 |
+| Background attach / resume / notify | `test_background_attach_resume_notify_flow.py` | P1 |
+| Automation vs foreground parity | `test_automation_foreground_parity_flow.py` | P1 |
+| Parallel subagent worktree merge story | `test_subagent_parallel_worktree_merge_flow.py` | P1 |
+| CLI / TUI surface parity | `test_cli_tui_surface_parity_flow.py` | P1 |
+| Desktop client-server session | `test_desktop_client_server_session_flow.py` | P2 |
+| Large-repo repo-map quality SLO | `test_repo_map_quality_large_repo_flow.py` | P2 |
+| Managed cloud task stub lifecycle | `test_managed_runtime_cloud_task_flow.py` | P2 |
+| Plugin / skill install security | `test_plugin_install_security_flow.py` | P2 |
+
+## Partial / Planned Gaps (docs & packaging)
 
 These items are tracked as open gaps from the 2026-05-24 landscape survey.
 They are **not** claimed as done — each has a concrete next action.
 
 | Gap | Source agent(s) | Current state | Next action | Priority |
 |-----|----------------|---------------|-------------|----------|
-| Background/cloud surface docs | Codex Cloud Tasks, Claude Code background sessions | **Partial** — `UltraworkStore` and `BackgroundRunStore` exist but surface docs are thin | Write hosted deployment guide + background session walkthrough | P2 |
-| Desktop/client-server packaging | OpenCode desktop, Codex app server | **Planned** — no docs or packaging guidance | Document desktop launch recipes in USAGE.md | P2 |
-| Repo-map quality benchmark | Aider repo-map, OpenCode LSP | **Partial** — `context_pack` exists but no quality eval against large repos | Write repo-map accuracy evaluation script + benchmark dataset | P2 |
+| Background/cloud surface docs | Codex Cloud Tasks, Claude Code background sessions | **Partial** — acceptance flows exist; hosted guide still thin | Write hosted deployment guide + background session walkthrough | P2 |
+| Desktop/client-server packaging | OpenCode desktop, Codex app server | **Partial** — MCP HTTP acceptance; no desktop bundle | Document desktop launch recipes in USAGE.md | P2 |
+| Repo-map quality benchmark | Aider repo-map, OpenCode LSP | **Partial** — large-repo SLO acceptance; no external benchmark dataset | Publish repo-map accuracy evaluation script + dataset | P2 |
 
 ## Evidence Commands
 

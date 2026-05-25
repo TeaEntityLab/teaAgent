@@ -1,0 +1,94 @@
+"""Parallel subagents in worktrees report lineage for parent review before merge."""
+
+from __future__ import annotations
+
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+from teaagent.chat_agent import ChatAgentConfig
+from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
+from teaagent.subagents import SubagentManager
+from teaagent.subagents._tools import register_subagent_tools
+from teaagent.tools import ToolRegistry
+
+
+class SubagentParallelWorktreeMergeFlowTests(unittest.TestCase):
+    def test_parallel_worktree_children_expose_lineage_for_parent_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(['git', 'init'], cwd=root, check=True, capture_output=True)
+            (root / 'README.md').write_text('# demo\n', encoding='utf-8')
+            subprocess.run(
+                ['git', 'add', 'README.md'], cwd=root, check=True, capture_output=True
+            )
+            subprocess.run(
+                ['git', 'commit', '-m', 'init'],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            (root / '.teaagent').mkdir()
+            registry = ToolRegistry()
+            config = ChatAgentConfig(root=root, enable_subagent=True)
+            manager = SubagentManager(
+                root=root, parent_config=config, parent_adapter=MagicMock()
+            )
+            worktrees = [
+                '.teaagent/subagent-worktrees/alpha',
+                '.teaagent/subagent-worktrees/beta',
+            ]
+            call_index = {'n': 0}
+
+            def fake_run(**kwargs: object) -> dict[str, object]:
+                idx = call_index['n']
+                call_index['n'] += 1
+                wt = worktrees[idx % len(worktrees)]
+                return {
+                    'run_id': f'child-{idx}',
+                    'status': 'completed',
+                    'iterations': 1,
+                    'tool_calls': 0,
+                    'final_answer': f'patched via {wt}',
+                    'lineage': {
+                        'parent_run_id': str(kwargs.get('parent_run_id', '')),
+                        'def_name': 'generic',
+                        'depth': 1,
+                        'isolation': 'worktree',
+                        'worktree_path': wt,
+                    },
+                    'message': 'ready for parent review',
+                }
+
+            with patch.object(manager, 'run_subagent', side_effect=fake_run):
+                register_subagent_tools(
+                    registry,
+                    adapter=MagicMock(),
+                    config=config,
+                    depth=0,
+                    manager=manager,
+                )
+                token = bind_parent_run_id('parent-merge')
+                try:
+                    first = registry.execute(
+                        'subagent',
+                        {'task': 'edit docs in worktree A', 'isolation': 'worktree'},
+                    )
+                    second = registry.execute(
+                        'subagent',
+                        {'task': 'edit tests in worktree B', 'isolation': 'worktree'},
+                    )
+                finally:
+                    reset_parent_run_id(token)
+
+            for result, expected_wt in zip((first, second), worktrees, strict=True):
+                self.assertEqual(result['lineage']['isolation'], 'worktree')
+                self.assertEqual(result['lineage']['worktree_path'], expected_wt)
+                self.assertEqual(result['lineage']['parent_run_id'], 'parent-merge')
+                self.assertIn('parent review', result['message'])
+
+
+if __name__ == '__main__':
+    unittest.main()

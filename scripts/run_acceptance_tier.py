@@ -7,6 +7,9 @@ from pathlib import Path
 TIERS: dict[str, tuple[str, ...]] = {
     'p0': (
         'test_first_run_experience_flow.py',
+        'test_first_hour_e2e_flow.py',
+        'test_error_recovery_common_misuse_flow.py',
+        'test_docs_acceptance_count_accuracy.py',
         'test_daily_cli.py',
         'test_p0_slo_flow.py',
         'test_plan_mode_read_only_flow.py',
@@ -17,6 +20,10 @@ TIERS: dict[str, tuple[str, ...]] = {
     'p1': (
         'test_run_undo_acceptance_flow.py',
         'test_session_resume_continuity_flow.py',
+        'test_background_attach_resume_notify_flow.py',
+        'test_automation_foreground_parity_flow.py',
+        'test_subagent_parallel_worktree_merge_flow.py',
+        'test_cli_tui_surface_parity_flow.py',
         'test_vscode_mcp_runtime_smoke_flow.py',
         'test_mcp_client_flow.py',
         'test_anp_adapter_flow.py',
@@ -34,8 +41,12 @@ TIER_DOC_TESTS: dict[str, tuple[str, ...]] = {
     'p1': TIERS['p1'],
     'p2': (
         'test_backend_adapter_flow.py',
+        'test_desktop_client_server_session_flow.py',
         'test_external_tool_manifest_compatibility_flow.py',
+        'test_managed_runtime_cloud_task_flow.py',
+        'test_plugin_install_security_flow.py',
         'test_remote_mcp_consumption_flow.py',
+        'test_repo_map_quality_large_repo_flow.py',
         'test_ultrawork_flow.py',
         'test_webhook_audit_flow.py',
     ),

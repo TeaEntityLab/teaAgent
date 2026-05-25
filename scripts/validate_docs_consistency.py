@@ -42,6 +42,7 @@ MATRIX_OPEN_GAP_COUNT = re.compile(
 MATRIX_SURVEY_DATE = re.compile(
     r'Landscape survey reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*', re.IGNORECASE
 )
+ARCHITECTURE_STALE_AT_COUNT = re.compile(r'10[0-4]\+\s*AT|104\+\s*AT', re.IGNORECASE)
 MODE_MATRIX_START = '<!-- MODE_SAFETY_MATRIX:START -->'
 MODE_MATRIX_END = '<!-- MODE_SAFETY_MATRIX:END -->'
 MODE_MATRIX_REQUIRED_TOPICS = (
@@ -544,6 +545,12 @@ def validate_docs_consistency(
             'Acceptance status mismatch: '
             f'docs/acceptance.md says {status_count} passed, '
             f'but pytest collect reports {collected_count} acceptance tests.'
+        )
+
+    if ARCHITECTURE_STALE_AT_COUNT.search(architecture_text):
+        errors.append(
+            'docs/architecture.md contains a stale hard-coded acceptance count '
+            '(for example 104+ AT). Reference docs/acceptance.md or pytest-collected counts.'
         )
 
     if not acceptance_tests:

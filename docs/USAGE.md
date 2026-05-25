@@ -258,6 +258,29 @@ Use this section as the everyday entry point. Competitive agent products converg
 same habit: a **simple start ritual**, **visible safety/cost/context state**, **reliable
 resume**, and **short task recipes** — not a larger framework.
 
+### Recommended daily entry (productized today)
+
+Use this order on a real repo:
+
+1. **CLI read-only cockpit** — `teaagent agent daily gpt "<goal>" --permission-mode read-only --root .`
+2. **Plan** — `teaagent agent preflight gpt "<goal>" --permission-mode read-only`
+3. **Execute** — `teaagent agent run gpt "<goal>" --permission-mode prompt` (or `workspace-write` for file-only edits)
+4. **Recover** — `teaagent agent status <run_id>` → `teaagent agent resume gpt <run_id>` → `teaagent agent undo` when edits need rollback
+
+Prefer **CLI** for scripts/CI and **TUI** (`teaagent tui`) for multi-turn chat, memory, and approvals in one session. VS Code, MCP HTTP, and ACP are integration surfaces — not the default first-hour path.
+
+### Known productization gaps (not release-grade yet)
+
+| Gap | What works today | What is still thin |
+|-----|------------------|-------------------|
+| Background / cloud tasks | `BackgroundRunStore`, `UltraworkStore`, automation cron | Hosted deployment guide, attach/resume UX parity with Codex Cloud / Claude background |
+| Desktop / client-server | MCP HTTP + session list (`teaagent mcp serve --http`) | Packaged desktop app, remote client attach recipes |
+| Repo-map quality | `context_pack`, LSP, hybrid index | Large-repo top-K/latency benchmark gate in CI |
+| Subagent merge | Worktree isolation + lineage | Parent review → merge/conflict CLI for parallel child runs |
+| Automation parity | Foreground argv builder shared with cron | Full skills/memory/tool allowlist parity under live cron (see acceptance flows) |
+
+See [use-cases.md](use-cases.md) for the full gap matrix and planned acceptance files.
+
 ### Start here every morning
 
 Recommended first command (read-only, no model call):

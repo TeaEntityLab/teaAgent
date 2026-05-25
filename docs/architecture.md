@@ -367,7 +367,7 @@ last refreshed 2026-05-24.
 | OAuth / security | ✅ OAuth 2.1 + DPoP | — | ✅ OAuth for MCP | — |
 | Telemetry | ✅ OTEL spans + metrics | ✅ OTEL spans | ✅ OTEL | — |
 | Cloud / background tasks | ✅ Ultrawork + BackgroundRun | ✅ background sessions | ✅ Cloud Tasks | — |
-| Acceptance test coverage | ✅ 104+ AT, P0/P1/P2 tiers | — | ✅ test suite | — |
+| Acceptance test coverage | ✅ See [acceptance.md](acceptance.md) (pytest-collected AT, P0/P1/P2 tiers) | — | ✅ test suite | — |
 | Declarative agent definitions | ✅ YAML/JSON/Markdown | ✅ .claude/agents/*.md | ✅ config.toml | — |
 
 ### TeaAgent Differentiators
