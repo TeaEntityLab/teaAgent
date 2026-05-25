@@ -24,11 +24,18 @@ class SubagentParallelWorktreeMergeFlowTests(unittest.TestCase):
             subprocess.run(
                 ['git', 'add', 'README.md'], cwd=root, check=True, capture_output=True
             )
+            env = {
+                'GIT_AUTHOR_NAME': 'test',
+                'GIT_AUTHOR_EMAIL': 'test@test.com',
+                'GIT_COMMITTER_NAME': 'test',
+                'GIT_COMMITTER_EMAIL': 'test@test.com',
+            }
             subprocess.run(
                 ['git', 'commit', '-m', 'init'],
                 cwd=root,
                 check=True,
                 capture_output=True,
+                env=env,
             )
             (root / '.teaagent').mkdir()
             registry = ToolRegistry()

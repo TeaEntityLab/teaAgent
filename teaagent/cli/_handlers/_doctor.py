@@ -52,11 +52,11 @@ def _looks_like_sensitive_string(value: str) -> bool:
         return True
     if candidate.startswith(('sk-', 'rk-', 'pk-', 'ghp_', 'xoxb-', 'xoxp-')):
         return True
-    if len(candidate) >= 20 and any(ch.isdigit() for ch in candidate) and any(
-        ch.isalpha() for ch in candidate
-    ):
-        return True
-    return False
+    return (
+        len(candidate) >= 20
+        and any(ch.isdigit() for ch in candidate)
+        and any(ch.isalpha() for ch in candidate)
+    )
 
 
 def _redact_sensitive_fields(
