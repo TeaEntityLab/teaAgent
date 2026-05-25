@@ -26,13 +26,21 @@ _SENSITIVE_KEY_MARKERS = (
     'authorization',
     'auth',
 )
+_SENSITIVE_EXACT_KEYS = {
+    'api_token',
+    'api_key_env',
+    'authorization',
+    'cf_aig_authorization',
+}
 
 
 def _is_sensitive_key(key: str) -> bool:
-    if key in {'token_source'}:
+    normalized = key.lower().replace('-', '_')
+    if normalized in {'token_source'}:
         return False
-    lowered = key.lower()
-    return any(marker in lowered for marker in _SENSITIVE_KEY_MARKERS)
+    if normalized in _SENSITIVE_EXACT_KEYS:
+        return True
+    return any(marker in normalized for marker in _SENSITIVE_KEY_MARKERS)
 
 
 def _redact_sensitive_fields(value: Any) -> Any:
