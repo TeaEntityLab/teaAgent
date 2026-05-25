@@ -672,8 +672,27 @@ def doctor_migration_command(args: argparse.Namespace) -> int:
         return 1
 
 
+def _sanitize_doctor_payload(value: Any) -> Any:
+    if isinstance(value, dict):
+        sanitized: dict[Any, Any] = {}
+        for key, item in value.items():
+            key_str = str(key).lower()
+            if (
+                key_str in {'api_token', 'aig_auth_header'}
+                or any(marker in key_str for marker in _SENSITIVE_KEY_MARKERS)
+            ):
+                sanitized[key] = _REDACTED
+                continue
+            sanitized[key] = _sanitize_doctor_payload(item)
+        return sanitized
+    if isinstance(value, list):
+        return [_sanitize_doctor_payload(item) for item in value]
+    return value
+
+
 def print_json(value: Any) -> None:
     if isinstance(value, dict) and value.get('mode') in {'wizard', 'setup'}:
         value = redact_wizard_payload(value)
+    value = _sanitize_doctor_payload(value)
     safe_value = _redact_sensitive_fields(value)
     print(json.dumps(safe_value, ensure_ascii=False, sort_keys=True))
