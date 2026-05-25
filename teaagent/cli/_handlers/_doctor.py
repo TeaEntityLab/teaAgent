@@ -43,6 +43,22 @@ def _is_sensitive_key(key: str) -> bool:
     return any(marker in normalized for marker in _SENSITIVE_KEY_MARKERS)
 
 
+def _looks_like_sensitive_string(value: str) -> bool:
+    candidate = value.strip()
+    if not candidate:
+        return False
+    lower = candidate.lower()
+    if lower.startswith('bearer '):
+        return True
+    if candidate.startswith(('sk-', 'rk-', 'pk-', 'ghp_', 'xoxb-', 'xoxp-')):
+        return True
+    if len(candidate) >= 20 and any(ch.isdigit() for ch in candidate) and any(
+        ch.isalpha() for ch in candidate
+    ):
+        return True
+    return False
+
+
 def _redact_sensitive_fields(
     value: Any, known_sensitive_values: set[str] | None = None
 ) -> Any:
@@ -64,7 +80,9 @@ def _redact_sensitive_fields(
         return [
             _redact_sensitive_fields(item, known_sensitive_values) for item in value
         ]
-    if isinstance(value, str) and value in known_sensitive_values:
+    if isinstance(value, str) and (
+        value in known_sensitive_values or _looks_like_sensitive_string(value)
+    ):
         return _REDACTED
     return value
 
