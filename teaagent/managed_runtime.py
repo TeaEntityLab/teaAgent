@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import secrets
 from dataclasses import dataclass, field
@@ -22,6 +23,26 @@ class ManagedRunResult:
     output: str
     runtime: str
     metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ManagedRuntimeCapability:
+    name: str
+    runtime_class: str
+    sdk_import: str
+    install_hint: str
+    status: str
+    experimental: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'name': self.name,
+            'runtime_class': self.runtime_class,
+            'sdk_import': self.sdk_import,
+            'install_hint': self.install_hint,
+            'status': self.status,
+            'experimental': self.experimental,
+        }
 
 
 def managed_runtime_context(
@@ -111,6 +132,43 @@ _INSTALL_ANTHROPIC = 'pip install anthropic'
 _INSTALL_OPENAI = 'pip install openai'
 _INSTALL_ADK = 'pip install google-adk'
 _INSTALL_VERTEX = 'pip install google-cloud-aiplatform'
+
+_RUNTIME_CAPABILITY_SPECS = (
+    ('anthropic', 'AnthropicManagedRuntime', 'anthropic', _INSTALL_ANTHROPIC),
+    ('openai', 'OpenAIManagedRuntime', 'openai', _INSTALL_OPENAI),
+    ('google-adk', 'GoogleADKRuntime', 'google.adk', _INSTALL_ADK),
+    (
+        'vertex-agent-engine',
+        'VertexAgentRuntime',
+        'google.cloud.aiplatform',
+        _INSTALL_VERTEX,
+    ),
+)
+
+
+def managed_runtime_capabilities() -> list[dict[str, Any]]:
+    """Return optional managed runtime adapter availability without importing SDKs."""
+
+    capabilities: list[dict[str, Any]] = []
+    for name, runtime_class, sdk_import, install_hint in _RUNTIME_CAPABILITY_SPECS:
+        status = 'available' if _sdk_import_available(sdk_import) else 'missing_sdk'
+        capabilities.append(
+            ManagedRuntimeCapability(
+                name=name,
+                runtime_class=runtime_class,
+                sdk_import=sdk_import,
+                install_hint=install_hint,
+                status=status,
+            ).to_dict()
+        )
+    return capabilities
+
+
+def _sdk_import_available(module_name: str) -> bool:
+    try:
+        return importlib.util.find_spec(module_name) is not None
+    except ModuleNotFoundError:
+        return False
 
 
 def _format_vertex_output(value: Any) -> str:

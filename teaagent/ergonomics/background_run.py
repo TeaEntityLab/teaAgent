@@ -27,6 +27,7 @@ class BackgroundRunRecord:
     run_id: Optional[str] = None
     label: Optional[str] = None
     stopped_at: Optional[str] = None
+    exit_code: Optional[int] = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -78,10 +79,13 @@ class BackgroundRunStore:
         if not record_path.exists():
             raise FileNotFoundError(f"background run '{background_id}' not found")
         data = json.loads(record_path.read_text(encoding='utf-8'))
-        data['alive'] = _is_alive(int(data['pid']))
+        data = _refresh_process_state(data, record_path)
         run_id = _run_id_from_log(Path(str(data['log_path'])))
         if run_id:
+            previous_run_id = data.get('run_id')
             data['run_id'] = run_id
+            if previous_run_id != run_id:
+                _persist_record_state(record_path, data)
         return data
 
     def update_run_id(self, background_id: str, run_id: str) -> None:
@@ -98,14 +102,57 @@ class BackgroundRunStore:
             self.dir.glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True
         ):
             data = json.loads(path.read_text(encoding='utf-8'))
-            data['alive'] = _is_alive(int(data['pid']))
+            data = _refresh_process_state(data, path)
             log_path = Path(str(data.get('log_path', '')))
             if not data.get('run_id'):
                 run_id = _run_id_from_log(log_path)
                 if run_id:
                     data['run_id'] = run_id
+                    _persist_record_state(path, data)
             rows.append(data)
         return rows
+
+
+def _persist_record_state(path: Path, data: dict[str, Any]) -> None:
+    persisted = {k: v for k, v in data.items() if k != 'alive'}
+    atomic_write_text(path, json.dumps(persisted, sort_keys=True))
+
+
+def _exit_code_from_wait_status(status: int) -> int:
+    if os.WIFEXITED(status):
+        return os.WEXITSTATUS(status)
+    if os.WIFSIGNALED(status):
+        return -os.WTERMSIG(status)
+    return status
+
+
+def _refresh_process_state(data: dict[str, Any], record_path: Path) -> dict[str, Any]:
+    if data.get('stopped_at'):
+        data['alive'] = False
+        return data
+
+    pid = int(data['pid'])
+    alive = _is_alive(pid)
+    exit_code: Optional[int] = None
+    if alive:
+        try:
+            waited_pid, status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            waited_pid = 0
+        except OSError:
+            waited_pid = pid
+            status = 1
+        if waited_pid == pid:
+            alive = False
+            exit_code = _exit_code_from_wait_status(status)
+
+    data['alive'] = alive
+    if not alive:
+        data['stopped_at'] = _utc_now()
+        if exit_code is not None:
+            data['exit_code'] = exit_code
+        _persist_record_state(record_path, data)
+    return data
 
 
 def _is_alive(pid: int) -> bool:
@@ -166,10 +213,30 @@ def build_agent_run_command(args: Any, task: str) -> list[str]:
         cmd.extend(['--permission-mode', args.permission_mode])
     if getattr(args, 'subagent', False):
         cmd.append('--subagent')
+    if getattr(args, 'max_subagent_depth', None) not in (None, 1):
+        cmd.extend(['--max-subagent-depth', str(args.max_subagent_depth)])
     if getattr(args, 'heartbeat', 0.0):
         cmd.extend(['--heartbeat', str(args.heartbeat)])
     if getattr(args, 'code_analysis', False):
         cmd.append('--code-analysis')
+    if getattr(args, 'telemetry_otlp_endpoint', None):
+        cmd.extend(['--telemetry-otlp-endpoint', str(args.telemetry_otlp_endpoint)])
+    if getattr(args, 'telemetry_service_name', None) not in (None, 'teaagent'):
+        cmd.extend(['--telemetry-service-name', str(args.telemetry_service_name)])
+    if getattr(args, 'telemetry_console', False):
+        cmd.append('--telemetry-console')
+    if getattr(args, 'checkpoint_store', None):
+        cmd.extend(['--checkpoint-store', str(args.checkpoint_store)])
+    if getattr(args, 'progress', None) is True:
+        cmd.append('--progress')
+    if getattr(args, 'no_progress', False):
+        cmd.append('--no-progress')
+    if getattr(args, 'stream', False):
+        cmd.append('--stream')
+    if getattr(args, 'stream_raw', False):
+        cmd.append('--stream-raw')
+    if getattr(args, 'json_stream', False):
+        cmd.append('--json-stream')
     if getattr(args, 'context_profile', None):
         cmd.extend(['--context-profile', args.context_profile])
     max_cost = int(getattr(args, 'max_estimated_cost_cents', 0) or 0)

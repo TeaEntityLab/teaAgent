@@ -130,6 +130,18 @@ def _register(
                         'container_path': {'type': 'string'},
                     },
                 },
+                'review': {
+                    'type': 'object',
+                    'properties': {
+                        'review_id': {'type': 'string'},
+                        'patch_path': {'type': 'string'},
+                        'status_path': {'type': 'string'},
+                        'changed_files': {
+                            'type': 'array',
+                            'items': {'type': 'string'},
+                        },
+                    },
+                },
             },
             'required': ['status'],
         },
@@ -294,6 +306,18 @@ def _register_batch(
                                     'batch_index': {'type': 'integer'},
                                     'worktree_path': {'type': 'string'},
                                     'container_path': {'type': 'string'},
+                                },
+                            },
+                            'review': {
+                                'type': 'object',
+                                'properties': {
+                                    'review_id': {'type': 'string'},
+                                    'patch_path': {'type': 'string'},
+                                    'status_path': {'type': 'string'},
+                                    'changed_files': {
+                                        'type': 'array',
+                                        'items': {'type': 'string'},
+                                    },
                                 },
                             },
                         },

@@ -14,6 +14,7 @@ from teaagent.managed_runtime import (
     _format_vertex_output,
     _vertex_agent_resource_name,
     _vertex_query_engine,
+    managed_runtime_capabilities,
 )
 
 
@@ -146,6 +147,18 @@ class RuntimeStubImportTests(unittest.TestCase):
 
 
 class ManagedRuntimeHelperTests(unittest.TestCase):
+    def test_managed_runtime_capabilities_report_optional_sdk_status(self) -> None:
+        capabilities = managed_runtime_capabilities()
+        names = {item['name'] for item in capabilities}
+        self.assertIn('anthropic', names)
+        self.assertIn('openai', names)
+        self.assertIn('google-adk', names)
+        self.assertIn('vertex-agent-engine', names)
+        for item in capabilities:
+            self.assertIn(item['status'], {'available', 'missing_sdk'})
+            self.assertTrue(item['experimental'])
+            self.assertTrue(item['install_hint'])
+
     def test_format_vertex_output_nested_dict(self) -> None:
         self.assertEqual(
             _format_vertex_output({'output': {'text': 'hello'}}),

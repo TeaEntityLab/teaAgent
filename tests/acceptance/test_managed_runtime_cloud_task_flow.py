@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from teaagent.audit import AuditLogger
-from teaagent.managed_runtime import ManagedAgentRunner
+from teaagent.managed_runtime import ManagedAgentRunner, managed_runtime_capabilities
 
 
 class _CloudTaskStub:
@@ -41,6 +41,16 @@ class _CloudTaskStub:
 
 
 class ManagedRuntimeCloudTaskFlowTests(unittest.TestCase):
+    def test_managed_runtime_capabilities_are_explicit_about_optional_sdks(
+        self,
+    ) -> None:
+        capabilities = managed_runtime_capabilities()
+        self.assertGreaterEqual(len(capabilities), 4)
+        for capability in capabilities:
+            self.assertIn(capability['status'], {'available', 'missing_sdk'})
+            self.assertIn('pip install', capability['install_hint'])
+            self.assertTrue(capability['experimental'])
+
     def test_cloud_stub_run_poll_cancel_and_audit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / 'cloud-run.jsonl'

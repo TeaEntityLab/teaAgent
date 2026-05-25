@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 from teaagent.ergonomics.background_run import BackgroundRunStore, _run_id_from_log
@@ -44,6 +45,28 @@ def test_background_start_echo_command(tmp_path: Path) -> None:
     shown = store.get(record.background_id)
     assert shown['label'] == 'echo-smoke'
     assert 'log_path' in shown
+
+
+def test_background_reconciles_completed_child_process(tmp_path: Path) -> None:
+    store = BackgroundRunStore(tmp_path)
+    record = store.start(
+        [
+            sys.executable,
+            '-c',
+            "import json; print(json.dumps({'run_id':'run-live-bg','status':'completed'}))",
+        ],
+        label='live-smoke',
+    )
+    shown = store.get(record.background_id)
+    deadline = time.time() + 5.0
+    while shown['alive'] and time.time() < deadline:
+        time.sleep(0.05)
+        shown = store.get(record.background_id)
+
+    assert shown['alive'] is False
+    assert shown['exit_code'] == 0
+    assert shown['run_id'] == 'run-live-bg'
+    assert shown['stopped_at']
 
 
 def test_background_show_includes_run_id_from_log(tmp_path: Path) -> None:

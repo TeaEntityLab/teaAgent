@@ -22,6 +22,16 @@ def register(
     _card(subs, handlers['card'])
     if 'attach' in handlers:
         _attach(subs, handlers['attach'])
+    if 'subagent_review_list' in handlers:
+        _subagent_review(
+            subs,
+            {
+                'list': handlers['subagent_review_list'],
+                'show': handlers['subagent_review_show'],
+                'check': handlers['subagent_review_check'],
+                'apply': handlers['subagent_review_apply'],
+            },
+        )
     if 'automation_add' in handlers:
         _automation(
             subs,
@@ -737,3 +747,41 @@ def _card(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type:
         help='Public endpoint URL to embed in the card (optional).',
     )
     p.set_defaults(func=handler)
+
+
+def _subagent_review(
+    subs: argparse._SubParsersAction,
+    handlers: dict[str, Callable],  # type: ignore[type-arg]
+) -> None:
+    p = subs.add_parser(
+        'subagent-review',
+        help='Inspect and apply isolated subagent review patches.',
+    )
+    commands = p.add_subparsers(dest='subagent_review_command', required=True)
+
+    list_cmd = commands.add_parser('list', help='List subagent review artifacts.')
+    list_cmd.add_argument('--root', default='.', help='Workspace root.')
+    list_cmd.add_argument('--parent-run-id', default=None)
+    list_cmd.set_defaults(func=handlers['list'])
+
+    show = commands.add_parser('show', help='Show one subagent review artifact.')
+    show.add_argument('review_id')
+    show.add_argument('--root', default='.', help='Workspace root.')
+    show.add_argument('--parent-run-id', default=None)
+    show.set_defaults(func=handlers['show'])
+
+    check = commands.add_parser(
+        'check', help='Check whether a review patch applies cleanly.'
+    )
+    check.add_argument('review_id')
+    check.add_argument('--root', default='.', help='Workspace root.')
+    check.add_argument('--parent-run-id', default=None)
+    check.set_defaults(func=handlers['check'])
+
+    apply = commands.add_parser(
+        'apply', help='Apply one reviewed subagent patch with git apply --3way.'
+    )
+    apply.add_argument('review_id')
+    apply.add_argument('--root', default='.', help='Workspace root.')
+    apply.add_argument('--parent-run-id', default=None)
+    apply.set_defaults(func=handlers['apply'])

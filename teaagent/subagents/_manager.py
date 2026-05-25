@@ -13,6 +13,7 @@ from teaagent.subagents._isolation import (
     prepare_subagent_isolation,
 )
 from teaagent.subagents._loader import load_subagent_defs
+from teaagent.subagents._review import capture_subagent_review
 from teaagent.subagents._types import (
     DEFAULT_SUBAGENT_ISOLATION,
     SubagentDef,
@@ -49,7 +50,7 @@ class SubagentManager:
     ) -> None:
         self._defs = load_subagent_defs(root)
         self._sessions: dict[str, SubagentSession] = {}
-        self._root = root
+        self._root = root.resolve()
         self._parent_config = parent_config
         self._parent_adapter = parent_adapter
         self._parent_registry: Any = None
@@ -174,9 +175,9 @@ class SubagentManager:
         worktree_rel: Optional[str] = None
         container_rel: Optional[str] = None
         if iso_ctx.worktree_path is not None:
-            worktree_rel = iso_ctx.worktree_path.relative_to(self._root).as_posix()
+            worktree_rel = _path_relative_to_root(iso_ctx.worktree_path, self._root)
         if iso_ctx.container_path is not None:
-            container_rel = iso_ctx.container_path.relative_to(self._root).as_posix()
+            container_rel = _path_relative_to_root(iso_ctx.container_path, self._root)
         lineage = SubagentLineage(
             parent_run_id=parent_run_id,
             def_name=def_used,
@@ -206,6 +207,19 @@ class SubagentManager:
                 sub_result.run_id,
                 **lineage.to_dict(),
             )
+            review = capture_subagent_review(
+                parent_root=self._root,
+                child_root=iso_ctx.child_root,
+                parent_run_id=parent_run_id,
+                child_run_id=sub_result.run_id,
+                lineage=lineage,
+            )
+            if review is not None:
+                sub_audit.record(
+                    'subagent_review_artifact',
+                    sub_result.run_id,
+                    **review,
+                )
             store.logger_for_result(sub_result, sub_audit)
             completed_at = datetime.now(timezone.utc).isoformat()
             session = SubagentSession(
@@ -225,6 +239,7 @@ class SubagentManager:
                 final_answer=(
                     sub_result.final_answer.content if sub_result.final_answer else ''
                 ),
+                review=review,
             )
             self._sessions[session.session_id] = session
             return _success(session)
@@ -264,8 +279,12 @@ def _normalize_name(name: str) -> str:
     return name.strip().lower().replace('_', '-').replace(' ', '-')
 
 
+def _path_relative_to_root(path: Path, root: Path) -> str:
+    return path.resolve().relative_to(root.resolve()).as_posix()
+
+
 def _success(session: SubagentSession) -> dict[str, Any]:
-    return {
+    payload = {
         'run_id': session.session_id,
         'status': session.status,
         'iterations': session.iterations,
@@ -274,6 +293,10 @@ def _success(session: SubagentSession) -> dict[str, Any]:
         'lineage': session.lineage.to_dict(),
         'message': '',
     }
+    if session.review is not None:
+        payload['review'] = session.review
+        payload['message'] = 'review artifact ready for parent check/apply'
+    return payload
 
 
 def _error(

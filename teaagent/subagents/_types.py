@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from teaagent.policy import PermissionMode
 
@@ -69,6 +69,7 @@ class SubagentSession:
     iterations: int = 0
     tool_calls: int = 0
     final_answer: str = ''
+    review: Optional[dict[str, Any]] = None
 
     @property
     def lineage(self) -> SubagentLineage:

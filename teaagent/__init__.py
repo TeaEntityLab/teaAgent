@@ -156,7 +156,10 @@ from teaagent.llm_conformance import (
     ModelConformanceResult,
     run_model_conformance,
 )
-from teaagent.managed_runtime import managed_runtime_context
+from teaagent.managed_runtime import (
+    managed_runtime_capabilities,
+    managed_runtime_context,
+)
 from teaagent.mcp_client import MCPClientError, MCPHTTPClient
 from teaagent.mcp_http import build_mcp_http_server, serve_mcp_http
 from teaagent.mcp_server import handle_mcp_request, serve_mcp_stdio
@@ -459,6 +462,7 @@ __all__ = [
     'run_tests_hook',
     'shell_command_hook',
     'managed_runtime_context',
+    'managed_runtime_capabilities',
     'parse_model_decision',
     'parse_permission_mode',
     'preflight',

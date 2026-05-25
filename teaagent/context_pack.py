@@ -79,6 +79,45 @@ def _resolve_candidate_file(root: Path, raw: str) -> dict[str, Any]:
     }
 
 
+def _candidate_from_graph_hit(root: Path, hit: dict[str, Any]) -> dict[str, Any] | None:
+    raw = str(hit.get('path') or hit.get('doc_id') or '').strip()
+    if not raw:
+        return None
+    entry = _resolve_candidate_file(root, raw)
+    if not entry['exists']:
+        return None
+    entry['reason'] = 'graph_rag_hit'
+    entry['source'] = str(hit.get('source') or hit.get('backend') or 'graph_rag')
+    if 'score' in hit:
+        entry['score'] = hit.get('score')
+    snippet = str(hit.get('snippet', '')).strip()
+    if snippet:
+        entry['snippet'] = snippet[:200]
+    return entry
+
+
+def _append_graph_hit_candidates(
+    *,
+    root: Path,
+    candidate_files: list[dict[str, Any]],
+    graph_rag: dict[str, Any],
+    file_limit: int,
+) -> list[dict[str, Any]]:
+    seen = {str(entry.get('path')) for entry in candidate_files}
+    enriched = list(candidate_files)
+    for hit in graph_rag.get('hits', []):
+        if not isinstance(hit, dict):
+            continue
+        entry = _candidate_from_graph_hit(root, hit)
+        if entry is None or entry['path'] in seen:
+            continue
+        enriched.append(entry)
+        seen.add(entry['path'])
+        if len(enriched) >= file_limit:
+            break
+    return enriched
+
+
 def _file_stat_symbol(entry: dict[str, Any]) -> dict[str, Any]:
     path = Path(str(entry['resolved']))
     try:
@@ -403,6 +442,15 @@ def build_context_pack(
         entry.to_dict()
         for entry in MemoryCatalog(root_path).search(task, limit=memory_limit)
     ]
+    graph_rag = _graph_rag_evidence(
+        root_path, task, search_graph=search_graph, hit_limit=graph_hit_limit
+    )
+    candidate_files = _append_graph_hit_candidates(
+        root=root_path,
+        candidate_files=candidate_files,
+        graph_rag=graph_rag,
+        file_limit=file_limit,
+    )
     symbols = _symbol_hints(
         root_path,
         candidate_files,
@@ -410,9 +458,6 @@ def build_context_pack(
         limit=symbol_limit,
         hydrate_lsp=hydrate_lsp,
         code_analysis_config=code_analysis_config,
-    )
-    graph_rag = _graph_rag_evidence(
-        root_path, task, search_graph=search_graph, hit_limit=graph_hit_limit
     )
 
     return ContextPack(

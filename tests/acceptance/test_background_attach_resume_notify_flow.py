@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import io
-import json
 import sys
+import time
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
@@ -34,19 +34,24 @@ def test_background_start_list_and_session_stream(tmp_path: Path) -> None:
 
     bg = BackgroundRunStore(tmp_path)
     record = bg.start(
-        [sys.executable, '-c', "print('ok')"],
+        [
+            sys.executable,
+            '-c',
+            "import json; print(json.dumps({'run_id':'run-bg-flow','status':'completed'}))",
+        ],
         label='acceptance-bg',
     )
     rows = bg.list()
     assert any(row['background_id'] == record.background_id for row in rows)
 
-    log_path = Path(record.log_path)
-    log_path.write_text(
-        json.dumps({'run_id': 'run-bg-flow', 'status': 'completed'}) + '\n',
-        encoding='utf-8',
-    )
     shown = bg.get(record.background_id)
+    deadline = time.time() + 5.0
+    while shown['alive'] and time.time() < deadline:
+        time.sleep(0.05)
+        shown = bg.get(record.background_id)
     assert shown['run_id'] == 'run-bg-flow'
+    assert shown['alive'] is False
+    assert shown['exit_code'] == 0
 
     events = list(stream_run_events('run-bg-flow', root=tmp_path))
     assert any(e.get('event_type') == 'run_completed' for e in events)
