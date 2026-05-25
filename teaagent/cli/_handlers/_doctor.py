@@ -43,18 +43,29 @@ def _is_sensitive_key(key: str) -> bool:
     return any(marker in normalized for marker in _SENSITIVE_KEY_MARKERS)
 
 
-def _redact_sensitive_fields(value: Any) -> Any:
+def _redact_sensitive_fields(
+    value: Any, known_sensitive_values: set[str] | None = None
+) -> Any:
+    if known_sensitive_values is None:
+        known_sensitive_values = set()
+
     if isinstance(value, dict):
         redacted: dict[Any, Any] = {}
         for k, v in value.items():
             key_str = str(k)
             if _is_sensitive_key(key_str):
+                if isinstance(v, str) and v:
+                    known_sensitive_values.add(v)
                 redacted[k] = _REDACTED
             else:
-                redacted[k] = _redact_sensitive_fields(v)
+                redacted[k] = _redact_sensitive_fields(v, known_sensitive_values)
         return redacted
     if isinstance(value, list):
-        return [_redact_sensitive_fields(item) for item in value]
+        return [
+            _redact_sensitive_fields(item, known_sensitive_values) for item in value
+        ]
+    if isinstance(value, str) and value in known_sensitive_values:
+        return _REDACTED
     return value
 
 
