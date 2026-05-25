@@ -52,6 +52,10 @@ def _looks_like_sensitive_string(value: str) -> bool:
         return True
     if candidate.startswith(('sk-', 'rk-', 'pk-', 'ghp_', 'xoxb-', 'xoxp-')):
         return True
+    # API keys and tokens are continuous strings without spaces;
+    # commands, paths, and sentences with spaces are not secrets.
+    if ' ' in candidate:
+        return False
     return (
         len(candidate) >= 20
         and any(ch.isdigit() for ch in candidate)
@@ -676,11 +680,7 @@ def _sanitize_doctor_payload(value: Any) -> Any:
     if isinstance(value, dict):
         sanitized: dict[Any, Any] = {}
         for key, item in value.items():
-            key_str = str(key).lower()
-            if (
-                key_str in {'api_token', 'aig_auth_header'}
-                or any(marker in key_str for marker in _SENSITIVE_KEY_MARKERS)
-            ):
+            if _is_sensitive_key(key):
                 sanitized[key] = _REDACTED
                 continue
             sanitized[key] = _sanitize_doctor_payload(item)
