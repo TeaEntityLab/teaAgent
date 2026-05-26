@@ -370,9 +370,11 @@ class ApprovalPresetStore:
 
         backup_path = None
         if self.path.is_file():
+            import time
+
             backup_path = str(
                 self.path.with_suffix(
-                    f'.json.backup.{datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")}'
+                    f'.json.backup.{datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")}.{time.time_ns()}'
                 )
             )
             try:

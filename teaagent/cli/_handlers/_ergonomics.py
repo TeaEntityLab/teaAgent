@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from typing import Any
+from typing import Any, Callable
 
 from teaagent.cli._handlers._misc import print_json
 from teaagent.daily import build_daily_brief
@@ -16,6 +16,25 @@ from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
 from teaagent.policy import parse_permission_mode
 from teaagent.recipes.registry import list_recipes, run_recipe
 from teaagent.run_store import RunStore
+
+
+def _wrap_approval_store_errors(func: Callable[[], int]) -> int:
+    """Unified error boundary for approval store operations.
+
+    Catches IOError from corrupt approvals.json and returns a helpful JSON response
+    suggesting the repair command instead of crashing with a raw exception.
+    """
+    try:
+        return func()
+    except IOError as exc:
+        print_json(
+            {
+                'status': 'issues_found',
+                'issues': [str(exc)],
+                'suggested_command': 'teaagent approval doctor --repair-store',
+            }
+        )
+        return 1
 
 
 def yesterday_command(args: argparse.Namespace) -> int:
@@ -180,137 +199,146 @@ def recipes_run_command(args: argparse.Namespace) -> int:
 
 
 def approval_list_command(args: argparse.Namespace) -> int:
-    store = ApprovalPresetStore(args.root)
-    if getattr(args, 'scoped', False):
-        print_json(store.list_all_scoped_approvals())
-    elif getattr(args, 'grants_only', False):
-        print_json([grant.to_dict() for grant in store.list_grants()])
-    else:
-        print_json(store.list_policy())
-    return 0
+    def _list() -> int:
+        store = ApprovalPresetStore(args.root)
+        if getattr(args, 'scoped', False):
+            print_json(store.list_all_scoped_approvals())
+        elif getattr(args, 'grants_only', False):
+            print_json([grant.to_dict() for grant in store.list_grants()])
+        else:
+            print_json(store.list_policy())
+        return 0
+
+    return _wrap_approval_store_errors(_list)
 
 
 def approval_check_command(args: argparse.Namespace) -> int:
     import json
 
-    store = ApprovalPresetStore(args.root)
-    arguments: dict[str, Any] = {}
+    def _check() -> int:
+        store = ApprovalPresetStore(args.root)
+        arguments: dict[str, Any] = {}
 
-    # Parse --arguments-json if provided (highest priority)
-    if args.arguments_json:
-        try:
-            arguments = json.loads(args.arguments_json)
-            if not isinstance(arguments, dict):
+        # Parse --arguments-json if provided (highest priority)
+        if args.arguments_json:
+            try:
+                arguments = json.loads(args.arguments_json)
+                if not isinstance(arguments, dict):
+                    print_json(
+                        {
+                            'status': 'error',
+                            'message': '--arguments-json must be a JSON object',
+                        }
+                    )
+                    return 1
+            except json.JSONDecodeError as exc:
                 print_json(
                     {
                         'status': 'error',
-                        'message': '--arguments-json must be a JSON object',
+                        'message': f'Invalid JSON in --arguments-json: {exc}',
                     }
                 )
                 return 1
-        except json.JSONDecodeError as exc:
-            print_json(
-                {
-                    'status': 'error',
-                    'message': f'Invalid JSON in --arguments-json: {exc}',
-                }
-            )
-            return 1
-    else:
-        # Parse --arg key=value pairs
-        for arg_pair in args.arg:
-            if '=' not in arg_pair:
-                print_json(
-                    {
-                        'status': 'error',
-                        'message': f'Invalid --arg format: {arg_pair} (expected key=value)',
-                    }
-                )
-                return 1
-            key, value = arg_pair.split('=', 1)
-            arguments[key] = value
+        else:
+            # Parse --arg key=value pairs
+            for arg_pair in args.arg:
+                if '=' not in arg_pair:
+                    print_json(
+                        {
+                            'status': 'error',
+                            'message': f'Invalid --arg format: {arg_pair} (expected key=value)',
+                        }
+                    )
+                    return 1
+                key, value = arg_pair.split('=', 1)
+                arguments[key] = value
 
-        # Fall back to --path and --command for compatibility
-        if args.path and 'path' not in arguments:
-            arguments['path'] = args.path
-        if args.command and 'command' not in arguments:
-            arguments['command'] = args.command
+            # Fall back to --path and --command for compatibility
+            if args.path and 'path' not in arguments:
+                arguments['path'] = args.path
+            if args.command and 'command' not in arguments:
+                arguments['command'] = args.command
 
-    result = store.check(
-        args.tool_name,
-        permission_mode=args.permission_mode,
-        arguments=arguments or None,
-    )
-    print_json(result)
-    return 0
+        result = store.check(
+            args.tool_name,
+            permission_mode=args.permission_mode,
+            arguments=arguments or None,
+        )
+        print_json(result)
+        return 0
+
+    return _wrap_approval_store_errors(_check)
 
 
 def approval_explain_command(args: argparse.Namespace) -> int:
     import json
 
-    store = ApprovalPresetStore(args.root)
-    arguments: dict[str, Any] = {}
+    def _explain() -> int:
+        store = ApprovalPresetStore(args.root)
+        arguments: dict[str, Any] = {}
 
-    # Parse --arguments-json if provided (highest priority)
-    if args.arguments_json:
-        try:
-            arguments = json.loads(args.arguments_json)
-            if not isinstance(arguments, dict):
+        # Parse --arguments-json if provided (highest priority)
+        if args.arguments_json:
+            try:
+                arguments = json.loads(args.arguments_json)
+                if not isinstance(arguments, dict):
+                    print_json(
+                        {
+                            'status': 'error',
+                            'message': '--arguments-json must be a JSON object',
+                        }
+                    )
+                    return 1
+            except json.JSONDecodeError as exc:
                 print_json(
                     {
                         'status': 'error',
-                        'message': '--arguments-json must be a JSON object',
+                        'message': f'Invalid JSON in --arguments-json: {exc}',
                     }
                 )
                 return 1
-        except json.JSONDecodeError as exc:
-            print_json(
-                {
-                    'status': 'error',
-                    'message': f'Invalid JSON in --arguments-json: {exc}',
-                }
-            )
-            return 1
-    else:
-        # Parse --arg key=value pairs
-        for arg_pair in args.arg:
-            if '=' not in arg_pair:
-                print_json(
-                    {
-                        'status': 'error',
-                        'message': f'Invalid --arg format: {arg_pair} (expected key=value)',
-                    }
-                )
-                return 1
-            key, value = arg_pair.split('=', 1)
-            arguments[key] = value
+        else:
+            # Parse --arg key=value pairs
+            for arg_pair in args.arg:
+                if '=' not in arg_pair:
+                    print_json(
+                        {
+                            'status': 'error',
+                            'message': f'Invalid --arg format: {arg_pair} (expected key=value)',
+                        }
+                    )
+                    return 1
+                key, value = arg_pair.split('=', 1)
+                arguments[key] = value
 
-        # Fall back to --path and --command for compatibility
-        if args.path and 'path' not in arguments:
-            arguments['path'] = args.path
-        if args.command and 'command' not in arguments:
-            arguments['command'] = args.command
+            # Fall back to --path and --command for compatibility
+            if args.path and 'path' not in arguments:
+                arguments['path'] = args.path
+            if args.command and 'command' not in arguments:
+                arguments['command'] = args.command
 
-    result = store.check(
-        args.tool_name,
-        permission_mode=args.permission_mode,
-        arguments=arguments or None,
-        include_inactive=True,
-    )
-    # Add explanation summary
-    explanation = {
-        'tool_name': args.tool_name,
-        'permission_mode': args.permission_mode,
-        'arguments': arguments,
-        'decision': result['decision'],
-        'allowed': result['allowed'],
-        'policy_order': result['policy_order'],
-        'evaluated_grants': result['evaluated_grants'],
-        'matched_grant': result['matched_grant'],
-        'summary': _build_explanation_summary(result),
-    }
-    print_json(explanation)
-    return 0
+        result = store.check(
+            args.tool_name,
+            permission_mode=args.permission_mode,
+            arguments=arguments or None,
+            include_inactive=True,
+        )
+        # Add explanation summary
+        explanation = {
+            'tool_name': args.tool_name,
+            'permission_mode': args.permission_mode,
+            'arguments': arguments,
+            'decision': result['decision'],
+            'allowed': result['allowed'],
+            'policy_order': result['policy_order'],
+            'evaluated_grants': result['evaluated_grants'],
+            'matched_grant': result['matched_grant'],
+            'summary': _build_explanation_summary(result),
+        }
+        print_json(explanation)
+        return 0
+
+    return _wrap_approval_store_errors(_explain)
 
 
 def _build_explanation_summary(check_result: dict[str, Any]) -> str:
@@ -342,59 +370,71 @@ def _build_explanation_summary(check_result: dict[str, Any]) -> str:
 
 
 def approval_revoke_command(args: argparse.Namespace) -> int:
-    store = ApprovalPresetStore(args.root)
-    revoked = store.revoke(args.grant_id)
-    if not revoked:
-        print_json(
-            {
-                'status': 'error',
-                'message': f"grant '{args.grant_id}' not found",
-            }
-        )
-        return 1
-    print_json({'status': 'revoked', 'grant_id': args.grant_id})
-    return 0
+    def _revoke() -> int:
+        store = ApprovalPresetStore(args.root)
+        revoked = store.revoke(args.grant_id)
+        if not revoked:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f"grant '{args.grant_id}' not found",
+                }
+            )
+            return 1
+        print_json({'status': 'revoked', 'grant_id': args.grant_id})
+        return 0
+
+    return _wrap_approval_store_errors(_revoke)
 
 
 def approval_grant_command(args: argparse.Namespace) -> int:
-    store = ApprovalPresetStore(args.root)
-    grant = store.grant(
-        args.tool_name,
-        scope=args.scope,
-        permission_mode=args.permission_mode,
-        path_globs=args.path_glob or None,
-        command_prefixes=args.command_prefix or None,
-        ttl_hours=args.ttl_hours,
-    )
-    print_json(grant.to_dict())
-    return 0
+    def _grant() -> int:
+        store = ApprovalPresetStore(args.root)
+        grant = store.grant(
+            args.tool_name,
+            scope=args.scope,
+            permission_mode=args.permission_mode,
+            path_globs=args.path_glob or None,
+            command_prefixes=args.command_prefix or None,
+            ttl_hours=args.ttl_hours,
+        )
+        print_json(grant.to_dict())
+        return 0
+
+    return _wrap_approval_store_errors(_grant)
 
 
 def approval_deny_command(args: argparse.Namespace) -> int:
-    store = ApprovalPresetStore(args.root)
-    grant = store.deny(
-        args.tool_name,
-        path_globs=args.path_glob or None,
-        command_prefixes=args.command_prefix or None,
-    )
-    print_json(grant.to_dict())
-    return 0
+    def _deny() -> int:
+        store = ApprovalPresetStore(args.root)
+        grant = store.deny(
+            args.tool_name,
+            path_globs=args.path_glob or None,
+            command_prefixes=args.command_prefix or None,
+        )
+        print_json(grant.to_dict())
+        return 0
+
+    return _wrap_approval_store_errors(_deny)
 
 
 def approval_audit_command(args: argparse.Namespace) -> int:
-    store = ApprovalPresetStore(args.root)
-    events = store.audit_tail(args.limit)
-    if getattr(args, 'scoped', False):
-        scoped_actions = {
-            'scoped_approval',
-            'consume_scoped_approval',
-            'consume_once',
-            'prune_scoped_approvals',
-            'clear_legacy_approved_call_ids',
-        }
-        events = [e for e in events if e.get('action') in scoped_actions]
-    print_json(events)
-    return 0
+    def _audit() -> int:
+        store = ApprovalPresetStore(args.root)
+        events = store.audit_tail(args.limit)
+        if getattr(args, 'scoped', False):
+            scoped_actions = {
+                'scoped_approval',
+                'consume_scoped_approval',
+                'consume_once',
+                'prune_scoped_approvals',
+                'clear_legacy_approved_call_ids',
+            }
+            events = [e for e in events if e.get('action') in scoped_actions]
+        print_json(events)
+        return 0
+
+    return _wrap_approval_store_errors(_audit)
 
 
 def approval_pending_command(args: argparse.Namespace) -> int:
@@ -526,125 +566,128 @@ def approval_approve_command(args: argparse.Namespace) -> int:
 
 
 def approval_preset_command(args: argparse.Namespace) -> int:
-    store = ApprovalPresetStore(args.root)
-    preset_name = args.name
+    def _preset() -> int:
+        store = ApprovalPresetStore(args.root)
+        preset_name = args.name
 
-    # Define preset templates
-    presets: dict[str, dict[str, Any]] = {
-        'dev-safe': {
-            'description': 'Allow workspace writes, pytest, git diff/status; deny secrets/** and deploy commands',
-            'grants': [
-                {
-                    'tool_name': 'workspace_write_file',
-                    'scope': 'session',
-                    'path_globs': ['src/**', 'tests/**', '*.py', '*.md', '*.txt'],
-                    'permission_mode': 'workspace-write',
-                },
-                {
-                    'tool_name': 'workspace_run_shell_mutate',
-                    'scope': 'session',
-                    'command_prefixes': ['pytest ', 'git diff', 'git status'],
-                },
-                {
-                    'tool_name': 'workspace_run_shell_mutate',
-                    'scope': 'deny',
-                    'command_prefixes': ['deploy', 'prod', 'production'],
-                },
-                {
-                    'tool_name': 'workspace_write_file',
-                    'scope': 'deny',
-                    'path_globs': ['secrets/**', '.env*', '*.key', '*.pem'],
-                },
-            ],
-        },
-        'ci-safe': {
-            'description': 'Read-only mode for CI environments',
-            'grants': [
-                {
-                    'tool_name': 'workspace_read_file',
-                    'scope': 'always',
-                },
-                {
-                    'tool_name': 'workspace_run_shell_mutate',
-                    'scope': 'session',
-                    'command_prefixes': ['git diff', 'git status', 'cat ', 'ls '],
-                },
-            ],
-        },
-        'strict': {
-            'description': 'Deny all destructive tools, require explicit approval',
-            'grants': [
-                {
-                    'tool_name': 'workspace_write_file',
-                    'scope': 'deny',
-                },
-                {
-                    'tool_name': 'workspace_run_shell_mutate',
-                    'scope': 'deny',
-                },
-            ],
-        },
-    }
-
-    if preset_name not in presets:
-        print_json({'status': 'error', 'message': f'Unknown preset: {preset_name}'})
-        return 1
-
-    preset = presets[preset_name]
-
-    # Check for duplicate grants to avoid bloat
-    existing_grants = store.list_grants()
-    existing_signatures = {
-        (
-            g.tool_name,
-            g.scope,
-            g.permission_mode,
-            tuple(sorted(g.path_globs)),
-            tuple(sorted(g.command_prefixes)),
-        )
-        for g in existing_grants
-    }
-
-    applied = []
-    skipped = []
-    for grant_config in preset['grants']:
-        signature = (
-            grant_config['tool_name'],
-            grant_config['scope'],
-            grant_config.get('permission_mode'),
-            tuple(sorted(grant_config.get('path_globs', []))),
-            tuple(sorted(grant_config.get('command_prefixes', []))),
-        )
-        if signature in existing_signatures:
-            skipped.append(grant_config)
-            continue
-        if grant_config['scope'] == 'deny':
-            grant = store.deny(
-                grant_config['tool_name'],
-                path_globs=grant_config.get('path_globs'),
-                command_prefixes=grant_config.get('command_prefixes'),
-            )
-        else:
-            grant = store.grant(
-                grant_config['tool_name'],
-                scope=grant_config['scope'],
-                permission_mode=grant_config.get('permission_mode'),
-                path_globs=grant_config.get('path_globs'),
-                command_prefixes=grant_config.get('command_prefixes'),
-            )
-        applied.append(grant.to_dict())
-        existing_signatures.add(signature)
-
-    print_json(
-        {
-            'status': 'applied',
-            'preset': preset_name,
-            'description': preset['description'],
-            'grants_applied': applied,
-            'grants_skipped': skipped,
+        # Define preset templates
+        presets: dict[str, dict[str, Any]] = {
+            'dev-safe': {
+                'description': 'Allow workspace writes, pytest, git diff/status; deny secrets/** and deploy commands',
+                'grants': [
+                    {
+                        'tool_name': 'workspace_write_file',
+                        'scope': 'session',
+                        'path_globs': ['src/**', 'tests/**', '*.py', '*.md', '*.txt'],
+                        'permission_mode': 'workspace-write',
+                    },
+                    {
+                        'tool_name': 'workspace_run_shell_mutate',
+                        'scope': 'session',
+                        'command_prefixes': ['pytest ', 'git diff', 'git status'],
+                    },
+                    {
+                        'tool_name': 'workspace_run_shell_mutate',
+                        'scope': 'deny',
+                        'command_prefixes': ['deploy', 'prod', 'production'],
+                    },
+                    {
+                        'tool_name': 'workspace_write_file',
+                        'scope': 'deny',
+                        'path_globs': ['secrets/**', '.env*', '*.key', '*.pem'],
+                    },
+                ],
+            },
+            'ci-safe': {
+                'description': 'Read-only mode for CI environments',
+                'grants': [
+                    {
+                        'tool_name': 'workspace_read_file',
+                        'scope': 'always',
+                    },
+                    {
+                        'tool_name': 'workspace_run_shell_mutate',
+                        'scope': 'session',
+                        'command_prefixes': ['git diff', 'git status', 'cat ', 'ls '],
+                    },
+                ],
+            },
+            'strict': {
+                'description': 'Deny all destructive tools, require explicit approval',
+                'grants': [
+                    {
+                        'tool_name': 'workspace_write_file',
+                        'scope': 'deny',
+                    },
+                    {
+                        'tool_name': 'workspace_run_shell_mutate',
+                        'scope': 'deny',
+                    },
+                ],
+            },
         }
-    )
-    return 0
+
+        if preset_name not in presets:
+            print_json({'status': 'error', 'message': f'Unknown preset: {preset_name}'})
+            return 1
+
+        preset = presets[preset_name]
+
+        # Check for duplicate grants to avoid bloat
+        existing_grants = store.list_grants()
+        existing_signatures = {
+            (
+                g.tool_name,
+                g.scope,
+                g.permission_mode,
+                tuple(sorted(g.path_globs)),
+                tuple(sorted(g.command_prefixes)),
+            )
+            for g in existing_grants
+        }
+
+        applied = []
+        skipped = []
+        for grant_config in preset['grants']:
+            signature = (
+                grant_config['tool_name'],
+                grant_config['scope'],
+                grant_config.get('permission_mode'),
+                tuple(sorted(grant_config.get('path_globs', []))),
+                tuple(sorted(grant_config.get('command_prefixes', []))),
+            )
+            if signature in existing_signatures:
+                skipped.append(grant_config)
+                continue
+            if grant_config['scope'] == 'deny':
+                grant = store.deny(
+                    grant_config['tool_name'],
+                    path_globs=grant_config.get('path_globs'),
+                    command_prefixes=grant_config.get('command_prefixes'),
+                )
+            else:
+                grant = store.grant(
+                    grant_config['tool_name'],
+                    scope=grant_config['scope'],
+                    permission_mode=grant_config.get('permission_mode'),
+                    path_globs=grant_config.get('path_globs'),
+                    command_prefixes=grant_config.get('command_prefixes'),
+                )
+            applied.append(grant.to_dict())
+            existing_signatures.add(signature)
+
+        print_json(
+            {
+                'status': 'applied',
+                'preset': preset_name,
+                'description': preset['description'],
+                'grants_applied': applied,
+                'grants_skipped': skipped,
+            }
+        )
+        return 0
+
+    return _wrap_approval_store_errors(_preset)
 
 
 def approval_doctor_command(args: argparse.Namespace) -> int:

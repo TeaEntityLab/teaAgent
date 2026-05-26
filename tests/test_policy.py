@@ -702,6 +702,30 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
             self.assertEqual(reset_store['grants'], [])
             self.assertEqual(reset_store['audit'][0]['action'], 'store_operator_reset')
 
+    def test_repair_store_same_second_creates_distinct_backups(self) -> None:
+        """Multiple repairs within the same second must create distinct backup files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            store.path.write_text('{bad json', encoding='utf-8')
+
+            result1 = store.repair_store()
+            backup_path1 = result1['backup_path']
+
+            # Corrupt again and repair immediately (same second)
+            store.path.write_text('{bad json 2', encoding='utf-8')
+            result2 = store.repair_store()
+            backup_path2 = result2['backup_path']
+
+            self.assertNotEqual(backup_path1, backup_path2)
+            self.assertTrue('.json.backup.' in backup_path1)
+            self.assertTrue('.json.backup.' in backup_path2)
+            # Verify both backups exist and contain their respective corrupt data
+            with open(backup_path1, encoding='utf-8') as f:
+                self.assertEqual(f.read(), '{bad json')
+            with open(backup_path2, encoding='utf-8') as f:
+                self.assertEqual(f.read(), '{bad json 2')
+
     # ---- fix_permissions parameter -------------------------------------------
 
     def test_fix_permissions_repairs_dir_mode(self) -> None:
