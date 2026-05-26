@@ -6,11 +6,9 @@ Verifies: tool registration, schema validation, error handling.
 from __future__ import annotations
 
 from teaagent.github_integration import (
-    register_github_tools,
     github_create_pr,
     github_list_prs,
-    github_review_pr,
-    github_ci_status,
+    register_github_tools,
 )
 from teaagent.tools import ToolRegistry
 
@@ -28,6 +26,7 @@ def test_github_tools_registered() -> None:
 def test_github_create_pr_no_token() -> None:
     """Should raise PermissionError when GITHUB_TOKEN is not set."""
     import os
+
     if 'GITHUB_TOKEN' not in os.environ and 'GH_TOKEN' not in os.environ:
         try:
             github_create_pr('owner/repo', 'title', 'branch')
@@ -56,5 +55,6 @@ def test_github_tool_execution_errors() -> None:
 
     if 'GITHUB_TOKEN' not in os.environ and 'GH_TOKEN' not in os.environ:
         import pytest
+
         with pytest.raises(PermissionError, match='GitHub token not found'):
             github_list_prs('owner/nonexistent-repo-12345')

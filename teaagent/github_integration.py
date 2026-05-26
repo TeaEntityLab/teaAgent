@@ -31,7 +31,9 @@ def _github_headers() -> dict[str, str]:
     }
 
 
-def _gh_api(method: str, path: str, body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+def _gh_api(
+    method: str, path: str, body: Optional[dict[str, Any]] = None
+) -> dict[str, Any]:
     import urllib.error
     import urllib.request
 
@@ -57,13 +59,17 @@ def github_create_pr(
     draft: bool = False,
 ) -> dict[str, Any]:
     """Create a pull request on *repo* (``owner/repo``) from *head* to *base*."""
-    result = _gh_api('POST', f'/repos/{repo}/pulls', {
-        'title': title,
-        'head': head,
-        'base': base,
-        'body': body,
-        'draft': draft,
-    })
+    result = _gh_api(
+        'POST',
+        f'/repos/{repo}/pulls',
+        {
+            'title': title,
+            'head': head,
+            'base': base,
+            'body': body,
+            'draft': draft,
+        },
+    )
     if 'error' in result:
         return {'status': 'error', 'message': result['error']}
     return {
@@ -110,10 +116,14 @@ def github_review_pr(
     event: str = 'COMMENT',
 ) -> dict[str, Any]:
     """Submit a review on PR #*pr_number*. *event* is APPROVE/REQUEST_CHANGES/COMMENT."""
-    result = _gh_api('POST', f'/repos/{repo}/pulls/{pr_number}/reviews', {
-        'body': body,
-        'event': event,
-    })
+    result = _gh_api(
+        'POST',
+        f'/repos/{repo}/pulls/{pr_number}/reviews',
+        {
+            'body': body,
+            'event': event,
+        },
+    )
     if 'error' in result:
         return {'status': 'error', 'message': result['error']}
     return {
@@ -148,69 +158,146 @@ def register_github_tools(registry: ToolRegistry) -> None:
     registry.register(
         name='github_create_pr',
         description='Create a pull request on GitHub from one branch to another.',
-        input_schema=object_schema({
-            'repo': {'type': 'string', 'description': 'Repository in owner/repo format.'},
-            'title': {'type': 'string', 'description': 'Pull request title.'},
-            'head': {'type': 'string', 'description': 'Source branch name.'},
-            'base': {'type': 'string', 'description': 'Target branch (default main).'},
-            'body': {'type': 'string', 'description': 'PR body text.'},
-            'draft': {'type': 'boolean', 'description': 'Create as draft PR.'},
-        }, required=['repo', 'title', 'head']),
-        output_schema=object_schema({
-            'status': 'string', 'pr_number': 'integer', 'pr_url': 'string',
-            'title': 'string', 'message': 'string',
-        }, required=['status']),
-        annotations=ToolAnnotations(read_only=False, destructive=False, idempotent=True),
+        input_schema=object_schema(
+            {
+                'repo': {
+                    'type': 'string',
+                    'description': 'Repository in owner/repo format.',
+                },
+                'title': {'type': 'string', 'description': 'Pull request title.'},
+                'head': {'type': 'string', 'description': 'Source branch name.'},
+                'base': {
+                    'type': 'string',
+                    'description': 'Target branch (default main).',
+                },
+                'body': {'type': 'string', 'description': 'PR body text.'},
+                'draft': {'type': 'boolean', 'description': 'Create as draft PR.'},
+            },
+            required=['repo', 'title', 'head'],
+        ),
+        output_schema=object_schema(
+            {
+                'status': 'string',
+                'pr_number': 'integer',
+                'pr_url': 'string',
+                'title': 'string',
+                'message': 'string',
+            },
+            required=['status'],
+        ),
+        annotations=ToolAnnotations(
+            read_only=False, destructive=False, idempotent=True
+        ),
         handler=lambda args: github_create_pr(
-            args['repo'], args['title'], args['head'],
-            base=args.get('base', 'main'), body=args.get('body', ''),
+            args['repo'],
+            args['title'],
+            args['head'],
+            base=args.get('base', 'main'),
+            body=args.get('body', ''),
             draft=args.get('draft', False),
         ),
     )
     registry.register(
         name='github_list_prs',
         description='List pull requests on a GitHub repository.',
-        input_schema=object_schema({
-            'repo': {'type': 'string', 'description': 'Repository in owner/repo format.'},
-            'state': {'type': 'string', 'description': 'PR state: open, closed, or all.'},
-            'limit': {'type': 'integer', 'description': 'Max results (default 10).'},
-        }, required=['repo']),
-        output_schema=object_schema({
-            'status': 'string', 'prs': 'array', 'count': 'integer', 'message': 'string',
-        }, required=['status']),
+        input_schema=object_schema(
+            {
+                'repo': {
+                    'type': 'string',
+                    'description': 'Repository in owner/repo format.',
+                },
+                'state': {
+                    'type': 'string',
+                    'description': 'PR state: open, closed, or all.',
+                },
+                'limit': {
+                    'type': 'integer',
+                    'description': 'Max results (default 10).',
+                },
+            },
+            required=['repo'],
+        ),
+        output_schema=object_schema(
+            {
+                'status': 'string',
+                'prs': 'array',
+                'count': 'integer',
+                'message': 'string',
+            },
+            required=['status'],
+        ),
         annotations=ToolAnnotations(read_only=True),
         handler=lambda args: github_list_prs(
-            args['repo'], state=args.get('state', 'open'), limit=args.get('limit', 10),
+            args['repo'],
+            state=args.get('state', 'open'),
+            limit=args.get('limit', 10),
         ),
     )
     registry.register(
         name='github_review_pr',
         description='Submit a code review on a pull request.',
-        input_schema=object_schema({
-            'repo': {'type': 'string', 'description': 'Repository in owner/repo format.'},
-            'pr_number': {'type': 'integer', 'description': 'Pull request number.'},
-            'body': {'type': 'string', 'description': 'Review comment body.'},
-            'event': {'type': 'string', 'description': 'APPROVE, REQUEST_CHANGES, or COMMENT.'},
-        }, required=['repo', 'pr_number', 'body']),
-        output_schema=object_schema({
-            'status': 'string', 'review_id': 'integer', 'state': 'string', 'message': 'string',
-        }, required=['status']),
-        annotations=ToolAnnotations(read_only=False, destructive=False, idempotent=False),
+        input_schema=object_schema(
+            {
+                'repo': {
+                    'type': 'string',
+                    'description': 'Repository in owner/repo format.',
+                },
+                'pr_number': {'type': 'integer', 'description': 'Pull request number.'},
+                'body': {'type': 'string', 'description': 'Review comment body.'},
+                'event': {
+                    'type': 'string',
+                    'description': 'APPROVE, REQUEST_CHANGES, or COMMENT.',
+                },
+            },
+            required=['repo', 'pr_number', 'body'],
+        ),
+        output_schema=object_schema(
+            {
+                'status': 'string',
+                'review_id': 'integer',
+                'state': 'string',
+                'message': 'string',
+            },
+            required=['status'],
+        ),
+        annotations=ToolAnnotations(
+            read_only=False, destructive=False, idempotent=False
+        ),
         handler=lambda args: github_review_pr(
-            args['repo'], args['pr_number'], args['body'], event=args.get('event', 'COMMENT'),
+            args['repo'],
+            args['pr_number'],
+            args['body'],
+            event=args.get('event', 'COMMENT'),
         ),
     )
     registry.register(
         name='github_ci_status',
         description='Get the combined CI status for a branch or commit on GitHub.',
-        input_schema=object_schema({
-            'repo': {'type': 'string', 'description': 'Repository in owner/repo format.'},
-            'ref': {'type': 'string', 'description': 'Branch name or commit SHA (default main).'},
-        }, required=['repo']),
-        output_schema=object_schema({
-            'status': 'string', 'state': 'string', 'total_count': 'integer',
-            'statuses': 'array', 'message': 'string',
-        }, required=['status']),
+        input_schema=object_schema(
+            {
+                'repo': {
+                    'type': 'string',
+                    'description': 'Repository in owner/repo format.',
+                },
+                'ref': {
+                    'type': 'string',
+                    'description': 'Branch name or commit SHA (default main).',
+                },
+            },
+            required=['repo'],
+        ),
+        output_schema=object_schema(
+            {
+                'status': 'string',
+                'state': 'string',
+                'total_count': 'integer',
+                'statuses': 'array',
+                'message': 'string',
+            },
+            required=['status'],
+        ),
         annotations=ToolAnnotations(read_only=True),
-        handler=lambda args: github_ci_status(args['repo'], ref=args.get('ref', 'main')),
+        handler=lambda args: github_ci_status(
+            args['repo'], ref=args.get('ref', 'main')
+        ),
     )

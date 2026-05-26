@@ -130,11 +130,12 @@ class TeaAgentTUI:
                 from prompt_toolkit.history import FileHistory
 
                 history_path = self._state_path.parent / 'history.txt'
+                history_path.parent.mkdir(parents=True, exist_ok=True)
                 self._session = PromptSession(
                     history=FileHistory(str(history_path)),
                     auto_suggest=AutoSuggestFromHistory(),
                 )
-            except ImportError:
+            except (ImportError, OSError):
                 self._session = None
 
         while True:
@@ -403,7 +404,6 @@ class TeaAgentTUI:
         self.heartbeat_seconds = data.get('heartbeat_seconds', self.heartbeat_seconds)
 
     def _save_tui_state(self) -> None:
-        self._state_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             'provider': self.provider,
             'model': self.model,
@@ -418,9 +418,13 @@ class TeaAgentTUI:
             'chat': self.chat,
             'session_id': self.session_id,
         }
-        self._state_path.write_text(
-            json.dumps(data, indent=2, sort_keys=True), encoding='utf-8'
-        )
+        try:
+            self._state_path.parent.mkdir(parents=True, exist_ok=True)
+            self._state_path.write_text(
+                json.dumps(data, indent=2, sort_keys=True), encoding='utf-8'
+            )
+        except OSError:
+            return
 
     def _get_store(self) -> GraphQLiteGraphStore:
         if self._store is None:

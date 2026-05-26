@@ -105,7 +105,13 @@ class CloudTaskStore:
         tasks = self._read_all()
         for i, t in enumerate(tasks):
             if t.task_id == task_id:
-                updated = CloudTask(**{**t.to_dict(), **changes, 'updated_at': datetime.now(timezone.utc).isoformat()})
+                updated = CloudTask(
+                    **{
+                        **t.to_dict(),
+                        **changes,
+                        'updated_at': datetime.now(timezone.utc).isoformat(),
+                    }
+                )
                 tasks[i] = updated
                 self._write_all(tasks)
                 return updated
@@ -132,7 +138,12 @@ class CloudTaskManager:
         self._runner_factory = runner_factory or _default_runner
 
     def submit(
-        self, name: str, prompt: str, runtime: str, *, adapter: Optional[ManagedRuntimeAdapter] = None
+        self,
+        name: str,
+        prompt: str,
+        runtime: str,
+        *,
+        adapter: Optional[ManagedRuntimeAdapter] = None,
     ) -> CloudTask:
         from teaagent.tools import ToolRegistry
 
@@ -161,24 +172,35 @@ class CloudTaskManager:
     def cancel(self, task_id: str) -> CloudTask:
         return self._store.cancel(task_id)
 
-    def list_tasks(self, *, status: Optional[str] = None, limit: int = 50) -> list[CloudTask]:
+    def list_tasks(
+        self, *, status: Optional[str] = None, limit: int = 50
+    ) -> list[CloudTask]:
         return self._store.list(status=status, limit=limit)
 
     def capabilities(self) -> list[dict[str, Any]]:
         return managed_runtime_capabilities()
 
 
-def _default_runner(runtime: str, *, adapter: Optional[ManagedRuntimeAdapter] = None) -> ManagedAgentRunner:
+def _default_runner(
+    runtime: str, *, adapter: Optional[ManagedRuntimeAdapter] = None
+) -> ManagedAgentRunner:
     if adapter is not None:
         return ManagedAgentRunner(adapter, runtime_name=runtime)
     runtime_map = {
-        'anthropic': ('AnthropicManagedRuntime', {'agent_id': 'default', 'model': 'claude-opus-4-5'}),
-        'openai': ('OpenAIManagedRuntime', {'assistant_id': 'default', 'model': 'gpt-4o'}),
+        'anthropic': (
+            'AnthropicManagedRuntime',
+            {'agent_id': 'default', 'model': 'claude-opus-4-5'},
+        ),
+        'openai': (
+            'OpenAIManagedRuntime',
+            {'assistant_id': 'default', 'model': 'gpt-4o'},
+        ),
     }
     if runtime in runtime_map:
         class_name, kwargs = runtime_map[runtime]
         module = __import__('teaagent.managed_runtime', fromlist=[class_name])
         cls = getattr(module, class_name)
         return ManagedAgentRunner(cls(**kwargs), runtime_name=runtime)
-    raise ValueError(f'unknown runtime: {runtime}. '
-                     f'Install the SDK or provide a custom adapter.')
+    raise ValueError(
+        f'unknown runtime: {runtime}. Install the SDK or provide a custom adapter.'
+    )

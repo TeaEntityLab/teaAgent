@@ -47,7 +47,9 @@ def skill_marketplace_list_command(args: Namespace) -> int:
         print(json.dumps([e.to_dict() for e in entries]))
     else:
         for e in entries:
-            print(f'{e.name:<24}  v{e.version:<8}  {e.author:<16}  {e.description[:50]}')
+            print(
+                f'{e.name:<24}  v{e.version:<8}  {e.author:<16}  {e.description[:50]}'
+            )
     return 0
 
 

@@ -9,29 +9,38 @@ import tempfile
 from pathlib import Path
 
 from teaagent.subagents._team_orchestrator import (
-    TeamDef,
     TeamOrchestrator,
     load_team_defs,
 )
-from teaagent.subagents._types import SubagentDef
 
 
 def _make_team_json(path: Path) -> None:
     import json
+
     teams_dir = path / '.teaagent' / 'teams'
     teams_dir.mkdir(parents=True, exist_ok=True)
-    (teams_dir / 'code-review.json').write_text(json.dumps({
-        'name': 'code-review',
-        'description': 'Code review team',
-        'max_concurrent': 2,
-        'merge_strategy': 'concatenate',
-        'specialists': [
-            {'name': 'reviewer', 'description': 'Reviews code changes',
-             'system_prompt': 'Review the code for bugs and style issues'},
-            {'name': 'tester', 'description': 'Suggests tests',
-             'system_prompt': 'Suggest test cases for the changes'},
-        ],
-    }))
+    (teams_dir / 'code-review.json').write_text(
+        json.dumps(
+            {
+                'name': 'code-review',
+                'description': 'Code review team',
+                'max_concurrent': 2,
+                'merge_strategy': 'concatenate',
+                'specialists': [
+                    {
+                        'name': 'reviewer',
+                        'description': 'Reviews code changes',
+                        'system_prompt': 'Review the code for bugs and style issues',
+                    },
+                    {
+                        'name': 'tester',
+                        'description': 'Suggests tests',
+                        'system_prompt': 'Suggest test cases for the changes',
+                    },
+                ],
+            }
+        )
+    )
 
 
 def test_load_team_defs() -> None:

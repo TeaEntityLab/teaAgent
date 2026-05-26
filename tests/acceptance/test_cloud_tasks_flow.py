@@ -5,7 +5,6 @@ Verifies: CloudTaskStore CRUD, CloudTaskManager submit/poll/cancel.
 
 from __future__ import annotations
 
-import json
 import os
 import tempfile
 
@@ -27,7 +26,10 @@ def test_cloud_task_submit_poll_cancel() -> None:
         from teaagent.managed_runtime import ManagedAgentRunner
 
         store = CloudTaskStore(tmp)
-        manager = CloudTaskManager(store=store, runner_factory=lambda r, adapter=None: ManagedAgentRunner(_EchoAdapter()))
+        manager = CloudTaskManager(
+            store=store,
+            runner_factory=lambda r, adapter=None: ManagedAgentRunner(_EchoAdapter()),
+        )
 
         task = manager.submit('test-task', 'hello cloud', 'echo')
         assert task.status == 'completed', f'expected completed, got {task.status}'
@@ -47,7 +49,9 @@ def test_cloud_task_submit_poll_cancel() -> None:
 def test_cloud_task_cancel() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         store = CloudTaskStore(tmp)
-        manager = CloudTaskManager(store=store, runner_factory=lambda r, adapter=None: _EchoAdapter())
+        manager = CloudTaskManager(
+            store=store, runner_factory=lambda r, adapter=None: _EchoAdapter()
+        )
 
         store.create('cancel-me', 'prompt', 'echo')
         tasks = manager.list_tasks(status='pending')

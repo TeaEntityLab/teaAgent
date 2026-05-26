@@ -42,6 +42,38 @@ def _make_registry() -> ToolRegistry:
     return registry
 
 
+def test_fresh_agent_run_does_not_register_browser_tools_twice(tmp_path, monkeypatch):
+    import teaagent.chat_agent as chat_agent
+
+    registry = _make_registry()
+    registry.register(
+        name='browser_navigate',
+        description='Navigate to a URL in a browser.',
+        input_schema={'type': 'object', 'properties': {'url': {'type': 'string'}}},
+        output_schema={'type': 'object', 'properties': {'status': {'type': 'string'}}},
+        annotations=ToolAnnotations(read_only=True),
+        handler=lambda _: {'status': 'ok'},
+    )
+    monkeypatch.setattr(
+        chat_agent, 'build_workspace_tool_registry', lambda _root: registry
+    )
+
+    def fail_register_browser_tools(_registry):
+        raise AssertionError('browser tools should already be registered')
+
+    monkeypatch.setattr(
+        chat_agent, 'register_browser_tools', fail_register_browser_tools
+    )
+
+    adapter = _StubAdapter()
+    config = chat_agent.ChatAgentConfig.from_root(tmp_path)
+    result = chat_agent.run_chat_agent(
+        task='say hello', adapter=adapter, config=config
+    )
+
+    assert result.status == 'completed'
+
+
 def test_cost_fields_populated_after_run(tmp_path):
     from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 

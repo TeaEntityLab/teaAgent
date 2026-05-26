@@ -11,6 +11,7 @@ from unittest.mock import PropertyMock, patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from teaagent.graphqlite_store import GraphQLiteRuntimeError
 from teaagent.tui import TeaAgentTUI
 
 
@@ -77,6 +78,38 @@ class TUITests(unittest.TestCase):
 
         self.assertEqual(tui.database, './graph.db')
         self.assertEqual(output, ['database: ./graph.db'])
+
+    def test_tui_smoke_reports_graphqlite_runtime_error(self) -> None:
+        output = []
+        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+
+        with patch.object(
+            tui,
+            '_get_store',
+            side_effect=GraphQLiteRuntimeError('sqlite extension unavailable'),
+        ):
+            self.assertTrue(tui.handle_command('smoke'))
+
+        self.assertEqual(output, ['error: sqlite extension unavailable'])
+
+    def test_tui_query_reports_graphqlite_runtime_error(self) -> None:
+        output = []
+        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+
+        with patch.object(
+            tui,
+            '_get_store',
+            side_effect=GraphQLiteRuntimeError('sqlite extension unavailable'),
+        ):
+            self.assertTrue(tui.handle_command('query MATCH (n) RETURN n'))
+
+        self.assertEqual(output, ['error: sqlite extension unavailable'])
+
+    def test_tui_state_save_ignores_os_write_failures(self) -> None:
+        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit')
+
+        with patch.object(Path, 'write_text', side_effect=PermissionError('denied')):
+            tui._save_tui_state()
 
     def test_tui_agent_settings_and_ask(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

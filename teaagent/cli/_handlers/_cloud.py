@@ -68,6 +68,6 @@ def cloud_capabilities_command(args: Namespace) -> int:
     if args.json:
         print(json.dumps(caps))
     else:
-        for c in (caps or []):
+        for c in caps or []:
             print(f'{c["name"]:<16}  {c["status"]:<12}  {c.get("install_hint", "")}')
     return 0

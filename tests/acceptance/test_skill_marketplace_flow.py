@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import tempfile
 
-from teaagent.marketplace import MarketplaceRegistry, MarketplaceClient
+from teaagent.marketplace import MarketplaceClient, MarketplaceRegistry
 
 
 def test_marketplace_publish_and_search() -> None:

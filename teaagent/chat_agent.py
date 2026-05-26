@@ -369,7 +369,7 @@ def run_chat_agent(
         )
     if _registry_fresh and config.enable_git_tools:
         register_git_tools(tool_registry, GitToolConfig(root=config.root))
-    if _registry_fresh:
+    if _registry_fresh and 'browser_navigate' not in tool_registry.list_tools():
         register_browser_tools(tool_registry)
     run_id = uuid4().hex
     project_instructions = load_project_instructions(config.root)

@@ -35,7 +35,10 @@ def gateway_start_command(args: Namespace) -> int:
             bot_token = os.environ.get('SLACK_BOT_TOKEN', args.slack_bot_token or '')
             app_token = os.environ.get('SLACK_APP_TOKEN', args.slack_app_token or '')
             if not bot_token or not app_token:
-                print('error: SLACK_BOT_TOKEN and SLACK_APP_TOKEN required', file=sys.stderr)
+                print(
+                    'error: SLACK_BOT_TOKEN and SLACK_APP_TOKEN required',
+                    file=sys.stderr,
+                )
                 return 1
             adapter = SlackAdapter(bot_token, app_token, server=server)
             server.register_adapter(adapter)
@@ -68,7 +71,9 @@ def gateway_list_command(args: Namespace) -> int:
     from teaagent.gateway import GatewayServer
 
     server = GatewayServer()
-    platforms = server.list_platforms() if args.quiet else ['telegram', 'slack', 'discord']
+    platforms = (
+        server.list_platforms() if args.quiet else ['telegram', 'slack', 'discord']
+    )
     for p in platforms if platforms else ['telegram', 'slack', 'discord']:
         print(p)
     return 0

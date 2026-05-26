@@ -33,7 +33,9 @@ class RemoteSkillEntry:
 class MarketplaceClient:
     """Client for fetching remote marketplace registries."""
 
-    def __init__(self, registry_url: str = 'https://agentskills.io/api/v1/skills') -> None:
+    def __init__(
+        self, registry_url: str = 'https://agentskills.io/api/v1/skills'
+    ) -> None:
         self._url = registry_url
 
     def fetch(self, *, query: str = '', limit: int = 20) -> list[RemoteSkillEntry]:
@@ -46,18 +48,24 @@ class MarketplaceClient:
                 data = json.loads(resp.read().decode('utf-8'))
         except Exception:
             return []
-        entries = data if isinstance(data, list) else data.get('skills', data.get('entries', []))
+        entries = (
+            data
+            if isinstance(data, list)
+            else data.get('skills', data.get('entries', []))
+        )
         results: list[RemoteSkillEntry] = []
         for e in entries[:limit]:
             if isinstance(e, dict) and 'name' in e:
-                results.append(RemoteSkillEntry(
-                    name=e['name'],
-                    description=e.get('description', ''),
-                    version=e.get('version', '0.1.0'),
-                    download_url=e.get('download_url') or e.get('url') or '',
-                    author=e.get('author', ''),
-                    tags=tuple(e.get('tags', [])),
-                ))
+                results.append(
+                    RemoteSkillEntry(
+                        name=e['name'],
+                        description=e.get('description', ''),
+                        version=e.get('version', '0.1.0'),
+                        download_url=e.get('download_url') or e.get('url') or '',
+                        author=e.get('author', ''),
+                        tags=tuple(e.get('tags', [])),
+                    )
+                )
         return results
 
     def download(self, entry: RemoteSkillEntry, dest: str) -> bool:

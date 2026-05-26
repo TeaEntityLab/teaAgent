@@ -19,6 +19,7 @@ from teaagent.subagents._types import SubagentDef
 @dataclass(frozen=True)
 class TeamDef:
     """Definition of an agent team with a lead and specialists."""
+
     name: str
     description: str = ''
     lead_prompt: str = ''
@@ -37,6 +38,7 @@ def load_team_defs(root: Path) -> dict[str, TeamDef]:
         if path.suffix in ('.yaml', '.yml'):
             try:
                 import yaml
+
                 data = yaml.safe_load(path.read_text(encoding='utf-8'))
             except ImportError:
                 continue
@@ -48,16 +50,18 @@ def load_team_defs(root: Path) -> dict[str, TeamDef]:
             continue
         specialists = []
         for spec in data.get('specialists', []):
-            specialists.append(SubagentDef(
-                name=spec.get('name', ''),
-                description=spec.get('description', ''),
-                system_prompt=spec.get('system_prompt', ''),
-                model=spec.get('model'),
-                max_iterations=spec.get('max_iterations', 5),
-                max_tool_calls=spec.get('max_tool_calls', 8),
-                isolation=spec.get('isolation', 'worktree'),
-                effort=spec.get('effort'),
-            ))
+            specialists.append(
+                SubagentDef(
+                    name=spec.get('name', ''),
+                    description=spec.get('description', ''),
+                    system_prompt=spec.get('system_prompt', ''),
+                    model=spec.get('model'),
+                    max_iterations=spec.get('max_iterations', 5),
+                    max_tool_calls=spec.get('max_tool_calls', 8),
+                    isolation=spec.get('isolation', 'worktree'),
+                    effort=spec.get('effort'),
+                )
+            )
         teams[data['name']] = TeamDef(
             name=data['name'],
             description=data.get('description', ''),

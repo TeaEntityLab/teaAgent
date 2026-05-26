@@ -88,7 +88,9 @@ class MarketplaceRegistry:
         entries = self._read()
         if query:
             q = query.lower()
-            entries = [e for e in entries if q in e.name.lower() or q in e.description.lower()]
+            entries = [
+                e for e in entries if q in e.name.lower() or q in e.description.lower()
+            ]
         if tag:
             entries = [e for e in entries if tag in e.tags]
         return entries[:limit]

@@ -11,6 +11,7 @@ from typing import Any, Optional, Protocol, runtime_checkable
 @dataclass(frozen=True)
 class GatewayMessage:
     """Normalized message from any messaging platform."""
+
     platform: str
     channel_id: str
     user_id: str

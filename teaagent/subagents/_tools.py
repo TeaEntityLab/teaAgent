@@ -109,7 +109,9 @@ def _register_team_tool(
             return {'status': 'error', 'message': "team requires non-empty 'task'"}
         team_name = args.get('team_name', '')
         return orchestrator.run_team(
-            task=task, team_name=team_name, parent_run_id=get_parent_run_id(),
+            task=task,
+            team_name=team_name,
+            parent_run_id=get_parent_run_id(),
         )
 
     registry.register(
@@ -119,7 +121,10 @@ def _register_team_tool(
             'type': 'object',
             'properties': {
                 'task': {'type': 'string', 'description': 'Task for the agent team.'},
-                'team_name': {'type': 'string', 'description': 'Team definition name from .teaagent/teams/.'},
+                'team_name': {
+                    'type': 'string',
+                    'description': 'Team definition name from .teaagent/teams/.',
+                },
             },
             'required': ['task', 'team_name'],
         },
@@ -134,7 +139,9 @@ def _register_team_tool(
             },
             'required': ['status'],
         },
-        annotations=ToolAnnotations(read_only=False, destructive=False, idempotent=False),
+        annotations=ToolAnnotations(
+            read_only=False, destructive=False, idempotent=False
+        ),
         handler=execute_team,
     )
 

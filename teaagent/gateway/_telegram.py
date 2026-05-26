@@ -45,7 +45,9 @@ class TelegramAdapter:
         from telegram.ext import Application, MessageHandler, filters
 
         self._app = Application.builder().token(self._token).build()
-        self._app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle))
+        self._app.add_handler(
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle)
+        )
         self._running = True
         self._thread = threading.Thread(target=self._app.run_polling, daemon=True)
         self._thread.start()
@@ -74,6 +76,7 @@ class TelegramAdapter:
     def send_message(self, channel_id: str, text: str) -> bool:
         self._check_deps()
         import telegram
+
         try:
             bot = telegram.Bot(token=self._token)
             bot.send_message(chat_id=channel_id, text=text)

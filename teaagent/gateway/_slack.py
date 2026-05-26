@@ -38,8 +38,7 @@ class SlackAdapter:
             import slack_sdk  # noqa: F401
         except ImportError:
             raise ImportError(
-                'Slack adapter requires slack-sdk. '
-                'Install with: pip install slack-sdk'
+                'Slack adapter requires slack-sdk. Install with: pip install slack-sdk'
             ) from None
 
     def start(self) -> None:
@@ -80,8 +79,11 @@ class SlackAdapter:
     def send_message(self, channel_id: str, text: str) -> bool:
         self._check_deps()
         from slack_sdk.web import WebClient
+
         try:
-            WebClient(token=self._bot_token).chat_postMessage(channel=channel_id, text=text)
+            WebClient(token=self._bot_token).chat_postMessage(
+                channel=channel_id, text=text
+            )
             return True
         except Exception:
             return False

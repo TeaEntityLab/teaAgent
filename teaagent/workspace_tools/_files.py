@@ -360,6 +360,7 @@ def _register_browser_tools_if_available(registry: ToolRegistry) -> None:
     """Register browser automation tools when Playwright is installed."""
     try:
         from teaagent.browser_tools import HAS_PLAYWRIGHT, register_browser_tools
+
         if HAS_PLAYWRIGHT:
             register_browser_tools(registry)
     except ImportError:

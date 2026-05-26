@@ -42,6 +42,7 @@ class TestTUIInteractive(unittest.TestCase):
 
                 # Verify PromptSession was created
                 self.assertTrue(mock_session_cls.called)
+                self.assertTrue(state_path.parent.exists())
 
                 # Verify history is persistent (it should be linked to a file)
                 args, kwargs = mock_session_cls.call_args

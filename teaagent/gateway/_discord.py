@@ -45,6 +45,7 @@ class DiscordAdapter:
     def start(self) -> None:
         self._check_deps()
         import discord
+
         intents = discord.Intents.default()
         intents.message_content = True
         self._client = discord.Client(intents=intents)
@@ -84,13 +85,15 @@ class DiscordAdapter:
         self._running = False
         if self._client is not None and self._loop is not None:
             asyncio.run_coroutine_threadsafe(
-                self._client.close(), self._loop,
+                self._client.close(),
+                self._loop,
             )
 
     def send_message(self, channel_id: str, text: str) -> bool:
         self._check_deps()
         if self._loop is None or not self._running:
             return False
+
         async def _send() -> bool:
             try:
                 channel = self._client.get_channel(int(channel_id))
@@ -103,6 +106,7 @@ class DiscordAdapter:
                 return True
             except Exception:
                 return False
+
         future = asyncio.run_coroutine_threadsafe(_send(), self._loop)
         try:
             return future.result(timeout=30)

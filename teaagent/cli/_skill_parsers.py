@@ -91,7 +91,9 @@ def register(
     publish.add_argument('--version', default='0.1.0', help='Skill version.')
     publish.add_argument('--author', default='', help='Author name.')
     publish.add_argument('--skill-path', default='', help='Path to SKILL.md.')
-    publish.add_argument('--tags', action='append', default=[], help='Tags. Repeatable.')
+    publish.add_argument(
+        '--tags', action='append', default=[], help='Tags. Repeatable.'
+    )
     publish.add_argument('--json', action='store_true', help='Output as JSON.')
     publish.add_argument('--root', default='.', help='Workspace root.')
     publish.set_defaults(func=handlers['publish'])

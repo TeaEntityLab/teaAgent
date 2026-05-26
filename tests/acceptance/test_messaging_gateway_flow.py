@@ -58,7 +58,10 @@ def test_gateway_dispatch_message() -> None:
 
     server = GatewayServer(agent_handler=handler)
     msg = GatewayMessage(
-        platform='test', channel_id='ch1', user_id='u1', text='hello gateway',
+        platform='test',
+        channel_id='ch1',
+        user_id='u1',
+        text='hello gateway',
     )
     response = server.dispatch(msg)
     assert response == 'reply: hello gateway'
@@ -72,23 +75,27 @@ def test_gateway_adapter_protocol() -> None:
 
 def test_gateway_telegram_adapter_import() -> None:
     from teaagent.gateway import TelegramAdapter
+
     adapter = TelegramAdapter(token='test:token')
     assert adapter.platform_name == 'telegram'
 
 
 def test_gateway_slack_adapter_import() -> None:
     from teaagent.gateway import SlackAdapter
+
     adapter = SlackAdapter(bot_token='xoxb-test', app_token='xapp-test')
     assert adapter.platform_name == 'slack'
 
 
 def test_gateway_discord_adapter_import() -> None:
     from teaagent.gateway import DiscordAdapter
+
     adapter = DiscordAdapter(token='test.token')
     assert adapter.platform_name == 'discord'
 
 
 def test_gateway_discord_adapter_protocol() -> None:
     from teaagent.gateway import DiscordAdapter
+
     adapter = DiscordAdapter(token='test.token')
     assert isinstance(adapter, GatewayAdapter)

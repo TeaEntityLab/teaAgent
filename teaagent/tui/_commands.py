@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from teaagent.daily import build_daily_brief
-from teaagent.graphqlite_store import check_graphqlite_runtime
+from teaagent.graphqlite_store import (
+    GraphQLiteRuntimeError,
+    GraphQLiteUnavailableError,
+    check_graphqlite_runtime,
+)
 from teaagent.intent import clarify_task
 from teaagent.llm import available_providers
 from teaagent.model_routing import route_model
@@ -372,17 +376,23 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         tui.output_fn(f'database: {tui.database}')
         return True
     if action == 'smoke':
-        graph_store = tui._get_store()
-        graph_store.graph.upsert_node(
-            'teaagent', {'name': 'TeaAgent'}, label='SmokeTest'
-        )
-        tui._print_json(graph_store.query('MATCH (n:SmokeTest) RETURN n.name'))
+        try:
+            graph_store = tui._get_store()
+            graph_store.graph.upsert_node(
+                'teaagent', {'name': 'TeaAgent'}, label='SmokeTest'
+            )
+            tui._print_json(graph_store.query('MATCH (n:SmokeTest) RETURN n.name'))
+        except (GraphQLiteRuntimeError, GraphQLiteUnavailableError) as exc:
+            tui.output_fn(f'error: {exc}')
         return True
     if action == 'query':
         if not args:
             tui.output_fn('error: query requires a Cypher string')
             return True
-        tui._print_json(tui._get_store().query(' '.join(args)))
+        try:
+            tui._print_json(tui._get_store().query(' '.join(args)))
+        except (GraphQLiteRuntimeError, GraphQLiteUnavailableError) as exc:
+            tui.output_fn(f'error: {exc}')
         return True
 
     if tui.chat:
