@@ -92,7 +92,10 @@ def _new_record_id() -> str:
 
 def _compute_argument_digest(arguments: dict[str, Any]) -> str:
     """Compute stable digest of arguments for exact matching."""
-    normalized = json.dumps(arguments, sort_keys=True, separators=(',', ':'))
+    from teaagent.audit import redact_tool_arguments
+
+    redacted = redact_tool_arguments(arguments)
+    normalized = json.dumps(redacted, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
 

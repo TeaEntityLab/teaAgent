@@ -133,7 +133,6 @@ def agent_resume_command(args: argparse.Namespace) -> int:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
     approval_store = ApprovalPresetStore(args.root)
-    scoped_approvals = approval_store.list_scoped_approvals_for_run(args.run_id)
 
     if not args.fresh_restart:
         checkpoint_path = getattr(args, 'checkpoint_store', None)
@@ -173,16 +172,10 @@ def agent_resume_command(args: argparse.Namespace) -> int:
                     arguments=pending['arguments'],
                 )
             auto_approved = pending['call_id']
-            # Re-fetch scoped approvals so the newly added one is included
-            scoped_approvals = approval_store.list_scoped_approvals_for_run(args.run_id)
 
-    # Legacy Escape Hatch: merge bare approved_call_ids from CLI argument for backward compatibility.
-    # New workflows should use run-scoped exact-match approvals. Bare call_ids are deprecated.
-    scoped_call_ids = [record.call_id for record in scoped_approvals]
-    all_approved = list(args.approve_call_id) + [
-        cid for cid in scoped_call_ids if cid not in args.approve_call_id
-    ]
-    args.approve_call_id = frozenset(all_approved)
+    # Legacy Escape Hatch: keep only explicitly provided bare call IDs from the --approve-call-id CLI flag
+    # for backward compatibility. We never merge database-persisted scoped approvals here as bare IDs.
+    args.approve_call_id = frozenset(args.approve_call_id)
 
     return _execute_agent_task(
         args,

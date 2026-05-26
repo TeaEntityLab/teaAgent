@@ -239,6 +239,7 @@ class TeaAgentTUI:
         *,
         clarify_first: bool = False,
         initial_observations: Optional[list[dict[str, Any]]] = None,
+        resumed_from: Optional[str] = None,
     ) -> None:
         from teaagent.ergonomics.context_inject import expand_at_references
 
@@ -295,6 +296,9 @@ class TeaAgentTUI:
             audit=audit,
             task_spec=task_spec,
             initial_observations=initial_observations,
+            initial_context_extra={'resumed_from': resumed_from}
+            if resumed_from
+            else None,
         )
         store.logger_for_result(result, audit)
         audit_summary = summarize_audit_events(store.show_run(result.run_id))
@@ -344,7 +348,15 @@ class TeaAgentTUI:
             f'approval: {"approved" if approved else "denied"} {request.call_id}'
         )
         if approved:
-            self.approved_call_ids.add(request.call_id)
+            if request.run_id:
+                store.add_scoped_approval(
+                    run_id=request.run_id,
+                    call_id=request.call_id,
+                    tool_name=request.tool_name,
+                    arguments=request.arguments,
+                )
+            else:
+                self.approved_call_ids.add(request.call_id)
         return approved
 
     def _run_result_payload(

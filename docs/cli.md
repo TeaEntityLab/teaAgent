@@ -859,13 +859,13 @@ Show one run record:
 teaagent agent show <run_id> --root /path/to/repo
 ```
 
-Resume the original task from a persisted run id with optional new approval tokens or settings:
+Resume the original task from a persisted run id with optional new settings:
 
 ```bash
-teaagent agent resume gpt <run_id> --root /path/to/repo --approve-call-id write-1
+teaagent agent resume <run_id> --root /path/to/repo
 ```
 
-By default, resume replays already-completed `tool_call_completed` observations into the new run's context so the model does not have to redo prior tool calls. If the original run paused with `pending_approval`, the pending `call_id` is auto-added to the approval list and reported back as `auto_approved_call_id` in the response payload.
+By default, resume replays already-completed `tool_call_completed` observations into the new run's context so the model does not have to redo prior tool calls. If the original run paused with `pending_approval`, the pending tool call is auto-approved by creating a precise, run-scoped exact-match approval (binding the run_id, call_id, tool_name, and argument digest) in the persistent preset database (`ApprovalPresetStore`), rather than adding a bare wildcard call ID. This ensures that only the exact prior proposed tool execution is permitted upon resumption.
 
 Pass `--fresh-restart` to skip replay and re-run the original task from scratch.
 

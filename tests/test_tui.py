@@ -268,6 +268,92 @@ class TUITests(unittest.TestCase):
             self.assertEqual(payload['status'], 'failed:permission')
             self.assertFalse((Path(tmp) / 'x.txt').exists())
 
+    def test_tui_scoped_approval_exact_matching(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+            from teaagent.runner import ApprovalRequest
+
+            output = []
+            replies = iter(['yes'])
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: next(replies),
+                output_fn=output.append,
+            )
+
+            # Create a mock ApprovalRequest with run_id
+            request = ApprovalRequest(
+                call_id='c123',
+                tool_name='workspace_write_file',
+                arguments={'path': 'a.txt', 'content': 'hello'},
+                reason='Needs approval',
+                annotations={
+                    'destructive': True,
+                    'read_only': False,
+                    'idempotent': True,
+                },
+                run_id='run-tui-123',
+            )
+
+            # 1. Trigger the approval handler
+            approved = tui._approval_handler(request)
+            self.assertTrue(approved)
+
+            # Verify run-scoped exact-match record was created in store
+            store = ApprovalPresetStore(tmp)
+            records = store.list_scoped_approvals_for_run('run-tui-123')
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0].call_id, 'c123')
+            self.assertEqual(records[0].tool_name, 'workspace_write_file')
+
+            # Verify legacy bare approved_call_ids in TUI is empty (not degraded)
+            self.assertNotIn('c123', tui.approved_call_ids)
+
+    def test_tui_resume_creates_precise_scoped_approval(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+            from teaagent.run_store import RunStore
+
+            output = []
+            run_store = RunStore(tmp)
+            run_id = 'run-resume-456'
+
+            # Setup a persisted run with a pending approval using the audit logger
+            audit = run_store.audit_logger(run_id)
+            audit.record('run_started', run_id, task='ask write file')
+            audit.record(
+                'tool_call_pending_approval',
+                run_id,
+                call_id='c456',
+                tool_name='workspace_write_file',
+                arguments={'path': 'x.txt', 'content': 'val'},
+                reason='Needs approval',
+                annotations={'destructive': True},
+            )
+
+            # Build TUI
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+                adapter_factory=lambda _provider, _model: FakeAdapter(
+                    ['{"type":"final","content":"done"}']
+                ),
+            )
+
+            # 2. Trigger TUI resume
+            self.assertTrue(tui.handle_command(f'resume {run_id}'))
+
+            # Verify exact scoped approval record exists in the store
+            approval_store = ApprovalPresetStore(tmp)
+            records = approval_store.list_scoped_approvals_for_run(run_id)
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0].call_id, 'c456')
+            self.assertEqual(records[0].tool_name, 'workspace_write_file')
+
+            # Verify that legacy bare approved_call_ids in TUI is empty
+            self.assertNotIn('c456', tui.approved_call_ids)
+
     def test_tui_clarify_command(self) -> None:
         output = []
         tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)

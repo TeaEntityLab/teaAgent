@@ -469,7 +469,7 @@ def run_chat_agent(
             allow_all_destructive=config.allow_destructive,
             permission_mode=config.permission_mode,
             approval_store=approval_store,
-            approval_origin_run_id=context_extra.get('resumed_from'),
+            approval_origin_run_id=context_extra.get('resumed_from') or run_id,
         ),
         approval_handler=config.approval_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),

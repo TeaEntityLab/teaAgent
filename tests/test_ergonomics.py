@@ -655,3 +655,59 @@ def test_agent_resume_auto_approve_creates_scoped_approval(
 
     expected_digest = _compute_argument_digest({'path': 'hello.txt', 'data': 'hi'})
     assert record.argument_digest == expected_digest
+
+    # C. Verify that bare approved_call_id remains an empty frozenset (not degraded to bare ID)
+    assert not execute_args['args'].approve_call_id
+    assert 'pending-call-456' not in execute_args['args'].approve_call_id
+
+
+def test_resume_policy_strict_exact_match_wiring(tmp_path: Path) -> None:
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+    from teaagent.policy import ApprovalPolicy, PermissionMode, ToolPermissionError
+
+    store = ApprovalPresetStore(tmp_path)
+    run_id = 'run-wiring-test-999'
+
+    # 1. Register a scoped approval for run-wiring-test-999
+    store.add_scoped_approval(
+        run_id=run_id,
+        call_id='c1',
+        tool_name='workspace_write_file',
+        arguments={'path': 'hello.txt', 'data': 'hi'},
+    )
+
+    # 2. Build ApprovalPolicy with empty legacy approved_call_ids
+    policy = ApprovalPolicy(
+        approved_call_ids=frozenset(),
+        permission_mode=PermissionMode.PROMPT,
+        approval_store=store,
+        approval_origin_run_id=run_id,
+    )
+
+    # 3. Correct call should be allowed
+    policy.assert_allowed(
+        tool_name='workspace_write_file',
+        call_id='c1',
+        destructive=True,
+        arguments={'path': 'hello.txt', 'data': 'hi'},
+    )
+
+    # 4. A different tool call with same call_id must be strictly BLOCKED
+    with pytest.raises(ToolPermissionError) as exc_tool:
+        policy.assert_allowed(
+            tool_name='workspace_run_shell_mutate',
+            call_id='c1',
+            destructive=True,
+            arguments={'command': 'rm -rf /'},
+        )
+    assert 'requires explicit approval' in str(exc_tool.value)
+
+    # 5. Same tool call with different arguments must be strictly BLOCKED
+    with pytest.raises(ToolPermissionError) as exc_args:
+        policy.assert_allowed(
+            tool_name='workspace_write_file',
+            call_id='c1',
+            destructive=True,
+            arguments={'path': 'dangerous.sh', 'data': 'malicious'},
+        )
+    assert 'requires explicit approval' in str(exc_args.value)

@@ -178,12 +178,15 @@ class AgentRunner:
                         arguments=decision.arguments,
                         reason=str(exc),
                         annotations=annotations,
+                        run_id=current_run_id,
                     )
                     if self._can_request_approval(tool.annotations.destructive):
+                        pending_payload = approval_request.to_dict()
+                        pending_payload.pop('run_id', None)
                         self.audit.record(
                             'tool_call_pending_approval',
                             current_run_id,
-                            **approval_request.to_dict(),
+                            **pending_payload,
                         )
                         if self.approval_handler is None:
                             self.audit.record(
@@ -222,10 +225,12 @@ class AgentRunner:
                             )
                             raise
                     else:
+                        blocked_payload = approval_request.to_dict()
+                        blocked_payload.pop('run_id', None)
                         self.audit.record(
                             'tool_call_blocked',
                             current_run_id,
-                            **approval_request.to_dict(),
+                            **blocked_payload,
                         )
                         raise
                 self.audit.record(

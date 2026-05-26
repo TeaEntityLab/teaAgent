@@ -32,15 +32,19 @@ class ApprovalRequest:
     arguments: dict[str, Any]
     reason: str
     annotations: dict[str, bool]
+    run_id: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             'call_id': self.call_id,
             'tool_name': self.tool_name,
             'arguments': redact_tool_arguments(self.arguments),
             'reason': self.reason,
             'annotations': self.annotations,
         }
+        if self.run_id is not None:
+            payload['run_id'] = self.run_id
+        return payload
 
 
 ApprovalHandler = Callable[[ApprovalRequest], bool]
