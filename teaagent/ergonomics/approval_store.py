@@ -65,6 +65,7 @@ class ScopedApprovalRecord:
     created_at: str
     expires_at: str | None = None
     consumed_at: str | None = None
+    key_id: str | None = None  # first 16 hex chars of the HMAC secret at creation time
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -79,6 +80,8 @@ class ScopedApprovalRecord:
             payload['expires_at'] = self.expires_at
         if self.consumed_at:
             payload['consumed_at'] = self.consumed_at
+        if self.key_id:
+            payload['key_id'] = self.key_id
         return payload
 
 
@@ -269,6 +272,14 @@ class ApprovalPresetStore:
                 'resume exact-match approval will not work across sessions.'
             ) from exc
         return secret
+
+    def _get_workspace_key_id(self) -> str:
+        """Return a stable 16-hex identifier derived from the first 8 bytes of the
+        workspace secret.  Used to detect whether a scoped approval was signed with
+        the same secret that is currently in use — without storing the secret itself
+        or requiring the original arguments to re-derive the digest.
+        """
+        return self._get_workspace_secret().hex()[:16]
 
     def _load(self) -> dict[str, Any]:
         if not self.path.is_file():
@@ -476,6 +487,12 @@ class ApprovalPresetStore:
             secret = self._get_workspace_secret()
             argument_digest = _compute_argument_digest(arguments, secret)
 
+        key_id = (
+            self._get_workspace_key_id()
+            if argument_digest and len(argument_digest) == 64
+            else None
+        )
+
         record = ScopedApprovalRecord(
             record_id=_new_record_id(),
             run_id=run_id,
@@ -484,6 +501,7 @@ class ApprovalPresetStore:
             argument_digest=argument_digest,
             created_at=now,
             expires_at=expires_at,
+            key_id=key_id,
         )
 
         data = self._load()
@@ -533,6 +551,7 @@ class ApprovalPresetStore:
                     created_at=str(item['created_at']),
                     expires_at=item.get('expires_at'),
                     consumed_at=item.get('consumed_at'),
+                    key_id=item.get('key_id'),
                 )
             )
         return records
@@ -868,8 +887,13 @@ class ApprovalPresetStore:
             return []
         return [item for item in audit[-limit:] if isinstance(item, dict)]
 
-    def check_security_health(self) -> dict[str, Any]:
+    def check_security_health(self, *, fix_permissions: bool = False) -> dict[str, Any]:
         """Run comprehensive security health checks on .teaagent runtime state.
+
+        Args:
+            fix_permissions: When True, attempt to apply the correct chmod values
+                to any paths whose modes are wrong before reporting.  Equivalent
+                to the ``approval doctor --fix-security`` flag.
 
         Returns a dict with 'ok' (bool) and 'checks' list where each entry has:
           - name: str
@@ -877,6 +901,8 @@ class ApprovalPresetStore:
           - severity: 'error' | 'warning' | 'info'
           - message: str
         """
+        import contextlib
+
         checks: list[dict[str, Any]] = []
         teaagent_dir = self.root / '.teaagent'
         secret_path = teaagent_dir / 'secret'
@@ -886,17 +912,31 @@ class ApprovalPresetStore:
             try:
                 mode = teaagent_dir.stat().st_mode & 0o777
                 if mode != _TEAAGENT_DIR_MODE:
-                    checks.append(
-                        {
-                            'name': 'teaagent_dir_mode',
-                            'ok': False,
-                            'severity': 'error',
-                            'message': (
-                                f'.teaagent/ has mode {oct(mode)}; expected {oct(_TEAAGENT_DIR_MODE)}. '
-                                f'Run: chmod {oct(_TEAAGENT_DIR_MODE)} {teaagent_dir}'
-                            ),
-                        }
-                    )
+                    if fix_permissions:
+                        with contextlib.suppress(OSError):
+                            teaagent_dir.chmod(_TEAAGENT_DIR_MODE)
+                        mode = teaagent_dir.stat().st_mode & 0o777
+                    if mode != _TEAAGENT_DIR_MODE:
+                        checks.append(
+                            {
+                                'name': 'teaagent_dir_mode',
+                                'ok': False,
+                                'severity': 'error',
+                                'message': (
+                                    f'.teaagent/ has mode {oct(mode)}; expected {oct(_TEAAGENT_DIR_MODE)}. '
+                                    f'Run: chmod {oct(_TEAAGENT_DIR_MODE)} {teaagent_dir}'
+                                ),
+                            }
+                        )
+                    else:
+                        checks.append(
+                            {
+                                'name': 'teaagent_dir_mode',
+                                'ok': True,
+                                'severity': 'info',
+                                'message': f'.teaagent/ fixed to {oct(mode)}',
+                            }
+                        )
                 else:
                     checks.append(
                         {
@@ -930,17 +970,31 @@ class ApprovalPresetStore:
             try:
                 mode = secret_path.stat().st_mode & 0o777
                 if mode != _TEAAGENT_FILE_MODE:
-                    checks.append(
-                        {
-                            'name': 'secret_file_mode',
-                            'ok': False,
-                            'severity': 'error',
-                            'message': (
-                                f'.teaagent/secret has mode {oct(mode)}; expected {oct(_TEAAGENT_FILE_MODE)}. '
-                                f'Run: chmod {oct(_TEAAGENT_FILE_MODE)} {secret_path}'
-                            ),
-                        }
-                    )
+                    if fix_permissions:
+                        with contextlib.suppress(OSError):
+                            secret_path.chmod(_TEAAGENT_FILE_MODE)
+                        mode = secret_path.stat().st_mode & 0o777
+                    if mode != _TEAAGENT_FILE_MODE:
+                        checks.append(
+                            {
+                                'name': 'secret_file_mode',
+                                'ok': False,
+                                'severity': 'error',
+                                'message': (
+                                    f'.teaagent/secret has mode {oct(mode)}; expected {oct(_TEAAGENT_FILE_MODE)}. '
+                                    f'Run: chmod {oct(_TEAAGENT_FILE_MODE)} {secret_path}'
+                                ),
+                            }
+                        )
+                    else:
+                        checks.append(
+                            {
+                                'name': 'secret_file_mode',
+                                'ok': True,
+                                'severity': 'info',
+                                'message': f'.teaagent/secret fixed to {oct(mode)}',
+                            }
+                        )
                 else:
                     checks.append(
                         {
@@ -1026,17 +1080,31 @@ class ApprovalPresetStore:
             try:
                 mode = self.path.stat().st_mode & 0o777
                 if mode != _TEAAGENT_FILE_MODE:
-                    checks.append(
-                        {
-                            'name': 'approvals_file_mode',
-                            'ok': False,
-                            'severity': 'error',
-                            'message': (
-                                f'approvals.json has mode {oct(mode)}; expected {oct(_TEAAGENT_FILE_MODE)}. '
-                                f'Run: chmod {oct(_TEAAGENT_FILE_MODE)} {self.path}'
-                            ),
-                        }
-                    )
+                    if fix_permissions:
+                        with contextlib.suppress(OSError):
+                            self.path.chmod(_TEAAGENT_FILE_MODE)
+                        mode = self.path.stat().st_mode & 0o777
+                    if mode != _TEAAGENT_FILE_MODE:
+                        checks.append(
+                            {
+                                'name': 'approvals_file_mode',
+                                'ok': False,
+                                'severity': 'error',
+                                'message': (
+                                    f'approvals.json has mode {oct(mode)}; expected {oct(_TEAAGENT_FILE_MODE)}. '
+                                    f'Run: chmod {oct(_TEAAGENT_FILE_MODE)} {self.path}'
+                                ),
+                            }
+                        )
+                    else:
+                        checks.append(
+                            {
+                                'name': 'approvals_file_mode',
+                                'ok': True,
+                                'severity': 'info',
+                                'message': f'approvals.json fixed to {oct(mode)}',
+                            }
+                        )
                 else:
                     checks.append(
                         {
@@ -1055,6 +1123,79 @@ class ApprovalPresetStore:
                         'message': f'Cannot stat approvals.json: {exc}',
                     }
                 )
+
+            # 3b. Check approvals.json content is valid
+            try:
+                raw = self.path.read_text(encoding='utf-8')
+                try:
+                    parsed = json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    checks.append(
+                        {
+                            'name': 'approvals_file_content',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'approvals.json is not valid JSON: {exc}. '
+                                'The file may be corrupt — back it up and delete to reset.'
+                            ),
+                        }
+                    )
+                else:
+                    if not isinstance(parsed, dict):
+                        checks.append(
+                            {
+                                'name': 'approvals_file_content',
+                                'ok': False,
+                                'severity': 'error',
+                                'message': (
+                                    f'approvals.json top-level must be a dict, got {type(parsed).__name__}. '
+                                    'The file may be corrupt — back it up and delete to reset.'
+                                ),
+                            }
+                        )
+                    else:
+                        bad_keys = [
+                            k
+                            for k in (
+                                'grants',
+                                'audit',
+                                'approved_call_ids',
+                                'scoped_approvals',
+                            )
+                            if k in parsed and not isinstance(parsed[k], list)
+                        ]
+                        if bad_keys:
+                            checks.append(
+                                {
+                                    'name': 'approvals_file_content',
+                                    'ok': False,
+                                    'severity': 'error',
+                                    'message': (
+                                        f'approvals.json has non-list values for keys: {bad_keys}. '
+                                        'The file structure is corrupt — back it up and delete to reset.'
+                                    ),
+                                    'bad_keys': bad_keys,
+                                }
+                            )
+                        else:
+                            checks.append(
+                                {
+                                    'name': 'approvals_file_content',
+                                    'ok': True,
+                                    'severity': 'info',
+                                    'message': 'approvals.json content is structurally valid',
+                                }
+                            )
+            except OSError as exc:
+                checks.append(
+                    {
+                        'name': 'approvals_file_content',
+                        'ok': False,
+                        'severity': 'error',
+                        'message': f'Cannot read approvals.json for content check: {exc}',
+                    }
+                )
         else:
             checks.append(
                 {
@@ -1064,11 +1205,23 @@ class ApprovalPresetStore:
                     'message': 'approvals.json does not exist yet',
                 }
             )
+            checks.append(
+                {
+                    'name': 'approvals_file_content',
+                    'ok': True,
+                    'severity': 'info',
+                    'message': 'approvals.json does not exist yet',
+                }
+            )
 
-        # 4. Check for orphaned v2 approvals (active records created with a secret
-        #    that no longer matches the current secret)
+        # 4. Check for orphaned v2 approvals using key_id exact match.
+        #    A v2 record is orphaned iff it carries a key_id that differs from
+        #    the current workspace key_id — meaning the HMAC secret was rotated
+        #    after this approval was created, so its digest is no longer reproducible.
+        #    Records without key_id (legacy, pre-Phase3) are skipped: they fall back
+        #    to the v1 16-hex digest path which does not use the secret.
         try:
-            self._get_workspace_secret()  # validate secret is loadable; raises IOError if corrupt
+            current_key_id = self._get_workspace_key_id()
             data = self._load()
             now = datetime.now(timezone.utc)
             orphaned = []
@@ -1088,23 +1241,14 @@ class ApprovalPresetStore:
                     except ValueError:
                         continue
                 digest = item.get('argument_digest', '')
-                if len(digest) == 64:  # v2 HMAC — verify it belongs to current secret
-                    # We cannot verify without knowing the original arguments,
-                    # but we can flag records as potentially orphaned if the secret
-                    # was recently regenerated (secret_path mtime > record created_at)
-                    created_at_str = item.get('created_at', '')
-                    if created_at_str and secret_path.exists():
-                        try:
-                            created_at = datetime.fromisoformat(created_at_str)
-                            if created_at.tzinfo is None:
-                                created_at = created_at.replace(tzinfo=timezone.utc)
-                            secret_mtime = datetime.fromtimestamp(
-                                secret_path.stat().st_mtime, tz=timezone.utc
-                            )
-                            if secret_mtime > created_at:
-                                orphaned.append(item.get('record_id', '?'))
-                        except (OSError, ValueError):
-                            pass
+                record_key_id = item.get('key_id')
+                # Only flag records that have a key_id AND it does not match current
+                if (
+                    len(digest) == 64
+                    and record_key_id
+                    and record_key_id != current_key_id
+                ):
+                    orphaned.append(item.get('record_id', '?'))
             if orphaned:
                 checks.append(
                     {
@@ -1112,8 +1256,8 @@ class ApprovalPresetStore:
                         'ok': False,
                         'severity': 'warning',
                         'message': (
-                            f'{len(orphaned)} active v2 scoped approval(s) may be orphaned '
-                            'because the workspace secret was regenerated after they were created. '
+                            f'{len(orphaned)} active v2 scoped approval(s) are orphaned '
+                            'because the workspace secret was rotated after they were created. '
                             'They will be blocked on next resume — re-approve via HITL.'
                         ),
                         'orphaned_record_ids': orphaned,

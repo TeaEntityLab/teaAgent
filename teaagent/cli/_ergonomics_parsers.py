@@ -300,6 +300,11 @@ def _approval(
         action='store_true',
         help='Remove duplicate grants automatically.',
     )
+    doctor.add_argument(
+        '--fix-security',
+        action='store_true',
+        help='Repair .teaagent/ directory and file permissions (0700/0600) automatically.',
+    )
     doctor.set_defaults(func=handlers['approval_doctor'], command='approval')
     next_cmd = subs.add_parser(
         'next', help='Show next pending approval and suggest actions.'

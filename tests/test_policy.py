@@ -494,5 +494,185 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
                 self.assertIn(check['severity'], ('error', 'warning', 'info'))
 
 
+class TrustBoundaryRegressionTests(unittest.TestCase):
+    """Phase 3.1 regressions: key_id orphan heuristic, JSON content check, fix_permissions."""
+
+    # ---- P2a: key_id-based orphan detection -----------------------------------
+
+    def test_fresh_v2_approval_not_flagged_as_orphan(self) -> None:
+        """A v2 scoped approval created with the CURRENT secret must not be reported
+        as orphaned — regression for the mtime false-positive bug."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.add_scoped_approval(
+                run_id='run-1',
+                call_id='call-1',
+                tool_name='workspace_write_file',
+                arguments={'path': 'a.txt', 'content': 'hi'},
+            )
+            result = store.check_security_health()
+            orphan_check = next(
+                c for c in result['checks'] if c['name'] == 'orphaned_v2_approvals'
+            )
+            self.assertTrue(
+                orphan_check['ok'],
+                f'Fresh v2 approval should NOT be orphan: {orphan_check}',
+            )
+
+    def test_rotated_secret_flags_old_v2_approval_as_orphan(self) -> None:
+        """After the secret is deleted and regenerated, old v2 approvals with a
+        different key_id must be flagged as orphaned."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.add_scoped_approval(
+                run_id='run-1',
+                call_id='call-1',
+                tool_name='workspace_write_file',
+                arguments={'path': 'a.txt', 'content': 'hi'},
+            )
+            # Rotate secret: delete and let it regenerate
+            secret_path = store.root / '.teaagent' / 'secret'
+            secret_path.unlink()
+            # New store instance will regenerate a different secret
+            store2 = ApprovalPresetStore(tmpdir)
+            result = store2.check_security_health()
+            orphan_check = next(
+                c for c in result['checks'] if c['name'] == 'orphaned_v2_approvals'
+            )
+            self.assertFalse(
+                orphan_check['ok'],
+                f'After rotation, old v2 approval should be orphaned: {orphan_check}',
+            )
+            self.assertIn('orphaned_record_ids', orphan_check)
+            self.assertEqual(len(orphan_check['orphaned_record_ids']), 1)
+
+    def test_v2_approval_without_key_id_not_flagged(self) -> None:
+        """Legacy v2 records without a key_id field must NOT be flagged as orphaned
+        (they predate key_id tracking and fall back to v1 matching)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            # Inject a record with 64-hex digest but no key_id
+            data = store._load()
+            data['scoped_approvals'].append(
+                {
+                    'record_id': 'legacy-001',
+                    'run_id': 'run-legacy',
+                    'call_id': 'call-legacy',
+                    'tool_name': 'shell_exec',
+                    'argument_digest': 'a' * 64,
+                    'created_at': '2026-01-01T00:00:00+00:00',
+                }
+            )
+            store._save(data)
+            result = store.check_security_health()
+            orphan_check = next(
+                c for c in result['checks'] if c['name'] == 'orphaned_v2_approvals'
+            )
+            self.assertTrue(
+                orphan_check['ok'],
+                f'Legacy record without key_id must not be flagged: {orphan_check}',
+            )
+
+    # ---- P2b: approvals.json content health check ----------------------------
+
+    def test_corrupt_json_detected_by_health_check(self) -> None:
+        """check_security_health must report error when approvals.json is invalid JSON."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            # Write something to trigger file creation first, then corrupt it
+            store.grant(tool_name='shell_exec', scope='once')
+            store.path.write_text('{bad json', encoding='utf-8')
+            result = store.check_security_health()
+            content_check = next(
+                (c for c in result['checks'] if c['name'] == 'approvals_file_content'),
+                None,
+            )
+            self.assertIsNotNone(
+                content_check, 'approvals_file_content check must exist'
+            )
+            self.assertFalse(content_check['ok'])
+            self.assertEqual(content_check['severity'], 'error')
+
+    def test_wrong_top_level_type_detected_by_health_check(self) -> None:
+        """check_security_health must report error when top-level is not a dict."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            store.path.write_text('[1, 2, 3]', encoding='utf-8')
+            result = store.check_security_health()
+            content_check = next(
+                (c for c in result['checks'] if c['name'] == 'approvals_file_content'),
+                None,
+            )
+            self.assertIsNotNone(content_check)
+            self.assertFalse(content_check['ok'])
+            self.assertIn('list', content_check['message'])
+
+    def test_bad_key_type_detected_by_health_check(self) -> None:
+        """check_security_health must report error when a required list key is not a list."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            store.path.write_text(
+                json.dumps(
+                    {'grants': 'not-a-list', 'audit': [], 'scoped_approvals': []}
+                ),
+                encoding='utf-8',
+            )
+            result = store.check_security_health()
+            content_check = next(
+                (c for c in result['checks'] if c['name'] == 'approvals_file_content'),
+                None,
+            )
+            self.assertIsNotNone(content_check)
+            self.assertFalse(content_check['ok'])
+            self.assertIn('grants', content_check.get('bad_keys', []))
+
+    def test_valid_approvals_json_passes_content_check(self) -> None:
+        """Normal approvals.json must get ok=True for the content check."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            result = store.check_security_health()
+            content_check = next(
+                (c for c in result['checks'] if c['name'] == 'approvals_file_content'),
+                None,
+            )
+            self.assertIsNotNone(content_check)
+            self.assertTrue(content_check['ok'])
+
+    # ---- fix_permissions parameter -------------------------------------------
+
+    def test_fix_permissions_repairs_dir_mode(self) -> None:
+        """check_security_health(fix_permissions=True) must chmod the dir back to 0o700."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            teaagent_dir = store.root / '.teaagent'
+            teaagent_dir.chmod(0o755)
+            result = store.check_security_health(fix_permissions=True)
+            mode_after = teaagent_dir.stat().st_mode & 0o777
+            self.assertEqual(mode_after, 0o700)
+            dir_check = next(
+                c for c in result['checks'] if c['name'] == 'teaagent_dir_mode'
+            )
+            self.assertTrue(dir_check['ok'])
+
+    def test_fix_permissions_repairs_approvals_mode(self) -> None:
+        """check_security_health(fix_permissions=True) must chmod approvals.json to 0o600."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            store.path.chmod(0o644)
+            result = store.check_security_health(fix_permissions=True)
+            mode_after = store.path.stat().st_mode & 0o777
+            self.assertEqual(mode_after, 0o600)
+            approvals_check = next(
+                c for c in result['checks'] if c['name'] == 'approvals_file_mode'
+            )
+            self.assertTrue(approvals_check['ok'])
+
+
 if __name__ == '__main__':
     unittest.main()

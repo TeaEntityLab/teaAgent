@@ -840,6 +840,16 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
                 f'Grant {grant.grant_id} ({grant.tool_name}) is always allowed without restrictions - consider scoping with path_globs or command_prefixes'
             )
 
+    fix_security = getattr(args, 'fix_security', False)
+    security = store.check_security_health(fix_permissions=fix_security)
+    if not security['ok']:
+        issues.extend(
+            c['message']
+            for c in security['checks']
+            if not c['ok'] and c['severity'] == 'error'
+        )
+    if fix_security and security['ok']:
+        actions_taken.append('Security permissions verified/repaired')
     status = 'healthy' if not issues else 'issues_found'
     print_json(
         {
@@ -848,6 +858,7 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
             'issues': issues,
             'suggestions': suggestions,
             'actions_taken': actions_taken,
+            'security': security,
             'summary': f'{len(issues)} issues, {len(suggestions)} suggestions',
         }
     )
