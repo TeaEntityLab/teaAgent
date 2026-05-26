@@ -126,3 +126,24 @@ def verify_audit_chain(log_path: Path) -> ChainVerificationResult:
         prev_hash = obj['hash']
 
     return ChainVerificationResult(valid=True, event_count=len(lines))
+
+
+def last_chain_hash(log_path: Path) -> str:
+    """Return the hash to use as ``prev_hash`` when appending to an existing log."""
+    if not log_path.is_file():
+        return GENESIS_HASH
+    last_hash = GENESIS_HASH
+    for line in log_path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if 'prev_hash' not in obj or 'hash' not in obj:
+            last_hash = GENESIS_HASH
+            continue
+        if isinstance(obj.get('hash'), str) and obj['hash']:
+            last_hash = obj['hash']
+    return last_hash

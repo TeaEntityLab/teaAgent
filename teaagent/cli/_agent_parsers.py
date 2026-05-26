@@ -62,7 +62,18 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         metavar='provider',
         help='Model provider (optional when set in .teaagent/config.toml).',
     )
-    p.add_argument('task', help='Task for the agent to perform.')
+    p.add_argument(
+        'task',
+        nargs='?',
+        default=None,
+        help='Task for the agent to perform (optional when --from-plan is set).',
+    )
+    p.add_argument(
+        '--from-plan',
+        default=None,
+        metavar='PATH',
+        help='Load task and provenance from a .teaagent/plans/*.md artifact.',
+    )
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )

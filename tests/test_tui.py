@@ -70,6 +70,12 @@ class TUITests(unittest.TestCase):
         self.assertEqual(parsed[2], [{'n.name': 'TeaAgent'}])
         self.assertEqual(output[-1], 'bye')
 
+    def test_tui_slash_alias_help(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+        self.assertTrue(tui.handle_command('/help'))
+        self.assertTrue(any('Commands:' in line for line in output))
+
     def test_tui_use_switches_database_label(self) -> None:
         output = []
         tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)

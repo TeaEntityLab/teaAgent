@@ -473,6 +473,13 @@ def run_chat_agent(
             audit_logger, run_id, interval_seconds=config.heartbeat_seconds
         )
         heartbeat.start()
+    run_started_extra: Optional[dict[str, Any]] = None
+    plan_contract = context_extra.get('plan_contract')
+    if isinstance(plan_contract, dict):
+        run_started_extra = {
+            'plan_path': plan_contract.get('rel_path'),
+            'plan_content_hash': plan_contract.get('content_hash'),
+        }
     try:
         result = runner.run(
             task=task,
@@ -480,6 +487,7 @@ def run_chat_agent(
             run_id=run_id,
             initial_observations=initial_observations,
             initial_context_extra=(context_extra or None),
+            run_started_extra=run_started_extra,
         )
         _auto_curate_memory(
             root=config.root,

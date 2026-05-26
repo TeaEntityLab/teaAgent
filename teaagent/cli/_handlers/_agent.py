@@ -20,6 +20,7 @@ from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.daily import build_daily_brief
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
+from teaagent.plan import PlanContract
 from teaagent.policy import parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
@@ -49,10 +50,30 @@ def _emit_readiness_payload(args: argparse.Namespace, payload: dict[str, Any]) -
     print_json(payload)
 
 
+def _resolve_run_task(
+    args: argparse.Namespace,
+) -> tuple[str, Optional[PlanContract]]:
+    from teaagent.plan import load_plan_contract
+
+    plan_contract: PlanContract | None = None
+    if getattr(args, 'from_plan', None):
+        plan_contract = load_plan_contract(args.from_plan, root=args.root)
+        raw_task = plan_contract.task
+    elif getattr(args, 'task', None):
+        raw_task = args.task
+    else:
+        raise ValueError('task or --from-plan is required')
+    return _prepare_task(args, raw_task), plan_contract
+
+
 def agent_run_task(args: argparse.Namespace) -> int:
     if getattr(args, 'background', False):
         return _start_background_run(args)
-    task = _prepare_task(args, args.task)
+    try:
+        task, plan_contract = _resolve_run_task(args)
+    except (FileNotFoundError, ValueError) as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
     if getattr(args, 'dry_run', False):
         from teaagent.ergonomics.dry_run import build_dry_run_payload
 
@@ -68,7 +89,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
         _emit_readiness_payload(args, payload)
         ready = payload.get('would_invoke_model', False)
         return 0 if ready or not getattr(args, 'human', False) else 2
-    return _execute_agent_task(args, task)
+    return _execute_agent_task(args, task, plan_contract=plan_contract)
 
 
 def _prepare_task(args: argparse.Namespace, task: str) -> str:
@@ -149,6 +170,7 @@ def _execute_agent_task(
     initial_observations: Optional[list[dict[str, Any]]] = None,
     initial_context_extra: Optional[dict[str, Any]] = None,
     auto_approved_call_id: Optional[str] = None,
+    plan_contract: Optional[Any] = None,
 ) -> int:
     task_spec = None
     if args.clarify:
@@ -170,6 +192,9 @@ def _execute_agent_task(
     )
     selected_model = routing.model if routing else args.model
     adapter = args._adapter_factory(args.provider, model=selected_model)  # type: ignore[attr-defined]
+    merged_context_extra: dict[str, Any] = dict(initial_context_extra or {})
+    if plan_contract is not None:
+        merged_context_extra['plan_contract'] = plan_contract.to_dict()
     store = RunStore(args.root)
     audit = store.audit_logger()
     from teaagent.run_undo import UndoJournal
@@ -253,7 +278,7 @@ def _execute_agent_task(
         audit=audit,
         task_spec=task_spec,
         initial_observations=initial_observations,
-        initial_context_extra=initial_context_extra,
+        initial_context_extra=merged_context_extra or None,
     )
     store.logger_for_result(result, audit)
     if undo_journal.has_entries:
@@ -270,6 +295,8 @@ def _execute_agent_task(
         audit_summary=summarize_audit_events(events),
         permission_mode=resolved_permission_mode.value,
     )
+    if plan_contract is not None:
+        payload['plan_contract'] = plan_contract.to_dict()
     if resumed_from:
         payload['resumed_from'] = resumed_from
         payload['task'] = task
@@ -325,7 +352,11 @@ def cli_approval_handler(request: ApprovalRequest) -> bool:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
     store = ApprovalPresetStore('.')
-    if store.is_allowed(request.tool_name, permission_mode='prompt'):
+    if store.is_allowed(
+        request.tool_name,
+        permission_mode='prompt',
+        arguments=request.arguments,
+    ):
         return True
     print(
         json.dumps(
@@ -413,12 +444,22 @@ def agent_undo_command(args: argparse.Namespace) -> int:
         return 1
     journal = UndoJournal(args.root, path=undo_path)
     result = journal.restore()
+    status = 'restored' if result.ok else 'partial'
+    rel_undo = undo_path.resolve().relative_to(store.root).as_posix()
     payload = {
-        'status': 'restored' if result.ok else 'partial',
+        'status': status,
         'run_id': run_id,
         'restored': result.restored,
         'deleted': result.deleted,
         'errors': result.errors,
+        'audit_recorded': store.record_undo_applied(
+            run_id,
+            status=status,
+            restored=result.restored,
+            deleted=result.deleted,
+            errors=result.errors,
+            undo_journal_path=rel_undo,
+        ),
     }
     if result.ok:
         undo_path.unlink(missing_ok=True)

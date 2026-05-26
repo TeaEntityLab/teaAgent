@@ -59,8 +59,13 @@ HELP_TEXT = """Commands:
   approvals                 List approved call ids for this session.
   clarify <task>            Score task ambiguity without calling a model.
   preflight <task>          Show clarify, routing, memory, and tool plan without calling a model.
+  plan <task>               Write a read-only plan artifact under .teaagent/plans.
   daily [task]              Show readiness, recent runs, harness health, and token budget.
+  run <task>                Run a model-driven agent task (alias for ask).
   ask <task>                Run a model-driven agent task with workspace tools.
+  undo [run_id]             Restore workspace files from the last undo journal (or a run id).
+  permissions               List destructive-tool approval presets for this workspace.
+  mcp                       Hint for MCP doctor / serve commands (run from a shell).
   ask --clarify <task>      Clarify first; stop if key details are missing.
   memory add <text>         Add a workspace memory entry.
   memory list               List recent workspace memories.
@@ -74,6 +79,8 @@ HELP_TEXT = """Commands:
   smoke                     Create a SmokeTest node and query it.
   query <cypher>            Execute a Cypher query.
   exit | quit               Leave the TUI.
+
+Slash aliases (/daily, /plan, /run, …) are accepted for the same commands.
 """
 
 
@@ -319,6 +326,16 @@ class TeaAgentTUI:
             self._print_json(payload)
 
     def _approval_handler(self, request: ApprovalRequest) -> bool:
+        from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+        store = ApprovalPresetStore(self.root)
+        if store.is_allowed(
+            request.tool_name,
+            permission_mode=self.permission_mode.value,
+            arguments=request.arguments,
+        ):
+            self.output_fn(f'approval: preset allowed {request.tool_name}')
+            return True
         self._print_json({'status': 'approval_required', 'approval': request.to_dict()})
         fn = self.input_fn or input
         answer = fn(f'approve {request.call_id} ({request.tool_name})? [y/N] ')

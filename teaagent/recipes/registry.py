@@ -23,6 +23,18 @@ class Recipe:
 
 
 RECIPES: dict[str, Recipe] = {
+    'first-hour': Recipe(
+        name='first-hour',
+        description='Golden path: setup health, daily readiness, plan, run, verify, undo',
+        task_template=(
+            'Walk through the TeaAgent first-hour path for this repo: confirm harness '
+            'health and daily readiness, outline a minimal plan artifact, list verification '
+            'commands (pytest or project tests), and note when to use `teaagent agent undo`. '
+            'Do not edit files in this recipe run.'
+        ),
+        permission_mode='read-only',
+        context_profile='lean',
+    ),
     'review-staged': Recipe(
         name='review-staged',
         description='Review git staged diff for issues before commit',

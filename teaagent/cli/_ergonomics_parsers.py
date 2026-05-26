@@ -143,6 +143,24 @@ def _approval(
         '--scope', choices=['once', 'session', 'always', 'deny'], default='session'
     )
     grant.add_argument('--permission-mode', default=None)
+    grant.add_argument(
+        '--path-glob',
+        action='append',
+        default=[],
+        help='Allow only when the tool path argument matches this glob (repeatable).',
+    )
+    grant.add_argument(
+        '--command-prefix',
+        action='append',
+        default=[],
+        help='Allow only when shell command starts with this prefix (repeatable).',
+    )
+    grant.add_argument(
+        '--ttl-hours',
+        type=float,
+        default=None,
+        help='Grant expiry in hours (session grants default to 8h when omitted).',
+    )
     grant.set_defaults(func=handlers['approval_grant'], command='approval')
     deny = subs.add_parser('deny')
     deny.add_argument('tool_name')

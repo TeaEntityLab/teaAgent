@@ -33,6 +33,8 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         return True
 
     action = parts[0].lower()
+    if action.startswith('/'):
+        action = action[1:]
     args = parts[1:]
     if action in {'exit', 'quit'}:
         tui.output_fn('bye')
@@ -302,6 +304,86 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             route=tui.route_model_enabled,
         )
         tui._print_json(report.to_dict())
+        return True
+    if action == 'plan':
+        if not args:
+            tui.output_fn('error: plan requires a task')
+            return True
+        from teaagent.ergonomics.context_inject import expand_at_references
+        from teaagent.plan import write_plan_artifact
+
+        plan_task, _refs = expand_at_references(' '.join(args), root=tui.root)
+        report = preflight(
+            plan_task,
+            root=tui.root,
+            provider=tui.provider,
+            model=tui.model,
+            permission_mode=tui.permission_mode,
+            route=tui.route_model_enabled,
+        )
+        artifact = write_plan_artifact(report, root=tui.root)
+        payload = report.to_dict()
+        payload['plan_artifact'] = str(artifact)
+        tui.output_fn(f'plan saved: {artifact}')
+        tui._print_json(payload)
+        return True
+    if action in {'run', 'permissions', 'undo', 'mcp'}:
+        if action == 'run':
+            if not args:
+                tui.output_fn('error: run requires a task')
+                return True
+            try:
+                tui._run_agent_task(' '.join(args))
+            except Exception as exc:
+                tui._print_json({'error': str(exc), 'status': 'failed:system'})
+            return True
+        if action == 'permissions':
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            approval_store = ApprovalPresetStore(tui.root)
+            tui._print_json([grant.to_dict() for grant in approval_store.list_grants()])
+            return True
+        if action == 'mcp':
+            tui.output_fn(
+                'mcp: run `teaagent doctor mcp --wizard` or `teaagent mcp serve` from a shell'
+            )
+            return True
+        from teaagent.run_undo import UndoJournal
+
+        run_store = RunStore(tui.root)
+        run_id = args[0] if args else run_store.latest_run_with_undo()
+        if run_id is None:
+            tui.output_fn('error: no undo journal found for recent runs')
+            return True
+        undo_path = run_store.undo_path(run_id)
+        if not undo_path.is_file():
+            tui.output_fn(f'error: no undo journal for run {run_id}')
+            return True
+        journal = UndoJournal(tui.root, path=undo_path)
+        result = journal.restore()
+        status = 'restored' if result.ok else 'partial'
+        audit_recorded = run_store.record_undo_applied(
+            run_id,
+            status=status,
+            restored=result.restored,
+            deleted=result.deleted,
+            errors=result.errors,
+            undo_journal_path=undo_path.resolve()
+            .relative_to(run_store.root)
+            .as_posix(),
+        )
+        if result.ok:
+            undo_path.unlink(missing_ok=True)
+        tui._print_json(
+            {
+                'status': status,
+                'run_id': run_id,
+                'restored': result.restored,
+                'deleted': result.deleted,
+                'errors': result.errors,
+                'audit_recorded': audit_recorded,
+            }
+        )
         return True
     if action == 'daily':
         from teaagent.ergonomics.context_inject import expand_at_references

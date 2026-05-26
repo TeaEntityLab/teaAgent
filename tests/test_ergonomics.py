@@ -49,6 +49,59 @@ def test_approval_preset_store(tmp_path: Path) -> None:
     assert not store.is_allowed('workspace_apply_patch', permission_mode='prompt')
 
 
+def test_scoped_approval_path_glob(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant(
+        'workspace_write_file',
+        scope='session',
+        path_globs=['src/**'],
+    )
+    assert store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'src/module.py'},
+    )
+    assert not store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'etc/passwd'},
+    )
+
+
+def test_scoped_approval_command_prefix(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant(
+        'run_terminal_cmd',
+        scope='session',
+        command_prefixes=['pytest '],
+    )
+    assert store.is_allowed(
+        'run_terminal_cmd',
+        permission_mode='prompt',
+        arguments={'command': 'pytest -q tests'},
+    )
+    assert not store.is_allowed(
+        'run_terminal_cmd',
+        permission_mode='prompt',
+        arguments={'command': 'rm -rf /'},
+    )
+
+
+def test_scoped_approval_expired_grant(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant('workspace_write_file', scope='session')
+    data = store._load()
+    assert isinstance(data['grants'][0], dict)
+    data['grants'][0]['expires_at'] = '2020-01-01T00:00:00+00:00'
+    store._save(data)
+    assert not store.is_allowed('workspace_write_file', permission_mode='prompt')
+
+
+def test_first_hour_recipe_listed() -> None:
+    names = {item['name'] for item in list_recipes()}
+    assert 'first-hour' in names
+
+
 def test_recipes_registry() -> None:
     names = {item['name'] for item in list_recipes()}
     assert 'review-staged' in names

@@ -19,11 +19,16 @@ Copy this sequence for a new repository (replace `gpt` with your provider):
 pip install -e .
 teaagent setup --root . --provider gpt --permission-mode read-only --write-env
 teaagent daily "summarize this repo" --dry-run --root . --human
-teaagent run "summarize the test suite" --permission-mode read-only --root .
+teaagent plan gpt "summarize the test suite" --root . --permission-mode read-only
+teaagent run gpt --from-plan .teaagent/plans/<timestamp>-*.md --permission-mode read-only --root .
+# after a mutating run:
+teaagent agent undo --last --root .
 ```
 
 - Use `--human` on `daily` and `setup` for readable summaries; omit it for JSON (automation default).
 - After setup, `provider` is optional on `daily`, `run`, and top-level shortcuts when `.teaagent/config.json` exists.
+- `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log).
+- Scoped approvals: `teaagent approval grant <tool> --path-glob 'src/**' --command-prefix 'pytest '` (session grants expire after 8h by default).
 
 **Advanced paths** (not part of the golden path): `teaagent init`, `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
 
@@ -39,7 +44,7 @@ TeaAgent matches common agent-setup practice in five layers:
 | Capabilities | Extra tools | Skills, plugins, `teaagent mcp serve`, workspace tools |
 | Continuity | What happened last time | Audit log, `teaagent runs`, `teaagent resume` |
 
-Typical progression: **setup → daily (readiness) → read-only run → workspace-write or prompt when editing**.
+Typical progression: **setup → daily (readiness) → plan → run (or `run --from-plan`) → verify → undo/resume when needed**.
 
 ## Recovery recipes
 

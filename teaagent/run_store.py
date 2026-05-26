@@ -74,6 +74,35 @@ class RunStore:
                 return summary.run_id
         return None
 
+    def record_undo_applied(
+        self,
+        run_id: str,
+        *,
+        status: str,
+        restored: list[str],
+        deleted: list[str],
+        errors: list[str],
+        undo_journal_path: Optional[str] = None,
+    ) -> bool:
+        """Append an ``undo_applied`` event to the run audit log when it exists."""
+        path = self.run_path(run_id)
+        if not path.is_file():
+            return False
+        from teaagent.audit_chain import last_chain_hash
+
+        audit = AuditLogger(path=path)
+        audit._prev_hash = last_chain_hash(path)
+        audit.record(
+            'undo_applied',
+            run_id,
+            status=status,
+            restored=list(restored),
+            deleted=list(deleted),
+            errors=list(errors),
+            undo_journal_path=undo_journal_path,
+        )
+        return audit.disk_error is None
+
     def list_runs(self, *, limit: int = 20) -> list[RunSummary]:
         summaries = [
             self.summarize(path)

@@ -77,6 +77,7 @@ class AgentRunner:
         run_id: Optional[str] = None,
         initial_observations: Optional[list[dict[str, Any]]] = None,
         initial_context_extra: Optional[dict[str, Any]] = None,
+        run_started_extra: Optional[dict[str, Any]] = None,
     ) -> RunResult:
         current_run_id = run_id or uuid4().hex
         observations: list[dict[str, Any]] = (
@@ -92,12 +93,13 @@ class AgentRunner:
         cost_cents = 0.0
         input_tokens = 0
         output_tokens = 0
-        self.audit.record(
-            'run_started',
-            current_run_id,
-            task=task,
-            replayed_observations=len(observations),
-        )
+        started_payload: dict[str, Any] = {
+            'task': task,
+            'replayed_observations': len(observations),
+        }
+        if run_started_extra:
+            started_payload.update(run_started_extra)
+        self.audit.record('run_started', current_run_id, **started_payload)
 
         while iterations < self.budget.max_iterations:
             iterations += 1

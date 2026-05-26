@@ -2,12 +2,64 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 from teaagent.preflight import PreflightReport
 from teaagent.storage import atomic_write_text
+
+_PLAN_TASK_LINE = re.compile(r'^-\s+\*\*Task:\*\*\s*(.+)\s*$', re.MULTILINE)
+
+
+@dataclass(frozen=True)
+class PlanContract:
+    """Parsed plan artifact used to bind execution runs to reviewed plans."""
+
+    path: Path
+    rel_path: str
+    content_hash: str
+    task: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            'path': str(self.path),
+            'rel_path': self.rel_path,
+            'content_hash': self.content_hash,
+            'task': self.task,
+        }
+
+
+def plan_content_hash(content: str) -> str:
+    return hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+
+def load_plan_contract(
+    plan_path: str | Path, *, root: str | Path = '.'
+) -> PlanContract:
+    workspace = Path(root).resolve()
+    path = Path(plan_path)
+    if not path.is_absolute():
+        path = (workspace / path).resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f'plan artifact not found: {plan_path}')
+    content = path.read_text(encoding='utf-8')
+    match = _PLAN_TASK_LINE.search(content)
+    if not match:
+        raise ValueError('plan artifact missing **Task:** line in Summary section')
+    task = match.group(1).strip()
+    try:
+        rel_path = path.relative_to(workspace).as_posix()
+    except ValueError:
+        rel_path = path.as_posix()
+    return PlanContract(
+        path=path,
+        rel_path=rel_path,
+        content_hash=plan_content_hash(content),
+        task=task,
+    )
 
 
 def _slugify(text: str, *, max_len: int = 48) -> str:
@@ -232,7 +284,8 @@ def render_plan_markdown(report: PreflightReport) -> str:
             'When this plan is approved:',
             '',
             '```bash',
-            f'teaagent run "{report.task}" --permission-mode workspace-write',
+            'teaagent run <provider> --from-plan .teaagent/plans/<this-file>.md '
+            f'--permission-mode {report.permission_mode.value}',
             '```',
             '',
         ]

@@ -11,6 +11,7 @@ from unittest.mock import patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from teaagent.run_store import RunStore
 
 
 def test_agent_undo_restores_last_run_writes(tmp_path: Path) -> None:
@@ -56,7 +57,12 @@ def test_agent_undo_restores_last_run_writes(tmp_path: Path) -> None:
     undo_payload = json.loads(undo_out.getvalue())
     assert undo_code == 0
     assert undo_payload['status'] == 'restored'
+    assert undo_payload['audit_recorded'] is True
     assert undo_payload['run_id'] == run_payload['run_id']
+    run_events = RunStore(tmp_path).show_run(run_payload['run_id'])
+    undo_audit = [e for e in run_events if e.get('event_type') == 'undo_applied']
+    assert len(undo_audit) == 1
+    assert undo_audit[0]['payload']['restored'] == undo_payload['restored']
     assert 'notes.txt' in undo_payload['restored']
     assert 'new.txt' in undo_payload['deleted']
     assert existing.read_text(encoding='utf-8') == 'before\n'
