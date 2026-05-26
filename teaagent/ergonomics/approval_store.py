@@ -207,27 +207,67 @@ def _compute_expires_at(
     return (created + timedelta(hours=hours)).isoformat()
 
 
+# Trust boundary: owner-only permissions on all .teaagent runtime state files
+_TEAAGENT_DIR_MODE = 0o700
+_TEAAGENT_FILE_MODE = 0o600
+
+
 class ApprovalPresetStore:
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root).resolve()
-        self.path = self.root / '.teaagent' / 'approvals.json'
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        import contextlib
+
+        teaagent_dir = self.root / '.teaagent'
+        teaagent_dir.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(
+            OSError
+        ):  # best-effort; may fail on network/read-only fs
+            teaagent_dir.chmod(_TEAAGENT_DIR_MODE)
+        self.path = teaagent_dir / 'approvals.json'
 
     def _get_workspace_secret(self) -> bytes:
-        import contextlib
+        """Load or generate the workspace-local HMAC secret.
+
+        Raises IOError if the secret file exists but cannot be read or parsed,
+        or if a newly-generated secret cannot be persisted to disk.  This
+        prevents silent fall-through to ephemeral digests that would break
+        subsequent resume exact-match checks.
+        """
+        import secrets
 
         secret_path = self.root / '.teaagent' / 'secret'
         if secret_path.is_file():
-            with contextlib.suppress(Exception):
+            try:
                 secret_hex = secret_path.read_text(encoding='utf-8').strip()
-                if len(secret_hex) == 64:
-                    return bytes.fromhex(secret_hex)
-        # Generate new secret
-        import secrets
-
+            except OSError as exc:
+                raise IOError(
+                    f'Cannot read workspace secret from {secret_path}: {exc}. '
+                    'Check file permissions or delete the file to regenerate.'
+                ) from exc
+            if len(secret_hex) != 64:
+                raise IOError(
+                    f'Workspace secret at {secret_path} is invalid '
+                    f'(expected 64-hex, got {len(secret_hex)} chars). '
+                    'Delete the file to regenerate a fresh secret.'
+                )
+            try:
+                return bytes.fromhex(secret_hex)
+            except ValueError as exc:
+                raise IOError(
+                    f'Workspace secret at {secret_path} is corrupt: {exc}. '
+                    'Delete the file to regenerate.'
+                ) from exc
+        # Generate and persist a fresh secret
         secret = secrets.token_bytes(32)
-        with contextlib.suppress(Exception):
+        try:
             secret_path.write_text(secret.hex(), encoding='utf-8')
+            secret_path.chmod(_TEAAGENT_FILE_MODE)
+        except OSError as exc:
+            raise IOError(
+                f'Cannot persist workspace secret to {secret_path}: {exc}. '
+                'Ensure .teaagent/ is writable. Without a persistent secret, '
+                'resume exact-match approval will not work across sessions.'
+            ) from exc
         return secret
 
     def _load(self) -> dict[str, Any]:
@@ -261,9 +301,15 @@ class ApprovalPresetStore:
         return data
 
     def _save(self, data: dict[str, Any]) -> None:
+        import contextlib
+
         self.path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8'
         )
+        with contextlib.suppress(
+            OSError
+        ):  # best-effort; permissions may already be correct
+            self.path.chmod(_TEAAGENT_FILE_MODE)
 
     def _migrate_missing_grant_ids(self) -> None:
         data = self._load()
@@ -821,3 +867,282 @@ class ApprovalPresetStore:
         if not isinstance(audit, list):
             return []
         return [item for item in audit[-limit:] if isinstance(item, dict)]
+
+    def check_security_health(self) -> dict[str, Any]:
+        """Run comprehensive security health checks on .teaagent runtime state.
+
+        Returns a dict with 'ok' (bool) and 'checks' list where each entry has:
+          - name: str
+          - ok: bool
+          - severity: 'error' | 'warning' | 'info'
+          - message: str
+        """
+        checks: list[dict[str, Any]] = []
+        teaagent_dir = self.root / '.teaagent'
+        secret_path = teaagent_dir / 'secret'
+
+        # 1. Check .teaagent directory permissions
+        if teaagent_dir.exists():
+            try:
+                mode = teaagent_dir.stat().st_mode & 0o777
+                if mode != _TEAAGENT_DIR_MODE:
+                    checks.append(
+                        {
+                            'name': 'teaagent_dir_mode',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'.teaagent/ has mode {oct(mode)}; expected {oct(_TEAAGENT_DIR_MODE)}. '
+                                f'Run: chmod {oct(_TEAAGENT_DIR_MODE)} {teaagent_dir}'
+                            ),
+                        }
+                    )
+                else:
+                    checks.append(
+                        {
+                            'name': 'teaagent_dir_mode',
+                            'ok': True,
+                            'severity': 'info',
+                            'message': f'.teaagent/ has correct mode {oct(mode)}',
+                        }
+                    )
+            except OSError as exc:
+                checks.append(
+                    {
+                        'name': 'teaagent_dir_mode',
+                        'ok': False,
+                        'severity': 'error',
+                        'message': f'Cannot stat .teaagent/: {exc}',
+                    }
+                )
+        else:
+            checks.append(
+                {
+                    'name': 'teaagent_dir_mode',
+                    'ok': True,
+                    'severity': 'info',
+                    'message': '.teaagent/ does not exist yet (will be created on first use)',
+                }
+            )
+
+        # 2. Check secret file
+        if secret_path.exists():
+            try:
+                mode = secret_path.stat().st_mode & 0o777
+                if mode != _TEAAGENT_FILE_MODE:
+                    checks.append(
+                        {
+                            'name': 'secret_file_mode',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'.teaagent/secret has mode {oct(mode)}; expected {oct(_TEAAGENT_FILE_MODE)}. '
+                                f'Run: chmod {oct(_TEAAGENT_FILE_MODE)} {secret_path}'
+                            ),
+                        }
+                    )
+                else:
+                    checks.append(
+                        {
+                            'name': 'secret_file_mode',
+                            'ok': True,
+                            'severity': 'info',
+                            'message': f'.teaagent/secret has correct mode {oct(mode)}',
+                        }
+                    )
+            except OSError as exc:
+                checks.append(
+                    {
+                        'name': 'secret_file_mode',
+                        'ok': False,
+                        'severity': 'error',
+                        'message': f'Cannot stat .teaagent/secret: {exc}',
+                    }
+                )
+            # Validate secret content
+            try:
+                secret_hex = secret_path.read_text(encoding='utf-8').strip()
+                if len(secret_hex) == 64:
+                    try:
+                        bytes.fromhex(secret_hex)
+                        checks.append(
+                            {
+                                'name': 'secret_content',
+                                'ok': True,
+                                'severity': 'info',
+                                'message': '.teaagent/secret is valid (64-hex HMAC key)',
+                            }
+                        )
+                    except ValueError:
+                        checks.append(
+                            {
+                                'name': 'secret_content',
+                                'ok': False,
+                                'severity': 'error',
+                                'message': '.teaagent/secret contains non-hex data. Delete it to regenerate.',
+                            }
+                        )
+                else:
+                    checks.append(
+                        {
+                            'name': 'secret_content',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'.teaagent/secret has {len(secret_hex)} chars (expected 64). '
+                                'Delete it to regenerate.'
+                            ),
+                        }
+                    )
+            except OSError as exc:
+                checks.append(
+                    {
+                        'name': 'secret_content',
+                        'ok': False,
+                        'severity': 'error',
+                        'message': f'Cannot read .teaagent/secret: {exc}',
+                    }
+                )
+        else:
+            checks.append(
+                {
+                    'name': 'secret_file_mode',
+                    'ok': True,
+                    'severity': 'info',
+                    'message': '.teaagent/secret does not exist yet (will be created on first destructive approval)',
+                }
+            )
+            checks.append(
+                {
+                    'name': 'secret_content',
+                    'ok': True,
+                    'severity': 'info',
+                    'message': '.teaagent/secret not yet created',
+                }
+            )
+
+        # 3. Check approvals.json permissions
+        if self.path.exists():
+            try:
+                mode = self.path.stat().st_mode & 0o777
+                if mode != _TEAAGENT_FILE_MODE:
+                    checks.append(
+                        {
+                            'name': 'approvals_file_mode',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'approvals.json has mode {oct(mode)}; expected {oct(_TEAAGENT_FILE_MODE)}. '
+                                f'Run: chmod {oct(_TEAAGENT_FILE_MODE)} {self.path}'
+                            ),
+                        }
+                    )
+                else:
+                    checks.append(
+                        {
+                            'name': 'approvals_file_mode',
+                            'ok': True,
+                            'severity': 'info',
+                            'message': f'approvals.json has correct mode {oct(mode)}',
+                        }
+                    )
+            except OSError as exc:
+                checks.append(
+                    {
+                        'name': 'approvals_file_mode',
+                        'ok': False,
+                        'severity': 'error',
+                        'message': f'Cannot stat approvals.json: {exc}',
+                    }
+                )
+        else:
+            checks.append(
+                {
+                    'name': 'approvals_file_mode',
+                    'ok': True,
+                    'severity': 'info',
+                    'message': 'approvals.json does not exist yet',
+                }
+            )
+
+        # 4. Check for orphaned v2 approvals (active records created with a secret
+        #    that no longer matches the current secret)
+        try:
+            self._get_workspace_secret()  # validate secret is loadable; raises IOError if corrupt
+            data = self._load()
+            now = datetime.now(timezone.utc)
+            orphaned = []
+            for item in data.get('scoped_approvals', []):
+                if not isinstance(item, dict):
+                    continue
+                if item.get('consumed_at'):
+                    continue
+                expires_at = item.get('expires_at')
+                if expires_at:
+                    try:
+                        exp = datetime.fromisoformat(expires_at)
+                        if exp.tzinfo is None:
+                            exp = exp.replace(tzinfo=timezone.utc)
+                        if now >= exp:
+                            continue
+                    except ValueError:
+                        continue
+                digest = item.get('argument_digest', '')
+                if len(digest) == 64:  # v2 HMAC — verify it belongs to current secret
+                    # We cannot verify without knowing the original arguments,
+                    # but we can flag records as potentially orphaned if the secret
+                    # was recently regenerated (secret_path mtime > record created_at)
+                    created_at_str = item.get('created_at', '')
+                    if created_at_str and secret_path.exists():
+                        try:
+                            created_at = datetime.fromisoformat(created_at_str)
+                            if created_at.tzinfo is None:
+                                created_at = created_at.replace(tzinfo=timezone.utc)
+                            secret_mtime = datetime.fromtimestamp(
+                                secret_path.stat().st_mtime, tz=timezone.utc
+                            )
+                            if secret_mtime > created_at:
+                                orphaned.append(item.get('record_id', '?'))
+                        except (OSError, ValueError):
+                            pass
+            if orphaned:
+                checks.append(
+                    {
+                        'name': 'orphaned_v2_approvals',
+                        'ok': False,
+                        'severity': 'warning',
+                        'message': (
+                            f'{len(orphaned)} active v2 scoped approval(s) may be orphaned '
+                            'because the workspace secret was regenerated after they were created. '
+                            'They will be blocked on next resume — re-approve via HITL.'
+                        ),
+                        'orphaned_record_ids': orphaned,
+                    }
+                )
+            else:
+                checks.append(
+                    {
+                        'name': 'orphaned_v2_approvals',
+                        'ok': True,
+                        'severity': 'info',
+                        'message': 'No orphaned v2 scoped approvals detected',
+                    }
+                )
+        except IOError as exc:
+            checks.append(
+                {
+                    'name': 'orphaned_v2_approvals',
+                    'ok': False,
+                    'severity': 'warning',
+                    'message': f'Could not check for orphaned v2 approvals: {exc}',
+                }
+            )
+
+        errors = [c for c in checks if not c['ok'] and c['severity'] == 'error']
+        warnings = [c for c in checks if not c['ok'] and c['severity'] == 'warning']
+        return {
+            'ok': len(errors) == 0,
+            'error_count': len(errors),
+            'warning_count': len(warnings),
+            'checks': checks,
+        }

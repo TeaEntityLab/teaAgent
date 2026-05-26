@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.llm import available_providers
 from teaagent.llm._config import PROVIDER_CONFIGS
 from teaagent.wizard import (
@@ -273,11 +274,14 @@ def doctor_providers(args: argparse.Namespace) -> int:
 def doctor_project(args: argparse.Namespace) -> int:
     if getattr(args, 'wizard', False):
         return _doctor_project_wizard(args)
-    root = str(Path(getattr(args, 'root', '.')).resolve())
+    root = Path(getattr(args, 'root', '.')).resolve()
+    security = ApprovalPresetStore(root).check_security_health()
+    overall_ok = security['ok']
     payload = {
-        'ok': True,
+        'ok': overall_ok,
         'mode': 'checklist',
-        'root': root,
+        'root': str(root),
+        'security': security,
         'next_steps': [
             f'teaagent setup --root {root}',
             'teaagent doctor providers',
@@ -286,7 +290,7 @@ def doctor_project(args: argparse.Namespace) -> int:
         ],
     }
     print_json(payload)
-    return 0
+    return 0 if overall_ok else 1
 
 
 def doctor_mcp(args: argparse.Namespace) -> int:
@@ -652,7 +656,10 @@ def doctor_all(args: argparse.Namespace) -> int:
         ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
         provider_results.append({'provider': provider, 'ok': ok, 'message': message})
     checks['providers'] = provider_results
-    ok = gql_ok and all(item['ok'] for item in provider_results)
+    root = Path(getattr(args, 'root', '.')).resolve()
+    security = ApprovalPresetStore(root).check_security_health()
+    checks['security'] = security
+    ok = gql_ok and all(item['ok'] for item in provider_results) and security['ok']
     print_json({'ok': ok, 'checks': checks})
     return 0 if ok else 1
 

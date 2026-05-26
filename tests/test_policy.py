@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from dataclasses import FrozenInstanceError
 
+from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.errors import ToolPermissionError
 from teaagent.policy import (
     ApprovalPolicy,
@@ -370,6 +371,127 @@ class ApprovalPolicyTests(unittest.TestCase):
             )
             self.assertIsNotNone(has_existing)
             self.assertEqual(has_existing.argument_digest, digest)
+
+
+class TrustBoundaryPermissionsTests(unittest.TestCase):
+    """Phase 3: .teaagent dir/file modes and check_security_health."""
+
+    def test_teaagent_dir_created_with_0700(self) -> None:
+        """__init__ must chmod .teaagent to 0o700."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            teaagent_dir = store.root / '.teaagent'
+            mode = teaagent_dir.stat().st_mode & 0o777
+            self.assertEqual(
+                mode, 0o700, f'.teaagent/ should be 0o700 but got {oct(mode)}'
+            )
+
+    def test_approvals_json_written_with_0600(self) -> None:
+        """_save must chmod approvals.json to 0o600 after every write."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            mode = store.path.stat().st_mode & 0o777
+            self.assertEqual(
+                mode, 0o600, f'approvals.json should be 0o600 but got {oct(mode)}'
+            )
+
+    def test_secret_written_with_0600(self) -> None:
+        """_get_workspace_secret must chmod secret to 0o600 after creation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            # trigger secret generation
+            store._get_workspace_secret()
+            secret_path = store.root / '.teaagent' / 'secret'
+            self.assertTrue(secret_path.exists(), 'secret file should be created')
+            mode = secret_path.stat().st_mode & 0o777
+            self.assertEqual(mode, 0o600, f'secret should be 0o600 but got {oct(mode)}')
+
+    def test_secret_raises_ioerror_on_corrupt_content(self) -> None:
+        """_get_workspace_secret must raise IOError on invalid hex content."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            secret_path = store.root / '.teaagent' / 'secret'
+            # Write garbage shorter than 64 chars
+            secret_path.write_text('tooshort', encoding='utf-8')
+            with self.assertRaises(IOError):
+                store._get_workspace_secret()
+
+    def test_secret_raises_ioerror_on_non_hex_content(self) -> None:
+        """_get_workspace_secret must raise IOError when 64-char but not valid hex."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            secret_path = store.root / '.teaagent' / 'secret'
+            secret_path.write_text('x' * 64, encoding='utf-8')  # not hex
+            with self.assertRaises(IOError):
+                store._get_workspace_secret()
+
+    def test_check_security_health_fresh_workspace_is_ok(self) -> None:
+        """Fresh workspace with no approvals yet should report ok=True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            result = store.check_security_health()
+            self.assertIn('ok', result)
+            self.assertIn('checks', result)
+            self.assertIsInstance(result['checks'], list)
+            # No errors expected on a fresh workspace (files don't exist yet)
+            self.assertTrue(result['ok'], f'Unexpected errors: {result["checks"]}')
+
+    def test_check_security_health_detects_wrong_dir_mode(self) -> None:
+        """check_security_health reports error when .teaagent/ mode is too open."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            teaagent_dir = store.root / '.teaagent'
+            teaagent_dir.chmod(0o755)  # too permissive
+            result = store.check_security_health()
+            dir_check = next(
+                (c for c in result['checks'] if c['name'] == 'teaagent_dir_mode'), None
+            )
+            self.assertIsNotNone(dir_check, 'teaagent_dir_mode check should be present')
+            self.assertFalse(dir_check['ok'])
+            self.assertEqual(dir_check['severity'], 'error')
+
+    def test_check_security_health_detects_wrong_secret_mode(self) -> None:
+        """check_security_health reports error when secret file mode is too open."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store._get_workspace_secret()  # create secret
+            secret_path = store.root / '.teaagent' / 'secret'
+            secret_path.chmod(0o644)  # too permissive
+            result = store.check_security_health()
+            secret_check = next(
+                (c for c in result['checks'] if c['name'] == 'secret_file_mode'), None
+            )
+            self.assertIsNotNone(secret_check)
+            self.assertFalse(secret_check['ok'])
+            self.assertEqual(secret_check['severity'], 'error')
+
+    def test_check_security_health_detects_wrong_approvals_mode(self) -> None:
+        """check_security_health reports error when approvals.json mode is too open."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')  # create the file
+            store.path.chmod(0o644)
+            result = store.check_security_health()
+            approvals_check = next(
+                (c for c in result['checks'] if c['name'] == 'approvals_file_mode'),
+                None,
+            )
+            self.assertIsNotNone(approvals_check)
+            self.assertFalse(approvals_check['ok'])
+            self.assertEqual(approvals_check['severity'], 'error')
+
+    def test_check_security_health_result_structure(self) -> None:
+        """Each check entry must have name, ok, severity, message fields."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            result = store.check_security_health()
+            for check in result['checks']:
+                self.assertIn('name', check)
+                self.assertIn('ok', check)
+                self.assertIn('severity', check)
+                self.assertIn('message', check)
+                self.assertIn(check['severity'], ('error', 'warning', 'info'))
 
 
 if __name__ == '__main__':
