@@ -506,13 +506,19 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                     f'cannot be auto-approved safely. Please approve it interactively.'
                 )
             else:
-                approval_store.add_scoped_approval(
+                if not approval_store.check_scoped_approval_digest(
                     run_id=args[0],
                     call_id=pending['call_id'],
                     tool_name=pending['tool_name'],
-                    arguments=pending['arguments'],
                     argument_digest=digest,
-                )
+                ):
+                    approval_store.add_scoped_approval(
+                        run_id=args[0],
+                        call_id=pending['call_id'],
+                        tool_name=pending['tool_name'],
+                        arguments=pending['arguments'],
+                        argument_digest=digest,
+                    )
                 tui.output_fn(
                     f'auto-approved pending call (run-scoped exact-match): {pending["call_id"]}'
                 )

@@ -33,9 +33,17 @@ class ApprovalRequest:
     reason: str
     annotations: dict[str, bool]
     run_id: Optional[str] = None
+    workspace_secret: Optional[bytes] = None
 
     def to_dict(self) -> dict[str, Any]:
         from teaagent.ergonomics.approval_store import _compute_argument_digest
+
+        if self.workspace_secret is not None:
+            digest = _compute_argument_digest(self.arguments, self.workspace_secret)
+            version = 'v2'
+        else:
+            digest = _compute_argument_digest(self.arguments)
+            version = 'v1'
 
         payload: dict[str, Any] = {
             'call_id': self.call_id,
@@ -43,8 +51,8 @@ class ApprovalRequest:
             'arguments': redact_tool_arguments(self.arguments),
             'reason': self.reason,
             'annotations': self.annotations,
-            'argument_digest': _compute_argument_digest(self.arguments),
-            'argument_digest_version': 'v1',
+            'argument_digest': digest,
+            'argument_digest_version': version,
         }
         if self.run_id is not None:
             payload['run_id'] = self.run_id

@@ -299,14 +299,12 @@ class TUITests(unittest.TestCase):
             approved = tui._approval_handler(request)
             self.assertTrue(approved)
 
-            # Verify run-scoped exact-match record was created in store
+            # Verify that immediate interactive HITL approval does NOT create a persistent record in the database
             store = ApprovalPresetStore(tmp)
             records = store.list_scoped_approvals_for_run('run-tui-123')
-            self.assertEqual(len(records), 1)
-            self.assertEqual(records[0].call_id, 'c123')
-            self.assertEqual(records[0].tool_name, 'workspace_write_file')
+            self.assertEqual(len(records), 0)
 
-            # Verify legacy bare approved_call_ids in TUI is empty (not degraded)
+            # Verify legacy bare approved_call_ids in TUI is empty
             self.assertNotIn('c123', tui.approved_call_ids)
 
     def test_tui_resume_creates_precise_scoped_approval(self) -> None:

@@ -90,9 +90,15 @@ def _new_record_id() -> str:
     return uuid4().hex[:12]
 
 
-def _compute_argument_digest(arguments: dict[str, Any]) -> str:
+def _compute_argument_digest(
+    arguments: dict[str, Any], secret: Optional[bytes] = None
+) -> str:
     """Compute stable digest of arguments for exact matching."""
     normalized = json.dumps(arguments, sort_keys=True, separators=(',', ':'))
+    if secret is not None:
+        import hmac
+
+        return hmac.new(secret, normalized.encode(), hashlib.sha256).hexdigest()
     return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
 
@@ -203,8 +209,26 @@ def _compute_expires_at(
 
 class ApprovalPresetStore:
     def __init__(self, root: str | Path) -> None:
-        self.path = Path(root).resolve() / '.teaagent' / 'approvals.json'
+        self.root = Path(root).resolve()
+        self.path = self.root / '.teaagent' / 'approvals.json'
         self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _get_workspace_secret(self) -> bytes:
+        import contextlib
+
+        secret_path = self.root / '.teaagent' / 'secret'
+        if secret_path.is_file():
+            with contextlib.suppress(Exception):
+                secret_hex = secret_path.read_text(encoding='utf-8').strip()
+                if len(secret_hex) == 64:
+                    return bytes.fromhex(secret_hex)
+        # Generate new secret
+        import secrets
+
+        secret = secrets.token_bytes(32)
+        with contextlib.suppress(Exception):
+            secret_path.write_text(secret.hex(), encoding='utf-8')
+        return secret
 
     def _load(self) -> dict[str, Any]:
         if not self.path.is_file():
@@ -403,7 +427,8 @@ class ApprovalPresetStore:
             expires_at = (created + timedelta(hours=ttl_hours)).isoformat()
 
         if argument_digest is None:
-            argument_digest = _compute_argument_digest(arguments)
+            secret = self._get_workspace_secret()
+            argument_digest = _compute_argument_digest(arguments, secret)
 
         record = ScopedApprovalRecord(
             record_id=_new_record_id(),
@@ -496,7 +521,26 @@ class ApprovalPresetStore:
         arguments: dict[str, Any],
     ) -> ScopedApprovalRecord | None:
         """Check if there's a matching scoped approval for this exact tool call."""
-        argument_digest = _compute_argument_digest(arguments)
+        secret = self._get_workspace_secret()
+        argument_digest_v2 = _compute_argument_digest(arguments, secret)
+        argument_digest_v1 = _compute_argument_digest(arguments)
+        for record in self.list_scoped_approvals_for_run(run_id):
+            if (
+                record.call_id == call_id
+                and record.tool_name == tool_name
+                and record.argument_digest in (argument_digest_v2, argument_digest_v1)
+            ):
+                return record
+        return None
+
+    def check_scoped_approval_digest(
+        self,
+        run_id: str,
+        call_id: str,
+        tool_name: str,
+        argument_digest: str,
+    ) -> ScopedApprovalRecord | None:
+        """Check if there's a matching scoped approval for this exact tool call and digest."""
         for record in self.list_scoped_approvals_for_run(run_id):
             if (
                 record.call_id == call_id

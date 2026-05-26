@@ -170,11 +170,11 @@ def agent_resume_command(args: argparse.Namespace) -> int:
                 )
             else:
                 # Check if this pending call already has a valid scoped approval to avoid duplicate storage writes
-                if not approval_store.check_scoped_approval(
+                if not approval_store.check_scoped_approval_digest(
                     run_id=args.run_id,
                     call_id=pending['call_id'],
                     tool_name=pending['tool_name'],
-                    arguments=pending['arguments'],
+                    argument_digest=digest,
                 ):
                     approval_store.add_scoped_approval(
                         run_id=args.run_id,

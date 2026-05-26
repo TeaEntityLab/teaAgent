@@ -172,6 +172,11 @@ class AgentRunner:
                         arguments=decision.arguments,
                     )
                 except ToolPermissionError as exc:
+                    secret = None
+                    if self.approval_policy and self.approval_policy.approval_store:
+                        secret = (
+                            self.approval_policy.approval_store._get_workspace_secret()
+                        )
                     approval_request = ApprovalRequest(
                         call_id=decision.call_id,
                         tool_name=decision.tool_name,
@@ -179,6 +184,7 @@ class AgentRunner:
                         reason=str(exc),
                         annotations=annotations,
                         run_id=current_run_id,
+                        workspace_secret=secret,
                     )
                     if self._can_request_approval(tool.annotations.destructive):
                         pending_payload = approval_request.to_dict()

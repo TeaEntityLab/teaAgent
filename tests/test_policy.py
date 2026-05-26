@@ -274,6 +274,103 @@ class ApprovalPolicyTests(unittest.TestCase):
             self.assertEqual(len(records), 1)
             self.assertIsNone(records[0].consumed_at)
 
+    def test_hmac_sha256_fingerprint_matching(self) -> None:
+        """Verify that v2 HMAC signatures match raw arguments and v1 legacy digests fall back safely."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            run_id = 'run-hmac-123'
+            tool_name = 'workspace_run_shell_mutate'
+            arguments = {'command': 'pytest'}
+
+            # 1. Create a scoped approval without explicit digest (will compute v2 digest using workspace secret)
+            record_v2 = store.add_scoped_approval(
+                run_id=run_id,
+                call_id='shell-v2',
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+
+            # Ensure a secure 64-character hex signature was generated (256-bit HMAC)
+            self.assertEqual(len(record_v2.argument_digest), 64)
+
+            # Assert policy accepts exact match via v2
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                approval_store=store,
+                approval_origin_run_id=run_id,
+            )
+            policy.assert_allowed(
+                tool_name=tool_name,
+                call_id='shell-v2',
+                destructive=True,
+                arguments=arguments,
+            )
+
+            # Record must be consumed
+            self.assertTrue(store.list_scoped_approvals_for_run(run_id) == [])
+
+            # 2. Add a legacy v1 record explicitly passing a v1 16-hex digest
+            from teaagent.ergonomics.approval_store import _compute_argument_digest
+
+            v1_digest = _compute_argument_digest(arguments)
+            self.assertEqual(len(v1_digest), 16)
+
+            store.add_scoped_approval(
+                run_id=run_id,
+                call_id='shell-v1',
+                tool_name=tool_name,
+                arguments=arguments,
+                argument_digest=v1_digest,
+            )
+
+            # Assert policy accepts fallback match via v1
+            policy.assert_allowed(
+                tool_name=tool_name,
+                call_id='shell-v1',
+                destructive=True,
+                arguments=arguments,
+            )
+
+    def test_resume_deduplication(self) -> None:
+        """Verify that check_scoped_approval_digest prevents duplicate scoped approvals on multiple resumes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            run_id = 'run-dedupe-123'
+            tool_name = 'workspace_write_file'
+            arguments = {'path': 'test.txt', 'content': 'hello'}
+            digest = 'dummy-digest-12345'
+
+            # First add should succeed
+            has_existing = store.check_scoped_approval_digest(
+                run_id=run_id,
+                call_id='write-1',
+                tool_name=tool_name,
+                argument_digest=digest,
+            )
+            self.assertIsNone(has_existing)
+
+            store.add_scoped_approval(
+                run_id=run_id,
+                call_id='write-1',
+                tool_name=tool_name,
+                arguments=arguments,
+                argument_digest=digest,
+            )
+
+            # Second check should find the existing record
+            has_existing = store.check_scoped_approval_digest(
+                run_id=run_id,
+                call_id='write-1',
+                tool_name=tool_name,
+                argument_digest=digest,
+            )
+            self.assertIsNotNone(has_existing)
+            self.assertEqual(has_existing.argument_digest, digest)
+
 
 if __name__ == '__main__':
     unittest.main()

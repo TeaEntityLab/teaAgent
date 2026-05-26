@@ -347,16 +347,8 @@ class TeaAgentTUI:
         self.output_fn(
             f'approval: {"approved" if approved else "denied"} {request.call_id}'
         )
-        if approved:
-            if request.run_id:
-                store.add_scoped_approval(
-                    run_id=request.run_id,
-                    call_id=request.call_id,
-                    tool_name=request.tool_name,
-                    arguments=request.arguments,
-                )
-            else:
-                self.approved_call_ids.add(request.call_id)
+        if approved and not request.run_id:
+            self.approved_call_ids.add(request.call_id)
         return approved
 
     def _run_result_payload(

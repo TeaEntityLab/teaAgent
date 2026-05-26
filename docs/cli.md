@@ -724,13 +724,14 @@ By default, destructive tools are blocked. To allow file writes, patching, or sh
 teaagent agent run gpt "Create a TODO.md summary" --allow-destructive
 ```
 
-Approve one exact destructive tool call id while staying in `prompt` mode:
+Approve one exact destructive tool call id (Legacy Escape Hatch / Deprecated):
 
 ```bash
 teaagent agent run gpt "Create a TODO.md summary" --approve-call-id write-todo-1
 ```
 
-The model decision must use the approved `call_id` for that exact destructive tool call. Other destructive calls remain blocked.
+> [!WARNING]
+> `--approve-call-id` is a deprecated legacy escape hatch. Using bare call IDs bypasses exact argument cryptographic validation and is highly discouraged. For standard workflows, use interactive HITL or exact-match `agent resume`.
 
 For interactive HITL approval during a CLI run, use:
 
@@ -738,7 +739,7 @@ For interactive HITL approval during a CLI run, use:
 teaagent agent run gpt "Create a TODO.md summary" --hitl-approval
 ```
 
-Without `--hitl-approval`, an unapproved destructive tool in `prompt` mode returns `pending_approval` with the required `call_id`. Re-run with `--approve-call-id <call_id>` or use `agent resume` with the same approval token.
+Without `--hitl-approval`, an unapproved destructive tool in `prompt` mode returns `pending_approval` with the required `call_id`. Use `agent resume` to auto-approve that precise tool call using its raw cryptographic digest, or use `--hitl-approval` to approve it interactively.
 
 ### Approval presets
 
