@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Commit-msg hook to enforce Lore trailer protocol.
+
+Required trailers:
+- Constraint: [description of constraints]
+- Tested: [what was tested]
+- Not-tested: [what was not tested] (optional)
+- Confidence: [high/medium/low]
+"""
+
+import sys
+from pathlib import Path
+
+
+def check_lore_trailers(commit_msg_file: str) -> int:
+    """Check if commit message contains required Lore trailers."""
+    msg = Path(commit_msg_file).read_text(encoding='utf-8')
+    lines = msg.strip().split('\n')
+    
+    # Extract trailers (key-value pairs at the end of the message)
+    trailers = {}
+    for line in lines:
+        if ':' in line and not line.startswith(' '):
+            key, value = line.split(':', 1)
+            key = key.strip().lower()
+            value = value.strip()
+            trailers[key] = value
+    
+    # Check required trailers
+    required = ['constraint', 'tested', 'confidence']
+    missing = [r for r in required if r not in trailers]
+    
+    if missing:
+        print(f"❌ Commit message missing required Lore trailers: {', '.join(missing)}", file=sys.stderr)
+        print("\nRequired trailers:", file=sys.stderr)
+        print("  Constraint: <description of constraints>", file=sys.stderr)
+        print("  Tested: <what was tested>", file=sys.stderr)
+        print("  Confidence: <high|medium|low>", file=sys.stderr)
+        print("\nOptional trailers:", file=sys.stderr)
+        print("  Not-tested: <what was not tested>", file=sys.stderr)
+        return 1
+    
+    # Validate confidence value
+    confidence = trailers['confidence'].lower()
+    if confidence not in ['high', 'medium', 'low']:
+        print(f"❌ Invalid confidence value: {confidence}. Must be: high, medium, or low", file=sys.stderr)
+        return 1
+    
+    return 0
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: commit-msg <commit-msg-file>", file=sys.stderr)
+        sys.exit(1)
+    
+    sys.exit(check_lore_trailers(sys.argv[1]))

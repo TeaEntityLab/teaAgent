@@ -457,112 +457,114 @@ def approval_pending_command(args: argparse.Namespace) -> int:
 
 
 def approval_approve_command(args: argparse.Namespace) -> int:
-    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+    def _approve() -> int:
+        from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-    store = RunStore(args.root)
-    approval_store = ApprovalPresetStore(args.root)
-    # Find the run with this pending call_id
-    target_run_id = None
-    pending_approval = None
-    for summary in store.list_runs(limit=100):
-        pending = store.pending_approval_for_run(summary.run_id)
-        if pending and pending.get('call_id') == args.call_id:
-            target_run_id = summary.run_id
-            pending_approval = pending
-            break
-
-    if not target_run_id or pending_approval is None:
-        print_json(
-            {
-                'status': 'error',
-                'message': f"call_id '{args.call_id}' not found in pending approvals",
-            }
-        )
-        return 1
-
-    pending = pending_approval
-    # Persist the approval as a scoped record for exact tool call matching
-    approval_store.add_scoped_approval(
-        run_id=target_run_id,
-        call_id=args.call_id,
-        tool_name=pending.get('tool_name', 'unknown'),
-        arguments=pending.get('arguments', {}),
-    )
-
-    # Approve the call
-    from teaagent.cli._handlers._agent import agent_resume_command
-
-    if args.resume:
-        # Load the original run to get its permission mode
-        original_permission_mode = 'prompt'
-        try:
-            for event in store.show_run(target_run_id):
-                if event.get('event_type') != 'run_started':
-                    continue
-                payload = event.get('payload') or {}
-                mode = payload.get('permission_mode')
-                if isinstance(mode, str) and mode:
-                    original_permission_mode = mode
+        store = RunStore(args.root)
+        approval_store = ApprovalPresetStore(args.root)
+        # Find the run with this pending call_id
+        target_run_id = None
+        pending_approval = None
+        for summary in store.list_runs(limit=100):
+            pending = store.pending_approval_for_run(summary.run_id)
+            if pending and pending.get('call_id') == args.call_id:
+                target_run_id = summary.run_id
+                pending_approval = pending
                 break
-        except FileNotFoundError:
-            original_permission_mode = 'prompt'
 
-        # Resume the run with the call_id approved
-        ns = argparse.Namespace(
-            run_id=target_run_id,
-            root=args.root,
-            provider=None,
-            model=None,
-            fresh_restart=False,
-            approve_call_id=[args.call_id],
-            clarify=False,
-            route_model=False,
-            max_iterations=10,
-            max_tool_calls=10,
-            allow_destructive=False,
-            hitl_approval=False,
-            permission_mode=original_permission_mode,
-            subagent=False,
-            max_subagent_depth=1,
-            heartbeat=0.0,
-            code_analysis=False,
-            telemetry_otlp_endpoint=None,
-            telemetry_service_name='teaagent',
-            telemetry_console=False,
-            checkpoint_store=None,
-            auto_compact=None,
-            _adapter_factory=getattr(args, '_adapter_factory', None),
-        )
-        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-
-        defaults = load_workspace_defaults(args.root)
-        if not ns.provider:
-            ns.provider = defaults.get('provider')
-        if not ns.provider:
-            print_json({'status': 'error', 'message': 'provider required for resume'})
+        if not target_run_id or pending_approval is None:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f"call_id '{args.call_id}' not found in pending approvals",
+                }
+            )
             return 1
-        return agent_resume_command(ns)
-    else:
-        # Record the approval in the audit log
-        audit = store.audit_logger(target_run_id)
-        audit.record(
-            'tool_call_approved',
-            target_run_id,
+
+        pending = pending_approval
+        # Persist the approval as a scoped record for exact tool call matching
+        approval_store.add_scoped_approval(
+            run_id=target_run_id,
             call_id=args.call_id,
-            tool_name=pending_approval.get('tool_name')
-            if pending_approval
-            else 'unknown',
+            tool_name=pending.get('tool_name', 'unknown'),
+            arguments=pending.get('arguments', {}),
         )
-        # Just approve without resuming
-        print_json(
-            {
-                'status': 'approved',
-                'call_id': args.call_id,
-                'run_id': target_run_id,
-                'note': 'Use --resume to continue the run',
-            }
-        )
-        return 0
+
+        # Approve the call
+        from teaagent.cli._handlers._agent import agent_resume_command
+
+        if args.resume:
+            # Load the original run to get its permission mode
+            original_permission_mode = 'prompt'
+            try:
+                for event in store.show_run(target_run_id):
+                    if event.get('event_type') != 'run_started':
+                        continue
+                    payload = event.get('payload') or {}
+                    mode = payload.get('permission_mode')
+                    if isinstance(mode, str) and mode:
+                        original_permission_mode = mode
+                    break
+            except FileNotFoundError:
+                original_permission_mode = 'prompt'
+
+            # Resume the run with the call_id approved
+            ns = argparse.Namespace(
+                run_id=target_run_id,
+                root=args.root,
+                provider=None,
+                model=None,
+                fresh_restart=False,
+                approve_call_id=[args.call_id],
+                clarify=False,
+                route_model=False,
+                max_iterations=10,
+                max_tool_calls=10,
+                allow_destructive=False,
+                hitl_approval=False,
+                permission_mode=original_permission_mode,
+                subagent=False,
+                max_subagent_depth=1,
+                heartbeat=0.0,
+                code_analysis=False,
+                telemetry_otlp_endpoint=None,
+                telemetry_service_name='teaagent',
+                telemetry_console=False,
+                checkpoint_store=None,
+                auto_compact=None,
+                _adapter_factory=getattr(args, '_adapter_factory', None),
+            )
+            from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+
+            defaults = load_workspace_defaults(args.root)
+            if not ns.provider:
+                ns.provider = defaults.get('provider')
+            if not ns.provider:
+                print_json({'status': 'error', 'message': 'provider required for resume'})
+                return 1
+            return agent_resume_command(ns)
+        else:
+            # Record the approval in the audit log
+            audit = store.audit_logger(target_run_id)
+            audit.record(
+                'tool_call_approved',
+                target_run_id,
+                call_id=args.call_id,
+                tool_name=pending_approval.get('tool_name')
+                if pending_approval
+                else 'unknown',
+            )
+            # Just approve without resuming
+            print_json(
+                {
+                    'status': 'approved',
+                    'call_id': args.call_id,
+                    'run_id': target_run_id,
+                    'note': 'Use --resume to continue the run',
+                }
+            )
+            return 0
+    return _wrap_approval_store_errors(_approve)
 
 
 def approval_preset_command(args: argparse.Namespace) -> int:
@@ -982,95 +984,97 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
 
 
 def approval_next_command(args: argparse.Namespace) -> int:
-    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+    def _next() -> int:
+        from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-    store = RunStore(args.root)
-    approval_store = ApprovalPresetStore(args.root)
+        store = RunStore(args.root)
 
-    # Find pending approvals
-    pending_runs: list[dict[str, Any]] = []
-    for summary in store.list_runs(limit=20):
-        pending = store.pending_approval_for_run(summary.run_id)
-        if pending:
-            pending_runs.append(
+        # Find pending approvals
+        pending_runs: list[dict[str, Any]] = []
+        for summary in store.list_runs(limit=20):
+            pending = store.pending_approval_for_run(summary.run_id)
+            if pending:
+                pending_runs.append(
+                    {
+                        'run_id': summary.run_id,
+                        'task': summary.task,
+                        'status': summary.status,
+                        'pending_approval': pending,
+                    }
+                )
+
+        if not pending_runs:
+            print_json(
                 {
-                    'run_id': summary.run_id,
-                    'task': summary.task,
-                    'status': summary.status,
-                    'pending_approval': pending,
+                    'status': 'no_pending',
+                    'message': 'No pending approvals found',
+                    'suggestions': [
+                        'Use "teaagent run" to start a new task',
+                        'Use "teaagent approval list" to view current grants',
+                    ],
                 }
             )
+            return 0
 
-    if not pending_runs:
+        # Get the first pending approval
+        first_pending = pending_runs[0]
+        pending_detail: dict[str, Any] = first_pending['pending_approval']
+        call_id = str(pending_detail['call_id'])
+        tool_name = str(pending_detail['tool_name'])
+        arguments = pending_detail.get('arguments', {})
+        if not isinstance(arguments, dict):
+            arguments = {}
+
+        # Explain why it's pending (lazy-create approval store only when needed)
+        from teaagent.policy import PermissionMode
+
+        permission_mode = PermissionMode.PROMPT.value
+        approval_store = ApprovalPresetStore(args.root, readonly=True)
+        check_result = approval_store.check(
+            tool_name,
+            permission_mode=permission_mode,
+            arguments=arguments,
+            include_inactive=True,
+        )
+
+        # Build suggestions
+        suggestions = []
+        if check_result['matched_grant']:
+            suggestions.append(
+                f'This tool call matches a {check_result["matched_grant"]["scope"]} grant but may need explicit approval'
+            )
+        else:
+            suggestions.append(
+                'No matching grant found - consider adding a preset or explicit approval'
+            )
+            suggestions.append('Try: teaagent approval preset dev-safe')
+        suggestions.append(f'Approve: teaagent approval approve {call_id}')
+        suggestions.append(
+            f'Approve and resume: teaagent approval approve {call_id} --resume'
+        )
+        suggestions.append(
+            f'Explain: teaagent approval explain {tool_name} --arg path={arguments.get("path", "")}'
+        )
+
         print_json(
             {
-                'status': 'no_pending',
-                'message': 'No pending approvals found',
-                'suggestions': [
-                    'Use "teaagent run" to start a new task',
-                    'Use "teaagent approval list" to view current grants',
-                ],
+                'status': 'pending_found',
+                'run_id': first_pending['run_id'],
+                'task': first_pending['task'],
+                'pending_approval': pending_detail,
+                'explanation': {
+                    'tool_name': tool_name,
+                    'decision': check_result['decision'],
+                    'allowed': check_result['allowed'],
+                    'matched_grant': check_result['matched_grant'],
+                    'evaluated_grants_count': len(check_result['evaluated_grants']),
+                },
+                'suggestions': suggestions,
+                'total_pending': len(pending_runs),
             }
         )
         return 0
-
-    # Get the first pending approval
-    first_pending = pending_runs[0]
-    pending_detail: dict[str, Any] = first_pending['pending_approval']
-    call_id = str(pending_detail['call_id'])
-    tool_name = str(pending_detail['tool_name'])
-    arguments = pending_detail.get('arguments', {})
-    if not isinstance(arguments, dict):
-        arguments = {}
-
-    # Explain why it's pending
-    from teaagent.policy import PermissionMode
-
-    permission_mode = PermissionMode.PROMPT.value
-    check_result = approval_store.check(
-        tool_name,
-        permission_mode=permission_mode,
-        arguments=arguments,
-        include_inactive=True,
-    )
-
-    # Build suggestions
-    suggestions = []
-    if check_result['matched_grant']:
-        suggestions.append(
-            f'This tool call matches a {check_result["matched_grant"]["scope"]} grant but may need explicit approval'
-        )
-    else:
-        suggestions.append(
-            'No matching grant found - consider adding a preset or explicit approval'
-        )
-        suggestions.append('Try: teaagent approval preset dev-safe')
-    suggestions.append(f'Approve: teaagent approval approve {call_id}')
-    suggestions.append(
-        f'Approve and resume: teaagent approval approve {call_id} --resume'
-    )
-    suggestions.append(
-        f'Explain: teaagent approval explain {tool_name} --arg path={arguments.get("path", "")}'
-    )
-
-    print_json(
-        {
-            'status': 'pending_found',
-            'run_id': first_pending['run_id'],
-            'task': first_pending['task'],
-            'pending_approval': pending_detail,
-            'explanation': {
-                'tool_name': tool_name,
-                'decision': check_result['decision'],
-                'allowed': check_result['allowed'],
-                'matched_grant': check_result['matched_grant'],
-                'evaluated_grants_count': len(check_result['evaluated_grants']),
-            },
-            'suggestions': suggestions,
-            'total_pending': len(pending_runs),
-        }
-    )
-    return 0
+    return _wrap_approval_store_errors(_next)
 
 
 def guidance_command(args: argparse.Namespace) -> int:
