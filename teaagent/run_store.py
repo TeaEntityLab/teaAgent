@@ -59,6 +59,21 @@ class RunStore:
     def run_path(self, run_id: str) -> Path:
         return self.store_dir / f'{safe_run_id(run_id)}.jsonl'
 
+    def undo_dir(self) -> Path:
+        path = self.root / '.teaagent' / 'undo'
+        path.mkdir(parents=True, exist_ok=True)
+        secure_audit_dir(path)
+        return path
+
+    def undo_path(self, run_id: str) -> Path:
+        return self.undo_dir() / f'{safe_run_id(run_id)}.jsonl'
+
+    def latest_run_with_undo(self, *, limit: int = 50) -> Optional[str]:
+        for summary in self.list_runs(limit=limit):
+            if self.undo_path(summary.run_id).is_file():
+                return summary.run_id
+        return None
+
     def list_runs(self, *, limit: int = 20) -> list[RunSummary]:
         summaries = [
             self.summarize(path)

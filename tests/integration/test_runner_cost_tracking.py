@@ -67,9 +67,7 @@ def test_fresh_agent_run_does_not_register_browser_tools_twice(tmp_path, monkeyp
 
     adapter = _StubAdapter()
     config = chat_agent.ChatAgentConfig.from_root(tmp_path)
-    result = chat_agent.run_chat_agent(
-        task='say hello', adapter=adapter, config=config
-    )
+    result = chat_agent.run_chat_agent(task='say hello', adapter=adapter, config=config)
 
     assert result.status == 'completed'
 

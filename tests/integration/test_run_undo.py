@@ -207,18 +207,86 @@ def test_journal_path_traversal_ignored(tmp_path):
     audit = AuditLogger()
     audit.add_sink(journal)
 
-    # Simulate a tool_call_started with a traversal path
     from teaagent.audit import AuditEvent
 
     evil_event = AuditEvent(
         event_type='tool_call_started',
         run_id='r-evil',
         payload={
+            'call_id': 'evil-1',
             'tool_name': 'workspace_write_file',
             'arguments': {'path': '../../../etc/passwd', 'content': '[redacted]'},
         },
     )
     journal(evil_event)
+    assert not journal.has_entries
+
+    completed = AuditEvent(
+        event_type='tool_call_completed',
+        run_id='r-evil',
+        payload={
+            'call_id': 'evil-1',
+            'tool_name': 'workspace_write_file',
+            'result': {'written': True},
+        },
+    )
+    journal(completed)
+    assert not journal.has_entries
 
     result = journal.restore()
     assert result.errors == [] or all('/etc/passwd' not in e for e in result.errors)
+
+
+def test_failed_write_must_not_create_undoable_journal(tmp_path):
+    """Failed writes leave no committed journal entry."""
+    journal = UndoJournal(tmp_path)
+    audit = AuditLogger()
+    audit.add_sink(journal)
+
+    from teaagent.errors import ToolExecutionError
+
+    notes = tmp_path / 'notes.txt'
+    notes.write_text('user version\n', encoding='utf-8')
+
+    registry = ToolRegistry()
+
+    def _failing_write(args: dict) -> dict:
+        raise ToolExecutionError('old text not found')
+
+    registry.register(
+        name='workspace_write_file',
+        description='write file',
+        input_schema={
+            'type': 'object',
+            'properties': {
+                'path': {'type': 'string'},
+                'content': {'type': 'string'},
+            },
+            'required': ['path', 'content'],
+        },
+        output_schema={
+            'type': 'object',
+            'properties': {'written': {'type': 'boolean'}},
+        },
+        annotations=ToolAnnotations(destructive=True),
+        handler=_failing_write,
+    )
+
+    _run_write(
+        registry,
+        audit,
+        [
+            ToolRequest(
+                'workspace_write_file',
+                {'path': 'notes.txt', 'content': 'agent version\n'},
+                'fail-1',
+            ),
+            FinalAnswer(content='done'),
+        ],
+    )
+
+    assert notes.read_text(encoding='utf-8') == 'user version\n'
+    assert not journal.has_entries
+    result = journal.restore()
+    assert result.restored == []
+    assert result.deleted == []

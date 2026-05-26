@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import Callable
+from typing import Callable, Optional
 
 from teaagent.policy import PermissionMode
 
@@ -14,8 +14,10 @@ def register(
     subs = agent.add_subparsers(dest='agent_command', required=True)
     _run(subs, handlers['run'])
     _preflight(subs, handlers['preflight'])
+    _plan(subs, handlers['plan'])
     _daily(subs, handlers['daily'])
     _resume(subs, handlers['resume'])
+    _undo(subs, handlers['undo'])
     _status(subs, handlers['status'])
     _runs(subs, handlers['runs'])
     _show(subs, handlers['show'])
@@ -217,42 +219,63 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
     )
 
 
-def _run(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
-    p = subs.add_parser(
-        'run',
-        help='Run one autonomous task with workspace tools.',
-        description='Run one autonomous task with workspace tools.',
-    )
-    add_agent_run_arguments(p)
-    p.set_defaults(func=handler, agent_command='run')
-
-
 def register_top_level_agent_aliases(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
-    handler: Callable,
+    handlers: dict[str, Callable],
 ) -> None:
-    """Register ``teaagent run`` and ``teaagent ask`` with the same flags as ``agent run``."""
-    run = subparsers.add_parser(
-        'run',
+    """Register daily-workflow aliases visible in ``teaagent --help``."""
+    _run(
+        subparsers,
+        handlers['run'],
         help='Run one autonomous task (alias for agent run).',
-        description='Run one autonomous task with workspace tools.',
+        defaults={'command': 'agent', 'agent_command': 'run'},
     )
-    add_agent_run_arguments(run)
-    run.set_defaults(func=handler, command='agent', agent_command='run')
-
     ask = subparsers.add_parser(
         'ask',
         help='Run one agent task (alias for agent run).',
         description='Run one autonomous task with workspace tools.',
     )
     add_agent_run_arguments(ask)
-    ask.set_defaults(func=handler, command='agent', agent_command='run')
+    ask.set_defaults(func=handlers['run'], command='agent', agent_command='run')
+
+    _daily(subparsers, handlers['daily'], top_level=True)
+    _preflight(subparsers, handlers['preflight'], top_level=True)
+    _plan(subparsers, handlers['plan'], top_level=True)
+    _resume(subparsers, handlers['resume'], top_level=True)
+    _runs(subparsers, handlers['runs'], top_level=True)
 
 
-def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _run(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    *,
+    help: str = 'Run one autonomous task with workspace tools.',
+    defaults: Optional[dict[str, object]] = None,
+) -> None:
     p = subs.add_parser(
-        'preflight',
-        help='Summarize clarify, routing, memory, and tool state without calling a model.',
+        'run',
+        help=help,
+        description='Run one autonomous task with workspace tools.',
+    )
+    add_agent_run_arguments(p)
+    base_defaults = {'func': handler, 'agent_command': 'run'}
+    if defaults:
+        base_defaults.update(defaults)
+    p.set_defaults(**base_defaults)
+
+
+def _preflight(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    *,
+    top_level: bool = False,
+) -> None:
+    help_text = (
+        'Summarize clarify, routing, memory, and tool state without calling a model.'
+    )
+    p = subs.add_parser(
+        'preflight' if not top_level else 'preflight',
+        help=help_text,
     )
     p.add_argument(
         'provider',
@@ -287,10 +310,77 @@ def _preflight(subs: argparse._SubParsersAction, handler: Callable) -> None:  # 
         default='balanced',
         help='Read-only context budget profile for preflight evidence.',
     )
-    p.set_defaults(func=handler, agent_command='preflight')
+    defaults: dict[str, object] = {'func': handler, 'agent_command': 'preflight'}
+    if top_level:
+        defaults['command'] = 'agent'
+    p.set_defaults(**defaults)
 
 
-def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _plan(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    *,
+    top_level: bool = False,
+) -> None:
+    p = subs.add_parser(
+        'plan',
+        help='Create a reviewable read-only plan artifact without calling a model.',
+    )
+    p.add_argument(
+        'provider',
+        nargs='?',
+        default=None,
+        metavar='provider',
+        help='Model provider (optional when set in .teaagent/config.toml).',
+    )
+    p.add_argument('task', help='Task to plan.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument('--model', default=None, help='Override model name.')
+    p.add_argument(
+        '--route-model', action='store_true', help='Apply task category routing.'
+    )
+    p.add_argument(
+        '--permission-mode',
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.READ_ONLY.value,
+        help='Permission mode to report (default: read-only planning).',
+    )
+    p.add_argument(
+        '--memory-limit',
+        type=int,
+        default=5,
+        help='Maximum matched memories to include.',
+    )
+    p.add_argument(
+        '--context-profile',
+        choices=['lean', 'balanced', 'deep'],
+        default='balanced',
+        help='Read-only context budget profile for planning evidence.',
+    )
+    p.add_argument(
+        '--human',
+        action='store_true',
+        help='Print a beginner-friendly planning summary instead of JSON.',
+    )
+    p.add_argument(
+        '--no-write',
+        action='store_true',
+        help='Skip writing .teaagent/plans/*.md artifact.',
+    )
+    defaults: dict[str, object] = {'func': handler, 'agent_command': 'plan'}
+    if top_level:
+        defaults['command'] = 'agent'
+    p.set_defaults(**defaults)
+
+
+def _daily(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    *,
+    top_level: bool = False,
+) -> None:
     p = subs.add_parser(
         'daily',
         help='Show read-only daily readiness, run, health, and token budget summary.',
@@ -346,7 +436,10 @@ def _daily(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type
         action='store_true',
         help='Write .teaagent/daily/YYYY-MM-DD.md from the daily brief.',
     )
-    p.set_defaults(func=handler, agent_command='daily')
+    defaults: dict[str, object] = {'func': handler, 'agent_command': 'daily'}
+    if top_level:
+        defaults['command'] = 'agent'
+    p.set_defaults(**defaults)
 
 
 def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -378,7 +471,12 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
     p.set_defaults(func=handler, agent_command='attach')
 
 
-def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _resume(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    *,
+    top_level: bool = False,
+) -> None:
     p = subs.add_parser(
         'resume',
         help="Re-run a persisted run's task using the original recorded task.",
@@ -480,7 +578,32 @@ def _resume(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         action='store_true',
         help='Emit NDJSON stream events on stdout.',
     )
-    p.set_defaults(func=handler, agent_command='resume')
+    defaults: dict[str, object] = {'func': handler, 'agent_command': 'resume'}
+    if top_level:
+        defaults['command'] = 'agent'
+    p.set_defaults(**defaults)
+
+
+def _undo(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+    p = subs.add_parser(
+        'undo',
+        help='Restore workspace files captured before an agent run.',
+    )
+    p.add_argument(
+        'run_id',
+        nargs='?',
+        default=None,
+        help='Run id to undo. Defaults to the most recent run with an undo journal.',
+    )
+    p.add_argument(
+        '--last',
+        action='store_true',
+        help='Undo the most recent run with an undo journal (default when run_id is omitted).',
+    )
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.set_defaults(func=handler, agent_command='undo')
 
 
 def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
@@ -710,13 +833,24 @@ def _add_automation_v2_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _runs(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
-    p = subs.add_parser('runs', help='List persisted agent runs.')
+def _runs(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    *,
+    top_level: bool = False,
+) -> None:
+    help_text = 'List persisted agent runs.'
+    if top_level:
+        help_text = 'List persisted agent runs (alias for agent runs).'
+    p = subs.add_parser('runs', help=help_text)
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
     p.add_argument('--limit', type=int, default=20, help='Maximum runs to list.')
-    p.set_defaults(func=handler)
+    defaults: dict[str, object] = {'func': handler}
+    if top_level:
+        defaults['command'] = 'runs'
+    p.set_defaults(**defaults)
 
 
 def _show(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

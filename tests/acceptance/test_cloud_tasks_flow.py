@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from pathlib import Path
 
 from teaagent.cloud_tasks import CloudTaskManager, CloudTaskStore
 
@@ -43,7 +44,7 @@ def test_cloud_task_submit_poll_cancel() -> None:
 
         manifest = os.path.join(tmp, '.teaagent', 'cloud-tasks', 'tasks.jsonl')
         assert os.path.exists(manifest), 'manifest file should exist'
-        assert task.name in open(manifest).read()
+        assert task.name in Path(manifest).read_text(encoding='utf-8')
 
 
 def test_cloud_task_cancel() -> None:

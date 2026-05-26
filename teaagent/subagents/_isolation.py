@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -23,12 +24,14 @@ class IsolationContext:
 
     def cleanup(self) -> None:
         if self.worktree_path is not None:
+            env = _git_subprocess_env()
             subprocess.run(
                 ['git', 'worktree', 'remove', '--force', str(self.worktree_path)],
                 cwd=self.parent_root,
                 check=False,
                 capture_output=True,
                 text=True,
+                env=env,
             )
             subprocess.run(
                 ['git', 'worktree', 'prune'],
@@ -36,9 +39,18 @@ class IsolationContext:
                 check=False,
                 capture_output=True,
                 text=True,
+                env=env,
             )
         if self.container_path is not None:
             shutil.rmtree(self.container_path, ignore_errors=True)
+
+
+def _git_subprocess_env() -> dict[str, str]:
+    """Drop inherited git dir pointers so temp-repo worktrees are isolated."""
+    env = os.environ.copy()
+    for key in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE'):
+        env.pop(key, None)
+    return env
 
 
 def normalize_subagent_isolation(value: Any) -> str | None:
@@ -103,6 +115,7 @@ def prepare_subagent_isolation(
             check=False,
             capture_output=True,
             text=True,
+            env=_git_subprocess_env(),
         )
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or '').strip()

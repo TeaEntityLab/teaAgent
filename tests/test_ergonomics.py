@@ -92,10 +92,15 @@ def test_cli_init_writes_toml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert (tmp_path / '.teaagent' / 'config.toml').is_file()
 
 
-def test_top_level_shortcut_daily_argv() -> None:
-    from teaagent.cli import _expand_argv
+def test_top_level_daily_parser_is_visible() -> None:
+    from teaagent.cli import build_parser
 
-    assert _expand_argv(['daily', 'gpt']) == ['agent', 'daily', 'gpt']
+    parser = build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(['daily', '--help'])
+    args = parser.parse_args(['daily', 'gpt', 'hello', '--root', '.'])
+    assert args.command == 'agent'
+    assert args.agent_command == 'daily'
 
 
 def test_normalize_providerless_run_task(tmp_path: Path) -> None:

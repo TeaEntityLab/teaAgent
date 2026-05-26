@@ -1,8 +1,12 @@
 """Run undo journal.
 
 ``UndoJournal`` is an :class:`~teaagent.audit.AuditLogger` sink that captures
-the pre-write state of every file touched by workspace write tools.  Calling
-:meth:`UndoJournal.restore` reverts all captured writes:
+the pre-write state of workspace path-based write tools **only after a successful
+tool call**.  Pending snapshots taken at ``tool_call_started`` are committed on
+``tool_call_completed`` and discarded on ``tool_call_failed``, ``tool_call_blocked``,
+or ``tool_call_denied``.
+
+Calling :meth:`UndoJournal.restore` reverts all committed writes:
 
 * Files that **did not exist before** the write are **deleted**.
 * Files that **did exist** are **restored** to their original content.
@@ -35,15 +39,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-_WRITE_TOOL_NAMES = frozenset(
-    {
-        'workspace_write_file',
-        'workspace_apply_patch',
-        'workspace_edit_at_hash',
-        'workspace_run_shell',  # mutate variant captured by name check below
-        'workspace_run_shell_mutate',
-    }
-)
+from teaagent.audit import secure_audit_dir, secure_audit_file
+from teaagent.storage import atomic_write_text
 
 # We only snapshot path-based tools, not shell commands (no stable path arg).
 _PATH_WRITE_TOOLS = frozenset(
@@ -51,6 +48,14 @@ _PATH_WRITE_TOOLS = frozenset(
         'workspace_write_file',
         'workspace_apply_patch',
         'workspace_edit_at_hash',
+    }
+)
+
+_DISCARD_PENDING_EVENTS = frozenset(
+    {
+        'tool_call_failed',
+        'tool_call_blocked',
+        'tool_call_denied',
     }
 )
 
@@ -86,7 +91,8 @@ class UndoJournal:
         ignored.
     path:
         Optional file path for persistent journal storage (JSONL).  When
-        ``None`` (default) the journal is held only in memory.
+        ``None`` (default) the journal is held only in memory until
+        :meth:`save_to` is called.
     """
 
     def __init__(
@@ -98,9 +104,10 @@ class UndoJournal:
         self._root = Path(root).resolve()
         self._path = Path(path).resolve() if path else None
         self._entries: list[_JournalEntry] = []
+        self._pending: dict[str, _JournalEntry] = {}
         if self._path is not None:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            # Load existing entries from disk (supports resume across restarts)
+            secure_audit_dir(self._path.parent)
             if self._path.is_file():
                 self._entries = list(self._load_from_disk())
 
@@ -113,29 +120,51 @@ class UndoJournal:
 
         if not isinstance(event, AuditEvent):
             return
-        if event.event_type != 'tool_call_started':
+        payload = event.payload if isinstance(event.payload, dict) else {}
+        call_id = payload.get('call_id')
+        if not isinstance(call_id, str) or not call_id:
             return
-        payload = event.payload
-        tool_name = payload.get('tool_name', '')
-        if tool_name not in _PATH_WRITE_TOOLS:
+
+        if event.event_type == 'tool_call_started':
+            self._on_tool_started(payload)
             return
-        args = payload.get('arguments', {})
-        rel_path = args.get('path', '') if isinstance(args, dict) else ''
-        if not rel_path or not isinstance(rel_path, str):
+        if event.event_type == 'tool_call_completed':
+            self._on_tool_completed(call_id)
             return
-        self._capture(rel_path)
+        if event.event_type in _DISCARD_PENDING_EVENTS:
+            self._pending.pop(call_id, None)
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _capture(self, rel_path: str) -> None:
-        """Read current file state and append a journal entry."""
+    def _on_tool_started(self, payload: dict[str, object]) -> None:
+        tool_name = payload.get('tool_name', '')
+        if tool_name not in _PATH_WRITE_TOOLS:
+            return
+        args = payload.get('arguments', {})
+        rel_path = args.get('path', '') if isinstance(args, dict) else ''
+        if not isinstance(rel_path, str) or not rel_path:
+            return
+        call_id = payload.get('call_id')
+        if not isinstance(call_id, str) or not call_id:
+            return
+        entry = self._snapshot(rel_path)
+        if entry is not None:
+            self._pending[call_id] = entry
+
+    def _on_tool_completed(self, call_id: str) -> None:
+        entry = self._pending.pop(call_id, None)
+        if entry is None:
+            return
+        self._entries.append(entry)
+
+    def _snapshot(self, rel_path: str) -> Optional[_JournalEntry]:
         try:
             abs_path = (self._root / rel_path).resolve()
-            abs_path.relative_to(self._root)  # raises ValueError if escapes root
+            abs_path.relative_to(self._root)
         except (ValueError, OSError):
-            return
+            return None
 
         existed = abs_path.is_file()
         content_b64: Optional[str] = None
@@ -143,26 +172,13 @@ class UndoJournal:
             try:
                 content_b64 = base64.b64encode(abs_path.read_bytes()).decode('ascii')
             except OSError:
-                return
+                return None
 
-        entry = _JournalEntry(
+        return _JournalEntry(
             path=rel_path,
             existed_before=existed,
             content_b64=content_b64,
         )
-        self._entries.append(entry)
-        if self._path is not None:
-            with open(self._path, 'a', encoding='utf-8') as fh:
-                fh.write(
-                    json.dumps(
-                        {
-                            'path': entry.path,
-                            'existed_before': entry.existed_before,
-                            'content_b64': entry.content_b64,
-                        }
-                    )
-                    + '\n'
-                )
 
     def _load_from_disk(self) -> Generator[_JournalEntry, None, None]:
         assert self._path is not None
@@ -184,6 +200,29 @@ class UndoJournal:
     # Public API
     # ------------------------------------------------------------------
 
+    @property
+    def has_entries(self) -> bool:
+        return bool(self._entries)
+
+    def save_to(self, path: str | Path) -> None:
+        """Persist in-memory journal entries to a JSONL file."""
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        secure_audit_dir(target.parent)
+        lines = [
+            json.dumps(
+                {
+                    'path': entry.path,
+                    'existed_before': entry.existed_before,
+                    'content_b64': entry.content_b64,
+                }
+            )
+            for entry in self._entries
+        ]
+        body = '\n'.join(lines) + ('\n' if lines else '')
+        atomic_write_text(target, body)
+        secure_audit_file(target)
+
     def restore(self) -> UndoResult:
         """Revert all captured file writes.
 
@@ -195,7 +234,6 @@ class UndoJournal:
         deleted: list[str] = []
         errors: list[str] = []
 
-        # Process in reverse so the earliest snapshot wins for repeated writes.
         seen: set[str] = set()
         for entry in reversed(self._entries):
             if entry.path in seen:

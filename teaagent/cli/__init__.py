@@ -11,6 +11,7 @@ from teaagent.cli._handlers import (
     agent_attach_command,
     agent_card_command,
     agent_daily_command,
+    agent_plan_command,
     agent_preflight_command,
     agent_resume_command,
     agent_run_show,
@@ -21,6 +22,7 @@ from teaagent.cli._handlers import (
     agent_subagent_review_check_command,
     agent_subagent_review_list_command,
     agent_subagent_review_show_command,
+    agent_undo_command,
     approval_audit_command,
     approval_deny_command,
     approval_grant_command,
@@ -122,18 +124,26 @@ from teaagent.llm_conformance import (
 from teaagent.mcp_http import serve_mcp_http
 from teaagent.policy import PermissionMode
 
-_TOP_LEVEL_SHORTCUTS: dict[str, list[str]] = {
-    'daily': ['agent', 'daily'],
-    'resume': ['agent', 'resume'],
-}
+_TOP_LEVEL_AGENT_COMMANDS = frozenset(
+    {'run', 'ask', 'daily', 'resume', 'preflight', 'plan'}
+)
+_AGENT_PROVIDER_COMMANDS = frozenset({'run', 'daily', 'resume', 'preflight', 'plan'})
+
+
+def _resolve_agent_command(args: argparse.Namespace) -> Optional[str]:
+    command = getattr(args, 'command', None)
+    if command in {'run', 'ask'}:
+        return 'run'
+    if command in _TOP_LEVEL_AGENT_COMMANDS - {'run', 'ask'}:
+        return str(command)
+    if command == 'agent':
+        agent_command = getattr(args, 'agent_command', None)
+        if agent_command in _AGENT_PROVIDER_COMMANDS:
+            return str(agent_command)
+    return None
 
 
 def _expand_argv(argv: Optional[list[str]]) -> Optional[list[str]]:
-    if not argv:
-        return argv
-    head = argv[0]
-    if head in _TOP_LEVEL_SHORTCUTS:
-        return _TOP_LEVEL_SHORTCUTS[head] + list(argv[1:])
     return argv
 
 
@@ -250,14 +260,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases
 
-    register_top_level_agent_aliases(subparsers, agent_run_task)
+    register_top_level_agent_aliases(
+        subparsers,
+        {
+            'run': agent_run_task,
+            'daily': agent_daily_command,
+            'preflight': agent_preflight_command,
+            'plan': agent_plan_command,
+            'resume': agent_resume_command,
+            'runs': agent_runs_list,
+        },
+    )
     register_agent(
         subparsers,
         {
             'run': agent_run_task,
             'preflight': agent_preflight_command,
+            'plan': agent_plan_command,
             'daily': agent_daily_command,
             'resume': agent_resume_command,
+            'undo': agent_undo_command,
             'status': agent_status_command,
             'runs': agent_runs_list,
             'show': agent_run_show,
@@ -341,20 +363,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-_AGENT_PROVIDER_COMMANDS = frozenset({'run', 'daily', 'resume', 'preflight'})
-
-
 def _normalize_optional_provider_args(args: argparse.Namespace) -> None:
-    command = getattr(args, 'command', None)
-    agent_command: Optional[str]
-    if command in {'run', 'ask'}:
-        agent_command = 'run'
-    elif command != 'agent':
+    agent_command = _resolve_agent_command(args)
+    if agent_command is None or agent_command not in _AGENT_PROVIDER_COMMANDS:
         return
-    else:
-        agent_command = getattr(args, 'agent_command', None)
-        if agent_command not in _AGENT_PROVIDER_COMMANDS:
-            return
     from teaagent.llm import available_providers
 
     providers = set(available_providers())
@@ -373,16 +385,9 @@ def _normalize_optional_provider_args(args: argparse.Namespace) -> None:
 
 
 def _require_provider_for_agent_commands(args: argparse.Namespace) -> None:
-    command = getattr(args, 'command', None)
-    agent_command: Optional[str]
-    if command in {'run', 'ask'}:
-        agent_command = 'run'
-    elif command != 'agent':
+    agent_command = _resolve_agent_command(args)
+    if agent_command is None or agent_command not in _AGENT_PROVIDER_COMMANDS:
         return
-    else:
-        agent_command = getattr(args, 'agent_command', None)
-        if agent_command not in _AGENT_PROVIDER_COMMANDS:
-            return
     from teaagent.ergonomics.workspace_defaults import (
         apply_workspace_defaults_to_namespace,
     )

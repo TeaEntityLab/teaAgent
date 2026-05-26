@@ -30,7 +30,7 @@ def test_github_create_pr_no_token() -> None:
     if 'GITHUB_TOKEN' not in os.environ and 'GH_TOKEN' not in os.environ:
         try:
             github_create_pr('owner/repo', 'title', 'branch')
-            assert False, 'should have raised'
+            raise AssertionError('should have raised')
         except PermissionError:
             pass
 

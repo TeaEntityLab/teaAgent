@@ -646,9 +646,9 @@ teaagent agent run gpt "create a script" --allow-destructive
 ### Option 3: Interactive Approval in TUI
 
 ```bash
-teaagent tui --hitl-approval
+teaagent tui
 # Then use: ask create a script
-# Agent will prompt y/N before destructive operations
+# In prompt permission mode, the TUI prompts y/N before destructive operations.
 ```
 
 ### Option 4: Pre-approve Specific Call IDs

@@ -166,5 +166,12 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
     assert isinstance(show_payload, list)
     assert any(event.get('run_id') == run_payload['run_id'] for event in show_payload)
 
-    subprocess.run(['git', 'checkout', '--', 'calc.py'], cwd=tmp_path, check=True)
+    undo_out = io.StringIO()
+    with redirect_stdout(undo_out):
+        undo_code = main(
+            ['agent', 'undo', run_payload['run_id'], '--root', str(tmp_path)]
+        )
+    undo_payload = json.loads(undo_out.getvalue())
+    assert undo_code == 0
+    assert undo_payload['status'] == 'restored'
     assert 'a - b' in calc.read_text(encoding='utf-8')

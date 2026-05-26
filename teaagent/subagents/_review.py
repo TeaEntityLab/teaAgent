@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.storage import atomic_write_text
+from teaagent.subagents._isolation import _git_subprocess_env
 from teaagent.subagents._types import SubagentLineage
 
 _REVIEW_PATHSPEC = ['--', '.', ':!.teaagent']
@@ -191,6 +192,7 @@ def _run_review_patch(
         check=False,
         capture_output=True,
         text=True,
+        env=_git_subprocess_env(),
     )
     status = 'applied' if apply_patch and result.returncode == 0 else 'applicable'
     if result.returncode != 0:
@@ -218,6 +220,7 @@ def _git(
         check=check,
         capture_output=True,
         text=True,
+        env=_git_subprocess_env(),
     )
 
 

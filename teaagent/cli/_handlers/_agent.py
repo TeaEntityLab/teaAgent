@@ -172,6 +172,10 @@ def _execute_agent_task(
     adapter = args._adapter_factory(args.provider, model=selected_model)  # type: ignore[attr-defined]
     store = RunStore(args.root)
     audit = store.audit_logger()
+    from teaagent.run_undo import UndoJournal
+
+    undo_journal = UndoJournal(args.root)
+    audit.add_sink(undo_journal)
 
     _telemetry_sink = None
     if getattr(args, 'telemetry_otlp_endpoint', None) or getattr(
@@ -252,6 +256,8 @@ def _execute_agent_task(
         initial_context_extra=initial_context_extra,
     )
     store.logger_for_result(result, audit)
+    if undo_journal.has_entries:
+        undo_journal.save_to(store.undo_path(result.run_id))
     if _telemetry_sink is not None:
         from contextlib import suppress
 
@@ -350,6 +356,74 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
     )
     print_json(report.to_dict())
     return 0 if report.to_dict()['ready'] else 2
+
+
+def agent_plan_command(args: argparse.Namespace) -> int:
+    from teaagent.plan import write_plan_artifact
+
+    report = preflight(
+        args.task,
+        root=args.root,
+        provider=args.provider,
+        model=args.model,
+        permission_mode=parse_permission_mode(args.permission_mode),
+        route=args.route_model,
+        memory_limit=args.memory_limit,
+        context_profile=args.context_profile,
+    )
+    payload = report.to_dict()
+    if not getattr(args, 'no_write', False):
+        artifact = write_plan_artifact(report, root=args.root)
+        payload['plan_artifact'] = str(artifact)
+    if getattr(args, 'human', False):
+        from teaagent.ergonomics.human_output import format_readiness_summary
+
+        print(format_readiness_summary(payload, root=args.root))
+        if payload.get('plan_artifact'):
+            print(f'\nPlan saved: {payload["plan_artifact"]}')
+        return 0 if payload.get('ready') else 2
+    print_json(payload)
+    return 0 if payload.get('ready') else 2
+
+
+def agent_undo_command(args: argparse.Namespace) -> int:
+    from teaagent.run_undo import UndoJournal
+
+    store = RunStore(args.root)
+    run_id = getattr(args, 'run_id', None)
+    if run_id is None or getattr(args, 'last', False):
+        run_id = store.latest_run_with_undo()
+        if run_id is None:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': 'no undo journal found for recent runs',
+                }
+            )
+            return 1
+    undo_path = store.undo_path(run_id)
+    if not undo_path.is_file():
+        print_json(
+            {
+                'status': 'error',
+                'message': f"no undo journal for run '{run_id}'",
+                'run_id': run_id,
+            }
+        )
+        return 1
+    journal = UndoJournal(args.root, path=undo_path)
+    result = journal.restore()
+    payload = {
+        'status': 'restored' if result.ok else 'partial',
+        'run_id': run_id,
+        'restored': result.restored,
+        'deleted': result.deleted,
+        'errors': result.errors,
+    }
+    if result.ok:
+        undo_path.unlink(missing_ok=True)
+    print_json(payload)
+    return 0 if result.ok else 1
 
 
 def _start_background_run(args: argparse.Namespace) -> int:
