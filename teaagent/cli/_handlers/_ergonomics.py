@@ -85,7 +85,7 @@ def background_show_command(args: argparse.Namespace) -> int:
 
 
 def session_list_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     rows = []
     for summary in store.list_runs(limit=args.limit):
         row = summary.to_dict()
@@ -97,7 +97,7 @@ def session_list_command(args: argparse.Namespace) -> int:
 
 
 def session_show_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -200,7 +200,7 @@ def recipes_run_command(args: argparse.Namespace) -> int:
 
 def approval_list_command(args: argparse.Namespace) -> int:
     def _list() -> int:
-        store = ApprovalPresetStore(args.root)
+        store = ApprovalPresetStore(args.root, readonly=True)
         if getattr(args, 'scoped', False):
             print_json(store.list_all_scoped_approvals())
         elif getattr(args, 'grants_only', False):
@@ -216,7 +216,7 @@ def approval_check_command(args: argparse.Namespace) -> int:
     import json
 
     def _check() -> int:
-        store = ApprovalPresetStore(args.root)
+        store = ApprovalPresetStore(args.root, readonly=True)
         arguments: dict[str, Any] = {}
 
         # Parse --arguments-json if provided (highest priority)
@@ -274,7 +274,7 @@ def approval_explain_command(args: argparse.Namespace) -> int:
     import json
 
     def _explain() -> int:
-        store = ApprovalPresetStore(args.root)
+        store = ApprovalPresetStore(args.root, readonly=True)
         arguments: dict[str, Any] = {}
 
         # Parse --arguments-json if provided (highest priority)
@@ -438,7 +438,7 @@ def approval_audit_command(args: argparse.Namespace) -> int:
 
 
 def approval_pending_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     pending_runs = []
     for summary in store.list_runs(limit=args.limit):
         pending = store.pending_approval_for_run(summary.run_id)
@@ -987,7 +987,7 @@ def approval_next_command(args: argparse.Namespace) -> int:
     def _next() -> int:
         from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-        store = RunStore(args.root)
+        store = RunStore(args.root, readonly=True)
 
         # Find pending approvals
         pending_runs: list[dict[str, Any]] = []

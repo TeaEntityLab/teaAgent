@@ -8,7 +8,7 @@ import json
 import subprocess
 from contextlib import redirect_stdout
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from teaagent.cli import main
 from teaagent.cli._handlers._ergonomics import (
@@ -810,3 +810,121 @@ def test_approval_explain_shows_expired_and_mode_mismatch(tmp_path: Path) -> Non
         g.get('reason') for g in explain_payload['evaluated_grants'] if g.get('reason')
     ]
     assert 'expired' in reasons or 'permission_mode_mismatch' in reasons
+
+
+def test_readonly_commands_dont_mutate_fresh_workspace(tmp_path: Path) -> None:
+    """Verify that read-only query commands don't create .teaagent/ in fresh workspaces."""
+    # Ensure .teaagent doesn't exist
+    teaagent_dir = tmp_path / '.teaagent'
+    assert not teaagent_dir.exists()
+
+    # Test approval next (should return no_pending without creating .teaagent)
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'next', '--root', str(tmp_path)]) == 0
+    payload = json.loads(out.getvalue())
+    assert payload['status'] == 'no_pending'
+    assert not teaagent_dir.exists()
+
+    # Test approval pending (should return empty list without creating .teaagent)
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'pending', '--root', str(tmp_path)]) == 0
+    pending = json.loads(out.getvalue())
+    assert pending == []
+    assert not teaagent_dir.exists()
+
+    # Test approval list (should return empty policy without creating .teaagent)
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'list', '--root', str(tmp_path)]) == 0
+    policy = json.loads(out.getvalue())
+    assert policy['grants'] == []
+    assert not teaagent_dir.exists()
+
+    # Test session list (should return empty list without creating .teaagent)
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['session', 'list', '--root', str(tmp_path)]) == 0
+    sessions = json.loads(out.getvalue())
+    assert sessions == []
+    assert not teaagent_dir.exists()
+
+    # Test session show missing (should error without creating .teaagent)
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['session', 'show', 'missing-run', '--root', str(tmp_path)]) == 1
+    error_payload = json.loads(out.getvalue())
+    assert error_payload['status'] == 'error'
+    assert not teaagent_dir.exists()
+
+    # Test audit list (should return empty list without creating .teaagent)
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['audit', 'list', '--root', str(tmp_path)]) == 0
+    audits = json.loads(out.getvalue())
+    assert audits == []
+    assert not teaagent_dir.exists()
+
+    # Test audit show missing (should error without creating .teaagent)
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['audit', 'show', 'missing-run', '--root', str(tmp_path)]) == 1
+    error_payload = json.loads(out.getvalue())
+    assert error_payload['status'] == 'error'
+    assert not teaagent_dir.exists()
+
+    # Verify .teaagent was never created
+    assert not teaagent_dir.exists()
+
+
+def test_runstore_readonly_prevents_mutation(tmp_path: Path) -> None:
+    """Verify that RunStore(readonly=True) raises on mutating operations."""
+    import pytest
+
+    # Ensure .teaagent doesn't exist
+    teaagent_dir = tmp_path / '.teaagent'
+    assert not teaagent_dir.exists()
+
+    # Create readonly store
+    store = RunStore(tmp_path, readonly=True)
+
+    # audit_logger should raise
+    with pytest.raises(RuntimeError, match='Cannot create audit logger in readonly mode'):
+        store.audit_logger()
+
+    # undo_dir should raise
+    with pytest.raises(RuntimeError, match='Cannot access undo directory in readonly mode'):
+        store.undo_dir()
+
+    # logger_for_result should raise (use mock audit logger to avoid audit_logger call)
+    mock_audit = MagicMock()
+    mock_audit.path = None
+    with pytest.raises(RuntimeError, match='Cannot persist logger result in readonly mode'):
+        store.logger_for_result(
+            RunResult(
+                run_id='test',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
+                status='completed',
+            ),
+            mock_audit,
+        )
+
+    # record_undo_applied should raise
+    with pytest.raises(RuntimeError, match='Cannot record undo applied in readonly mode'):
+        store.record_undo_applied(
+            'test',
+            status='ok',
+            restored=[],
+            deleted=[],
+            errors=[],
+        )
+
+    # Verify .teaagent was never created
+    assert not teaagent_dir.exists()
+
+    # Read operations should work
+    assert store.list_runs() == []
+    assert not teaagent_dir.exists()

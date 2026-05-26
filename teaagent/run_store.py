@@ -34,14 +34,18 @@ class RunSummary:
 
 
 class RunStore:
-    def __init__(self, root: str | Path = '.') -> None:
+    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
+        self.readonly = readonly
         self.store_dir = self.root / '.teaagent' / 'runs'
-        self.store_dir.mkdir(parents=True, exist_ok=True)
-        secure_audit_dir(self.root / '.teaagent')
-        secure_audit_dir(self.store_dir)
+        if not readonly:
+            self.store_dir.mkdir(parents=True, exist_ok=True)
+            secure_audit_dir(self.root / '.teaagent')
+            secure_audit_dir(self.store_dir)
 
     def audit_logger(self, run_id: Optional[str] = None) -> AuditLogger:
+        if self.readonly:
+            raise RuntimeError('Cannot create audit logger in readonly mode')
         if run_id is None:
             path = self.store_dir / f'pending-{uuid4().hex}.jsonl'
         else:
@@ -49,6 +53,8 @@ class RunStore:
         return AuditLogger(path=path)
 
     def logger_for_result(self, result: RunResult, audit: AuditLogger) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot persist logger result in readonly mode')
         if audit.path is None or audit.path == self.run_path(result.run_id):
             return
         target = self.run_path(result.run_id)
@@ -60,6 +66,8 @@ class RunStore:
         return self.store_dir / f'{safe_run_id(run_id)}.jsonl'
 
     def undo_dir(self) -> Path:
+        if self.readonly:
+            raise RuntimeError('Cannot access undo directory in readonly mode')
         path = self.root / '.teaagent' / 'undo'
         path.mkdir(parents=True, exist_ok=True)
         secure_audit_dir(path)
@@ -85,6 +93,8 @@ class RunStore:
         undo_journal_path: Optional[str] = None,
     ) -> bool:
         """Append an ``undo_applied`` event to the run audit log when it exists."""
+        if self.readonly:
+            raise RuntimeError('Cannot record undo applied in readonly mode')
         path = self.run_path(run_id)
         if not path.is_file():
             return False
@@ -104,6 +114,8 @@ class RunStore:
         return audit.disk_error is None
 
     def list_runs(self, *, limit: int = 20) -> list[RunSummary]:
+        if not self.store_dir.exists():
+            return []
         summaries = [
             self.summarize(path)
             for path in sorted(

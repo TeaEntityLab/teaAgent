@@ -9,13 +9,13 @@ from teaagent.run_store import RunStore
 
 
 def audit_list_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
     return 0
 
 
 def audit_show_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     try:
         print_json(store.show_run(args.run_id))
     except FileNotFoundError as exc:
@@ -55,7 +55,7 @@ def audit_prune_command(args: argparse.Namespace) -> int:
 def audit_serve_command(args: argparse.Namespace) -> int:
     from teaagent.audit_viewer import serve_audit_viewer
 
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     serve_audit_viewer(store, host=args.host, port=args.port)
     return 0
 
