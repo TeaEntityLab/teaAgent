@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal, Sequence
+from uuid import uuid4
 
 GrantScope = Literal['once', 'session', 'always', 'deny']
 
@@ -17,6 +19,7 @@ _COMMAND_ARGUMENT_KEYS = ('command', 'cmd')
 
 @dataclass(frozen=True)
 class ApprovalGrant:
+    grant_id: str
     tool_name: str
     scope: GrantScope
     permission_mode: str | None = None
@@ -27,6 +30,7 @@ class ApprovalGrant:
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
+            'grant_id': self.grant_id,
             'tool_name': self.tool_name,
             'scope': self.scope,
             'permission_mode': self.permission_mode,
@@ -41,10 +45,35 @@ class ApprovalGrant:
         return payload
 
 
+def _new_grant_id() -> str:
+    return uuid4().hex[:12]
+
+
+def _stable_grant_id(item: dict[str, Any]) -> str:
+    """Deterministic id for legacy grants missing grant_id (safe to persist)."""
+    fingerprint = {
+        'tool_name': item.get('tool_name'),
+        'scope': item.get('scope', 'once'),
+        'permission_mode': item.get('permission_mode'),
+        'created_at': item.get('created_at', ''),
+        'path_globs': sorted(str(g) for g in (item.get('path_globs') or []) if g),
+        'command_prefixes': sorted(
+            str(p) for p in (item.get('command_prefixes') or []) if p
+        ),
+        'expires_at': item.get('expires_at'),
+    }
+    digest = hashlib.sha256(
+        json.dumps(fingerprint, sort_keys=True, separators=(',', ':')).encode()
+    ).hexdigest()[:12]
+    return f'leg-{digest}'
+
+
 def _parse_grant(item: dict[str, Any]) -> ApprovalGrant:
     path_globs = item.get('path_globs') or []
     command_prefixes = item.get('command_prefixes') or []
+    grant_id = item.get('grant_id')
     return ApprovalGrant(
+        grant_id=str(grant_id) if grant_id else _stable_grant_id(item),
         tool_name=str(item['tool_name']),
         scope=item.get('scope', 'once'),  # type: ignore[arg-type]
         permission_mode=item.get('permission_mode'),
@@ -148,7 +177,22 @@ class ApprovalPresetStore:
             json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8'
         )
 
+    def _migrate_missing_grant_ids(self) -> None:
+        data = self._load()
+        changed = False
+        for grant in data.get('grants', []):
+            if (
+                isinstance(grant, dict)
+                and grant.get('tool_name')
+                and not grant.get('grant_id')
+            ):
+                grant['grant_id'] = _stable_grant_id(grant)
+                changed = True
+        if changed:
+            self._save(data)
+
     def list_grants(self) -> list[ApprovalGrant]:
+        self._migrate_missing_grant_ids()
         grants: list[ApprovalGrant] = []
         for item in self._load().get('grants', []):
             if isinstance(item, dict) and item.get('tool_name'):
@@ -170,6 +214,7 @@ class ApprovalPresetStore:
             scope=scope, created_at=now, ttl_hours=ttl_hours
         )
         entry = ApprovalGrant(
+            grant_id=_new_grant_id(),
             tool_name=tool_name,
             scope=scope,
             permission_mode=permission_mode,
@@ -178,27 +223,41 @@ class ApprovalPresetStore:
             command_prefixes=tuple(command_prefixes or ()),
             expires_at=expires_at,
         )
+        self._migrate_missing_grant_ids()
         data = self._load()
-        grants = [
-            g
-            for g in data['grants']
-            if not (isinstance(g, dict) and g.get('tool_name') == tool_name)
-        ]
+        grants = [g for g in data['grants'] if isinstance(g, dict)]
         grants.append(entry.to_dict())
         data['grants'] = grants
         data['audit'].append({'action': 'grant', **entry.to_dict()})
         self._save(data)
         return entry
 
-    def deny(self, tool_name: str) -> ApprovalGrant:
-        return self.grant(tool_name, scope='deny')
+    def deny(
+        self,
+        tool_name: str,
+        *,
+        path_globs: Sequence[str] | None = None,
+        command_prefixes: Sequence[str] | None = None,
+    ) -> ApprovalGrant:
+        return self.grant(
+            tool_name,
+            scope='deny',
+            path_globs=path_globs,
+            command_prefixes=command_prefixes,
+        )
 
-    def _remove_grant(self, tool_name: str) -> None:
+    def _remove_grant(self, grant_id: str) -> None:
         data = self._load()
+
+        def _should_remove(grant: object) -> bool:
+            if not isinstance(grant, dict):
+                return False
+            if grant.get('grant_id') == grant_id:
+                return True
+            return not grant.get('grant_id') and _stable_grant_id(grant) == grant_id
+
         data['grants'] = [
-            grant
-            for grant in data['grants']
-            if not (isinstance(grant, dict) and grant.get('tool_name') == tool_name)
+            grant for grant in data['grants'] if not _should_remove(grant)
         ]
         self._save(data)
 
@@ -218,6 +277,21 @@ class ApprovalPresetStore:
             grant.command_prefixes, arguments
         )
 
+    def _active_grants_for(
+        self, tool_name: str, *, permission_mode: str
+    ) -> list[ApprovalGrant]:
+        active: list[ApprovalGrant] = []
+        for grant in self.list_grants():
+            if grant.tool_name != tool_name or _grant_expired(grant):
+                continue
+            if (
+                grant.permission_mode is not None
+                and grant.permission_mode != permission_mode
+            ):
+                continue
+            active.append(grant)
+        return active
+
     def is_allowed(
         self,
         tool_name: str,
@@ -226,35 +300,32 @@ class ApprovalPresetStore:
         arguments: dict[str, Any] | None = None,
     ) -> bool:
         args = arguments or {}
-        for grant in self.list_grants():
-            if grant.tool_name != tool_name:
-                continue
-            if _grant_expired(grant):
-                continue
-            if grant.scope == 'deny':
+        active = self._active_grants_for(tool_name, permission_mode=permission_mode)
+        for grant in active:
+            if grant.scope == 'deny' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=args
+            ):
                 return False
-            if grant.scope == 'once':
-                if self._grant_matches(
-                    grant, permission_mode=permission_mode, arguments=args
-                ):
-                    self._remove_grant(grant.tool_name)
-                    data = self._load()
-                    data['audit'].append(
-                        {
-                            'action': 'consume_once',
-                            'tool_name': grant.tool_name,
-                            'created_at': datetime.now(timezone.utc).isoformat(),
-                        }
-                    )
-                    self._save(data)
-                    return True
-                continue
-            if grant.scope == 'always':
-                if self._grant_matches(
-                    grant, permission_mode=permission_mode, arguments=args
-                ):
-                    return True
-                continue
+        for grant in active:
+            if grant.scope == 'once' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=args
+            ):
+                self._remove_grant(grant.grant_id)
+                data = self._load()
+                data['audit'].append(
+                    {
+                        'action': 'consume_once',
+                        'grant_id': grant.grant_id,
+                        'tool_name': grant.tool_name,
+                        'created_at': datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+                self._save(data)
+                return True
+            if grant.scope == 'always' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=args
+            ):
+                return True
             if grant.scope == 'session' and self._grant_matches(
                 grant, permission_mode=permission_mode, arguments=args
             ):

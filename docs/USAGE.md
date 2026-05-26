@@ -28,7 +28,7 @@ teaagent agent undo --last --root .
 
 - Use `--human` on `daily` and `setup` for readable summaries; omit it for JSON (automation default).
 - After setup, `provider` is optional on `daily`, `run`, and top-level shortcuts when `.teaagent/config.json` exists.
-- `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log). Plans must live under `.teaagent/plans/` unless you pass `--allow-external-plan`.
+- `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log). Plans must live under `.teaagent/plans/` unless you pass `--allow-external-plan` (other paths must still be under `--root`).
 - Scoped approvals (session grants expire after 8h by default; use separate grants per constraint):
   - `teaagent approval grant workspace_write_file --path-glob 'src/**' --root .`
   - `teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --root .`

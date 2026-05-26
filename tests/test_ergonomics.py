@@ -87,6 +87,114 @@ def test_scoped_approval_command_prefix(tmp_path: Path) -> None:
     )
 
 
+def test_multiple_grants_same_tool(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant(
+        'workspace_write_file',
+        scope='session',
+        path_globs=['src/**'],
+    )
+    store.grant(
+        'workspace_write_file',
+        scope='session',
+        path_globs=['docs/**'],
+    )
+    assert len(store.list_grants()) == 2
+    assert store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'src/a.py'},
+    )
+    assert store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'docs/readme.md'},
+    )
+    assert not store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'etc/passwd'},
+    )
+
+
+def test_scoped_deny_blocks_only_matching_paths(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant(
+        'workspace_write_file',
+        scope='session',
+        path_globs=['src/**'],
+    )
+    store.deny('workspace_write_file', path_globs=['src/secret/**'])
+    assert store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'src/public.txt'},
+    )
+    assert not store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'src/secret/key.txt'},
+    )
+
+
+def test_once_consumes_single_grant_only(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    first = store.grant(
+        'workspace_write_file',
+        scope='once',
+        path_globs=['src/**'],
+    )
+    second = store.grant(
+        'workspace_write_file',
+        scope='once',
+        path_globs=['docs/**'],
+    )
+    assert store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'src/a.py'},
+    )
+    assert len(store.list_grants()) == 1
+    remaining = store.list_grants()[0]
+    assert remaining.grant_id == second.grant_id
+    assert store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'docs/readme.md'},
+    )
+    assert not store.is_allowed(
+        'workspace_write_file',
+        permission_mode='prompt',
+        arguments={'path': 'src/a.py'},
+    )
+    assert first.grant_id != second.grant_id
+
+
+def test_legacy_once_grant_without_grant_id_is_consumed(tmp_path: Path) -> None:
+    import json
+
+    store = ApprovalPresetStore(tmp_path)
+    store.path.parent.mkdir(parents=True, exist_ok=True)
+    store.path.write_text(
+        json.dumps(
+            {
+                'grants': [
+                    {
+                        'tool_name': 'workspace_write_file',
+                        'scope': 'once',
+                        'created_at': '2026-01-01T00:00:00+00:00',
+                    }
+                ],
+                'audit': [],
+            }
+        ),
+        encoding='utf-8',
+    )
+    assert store.is_allowed('workspace_write_file', permission_mode='prompt')
+    assert not store.is_allowed('workspace_write_file', permission_mode='prompt')
+    assert store.list_grants() == []
+
+
 def test_scoped_approval_once_consumed(tmp_path: Path) -> None:
     store = ApprovalPresetStore(tmp_path)
     store.grant('workspace_write_file', scope='once')

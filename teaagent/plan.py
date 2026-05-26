@@ -59,7 +59,8 @@ def load_plan_contract(
     plans_dir = (workspace / '.teaagent' / 'plans').resolve()
     if not allow_external_plan and not _path_under_dir(path, plans_dir):
         raise ValueError(
-            'plan must be under .teaagent/plans/; pass --allow-external-plan to override'
+            'plan must be under .teaagent/plans/; use --allow-external-plan for '
+            'other paths under --root'
         )
     content = path.read_text(encoding='utf-8')
     match = _PLAN_TASK_LINE.search(content)

@@ -147,13 +147,19 @@ def _approval(
         '--path-glob',
         action='append',
         default=[],
-        help='Allow only when the tool path argument matches this glob (repeatable).',
+        help=(
+            'Match tool path argument to this glob (repeatable). With --scope deny, '
+            'blocks only matching paths.'
+        ),
     )
     grant.add_argument(
         '--command-prefix',
         action='append',
         default=[],
-        help='Allow only when shell command starts with this prefix (repeatable).',
+        help=(
+            'Match shell command prefix (repeatable). With --scope deny, blocks only '
+            'matching commands.'
+        ),
     )
     grant.add_argument(
         '--ttl-hours',
@@ -162,9 +168,23 @@ def _approval(
         help='Grant expiry in hours (session grants default to 8h when omitted).',
     )
     grant.set_defaults(func=handlers['approval_grant'], command='approval')
-    deny = subs.add_parser('deny')
+    deny = subs.add_parser(
+        'deny', help='Deny a tool globally (use grant --scope deny for scoped deny).'
+    )
     deny.add_argument('tool_name')
     deny.add_argument('--root', default='.')
+    deny.add_argument(
+        '--path-glob',
+        action='append',
+        default=[],
+        help='Deny only when the tool path matches this glob (repeatable).',
+    )
+    deny.add_argument(
+        '--command-prefix',
+        action='append',
+        default=[],
+        help='Deny only when the shell command starts with this prefix (repeatable).',
+    )
     deny.set_defaults(func=handlers['approval_deny'], command='approval')
     audit = subs.add_parser('audit')
     audit.add_argument('--root', default='.')

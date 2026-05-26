@@ -200,7 +200,11 @@ def approval_grant_command(args: argparse.Namespace) -> int:
 
 def approval_deny_command(args: argparse.Namespace) -> int:
     store = ApprovalPresetStore(args.root)
-    grant = store.deny(args.tool_name)
+    grant = store.deny(
+        args.tool_name,
+        path_globs=args.path_glob or None,
+        command_prefixes=args.command_prefix or None,
+    )
     print_json(grant.to_dict())
     return 0
 

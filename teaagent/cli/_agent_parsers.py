@@ -77,7 +77,7 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         '--allow-external-plan',
         action='store_true',
-        help='Allow --from-plan paths outside .teaagent/plans (use with care).',
+        help=('Allow plan paths elsewhere under --root (not only .teaagent/plans/).'),
     )
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
