@@ -193,6 +193,31 @@ class ApprovalPresetStore:
     def deny(self, tool_name: str) -> ApprovalGrant:
         return self.grant(tool_name, scope='deny')
 
+    def _remove_grant(self, tool_name: str) -> None:
+        data = self._load()
+        data['grants'] = [
+            grant
+            for grant in data['grants']
+            if not (isinstance(grant, dict) and grant.get('tool_name') == tool_name)
+        ]
+        self._save(data)
+
+    def _grant_matches(
+        self,
+        grant: ApprovalGrant,
+        *,
+        permission_mode: str,
+        arguments: dict[str, Any],
+    ) -> bool:
+        if (
+            grant.permission_mode is not None
+            and grant.permission_mode != permission_mode
+        ):
+            return False
+        return _path_matches(grant.path_globs, arguments) and _command_matches(
+            grant.command_prefixes, arguments
+        )
+
     def is_allowed(
         self,
         tool_name: str,
@@ -208,20 +233,30 @@ class ApprovalPresetStore:
                 continue
             if grant.scope == 'deny':
                 return False
+            if grant.scope == 'once':
+                if self._grant_matches(
+                    grant, permission_mode=permission_mode, arguments=args
+                ):
+                    self._remove_grant(grant.tool_name)
+                    data = self._load()
+                    data['audit'].append(
+                        {
+                            'action': 'consume_once',
+                            'tool_name': grant.tool_name,
+                            'created_at': datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
+                    self._save(data)
+                    return True
+                continue
             if grant.scope == 'always':
-                if _path_matches(grant.path_globs, args) and _command_matches(
-                    grant.command_prefixes, args
+                if self._grant_matches(
+                    grant, permission_mode=permission_mode, arguments=args
                 ):
                     return True
                 continue
-            if (
-                grant.scope == 'session'
-                and (
-                    grant.permission_mode is None
-                    or grant.permission_mode == permission_mode
-                )
-                and _path_matches(grant.path_globs, args)
-                and _command_matches(grant.command_prefixes, args)
+            if grant.scope == 'session' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=args
             ):
                 return True
         return False

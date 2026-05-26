@@ -87,6 +87,36 @@ def test_scoped_approval_command_prefix(tmp_path: Path) -> None:
     )
 
 
+def test_scoped_approval_once_consumed(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant('workspace_write_file', scope='once')
+    assert store.is_allowed('workspace_write_file', permission_mode='prompt')
+    assert not store.is_allowed('workspace_write_file', permission_mode='prompt')
+
+
+def test_cli_approval_handler_honors_run_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from teaagent.cli._handlers._agent import make_cli_approval_handler
+    from teaagent.runner import ApprovalRequest
+
+    workspace = tmp_path / 'repo'
+    workspace.mkdir()
+    other_cwd = tmp_path / 'other'
+    other_cwd.mkdir()
+    ApprovalPresetStore(workspace).grant('workspace_write_file', scope='always')
+    handler = make_cli_approval_handler(workspace, permission_mode='prompt')
+    request = ApprovalRequest(
+        call_id='call-1',
+        tool_name='workspace_write_file',
+        arguments={'path': 'src/x.py'},
+        reason='destructive',
+        annotations={'destructive': True},
+    )
+    monkeypatch.chdir(other_cwd)
+    assert handler(request) is True
+
+
 def test_scoped_approval_expired_grant(tmp_path: Path) -> None:
     store = ApprovalPresetStore(tmp_path)
     store.grant('workspace_write_file', scope='session')

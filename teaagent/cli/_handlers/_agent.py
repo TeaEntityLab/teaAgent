@@ -24,7 +24,7 @@ from teaagent.plan import PlanContract
 from teaagent.policy import parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
-from teaagent.runner import ApprovalRequest, RunResult
+from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
 from teaagent.skill_candidates import SkillCandidateStore
 
 
@@ -57,7 +57,11 @@ def _resolve_run_task(
 
     plan_contract: PlanContract | None = None
     if getattr(args, 'from_plan', None):
-        plan_contract = load_plan_contract(args.from_plan, root=args.root)
+        plan_contract = load_plan_contract(
+            args.from_plan,
+            root=args.root,
+            allow_external_plan=getattr(args, 'allow_external_plan', False),
+        )
         raw_task = plan_contract.task
     elif getattr(args, 'task', None):
         raw_task = args.task
@@ -228,14 +232,20 @@ def _execute_agent_task(
         except Exception as exc:
             print(f'Telemetry setup failed: {exc}', file=sys.stderr)
 
-    approval_handler = cli_approval_handler if args.hitl_approval else None
+    resolved_permission_mode = parse_permission_mode(args.permission_mode)
+    approval_handler = (
+        make_cli_approval_handler(
+            args.root, permission_mode=resolved_permission_mode.value
+        )
+        if args.hitl_approval
+        else None
+    )
     checkpoint_store = None
     checkpoint_path = getattr(args, 'checkpoint_store', None)
     if checkpoint_path:
         from teaagent.checkpoint import SQLiteCheckpointStore
 
         checkpoint_store = SQLiteCheckpointStore(checkpoint_path)
-    resolved_permission_mode = parse_permission_mode(args.permission_mode)
     from teaagent.streaming.handlers import (
         adapter_supports_streaming,
         build_run_stream_handlers,
@@ -348,30 +358,41 @@ def run_result_payload(
     return payload
 
 
-def cli_approval_handler(request: ApprovalRequest) -> bool:
+def make_cli_approval_handler(
+    root: str | Path, *, permission_mode: str = 'prompt'
+) -> ApprovalHandler:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-    store = ApprovalPresetStore('.')
-    if store.is_allowed(
-        request.tool_name,
-        permission_mode='prompt',
-        arguments=request.arguments,
-    ):
-        return True
-    print(
-        json.dumps(
-            {'status': 'approval_required', 'approval': request.to_dict()},
-            sort_keys=True,
-        ),
-        file=sys.stderr,
-    )
-    print(
-        f'Approve destructive tool call {request.call_id} ({request.tool_name})? [y/N] ',
-        end='',
-        file=sys.stderr,
-    )
-    answer = input()
-    return answer.strip().lower() in {'y', 'yes'}
+    store = ApprovalPresetStore(root)
+
+    def _handler(request: ApprovalRequest) -> bool:
+        if store.is_allowed(
+            request.tool_name,
+            permission_mode=permission_mode,
+            arguments=request.arguments,
+        ):
+            return True
+        print(
+            json.dumps(
+                {'status': 'approval_required', 'approval': request.to_dict()},
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        print(
+            f'Approve destructive tool call {request.call_id} ({request.tool_name})? [y/N] ',
+            end='',
+            file=sys.stderr,
+        )
+        answer = input()
+        return answer.strip().lower() in {'y', 'yes'}
+
+    return _handler
+
+
+def cli_approval_handler(request: ApprovalRequest) -> bool:
+    """Default handler for cwd workspace; prefer ``make_cli_approval_handler(root)``."""
+    return make_cli_approval_handler('.')(request)
 
 
 def agent_preflight_command(args: argparse.Namespace) -> int:

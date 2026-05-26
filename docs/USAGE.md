@@ -20,15 +20,18 @@ pip install -e .
 teaagent setup --root . --provider gpt --permission-mode read-only --write-env
 teaagent daily "summarize this repo" --dry-run --root . --human
 teaagent plan gpt "summarize the test suite" --root . --permission-mode read-only
-teaagent run gpt --from-plan .teaagent/plans/<timestamp>-*.md --permission-mode read-only --root .
+# Use the plan_artifact path printed by plan (under .teaagent/plans/):
+teaagent run gpt --from-plan .teaagent/plans/20260526-120000-summarize-the-test-suite.md --permission-mode read-only --root .
 # after a mutating run:
 teaagent agent undo --last --root .
 ```
 
 - Use `--human` on `daily` and `setup` for readable summaries; omit it for JSON (automation default).
 - After setup, `provider` is optional on `daily`, `run`, and top-level shortcuts when `.teaagent/config.json` exists.
-- `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log).
-- Scoped approvals: `teaagent approval grant <tool> --path-glob 'src/**' --command-prefix 'pytest '` (session grants expire after 8h by default).
+- `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log). Plans must live under `.teaagent/plans/` unless you pass `--allow-external-plan`.
+- Scoped approvals (session grants expire after 8h by default; use separate grants per constraint):
+  - `teaagent approval grant workspace_write_file --path-glob 'src/**' --root .`
+  - `teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --root .`
 
 **Advanced paths** (not part of the golden path): `teaagent init`, `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
 

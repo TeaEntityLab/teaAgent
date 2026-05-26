@@ -137,7 +137,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`244 passed` (209 prior + 29 new cloud/gateway/github/teams/marketplace/browser flows).
+`245 passed` (209 prior + 29 new cloud/gateway/github/teams/marketplace/browser flows).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

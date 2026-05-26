@@ -36,8 +36,19 @@ def plan_content_hash(content: str) -> str:
     return hashlib.sha256(content.encode('utf-8')).hexdigest()
 
 
+def _path_under_dir(path: Path, directory: Path) -> bool:
+    try:
+        path.resolve().relative_to(directory.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 def load_plan_contract(
-    plan_path: str | Path, *, root: str | Path = '.'
+    plan_path: str | Path,
+    *,
+    root: str | Path = '.',
+    allow_external_plan: bool = False,
 ) -> PlanContract:
     workspace = Path(root).resolve()
     path = Path(plan_path)
@@ -45,15 +56,17 @@ def load_plan_contract(
         path = (workspace / path).resolve()
     if not path.is_file():
         raise FileNotFoundError(f'plan artifact not found: {plan_path}')
+    plans_dir = (workspace / '.teaagent' / 'plans').resolve()
+    if not allow_external_plan and not _path_under_dir(path, plans_dir):
+        raise ValueError(
+            'plan must be under .teaagent/plans/; pass --allow-external-plan to override'
+        )
     content = path.read_text(encoding='utf-8')
     match = _PLAN_TASK_LINE.search(content)
     if not match:
         raise ValueError('plan artifact missing **Task:** line in Summary section')
     task = match.group(1).strip()
-    try:
-        rel_path = path.relative_to(workspace).as_posix()
-    except ValueError:
-        rel_path = path.as_posix()
+    rel_path = path.relative_to(workspace).as_posix()
     return PlanContract(
         path=path,
         rel_path=rel_path,

@@ -75,6 +75,11 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         help='Load task and provenance from a .teaagent/plans/*.md artifact.',
     )
     p.add_argument(
+        '--allow-external-plan',
+        action='store_true',
+        help='Allow --from-plan paths outside .teaagent/plans (use with care).',
+    )
+    p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
     p.add_argument('--model', default=None, help='Override model name.')
