@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from dataclasses import FrozenInstanceError
@@ -642,6 +643,64 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
             )
             self.assertIsNotNone(content_check)
             self.assertTrue(content_check['ok'])
+
+    def test_mutating_store_fails_closed_on_corrupt_json(self) -> None:
+        """Mutating paths must not silently replace a corrupt approvals.json."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            store.path.write_text('{bad json', encoding='utf-8')
+
+            with self.assertRaises(IOError):
+                store.grant(tool_name='workspace_write_file', scope='once')
+
+            self.assertEqual(store.path.read_text(encoding='utf-8'), '{bad json')
+
+    def test_repair_store_noops_on_healthy_store(self) -> None:
+        """--repair-store semantics: a valid store is inspected, not reset."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            before = store.path.read_text(encoding='utf-8')
+
+            result = store.repair_store()
+
+            self.assertEqual(result['status'], 'noop')
+            self.assertFalse(result['repaired'])
+            self.assertEqual(store.path.read_text(encoding='utf-8'), before)
+
+    def test_repair_store_rebuilds_corrupt_store_with_backup(self) -> None:
+        """Corrupt store repair must preserve the bad file in a timestamped backup."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+            store.path.write_text('{bad json', encoding='utf-8')
+
+            result = store.repair_store()
+
+            self.assertEqual(result['status'], 'repaired')
+            self.assertTrue(result['repaired'])
+            self.assertIsNotNone(result['backup_path'])
+            with open(result['backup_path'], encoding='utf-8') as backup:
+                self.assertEqual(backup.read(), '{bad json')
+            repaired = json.loads(store.path.read_text(encoding='utf-8'))
+            self.assertEqual(repaired['grants'], [])
+            self.assertEqual(repaired['audit'][0]['action'], 'store_repaired')
+
+    def test_repair_store_operator_reset_is_audited_separately(self) -> None:
+        """Explicit healthy-store reset is allowed only as a distinct audit event."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.grant(tool_name='shell_exec', scope='once')
+
+            result = store.repair_store(reset_healthy=True)
+
+            self.assertEqual(result['status'], 'reset')
+            self.assertTrue(result['repaired'])
+            self.assertIsNotNone(result['backup_path'])
+            reset_store = json.loads(store.path.read_text(encoding='utf-8'))
+            self.assertEqual(reset_store['grants'], [])
+            self.assertEqual(reset_store['audit'][0]['action'], 'store_operator_reset')
 
     # ---- fix_permissions parameter -------------------------------------------
 

@@ -275,7 +275,7 @@ def doctor_project(args: argparse.Namespace) -> int:
     if getattr(args, 'wizard', False):
         return _doctor_project_wizard(args)
     root = Path(getattr(args, 'root', '.')).resolve()
-    security = ApprovalPresetStore(root).check_security_health()
+    security = ApprovalPresetStore(root, readonly=True).check_security_health()
     overall_ok = security['ok']
     payload = {
         'ok': overall_ok,
@@ -657,7 +657,7 @@ def doctor_all(args: argparse.Namespace) -> int:
         provider_results.append({'provider': provider, 'ok': ok, 'message': message})
     checks['providers'] = provider_results
     root = Path(getattr(args, 'root', '.')).resolve()
-    security = ApprovalPresetStore(root).check_security_health()
+    security = ApprovalPresetStore(root, readonly=True).check_security_health()
     checks['security'] = security
     ok = gql_ok and all(item['ok'] for item in provider_results) and security['ok']
     print_json({'ok': ok, 'checks': checks})

@@ -216,16 +216,18 @@ _TEAAGENT_FILE_MODE = 0o600
 
 
 class ApprovalPresetStore:
-    def __init__(self, root: str | Path) -> None:
+    def __init__(self, root: str | Path, *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
+        self.readonly = readonly
         import contextlib
 
         teaagent_dir = self.root / '.teaagent'
-        teaagent_dir.mkdir(parents=True, exist_ok=True)
-        with contextlib.suppress(
-            OSError
-        ):  # best-effort; may fail on network/read-only fs
-            teaagent_dir.chmod(_TEAAGENT_DIR_MODE)
+        if not readonly:
+            teaagent_dir.mkdir(parents=True, exist_ok=True)
+            with contextlib.suppress(
+                OSError
+            ):  # best-effort; may fail on network/read-only fs
+                teaagent_dir.chmod(_TEAAGENT_DIR_MODE)
         self.path = teaagent_dir / 'approvals.json'
 
     def _get_workspace_secret(self) -> bytes:
@@ -235,6 +237,8 @@ class ApprovalPresetStore:
         or if a newly-generated secret cannot be persisted to disk.  This
         prevents silent fall-through to ephemeral digests that would break
         subsequent resume exact-match checks.
+
+        In readonly mode, only reads existing secret; raises IOError if missing.
         """
         import secrets
 
@@ -260,6 +264,11 @@ class ApprovalPresetStore:
                     f'Workspace secret at {secret_path} is corrupt: {exc}. '
                     'Delete the file to regenerate.'
                 ) from exc
+        if self.readonly:
+            raise IOError(
+                f'Workspace secret does not exist at {secret_path} and store is in readonly mode. '
+                'Cannot perform v2 scoped approval checks without a secret.'
+            )
         # Generate and persist a fresh secret
         secret = secrets.token_bytes(32)
         try:
@@ -282,6 +291,11 @@ class ApprovalPresetStore:
         return self._get_workspace_secret().hex()[:16]
 
     def _load(self) -> dict[str, Any]:
+        """Load approvals.json with fail-closed behavior.
+
+        Raises IOError if the file is corrupt or unreadable. This prevents silent
+        data loss and ensures explicit repair is required.
+        """
         if not self.path.is_file():
             return {
                 'grants': [],
@@ -291,25 +305,105 @@ class ApprovalPresetStore:
             }
         try:
             data = json.loads(self.path.read_text(encoding='utf-8'))
-        except (OSError, json.JSONDecodeError):
-            return {
-                'grants': [],
-                'audit': [],
-                'approved_call_ids': [],
-                'scoped_approvals': [],
-            }
+        except (OSError, json.JSONDecodeError) as exc:
+            raise IOError(
+                f'Cannot read approvals.json: {exc}. '
+                'File is corrupt or unreadable. Use --repair-store to rebuild from backup.'
+            ) from exc
         if not isinstance(data, dict):
-            return {
-                'grants': [],
-                'audit': [],
-                'approved_call_ids': [],
-                'scoped_approvals': [],
-            }
+            raise IOError(
+                f'approvals.json has invalid structure (expected dict, got {type(data).__name__}). '
+                'Use --repair-store to rebuild from backup.'
+            )
         data.setdefault('grants', [])
         data.setdefault('audit', [])
         data.setdefault('approved_call_ids', [])
         data.setdefault('scoped_approvals', [])
         return data
+
+    def repair_store(self, *, reset_healthy: bool = False) -> dict[str, Any]:
+        """Explicitly rebuild the approvals.json store from a corrupt state.
+
+        This method validates the store first and only repairs if corrupt or invalid.
+        ``reset_healthy`` is reserved for explicit operator-requested resets of a
+        validated store. It still backs up the current file and records a distinct
+        audit action so healthy-store resets are reviewable after the fact.
+
+        Args:
+            reset_healthy: Rebuild a validated store only after the caller has
+                received an explicit reset command from the user.
+
+        Returns:
+            dict with 'backup_path' (str | None), 'repaired' (bool), and 'status' (str)
+        """
+        import shutil
+        from datetime import datetime, timezone
+
+        # Validate store health first
+        is_corrupt = False
+        if self.path.is_file():
+            try:
+                data = json.loads(self.path.read_text(encoding='utf-8'))
+                if not isinstance(data, dict):
+                    is_corrupt = True
+                else:
+                    # Check required keys are lists
+                    for key in (
+                        'grants',
+                        'audit',
+                        'approved_call_ids',
+                        'scoped_approvals',
+                    ):
+                        if key in data and not isinstance(data[key], list):
+                            is_corrupt = True
+                            break
+            except (OSError, json.JSONDecodeError):
+                is_corrupt = True
+
+        if not is_corrupt and not reset_healthy:
+            return {
+                'backup_path': None,
+                'repaired': False,
+                'status': 'noop',
+                'message': 'Store is healthy, no repair needed. Use --force-reset-store only for an explicit operator reset.',
+            }
+
+        backup_path = None
+        if self.path.is_file():
+            backup_path = str(
+                self.path.with_suffix(
+                    f'.json.backup.{datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")}'
+                )
+            )
+            try:
+                shutil.copy2(self.path, backup_path)
+            except OSError as exc:
+                raise IOError(
+                    f'Cannot backup approvals.json to {backup_path}: {exc}. '
+                    'Repair aborted.'
+                ) from exc
+
+        audit_action = (
+            'store_operator_reset'
+            if reset_healthy and not is_corrupt
+            else 'store_repaired'
+        )
+        status = 'reset' if audit_action == 'store_operator_reset' else 'repaired'
+        # Create fresh empty store
+        fresh_data = {
+            'grants': [],
+            'audit': [
+                {
+                    'action': audit_action,
+                    'backup_path': backup_path,
+                    'created_at': datetime.now(timezone.utc).isoformat(),
+                }
+            ],
+            'approved_call_ids': [],
+            'scoped_approvals': [],
+        }
+        self._save(fresh_data)
+        return {'backup_path': backup_path, 'repaired': True, 'status': status}
 
     def _save(self, data: dict[str, Any]) -> None:
         import contextlib
@@ -895,7 +989,8 @@ class ApprovalPresetStore:
                 to any paths whose modes are wrong before reporting.  Equivalent
                 to the ``approval doctor --fix-security`` flag.
 
-        Returns a dict with 'ok' (bool) and 'checks' list where each entry has:
+        Returns a dict with 'ok' (bool), 'fixed_count' (int), 'verified_count' (int),
+        and 'checks' list where each entry has:
           - name: str
           - ok: bool
           - severity: 'error' | 'warning' | 'info'
@@ -904,6 +999,8 @@ class ApprovalPresetStore:
         import contextlib
 
         checks: list[dict[str, Any]] = []
+        fixed_count = 0
+        verified_count = 0
         teaagent_dir = self.root / '.teaagent'
         secret_path = teaagent_dir / 'secret'
 
@@ -937,6 +1034,7 @@ class ApprovalPresetStore:
                                 'message': f'.teaagent/ fixed to {oct(mode)}',
                             }
                         )
+                        fixed_count += 1
                 else:
                     checks.append(
                         {
@@ -946,6 +1044,7 @@ class ApprovalPresetStore:
                             'message': f'.teaagent/ has correct mode {oct(mode)}',
                         }
                     )
+                    verified_count += 1
             except OSError as exc:
                 checks.append(
                     {
@@ -995,6 +1094,7 @@ class ApprovalPresetStore:
                                 'message': f'.teaagent/secret fixed to {oct(mode)}',
                             }
                         )
+                        fixed_count += 1
                 else:
                     checks.append(
                         {
@@ -1004,6 +1104,7 @@ class ApprovalPresetStore:
                             'message': f'.teaagent/secret has correct mode {oct(mode)}',
                         }
                     )
+                    verified_count += 1
             except OSError as exc:
                 checks.append(
                     {
@@ -1105,6 +1206,7 @@ class ApprovalPresetStore:
                                 'message': f'approvals.json fixed to {oct(mode)}',
                             }
                         )
+                        fixed_count += 1
                 else:
                     checks.append(
                         {
@@ -1114,6 +1216,7 @@ class ApprovalPresetStore:
                             'message': f'approvals.json has correct mode {oct(mode)}',
                         }
                     )
+                    verified_count += 1
             except OSError as exc:
                 checks.append(
                     {
@@ -1215,16 +1318,13 @@ class ApprovalPresetStore:
             )
 
         # 4. Check for orphaned v2 approvals using key_id exact match.
-        #    A v2 record is orphaned iff it carries a key_id that differs from
-        #    the current workspace key_id — meaning the HMAC secret was rotated
-        #    after this approval was created, so its digest is no longer reproducible.
-        #    Records without key_id (legacy, pre-Phase3) are skipped: they fall back
-        #    to the v1 16-hex digest path which does not use the secret.
+        #    Read the secret only after finding active keyed v2 records. This keeps
+        #    read-only doctor/check commands non-mutating and avoids warning on a
+        #    fresh workspace with no approval state yet.
         try:
-            current_key_id = self._get_workspace_key_id()
             data = self._load()
             now = datetime.now(timezone.utc)
-            orphaned = []
+            candidates = []
             for item in data.get('scoped_approvals', []):
                 if not isinstance(item, dict):
                     continue
@@ -1242,13 +1342,14 @@ class ApprovalPresetStore:
                         continue
                 digest = item.get('argument_digest', '')
                 record_key_id = item.get('key_id')
-                # Only flag records that have a key_id AND it does not match current
-                if (
-                    len(digest) == 64
-                    and record_key_id
-                    and record_key_id != current_key_id
-                ):
-                    orphaned.append(item.get('record_id', '?'))
+                if len(digest) == 64 and record_key_id:
+                    candidates.append(item)
+            current_key_id = self._get_workspace_key_id() if candidates else None
+            orphaned = [
+                item.get('record_id', '?')
+                for item in candidates
+                if item.get('key_id') != current_key_id
+            ]
             if orphaned:
                 checks.append(
                     {
@@ -1288,5 +1389,7 @@ class ApprovalPresetStore:
             'ok': len(errors) == 0,
             'error_count': len(errors),
             'warning_count': len(warnings),
+            'fixed_count': fixed_count,
+            'verified_count': verified_count,
             'checks': checks,
         }

@@ -650,8 +650,73 @@ def approval_preset_command(args: argparse.Namespace) -> int:
 def approval_doctor_command(args: argparse.Namespace) -> int:
     from datetime import datetime, timezone
 
-    store = ApprovalPresetStore(args.root)
-    grants = store.list_grants()
+    readonly = not (
+        getattr(args, 'repair_store', False)
+        or getattr(args, 'force_reset_store', False)
+    )
+    store = ApprovalPresetStore(args.root, readonly=readonly)
+
+    # Handle explicit store repair if requested
+    if getattr(args, 'repair_store', False) or getattr(
+        args, 'force_reset_store', False
+    ):
+        try:
+            reset_healthy = getattr(args, 'force_reset_store', False)
+            repair_result = store.repair_store(reset_healthy=reset_healthy)
+            if repair_result['status'] == 'noop':
+                print_json(
+                    {
+                        'status': 'noop',
+                        'message': repair_result['message'],
+                    }
+                )
+                return 0
+            action = 'reset' if repair_result['status'] == 'reset' else 'repaired'
+            actions_taken = [f'Store {action}. Backup: {repair_result["backup_path"]}']
+            print_json(
+                {
+                    'status': repair_result['status'],
+                    'backup_path': repair_result['backup_path'],
+                    'actions_taken': actions_taken,
+                }
+            )
+            return 0
+        except IOError as exc:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': str(exc),
+                }
+            )
+            return 1
+
+    # Run security health check first (before grant analysis) to detect corrupt files
+    fix_security = getattr(args, 'fix_security', False)
+    try:
+        security = store.check_security_health(fix_permissions=fix_security)
+    except IOError as exc:
+        # Store is corrupt, suggest repair
+        print_json(
+            {
+                'status': 'issues_found',
+                'issues': [str(exc)],
+                'suggested_command': 'teaagent approval doctor --repair-store',
+            }
+        )
+        return 1
+
+    # Now try to load grants (may fail if corrupt)
+    try:
+        grants = store.list_grants()
+    except IOError as exc:
+        print_json(
+            {
+                'status': 'issues_found',
+                'issues': [str(exc)],
+                'suggested_command': 'teaagent approval doctor --repair-store',
+            }
+        )
+        return 1
 
     issues = []
     suggestions = []
@@ -848,8 +913,15 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
             for c in security['checks']
             if not c['ok'] and c['severity'] == 'error'
         )
-    if fix_security and security['ok']:
-        actions_taken.append('Security permissions verified/repaired')
+    if fix_security:
+        if security['fixed_count'] > 0:
+            actions_taken.append(
+                f'Security permissions fixed: {security["fixed_count"]} items'
+            )
+        if security['verified_count'] > 0:
+            actions_taken.append(
+                f'Security permissions verified: {security["verified_count"]} items'
+            )
     status = 'healthy' if not issues else 'issues_found'
     print_json(
         {

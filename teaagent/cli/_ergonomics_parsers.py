@@ -305,6 +305,16 @@ def _approval(
         action='store_true',
         help='Repair .teaagent/ directory and file permissions (0700/0600) automatically.',
     )
+    doctor.add_argument(
+        '--repair-store',
+        action='store_true',
+        help='Rebuild approvals.json from corrupt state (backs up corrupt file first). Only repairs if corrupt.',
+    )
+    doctor.add_argument(
+        '--force-reset-store',
+        action='store_true',
+        help='Reset approvals.json after making a backup even when it validates. Intended for explicit operator recovery.',
+    )
     doctor.set_defaults(func=handlers['approval_doctor'], command='approval')
     next_cmd = subs.add_parser(
         'next', help='Show next pending approval and suggest actions.'
