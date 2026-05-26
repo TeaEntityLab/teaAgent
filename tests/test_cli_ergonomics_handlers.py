@@ -642,12 +642,17 @@ def test_approval_preset_and_doctor(tmp_path: Path) -> None:
     # Run doctor
     out = io.StringIO()
     with redirect_stdout(out):
-        assert main(['approval', 'doctor', '--root', str(tmp_path)]) == 0
+        result = main(['approval', 'doctor', '--root', str(tmp_path)])
     doctor_payload = json.loads(out.getvalue())
     assert doctor_payload['status'] in ('healthy', 'issues_found')
     assert 'total_grants' in doctor_payload
     assert 'issues' in doctor_payload
     assert 'suggestions' in doctor_payload
+    # Doctor returns 1 if there are issues (for CI usage), 0 if healthy
+    if doctor_payload['status'] == 'healthy':
+        assert result == 0
+    else:
+        assert result == 1
 
 
 def test_approval_check_invalid_json(tmp_path: Path) -> None:

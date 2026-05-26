@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
 from dataclasses import FrozenInstanceError
 
@@ -109,6 +110,57 @@ class ApprovalPolicyTests(unittest.TestCase):
         policy = ApprovalPolicy()
         with self.assertRaises(FrozenInstanceError):
             policy.allow_all_destructive = True  # type: ignore[misc]
+
+    def test_scoped_approval_blocks_same_call_id_different_tool(self) -> None:
+        """Regression test: same call_id with different tool/args must be blocked."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            run_id = 'test-run-123'
+
+            # Add scoped approval for workspace_write_file with specific arguments
+            store.add_scoped_approval(
+                run_id=run_id,
+                call_id='write-1',
+                tool_name='workspace_write_file',
+                arguments={'path': 'safe.txt', 'content': 'hello'},
+            )
+
+            # Create policy with scoped approval checking
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                approval_store=store,
+                approval_origin_run_id=run_id,
+            )
+
+            # This should pass - exact match
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='write-1',
+                destructive=True,
+                arguments={'path': 'safe.txt', 'content': 'hello'},
+            )
+
+            # This should fail - same call_id but different tool
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_run_shell_mutate',
+                    call_id='write-1',
+                    destructive=True,
+                    arguments={'command': 'rm -rf build'},
+                )
+            self.assertIn('explicit approval', str(ctx.exception))
+
+            # This should fail - same call_id and tool but different arguments
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_write_file',
+                    call_id='write-1',
+                    destructive=True,
+                    arguments={'path': 'dangerous.txt', 'content': 'malicious'},
+                )
+            self.assertIn('explicit approval', str(ctx.exception))
 
 
 if __name__ == '__main__':

@@ -169,6 +169,7 @@ class AgentRunner:
                         tool_name=decision.tool_name,
                         call_id=decision.call_id,
                         destructive=tool.annotations.destructive,
+                        arguments=decision.arguments,
                     )
                 except ToolPermissionError as exc:
                     approval_request = ApprovalRequest(

@@ -90,6 +90,7 @@ class ChatAgentConfig:
     skill_prompt_mode: str = 'eager'
     hook_registry: Optional[HookRegistry] = None
     auto_mode_config: Optional[AutoModeConfig] = None
+    use_approval_store: bool = True
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
@@ -452,6 +453,13 @@ def run_chat_agent(
         skills=active_skills,
         skill_index=skill_index_entries or None,
     )
+    # Load approval store if enabled
+    approval_store = None
+    if config.use_approval_store:
+        from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+        approval_store = ApprovalPresetStore(config.root)
+
     runner = AgentRunner(
         registry=tool_registry,
         audit=audit_logger,
@@ -460,6 +468,8 @@ def run_chat_agent(
             approved_call_ids=config.approved_call_ids,
             allow_all_destructive=config.allow_destructive,
             permission_mode=config.permission_mode,
+            approval_store=approval_store,
+            approval_origin_run_id=context_extra.get('resumed_from'),
         ),
         approval_handler=config.approval_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),

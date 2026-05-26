@@ -129,6 +129,12 @@ def agent_resume_command(args: argparse.Namespace) -> int:
     initial_context_extra: Optional[dict[str, Any]] = None
     auto_approved: Optional[str] = None
 
+    # Load scoped approvals for this specific run only
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+    approval_store = ApprovalPresetStore(args.root)
+    scoped_approvals = approval_store.list_scoped_approvals_for_run(args.run_id)
+
     if not args.fresh_restart:
         checkpoint_path = getattr(args, 'checkpoint_store', None)
         checkpoint = None
@@ -155,6 +161,13 @@ def agent_resume_command(args: argparse.Namespace) -> int:
         if pending and pending['call_id'] not in args.approve_call_id:
             args.approve_call_id = list(args.approve_call_id) + [pending['call_id']]
             auto_approved = pending['call_id']
+
+    # Merge scoped approval call_ids for this run with explicitly provided ones
+    scoped_call_ids = [record.call_id for record in scoped_approvals]
+    all_approved = list(args.approve_call_id) + [
+        cid for cid in scoped_call_ids if cid not in args.approve_call_id
+    ]
+    args.approve_call_id = frozenset(all_approved)
 
     return _execute_agent_task(
         args,
@@ -197,6 +210,8 @@ def _execute_agent_task(
     selected_model = routing.model if routing else args.model
     adapter = args._adapter_factory(args.provider, model=selected_model)  # type: ignore[attr-defined]
     merged_context_extra: dict[str, Any] = dict(initial_context_extra or {})
+    if resumed_from:
+        merged_context_extra['resumed_from'] = resumed_from
     if plan_contract is not None:
         merged_context_extra['plan_contract'] = plan_contract.to_dict()
     store = RunStore(args.root)

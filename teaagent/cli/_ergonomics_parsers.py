@@ -280,7 +280,22 @@ def _approval(
         'doctor', help='Diagnose approval policy health and suggest improvements.'
     )
     doctor.add_argument('--root', default='.')
+    doctor.add_argument(
+        '--prune-expired',
+        action='store_true',
+        help='Remove expired grants automatically.',
+    )
+    doctor.add_argument(
+        '--fix-duplicates',
+        action='store_true',
+        help='Remove duplicate grants automatically.',
+    )
     doctor.set_defaults(func=handlers['approval_doctor'], command='approval')
+    next_cmd = subs.add_parser(
+        'next', help='Show next pending approval and suggest actions.'
+    )
+    next_cmd.add_argument('--root', default='.')
+    next_cmd.set_defaults(func=handlers['approval_next'], command='approval')
 
 
 def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

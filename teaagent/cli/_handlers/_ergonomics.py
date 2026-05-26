@@ -405,7 +405,10 @@ def approval_pending_command(args: argparse.Namespace) -> int:
 
 
 def approval_approve_command(args: argparse.Namespace) -> int:
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
     store = RunStore(args.root)
+    approval_store = ApprovalPresetStore(args.root)
     # Find the run with this pending call_id
     target_run_id = None
     pending_approval = None
@@ -416,7 +419,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
             pending_approval = pending
             break
 
-    if not target_run_id:
+    if not target_run_id or pending_approval is None:
         print_json(
             {
                 'status': 'error',
@@ -424,6 +427,15 @@ def approval_approve_command(args: argparse.Namespace) -> int:
             }
         )
         return 1
+
+    pending = pending_approval
+    # Persist the approval as a scoped record for exact tool call matching
+    approval_store.add_scoped_approval(
+        run_id=target_run_id,
+        call_id=args.call_id,
+        tool_name=pending.get('tool_name', 'unknown'),
+        arguments=pending.get('arguments', {}),
+    )
 
     # Approve the call
     from teaagent.cli._handlers._agent import agent_resume_command
@@ -567,8 +579,33 @@ def approval_preset_command(args: argparse.Namespace) -> int:
         return 1
 
     preset = presets[preset_name]
+
+    # Check for duplicate grants to avoid bloat
+    existing_grants = store.list_grants()
+    existing_signatures = {
+        (
+            g.tool_name,
+            g.scope,
+            g.permission_mode,
+            tuple(sorted(g.path_globs)),
+            tuple(sorted(g.command_prefixes)),
+        )
+        for g in existing_grants
+    }
+
     applied = []
+    skipped = []
     for grant_config in preset['grants']:
+        signature = (
+            grant_config['tool_name'],
+            grant_config['scope'],
+            grant_config.get('permission_mode'),
+            tuple(sorted(grant_config.get('path_globs', []))),
+            tuple(sorted(grant_config.get('command_prefixes', []))),
+        )
+        if signature in existing_signatures:
+            skipped.append(grant_config)
+            continue
         if grant_config['scope'] == 'deny':
             grant = store.deny(
                 grant_config['tool_name'],
@@ -584,6 +621,7 @@ def approval_preset_command(args: argparse.Namespace) -> int:
                 command_prefixes=grant_config.get('command_prefixes'),
             )
         applied.append(grant.to_dict())
+        existing_signatures.add(signature)
 
     print_json(
         {
@@ -591,23 +629,26 @@ def approval_preset_command(args: argparse.Namespace) -> int:
             'preset': preset_name,
             'description': preset['description'],
             'grants_applied': applied,
+            'grants_skipped': skipped,
         }
     )
     return 0
 
 
 def approval_doctor_command(args: argparse.Namespace) -> int:
+    from datetime import datetime, timezone
+
     store = ApprovalPresetStore(args.root)
     grants = store.list_grants()
 
     issues = []
     suggestions = []
+    actions_taken = []
 
     # Check for expired grants
+    expired_grant_ids = []
     for grant in grants:
         if grant.expires_at:
-            from datetime import datetime, timezone
-
             try:
                 expires = datetime.fromisoformat(grant.expires_at)
                 if expires.tzinfo is None:
@@ -616,10 +657,35 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
                     issues.append(
                         f'Grant {grant.grant_id} ({grant.tool_name}) expired at {grant.expires_at}'
                     )
+                    expired_grant_ids.append(grant.grant_id)
             except ValueError:
                 issues.append(
                     f'Grant {grant.grant_id} ({grant.tool_name}) has invalid expiry: {grant.expires_at}'
                 )
+
+    # Prune expired grants if requested
+    if args.prune_expired and expired_grant_ids:
+        for grant_id in expired_grant_ids:
+            if store.revoke(grant_id):
+                actions_taken.append(f'Revoked expired grant {grant_id}')
+        # Refresh grants after pruning
+        grants = store.list_grants()
+        # Recalculate issues after pruning
+        issues = []
+        for grant in grants:
+            if grant.expires_at:
+                try:
+                    expires = datetime.fromisoformat(grant.expires_at)
+                    if expires.tzinfo is None:
+                        expires = expires.replace(tzinfo=timezone.utc)
+                    if datetime.now(timezone.utc) >= expires:
+                        issues.append(
+                            f'Grant {grant.grant_id} ({grant.tool_name}) expired at {grant.expires_at}'
+                        )
+                except ValueError:
+                    issues.append(
+                        f'Grant {grant.grant_id} ({grant.tool_name}) has invalid expiry: {grant.expires_at}'
+                    )
 
     # Check for conflicting rules (deny + allow for same tool)
     tool_scopes: dict[str, list[str]] = {}
@@ -634,8 +700,57 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
                 f'Tool {tool_name} has both deny and allow grants - deny takes precedence'
             )
 
+    # Check for duplicate grants
+    grant_signatures = {}
+    duplicate_grant_ids = []
+    for grant in grants:
+        signature = (
+            grant.tool_name,
+            grant.scope,
+            grant.permission_mode,
+            tuple(sorted(grant.path_globs)),
+            tuple(sorted(grant.command_prefixes)),
+        )
+        if signature in grant_signatures:
+            duplicate_grant_ids.append(grant.grant_id)
+        else:
+            grant_signatures[signature] = grant.grant_id
+
+    # Fix duplicates if requested
+    if args.fix_duplicates and duplicate_grant_ids:
+        for grant_id in duplicate_grant_ids:
+            if store.revoke(grant_id):
+                actions_taken.append(f'Revoked duplicate grant {grant_id}')
+        # Refresh grants after removing duplicates
+        grants = store.list_grants()
+        # Recalculate duplicate check
+        grant_signatures = {}
+        duplicate_grant_ids = []
+        for grant in grants:
+            signature = (
+                grant.tool_name,
+                grant.scope,
+                grant.permission_mode,
+                tuple(sorted(grant.path_globs)),
+                tuple(sorted(grant.command_prefixes)),
+            )
+            if signature in grant_signatures:
+                duplicate_grant_ids.append(grant.grant_id)
+            else:
+                grant_signatures[signature] = grant.grant_id
+
+    # Only add duplicate issue if duplicates still exist (either not fixed or fix failed)
+    if duplicate_grant_ids:
+        issues.append(
+            f'Found {len(duplicate_grant_ids)} duplicate grants that can be removed'
+        )
+
     # Suggest common patterns if missing
-    common_tools = {'workspace_write_file', 'bash'}
+    common_tools = {
+        'workspace_write_file',
+        'workspace_run_shell_mutate',
+        'workspace_apply_patch',
+    }
     existing_tools = {grant.tool_name for grant in grants}
     for tool in common_tools - existing_tools:
         suggestions.append(
@@ -653,13 +768,108 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
                 f'Grant {grant.grant_id} ({grant.tool_name}) is always allowed without restrictions - consider scoping with path_globs or command_prefixes'
             )
 
+    status = 'healthy' if not issues else 'issues_found'
     print_json(
         {
-            'status': 'healthy' if not issues else 'issues_found',
+            'status': status,
             'total_grants': len(grants),
             'issues': issues,
             'suggestions': suggestions,
+            'actions_taken': actions_taken,
             'summary': f'{len(issues)} issues, {len(suggestions)} suggestions',
+        }
+    )
+    # Return non-zero exit code if there are issues (for CI usage)
+    return 1 if issues else 0
+
+
+def approval_next_command(args: argparse.Namespace) -> int:
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+    store = RunStore(args.root)
+    approval_store = ApprovalPresetStore(args.root)
+
+    # Find pending approvals
+    pending_runs: list[dict[str, Any]] = []
+    for summary in store.list_runs(limit=20):
+        pending = store.pending_approval_for_run(summary.run_id)
+        if pending:
+            pending_runs.append(
+                {
+                    'run_id': summary.run_id,
+                    'task': summary.task,
+                    'status': summary.status,
+                    'pending_approval': pending,
+                }
+            )
+
+    if not pending_runs:
+        print_json(
+            {
+                'status': 'no_pending',
+                'message': 'No pending approvals found',
+                'suggestions': [
+                    'Use "teaagent run" to start a new task',
+                    'Use "teaagent approval list" to view current grants',
+                ],
+            }
+        )
+        return 0
+
+    # Get the first pending approval
+    first_pending = pending_runs[0]
+    pending_detail: dict[str, Any] = first_pending['pending_approval']
+    call_id = str(pending_detail['call_id'])
+    tool_name = str(pending_detail['tool_name'])
+    arguments = pending_detail.get('arguments', {})
+    if not isinstance(arguments, dict):
+        arguments = {}
+
+    # Explain why it's pending
+    from teaagent.policy import PermissionMode
+
+    permission_mode = PermissionMode.PROMPT.value
+    check_result = approval_store.check(
+        tool_name,
+        permission_mode=permission_mode,
+        arguments=arguments,
+        include_inactive=True,
+    )
+
+    # Build suggestions
+    suggestions = []
+    if check_result['matched_grant']:
+        suggestions.append(
+            f'This tool call matches a {check_result["matched_grant"]["scope"]} grant but may need explicit approval'
+        )
+    else:
+        suggestions.append(
+            'No matching grant found - consider adding a preset or explicit approval'
+        )
+        suggestions.append('Try: teaagent approval preset dev-safe')
+    suggestions.append(f'Approve: teaagent approval approve {call_id}')
+    suggestions.append(
+        f'Approve and resume: teaagent approval approve {call_id} --resume'
+    )
+    suggestions.append(
+        f'Explain: teaagent approval explain {tool_name} --arg path={arguments.get("path", "")}'
+    )
+
+    print_json(
+        {
+            'status': 'pending_found',
+            'run_id': first_pending['run_id'],
+            'task': first_pending['task'],
+            'pending_approval': pending_detail,
+            'explanation': {
+                'tool_name': tool_name,
+                'decision': check_result['decision'],
+                'allowed': check_result['allowed'],
+                'matched_grant': check_result['matched_grant'],
+                'evaluated_grants_count': len(check_result['evaluated_grants']),
+            },
+            'suggestions': suggestions,
+            'total_pending': len(pending_runs),
         }
     )
     return 0
