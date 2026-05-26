@@ -927,4 +927,47 @@ def test_runstore_readonly_prevents_mutation(tmp_path: Path) -> None:
 
     # Read operations should work
     assert store.list_runs() == []
+
+
+def test_readonly_query_commands_do_not_create_teaagent_dir(tmp_path: Path) -> None:
+    """Verify that readonly query commands don't create .teaagent in fresh workspace."""
+    import argparse
+
+    from teaagent.cli._handlers._agent import (
+        agent_run_show,
+        agent_runs_list,
+        agent_status_command,
+    )
+    from teaagent.cli._handlers._ergonomics import (
+        background_list_command,
+        background_show_command,
+    )
+
+    # Ensure .teaagent doesn't exist
+    teaagent_dir = tmp_path / '.teaagent'
+    assert not teaagent_dir.exists()
+
+    # Test agent runs list (readonly)
+    args = argparse.Namespace(root=str(tmp_path), limit=20)
+    agent_runs_list(args)
+    assert not teaagent_dir.exists()
+
+    # Test agent status (readonly)
+    args = argparse.Namespace(root=str(tmp_path), run_id='nonexistent')
+    agent_status_command(args)
+    assert not teaagent_dir.exists()
+
+    # Test agent show (readonly)
+    args = argparse.Namespace(root=str(tmp_path), run_id='nonexistent')
+    agent_run_show(args)
+    assert not teaagent_dir.exists()
+
+    # Test background list (readonly)
+    args = argparse.Namespace(root=str(tmp_path))
+    background_list_command(args)
+    assert not teaagent_dir.exists()
+
+    # Test background show (readonly)
+    args = argparse.Namespace(root=str(tmp_path), background_id='nonexistent')
+    background_show_command(args)
     assert not teaagent_dir.exists()

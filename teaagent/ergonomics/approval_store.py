@@ -408,6 +408,8 @@ class ApprovalPresetStore:
         return {'backup_path': backup_path, 'repaired': True, 'status': status}
 
     def _save(self, data: dict[str, Any]) -> None:
+        if self.readonly:
+            raise IOError('Cannot save: ApprovalPresetStore is in readonly mode')
         import contextlib
 
         self.path.write_text(
@@ -443,7 +445,6 @@ class ApprovalPresetStore:
             self._save(data)
 
     def list_grants(self) -> list[ApprovalGrant]:
-        self._migrate_missing_grant_ids()
         grants: list[ApprovalGrant] = []
         for item in self._load().get('grants', []):
             if isinstance(item, dict) and item.get('tool_name'):
@@ -738,6 +739,7 @@ class ApprovalPresetStore:
         command_prefixes: Sequence[str] | None = None,
         ttl_hours: float | None = None,
     ) -> ApprovalGrant:
+        self._migrate_missing_grant_ids()
         now = datetime.now(timezone.utc).isoformat()
         expires_at = _compute_expires_at(
             scope=scope, created_at=now, ttl_hours=ttl_hours
@@ -752,7 +754,6 @@ class ApprovalPresetStore:
             command_prefixes=tuple(command_prefixes or ()),
             expires_at=expires_at,
         )
-        self._migrate_missing_grant_ids()
         data = self._load()
         grants = [g for g in data['grants'] if isinstance(g, dict)]
         grants.append(entry.to_dict())

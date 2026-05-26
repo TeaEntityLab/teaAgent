@@ -69,7 +69,7 @@ def status_short_command(args: argparse.Namespace) -> int:
 def background_list_command(args: argparse.Namespace) -> int:
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
-    print_json(BackgroundRunStore(args.root).list())
+    print_json(BackgroundRunStore(args.root, readonly=True).list())
     return 0
 
 
@@ -77,7 +77,7 @@ def background_show_command(args: argparse.Namespace) -> int:
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
     try:
-        print_json(BackgroundRunStore(args.root).get(args.background_id))
+        print_json(BackgroundRunStore(args.root, readonly=True).get(args.background_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -698,6 +698,9 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
     readonly = not (
         getattr(args, 'repair_store', False)
         or getattr(args, 'force_reset_store', False)
+        or getattr(args, 'prune_expired', False)
+        or getattr(args, 'fix_duplicates', False)
+        or getattr(args, 'fix_security', False)
     )
     store = ApprovalPresetStore(args.root, readonly=readonly)
 

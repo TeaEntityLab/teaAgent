@@ -36,10 +36,12 @@ class BackgroundRunRecord:
 class BackgroundRunStore:
     """Detached agent runs persisted under ``.teaagent/background/``."""
 
-    def __init__(self, root: str | Path = '.') -> None:
+    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
+        self.readonly = readonly
         self.dir = self.root / '.teaagent' / 'background'
-        self.dir.mkdir(parents=True, exist_ok=True)
+        if not readonly:
+            self.dir.mkdir(parents=True, exist_ok=True)
 
     def _record_path(self, background_id: str) -> Path:
         return self.dir / f'{background_id}.json'
@@ -47,6 +49,8 @@ class BackgroundRunStore:
     def start(
         self, command: list[str], *, label: Optional[str] = None
     ) -> BackgroundRunRecord:
+        if self.readonly:
+            raise IOError('Cannot start background run: BackgroundRunStore is in readonly mode')
         if not command:
             raise ValueError('background command must not be empty')
         background_id = uuid4().hex
@@ -79,16 +83,18 @@ class BackgroundRunStore:
         if not record_path.exists():
             raise FileNotFoundError(f"background run '{background_id}' not found")
         data = json.loads(record_path.read_text(encoding='utf-8'))
-        data = _refresh_process_state(data, record_path)
+        data = _refresh_process_state(data, record_path, persist=not self.readonly)
         run_id = _run_id_from_log(Path(str(data['log_path'])))
         if run_id:
             previous_run_id = data.get('run_id')
             data['run_id'] = run_id
-            if previous_run_id != run_id:
+            if previous_run_id != run_id and not self.readonly:
                 _persist_record_state(record_path, data)
         return data
 
     def update_run_id(self, background_id: str, run_id: str) -> None:
+        if self.readonly:
+            raise IOError('Cannot update run_id: BackgroundRunStore is in readonly mode')
         record_path = self._record_path(background_id)
         if not record_path.exists():
             raise FileNotFoundError(f"background run '{background_id}' not found")
@@ -97,18 +103,21 @@ class BackgroundRunStore:
         atomic_write_text(record_path, json.dumps(data, sort_keys=True))
 
     def list(self) -> list[dict[str, Any]]:
+        if not self.dir.exists():
+            return []
         rows: list[dict[str, Any]] = []
         for path in sorted(
             self.dir.glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True
         ):
             data = json.loads(path.read_text(encoding='utf-8'))
-            data = _refresh_process_state(data, path)
+            data = _refresh_process_state(data, path, persist=not self.readonly)
             log_path = Path(str(data.get('log_path', '')))
             if not data.get('run_id'):
                 run_id = _run_id_from_log(log_path)
                 if run_id:
                     data['run_id'] = run_id
-                    _persist_record_state(path, data)
+                    if not self.readonly:
+                        _persist_record_state(path, data)
             rows.append(data)
         return rows
 
@@ -126,7 +135,7 @@ def _exit_code_from_wait_status(status: int) -> int:
     return status
 
 
-def _refresh_process_state(data: dict[str, Any], record_path: Path) -> dict[str, Any]:
+def _refresh_process_state(data: dict[str, Any], record_path: Path, *, persist: bool = True) -> dict[str, Any]:
     if data.get('stopped_at'):
         data['alive'] = False
         return data
@@ -151,7 +160,8 @@ def _refresh_process_state(data: dict[str, Any], record_path: Path) -> dict[str,
         data['stopped_at'] = _utc_now()
         if exit_code is not None:
             data['exit_code'] = exit_code
-        _persist_record_state(record_path, data)
+        if persist:
+            _persist_record_state(record_path, data)
     return data
 
 

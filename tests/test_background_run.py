@@ -92,3 +92,46 @@ def test_background_show_includes_run_id_from_log(tmp_path: Path) -> None:
     shown = store.get(bg_id)
     assert shown['run_id'] == 'run-from-log'
     assert shown['alive'] is False
+
+
+def test_readonly_background_dead_record_does_not_write_file(tmp_path: Path) -> None:
+    """Verify that readonly background get/list returns enriched data but doesn't write."""
+    bg_dir = tmp_path / '.teaagent' / 'background'
+    bg_dir.mkdir(parents=True)
+    log_path = bg_dir / 'dead-readonly.log'
+    log_path.write_text('', encoding='utf-8')
+
+    # Create a dead process record without stopped_at
+    record = {
+        'background_id': 'dead-readonly',
+        'pid': 2_147_483_647,
+        'command': ['noop'],
+        'started_at': '2026-05-22T00:00:00+00:00',
+        'log_path': str(log_path),
+    }
+    record_path = bg_dir / 'dead-readonly.json'
+    original_content = json.dumps(record)
+    record_path.write_text(original_content, encoding='utf-8')
+
+    # Get record with readonly store
+    readonly_store = BackgroundRunStore(tmp_path, readonly=True)
+    shown = readonly_store.get('dead-readonly')
+    
+    # Should return enriched data with stopped_at
+    assert shown['alive'] is False
+    assert 'stopped_at' in shown
+    
+    # But file should not be modified
+    current_content = record_path.read_text(encoding='utf-8')
+    assert current_content == original_content
+    assert 'stopped_at' not in json.loads(current_content)
+
+    # Same for list()
+    rows = readonly_store.list()
+    assert len(rows) == 1
+    assert rows[0]['alive'] is False
+    assert 'stopped_at' in rows[0]
+    
+    # File still not modified
+    current_content = record_path.read_text(encoding='utf-8')
+    assert current_content == original_content

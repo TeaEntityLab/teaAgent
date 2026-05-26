@@ -1359,7 +1359,7 @@ def agent_daily_command(args: argparse.Namespace) -> int:
 
 
 def agent_status_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     try:
         print_json(store.heartbeat_for_run(args.run_id))
     except FileNotFoundError as exc:
@@ -1369,14 +1369,18 @@ def agent_status_command(args: argparse.Namespace) -> int:
 
 
 def agent_runs_list(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = RunStore(args.root, readonly=True)
     print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
     return 0
 
 
 def agent_run_show(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
-    print_json(store.show_run(args.run_id))
+    store = RunStore(args.root, readonly=True)
+    try:
+        print_json(store.show_run(args.run_id))
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
     return 0
 
 

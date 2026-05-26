@@ -226,9 +226,15 @@ def test_migrate_grant_id_writes_audit(tmp_path: Path) -> None:
         ),
         encoding='utf-8',
     )
+    # list_grants should NOT write migration (readonly path)
     grants = store.list_grants()
     assert len(grants) == 1
     assert grants[0].grant_id.startswith('leg-')
+    audit = store.audit_tail(5)
+    assert not any(row.get('action') == 'migrate_grant_id' for row in audit)
+
+    # Mutating operation should trigger migration
+    store.grant('workspace_read_file', scope='always')
     audit = store.audit_tail(5)
     assert any(row.get('action') == 'migrate_grant_id' for row in audit)
 
@@ -719,3 +725,57 @@ def test_resume_policy_strict_exact_match_wiring(tmp_path: Path) -> None:
             arguments={'path': 'dangerous.sh', 'data': 'malicious'},
         )
     assert 'requires explicit approval' in str(exc_args.value)
+
+
+def test_legacy_approval_list_returns_stable_id_without_migration(tmp_path: Path) -> None:
+    """Verify that readonly list_grants returns leg-* IDs without writing migration."""
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+    # Create a legacy grant without grant_id
+    tea = tmp_path / '.teaagent'
+    tea.mkdir()
+    approvals_path = tea / 'approvals.json'
+    legacy_data = {
+        'grants': [
+            {
+                'tool_name': 'workspace_write_file',
+                'scope': 'session',
+                'permission_mode': 'prompt',
+                'created_at': '2026-05-22T00:00:00+00:00',
+                # Note: no grant_id field
+            }
+        ],
+        'audit': [],
+        'approved_call_ids': [],
+        'scoped_approvals': [],
+    }
+    original_content = json.dumps(legacy_data, indent=2)
+    approvals_path.write_text(original_content, encoding='utf-8')
+
+    # List grants with readonly store
+    readonly_store = ApprovalPresetStore(tmp_path, readonly=True)
+    grants = readonly_store.list_grants()
+
+    # Should return one grant with stable leg-* ID
+    assert len(grants) == 1
+    assert grants[0].tool_name == 'workspace_write_file'
+    assert grants[0].grant_id.startswith('leg-')
+
+    # But file should not be modified (no migration written)
+    current_content = approvals_path.read_text(encoding='utf-8')
+    assert current_content == original_content
+    current_data = json.loads(current_content)
+    assert 'grant_id' not in current_data['grants'][0]
+
+    # Mutating operations should still trigger migration
+    writable_store = ApprovalPresetStore(tmp_path, readonly=False)
+    writable_store.grant('workspace_read_file', scope='always')
+
+    # Now file should be modified with migration
+    current_content = approvals_path.read_text(encoding='utf-8')
+    current_data = json.loads(current_content)
+    # Original grant should now have grant_id
+    assert 'grant_id' in current_data['grants'][0]
+    assert current_data['grants'][0]['grant_id'].startswith('leg-')
+    # New grant should have fresh ID
+    assert 'grant_id' in current_data['grants'][1]
