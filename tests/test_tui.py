@@ -321,12 +321,20 @@ class TUITests(unittest.TestCase):
             # Setup a persisted run with a pending approval using the audit logger
             audit = run_store.audit_logger(run_id)
             audit.record('run_started', run_id, task='ask write file')
+
+            from teaagent.ergonomics.approval_store import _compute_argument_digest
+
+            args_payload = {'path': 'x.txt', 'content': 'val'}
+            digest = _compute_argument_digest(args_payload)
+
             audit.record(
                 'tool_call_pending_approval',
                 run_id,
                 call_id='c456',
                 tool_name='workspace_write_file',
-                arguments={'path': 'x.txt', 'content': 'val'},
+                arguments=args_payload,
+                argument_digest=digest,
+                argument_digest_version='v1',
                 reason='Needs approval',
                 annotations={'destructive': True},
             )

@@ -35,12 +35,16 @@ class ApprovalRequest:
     run_id: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
+        from teaagent.ergonomics.approval_store import _compute_argument_digest
+
         payload: dict[str, Any] = {
             'call_id': self.call_id,
             'tool_name': self.tool_name,
             'arguments': redact_tool_arguments(self.arguments),
             'reason': self.reason,
             'annotations': self.annotations,
+            'argument_digest': _compute_argument_digest(self.arguments),
+            'argument_digest_version': 'v1',
         }
         if self.run_id is not None:
             payload['run_id'] = self.run_id

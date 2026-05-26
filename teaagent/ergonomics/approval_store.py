@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import Any, Literal, Optional, Sequence
 from uuid import uuid4
 
 GrantScope = Literal['once', 'session', 'always', 'deny']
@@ -92,10 +92,7 @@ def _new_record_id() -> str:
 
 def _compute_argument_digest(arguments: dict[str, Any]) -> str:
     """Compute stable digest of arguments for exact matching."""
-    from teaagent.audit import redact_tool_arguments
-
-    redacted = redact_tool_arguments(arguments)
-    normalized = json.dumps(redacted, sort_keys=True, separators=(',', ':'))
+    normalized = json.dumps(arguments, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
 
@@ -392,6 +389,7 @@ class ApprovalPresetStore:
         arguments: dict[str, Any],
         *,
         ttl_hours: float | None = None,
+        argument_digest: Optional[str] = None,
     ) -> ScopedApprovalRecord:
         """Add a run-scoped approval record for exact tool call matching."""
         now = datetime.now(timezone.utc).isoformat()
@@ -404,12 +402,15 @@ class ApprovalPresetStore:
                 created = created.replace(tzinfo=timezone.utc)
             expires_at = (created + timedelta(hours=ttl_hours)).isoformat()
 
+        if argument_digest is None:
+            argument_digest = _compute_argument_digest(arguments)
+
         record = ScopedApprovalRecord(
             record_id=_new_record_id(),
             run_id=run_id,
             call_id=call_id,
             tool_name=tool_name,
-            argument_digest=_compute_argument_digest(arguments),
+            argument_digest=argument_digest,
             created_at=now,
             expires_at=expires_at,
         )

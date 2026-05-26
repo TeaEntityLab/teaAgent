@@ -604,12 +604,20 @@ def test_agent_resume_auto_approve_creates_scoped_approval(
 
     # Write events: run_started and a tool_call_pending_approval
     audit.record('run_started', run_id, task='write a file')
+
+    from teaagent.ergonomics.approval_store import _compute_argument_digest
+
+    args_payload = {'path': 'hello.txt', 'data': 'hi'}
+    digest = _compute_argument_digest(args_payload)
+
     audit.record(
         'tool_call_pending_approval',
         run_id,
         call_id='pending-call-456',
         tool_name='workspace_write_file',
-        arguments={'path': 'hello.txt', 'data': 'hi'},
+        arguments=args_payload,
+        argument_digest=digest,
+        argument_digest_version='v1',
     )
 
     # 2. Mock _execute_agent_task so it doesn't run the LLM Decision loop

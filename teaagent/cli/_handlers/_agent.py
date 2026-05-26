@@ -158,20 +158,32 @@ def agent_resume_command(args: argparse.Namespace) -> int:
                 }
         pending = store.pending_approval_for_run(args.run_id)
         if pending and pending['call_id'] not in args.approve_call_id:
-            # Check if this pending call already has a valid scoped approval to avoid duplicate storage writes
-            if not approval_store.check_scoped_approval(
-                run_id=args.run_id,
-                call_id=pending['call_id'],
-                tool_name=pending['tool_name'],
-                arguments=pending['arguments'],
-            ):
-                approval_store.add_scoped_approval(
+            digest = pending.get('argument_digest')
+            if not digest:
+                import sys
+
+                print(
+                    f"Warning: Pending call '{pending['call_id']}' is a legacy record and "
+                    f'cannot be auto-approved safely due to redacted arguments. '
+                    f'Please approve explicitly with --approve-call-id {pending["call_id"]}.',
+                    file=sys.stderr,
+                )
+            else:
+                # Check if this pending call already has a valid scoped approval to avoid duplicate storage writes
+                if not approval_store.check_scoped_approval(
                     run_id=args.run_id,
                     call_id=pending['call_id'],
                     tool_name=pending['tool_name'],
                     arguments=pending['arguments'],
-                )
-            auto_approved = pending['call_id']
+                ):
+                    approval_store.add_scoped_approval(
+                        run_id=args.run_id,
+                        call_id=pending['call_id'],
+                        tool_name=pending['tool_name'],
+                        arguments=pending['arguments'],
+                        argument_digest=digest,
+                    )
+                auto_approved = pending['call_id']
 
     # Legacy Escape Hatch: keep only explicitly provided bare call IDs from the --approve-call-id CLI flag
     # for backward compatibility. We never merge database-persisted scoped approvals here as bare IDs.

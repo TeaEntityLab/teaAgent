@@ -499,15 +499,23 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
             approval_store = ApprovalPresetStore(tui.root)
-            approval_store.add_scoped_approval(
-                run_id=args[0],
-                call_id=pending['call_id'],
-                tool_name=pending['tool_name'],
-                arguments=pending['arguments'],
-            )
-            tui.output_fn(
-                f'auto-approved pending call (run-scoped exact-match): {pending["call_id"]}'
-            )
+            digest = pending.get('argument_digest')
+            if not digest:
+                tui.output_fn(
+                    f"warning: pending call '{pending['call_id']}' is a legacy record and "
+                    f'cannot be auto-approved safely. Please approve it interactively.'
+                )
+            else:
+                approval_store.add_scoped_approval(
+                    run_id=args[0],
+                    call_id=pending['call_id'],
+                    tool_name=pending['tool_name'],
+                    arguments=pending['arguments'],
+                    argument_digest=digest,
+                )
+                tui.output_fn(
+                    f'auto-approved pending call (run-scoped exact-match): {pending["call_id"]}'
+                )
         tui.output_fn(f'resume: {args[0]}')
         tui._run_agent_task(
             original_task,

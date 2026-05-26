@@ -165,6 +165,10 @@ class RunStore:
                         'call_id': call_id,
                         'tool_name': tool_name,
                         'arguments': arguments if isinstance(arguments, dict) else {},
+                        'argument_digest': payload.get('argument_digest'),
+                        'argument_digest_version': payload.get(
+                            'argument_digest_version'
+                        ),
                     }
             elif event_type in {
                 'tool_call_approved',

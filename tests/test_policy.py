@@ -162,6 +162,118 @@ class ApprovalPolicyTests(unittest.TestCase):
                 )
             self.assertIn('explicit approval', str(ctx.exception))
 
+    def test_scoped_approval_blocks_sensitive_command_mismatch(self) -> None:
+        """Verify that shell mutate with a different command is strictly blocked and does not consume the record."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            run_id = 'run-cmd-123'
+
+            store.add_scoped_approval(
+                run_id=run_id,
+                call_id='shell-1',
+                tool_name='workspace_run_shell_mutate',
+                arguments={'command': 'pytest'},
+            )
+
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                approval_store=store,
+                approval_origin_run_id=run_id,
+            )
+
+            # Check with a different command - must fail
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_run_shell_mutate',
+                    call_id='shell-1',
+                    destructive=True,
+                    arguments={'command': 'rm -rf /important'},
+                )
+            self.assertIn('explicit approval', str(ctx.exception))
+
+            # The record must NOT be consumed
+            records = store.list_scoped_approvals_for_run(run_id)
+            self.assertEqual(len(records), 1)
+            self.assertIsNone(records[0].consumed_at)
+
+    def test_scoped_approval_blocks_sensitive_content_mismatch(self) -> None:
+        """Verify that write file with different content is strictly blocked and does not consume the record."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            run_id = 'run-content-123'
+
+            store.add_scoped_approval(
+                run_id=run_id,
+                call_id='write-1',
+                tool_name='workspace_write_file',
+                arguments={'path': 'out.txt', 'content': 'safe content'},
+            )
+
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                approval_store=store,
+                approval_origin_run_id=run_id,
+            )
+
+            # Check with different content - must fail
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_write_file',
+                    call_id='write-1',
+                    destructive=True,
+                    arguments={'path': 'out.txt', 'content': 'malicious payload'},
+                )
+            self.assertIn('explicit approval', str(ctx.exception))
+
+            # The record must NOT be consumed
+            records = store.list_scoped_approvals_for_run(run_id)
+            self.assertEqual(len(records), 1)
+            self.assertIsNone(records[0].consumed_at)
+
+    def test_scoped_approval_blocks_sensitive_patch_mismatch(self) -> None:
+        """Verify that edit with different old/new keys is strictly blocked and does not consume the record."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            run_id = 'run-patch-123'
+
+            store.add_scoped_approval(
+                run_id=run_id,
+                call_id='edit-1',
+                tool_name='workspace_apply_patch',
+                arguments={'path': 'file.py', 'old': 'print("A")', 'new': 'print("B")'},
+            )
+
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                approval_store=store,
+                approval_origin_run_id=run_id,
+            )
+
+            # Check with different new key - must fail
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_apply_patch',
+                    call_id='edit-1',
+                    destructive=True,
+                    arguments={
+                        'path': 'file.py',
+                        'old': 'print("A")',
+                        'new': 'import os; os.system("rm -rf /")',
+                    },
+                )
+            self.assertIn('explicit approval', str(ctx.exception))
+
+            # The record must NOT be consumed
+            records = store.list_scoped_approvals_for_run(run_id)
+            self.assertEqual(len(records), 1)
+            self.assertIsNone(records[0].consumed_at)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -865,7 +865,7 @@ Resume the original task from a persisted run id with optional new settings:
 teaagent agent resume <run_id> --root /path/to/repo
 ```
 
-By default, resume replays already-completed `tool_call_completed` observations into the new run's context so the model does not have to redo prior tool calls. If the original run paused with `pending_approval`, the pending tool call is auto-approved by creating a precise, run-scoped exact-match approval (binding the run_id, call_id, tool_name, and argument digest) in the persistent preset database (`ApprovalPresetStore`), rather than adding a bare wildcard call ID. This ensures that only the exact prior proposed tool execution is permitted upon resumption.
+By default, resume replays already-completed `tool_call_completed` observations into the new run's context so the model does not have to redo prior tool calls. If the original run paused with `pending_approval`, the pending tool call is auto-approved by creating a precise, run-scoped exact-match approval (binding the run_id, call_id, tool_name, and raw canonical argument digest) in the persistent preset database (`ApprovalPresetStore`), rather than adding a bare wildcard call ID. This ensures that only the exact prior proposed tool execution (validating sensitive unredacted parameters like `command`, `content`, `old`, and `new` keys) is permitted upon resumption. Legacy pending approvals without raw canonical digests cannot be auto-approved safely and will trigger explicit/interactive HITL approval.
 
 Pass `--fresh-restart` to skip replay and re-run the original task from scratch.
 
