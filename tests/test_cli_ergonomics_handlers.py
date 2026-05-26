@@ -422,3 +422,386 @@ def test_daily_journal_render_and_cost_helpers(tmp_path: Path) -> None:
         >= 0.0
     )
     assert daily_spend_cents(tmp_path) >= 0.0
+
+
+def test_approval_check_with_arg_flags(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Grant with path glob
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'grant',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--scope',
+                    'always',
+                    '--path-glob',
+                    'src/**',
+                ]
+            )
+            == 0
+        )
+
+    # Check with --arg flag
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'check',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--arg',
+                    'path=src/a.py',
+                ]
+            )
+            == 0
+        )
+    check_payload = json.loads(out.getvalue())
+    assert check_payload['decision'] == 'allow'
+    assert check_payload['allowed'] is True
+
+    # Check with --arguments-json flag
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'check',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--arguments-json',
+                    '{"path": "src/b.py"}',
+                ]
+            )
+            == 0
+        )
+    check_payload = json.loads(out.getvalue())
+    assert check_payload['decision'] == 'allow'
+
+    # Check with mismatching path
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'check',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--arg',
+                    'path=other/file.txt',
+                ]
+            )
+            == 0
+        )
+    check_payload = json.loads(out.getvalue())
+    assert check_payload['decision'] == 'prompt'
+
+
+def test_approval_explain_with_mismatch_reasons(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Grant with specific path
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'grant',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--scope',
+                    'always',
+                    '--path-glob',
+                    'src/**',
+                ]
+            )
+            == 0
+        )
+
+    # Explain with matching path
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'explain',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--arg',
+                    'path=src/a.py',
+                ]
+            )
+            == 0
+        )
+    explain_payload = json.loads(out.getvalue())
+    assert explain_payload['decision'] == 'allow'
+    assert explain_payload['summary']
+    assert 'Allowed by matching' in explain_payload['summary']
+
+    # Explain with mismatching path
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'explain',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--arg',
+                    'path=other/file.txt',
+                ]
+            )
+            == 0
+        )
+    explain_payload = json.loads(out.getvalue())
+    assert explain_payload['decision'] == 'prompt'
+    assert explain_payload['summary']
+    assert 'reason' in explain_payload['evaluated_grants'][0]
+
+
+def test_approval_pending_and_approve_workflow(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Create a run with pending approval
+    store = RunStore(tmp_path)
+    audit = store.audit_logger('run-pending')
+    audit.record('run_started', 'run-pending', task='test')
+    audit.record(
+        'tool_call_pending_approval',
+        'run-pending',
+        call_id='call-123',
+        tool_name='workspace_write_file',
+    )
+    store.logger_for_result(
+        RunResult(
+            run_id='run-pending',
+            final_answer=None,
+            iterations=1,
+            tool_calls=1,
+            status='pending_approval',
+        ),
+        audit,
+    )
+
+    # List pending approvals
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'pending', '--root', str(tmp_path)]) == 0
+    pending_payload = json.loads(out.getvalue())
+    assert len(pending_payload) == 1
+    assert pending_payload[0]['run_id'] == 'run-pending'
+    assert pending_payload[0]['pending_approval']['call_id'] == 'call-123'
+
+    # Approve without resume
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'approve', 'call-123', '--root', str(tmp_path)]) == 0
+    approve_payload = json.loads(out.getvalue())
+    assert approve_payload['status'] == 'approved'
+    assert approve_payload['call_id'] == 'call-123'
+
+
+def test_approval_preset_and_doctor(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Apply dev-safe preset
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'preset', 'dev-safe', '--root', str(tmp_path)]) == 0
+    preset_payload = json.loads(out.getvalue())
+    assert preset_payload['status'] == 'applied'
+    assert preset_payload['preset'] == 'dev-safe'
+    assert len(preset_payload['grants_applied']) > 0
+
+    # Run doctor
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'doctor', '--root', str(tmp_path)]) == 0
+    doctor_payload = json.loads(out.getvalue())
+    assert doctor_payload['status'] in ('healthy', 'issues_found')
+    assert 'total_grants' in doctor_payload
+    assert 'issues' in doctor_payload
+    assert 'suggestions' in doctor_payload
+
+
+def test_approval_check_invalid_json(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Invalid JSON
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(
+            [
+                'approval',
+                'check',
+                'workspace_write_file',
+                '--root',
+                str(tmp_path),
+                '--arguments-json',
+                'invalid json',
+            ]
+        )
+    assert code == 1
+    error_payload = json.loads(out.getvalue())
+    assert error_payload['status'] == 'error'
+
+    # Invalid --arg format
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(
+            [
+                'approval',
+                'check',
+                'workspace_write_file',
+                '--root',
+                str(tmp_path),
+                '--arg',
+                'invalid-format',
+            ]
+        )
+    assert code == 1
+    error_payload = json.loads(out.getvalue())
+    assert error_payload['status'] == 'error'
+
+
+def test_approval_preset_uses_correct_tool_names(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Apply dev-safe preset
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'preset', 'dev-safe', '--root', str(tmp_path)]) == 0
+    preset_payload = json.loads(out.getvalue())
+    assert preset_payload['status'] == 'applied'
+
+    # Verify workspace_run_shell_mutate is used instead of bash
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'list', '--root', str(tmp_path)]) == 0
+    list_payload = json.loads(out.getvalue())
+    tool_names = [g['tool_name'] for g in list_payload['grants']]
+    assert 'workspace_run_shell_mutate' in tool_names
+    assert 'bash' not in tool_names
+
+
+def test_approval_approve_persists_state(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Create a run with pending approval
+    store = RunStore(tmp_path)
+    audit = store.audit_logger('run-approve-persist')
+    audit.record('run_started', 'run-approve-persist', task='test')
+    audit.record(
+        'tool_call_pending_approval',
+        'run-approve-persist',
+        call_id='call-456',
+        tool_name='workspace_write_file',
+    )
+    store.logger_for_result(
+        RunResult(
+            run_id='run-approve-persist',
+            final_answer=None,
+            iterations=1,
+            tool_calls=1,
+            status='pending_approval',
+        ),
+        audit,
+    )
+
+    # Approve without resume
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'approve', 'call-456', '--root', str(tmp_path)]) == 0
+    approve_payload = json.loads(out.getvalue())
+    assert approve_payload['status'] == 'approved'
+
+    # Verify pending approval is cleared
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'pending', '--root', str(tmp_path)]) == 0
+    pending_payload = json.loads(out.getvalue())
+    assert len(pending_payload) == 0
+
+
+def test_approval_explain_shows_expired_and_mode_mismatch(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    # Create an expired grant using ttl_hours
+    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+    store = ApprovalPresetStore(tmp_path)
+    # Use negative ttl_hours to create an expired grant
+    store.grant(
+        'workspace_write_file',
+        scope='session',
+        path_globs=['src/**'],
+        ttl_hours=-1.0,
+    )
+
+    # Create a mode-mismatched grant
+    store.grant(
+        'workspace_write_file',
+        scope='session',
+        path_globs=['src/**'],
+        permission_mode='read-only',
+    )
+
+    # Explain should show these inactive grants with reasons
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'explain',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--arg',
+                    'path=src/a.py',
+                ]
+            )
+            == 0
+        )
+    explain_payload = json.loads(out.getvalue())
+    # Should have evaluated grants including expired/mode-mismatched ones
+    assert len(explain_payload['evaluated_grants']) >= 2
+    # Check for expired reason
+    reasons = [
+        g.get('reason') for g in explain_payload['evaluated_grants'] if g.get('reason')
+    ]
+    assert 'expired' in reasons or 'permission_mode_mismatch' in reasons

@@ -307,15 +307,23 @@ class ApprovalPresetStore:
         *,
         permission_mode: str,
         arguments: dict[str, Any],
-    ) -> bool:
+    ) -> tuple[bool, str | None]:
+        if _grant_expired(grant):
+            return False, 'expired'
         if (
             grant.permission_mode is not None
             and grant.permission_mode != permission_mode
         ):
-            return False
-        return _path_matches(grant.path_globs, arguments) and _command_matches(
-            grant.command_prefixes, arguments
-        )
+            return False, 'permission_mode_mismatch'
+        path_ok = _path_matches(grant.path_globs, arguments)
+        command_ok = _command_matches(grant.command_prefixes, arguments)
+        if not path_ok and not command_ok:
+            return False, 'path_glob_and_command_prefix_mismatch'
+        if not path_ok:
+            return False, 'path_glob_mismatch'
+        if not command_ok:
+            return False, 'command_prefix_mismatch'
+        return True, None
 
     def _active_grants_for(
         self, tool_name: str, *, permission_mode: str
@@ -355,14 +363,16 @@ class ApprovalPresetStore:
     ) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         for grant in active:
+            matched, reason = self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=arguments
+            )
             rows.append(
                 {
                     'grant_id': grant.grant_id,
                     'scope': grant.scope,
                     'permission_mode': grant.permission_mode,
-                    'matched': self._grant_matches(
-                        grant, permission_mode=permission_mode, arguments=arguments
-                    ),
+                    'matched': matched,
+                    'reason': reason,
                     'path_globs': list(grant.path_globs),
                     'command_prefixes': list(grant.command_prefixes),
                 }
@@ -375,28 +385,43 @@ class ApprovalPresetStore:
         *,
         permission_mode: str,
         arguments: dict[str, Any],
+        include_inactive: bool = False,
     ) -> tuple[ApprovalDecision, ApprovalGrant | None, list[dict[str, Any]]]:
-        active = self._active_grants_for(tool_name, permission_mode=permission_mode)
-        evaluated = self._evaluate_grant_rows(
-            active, permission_mode=permission_mode, arguments=arguments
-        )
+        if include_inactive:
+            # For explain, include all grants (including expired/mode-mismatched)
+            all_grants = self.list_grants()
+            tool_grants = [g for g in all_grants if g.tool_name == tool_name]
+            evaluated = self._evaluate_grant_rows(
+                tool_grants, permission_mode=permission_mode, arguments=arguments
+            )
+            # Decision logic still only considers active grants
+            active = self._active_grants_for(tool_name, permission_mode=permission_mode)
+        else:
+            active = self._active_grants_for(tool_name, permission_mode=permission_mode)
+            evaluated = self._evaluate_grant_rows(
+                active, permission_mode=permission_mode, arguments=arguments
+            )
         for grant in active:
-            if grant.scope == 'deny' and self._grant_matches(
+            matched, _reason = self._grant_matches(
                 grant, permission_mode=permission_mode, arguments=arguments
-            ):
+            )
+            if grant.scope == 'deny' and matched:
                 return 'deny', grant, evaluated
         for grant in active:
-            if grant.scope == 'once' and self._grant_matches(
+            matched, _reason = self._grant_matches(
                 grant, permission_mode=permission_mode, arguments=arguments
-            ):
+            )
+            if grant.scope == 'once' and matched:
                 return 'allow', grant, evaluated
-            if grant.scope == 'always' and self._grant_matches(
+            matched, _reason = self._grant_matches(
                 grant, permission_mode=permission_mode, arguments=arguments
-            ):
+            )
+            if grant.scope == 'always' and matched:
                 return 'allow', grant, evaluated
-            if grant.scope == 'session' and self._grant_matches(
+            matched, _reason = self._grant_matches(
                 grant, permission_mode=permission_mode, arguments=arguments
-            ):
+            )
+            if grant.scope == 'session' and matched:
                 return 'allow', grant, evaluated
         return 'prompt', None, evaluated
 
@@ -408,10 +433,14 @@ class ApprovalPresetStore:
         arguments: dict[str, Any] | None = None,
         path: str | None = None,
         command: str | None = None,
+        include_inactive: bool = False,
     ) -> dict[str, Any]:
         args = self._build_arguments(arguments, path=path, command=command)
         decision, matched, evaluated = self._resolve_decision(
-            tool_name, permission_mode=permission_mode, arguments=args
+            tool_name,
+            permission_mode=permission_mode,
+            arguments=args,
+            include_inactive=include_inactive,
         )
         payload: dict[str, Any] = {
             'tool_name': tool_name,

@@ -757,6 +757,68 @@ teaagent approval audit --limit 20 --root .
 
 `approval check` is dry-run: it does not consume `once` grants (those are removed when the tool actually runs). `approval list` defaults to a policy envelope; pass `--grants-only` if scripts expect a top-level JSON array.
 
+#### Enhanced approval check with arbitrary arguments
+
+Test arbitrary tool arguments beyond just `--path` and `--command`:
+
+```bash
+# Using --arg key=value (repeatable)
+teaagent approval check workspace_write_file --arg path=src/foo.py --arg content=bar --root .
+
+# Using --arguments-json for complex nested arguments
+teaagent approval check workspace_write_file --arguments-json '{"path": "src/foo.py", "content": "bar"}' --root .
+```
+
+#### Approval explain with mismatch diagnostics
+
+Understand why a tool call matches or fails to match approval rules:
+
+```bash
+teaagent approval explain workspace_write_file --arg path=src/foo.py --root .
+```
+
+Output includes a human-readable `summary` field explaining the decision and `reason` fields in `evaluated_grants` showing why each grant matched or failed (e.g., `path_glob_mismatch`, `permission_mode_mismatch`, `expired`).
+
+#### Approval pending and approve workflow
+
+Manage runs stuck on pending approval:
+
+```bash
+# List all runs with pending approvals
+teaagent approval pending --root .
+
+# Approve a specific call (without resuming)
+teaagent approval approve <call_id> --root .
+
+# Approve and immediately resume the run
+teaagent approval approve <call_id> --root . --resume
+```
+
+#### Approval presets for common patterns
+
+Apply predefined policy templates:
+
+```bash
+# dev-safe: allow workspace writes, pytest, git diff/status; deny secrets/** and deploy commands
+teaagent approval preset dev-safe --root .
+
+# ci-safe: read-only mode for CI environments
+teaagent approval preset ci-safe --root .
+
+# strict: deny all destructive tools, require explicit approval
+teaagent approval preset strict --root .
+```
+
+#### Approval doctor for policy health
+
+Diagnose approval policy health and get suggestions:
+
+```bash
+teaagent approval doctor --root .
+```
+
+Reports expired grants, conflicting rules (deny + allow for same tool), missing common patterns, and overly broad rules.
+
 Prefer explicit permission modes for regular use:
 
 ```bash
@@ -812,7 +874,10 @@ Inside TUI:
 ```text
 ask write TODO.md       # prompts y/N when a destructive call is proposed
 approve write-todo-1
-approvals
+approvals               # list approved call IDs
+approvals check workspace_write_file path=src/foo.py
+approvals revoke <grant_id>
+approvals pending
 unapprove write-todo-1
 runs
 show <run_id>

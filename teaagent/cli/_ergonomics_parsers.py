@@ -158,7 +158,45 @@ def _approval(
     check.add_argument(
         '--command', default=None, help='Shell command argument to match.'
     )
+    check.add_argument(
+        '--arg',
+        action='append',
+        default=[],
+        help='Tool argument as key=value (repeatable). Overrides --path/--command if keys conflict.',
+    )
+    check.add_argument(
+        '--arguments-json',
+        default=None,
+        help='Tool arguments as JSON string (for complex nested arguments).',
+    )
     check.set_defaults(func=handlers['approval_check'], command='approval')
+    explain = subs.add_parser(
+        'explain',
+        help='Explain why a tool call matches or fails to match approval rules.',
+    )
+    explain.add_argument('tool_name')
+    explain.add_argument('--root', default='.')
+    explain.add_argument(
+        '--permission-mode',
+        default=PermissionMode.PROMPT.value,
+        choices=[mode.value for mode in PermissionMode],
+    )
+    explain.add_argument('--path', default=None, help='Tool path argument to match.')
+    explain.add_argument(
+        '--command', default=None, help='Shell command argument to match.'
+    )
+    explain.add_argument(
+        '--arg',
+        action='append',
+        default=[],
+        help='Tool argument as key=value (repeatable). Overrides --path/--command if keys conflict.',
+    )
+    explain.add_argument(
+        '--arguments-json',
+        default=None,
+        help='Tool arguments as JSON string (for complex nested arguments).',
+    )
+    explain.set_defaults(func=handlers['approval_explain'], command='approval')
     revoke = subs.add_parser('revoke', help='Remove one approval grant by grant_id.')
     revoke.add_argument('grant_id')
     revoke.add_argument('--root', default='.')
@@ -217,6 +255,32 @@ def _approval(
     audit.add_argument('--root', default='.')
     audit.add_argument('--limit', type=int, default=20)
     audit.set_defaults(func=handlers['approval_audit'], command='approval')
+    pending = subs.add_parser(
+        'pending', help='List runs with pending approval requests.'
+    )
+    pending.add_argument('--root', default='.')
+    pending.add_argument('--limit', type=int, default=20)
+    pending.set_defaults(func=handlers['approval_pending'], command='approval')
+    approve = subs.add_parser(
+        'approve', help='Approve a pending call and optionally resume the run.'
+    )
+    approve.add_argument('call_id')
+    approve.add_argument('--root', default='.')
+    approve.add_argument(
+        '--resume', action='store_true', help='Resume the run after approval.'
+    )
+    approve.set_defaults(func=handlers['approval_approve'], command='approval')
+    preset = subs.add_parser(
+        'preset', help='Apply a predefined approval policy template.'
+    )
+    preset.add_argument('name', choices=['dev-safe', 'ci-safe', 'strict'])
+    preset.add_argument('--root', default='.')
+    preset.set_defaults(func=handlers['approval_preset'], command='approval')
+    doctor = subs.add_parser(
+        'doctor', help='Diagnose approval policy health and suggest improvements.'
+    )
+    doctor.add_argument('--root', default='.')
+    doctor.set_defaults(func=handlers['approval_doctor'], command='approval')
 
 
 def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]

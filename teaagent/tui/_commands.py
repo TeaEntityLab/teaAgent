@@ -259,7 +259,62 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         tui.output_fn(f'unapproved: {args[0]}')
         return True
     if action == 'approvals':
-        tui._print_json(sorted(tui.approved_call_ids))
+        if not args:
+            tui._print_json(sorted(tui.approved_call_ids))
+            return True
+        sub = args[0]
+        if sub == 'check':
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            if len(args) < 2:
+                tui.output_fn('error: approvals check requires a tool_name')
+                return True
+            tool_name = args[1]
+            approval_store = ApprovalPresetStore(tui.root)
+            # Parse additional arguments
+            arguments = {}
+            for arg in args[2:]:
+                if '=' in arg:
+                    key, value = arg.split('=', 1)
+                    arguments[key] = value
+            result = approval_store.check(
+                tool_name,
+                permission_mode=tui.permission_mode.value,
+                arguments=arguments or None,
+            )
+            tui._print_json(result)
+            return True
+        if sub == 'revoke':
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            if len(args) < 2:
+                tui.output_fn('error: approvals revoke requires a grant_id')
+                return True
+            grant_id = args[1]
+            approval_store = ApprovalPresetStore(tui.root)
+            revoked = approval_store.revoke(grant_id)
+            if not revoked:
+                tui.output_fn(f"error: grant '{grant_id}' not found")
+            else:
+                tui.output_fn(f'revoked: {grant_id}')
+            return True
+        if sub == 'pending':
+            store = RunStore(tui.root)
+            pending_runs = []
+            for summary in store.list_runs(limit=20):
+                pending = store.pending_approval_for_run(summary.run_id)
+                if pending:
+                    pending_runs.append(
+                        {
+                            'run_id': summary.run_id,
+                            'task': summary.task,
+                            'status': summary.status,
+                            'pending_approval': pending,
+                        }
+                    )
+            tui._print_json(pending_runs)
+            return True
+        tui.output_fn(f"error: unknown approvals subcommand '{sub}'")
         return True
     if action == 'ask':
         if not args:
@@ -360,27 +415,27 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn(f'error: no undo journal for run {run_id}')
             return True
         journal = UndoJournal(tui.root, path=undo_path)
-        result = journal.restore()
-        status = 'restored' if result.ok else 'partial'
+        restore_result = journal.restore()
+        status = 'restored' if restore_result.ok else 'partial'
         audit_recorded = run_store.record_undo_applied(
             run_id,
             status=status,
-            restored=result.restored,
-            deleted=result.deleted,
-            errors=result.errors,
+            restored=restore_result.restored,
+            deleted=restore_result.deleted,
+            errors=restore_result.errors,
             undo_journal_path=undo_path.resolve()
             .relative_to(run_store.root)
             .as_posix(),
         )
-        if result.ok:
+        if restore_result.ok:
             undo_path.unlink(missing_ok=True)
         tui._print_json(
             {
                 'status': status,
                 'run_id': run_id,
-                'restored': result.restored,
-                'deleted': result.deleted,
-                'errors': result.errors,
+                'restored': restore_result.restored,
+                'deleted': restore_result.deleted,
+                'errors': restore_result.errors,
                 'audit_recorded': audit_recorded,
             }
         )
