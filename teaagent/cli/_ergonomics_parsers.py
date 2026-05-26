@@ -142,6 +142,11 @@ def _approval(
         action='store_true',
         help='Emit only the grants array (legacy JSON shape for jq/scripts).',
     )
+    lst.add_argument(
+        '--scoped',
+        action='store_true',
+        help='Emit only the active scoped approvals.',
+    )
     lst.set_defaults(func=handlers['approval_list'], command='approval')
     check = subs.add_parser(
         'check',
@@ -254,6 +259,11 @@ def _approval(
     audit = subs.add_parser('audit')
     audit.add_argument('--root', default='.')
     audit.add_argument('--limit', type=int, default=20)
+    audit.add_argument(
+        '--scoped',
+        action='store_true',
+        help='Show only audit events related to scoped approvals.',
+    )
     audit.set_defaults(func=handlers['approval_audit'], command='approval')
     pending = subs.add_parser(
         'pending', help='List runs with pending approval requests.'

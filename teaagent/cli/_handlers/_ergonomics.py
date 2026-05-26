@@ -181,7 +181,9 @@ def recipes_run_command(args: argparse.Namespace) -> int:
 
 def approval_list_command(args: argparse.Namespace) -> int:
     store = ApprovalPresetStore(args.root)
-    if getattr(args, 'grants_only', False):
+    if getattr(args, 'scoped', False):
+        print_json(store.list_all_scoped_approvals())
+    elif getattr(args, 'grants_only', False):
         print_json([grant.to_dict() for grant in store.list_grants()])
     else:
         print_json(store.list_policy())
@@ -381,7 +383,17 @@ def approval_deny_command(args: argparse.Namespace) -> int:
 
 def approval_audit_command(args: argparse.Namespace) -> int:
     store = ApprovalPresetStore(args.root)
-    print_json(store.audit_tail(args.limit))
+    events = store.audit_tail(args.limit)
+    if getattr(args, 'scoped', False):
+        scoped_actions = {
+            'scoped_approval',
+            'consume_scoped_approval',
+            'consume_once',
+            'prune_scoped_approvals',
+            'clear_legacy_approved_call_ids',
+        }
+        events = [e for e in events if e.get('action') in scoped_actions]
+    print_json(events)
     return 0
 
 
@@ -743,6 +755,66 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
     if duplicate_grant_ids:
         issues.append(
             f'Found {len(duplicate_grant_ids)} duplicate grants that can be removed'
+        )
+
+    # Check for expired or consumed scoped approvals
+    all_scoped = store.list_all_scoped_approvals()
+    expired_or_consumed = [
+        r for r in all_scoped if r['status'] in {'expired', 'consumed'}
+    ]
+    if expired_or_consumed:
+        issues.append(
+            f'Found {len(expired_or_consumed)} expired or consumed scoped approvals that can be pruned'
+        )
+
+    # Prune expired or consumed scoped approvals if requested
+    if args.prune_expired and expired_or_consumed:
+        pruned_scoped = store.prune_scoped_approvals()
+        if pruned_scoped > 0:
+            actions_taken.append(
+                f'Pruned {pruned_scoped} expired or consumed scoped approvals'
+            )
+            # Recalculate
+            all_scoped = store.list_all_scoped_approvals()
+            expired_or_consumed = [
+                r for r in all_scoped if r['status'] in {'expired', 'consumed'}
+            ]
+            issues = [
+                iss
+                for iss in issues
+                if not (
+                    iss.startswith('Found ')
+                    and 'scoped approvals that can be pruned' in iss
+                )
+            ]
+
+    # Check for legacy bare approved call IDs
+    legacy_ids = store.list_approved_call_ids()
+    if legacy_ids:
+        issues.append(f'Found {len(legacy_ids)} legacy bare approved_call_ids residue')
+
+    # Clear legacy bare approved call IDs if requested
+    if args.fix_duplicates and legacy_ids:
+        cleared_legacy = store.clear_legacy_approved_call_ids()
+        if cleared_legacy > 0:
+            actions_taken.append(
+                f'Cleared {cleared_legacy} legacy bare approved_call_ids residue'
+            )
+            # Remove legacy issues
+            issues = [
+                iss
+                for iss in issues
+                if not (
+                    iss.startswith('Found ')
+                    and 'legacy bare approved_call_ids residue' in iss
+                )
+            ]
+
+    # Suggest pruning if unconsumed active scoped approvals > 50
+    active_scoped = [r for r in all_scoped if r['status'] == 'active']
+    if len(active_scoped) > 50:
+        suggestions.append(
+            f'Found {len(active_scoped)} active unconsumed scoped approvals. Consider pruning them if associated runs are finished.'
         )
 
     # Suggest common patterns if missing

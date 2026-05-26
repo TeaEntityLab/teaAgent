@@ -280,12 +280,14 @@ class ApprovalPresetStore:
         }
 
     def add_approved_call_id(self, call_id: str) -> None:
+        """Legacy method for backward compatibility. Use add_scoped_approval instead."""
         data = self._load()
         if call_id not in data['approved_call_ids']:
             data['approved_call_ids'].append(call_id)
             self._save(data)
 
     def remove_approved_call_id(self, call_id: str) -> None:
+        """Legacy method for backward compatibility. Use consume_scoped_approval instead."""
         data = self._load()
         if call_id in data['approved_call_ids']:
             data['approved_call_ids'].remove(call_id)
@@ -294,6 +296,90 @@ class ApprovalPresetStore:
     def list_approved_call_ids(self) -> list[str]:
         """Legacy method for backward compatibility. Returns all bare call IDs."""
         return self._load()['approved_call_ids']
+
+    def list_all_scoped_approvals(self) -> list[dict[str, Any]]:
+        """List all scoped approvals in the store with their current status."""
+        data = self._load()
+        records = []
+        now = datetime.now(timezone.utc)
+        for item in data.get('scoped_approvals', []):
+            if not isinstance(item, dict):
+                continue
+            rec = dict(item)
+            if rec.get('consumed_at'):
+                rec['status'] = 'consumed'
+            elif rec.get('expires_at'):
+                try:
+                    expires = datetime.fromisoformat(rec['expires_at'])
+                    if expires.tzinfo is None:
+                        expires = expires.replace(tzinfo=timezone.utc)
+                    if now >= expires:
+                        rec['status'] = 'expired'
+                    else:
+                        rec['status'] = 'active'
+                except ValueError:
+                    rec['status'] = 'active'
+            else:
+                rec['status'] = 'active'
+            records.append(rec)
+        return records
+
+    def prune_scoped_approvals(self) -> int:
+        """Prune expired or consumed scoped approvals. Returns the count of pruned records."""
+        data = self._load()
+        now = datetime.now(timezone.utc)
+
+        pruned = []
+        keep = []
+        for item in data.get('scoped_approvals', []):
+            if not isinstance(item, dict):
+                continue
+            should_prune = False
+            if item.get('consumed_at'):
+                should_prune = True
+            elif item.get('expires_at'):
+                try:
+                    expires = datetime.fromisoformat(item['expires_at'])
+                    if expires.tzinfo is None:
+                        expires = expires.replace(tzinfo=timezone.utc)
+                    if now >= expires:
+                        should_prune = True
+                except ValueError:
+                    should_prune = True
+
+            if should_prune:
+                pruned.append(item.get('record_id', 'unknown'))
+            else:
+                keep.append(item)
+
+        if len(pruned) > 0:
+            data['scoped_approvals'] = keep
+            data['audit'].append(
+                {
+                    'action': 'prune_scoped_approvals',
+                    'pruned_record_ids': pruned,
+                    'created_at': now.isoformat(),
+                }
+            )
+            self._save(data)
+        return len(pruned)
+
+    def clear_legacy_approved_call_ids(self) -> int:
+        """Clear all legacy bare approved call IDs. Returns the count of cleared IDs."""
+        data = self._load()
+        original_ids = data.get('approved_call_ids', [])
+        count = len(original_ids)
+        if count > 0:
+            data['approved_call_ids'] = []
+            data['audit'].append(
+                {
+                    'action': 'clear_legacy_approved_call_ids',
+                    'cleared_call_ids': list(original_ids),
+                    'created_at': datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            self._save(data)
+        return count
 
     def add_scoped_approval(
         self,

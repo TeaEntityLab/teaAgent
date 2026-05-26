@@ -460,3 +460,198 @@ def test_resolve_auto_compact_defaults(tmp_path: Path) -> None:
 
     args = argparse.Namespace(auto_compact=None, root=str(tmp_path))
     assert _resolve_auto_compact(args) is True
+
+
+def test_scoped_approval_hardening_and_observability(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+
+    # 1. Test listing all scoped approvals (empty first)
+    assert store.list_all_scoped_approvals() == []
+
+    # 2. Add some scoped approvals
+    rec1 = store.add_scoped_approval(
+        run_id='run-1',
+        call_id='call-1',
+        tool_name='workspace_write_file',
+        arguments={'path': 'a.txt', 'content': 'hello'},
+        ttl_hours=1.0,
+    )
+    rec2 = store.add_scoped_approval(
+        run_id='run-1',
+        call_id='call-2',
+        tool_name='workspace_write_file',
+        arguments={'path': 'b.txt', 'content': 'world'},
+        ttl_hours=1.0,
+    )
+
+    # Check all are listed with active status
+    all_scoped = store.list_all_scoped_approvals()
+    assert len(all_scoped) == 2
+    assert all(r['status'] == 'active' for r in all_scoped)
+
+    # 3. Consume one
+    assert store.consume_scoped_approval(rec1.record_id) is True
+    all_scoped = store.list_all_scoped_approvals()
+    assert any(
+        r['record_id'] == rec1.record_id and r['status'] == 'consumed'
+        for r in all_scoped
+    )
+    assert any(
+        r['record_id'] == rec2.record_id and r['status'] == 'active' for r in all_scoped
+    )
+
+    # 4. Pruning
+    pruned_count = store.prune_scoped_approvals()
+    assert pruned_count == 1  # consumed one pruned
+    all_scoped = store.list_all_scoped_approvals()
+    assert len(all_scoped) == 1
+    assert all_scoped[0]['record_id'] == rec2.record_id
+
+    # 5. Clear legacy bare approved call IDs
+    store.add_approved_call_id('bare-call-123')
+    assert 'bare-call-123' in store.list_approved_call_ids()
+    cleared = store.clear_legacy_approved_call_ids()
+    assert cleared == 1
+    assert store.list_approved_call_ids() == []
+
+
+def test_approval_doctor_scoped_auditing_and_pruning(tmp_path: Path) -> None:
+    import argparse
+
+    from teaagent.cli._handlers._ergonomics import approval_doctor_command
+
+    store = ApprovalPresetStore(tmp_path)
+
+    # Add a consumed scoped approval and a legacy bare approved_call_id
+    rec = store.add_scoped_approval(
+        run_id='run-doctor',
+        call_id='call-doctor-1',
+        tool_name='workspace_write_file',
+        arguments={'path': 'doc.txt'},
+    )
+    store.consume_scoped_approval(rec.record_id)
+    store.add_approved_call_id('legacy-bare-id')
+
+    # Run doctor in audit/diagnostic mode (should return 1 because issues found)
+    args_diag = argparse.Namespace(
+        root=str(tmp_path),
+        prune_expired=False,
+        fix_duplicates=False,
+    )
+    # Mock print_json to inspect the result
+    reported_payload = None
+
+    def mock_print_json(val):
+        nonlocal reported_payload
+        reported_payload = val
+
+    import teaagent.cli._handlers._ergonomics as ergonomics_mod
+
+    orig_print = ergonomics_mod.print_json
+    ergonomics_mod.print_json = mock_print_json
+    try:
+        exit_code = approval_doctor_command(args_diag)
+        assert exit_code == 1
+        assert any(
+            'expired or consumed scoped approvals' in iss
+            for iss in reported_payload['issues']
+        )
+        assert any(
+            'legacy bare approved_call_ids residue' in iss
+            for iss in reported_payload['issues']
+        )
+
+        # Now run doctor with fixes
+        args_fix = argparse.Namespace(
+            root=str(tmp_path),
+            prune_expired=True,
+            fix_duplicates=True,
+        )
+        exit_code_fix = approval_doctor_command(args_fix)
+        assert exit_code_fix == 0
+        assert not any(
+            'expired or consumed scoped approvals' in iss
+            for iss in reported_payload['issues']
+        )
+        assert not any(
+            'legacy bare approved_call_ids residue' in iss
+            for iss in reported_payload['issues']
+        )
+        assert (
+            'Pruned 1 expired or consumed scoped approvals'
+            in reported_payload['actions_taken']
+        )
+        assert (
+            'Cleared 1 legacy bare approved_call_ids residue'
+            in reported_payload['actions_taken']
+        )
+    finally:
+        ergonomics_mod.print_json = orig_print
+
+
+def test_agent_resume_auto_approve_creates_scoped_approval(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import argparse
+
+    from teaagent.cli._handlers._agent import agent_resume_command
+    from teaagent.run_store import RunStore
+
+    # 1. Setup the RunStore and mock run audit trail
+    store = RunStore(tmp_path)
+    run_id = 'run-resume-test-123'
+    audit = store.audit_logger(run_id)
+
+    # Write events: run_started and a tool_call_pending_approval
+    audit.record('run_started', run_id, task='write a file')
+    audit.record(
+        'tool_call_pending_approval',
+        run_id,
+        call_id='pending-call-456',
+        tool_name='workspace_write_file',
+        arguments={'path': 'hello.txt', 'data': 'hi'},
+    )
+
+    # 2. Mock _execute_agent_task so it doesn't run the LLM Decision loop
+    execute_args = {}
+
+    def mock_execute(args, task, **kwargs):
+        execute_args['args'] = args
+        execute_args['task'] = task
+        execute_args['kwargs'] = kwargs
+        return 0
+
+    monkeypatch.setattr(
+        'teaagent.cli._handlers._agent._execute_agent_task', mock_execute
+    )
+
+    # 3. Call agent_resume_command
+    args = argparse.Namespace(
+        run_id=run_id,
+        root=str(tmp_path),
+        fresh_restart=False,
+        approve_call_id=[],
+        provider='mock-provider',
+        model='mock-model',
+        auto_compact=None,
+    )
+
+    exit_code = agent_resume_command(args)
+    assert exit_code == 0
+
+    # 4. Verify that:
+    # A. _execute_agent_task was called with auto_approved_call_id='pending-call-456'
+    assert execute_args['kwargs']['auto_approved_call_id'] == 'pending-call-456'
+
+    # B. A run-scoped approval record was added to ApprovalPresetStore
+    approval_store = ApprovalPresetStore(tmp_path)
+    scoped_records = approval_store.list_scoped_approvals_for_run(run_id)
+    assert len(scoped_records) == 1
+    record = scoped_records[0]
+    assert record.call_id == 'pending-call-456'
+    assert record.tool_name == 'workspace_write_file'
+    # Argument digest check
+    from teaagent.ergonomics.approval_store import _compute_argument_digest
+
+    expected_digest = _compute_argument_digest({'path': 'hello.txt', 'data': 'hi'})
+    assert record.argument_digest == expected_digest

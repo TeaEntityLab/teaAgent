@@ -159,10 +159,25 @@ def agent_resume_command(args: argparse.Namespace) -> int:
                 }
         pending = store.pending_approval_for_run(args.run_id)
         if pending and pending['call_id'] not in args.approve_call_id:
-            args.approve_call_id = list(args.approve_call_id) + [pending['call_id']]
+            # Check if this pending call already has a valid scoped approval to avoid duplicate storage writes
+            if not approval_store.check_scoped_approval(
+                run_id=args.run_id,
+                call_id=pending['call_id'],
+                tool_name=pending['tool_name'],
+                arguments=pending['arguments'],
+            ):
+                approval_store.add_scoped_approval(
+                    run_id=args.run_id,
+                    call_id=pending['call_id'],
+                    tool_name=pending['tool_name'],
+                    arguments=pending['arguments'],
+                )
             auto_approved = pending['call_id']
+            # Re-fetch scoped approvals so the newly added one is included
+            scoped_approvals = approval_store.list_scoped_approvals_for_run(args.run_id)
 
-    # Merge scoped approval call_ids for this run with explicitly provided ones
+    # Legacy Escape Hatch: merge bare approved_call_ids from CLI argument for backward compatibility.
+    # New workflows should use run-scoped exact-match approvals. Bare call_ids are deprecated.
     scoped_call_ids = [record.call_id for record in scoped_approvals]
     all_approved = list(args.approve_call_id) + [
         cid for cid in scoped_call_ids if cid not in args.approve_call_id

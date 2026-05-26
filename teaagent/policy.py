@@ -22,6 +22,8 @@ class PermissionMode(str, Enum):
 class ApprovalPolicy:
     """Session-scoped approval policy for high-risk tool calls."""
 
+    # Deprecated: approved_call_ids is a legacy escape hatch kept for CLI argument/test compatibility.
+    # New workflows must use run-scoped exact-match scoped_approvals.
     approved_call_ids: frozenset[str] = field(default_factory=frozenset)
     allow_all_destructive: bool = False
     permission_mode: PermissionMode = PermissionMode.PROMPT
@@ -84,7 +86,8 @@ class ApprovalPolicy:
                 # Consume the scoped approval after successful match (one-time use)
                 self.approval_store.consume_scoped_approval(matching_record.record_id)
                 return
-        # Fallback to bare call_id check for explicit CLI --approve-call-id backward compatibility
+        # Legacy Fallback: bare call_id check for explicit CLI --approve-call-id backward compatibility.
+        # This fallback is deprecated and scheduled for future removal.
         if destructive and call_id not in self.approved_call_ids:
             raise ToolPermissionError(
                 f"Tool call '{call_id}' for '{tool_name}' requires explicit approval."
