@@ -133,9 +133,36 @@ def _approval(
         'approval', help='Manage destructive-tool approval presets.'
     )
     subs = approval.add_subparsers(dest='approval_command', required=True)
-    lst = subs.add_parser('list')
+    lst = subs.add_parser(
+        'list', help='List approval grants and policy evaluation order.'
+    )
     lst.add_argument('--root', default='.')
+    lst.add_argument(
+        '--grants-only',
+        action='store_true',
+        help='Emit only the grants array (legacy JSON shape for jq/scripts).',
+    )
     lst.set_defaults(func=handlers['approval_list'], command='approval')
+    check = subs.add_parser(
+        'check',
+        help='Explain whether a tool call would be allowed by current presets.',
+    )
+    check.add_argument('tool_name')
+    check.add_argument('--root', default='.')
+    check.add_argument(
+        '--permission-mode',
+        default=PermissionMode.PROMPT.value,
+        choices=[mode.value for mode in PermissionMode],
+    )
+    check.add_argument('--path', default=None, help='Tool path argument to match.')
+    check.add_argument(
+        '--command', default=None, help='Shell command argument to match.'
+    )
+    check.set_defaults(func=handlers['approval_check'], command='approval')
+    revoke = subs.add_parser('revoke', help='Remove one approval grant by grant_id.')
+    revoke.add_argument('grant_id')
+    revoke.add_argument('--root', default='.')
+    revoke.set_defaults(func=handlers['approval_revoke'], command='approval')
     grant = subs.add_parser('grant')
     grant.add_argument('tool_name')
     grant.add_argument('--root', default='.')

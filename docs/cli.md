@@ -97,7 +97,10 @@ teaagent agent attach <run_id> --follow
 teaagent agent attach <run_id> --resume
 teaagent model capabilities --per-model --provider gpt
 teaagent ci review --provider gpt
-teaagent approval grant workspace_write_file --scope session
+teaagent approval grant workspace_write_file --scope session --root .
+teaagent approval list --root .
+teaagent approval check workspace_write_file --path src/foo.py --root .
+teaagent approval revoke <grant_id> --root .
 teaagent guidance
 teaagent agent run gpt "read @README.md" --dry-run
 teaagent agent daily gpt --write-journal
@@ -736,6 +739,23 @@ teaagent agent run gpt "Create a TODO.md summary" --hitl-approval
 ```
 
 Without `--hitl-approval`, an unapproved destructive tool in `prompt` mode returns `pending_approval` with the required `call_id`. Re-run with `--approve-call-id <call_id>` or use `agent resume` with the same approval token.
+
+### Approval presets
+
+Persistent scoped presets live in `.teaagent/approvals.json` under `--root`. Evaluation order is **deny → allow (once/session/always) → prompt** when no preset matches.
+
+```bash
+teaagent approval grant workspace_write_file --path-glob 'src/**' --scope session --root .
+teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --scope session --root .
+teaagent approval deny workspace_write_file --path-glob 'secrets/**' --root .
+teaagent approval list --root .                         # { policy_order, grants }
+teaagent approval list --grants-only --root .           # legacy grants array for jq
+teaagent approval check workspace_write_file --path src/foo.py --permission-mode prompt --root .
+teaagent approval revoke <grant_id> --root .
+teaagent approval audit --limit 20 --root .
+```
+
+`approval check` is dry-run: it does not consume `once` grants (those are removed when the tool actually runs). `approval list` defaults to a policy envelope; pass `--grants-only` if scripts expect a top-level JSON array.
 
 Prefer explicit permission modes for regular use:
 

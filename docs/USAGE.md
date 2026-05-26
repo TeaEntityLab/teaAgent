@@ -32,6 +32,9 @@ teaagent agent undo --last --root .
 - Scoped approvals (session grants expire after 8h by default; use separate grants per constraint):
   - `teaagent approval grant workspace_write_file --path-glob 'src/**' --root .`
   - `teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --root .`
+  - `teaagent approval list --root .` shows grants and evaluation order (deny before allow); use `--grants-only` for the legacy grants array (`jq '.[0].grant_id'`)
+  - `teaagent approval check workspace_write_file --path src/foo.py --root .` explains allow/deny/prompt
+  - `teaagent approval revoke <grant_id> --root .` removes one rule
 
 **Advanced paths** (not part of the golden path): `teaagent init`, `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
 

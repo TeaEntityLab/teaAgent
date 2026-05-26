@@ -170,6 +170,69 @@ def test_once_consumes_single_grant_only(tmp_path: Path) -> None:
     assert first.grant_id != second.grant_id
 
 
+def test_approval_check_reports_deny_before_allow(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant('workspace_write_file', scope='session', path_globs=['src/**'])
+    store.deny('workspace_write_file', path_globs=['src/secret/**'])
+    blocked = store.check(
+        'workspace_write_file',
+        permission_mode='prompt',
+        path='src/secret/key.txt',
+    )
+    assert blocked['decision'] == 'deny'
+    assert blocked['allowed'] is False
+    assert blocked['matched_grant']['scope'] == 'deny'
+    allowed = store.check(
+        'workspace_write_file',
+        permission_mode='prompt',
+        path='src/public.txt',
+    )
+    assert allowed['decision'] == 'allow'
+    assert allowed['allowed'] is True
+    assert 'policy_order' in allowed
+
+
+def test_approval_check_does_not_consume_once(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    store.grant('workspace_write_file', scope='once')
+    first = store.check('workspace_write_file', permission_mode='prompt')
+    second = store.check('workspace_write_file', permission_mode='prompt')
+    assert first['decision'] == 'allow'
+    assert second['decision'] == 'allow'
+    assert len(store.list_grants()) == 1
+    assert store.is_allowed('workspace_write_file', permission_mode='prompt')
+    assert not store.is_allowed('workspace_write_file', permission_mode='prompt')
+
+
+def test_approval_revoke_removes_grant(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    grant = store.grant('workspace_write_file', scope='always')
+    assert store.revoke(grant.grant_id)
+    assert store.list_grants() == []
+    assert not store.revoke(grant.grant_id)
+
+
+def test_migrate_grant_id_writes_audit(tmp_path: Path) -> None:
+    import json
+
+    store = ApprovalPresetStore(tmp_path)
+    store.path.parent.mkdir(parents=True, exist_ok=True)
+    store.path.write_text(
+        json.dumps(
+            {
+                'grants': [{'tool_name': 'workspace_write_file', 'scope': 'session'}],
+                'audit': [],
+            }
+        ),
+        encoding='utf-8',
+    )
+    grants = store.list_grants()
+    assert len(grants) == 1
+    assert grants[0].grant_id.startswith('leg-')
+    audit = store.audit_tail(5)
+    assert any(row.get('action') == 'migrate_grant_id' for row in audit)
+
+
 def test_legacy_once_grant_without_grant_id_is_consumed(tmp_path: Path) -> None:
     import json
 

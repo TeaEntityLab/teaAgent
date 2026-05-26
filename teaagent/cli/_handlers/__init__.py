@@ -53,9 +53,11 @@ from ._doctor import (
 )
 from ._ergonomics import (
     approval_audit_command,
+    approval_check_command,
     approval_deny_command,
     approval_grant_command,
     approval_list_command,
+    approval_revoke_command,
     background_list_command,
     background_show_command,
     ci_review_command,
@@ -127,9 +129,11 @@ __all__ = [
     'agent_attach_command',
     'agent_card_command',
     'approval_audit_command',
+    'approval_check_command',
     'approval_deny_command',
     'approval_grant_command',
     'approval_list_command',
+    'approval_revoke_command',
     'background_list_command',
     'background_show_command',
     'ci_review_command',

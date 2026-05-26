@@ -132,7 +132,95 @@ def test_background_session_and_approval_commands(tmp_path: Path) -> None:
     out = io.StringIO()
     with redirect_stdout(out):
         assert main(['approval', 'list', '--root', str(tmp_path)]) == 0
-    assert json.loads(out.getvalue())
+    policy = json.loads(out.getvalue())
+    assert 'policy_order' in policy
+    assert isinstance(policy['grants'], list)
+    assert policy['grants'][0]['grant_id']
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(['approval', 'list', '--grants-only', '--root', str(tmp_path)]) == 0
+    grants_only = json.loads(out.getvalue())
+    assert isinstance(grants_only, list)
+    assert grants_only[0]['grant_id'] == policy['grants'][0]['grant_id']
+
+
+def test_approval_check_and_revoke_cli(tmp_path: Path) -> None:
+    config = tmp_path / '.teaagent' / 'config.toml'
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text('provider = "gpt"\n', encoding='utf-8')
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'grant',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--scope',
+                    'always',
+                    '--path-glob',
+                    'src/**',
+                ]
+            )
+            == 0
+        )
+    grant_id = json.loads(out.getvalue())['grant_id']
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'check',
+                    'workspace_write_file',
+                    '--root',
+                    str(tmp_path),
+                    '--path',
+                    'src/a.py',
+                ]
+            )
+            == 0
+        )
+    check_payload = json.loads(out.getvalue())
+    assert check_payload['decision'] == 'allow'
+    assert check_payload['allowed'] is True
+    assert check_payload['matched_grant']['grant_id'] == grant_id
+    assert check_payload['policy_order']
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'revoke',
+                    grant_id,
+                    '--root',
+                    str(tmp_path),
+                ]
+            )
+            == 0
+        )
+    assert json.loads(out.getvalue())['status'] == 'revoked'
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(
+            [
+                'approval',
+                'revoke',
+                'missing-grant-id',
+                '--root',
+                str(tmp_path),
+            ]
+        )
+    assert code == 1
+    assert json.loads(out.getvalue())['status'] == 'error'
 
 
 def test_ci_review_print_only_and_journal(tmp_path: Path) -> None:

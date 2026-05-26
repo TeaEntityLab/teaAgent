@@ -180,7 +180,41 @@ def recipes_run_command(args: argparse.Namespace) -> int:
 
 def approval_list_command(args: argparse.Namespace) -> int:
     store = ApprovalPresetStore(args.root)
-    print_json([grant.to_dict() for grant in store.list_grants()])
+    if getattr(args, 'grants_only', False):
+        print_json([grant.to_dict() for grant in store.list_grants()])
+    else:
+        print_json(store.list_policy())
+    return 0
+
+
+def approval_check_command(args: argparse.Namespace) -> int:
+    store = ApprovalPresetStore(args.root)
+    arguments: dict[str, str] = {}
+    if args.path:
+        arguments['path'] = args.path
+    if args.command:
+        arguments['command'] = args.command
+    result = store.check(
+        args.tool_name,
+        permission_mode=args.permission_mode,
+        arguments=arguments or None,
+    )
+    print_json(result)
+    return 0
+
+
+def approval_revoke_command(args: argparse.Namespace) -> int:
+    store = ApprovalPresetStore(args.root)
+    revoked = store.revoke(args.grant_id)
+    if not revoked:
+        print_json(
+            {
+                'status': 'error',
+                'message': f"grant '{args.grant_id}' not found",
+            }
+        )
+        return 1
+    print_json({'status': 'revoked', 'grant_id': args.grant_id})
     return 0
 
 

@@ -10,8 +10,15 @@ from typing import Any, Literal, Sequence
 from uuid import uuid4
 
 GrantScope = Literal['once', 'session', 'always', 'deny']
+ApprovalDecision = Literal['allow', 'deny', 'prompt']
 
 SESSION_TTL_HOURS = 8.0
+
+POLICY_ORDER = [
+    'Matching deny grants block the tool call',
+    'Matching once, always, or session grants allow',
+    'Otherwise HITL prompt is required (no matching preset)',
+]
 
 _PATH_ARGUMENT_KEYS = ('path', 'file_path', 'target_path', 'file')
 _COMMAND_ARGUMENT_KEYS = ('command', 'cmd')
@@ -180,6 +187,7 @@ class ApprovalPresetStore:
     def _migrate_missing_grant_ids(self) -> None:
         data = self._load()
         changed = False
+        now = datetime.now(timezone.utc).isoformat()
         for grant in data.get('grants', []):
             if (
                 isinstance(grant, dict)
@@ -187,6 +195,15 @@ class ApprovalPresetStore:
                 and not grant.get('grant_id')
             ):
                 grant['grant_id'] = _stable_grant_id(grant)
+                data['audit'].append(
+                    {
+                        'action': 'migrate_grant_id',
+                        'grant_id': grant['grant_id'],
+                        'tool_name': grant.get('tool_name'),
+                        'scope': grant.get('scope'),
+                        'created_at': now,
+                    }
+                )
                 changed = True
         if changed:
             self._save(data)
@@ -198,6 +215,29 @@ class ApprovalPresetStore:
             if isinstance(item, dict) and item.get('tool_name'):
                 grants.append(_parse_grant(item))
         return grants
+
+    def list_policy(self) -> dict[str, Any]:
+        return {
+            'policy_order': list(POLICY_ORDER),
+            'grants': [grant.to_dict() for grant in self.list_grants()],
+        }
+
+    def revoke(self, grant_id: str) -> bool:
+        self._migrate_missing_grant_ids()
+        before = len(self.list_grants())
+        self._remove_grant(grant_id)
+        if len(self.list_grants()) >= before:
+            return False
+        data = self._load()
+        data['audit'].append(
+            {
+                'action': 'revoke',
+                'grant_id': grant_id,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        self._save(data)
+        return True
 
     def grant(
         self,
@@ -292,6 +332,104 @@ class ApprovalPresetStore:
             active.append(grant)
         return active
 
+    def _build_arguments(
+        self,
+        arguments: dict[str, Any] | None,
+        *,
+        path: str | None = None,
+        command: str | None = None,
+    ) -> dict[str, Any]:
+        args = dict(arguments or {})
+        if path is not None:
+            args['path'] = path
+        if command is not None:
+            args['command'] = command
+        return args
+
+    def _evaluate_grant_rows(
+        self,
+        active: list[ApprovalGrant],
+        *,
+        permission_mode: str,
+        arguments: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for grant in active:
+            rows.append(
+                {
+                    'grant_id': grant.grant_id,
+                    'scope': grant.scope,
+                    'permission_mode': grant.permission_mode,
+                    'matched': self._grant_matches(
+                        grant, permission_mode=permission_mode, arguments=arguments
+                    ),
+                    'path_globs': list(grant.path_globs),
+                    'command_prefixes': list(grant.command_prefixes),
+                }
+            )
+        return rows
+
+    def _resolve_decision(
+        self,
+        tool_name: str,
+        *,
+        permission_mode: str,
+        arguments: dict[str, Any],
+    ) -> tuple[ApprovalDecision, ApprovalGrant | None, list[dict[str, Any]]]:
+        active = self._active_grants_for(tool_name, permission_mode=permission_mode)
+        evaluated = self._evaluate_grant_rows(
+            active, permission_mode=permission_mode, arguments=arguments
+        )
+        for grant in active:
+            if grant.scope == 'deny' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=arguments
+            ):
+                return 'deny', grant, evaluated
+        for grant in active:
+            if grant.scope == 'once' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=arguments
+            ):
+                return 'allow', grant, evaluated
+            if grant.scope == 'always' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=arguments
+            ):
+                return 'allow', grant, evaluated
+            if grant.scope == 'session' and self._grant_matches(
+                grant, permission_mode=permission_mode, arguments=arguments
+            ):
+                return 'allow', grant, evaluated
+        return 'prompt', None, evaluated
+
+    def check(
+        self,
+        tool_name: str,
+        *,
+        permission_mode: str,
+        arguments: dict[str, Any] | None = None,
+        path: str | None = None,
+        command: str | None = None,
+    ) -> dict[str, Any]:
+        args = self._build_arguments(arguments, path=path, command=command)
+        decision, matched, evaluated = self._resolve_decision(
+            tool_name, permission_mode=permission_mode, arguments=args
+        )
+        payload: dict[str, Any] = {
+            'tool_name': tool_name,
+            'permission_mode': permission_mode,
+            'arguments': args,
+            'allowed': decision == 'allow',
+            'decision': decision,
+            'policy_order': list(POLICY_ORDER),
+            'evaluated_grants': evaluated,
+            'matched_grant': matched.to_dict() if matched else None,
+        }
+        if matched is not None and matched.scope == 'once' and decision == 'allow':
+            payload['note'] = (
+                'once grants are consumed when the tool actually runs; '
+                'check does not remove them'
+            )
+        return payload
+
     def is_allowed(
         self,
         tool_name: str,
@@ -300,36 +438,25 @@ class ApprovalPresetStore:
         arguments: dict[str, Any] | None = None,
     ) -> bool:
         args = arguments or {}
-        active = self._active_grants_for(tool_name, permission_mode=permission_mode)
-        for grant in active:
-            if grant.scope == 'deny' and self._grant_matches(
-                grant, permission_mode=permission_mode, arguments=args
-            ):
-                return False
-        for grant in active:
-            if grant.scope == 'once' and self._grant_matches(
-                grant, permission_mode=permission_mode, arguments=args
-            ):
-                self._remove_grant(grant.grant_id)
+        decision, matched, _evaluated = self._resolve_decision(
+            tool_name, permission_mode=permission_mode, arguments=args
+        )
+        if decision == 'deny':
+            return False
+        if decision == 'allow' and matched is not None:
+            if matched.scope == 'once':
+                self._remove_grant(matched.grant_id)
                 data = self._load()
                 data['audit'].append(
                     {
                         'action': 'consume_once',
-                        'grant_id': grant.grant_id,
-                        'tool_name': grant.tool_name,
+                        'grant_id': matched.grant_id,
+                        'tool_name': matched.tool_name,
                         'created_at': datetime.now(timezone.utc).isoformat(),
                     }
                 )
                 self._save(data)
-                return True
-            if grant.scope == 'always' and self._grant_matches(
-                grant, permission_mode=permission_mode, arguments=args
-            ):
-                return True
-            if grant.scope == 'session' and self._grant_matches(
-                grant, permission_mode=permission_mode, arguments=args
-            ):
-                return True
+            return True
         return False
 
     def audit_tail(self, limit: int = 20) -> list[dict[str, Any]]:
