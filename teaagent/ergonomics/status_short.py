@@ -24,6 +24,7 @@ def build_status_short(
         permission_mode=permission_mode,
         context_profile='lean',
         runs_limit=3,
+        readonly=True,
     )
     level = brief.token_budget.usage_level
     colour = {'green': 'G', 'yellow': 'Y', 'red': 'R'}.get(level, '?')
@@ -36,7 +37,7 @@ def build_status_short(
                 break
         if not active:
             active = brief.recent_runs[0].run_id
-    store = RunStore(root)
+    store = RunStore(root, readonly=True)
     status = 'idle'
     if active:
         try:

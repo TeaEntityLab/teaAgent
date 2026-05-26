@@ -81,13 +81,13 @@ def skill_candidate_eval_command(args: argparse.Namespace) -> int:
 
 
 def skill_candidate_list_command(args: argparse.Namespace) -> int:
-    rows = [row.to_dict() for row in SkillCandidateStore(args.root).list()]
+    rows = [row.to_dict() for row in SkillCandidateStore(args.root, readonly=True).list()]
     _print_json(rows)
     return 0
 
 
 def skill_candidate_show_command(args: argparse.Namespace) -> int:
-    store = SkillCandidateStore(args.root)
+    store = SkillCandidateStore(args.root, readonly=True)
     try:
         row = store.show(args.candidate_id)
     except FileNotFoundError as exc:

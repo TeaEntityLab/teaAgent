@@ -427,6 +427,7 @@ def build_context_pack(
     hydrate_lsp: bool = False,
     search_graph: bool = True,
     code_analysis_config: Optional[CodeAnalysisConfig] = None,
+    readonly: bool = False,
 ) -> ContextPack:
     root_path = Path(root).resolve()
     texts = [task]
@@ -440,7 +441,7 @@ def build_context_pack(
     ]
     memories = [
         entry.to_dict()
-        for entry in MemoryCatalog(root_path).search(task, limit=memory_limit)
+        for entry in MemoryCatalog(root_path, readonly=readonly).search(task, limit=memory_limit)
     ]
     graph_rag = _graph_rag_evidence(
         root_path, task, search_graph=search_graph, hit_limit=graph_hit_limit

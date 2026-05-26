@@ -971,3 +971,122 @@ def test_readonly_query_commands_do_not_create_teaagent_dir(tmp_path: Path) -> N
     args = argparse.Namespace(root=str(tmp_path), background_id='nonexistent')
     background_show_command(args)
     assert not teaagent_dir.exists()
+
+
+def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: Path) -> None:
+    """Table-driven test distinguishing zero-footprint queries from mutating initializers."""
+    import argparse
+    import contextlib
+    import shutil
+
+    from teaagent.cli._handlers._agent import (
+        automation_list_command,
+        automation_show_command,
+        automation_status_command,
+    )
+    from teaagent.cli._handlers._memory import (
+        memory_list_command,
+        memory_search_command,
+        memory_show_command,
+    )
+    from teaagent.cli._handlers._skill import (
+        skill_candidate_list_command,
+        skill_candidate_show_command,
+    )
+    from teaagent.ergonomics.run_history import list_recall_runs, list_yesterday_runs
+    from teaagent.ergonomics.status_short import build_status_short
+    from teaagent.policy import PermissionMode
+
+    teaagent_dir = tmp_path / '.teaagent'
+
+    # Zero-footprint queries: should NOT create .teaagent
+    zero_footprint_queries = [
+        ('memory list', lambda: memory_list_command(argparse.Namespace(root=str(tmp_path), limit=10))),
+        ('memory search', lambda: memory_search_command(argparse.Namespace(root=str(tmp_path), query='test', limit=10))),
+        ('memory show missing', lambda: memory_show_command(argparse.Namespace(root=str(tmp_path), memory_id='missing'))),
+        ('skill candidate list', lambda: skill_candidate_list_command(argparse.Namespace(root=str(tmp_path)))),
+        ('skill candidate show missing', lambda: skill_candidate_show_command(argparse.Namespace(root=str(tmp_path), candidate_id='missing'))),
+        ('automation list', lambda: automation_list_command(argparse.Namespace(root=str(tmp_path)))),
+        ('automation show missing', lambda: automation_show_command(argparse.Namespace(root=str(tmp_path), automation_id='missing'))),
+        ('automation status', lambda: automation_status_command(argparse.Namespace(root=str(tmp_path)))),
+        ('yesterday runs', lambda: list_yesterday_runs(tmp_path)),
+        ('recall runs', lambda: list_recall_runs(tmp_path)),
+        ('status short', lambda: build_status_short(root=tmp_path, provider='gpt', permission_mode=PermissionMode.PROMPT)),
+    ]
+
+    for name, cmd_fn in zero_footprint_queries:
+        # Reset: ensure .teaagent doesn't exist
+        if teaagent_dir.exists():
+            shutil.rmtree(teaagent_dir)
+        assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
+
+        # Execute command
+        with contextlib.suppress(Exception):
+            cmd_fn()
+
+        # Verify .teaagent was NOT created
+        assert not teaagent_dir.exists(), f"{name} should not create .teaagent directory"
+
+    # Mutating initializers: SHOULD create .teaagent
+    mutating_initializers = [
+        ('memory add', lambda: _setup_config_and_add_memory(tmp_path)),
+        ('skill candidate propose', lambda: _setup_config_and_propose_candidate(tmp_path)),
+        ('automation add', lambda: _setup_config_and_add_automation(tmp_path)),
+    ]
+
+    for name, cmd_fn in mutating_initializers:
+        # Reset: ensure .teaagent doesn't exist
+        if teaagent_dir.exists():
+            shutil.rmtree(teaagent_dir)
+        assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
+
+        # Execute command
+        with contextlib.suppress(Exception):
+            cmd_fn()
+
+        # Verify .teaagent WAS created
+        assert teaagent_dir.exists(), f"{name} should create .teaagent directory"
+
+        # Clean up for next iteration
+        shutil.rmtree(teaagent_dir)
+
+
+def _setup_config_and_add_memory(tmp_path: Path) -> None:
+    """Helper to test memory add - should create .teaagent."""
+    import contextlib
+
+    from teaagent.memory import MemoryCatalog
+
+    with contextlib.suppress(Exception):
+        MemoryCatalog(tmp_path).add('test memory')
+
+
+def _setup_config_and_propose_candidate(tmp_path: Path) -> None:
+    """Helper to test skill candidate store initialization - should create .teaagent."""
+    import contextlib
+
+    from teaagent.skill_candidates import SkillCandidateStore
+
+    # Just instantiating SkillCandidateStore should create .teaagent/skill-candidates
+    with contextlib.suppress(Exception):
+        SkillCandidateStore(tmp_path)
+
+
+def _setup_config_and_add_automation(tmp_path: Path) -> None:
+    """Helper to test automation add - should create .teaagent."""
+    import contextlib
+
+    from teaagent.automations import AutomationStore
+
+    with contextlib.suppress(Exception):
+        AutomationStore(tmp_path).create(
+            name='test',
+            task='test task',
+            schedule='every 1h',
+            provider='gpt',
+            model=None,
+            permission_mode='read-only',
+            context_profile='balanced',
+            max_iterations=10,
+            max_tool_calls=10,
+        )

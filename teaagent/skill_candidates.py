@@ -41,10 +41,12 @@ class SkillCandidate:
 
 
 class SkillCandidateStore:
-    def __init__(self, root: str | Path = '.') -> None:
+    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
         self.dir = self.root / '.teaagent' / 'skill-candidates'
-        self.dir.mkdir(parents=True, exist_ok=True)
+        self.readonly = readonly
+        if not readonly:
+            self.dir.mkdir(parents=True, exist_ok=True)
 
     def _dir(self, candidate_id: str) -> Path:
         return self.dir / candidate_id
@@ -81,6 +83,8 @@ class SkillCandidateStore:
     def create_from_run(
         self, *, run_id: str, name: str, description: str
     ) -> SkillCandidate:
+        if self.readonly:
+            raise RuntimeError('Cannot create skill candidate in readonly mode')
         run_store = RunStore(self.root)
         task = run_store.task_for_run(run_id)
         events = run_store.show_run(run_id)
@@ -145,6 +149,8 @@ class SkillCandidateStore:
         return self.run_offline_eval(candidate_id)
 
     def run_offline_eval(self, candidate_id: str) -> SkillCandidate:
+        if self.readonly:
+            raise RuntimeError('Cannot run offline eval in readonly mode')
         candidate_dir = self._dir(candidate_id)
         report = run_offline_eval(candidate_dir)
         write_eval_report(candidate_dir, report)
@@ -156,6 +162,8 @@ class SkillCandidateStore:
     def set_review(
         self, candidate_id: str, *, status: str, summary: str
     ) -> SkillCandidate:
+        if self.readonly:
+            raise RuntimeError('Cannot set review in readonly mode')
         current = self.show(candidate_id)
         from teaagent.audit import utc_now
 
@@ -221,6 +229,8 @@ class SkillCandidateStore:
         scope: str,
         attested_personal: bool = False,
     ) -> dict[str, Any]:
+        if self.readonly:
+            raise RuntimeError('Cannot install skill candidate in readonly mode')
         candidate = self.show(candidate_id)
         if candidate.status not in {'review_passed', 'installed'}:
             raise ValueError('candidate must pass review before install')

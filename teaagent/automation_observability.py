@@ -98,7 +98,7 @@ def automation_blocked_gate_reason(
     ticket = validate_automation_spec(spec, root=str(root))
     if ticket.errors:
         return '; '.join(ticket.errors[:2])
-    store = AutomationStore(root)
+    store = AutomationStore(root, readonly=True)
     with contextlib.suppress(FileNotFoundError):
         store.show_quarantined(spec.automation_id)
         return 'automation is quarantined; promote after review'

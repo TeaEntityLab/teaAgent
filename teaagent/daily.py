@@ -295,6 +295,7 @@ def build_daily_brief(
     memory_limit: Optional[int] = None,
     runs_limit: int = 5,
     context_profile: str = 'balanced',
+    readonly: bool = False,
 ) -> DailyBrief:
     from teaagent.preflight import preflight
 
@@ -309,8 +310,9 @@ def build_daily_brief(
         route=route,
         memory_limit=profile.memory_limit,
         context_profile=profile.name,
+        readonly=readonly,
     )
-    store = RunStore(root)
+    store = RunStore(root, readonly=readonly)
     recent_runs = _recent_run_rollups(store, runs_limit)
     token_budget = build_token_budget_report(
         task=effective_task,

@@ -16,7 +16,7 @@ def _parse_day(value: str) -> date | None:
 
 def list_yesterday_runs(root: str | Path, *, limit: int = 20) -> list[dict[str, Any]]:
     target = date.today() - timedelta(days=1)
-    store = RunStore(root)
+    store = RunStore(root, readonly=True)
     results: list[dict[str, Any]] = []
     for summary in store.list_runs(limit=200):
         day = _parse_day(summary.created_at)
@@ -28,7 +28,7 @@ def list_yesterday_runs(root: str | Path, *, limit: int = 20) -> list[dict[str, 
 
 
 def list_recall_runs(root: str | Path, *, limit: int = 5) -> list[dict[str, Any]]:
-    store = RunStore(root)
+    store = RunStore(root, readonly=True)
     return [_enrich_summary(store, summary) for summary in store.list_runs(limit=limit)]
 
 

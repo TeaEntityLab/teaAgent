@@ -34,13 +34,17 @@ class MemoryEntry:
 
 
 class MemoryCatalog:
-    def __init__(self, root: str | Path = '.') -> None:
+    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
         self.path = self.root / '.teaagent' / 'memory.jsonl'
         self.quarantine_path = self.root / '.teaagent' / 'memory-quarantine.jsonl'
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.readonly = readonly
+        if not readonly:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def add(self, content: str, *, tags: tuple[str, ...] = ()) -> MemoryEntry:
+        if self.readonly:
+            raise RuntimeError('Cannot add memory in readonly mode')
         entry = MemoryEntry(
             memory_id=uuid4().hex, content=content.strip(), tags=normalize_tags(tags)
         )
@@ -56,6 +60,8 @@ class MemoryCatalog:
         tags: tuple[str, ...] = (),
         provenance: dict[str, Any],
     ) -> MemoryEntry:
+        if self.readonly:
+            raise RuntimeError('Cannot add quarantined memory in readonly mode')
         entry = MemoryEntry(
             memory_id=uuid4().hex, content=content.strip(), tags=normalize_tags(tags)
         )

@@ -159,12 +159,14 @@ def compute_next_run_at(schedule: str, *, now: Optional[datetime] = None) -> str
 
 
 class AutomationStore:
-    def __init__(self, root: str | Path = '.') -> None:
+    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
         self.dir = self.root / '.teaagent' / 'automations'
         self.quarantine_dir = self.root / '.teaagent' / 'automations-quarantine'
-        self.dir.mkdir(parents=True, exist_ok=True)
-        self.quarantine_dir.mkdir(parents=True, exist_ok=True)
+        self.readonly = readonly
+        if not readonly:
+            self.dir.mkdir(parents=True, exist_ok=True)
+            self.quarantine_dir.mkdir(parents=True, exist_ok=True)
 
     def _spec_path(self, automation_id: str) -> Path:
         return self.dir / f'{automation_id}.json'
@@ -282,6 +284,8 @@ class AutomationStore:
         context_from: str = '',
         provenance_digest: str = '',
     ) -> AutomationSpec:
+        if self.readonly:
+            raise RuntimeError('Cannot create automation in readonly mode')
         spec = self.draft(
             name=name,
             task=task,
@@ -337,6 +341,8 @@ class AutomationStore:
         *,
         provenance: dict[str, Any],
     ) -> AutomationSpec:
+        if self.readonly:
+            raise RuntimeError('Cannot create quarantined automation in readonly mode')
         payload = {
             **spec.to_dict(),
             'enabled': False,
@@ -378,6 +384,8 @@ class AutomationStore:
         *,
         attested: bool = False,
     ) -> AutomationSpec:
+        if self.readonly:
+            raise RuntimeError('Cannot promote quarantined automation in readonly mode')
         payload = dict(self.show_quarantined(automation_id))
         provenance = payload.pop('provenance', None)
         payload.pop('quarantine', None)
@@ -426,6 +434,8 @@ class AutomationStore:
         return promoted
 
     def delete(self, automation_id: str) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot delete automation in readonly mode')
         path = self._spec_path(automation_id)
         quarantine_path = self._quarantine_path(automation_id)
         if path.exists():
@@ -437,6 +447,8 @@ class AutomationStore:
         raise FileNotFoundError(f"automation '{automation_id}' not found")
 
     def update(self, spec: AutomationSpec) -> AutomationSpec:
+        if self.readonly:
+            raise RuntimeError('Cannot update automation in readonly mode')
         updated = AutomationSpec(**{**spec.to_dict(), 'updated_at': iso_utc(utc_now())})
         atomic_write_text(
             self._spec_path(spec.automation_id), json.dumps(updated.to_dict())
@@ -444,6 +456,8 @@ class AutomationStore:
         return updated
 
     def set_enabled(self, automation_id: str, enabled: bool) -> AutomationSpec:
+        if self.readonly:
+            raise RuntimeError('Cannot set enabled in readonly mode')
         spec = self.show(automation_id)
         next_run_at = spec.next_run_at
         if enabled and not next_run_at:
@@ -472,13 +486,14 @@ def build_automation_status(
     root: str | Path,
     *,
     store: Optional[AutomationStore] = None,
+    readonly: bool = True,
 ) -> dict[str, Any]:
     """Summarize automation health for CLI status output."""
     from teaagent.automation_observability import enrich_automation_status_row
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
-    automation_store = store or AutomationStore(root)
-    bg_store = BackgroundRunStore(root)
+    automation_store = store or AutomationStore(root, readonly=readonly)
+    bg_store = BackgroundRunStore(root, readonly=readonly)
     rows: list[dict[str, Any]] = []
     for spec in automation_store.list():
         log_tail = ''

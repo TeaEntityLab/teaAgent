@@ -960,7 +960,7 @@ def automation_add_command(args: argparse.Namespace) -> int:
 
 
 def automation_list_command(args: argparse.Namespace) -> int:
-    store = AutomationStore(args.root)
+    store = AutomationStore(args.root, readonly=True)
     if getattr(args, 'quarantined', False):
         print_json(store.list_quarantined())
         return 0
@@ -985,7 +985,7 @@ def automation_promote_command(args: argparse.Namespace) -> int:
 
 def automation_show_command(args: argparse.Namespace) -> int:
     try:
-        spec = AutomationStore(args.root).show(args.automation_id)
+        spec = AutomationStore(args.root, readonly=True).show(args.automation_id)
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
