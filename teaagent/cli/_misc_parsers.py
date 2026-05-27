@@ -38,6 +38,12 @@ def register(
         serve_handler=handlers.get('audit_serve'),
         verify_handler=handlers.get('audit_verify'),
     )
+    _env(
+        subparsers,
+        handlers.get('env_provision'),
+        handlers.get('env_verify'),
+        handlers.get('env_lock'),
+    )
     _graphqlite(
         subparsers,
         handlers['graphqlite_query'],
@@ -968,3 +974,26 @@ def _replay(
         help='Branch name to resume.',
     )
     resume_cmd.set_defaults(func=resume_handler or _deprecation_warning)
+
+
+def _env(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    provision_handler: Callable,
+    verify_handler: Callable,
+    lock_handler: Callable,
+) -> None:
+    """Register environment subcommands."""
+    env_parser = subparsers.add_parser('env', help='Hermetic environment provisioning and verification')
+    subs = env_parser.add_subparsers(dest='env_command', required=True)
+
+    provision_cmd = subs.add_parser('provision', help='Provision hermetic environment from teaagent.toml')
+    provision_cmd.add_argument('--root', default='.', help='Workspace root.')
+    provision_cmd.set_defaults(func=provision_handler)
+
+    verify_cmd = subs.add_parser('verify', help='Verify environment compliance against lockfile')
+    verify_cmd.add_argument('--root', default='.', help='Workspace root.')
+    verify_cmd.set_defaults(func=verify_handler)
+
+    lock_cmd = subs.add_parser('lock', help='Generate lockfile from current environment')
+    lock_cmd.add_argument('--root', default='.', help='Workspace root.')
+    lock_cmd.set_defaults(func=lock_handler)

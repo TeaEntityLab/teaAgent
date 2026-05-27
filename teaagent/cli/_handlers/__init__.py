@@ -52,6 +52,11 @@ from ._audit import (
     audit_show_command,
     audit_verify_command,
 )
+from ._env import (
+    env_lock_command,
+    env_provision_command,
+    env_verify_command,
+)
 from ._cloud import (
     cloud_cancel_command,
     cloud_capabilities_command,
@@ -219,6 +224,9 @@ __all__ = [
     'audit_prune_command',
     'audit_show_command',
     'audit_verify_command',
+    'env_lock_command',
+    'env_provision_command',
+    'env_verify_command',
     'chat_command',
     'clarify_command',
     'completion_command',

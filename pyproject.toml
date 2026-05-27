@@ -22,7 +22,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = []
+dependencies = [
+    "tomli>=2.0.1; python_version < '3.11'",
+]
 
 [tool.setuptools.packages.find]
 include = ["teaagent*"]

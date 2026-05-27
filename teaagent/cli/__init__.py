@@ -75,6 +75,9 @@ from teaagent.cli._handlers import (
     doctor_model,
     doctor_project,
     doctor_providers,
+    env_lock_command,
+    env_provision_command,
+    env_verify_command,
     experiment_cancel,
     experiment_compare,
     experiment_list,
@@ -259,6 +262,9 @@ def build_parser() -> argparse.ArgumentParser:
             'audit_verify': audit_verify_command,
             'doctor_migration': doctor_migration_command,
             'doctor_git_sandbox': doctor_git_sandbox,
+            'env_provision': env_provision_command,
+            'env_verify': env_verify_command,
+            'env_lock': env_lock_command,
         },
     )
     register_memory(
