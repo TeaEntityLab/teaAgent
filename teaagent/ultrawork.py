@@ -50,13 +50,17 @@ class WorkerRecord:
 class UltraworkStore:
     """Detached background workers persisted under .teaagent/ultrawork/."""
 
-    def __init__(self, root: str | Path = '.', *, notify_config: Any = None) -> None:
+    def __init__(self, root: str | Path = '.', *, notify_config: Any = None, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
         self.dir = self.root / '.teaagent' / 'ultrawork'
-        self.dir.mkdir(parents=True, exist_ok=True)
+        self.readonly = readonly
+        if not readonly:
+            self.dir.mkdir(parents=True, exist_ok=True)
         self._notify_config = notify_config
 
     def start(self, command: list[str], *, label: Optional[str] = None) -> WorkerRecord:
+        if self.readonly:
+            raise RuntimeError('Cannot start ultrawork worker in readonly mode')
         if not command:
             raise ValueError('ultrawork command must not be empty')
         worker_id = uuid4().hex

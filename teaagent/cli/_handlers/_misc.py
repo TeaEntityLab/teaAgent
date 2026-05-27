@@ -90,13 +90,13 @@ def ultrawork_start_command(args: argparse.Namespace) -> int:
 
 
 def ultrawork_list_command(args: argparse.Namespace) -> int:
-    print_json(UltraworkStore(args.root).list())
+    print_json(UltraworkStore(args.root, readonly=True).list())
     return 0
 
 
 def ultrawork_show_command(args: argparse.Namespace) -> int:
     try:
-        print_json(UltraworkStore(args.root).show(args.worker_id))
+        print_json(UltraworkStore(args.root, readonly=True).show(args.worker_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -105,7 +105,7 @@ def ultrawork_show_command(args: argparse.Namespace) -> int:
 
 def ultrawork_logs_command(args: argparse.Namespace) -> int:
     try:
-        print_json(UltraworkStore(args.root).logs(args.worker_id, max_bytes=args.bytes))
+        print_json(UltraworkStore(args.root, readonly=True).logs(args.worker_id, max_bytes=args.bytes))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
