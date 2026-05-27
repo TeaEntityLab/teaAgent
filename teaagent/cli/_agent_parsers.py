@@ -125,8 +125,20 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         '--parallel',
         default=None,
-        metavar='OPTIONS',
-        help='Run parallel experiments with comma-separated options (e.g., opt1,opt2,opt3). Creates isolated sandbox branches for each option.',
+        metavar='N',
+        type=int,
+        help='Run tournament mode with N parallel approaches. Creates isolated sandbox branches for each approach.',
+    )
+    p.add_argument(
+        '--approach',
+        action='append',
+        default=[],
+        help='Custom approach hint for tournament mode. Can be repeated.',
+    )
+    p.add_argument(
+        '--no-benchmark',
+        action='store_true',
+        help='Skip performance benchmarking in tournament mode.',
     )
     p.add_argument(
         '--approve-call-id',

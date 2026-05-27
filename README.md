@@ -112,7 +112,19 @@ TeaAgent includes LSP/static analysis validation foundation for code correctness
 - Supports Python, TypeScript, and JavaScript projects
 - Enable with `--validate` flag (opt-in)
 
-**Status:** Foundation implemented. Full self-healing loop and tournament selection features are documented in spec files for future implementation.
+### 9. Tournament Selection (Foundation)
+
+TeaAgent includes tournament-style parallel execution foundation for architecture exploration:
+
+**Parallel Execution:**
+- Create isolated git sandbox branches for multiple approaches
+- Auto-generate approach hints based on task keywords
+- Execute subagents in parallel with resource limits
+- Benchmark correctness, performance, and code quality
+- Compare approaches with weighted scoring
+- Enable with `--parallel N` flag (opt-in)
+
+**Status:** Foundation implemented. Full integration with agent runner and human approval workflow documented in spec files for future implementation.
 
 ## Architecture
 
