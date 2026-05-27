@@ -102,6 +102,18 @@ TeaAgent includes persistent memory features to learn from past mistakes and syn
 - Commands: `/pin <file>`, `/unpin <file>`, `/pinned` (list)
 - Visual indicator in prompt shows pinned file count (e.g., `teaagent📌2>`)
 
+### 8. Self-Healing Validation (Foundation)
+
+TeaAgent includes LSP/static analysis validation foundation for code correctness:
+
+**Validation Tools:**
+- Auto-detects available tools (ruff, mypy, tsc, eslint)
+- Validates code before committing changes
+- Supports Python, TypeScript, and JavaScript projects
+- Enable with `--validate` flag (opt-in)
+
+**Status:** Foundation implemented. Full self-healing loop and tournament selection features are documented in spec files for future implementation.
+
 ## Architecture
 
 ```

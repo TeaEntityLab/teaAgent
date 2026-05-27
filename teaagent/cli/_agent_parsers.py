@@ -168,6 +168,16 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         help='Enable LSP-backed code analysis tools (code_definition/code_references/code_diagnostics).',
     )
     p.add_argument(
+        '--validate',
+        action='store_true',
+        help='Enable LSP/static analysis validation with self-healing loop.',
+    )
+    p.add_argument(
+        '--no-validate',
+        action='store_true',
+        help='Disable validation even if configured.',
+    )
+    p.add_argument(
         '--telemetry-otlp-endpoint',
         default=None,
         metavar='URL',
