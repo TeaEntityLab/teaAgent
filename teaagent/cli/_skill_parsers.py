@@ -135,6 +135,8 @@ def register(
     publish_tsb.add_argument('--version', default='1.0.0', help='Skill version.')
     publish_tsb.add_argument('--author', help='Author name.')
     publish_tsb.add_argument('--key', help='Path to SSH/GPG key for signing.')
+    publish_tsb.add_argument('--sigstore', action='store_true', help='Use Sigstore keyless signing instead of SSH key.')
+    publish_tsb.add_argument('--identity-token', help='OIDC identity token for Sigstore signing.')
     publish_tsb.add_argument('--environment-type', default='uv', help='Environment type (uv, nix, docker).')
     publish_tsb.set_defaults(func=handlers.get('publish_tsb'))
 

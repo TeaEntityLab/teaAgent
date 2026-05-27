@@ -17,6 +17,12 @@ from typing import Any
 
 from teaagent.audit_chain import verify_audit_chain
 
+try:
+    from teaagent.sigstore_signer import SigstoreSigner, ProvenanceGate
+    SIGSTORE_AVAILABLE = True
+except ImportError:
+    SIGSTORE_AVAILABLE = False
+
 
 @dataclass(frozen=True)
 class TSBMetadata:
@@ -33,10 +39,12 @@ class TSBMetadata:
 @dataclass(frozen=True)
 class TSBAttestation:
     """Cryptographic attestation for a skill bundle."""
-    author_signature: str  # SSH/GPG signature of the bundle
+    author_signature: str  # SSH/GPG/Sigstore signature of the bundle
     audit_chain_hash: str  # SHA256 hash of the audit chain
     bundle_hash: str  # SHA256 hash of the entire bundle
-    signature_algorithm: str = "ed25519"  # or rsa, ecdsa
+    signature_algorithm: str = "ed25519"  # or rsa, ecdsa, sigstore
+    certificate: str = ""  # PEM certificate for Sigstore verification
+    signer: str = "ssh"  # ssh, sigstore-keyless
 
 
 @dataclass(frozen=True)
@@ -151,6 +159,8 @@ class TSBBuilder:
         skill_path: Path,
         audit_log_path: Path,
         author_key_path: Path | None = None,
+        use_sigstore: bool = False,
+        identity_token: str | None = None,
     ) -> None:
         """Initialize TSB builder.
         
@@ -158,10 +168,14 @@ class TSBBuilder:
             skill_path: Path to skill directory.
             audit_log_path: Path to audit log file.
             author_key_path: Path to author's SSH/GPG key for signing.
+            use_sigstore: Use Sigstore keyless signing instead of SSH key.
+            identity_token: OIDC identity token for Sigstore signing.
         """
         self._skill_path = Path(skill_path).resolve()
         self._audit_log_path = Path(audit_log_path).resolve()
         self._author_key_path = Path(author_key_path) if author_key_path else None
+        self._use_sigstore = use_sigstore
+        self._identity_token = identity_token
         self._redaction_filter = RedactionFilter()
     
     def build_tsb(
@@ -229,10 +243,23 @@ class TSBBuilder:
             bundle_hash.update((tmp_path / "audit.jsonl").read_bytes())
             bundle_hash = bundle_hash.hexdigest()
             
-            # Sign bundle if key provided
+            # Sign bundle if key provided or using Sigstore
             signature = ""
-            if self._author_key_path and self._author_key_path.exists():
+            certificate = ""
+            signer_type = ""
+            
+            if self._use_sigstore and SIGSTORE_AVAILABLE:
+                try:
+                    sigstore_signer = SigstoreSigner(identity_token=self._identity_token)
+                    sig_result = sigstore_signer.sign(output_path)
+                    signature = sig_result["signature"]
+                    certificate = sig_result["certificate"]
+                    signer_type = "sigstore-keyless"
+                except ValueError as exc:
+                    raise ValueError(f"Sigstore signing failed: {exc}")
+            elif self._author_key_path and self._author_key_path.exists():
                 signature = self._sign_bundle(output_path, self._author_key_path)
+                signer_type = "ssh"
             
             # Update manifest with final hashes and signature
             manifest = TSBManifest(
@@ -242,6 +269,8 @@ class TSBBuilder:
                     audit_chain_hash=audit_hash,
                     bundle_hash=bundle_hash,
                     signature_algorithm=manifest.attestation.signature_algorithm,
+                    certificate=certificate,
+                    signer=signer_type,
                 ),
                 files=manifest.files,
             )
@@ -314,6 +343,8 @@ class TSBBuilder:
                 "audit_chain_hash": manifest.attestation.audit_chain_hash,
                 "bundle_hash": manifest.attestation.bundle_hash,
                 "signature_algorithm": manifest.attestation.signature_algorithm,
+                "certificate": manifest.attestation.certificate,
+                "signer": manifest.attestation.signer,
             },
             "files": manifest.files,
         }
@@ -401,10 +432,19 @@ class TSBVerifier:
             
             # Verify signature if requested
             if verify_signature and manifest_data["attestation"]["author_signature"]:
-                # In production, this would verify against the author's public key
-                # For now, we just check that a signature exists
-                if not manifest_data["attestation"]["author_signature"]:
-                    return False, "Missing author signature"
+                # Use ProvenanceGate for verification if available
+                if SIGSTORE_AVAILABLE:
+                    try:
+                        gate = ProvenanceGate(require_signature=True)
+                        is_valid, message = gate.verify_provenance(self._tsb_path, manifest_data)
+                        if not is_valid:
+                            return False, f"Provenance verification failed: {message}"
+                    except Exception as exc:
+                        return False, f"Provenance gate error: {exc}"
+                else:
+                    # Fallback: just check that a signature exists
+                    if not manifest_data["attestation"]["author_signature"]:
+                        return False, "Missing author signature"
             
             return True, "TSB verification successful"
     

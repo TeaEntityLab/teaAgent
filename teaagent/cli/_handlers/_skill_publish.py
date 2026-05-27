@@ -66,10 +66,18 @@ def skill_publish_command(args: argparse.Namespace) -> int:
         print(f"[Packaging...] Building TSB for skill: {skill_name}")
         print(f"[Redacting...] Applying privacy filters to audit log...")
         
+        use_sigstore = getattr(args, 'sigstore', False)
+        identity_token = getattr(args, 'identity_token', None)
+        
+        if use_sigstore:
+            print(f"[Signing...] Using Sigstore keyless signing...")
+        
         builder = TSBBuilder(
             skill_path=skill_path,
             audit_log_path=audit_log_path,
             author_key_path=author_key_path,
+            use_sigstore=use_sigstore,
+            identity_token=identity_token,
         )
         
         manifest = builder.build_tsb(output_path, metadata)
@@ -78,7 +86,8 @@ def skill_publish_command(args: argparse.Namespace) -> int:
         print(f"[✓] Bundle hash: {manifest.attestation.bundle_hash}")
         print(f"[✓] Audit chain hash: {manifest.attestation.audit_chain_hash}")
         if manifest.attestation.author_signature:
-            print(f"[✓] Author signature: {manifest.attestation.author_signature[:32]}...")
+            print(f"[✓] Signer: {manifest.attestation.signer}")
+            print(f"[✓] Signature: {manifest.attestation.author_signature[:32]}...")
         
         print_json({
             "status": "success",
@@ -86,6 +95,7 @@ def skill_publish_command(args: argparse.Namespace) -> int:
             "skill_name": skill_name,
             "skill_version": skill_version,
             "bundle_hash": manifest.attestation.bundle_hash,
+            "signer": manifest.attestation.signer,
             "files_count": len(manifest.files),
         })
         return 0
