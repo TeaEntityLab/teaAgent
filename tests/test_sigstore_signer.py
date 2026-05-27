@@ -274,6 +274,78 @@ class TSBProvenanceVerifierTests(unittest.TestCase):
         self.assertEqual(verifier._identity, "test@example.com")
         self.assertEqual(verifier._issuer, "https://accounts.google.com")
 
+    def test_detect_ci_oidc_token_github_actions(self) -> None:
+        """Test OIDC token detection for GitHub Actions."""
+        from teaagent.sigstore_signer import detect_ci_oidc_token
+        import os
+        
+        # Save original env
+        original_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
+        original_url = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL')
+        
+        try:
+            # Set GitHub Actions environment
+            os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN'] = 'test_token'
+            os.environ['ACTIONS_ID_TOKEN_REQUEST_URL'] = 'https://test.url'
+            
+            token = detect_ci_oidc_token()
+            self.assertEqual(token, 'test_token')
+            
+        finally:
+            # Restore original env
+            if original_token is None:
+                os.environ.pop('ACTIONS_ID_TOKEN_REQUEST_TOKEN', None)
+            else:
+                os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN'] = original_token
+            if original_url is None:
+                os.environ.pop('ACTIONS_ID_TOKEN_REQUEST_URL', None)
+            else:
+                os.environ['ACTIONS_ID_TOKEN_REQUEST_URL'] = original_url
+
+    def test_detect_ci_oidc_token_gitlab_ci(self) -> None:
+        """Test OIDC token detection for GitLab CI."""
+        from teaagent.sigstore_signer import detect_ci_oidc_token
+        import os
+        
+        original_jwt = os.environ.get('CI_JOB_JWT')
+        
+        try:
+            os.environ['CI_JOB_JWT'] = 'gitlab_jwt_token'
+            token = detect_ci_oidc_token()
+            self.assertEqual(token, 'gitlab_jwt_token')
+            
+        finally:
+            if original_jwt is None:
+                os.environ.pop('CI_JOB_JWT', None)
+            else:
+                os.environ['CI_JOB_JWT'] = original_jwt
+
+    def test_detect_ci_oidc_token_none(self) -> None:
+        """Test OIDC token detection when no CI environment is present."""
+        from teaagent.sigstore_signer import detect_ci_oidc_token
+        import os
+        
+        # Clear all CI environment variables
+        ci_vars = [
+            'ACTIONS_ID_TOKEN_REQUEST_TOKEN', 'ACTIONS_ID_TOKEN_REQUEST_URL',
+            'CI_JOB_JWT', 'CIRCLE_OIDC_TOKEN', 'GOOGLE_OIDC_TOKEN'
+        ]
+        
+        original_values = {}
+        for var in ci_vars:
+            original_values[var] = os.environ.get(var)
+            os.environ.pop(var, None)
+        
+        try:
+            token = detect_ci_oidc_token()
+            self.assertIsNone(token)
+            
+        finally:
+            # Restore original values
+            for var, value in original_values.items():
+                if value is not None:
+                    os.environ[var] = value
+
 
 class SigstoreAvailabilityTests(unittest.TestCase):
     def test_sigstore_availability_flag(self) -> None:

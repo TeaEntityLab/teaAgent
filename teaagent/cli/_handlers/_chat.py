@@ -131,6 +131,48 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 print(f"[TeaAgent] Estimated cost for next task will be shown before execution")
                 continue
             
+            # Handle diff command
+            if user_input == '/diff':
+                print("[TeaAgent] Showing git diff for current session...")
+                import subprocess
+                try:
+                    result = subprocess.run(
+                        ['git', 'diff', '--color=always'],
+                        cwd=config.root,
+                        capture_output=True,
+                        text=True,
+                    )
+                    if result.stdout:
+                        print(result.stdout)
+                    else:
+                        print("[TeaAgent] No changes detected in working directory")
+                except FileNotFoundError:
+                    print("[TeaAgent] Git not found in PATH")
+                except Exception as exc:
+                    print(f"[TeaAgent] Error running git diff: {exc}")
+                continue
+            
+            # Handle undo command
+            if user_input == '/undo':
+                print("[TeaAgent] Undoing last change...")
+                import subprocess
+                try:
+                    result = subprocess.run(
+                        ['git', 'checkout', '--', '.'],
+                        cwd=config.root,
+                        capture_output=True,
+                        text=True,
+                    )
+                    if result.returncode == 0:
+                        print("[TeaAgent] All changes reverted successfully")
+                    else:
+                        print(f"[TeaAgent] Error: {result.stderr}")
+                except FileNotFoundError:
+                    print("[TeaAgent] Git not found in PATH")
+                except Exception as exc:
+                    print(f"[TeaAgent] Error running git checkout: {exc}")
+                continue
+            
             # Execute task
             print(f"[TeaAgent] Executing: {user_input}")
             result = run_chat_agent(config, user_input)
@@ -159,5 +201,7 @@ def print_chat_help() -> None:
     print("  /help, /?, help, ?         - Show this help")
     print("  /cost                      - Show session cost")
     print("  /compact                   - Context compaction info")
+    print("  /diff                      - Show git diff for current session")
+    print("  /undo                      - Undo all changes (git checkout -- .)")
     print()
     print("[TeaAgent] Any other input will be executed as a task")

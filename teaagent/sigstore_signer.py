@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,39 @@ except ImportError:
     SIGSTORE_AVAILABLE = False
 
 
+def detect_ci_oidc_token() -> str | None:
+    """Auto-detect OIDC token from CI/CD environment variables.
+    
+    Checks common CI/CD platforms for OIDC token environment variables:
+    - GitHub Actions: ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
+    - GitLab CI: CI_JOB_JWT
+    - CircleCI: CIRCLE_OIDC_TOKEN
+    - Google Cloud Build: GOOGLE_OIDC_TOKEN
+    
+    Returns:
+        OIDC token string if found, None otherwise.
+    """
+    # GitHub Actions
+    if os.getenv('ACTIONS_ID_TOKEN_REQUEST_TOKEN') and os.getenv('ACTIONS_ID_TOKEN_REQUEST_URL'):
+        # GitHub Actions requires a token exchange, return the request token
+        # The sigstore library will handle the exchange
+        return os.getenv('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
+    
+    # GitLab CI
+    if os.getenv('CI_JOB_JWT'):
+        return os.getenv('CI_JOB_JWT')
+    
+    # CircleCI
+    if os.getenv('CIRCLE_OIDC_TOKEN'):
+        return os.getenv('CIRCLE_OIDC_TOKEN')
+    
+    # Google Cloud Build
+    if os.getenv('GOOGLE_OIDC_TOKEN'):
+        return os.getenv('GOOGLE_OIDC_TOKEN')
+    
+    return None
+
+
 class SigstoreSigner:
     """Sigstore keyless signer for TSB bundles using programmatic API."""
     
@@ -28,12 +62,16 @@ class SigstoreSigner:
         """Initialize Sigstore signer.
         
         Args:
-            identity_token: Optional OIDC identity token for signing.
+            identity_token: Optional OIDC identity token for signing. If not provided,
+                will auto-detect from CI/CD environment variables.
         """
         if not SIGSTORE_AVAILABLE:
             raise ValueError(
                 "sigstore-python is not installed. Install with: pip install sigstore"
             )
+        # Auto-detect OIDC token from CI/CD environment if not provided
+        if identity_token is None:
+            identity_token = detect_ci_oidc_token()
         self._identity_token = identity_token
     
     def sign(self, bundle_path: Path) -> dict[str, Any]:

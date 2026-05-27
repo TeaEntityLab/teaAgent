@@ -107,12 +107,23 @@ def assemble_agent_prompt(
     )
 
 
-def load_project_instructions(root: str | Path) -> str:
+def load_project_instructions(root: str | Path, affected_paths: Optional[list[Path]] = None) -> str:
+    """Load project instructions from AGENTS.md and modular .teaagent/rules/ directory.
+    
+    Args:
+        root: Project root directory.
+        affected_paths: Optional list of file paths being modified. If provided, only loads
+            relevant modular rules based on path matching.
+    
+    Returns:
+        Combined project instructions as a single string.
+    """
     resolved = Path(root).resolve()
     start_dir = resolved if resolved.is_dir() else resolved.parent
     filenames = ('AGENTS.override.md', 'AGENTS.md', 'CLAUDE.md', 'AGENT.md')
     parts: list[str] = []
 
+    # Load base project instructions
     for directory in reversed(start_dir.parents):
         for filename in filenames:
             path = directory / filename
@@ -122,7 +133,64 @@ def load_project_instructions(root: str | Path) -> str:
         path = start_dir / filename
         if path.exists():
             parts.append(path.read_text(encoding='utf-8'))
+    
+    # Load modular rules from .teaagent/rules/
+    rules_dir = start_dir / '.teaagent' / 'rules'
+    if rules_dir.exists() and rules_dir.is_dir():
+        if affected_paths:
+            # Path-aware rule injection: only load rules relevant to affected paths
+            relevant_rules = _load_relevant_rules(rules_dir, affected_paths, start_dir)
+            parts.extend(relevant_rules)
+        else:
+            # Load all rules if no specific paths provided
+            for rule_file in sorted(rules_dir.glob('*.md')):
+                parts.append(rule_file.read_text(encoding='utf-8'))
+    
     return '\n\n'.join(part for part in parts if part.strip())
+
+
+def _load_relevant_rules(rules_dir: Path, affected_paths: list[Path], project_root: Path) -> list[str]:
+    """Load modular rules based on path matching.
+    
+    Args:
+        rules_dir: Directory containing modular rule files.
+        affected_paths: List of file paths being modified.
+        project_root: Project root directory for resolving relative paths.
+    
+    Returns:
+        List of relevant rule file contents.
+    """
+    relevant_rules: list[str] = []
+    
+    for rule_file in sorted(rules_dir.glob('*.md')):
+        rule_name = rule_file.stem
+        rule_content = rule_file.read_text(encoding='utf-8')
+        
+        # Check if any affected path matches this rule
+        # Rule files can be named after directories (e.g., db.md for teaagent/db/)
+        # or contain path patterns in their content
+        is_relevant = False
+        
+        for affected_path in affected_paths:
+            try:
+                rel_path = affected_path.relative_to(project_root)
+                # Check if rule name matches any part of the path
+                if rule_name in str(rel_path):
+                    is_relevant = True
+                    break
+                # Check if rule content mentions the path
+                if str(rel_path) in rule_content:
+                    is_relevant = True
+                    break
+            except ValueError:
+                # Path is outside project root, include rule as safety measure
+                is_relevant = True
+                break
+        
+        if is_relevant:
+            relevant_rules.append(rule_content)
+    
+    return relevant_rules
 
 
 def parse_model_decision(text: str) -> ToolRequest | FinalAnswer:
