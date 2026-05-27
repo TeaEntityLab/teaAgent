@@ -34,6 +34,8 @@ def register(
                 'apply': handlers['subagent_review_apply'],
             },
         )
+    if 'chat' in handlers:
+        _chat(subs, handlers['chat'])
     if 'automation_add' in handlers:
         _automation(
             subs,
@@ -495,6 +497,13 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         help='Emit a desktop notification with the current run status.',
     )
     p.set_defaults(func=handler, agent_command='attach')
+
+
+def _chat(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+    p = subs.add_parser('chat', help='Interactive chat REPL for continuous agent interaction.')
+    p.add_argument('task', nargs='?', default=None, help='Initial task to execute (optional).')
+    add_agent_run_arguments(p)
+    p.set_defaults(func=handler, agent_command='chat')
 
 
 def _resume(

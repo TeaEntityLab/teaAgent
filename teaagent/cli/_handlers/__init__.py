@@ -27,6 +27,7 @@ from ._agent import (
     automation_template_command,
     automation_tick_command,
 )
+from ._chat import chat_command
 from ._audit import (
     audit_list_command,
     audit_prune_command,
@@ -199,6 +200,7 @@ __all__ = [
     'audit_list_command',
     'audit_prune_command',
     'audit_show_command',
+    'chat_command',
     'clarify_command',
     'completion_command',
     'configure_command',

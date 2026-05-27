@@ -371,6 +371,16 @@ def _doctor(
         default=None,
         help='Provider to check. Can be repeated. Defaults to all providers.',
     )
+    all_checks.add_argument(
+        '--repair',
+        action='store_true',
+        help='Automatically fix common issues (file permissions, database migrations).',
+    )
+    all_checks.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root for repair operations. Defaults to current directory.',
+    )
     all_checks.set_defaults(func=all_handler or graphqlite_handler)
 
     migration = subs.add_parser(

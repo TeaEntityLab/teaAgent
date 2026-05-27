@@ -644,9 +644,15 @@ def _doctor_mcp_wizard(args: argparse.Namespace) -> int:
 
 
 def doctor_all(args: argparse.Namespace) -> int:
+    """Unified doctor command checking all subsystems with optional auto-repair."""
     checks: dict[str, Any] = {}
+    repair_actions: list[str] = []
+    
+    # GraphQLite check
     gql_ok, gql_message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
     checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
+    
+    # Providers check
     provider_results = []
     configured_providers = args.provider
     if isinstance(configured_providers, str):
@@ -657,11 +663,65 @@ def doctor_all(args: argparse.Namespace) -> int:
         ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
         provider_results.append({'provider': provider, 'ok': ok, 'message': message})
     checks['providers'] = provider_results
+    
+    # Security check
     root = Path(getattr(args, 'root', '.')).resolve()
     security = ApprovalPresetStore(root, readonly=True).check_security_health()
     checks['security'] = security
+    
+    # Git sandbox check
+    git_repo_ok = is_git_repository(root)
+    checks['git_sandbox'] = {'ok': git_repo_ok, 'message': 'Git repository available' if git_repo_ok else 'Not a git repository'}
+    
+    # Environment variables check
+    env_checks = {
+        'WORKERS_AI_BASE_URL': bool(os.environ.get('WORKERS_AI_BASE_URL')),
+        'CLOUDFLARE_API_TOKEN': bool(os.environ.get('CLOUDFLARE_API_TOKEN')),
+    }
+    checks['environment'] = env_checks
+    
+    # Overall status
     ok = gql_ok and all(item['ok'] for item in provider_results) and security['ok']
-    print_json({'ok': ok, 'checks': checks})
+    
+    # Auto-repair logic
+    repair = getattr(args, 'repair', False)
+    if repair:
+        # Fix file permissions
+        if not security['ok']:
+            try:
+                # Fix approval store permissions
+                approval_dir = root / '.teaagent' / 'approval'
+                if approval_dir.exists():
+                    approval_dir.chmod(0o700)
+                    for f in approval_dir.iterdir():
+                        if f.is_file():
+                            f.chmod(0o600)
+                    repair_actions.append('Fixed approval store permissions to 0700/0600')
+                    security = ApprovalPresetStore(root, readonly=True).check_security_health()
+                    checks['security'] = security
+            except Exception as exc:
+                repair_actions.append(f'Failed to fix permissions: {exc}')
+        
+        # Run database migrations if needed
+        if not gql_ok:
+            try:
+                from teaagent.graphqlite_store import GraphQLiteGraphStore
+                store = GraphQLiteGraphStore(root)
+                # Attempt to initialize/migrate
+                repair_actions.append('Attempted GraphQLite database migration')
+                # Re-check after migration
+                gql_ok, gql_message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
+                checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
+            except Exception as exc:
+                repair_actions.append(f'Failed to migrate database: {exc}')
+    
+    payload = {
+        'ok': ok,
+        'checks': checks,
+        'repair_mode': repair,
+        'repair_actions': repair_actions if repair else [],
+    }
+    print_json(payload)
     return 0 if ok else 1
 
 
