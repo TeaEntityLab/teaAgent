@@ -220,8 +220,10 @@ class TSBBuilder:
             )
             
             # Calculate hash of skill files and audit only (excluding manifest)
+            # Use sorted iteration for deterministic hash across platforms
             bundle_hash = hashlib.sha256()
-            for file_path in (tmp_path / "skill").rglob("*"):
+            skill_files = sorted((tmp_path / "skill").rglob("*"), key=lambda p: str(p))
+            for file_path in skill_files:
                 if file_path.is_file():
                     bundle_hash.update(file_path.read_bytes())
             bundle_hash.update((tmp_path / "audit.jsonl").read_bytes())
@@ -264,12 +266,12 @@ class TSBBuilder:
             
         Returns:
             Base64-encoded signature.
+            
+        Raises:
+            ValueError: If signing fails.
         """
         import base64
         import subprocess
-        
-        # Calculate hash to sign
-        bundle_hash = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
         
         try:
             # Use ssh-keygen to sign
@@ -291,9 +293,9 @@ class TSBBuilder:
             # Extract signature from output
             signature = result.stdout.strip()
             return base64.b64encode(signature.encode()).decode()
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            # Fallback: simple hash-based signature (not cryptographically secure)
-            return base64.b64encode(bundle_hash.encode()).decode()
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            # Do NOT fall back to hash-based signature - this is security theater
+            raise ValueError(f"Failed to sign bundle with ssh-keygen: {exc}. Please ensure ssh-keygen is installed and the key is valid.")
     
     def _manifest_to_dict(self, manifest: TSBManifest) -> dict[str, Any]:
         """Convert manifest to dictionary."""
@@ -341,10 +343,20 @@ class TSBVerifier:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             
-            # Extract tarball
+            # Extract tarball with path traversal protection
             try:
                 with tarfile.open(self._tsb_path, "r:gz") as tar:
-                    tar.extractall(tmp_path)
+                    # Use data_filter to prevent path traversal attacks (CVE-2007-4559, CVE-2025-4517)
+                    # Python 3.12+ supports filter='data', fallback to members-only extraction for older versions
+                    if hasattr(tarfile, 'data_filter'):
+                        tar.extractall(tmp_path, filter='data')
+                    else:
+                        # Fallback: extract members individually with path validation
+                        for member in tar.getmembers():
+                            # Prevent absolute path and parent directory traversal
+                            if member.name.startswith('/') or '..' in member.name.split('/'):
+                                return False, f"Path traversal attempt detected: {member.name}"
+                            tar.extract(member, tmp_path)
             except Exception as exc:
                 return False, f"Failed to extract TSB: {exc}"
             
@@ -359,10 +371,12 @@ class TSBVerifier:
                 return False, f"Invalid manifest JSON: {exc}"
             
             # Verify bundle hash (hash of skill files and audit only, excluding manifest)
+            # Use sorted iteration for deterministic hash across platforms
             bundle_hash = hashlib.sha256()
             skill_path = tmp_path / "skill"
             if skill_path.exists():
-                for file_path in skill_path.rglob("*"):
+                skill_files = sorted(skill_path.rglob("*"), key=lambda p: str(p))
+                for file_path in skill_files:
                     if file_path.is_file():
                         bundle_hash.update(file_path.read_bytes())
             audit_path = tmp_path / "audit.jsonl"
