@@ -111,3 +111,142 @@ def test_run_chat_repl_empty_input(monkeypatch):
         
         result = run_chat_repl(config)
         assert result == 0
+
+
+def test_run_chat_repl_context_command(monkeypatch, capsys):
+    """Test REPL /context command shows targeted files."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["/context", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "No files currently targeted" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_add_command(monkeypatch, capsys):
+    """Test REPL /add command adds files to context."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        # Create a test file
+        test_file = Path(tmpdir) / "test.py"
+        test_file.write_text("print('test')")
+        
+        inputs = ["/add test.py", "/context", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Added to context" in captured.out
+        assert "test.py" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_drop_command(monkeypatch, capsys):
+    """Test REPL /drop command removes files from context."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        # Create a test file
+        test_file = Path(tmpdir) / "test.py"
+        test_file.write_text("print('test')")
+        
+        inputs = ["/add test.py", "/drop test.py", "/context", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Removed from context" in captured.out
+        assert "No files currently targeted" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_cost_command(monkeypatch, capsys):
+    """Test REPL /cost command shows session cost."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["/cost", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Session cost" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_compact_command(monkeypatch, capsys):
+    """Test REPL /compact command shows compaction info."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["/compact", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Compaction complete" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_provider_command(monkeypatch, capsys):
+    """Test REPL /provider command switches provider."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["/provider claude", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Provider switched" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_model_command(monkeypatch, capsys):
+    """Test REPL /model command switches model."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["/model claude-3-5-sonnet", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Model switched" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_effort_command(monkeypatch, capsys):
+    """Test REPL /effort command sets effort level."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["/effort low", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Effort level set to: low" in captured.out
+        assert "Budget limit" in captured.out
+        assert result == 0
+
+
+def test_run_chat_repl_budget_command(monkeypatch, capsys):
+    """Test REPL /budget command shows budget status."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["/budget", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        
+        result = run_chat_repl(config)
+        captured = capsys.readouterr()
+        assert "Effort level" in captured.out
+        assert "Budget limit" in captured.out
+        assert "Session cost" in captured.out
+        assert result == 0
