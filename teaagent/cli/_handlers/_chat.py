@@ -206,7 +206,7 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
         targeted_files: Current targeted file set
         
     Returns:
-        run_id of the created background task
+        run_id of the created background task, or empty string on failure
     """
     import subprocess
     from pathlib import Path
@@ -267,6 +267,20 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
         if result.stdout.strip():
             print("[TeaAgent] Workspace has uncommitted changes, creating sandbox branch...")
             branch_name = f"suspended-{run_id}"
+            
+            # Check if branch already exists
+            check_result = subprocess.run(
+                ['git', 'branch', '--list', branch_name],
+                cwd=root,
+                capture_output=True,
+                text=True,
+            )
+            
+            if check_result.stdout.strip():
+                # Branch exists, use timestamp to make unique
+                import time as time_module
+                branch_name = f"suspended-{run_id}-{int(time_module.time())}"
+            
             subprocess.run(['git', 'checkout', '-b', branch_name], cwd=root, capture_output=True)
             suspension_data['sandbox_branch'] = branch_name
             suspension_data['audit_trail']['sandbox_branch'] = branch_name
@@ -281,6 +295,8 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
     print(f"[TeaAgent] Run ID: {run_id}")
     print(f"[TeaAgent] To attach: teaagent attach {run_id} --follow")
     print(f"[TeaAgent] To resume: teaagent resume {run_id}")
+    print(f"[TeaAgent] To review: teaagent agent interactive-review {run_id}")
+    print(f"[TeaAgent] Note: Background execution requires manual setup")
     
     return run_id
 

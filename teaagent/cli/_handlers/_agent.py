@@ -734,8 +734,34 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
     
     root_path = Path(root).resolve()
     
+    # Verify suspension file exists for this run_id
+    tea_dir = root_path / '.teaagent'
+    suspension_file = tea_dir / f'suspension-{run_id}.json'
+    
+    if not suspension_file.exists():
+        print(f'[TeaAgent] Error: No suspension data found for run_id {run_id}')
+        print(f'[TeaAgent] Expected file: {suspension_file}')
+        return 1
+    
+    # Load and validate suspension data
+    try:
+        with open(suspension_file) as f:
+            suspension_data = json.load(f)
+    except json.JSONDecodeError as exc:
+        print(f'[TeaAgent] Error: Corrupted suspension data: {exc}')
+        return 1
+    except Exception as exc:
+        print(f'[TeaAgent] Error loading suspension data: {exc}')
+        return 1
+    
+    # Verify ACP compliance
+    if 'acp_version' not in suspension_data:
+        print('[TeaAgent] Warning: Suspension data missing ACP version field')
+    
     print(f'\n=== Interactive Review Mode ===')
     print(f'Reviewing results from run: {run_id}')
+    print(f'Original mode: {suspension_data.get("mode", "unknown")}')
+    print(f'Suspended at: {__import__("time").ctime(suspension_data.get("timestamp", 0))}')
     print()
     
     # Get changed files from the run
@@ -806,6 +832,9 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
             elif choice == 'r':
                 review_decisions[file_path] = 'rejected'
                 print(f'✗ Rejected {file_path} (marked for AI reconsideration)')
+                # Apply rejection by reverting the file
+                subprocess.run(['git', 'checkout', '--', file_path], cwd=root_path, capture_output=True)
+                print(f'  Reverted changes to {file_path}')
                 current_index += 1
             elif choice == 'n':
                 print(f'→ Skipped {file_path}')
@@ -828,8 +857,6 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
         print(f'Skipped: {len(changed_files) - len(review_decisions)}')
         
         # Save review decisions with ACP compliance
-        tea_dir = root_path / '.teaagent'
-        tea_dir.mkdir(parents=True, exist_ok=True)
         review_file = tea_dir / f'review-{run_id}.json'
         
         try:
@@ -842,9 +869,10 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
                     'decisions': review_decisions,
                     'audit_trail': {
                         'review_time': time.time(),
-                        'original_mode': 'robot',
+                        'original_mode': suspension_data.get('mode', 'unknown'),
                         'transition_type': 'robot_to_keyboard',
                         'files_reviewed': len(changed_files),
+                        'suspension_data': suspension_data.get('audit_trail', {}),
                     }
                 }, f, indent=2)
             print(f'\nReview decisions saved to {review_file}')

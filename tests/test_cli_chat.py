@@ -615,6 +615,7 @@ def test_suspend_to_background_preserves_context(capsys):
 def test_interactive_review_mode_no_changes(capsys):
     """Test interactive review mode with no changes."""
     import subprocess
+    import json
     
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize git repo
@@ -627,6 +628,22 @@ def test_interactive_review_mode_no_changes(capsys):
         subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
         subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
         
+        # Create suspension file for the run_id
+        tea_dir = Path(tmpdir) / '.teaagent'
+        tea_dir.mkdir(parents=True, exist_ok=True)
+        suspension_file = tea_dir / 'suspension-test-run-id.json'
+        suspension_data = {
+            'run_id': 'test-run-id',
+            'timestamp': __import__('time').time(),
+            'acp_version': '1.0.0',
+            'mode': 'suspended_from_repl',
+            'config': {},
+            'session_context': {'observations_count': 0, 'compaction_count': 0},
+            'targeted_files': [],
+            'audit_trail': {'suspension_time': __import__('time').time(), 'original_mode': 'repl', 'transition_type': 'keyboard_to_robot'}
+        }
+        suspension_file.write_text(json.dumps(suspension_data, indent=2))
+        
         result = interactive_review_mode(tmpdir, "test-run-id")
         captured = capsys.readouterr()
         
@@ -634,8 +651,8 @@ def test_interactive_review_mode_no_changes(capsys):
         assert "No changes detected to review" in captured.out
 
 
-def test_interactive_review_mode_with_changes(capsys, monkeypatch):
-    """Test interactive review mode with file changes."""
+def test_interactive_review_mode_invalid_run_id(capsys):
+    """Test interactive review mode with invalid run_id."""
     import subprocess
     
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -652,6 +669,49 @@ def test_interactive_review_mode_with_changes(capsys, monkeypatch):
         # Make changes
         (Path(tmpdir) / "test.txt").write_text("modified content")
         
+        result = interactive_review_mode(tmpdir, "invalid-run-id")
+        captured = capsys.readouterr()
+        
+        # Should fail with error about missing suspension data
+        assert result == 1
+        assert "No suspension data found" in captured.out
+
+
+def test_interactive_review_mode_with_changes(capsys, monkeypatch):
+    """Test interactive review mode with file changes."""
+    import subprocess
+    import json
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Initialize git repo
+        subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        
+        # Create initial commit
+        (Path(tmpdir) / "test.txt").write_text("initial content")
+        subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        
+        # Create suspension file for the run_id
+        tea_dir = Path(tmpdir) / '.teaagent'
+        tea_dir.mkdir(parents=True, exist_ok=True)
+        suspension_file = tea_dir / 'suspension-test-run-id.json'
+        suspension_data = {
+            'run_id': 'test-run-id',
+            'timestamp': __import__('time').time(),
+            'acp_version': '1.0.0',
+            'mode': 'suspended_from_repl',
+            'config': {},
+            'session_context': {'observations_count': 0, 'compaction_count': 0},
+            'targeted_files': [],
+            'audit_trail': {'suspension_time': __import__('time').time(), 'original_mode': 'repl', 'transition_type': 'keyboard_to_robot'}
+        }
+        suspension_file.write_text(json.dumps(suspension_data, indent=2))
+        
+        # Make changes
+        (Path(tmpdir) / "test.txt").write_text("modified content")
+        
         # Mock user input to skip the file (n for next)
         inputs = ["n"]  # Skip the file
         monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0) if inputs else "n")
@@ -659,7 +719,7 @@ def test_interactive_review_mode_with_changes(capsys, monkeypatch):
         result = interactive_review_mode(tmpdir, "test-run-id")
         captured = capsys.readouterr()
         
-        # The function should complete (return code may vary based on implementation)
+        # The function should complete
         assert "Interactive Review Mode" in captured.out or "Review" in captured.out
 
 
