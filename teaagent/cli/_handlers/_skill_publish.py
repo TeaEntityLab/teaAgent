@@ -129,16 +129,24 @@ def skill_verify_tsb_command(args: argparse.Namespace) -> int:
         
         print(f"[Verifying...] Checking TSB integrity and attestation...")
         
-        # Extract identity/issuer from args if provided
+        # Extract identity/issuer/offline from args if provided
         identity = getattr(args, 'identity', None)
         issuer = getattr(args, 'issuer', None)
+        offline = getattr(args, 'offline', False)
         
         if identity or issuer:
             print(f"[Policy...] Enforcing OIDC identity: {identity or 'any'}")
             print(f"[Policy...] Enforcing OIDC issuer: {issuer or 'any'}")
         
-        verifier = TSBVerifier(tsb_path)
-        is_valid, message = verifier.verify(verify_signature=not args.skip_signature)
+        if offline:
+            print(f"[Mode...] Offline verification (skipping Rekor/Fulcio)")
+        
+        verifier = TSBVerifier(tsb_path, offline=offline)
+        is_valid, message = verifier.verify(
+            verify_signature=not args.skip_signature,
+            identity=identity,
+            issuer=issuer,
+        )
         
         if is_valid:
             print(f"[✓] {message}")

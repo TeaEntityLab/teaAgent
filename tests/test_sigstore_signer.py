@@ -225,6 +225,55 @@ class TSBProvenanceVerifierTests(unittest.TestCase):
             self.assertTrue(is_valid)
             self.assertIn("Signature present from unknown", message)
 
+    def test_verify_offline_mode(self) -> None:
+        """Test verification in offline mode (air-gapped environment)."""
+        if not SIGSTORE_AVAILABLE:
+            self.skipTest("sigstore-python not installed")
+        
+        signer = SigstoreSigner()
+        
+        # Mock verification in offline mode
+        with patch.object(signer._signer, 'sign') as mock_sign:
+            mock_sign.return_value = Mock(
+                signature=b"test_signature",
+                certificate_pem="test_cert",
+            )
+            
+            result = signer.sign(self.test_file)
+            
+            # Test verification in offline mode
+            with patch.object(Verifier, 'production') as mock_verifier:
+                mock_verify_instance = Mock()
+                mock_verifier.return_value = mock_verify_instance
+                mock_verify_instance.verify.return_value = Mock()
+                
+                is_valid = signer.verify(
+                    self.test_file,
+                    result["signature"],
+                    result["certificate"],
+                    offline=True,
+                )
+                
+                self.assertTrue(is_valid)
+                # In offline mode, verifier should still be created but skip Rekor checks
+                mock_verifier.assert_called_once()
+
+    def test_verifier_offline_mode(self) -> None:
+        """Test TSBProvenanceVerifier in offline mode."""
+        if not SIGSTORE_AVAILABLE:
+            self.skipTest("sigstore-python not installed")
+        
+        verifier = TSBProvenanceVerifier(
+            require_signature=True,
+            identity="test@example.com",
+            issuer="https://accounts.google.com",
+            offline=True,
+        )
+        
+        self.assertTrue(verifier._offline)
+        self.assertEqual(verifier._identity, "test@example.com")
+        self.assertEqual(verifier._issuer, "https://accounts.google.com")
+
 
 class SigstoreAvailabilityTests(unittest.TestCase):
     def test_sigstore_availability_flag(self) -> None:

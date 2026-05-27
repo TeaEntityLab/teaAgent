@@ -44,6 +44,15 @@ _WRITE_FILE_TOOLS = frozenset(
 _PROMPT = '[y]es / [n]o / [e]xplain? '
 _MAX_DIFF_LINES = 80
 
+# Color codes for enhanced terminal output (if supported)
+_COLOR_RESET = '\033[0m'
+_COLOR_BOLD = '\033[1m'
+_COLOR_YELLOW = '\033[33m'
+_COLOR_GREEN = '\033[32m'
+_COLOR_RED = '\033[31m'
+_COLOR_BLUE = '\033[34m'
+_COLOR_CYAN = '\033[36m'
+
 
 class DiffApprovalHandler:
     """Interactive HITL approval handler that shows a unified diff.
@@ -68,20 +77,31 @@ class DiffApprovalHandler:
         input_fn: Callable[[str], str] = input,
         output_fn: Callable[[str], None] = print,
         max_prompts: int = 5,
+        enable_colors: bool = True,
     ) -> None:
         self._root = Path(workspace_root).resolve()
         self._input = input_fn
         self._output = output_fn
         self._max_prompts = max_prompts
+        self._enable_colors = enable_colors
 
     # ------------------------------------------------------------------
     # ApprovalHandler protocol
     # ------------------------------------------------------------------
 
+    def _colorize(self, text: str, color: str) -> str:
+        """Apply color to text if colors are enabled."""
+        if not self._enable_colors:
+            return text
+        return f"{color}{text}{_COLOR_RESET}"
+
     def __call__(self, request: ApprovalRequest) -> bool:
         self._output('')
-        self._output(f'  Tool: {request.tool_name}  (call_id: {request.call_id})')
-        self._output(f'  Reason: {request.reason}')
+        tool_name = self._colorize(request.tool_name, _COLOR_BOLD + _COLOR_CYAN)
+        call_id = self._colorize(str(request.call_id), _COLOR_YELLOW)
+        reason = self._colorize(request.reason, _COLOR_YELLOW)
+        self._output(f'  Tool: {tool_name}  (call_id: {call_id})')
+        self._output(f'  Reason: {reason}')
 
         self._show_preview(request)
 
@@ -202,11 +222,20 @@ class DiffApprovalHandler:
         if not diff:
             self._output(f'  (no diff for {rel})')
             return
-        self._output(f'  Diff for {rel}:')
+        rel_colored = self._colorize(rel, _COLOR_BOLD + _COLOR_BLUE)
+        self._output(f'  Diff for {rel_colored}:')
         for line in diff[:_MAX_DIFF_LINES]:
+            # Colorize diff lines
+            if line.startswith('+') and not line.startswith('+++'):
+                line = self._colorize(line, _COLOR_GREEN)
+            elif line.startswith('-') and not line.startswith('---'):
+                line = self._colorize(line, _COLOR_RED)
+            elif line.startswith('@@'):
+                line = self._colorize(line, _COLOR_CYAN)
             self._output(f'  {line}')
         if len(diff) > _MAX_DIFF_LINES:
-            self._output(f'  ... ({len(diff) - _MAX_DIFF_LINES} more lines)')
+            more = self._colorize(f'... ({len(diff) - _MAX_DIFF_LINES} more lines)', _COLOR_YELLOW)
+            self._output(f'  {more}')
 
     def _explain(self, request: ApprovalRequest) -> None:
         self._output('')

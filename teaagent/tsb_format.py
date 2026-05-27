@@ -366,20 +366,30 @@ class TSBBuilder:
 class TSBVerifier:
     """Verifier for Provenanced Skill Bundles."""
     
-    def __init__(self, tsb_path: Path) -> None:
+    def __init__(self, tsb_path: Path, offline: bool = False) -> None:
         """Initialize TSB verifier.
         
         Args:
             tsb_path: Path to TSB file.
+            offline: If True, skip Rekor/Fulcio online verification for air-gapped environments.
         """
         self._tsb_path = Path(tsb_path).resolve()
+        self._offline = offline
     
-    def verify(self, verify_signature: bool = True, skip_audit_verification: bool = False) -> tuple[bool, str]:
+    def verify(
+        self,
+        verify_signature: bool = True,
+        skip_audit_verification: bool = False,
+        identity: str | None = None,
+        issuer: str | None = None,
+    ) -> tuple[bool, str]:
         """Verify TSB integrity and attestation.
         
         Args:
             verify_signature: Whether to verify cryptographic signature.
             skip_audit_verification: Skip audit chain verification (for testing).
+            identity: Optional OIDC identity to enforce (e.g., email).
+            issuer: Optional OIDC issuer to enforce (e.g., "https://accounts.google.com").
             
         Returns:
             Tuple of (is_valid, error_message).
@@ -452,11 +462,11 @@ class TSBVerifier:
                 # Use TSBProvenanceVerifier for verification if available
                 if SIGSTORE_AVAILABLE:
                     try:
-                        # TODO: Make identity/issuer configurable via CLI or config
                         verifier = TSBProvenanceVerifier(
                             require_signature=True,
-                            identity=None,  # Optional: enforce specific email
-                            issuer=None,  # Optional: enforce specific OIDC issuer
+                            identity=identity,  # Optional: enforce specific email
+                            issuer=issuer,  # Optional: enforce specific OIDC issuer
+                            offline=self._offline,  # Offline mode for air-gapped environments
                         )
                         is_valid, message = verifier.verify_provenance(self._tsb_path, manifest_data)
                         if not is_valid:

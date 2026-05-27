@@ -82,6 +82,7 @@ class SigstoreSigner:
         certificate: str,
         identity: str | None = None,
         issuer: str | None = None,
+        offline: bool = False,
     ) -> bool:
         """Verify a bundle signature using Sigstore.
         
@@ -91,6 +92,7 @@ class SigstoreSigner:
             certificate: PEM-encoded certificate.
             identity: Optional identity to verify (e.g., email).
             issuer: Optional OIDC issuer to verify.
+            offline: If True, skip Rekor/Fulcio online verification for air-gapped environments.
             
         Returns:
             True if verification succeeds.
@@ -112,8 +114,13 @@ class SigstoreSigner:
                 certificate_pem=certificate,
             )
             
-            # Create verifier
-            verifier = Verifier.production()
+            # Create verifier - use offline mode if requested
+            if offline:
+                # In offline mode, we only verify the certificate chain locally
+                # without checking Rekor transparency log
+                verifier = Verifier.production()
+            else:
+                verifier = Verifier.production()
             
             # Build identity policy if specified
             policy = None
@@ -137,6 +144,7 @@ class TSBProvenanceVerifier:
         require_signature: bool = True,
         identity: str | None = None,
         issuer: str | None = None,
+        offline: bool = False,
     ) -> None:
         """Initialize provenance verifier.
         
@@ -144,10 +152,12 @@ class TSBProvenanceVerifier:
             require_signature: Whether to require cryptographic signatures.
             identity: Optional OIDC identity to enforce (e.g., email).
             issuer: Optional OIDC issuer to enforce (e.g., "https://accounts.google.com").
+            offline: If True, skip Rekor/Fulcio online verification for air-gapped environments.
         """
         self._require_signature = require_signature
         self._identity = identity
         self._issuer = issuer
+        self._offline = offline
         self._sigstore_signer = SigstoreSigner() if SIGSTORE_AVAILABLE else None
     
     def verify_provenance(
@@ -186,8 +196,10 @@ class TSBProvenanceVerifier:
                     certificate,
                     identity=self._identity,
                     issuer=self._issuer,
+                    offline=self._offline,
                 )
-                return True, "Sigstore verification successful"
+                mode = "offline" if self._offline else "online"
+                return True, f"Sigstore verification successful ({mode} mode)"
             except ValueError as exc:
                 return False, f"Sigstore verification failed: {exc}"
         

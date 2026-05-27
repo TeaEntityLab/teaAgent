@@ -13,6 +13,7 @@ from typing import Optional
 
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.config_loader import ConfigResolver
+from teaagent.context import ContextCompactor
 from teaagent.llm import available_providers
 from teaagent.policy import parse_permission_mode
 
@@ -65,6 +66,20 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     # Session cost accumulator
     session_cost_cents = 0.0
     
+    # Context compactor for session management
+    compactor = ContextCompactor(
+        recent_observations=3,
+        threshold_low=0.75,
+        threshold_high=0.92,
+        enable_semantic_compression=True,
+    )
+    
+    # Session context for compaction
+    session_context = {
+        'observations': [],
+        'compaction_count': 0,
+    }
+    
     # If initial task provided, execute it first
     if initial_task:
         print(f"[TeaAgent] Executing initial task: {initial_task}")
@@ -73,6 +88,11 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             return result
         # Placeholder cost tracking for initial task
         session_cost_cents += 10
+        session_context['observations'].append({
+            'task': initial_task,
+            'result': result,
+            'cost_cents': 10,
+        })
         print()
     
     # REPL loop
@@ -96,8 +116,13 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             
             # Handle compact command
             if user_input == '/compact':
-                print("[TeaAgent] Context compaction is available via ContextCompactor")
-                print("[TeaAgent] In chat mode, context is managed per-task. For persistent context management, use the CLI.")
+                print("[TeaAgent] Compacting session context...")
+                compaction_result = compactor.compact(session_context)
+                print(f"[TeaAgent] Compaction complete:")
+                print(f"  - Tokens saved: ~{compaction_result.tokens_saved}")
+                print(f"  - Compression ratio: {compaction_result.compression_ratio:.2%}")
+                print(f"  - Total compactions: {session_context.get('compaction_count', 0)}")
+                print(f"  - Observations retained: {len(session_context.get('observations', []))}")
                 continue
             
             # Handle cost command

@@ -148,4 +148,5 @@ def register(
     verify_tsb.add_argument('--skip-signature', action='store_true', help='Skip signature verification.')
     verify_tsb.add_argument('--identity', help='Require specific OIDC identity (e.g., email).')
     verify_tsb.add_argument('--issuer', help='Require specific OIDC issuer (e.g., https://accounts.google.com).')
+    verify_tsb.add_argument('--offline', action='store_true', help='Skip Rekor/Fulcio online verification for air-gapped environments.')
     verify_tsb.set_defaults(func=handlers.get('verify_tsb'))
