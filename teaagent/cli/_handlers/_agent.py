@@ -309,19 +309,19 @@ def _execute_agent_task(
         
         # Option A: Auto-enable without prompt (always consent or non-interactive)
         if consent == 'always' or not is_interactive:
-            print('[TeaAgent] Git repository detected. Safe git sandbox auto-enabled.')
+            print('[TeaAgent] Git repository detected. Safe git sandbox auto-enabled.', file=sys.stderr)
             sandbox_result = git_sandbox.start(auto_stash=auto_stash)
             if not sandbox_result.success:
                 print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
                 git_sandbox_available = False
         # Option B: Interactive prompting
         else:
-            print('[TeaAgent] Git repository detected. Would you like to run in a safe sandbox branch? [Y/n/always]: ', end='')
+            print('[TeaAgent] Git repository detected. Would you like to run in a safe sandbox branch? [Y/n/always]: ', end='', file=sys.stderr)
             choice = input().strip().lower()
             
             if choice in ('always', 'a'):
                 _save_git_sandbox_consent(args.root, 'always')
-                print('[TeaAgent] Preference saved. Safe git sandbox will be auto-enabled for this project.')
+                print('[TeaAgent] Preference saved. Safe git sandbox will be auto-enabled for this project.', file=sys.stderr)
                 sandbox_result = git_sandbox.start(auto_stash=auto_stash)
                 if not sandbox_result.success:
                     print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
@@ -332,7 +332,7 @@ def _execute_agent_task(
                     print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
                     git_sandbox_available = False
             else:
-                print('[TeaAgent] Sandbox declined. Running in local workspace directly.')
+                print('[TeaAgent] Sandbox declined. Running in local workspace directly.', file=sys.stderr)
                 git_sandbox_available = False
 
     undo_journal = UndoJournal(args.root)
@@ -557,87 +557,42 @@ def _execute_agent_task(
                             if git_sandbox._stash_id:
                                 from teaagent.git_sandbox import stash_pop
                                 stash_pop(args.root)
-                            print(f'[TeaAgent] Merge completed with manual resolution.')
+                            print(f'[TeaAgent] Merge completed with manual resolution.', file=sys.stderr)
 
+    if _telemetry_sink is not None:
+        from contextlib import suppress
 
-def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
-    """Show interactive diff before merge prompt.
-    
-    Args:
-        root: The workspace root directory
-        sandbox_branch: The sandbox branch name
-        
-    Returns:
-        True if user wants to proceed, False to cancel
-    """
-    import subprocess
-    from pathlib import Path
-    
-    root_path = Path(root).resolve()
-    
-    print(f'\n=== Sandbox Merge Preview ===')
-    print(f'Branch: {sandbox_branch}')
-    print()
-    
-    # Get diff summary
-    try:
-        # Get list of changed files
-        result = subprocess.run(
-            ['git', 'diff', '--stat', f'{sandbox_branch}'],
-            cwd=root_path,
-            capture_output=True,
-            text=True,
-        )
-        
-        if result.returncode == 0 and result.stdout.strip():
-            print('Changed files:')
-            print(result.stdout)
-        else:
-            print('No changes detected in sandbox branch.')
-            return True
-        
-        # Ask if user wants to see detailed diff
-        print('\nView detailed diff? [Y/n]: ', end='')
-        choice = input().strip().lower()
-        
-        if choice in ('n', 'no'):
-            return True
-        
-        # Show detailed diff with color
-        print('\n=== Detailed Changes ===')
-        result = subprocess.run(
-            ['git', 'diff', '--color=always', f'{sandbox_branch}'],
-            cwd=root_path,
-            capture_output=True,
-            text=True,
-        )
-        
-        if result.stdout:
-            # Paginate output if it's long
-            lines = result.stdout.split('\n')
-            if len(lines) > 50:
-                # Show first 30 lines
-                print('\n'.join(lines[:30]))
-                print(f'\n... ({len(lines) - 30} more lines)')
-                print('Press Enter to see more, or q to quit: ', end='')
-                more = input().strip().lower()
-                if more != 'q':
-                    print('\n'.join(lines[30:]))
-            else:
-                print(result.stdout)
-        else:
-            print('No detailed changes available.')
-        
-        print('\n=== End of Diff ===')
-        
-    except FileNotFoundError:
-        print('[TeaAgent] Git not found in PATH')
-        return True
-    except Exception as exc:
-        print(f'[TeaAgent] Error getting diff: {exc}')
-        return True
-    
-    return True
+        with suppress(Exception):
+            _telemetry_sink.force_flush()
+    events = store.show_run(result.run_id)
+    payload = run_result_payload(
+        result,
+        routing=routing.to_dict() if routing else None,
+        audit_summary=summarize_audit_events(events),
+        permission_mode=resolved_permission_mode.value,
+    )
+    if plan_contract is not None:
+        payload['plan_contract'] = plan_contract.to_dict()
+    if resumed_from:
+        payload['resumed_from'] = resumed_from
+        payload['task'] = task
+        if initial_observations:
+            payload['replayed_observations'] = len(initial_observations)
+        if initial_context_extra and initial_context_extra.get('resume_compaction'):
+            payload['resume_compaction'] = initial_context_extra['resume_compaction']
+        if auto_approved_call_id is not None:
+            payload['auto_approved_call_id'] = auto_approved_call_id
+    if getattr(args, 'json_stream', False):
+        from teaagent.streaming.events import StreamEvent, emit_stream_event
+
+        emit_stream_event(StreamEvent('run_result', payload))
+    else:
+        print_json(payload)
+    if getattr(args, 'notify', False):
+        from teaagent.ergonomics.notify import notify
+
+        notify('TeaAgent', f'Run {result.run_id} {result.status}')
+    return 0 if result.status == 'completed' else 1
 
 
 def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:

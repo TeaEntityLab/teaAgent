@@ -51,7 +51,10 @@ class CLITests(unittest.TestCase):
                     ]
                 )
 
-            payload = json.loads(output.getvalue())
+            try:
+                payload = json.loads(output.getvalue())
+            except Exception as e:
+                raise ValueError(f"JSONDecodeError: output.getvalue() is {repr(output.getvalue())}, exit_code was {exit_code}") from e
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload['status'], 'completed')
 
