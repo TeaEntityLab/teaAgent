@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
@@ -120,6 +121,67 @@ class TeaAgentTUI:
         self._session_store: Optional[SessionStore] = None
         self._session: Optional['PromptSession'] = None
 
+    def _should_use_split_pane(self) -> bool:
+        """Check if terminal is large enough for split-pane layout."""
+        try:
+            columns, lines = shutil.get_terminal_size()
+            return columns >= 120 and lines >= 30
+        except (OSError, ValueError):
+            return False
+
+    def _print_state_panel(self) -> None:
+        """Print the state panel showing token budget, files, and memory."""
+        try:
+            columns, lines = shutil.get_terminal_size()
+        except (OSError, ValueError):
+            return
+
+        # Clear screen and print header
+        print('\033[2J\033[H', end='')  # Clear screen
+        print('=' * columns)
+        print(f'TeaAgent TUI {__version__} - State Panel')
+        print('=' * columns)
+
+        # Left panel: Chat area placeholder
+        print('\n[Chat Area - Enter commands below]')
+        print('-' * columns)
+
+        # Right panel: State information
+        print('\n[State Panel]')
+        print(f'Provider: {self.provider}')
+        print(f'Model: {self.model or "default"}')
+        print(f'Root: {self.root}')
+        print(f'Permission Mode: {self.permission_mode.value}')
+        print(f'Destructive: {"allowed" if self.allow_destructive else "blocked"}')
+        print(f'Chat: {"enabled" if self.chat else "disabled"}')
+
+        # Recent runs
+        try:
+            from teaagent.run_store import RunStore
+
+            store = RunStore(self.root, readonly=True)
+            recent_runs = store.list_runs(limit=3)
+            print(f'\nRecent Runs: {len(recent_runs)}')
+            for run in recent_runs:
+                print(f'  - {run.run_id[:8]}: {run.status}')
+        except Exception:
+            print('\nRecent Runs: (unavailable)')
+
+        # Memory catalog
+        try:
+            from teaagent.memory import MemoryCatalog
+
+            memory = MemoryCatalog(self.root, readonly=True)
+            memories = memory.list(limit=3)
+            print(f'\nMemory Entries: {len(memories)}')
+            for mem in memories:
+                print(f'  - {mem.mem_id[:8]}: {mem.content[:30]}...')
+        except Exception:
+            print('\nMemory Entries: (unavailable)')
+
+        print('=' * columns)
+        print()
+
     def run(self, *, run_setup: bool = False, setup_write_env: bool = False) -> int:
         self._load_workspace_defaults()
         self._load_tui_state()
@@ -128,6 +190,11 @@ class TeaAgentTUI:
             from teaagent.tui._setup import run_tui_setup
 
             run_tui_setup(self, write_env=setup_write_env)
+
+        # Check if we should use split-pane layout
+        use_split_pane = self._should_use_split_pane()
+        if use_split_pane:
+            self.output_fn('[TeaAgent] Split-pane layout enabled (terminal size >= 120x30)')
 
         # Initialize prompt_toolkit session if available and no custom input_fn is provided
         if self.input_fn is None:
@@ -147,6 +214,9 @@ class TeaAgentTUI:
 
         while True:
             try:
+                if use_split_pane:
+                    self._print_state_panel()
+
                 if self.input_fn:
                     raw_command = self.input_fn(self._prompt())
                 elif self._session:

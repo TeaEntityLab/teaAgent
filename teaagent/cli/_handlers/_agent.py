@@ -237,6 +237,16 @@ def _execute_agent_task(
     store = RunStore(args.root)
     audit = store.audit_logger()
     from teaagent.run_undo import UndoJournal
+    from teaagent.git_sandbox import GitBranchSandbox
+
+    # Initialize git sandbox if available (will be updated with actual run_id later)
+    git_sandbox = GitBranchSandbox(args.root, run_id='pending')
+    git_sandbox_available = git_sandbox.is_available()
+    if git_sandbox_available:
+        sandbox_result = git_sandbox.start()
+        if not sandbox_result.success:
+            print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
+            git_sandbox_available = False
 
     undo_journal = UndoJournal(args.root)
     audit.add_sink(undo_journal)
@@ -328,6 +338,18 @@ def _execute_agent_task(
     store.logger_for_result(result, audit)
     if undo_journal.has_entries:
         undo_journal.save_to(store.undo_path(result.run_id))
+
+    # Update git sandbox with actual run_id and commit changes
+    if git_sandbox_available:
+        # Re-create sandbox with actual run_id
+        git_sandbox = GitBranchSandbox(args.root, run_id=result.run_id)
+        if git_sandbox.is_available():
+            git_sandbox.start()
+            if result.status == 'completed':
+                commit_result = git_sandbox.commit(f'teaagent run: {task[:50]}')
+                if not commit_result.success:
+                    print(f'[TeaAgent WARNING] Git commit failed: {commit_result.error}', file=sys.stderr)
+
     if _telemetry_sink is not None:
         from contextlib import suppress
 
@@ -510,6 +532,7 @@ def agent_plan_command(args: argparse.Namespace) -> int:
 
 
 def agent_undo_command(args: argparse.Namespace) -> int:
+    from teaagent.git_sandbox import GitBranchSandbox
     from teaagent.run_undo import UndoJournal
 
     store = RunStore(args.root)
@@ -524,6 +547,25 @@ def agent_undo_command(args: argparse.Namespace) -> int:
                 }
             )
             return 1
+
+    # Try git sandbox rollback first
+    git_sandbox = GitBranchSandbox(args.root, run_id=run_id)
+    if git_sandbox.is_available():
+        rollback_result = git_sandbox.rollback()
+        if rollback_result.success:
+            print_json(
+                {
+                    'status': 'restored',
+                    'method': 'git',
+                    'run_id': run_id,
+                    'branch': rollback_result.branch_name,
+                }
+            )
+            return 0
+        else:
+            print(f'[TeaAgent WARNING] Git rollback failed: {rollback_result.error}, falling back to UndoJournal', file=sys.stderr)
+
+    # Fallback to UndoJournal
     undo_path = store.undo_path(run_id)
     if not undo_path.is_file():
         print_json(
@@ -540,6 +582,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:
     rel_undo = undo_path.resolve().relative_to(store.root).as_posix()
     payload = {
         'status': status,
+        'method': 'journal',
         'run_id': run_id,
         'restored': result.restored,
         'deleted': result.deleted,
