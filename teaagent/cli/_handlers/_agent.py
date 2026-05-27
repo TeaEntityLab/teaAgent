@@ -147,6 +147,24 @@ def _resolve_auto_compact(args: argparse.Namespace) -> bool:
     return bool(defaults.get('auto_compact_on_resume', True))
 
 
+def _save_git_sandbox_consent(root: str | Path, value: str) -> None:
+    root_path = Path(root).resolve()
+    tea_dir = root_path / '.teaagent'
+    tea_dir.mkdir(parents=True, exist_ok=True)
+    json_path = tea_dir / 'config.json'
+    config = {}
+    if json_path.is_file():
+        try:
+            config = json.loads(json_path.read_text(encoding='utf-8'))
+        except Exception:
+            pass
+    config['git_sandbox_consent'] = value
+    try:
+        json_path.write_text(json.dumps(config, sort_keys=True, indent=2), encoding='utf-8')
+    except Exception as exc:
+        print(f"Warning: Failed to save configuration: {exc}", file=sys.stderr)
+
+
 def agent_resume_command(args: argparse.Namespace) -> int:
     store = RunStore(args.root)
     try:

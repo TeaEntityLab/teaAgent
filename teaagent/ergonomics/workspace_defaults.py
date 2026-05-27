@@ -23,8 +23,8 @@ DEFAULT_KEYS = {
     'heartbeat': 0.0,
     'daily_cost_cap_cents': 0,
     'auto_compact_on_resume': True,
-    'root': '.',
     'git_sandbox_consent': 'prompt',
+    'root': '.',
 }
 
 

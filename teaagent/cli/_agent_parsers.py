@@ -277,6 +277,13 @@ def register_top_level_agent_aliases(
     _plan(subparsers, handlers['plan'], top_level=True)
     _resume(subparsers, handlers['resume'], top_level=True)
     _runs(subparsers, handlers['runs'], top_level=True)
+    if 'chat' in handlers:
+        _chat(
+            subparsers,
+            handlers['chat'],
+            help='Interactive chat REPL (alias for agent chat).',
+            defaults={'command': 'agent', 'agent_command': 'chat'},
+        )
 
 
 def _run(
@@ -505,11 +512,20 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
     p.set_defaults(func=handler, agent_command='attach')
 
 
-def _chat(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
-    p = subs.add_parser('chat', help='Interactive chat REPL for continuous agent interaction.')
+def _chat(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+    *,
+    help: str = 'Interactive chat REPL for continuous agent interaction.',
+    defaults: Optional[dict[str, object]] = None,
+) -> None:
+    p = subs.add_parser('chat', help=help)
     p.add_argument('task', nargs='?', default=None, help='Initial task to execute (optional).')
     add_agent_run_arguments(p)
-    p.set_defaults(func=handler, agent_command='chat')
+    base_defaults = {'func': handler, 'agent_command': 'chat'}
+    if defaults:
+        base_defaults.update(defaults)
+    p.set_defaults(**base_defaults)
 
 
 def _resume(
