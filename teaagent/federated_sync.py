@@ -1,0 +1,393 @@
+"""Federated graph sync protocol for multi-agent collaboration.
+
+This module provides FederatedGraphSync for synchronizing code ontology
+graphs across multiple TeaAgent instances, enabling collaborative code
+intelligence with conflict resolution and incremental updates.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
+
+from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
+
+
+@dataclass(frozen=True)
+class GraphChange:
+    """Represents a single change to the graph."""
+    change_id: str
+    timestamp: float
+    node_id: Optional[str] = None
+    edge_id: Optional[str] = None
+    change_type: str = ""  # "node_add", "node_update", "node_delete", "edge_add", "edge_delete"
+    data: dict[str, Any] = field(default_factory=dict)
+    source_agent_id: str = ""
+
+
+@dataclass(frozen=True)
+class SyncMessage:
+    """Message sent between agents for graph synchronization."""
+    message_id: str
+    sender_agent_id: str
+    timestamp: float
+    changes: list[GraphChange]
+    sequence_number: int
+    graph_version: str
+
+
+@dataclass(frozen=True)
+class SyncAck:
+    """Acknowledgment message for sync confirmation."""
+    message_id: str
+    receiver_agent_id: str
+    timestamp: float
+    accepted_changes: list[str]
+    rejected_changes: list[str]
+    conflicts: list[str]
+
+
+@dataclass(frozen=True)
+class SyncState:
+    """Current synchronization state for an agent."""
+    agent_id: str
+    graph_version: str
+    last_sync_time: float
+    sequence_number: int
+    peer_states: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+
+class FederatedGraphSync:
+    """Manages federated synchronization of code ontology graphs."""
+
+    def __init__(
+        self,
+        root: str | Path,
+        agent_id: str,
+        graph_store: Optional[GraphQLiteGraphStore] = None,
+    ) -> None:
+        self._root = Path(root).resolve()
+        self._agent_id = agent_id
+        self._graph_store = graph_store
+        self._sync_state_path = self._root / '.teaagent' / 'federated_sync_state.json'
+        self._sync_state = self._load_sync_state()
+        self._pending_changes: list[GraphChange] = []
+
+    def _load_sync_state(self) -> SyncState:
+        """Load sync state from disk."""
+        if not self._sync_state_path.exists():
+            return SyncState(
+                agent_id=self._agent_id,
+                graph_version="0",
+                last_sync_time=0.0,
+                sequence_number=0,
+            )
+        
+        try:
+            data = json.loads(self._sync_state_path.read_text(encoding='utf-8'))
+            return SyncState(
+                agent_id=data['agent_id'],
+                graph_version=data['graph_version'],
+                last_sync_time=data['last_sync_time'],
+                sequence_number=data['sequence_number'],
+                peer_states=data.get('peer_states', {}),
+            )
+        except (json.JSONDecodeError, KeyError):
+            return SyncState(
+                agent_id=self._agent_id,
+                graph_version="0",
+                last_sync_time=0.0,
+                sequence_number=0,
+            )
+
+    def _save_sync_state(self) -> None:
+        """Save sync state to disk."""
+        self._sync_state_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            'agent_id': self._sync_state.agent_id,
+            'graph_version': self._sync_state.graph_version,
+            'last_sync_time': self._sync_state.last_sync_time,
+            'sequence_number': self._sync_state.sequence_number,
+            'peer_states': self._sync_state.peer_states,
+        }
+        self._sync_state_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+
+    def _generate_change_id(self, change_type: str, data: dict[str, Any]) -> str:
+        """Generate unique ID for a change based on content hash."""
+        content = json.dumps({'type': change_type, 'data': data}, sort_keys=True)
+        return hashlib.sha256(content.encode()).hexdigest()[:16]
+
+    def _update_graph_version(self) -> str:
+        """Update graph version based on current state."""
+        # Simple version increment - in production, use content hash
+        current_version = int(self._sync_state.graph_version) if self._sync_state.graph_version.isdigit() else 0
+        new_version = str(current_version + 1)
+        self._sync_state = SyncState(
+            agent_id=self._sync_state.agent_id,
+            graph_version=new_version,
+            last_sync_time=self._sync_state.last_sync_time,
+            sequence_number=self._sync_state.sequence_number,
+            peer_states=self._sync_state.peer_states,
+        )
+        self._save_sync_state()
+        return new_version
+
+    def record_node_change(
+        self,
+        node_id: str,
+        change_type: str,
+        data: dict[str, Any],
+    ) -> GraphChange:
+        """Record a node change for synchronization."""
+        change_id = self._generate_change_id(change_type, data)
+        change = GraphChange(
+            change_id=change_id,
+            timestamp=time.time(),
+            node_id=node_id,
+            change_type=change_type,
+            data=data,
+            source_agent_id=self._agent_id,
+        )
+        self._pending_changes.append(change)
+        return change
+
+    def record_edge_change(
+        self,
+        edge_id: str,
+        change_type: str,
+        data: dict[str, Any],
+    ) -> GraphChange:
+        """Record an edge change for synchronization."""
+        change_id = self._generate_change_id(change_type, data)
+        change = GraphChange(
+            change_id=change_id,
+            timestamp=time.time(),
+            edge_id=edge_id,
+            change_type=change_type,
+            data=data,
+            source_agent_id=self._agent_id,
+        )
+        self._pending_changes.append(change)
+        return change
+
+    def create_sync_message(self) -> SyncMessage:
+        """Create a sync message with pending changes."""
+        self._sync_state = SyncState(
+            agent_id=self._sync_state.agent_id,
+            graph_version=self._sync_state.graph_version,
+            last_sync_time=time.time(),
+            sequence_number=self._sync_state.sequence_number + 1,
+            peer_states=self._sync_state.peer_states,
+        )
+        self._save_sync_state()
+
+        message = SyncMessage(
+            message_id=hashlib.sha256(f"{self._agent_id}{time.time()}".encode()).hexdigest()[:16],
+            sender_agent_id=self._agent_id,
+            timestamp=time.time(),
+            changes=list(self._pending_changes),
+            sequence_number=self._sync_state.sequence_number,
+            graph_version=self._sync_state.graph_version,
+        )
+        
+        self._pending_changes.clear()
+        return message
+
+    def process_sync_message(self, message: SyncMessage) -> SyncAck:
+        """Process incoming sync message and apply changes."""
+        accepted_changes = []
+        rejected_changes = []
+        conflicts = []
+
+        if not self._graph_store:
+            return SyncAck(
+                message_id=message.message_id,
+                receiver_agent_id=self._agent_id,
+                timestamp=time.time(),
+                accepted_changes=[],
+                rejected_changes=[c.change_id for c in message.changes],
+                conflicts=["No graph store available"],
+            )
+
+        for change in message.changes:
+            try:
+                if self._apply_change(change):
+                    accepted_changes.append(change.change_id)
+                else:
+                    rejected_changes.append(change.change_id)
+            except Exception as exc:
+                rejected_changes.append(change.change_id)
+                conflicts.append(f"{change.change_id}: {str(exc)}")
+
+        # Update peer state
+        self._sync_state.peer_states[message.sender_agent_id] = {
+            'last_seen_sequence': message.sequence_number,
+            'graph_version': message.graph_version,
+            'last_seen_time': message.timestamp,
+        }
+        self._save_sync_state()
+
+        # Update our graph version if we accepted changes
+        if accepted_changes:
+            self._update_graph_version()
+
+        return SyncAck(
+            message_id=message.message_id,
+            receiver_agent_id=self._agent_id,
+            timestamp=time.time(),
+            accepted_changes=accepted_changes,
+            rejected_changes=rejected_changes,
+            conflicts=conflicts,
+        )
+
+    def _apply_change(self, change: GraphChange) -> bool:
+        """Apply a single change to the graph store."""
+        if change.change_type == "node_add":
+            return self._apply_node_add(change)
+        elif change.change_type == "node_update":
+            return self._apply_node_update(change)
+        elif change.change_type == "node_delete":
+            return self._apply_node_delete(change)
+        elif change.change_type == "edge_add":
+            return self._apply_edge_add(change)
+        elif change.change_type == "edge_delete":
+            return self._apply_edge_delete(change)
+        return False
+
+    def _apply_node_add(self, change: GraphChange) -> bool:
+        """Apply node addition."""
+        if not change.node_id:
+            return False
+        try:
+            self._graph_store.graph.upsert_node(
+                change.node_id,
+                change.data,
+                label=change.data.get('label', 'CodeNode'),
+            )
+            return True
+        except Exception:
+            return False
+
+    def _apply_node_update(self, change: GraphChange) -> bool:
+        """Apply node update."""
+        if not change.node_id:
+            return False
+        try:
+            self._graph_store.graph.upsert_node(
+                change.node_id,
+                change.data,
+                label=change.data.get('label', 'CodeNode'),
+            )
+            return True
+        except Exception:
+            return False
+
+    def _apply_node_delete(self, change: GraphChange) -> bool:
+        """Apply node deletion."""
+        if not change.node_id:
+            return False
+        try:
+            self._graph_store.graph.delete_node(change.node_id)
+            return True
+        except Exception:
+            return False
+
+    def _apply_edge_add(self, change: GraphChange) -> bool:
+        """Apply edge addition."""
+        if not change.edge_id:
+            return False
+        try:
+            from_id = change.data.get('from')
+            to_id = change.data.get('to')
+            edge_type = change.data.get('edge_type', 'RELATED')
+            if from_id and to_id:
+                self._graph_store.graph.upsert_edge(
+                    from_id,
+                    to_id,
+                    edge_type,
+                    change.data,
+                )
+                return True
+        except Exception:
+            return False
+        return False
+
+    def _apply_edge_delete(self, change: GraphChange) -> bool:
+        """Apply edge deletion."""
+        if not change.edge_id:
+            return False
+        try:
+            from_id = change.data.get('from')
+            to_id = change.data.get('to')
+            edge_type = change.data.get('edge_type', 'RELATED')
+            if from_id and to_id:
+                self._graph_store.graph.delete_edge(from_id, to_id, edge_type)
+                return True
+        except Exception:
+            return False
+        return False
+
+    def get_sync_state(self) -> SyncState:
+        """Get current sync state."""
+        return self._sync_state
+
+    def export_sync_message(self, message: SyncMessage, path: str | Path) -> None:
+        """Export sync message to file for webhook/P2P transfer."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            'message_id': message.message_id,
+            'sender_agent_id': message.sender_agent_id,
+            'timestamp': message.timestamp,
+            'sequence_number': message.sequence_number,
+            'graph_version': message.graph_version,
+            'changes': [
+                {
+                    'change_id': c.change_id,
+                    'timestamp': c.timestamp,
+                    'node_id': c.node_id,
+                    'edge_id': c.edge_id,
+                    'change_type': c.change_type,
+                    'data': c.data,
+                    'source_agent_id': c.source_agent_id,
+                }
+                for c in message.changes
+            ],
+        }
+        path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+
+    def import_sync_message(self, path: str | Path) -> Optional[SyncMessage]:
+        """Import sync message from file."""
+        path = Path(path)
+        if not path.exists():
+            return None
+        
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+            changes = [
+                GraphChange(
+                    change_id=c['change_id'],
+                    timestamp=c['timestamp'],
+                    node_id=c.get('node_id'),
+                    edge_id=c.get('edge_id'),
+                    change_type=c['change_type'],
+                    data=c['data'],
+                    source_agent_id=c['source_agent_id'],
+                )
+                for c in data['changes']
+            ]
+            return SyncMessage(
+                message_id=data['message_id'],
+                sender_agent_id=data['sender_agent_id'],
+                timestamp=data['timestamp'],
+                changes=changes,
+                sequence_number=data['sequence_number'],
+                graph_version=data['graph_version'],
+            )
+        except (json.JSONDecodeError, KeyError):
+            return None
