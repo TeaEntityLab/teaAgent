@@ -43,6 +43,11 @@ def register(
         handlers['graphqlite_smoke'],
         migrate_handler=handlers.get('graphqlite_migrate'),
     )
+    _code_ontology(
+        subparsers,
+        handlers.get('code_ontology_build'),
+        handlers.get('code_ontology_query'),
+    )
     _ultrawork(
         subparsers,
         handlers['ultrawork_start'],
@@ -512,6 +517,41 @@ def _graphqlite(
             help='SQLite database path. Defaults to :memory:.',
         )
         migrate.set_defaults(func=migrate_handler)
+
+
+def _code_ontology(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    build_handler: Optional[Callable] = None,
+    query_handler: Optional[Callable] = None,
+) -> None:
+    code_ontology = subparsers.add_parser(
+        'code-ontology', help='Build and query code ontology graph.'
+    )
+    subs = code_ontology.add_subparsers(dest='code_ontology_command', required=True)
+
+    build = subs.add_parser('build', help='Build code ontology from source files.')
+    build.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    build.add_argument(
+        '--extensions',
+        default='.py',
+        help='File extensions to parse (comma-separated). Defaults to .py.',
+    )
+    build.set_defaults(func=build_handler)
+
+    query = subs.add_parser('query', help='Query code ontology for dependencies.')
+    query.add_argument('entity', help='Entity name to query (class, function, etc.).')
+    query.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    query.add_argument(
+        '--direction',
+        choices=['upstream', 'downstream', 'both'],
+        default='both',
+        help='Dependency direction: upstream (callers), downstream (callees), or both.',
+    )
+    query.set_defaults(func=query_handler)
 
 
 def _ultrawork(

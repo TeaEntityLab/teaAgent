@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from teaagent.code_ontology import CodeOntologyGraph
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.intent import clarify_task
 from teaagent.llm import available_providers, check_llm_configuration
@@ -63,6 +64,69 @@ def graphqlite_migrate(args: argparse.Namespace) -> int:
         )
     )
     print_json(store.migration_status())
+    return 0
+
+
+def code_ontology_build(args: argparse.Namespace) -> int:
+    """Build code ontology graph from source files."""
+    root = Path(args.root).resolve()
+    
+    # Initialize GraphQLite store
+    db_path = root / '.teaagent' / 'graphqlite.db'
+    store = GraphQLiteGraphStore(GraphQLiteConfig(database=str(db_path)))
+    
+    # Build ontology
+    extensions = getattr(args, 'extensions', None)
+    if extensions:
+        ext_list = extensions.split(',')
+    else:
+        ext_list = ['.py']
+    
+    ontology = CodeOntologyGraph(root, graph_store=store)
+    ontology.build(extensions=ext_list)
+    
+    nodes = ontology.builder.get_nodes()
+    edges = ontology.builder.get_edges()
+    
+    print_json({
+        'status': 'success',
+        'root': str(root),
+        'nodes_count': len(nodes),
+        'edges_count': len(edges),
+        'extensions': ext_list,
+        'database': str(db_path),
+    })
+    return 0
+
+
+def code_ontology_query(args: argparse.Namespace) -> int:
+    """Query code ontology for dependencies."""
+    root = Path(args.root).resolve()
+    
+    db_path = root / '.teaagent' / 'graphqlite.db'
+    if not db_path.is_file():
+        print_json({'status': 'error', 'message': 'Code ontology database not found. Run "teaagent code-ontology build" first.'})
+        return 1
+    
+    store = GraphQLiteGraphStore(GraphQLiteConfig(database=str(db_path)))
+    ontology = CodeOntologyGraph(root, graph_store=store)
+    
+    entity = args.entity
+    direction = getattr(args, 'direction', 'both')
+    
+    if direction not in ('upstream', 'downstream', 'both'):
+        print_json({'status': 'error', 'message': 'direction must be upstream, downstream, or both'})
+        return 1
+    
+    results = ontology.query_dependencies(entity, direction=direction)
+    
+    print_json({
+        'status': 'success',
+        'entity': entity,
+        'direction': direction,
+        'results': results,
+        'count': len(results),
+    })
     return 0
 
 

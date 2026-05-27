@@ -99,6 +99,8 @@ from ._memory import (
 )
 from ._misc import (
     clarify_command,
+    code_ontology_build,
+    code_ontology_query,
     completion_command,
     configure_command,
     graphqlite_migrate,
@@ -205,6 +207,8 @@ __all__ = [
     'doctor_all',
     'doctor_graphqlite',
     'doctor_model',
+    'code_ontology_build',
+    'code_ontology_query',
     'graphqlite_migrate',
     'graphqlite_query',
     'graphqlite_smoke',
