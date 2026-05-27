@@ -690,3 +690,522 @@ def abort_merge(root: str | Path) -> bool:
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
+
+
+def extract_conflict_context(root: str | Path, file_path: str) -> Optional[dict[str, str]]:
+    """Extract conflict markers and context from a conflicted file.
+
+    Args:
+        root: Git repository root path.
+        file_path: Relative path to conflicted file.
+
+    Returns:
+        Dict with 'ours', 'theirs', and 'base' content, or None if extraction fails.
+    """
+    root_path = Path(root).resolve()
+    file_full_path = root_path / file_path
+
+    if not file_full_path.exists():
+        return None
+
+    try:
+        content = file_full_path.read_text(encoding='utf-8')
+        
+        # Extract conflict sections
+        lines = content.split('\n')
+        sections = {'ours': '', 'theirs': '', 'base': ''}
+        current_section = None
+        
+        for line in lines:
+            if line.startswith('<<<<<<<'):
+                current_section = 'ours'
+                sections['ours'] = ''
+            elif line.startswith('======='):
+                current_section = 'theirs'
+                sections['theirs'] = ''
+            elif line.startswith('>>>>>>>'):
+                current_section = None
+            elif current_section:
+                sections[current_section] += line + '\n'
+        
+        # Try to get base version using git show
+        try:
+            result = subprocess.run(
+                ['git', 'show', ':1:' + file_path],
+                cwd=root_path,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            sections['base'] = result.stdout
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            sections['base'] = ''
+        
+        return sections
+    except (IOError, UnicodeDecodeError):
+        return None
+
+
+def apply_llm_resolution(root: str | Path, file_path: str, resolved_content: str) -> bool:
+    """Apply LLM-resolved content to a conflicted file.
+
+    Args:
+        root: Git repository root path.
+        file_path: Relative path to conflicted file.
+        resolved_content: The resolved content from LLM.
+
+    Returns:
+        True if application succeeded, False otherwise.
+    """
+    root_path = Path(root).resolve()
+    file_full_path = root_path / file_path
+
+    try:
+        file_full_path.write_text(resolved_content, encoding='utf-8')
+        subprocess.run(
+            ['git', 'add', file_path],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return True
+    except (IOError, subprocess.CalledProcessError):
+        return False
+
+
+def resolve_conflicts_with_llm(
+    root: str | Path,
+    conflicted_files: list[str],
+    provider: str,
+    model: str,
+) -> dict[str, str]:
+    """Resolve merge conflicts using LLM.
+
+    Args:
+        root: Git repository root path.
+        conflicted_files: List of conflicted file paths.
+        provider: LLM provider to use.
+        model: Model name to use.
+
+    Returns:
+        Dict mapping file paths to resolution status ('resolved', 'failed', 'skipped').
+    """
+    from teaagent.llm._config import PROVIDER_CONFIGS
+    from teaagent.llm._adapters import get_adapter
+
+    root_path = Path(root).resolve()
+    results: dict[str, str] = {}
+
+    config = PROVIDER_CONFIGS.get(provider)
+    if not config:
+        for file_path in conflicted_files:
+            results[file_path] = 'skipped'
+        return results
+
+    try:
+        adapter = get_adapter(provider, model=model)
+    except Exception:
+        for file_path in conflicted_files:
+            results[file_path] = 'skipped'
+        return results
+
+    for file_path in conflicted_files:
+        context = extract_conflict_context(root_path, file_path)
+        if not context:
+            results[file_path] = 'failed'
+            continue
+
+        # Build prompt for LLM
+        prompt = f"""You are a code merge conflict resolver. Resolve the following merge conflict by intelligently combining both versions.
+
+File: {file_path}
+
+Base version (common ancestor):
+```
+{context['base']}
+```
+
+Our version (current branch):
+```
+{context['ours']}
+```
+
+Their version (incoming branch):
+```
+{context['theirs']}
+```
+
+Instructions:
+1. Analyze the differences between the three versions
+2. Create a merged version that preserves the intent of both changes
+3. Remove all conflict markers (<<<<<<<, =======, >>>>>>>)
+4. Output ONLY the resolved file content, no explanations
+5. If the changes are truly incompatible, prefer the incoming (their) version for agent changes
+
+Resolved file content:"""
+
+        try:
+            response = adapter.complete(prompt, max_tokens=8192, temperature=0.1)
+            resolved_content = response.strip()
+            
+            if apply_llm_resolution(root_path, file_path, resolved_content):
+                results[file_path] = 'resolved'
+            else:
+                results[file_path] = 'failed'
+        except Exception:
+            results[file_path] = 'failed'
+
+    return results
+
+
+class ParallelExperimentStack:
+    """Manage multiple parallel sandbox branches for experimentation."""
+
+    def __init__(self, root: str | Path, run_id: str, options: list[str]):
+        """Initialize parallel experiment stack.
+
+        Args:
+            root: Git repository root path.
+            run_id: Base run ID for all experiments.
+            options: List of option names (e.g., ['optA', 'optB', 'optC']).
+        """
+        self._root = Path(root).resolve()
+        self._run_id = run_id
+        self._options = options
+        self._sandboxes: dict[str, GitBranchSandbox] = {}
+        self._original_branch: Optional[str] = None
+
+    def start_all(self, auto_stash: bool = False) -> dict[str, GitSandboxResult]:
+        """Start all sandbox branches for parallel experimentation.
+
+        Args:
+            auto_stash: Whether to auto-stash uncommitted changes.
+
+        Returns:
+            Dict mapping option names to their sandbox results.
+        """
+        results: dict[str, GitSandboxResult] = {}
+
+        if not is_git_repository(self._root):
+            for option in self._options:
+                results[option] = GitSandboxResult(
+                    success=False,
+                    error='Not a git repository',
+                )
+            return results
+
+        # Get original branch
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=self._root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self._original_branch = result.stdout.strip()
+        except subprocess.CalledProcessError:
+            for option in self._options:
+                results[option] = GitSandboxResult(
+                    success=False,
+                    error='Failed to get current branch',
+                )
+            return results
+
+        # Create sandbox for each option
+        for option in self._options:
+            branch_name = f'teaagent-sandbox-{self._run_id}-{option}'
+            sandbox = GitBranchSandbox(self._root, run_id=f'{self._run_id}-{option}')
+            self._sandboxes[option] = sandbox
+            results[option] = sandbox.start(auto_stash=auto_stash)
+
+        return results
+
+    def get_sandbox(self, option: str) -> Optional[GitBranchSandbox]:
+        """Get sandbox for a specific option.
+
+        Args:
+            option: Option name.
+
+        Returns:
+            GitBranchSandbox instance or None if not found.
+        """
+        return self._sandboxes.get(option)
+
+    def compare_branches(self) -> dict[str, dict[str, Any]]:
+        """Compare all experimental branches against original.
+
+        Returns:
+            Dict mapping option names to comparison stats (files_changed, insertions, deletions).
+        """
+        comparisons: dict[str, dict[str, Any]] = {}
+
+        if not self._original_branch:
+            return comparisons
+
+        for option, sandbox in self._sandboxes.items():
+            try:
+                result = subprocess.run(
+                    ['git', 'diff', '--stat', self._original_branch, sandbox._branch_name],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                stats = result.stdout.strip()
+                
+                # Parse stats
+                files_changed = 0
+                insertions = 0
+                deletions = 0
+                
+                for line in stats.split('\n'):
+                    if 'file' in line or 'files' in line:
+                        parts = line.split()
+                        if parts:
+                            try:
+                                files_changed = int(parts[0])
+                            except ValueError:
+                                pass
+                    if 'insertion' in line or 'insertions' in line:
+                        parts = line.split()
+                        if parts:
+                            try:
+                                insertions = int(parts[0])
+                            except ValueError:
+                                pass
+                    if 'deletion' in line or 'deletions' in line:
+                        parts = line.split()
+                        if parts:
+                            try:
+                                deletions = int(parts[0])
+                            except ValueError:
+                                pass
+
+                comparisons[option] = {
+                    'files_changed': files_changed,
+                    'insertions': insertions,
+                    'deletions': deletions,
+                    'diff_stat': stats,
+                }
+            except subprocess.CalledProcessError:
+                comparisons[option] = {
+                    'files_changed': 0,
+                    'insertions': 0,
+                    'deletions': 0,
+                    'diff_stat': 'Failed to compare',
+                }
+
+        return comparisons
+
+    def cleanup_all(self, keep_best: Optional[str] = None) -> dict[str, bool]:
+        """Delete all sandbox branches, optionally keeping the best one.
+
+        Args:
+            keep_best: Option name to keep (e.g., 'optA').
+
+        Returns:
+            Dict mapping option names to deletion success status.
+        """
+        results: dict[str, bool] = {}
+
+        # Switch back to original branch first
+        if self._original_branch:
+            try:
+                subprocess.run(
+                    ['git', 'checkout', self._original_branch],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+            except subprocess.CalledProcessError:
+                pass  # Continue with cleanup even if checkout fails
+
+        for option, sandbox in self._sandboxes.items():
+            if keep_best and option == keep_best:
+                results[option] = True  # Kept, not deleted
+                continue
+
+            try:
+                subprocess.run(
+                    ['git', 'branch', '-D', sandbox._branch_name],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                results[option] = True
+            except subprocess.CalledProcessError:
+                results[option] = False
+
+        return results
+
+
+class OSSandbox:
+    """OS-level sandboxing for shell command execution.
+
+    Provides process isolation and filesystem restrictions for safe
+    execution of agent shell commands.
+    """
+
+    def __init__(self, root: str | Path, allowed_paths: Optional[list[str]] = None):
+        """Initialize OS-level sandbox.
+
+        Args:
+            root: Git repository root path (primary allowed path).
+            allowed_paths: Additional allowed paths (e.g., temp directories).
+        """
+        self._root = Path(root).resolve()
+        self._allowed_paths = [str(self._root)]
+        if allowed_paths:
+            self._allowed_paths.extend([Path(p).resolve() for p in allowed_paths])
+
+    def is_path_allowed(self, path: str) -> bool:
+        """Check if a path is within allowed sandbox boundaries.
+
+        Args:
+            path: Path to check.
+
+        Returns:
+            True if path is allowed, False otherwise.
+        """
+        try:
+            resolved_path = Path(path).resolve()
+            for allowed in self._allowed_paths:
+                allowed_path = Path(allowed).resolve()
+                try:
+                    resolved_path.relative_to(allowed_path)
+                    return True
+                except ValueError:
+                    continue
+            return False
+        except (ValueError, OSError):
+            return False
+
+    def sanitize_environment(self, env: Optional[dict[str, str]] = None) -> dict[str, str]:
+        """Sanitize environment variables for safe execution.
+
+        Args:
+            env: Original environment (uses os.environ if None).
+
+        Returns:
+            Sanitized environment dict.
+        """
+        import os
+
+        if env is None:
+            env = dict(os.environ)
+
+        # Remove sensitive environment variables
+        sensitive_keys = [
+            'SSH_PRIVATE_KEY',
+            'SSH_KEY',
+            'AWS_SECRET_ACCESS_KEY',
+            'GOOGLE_APPLICATION_CREDENTIALS',
+            'GITHUB_TOKEN',
+            'API_KEY',
+            'SECRET_KEY',
+            'PASSWORD',
+            'TOKEN',
+        ]
+
+        for key in list(env.keys()):
+            if any(sensitive in key.upper() for sensitive in sensitive_keys):
+                del env[key]
+
+        # Restrict PATH to safe directories
+        safe_path = '/usr/bin:/bin:/usr/local/bin'
+        env['PATH'] = safe_path
+
+        # Set sandbox indicator
+        env['TEAAGENT_SANDBOX'] = '1'
+
+        return env
+
+    def execute_sandboxed(
+        self,
+        command: list[str],
+        cwd: Optional[str] = None,
+        timeout: int = 300,
+    ) -> dict[str, Any]:
+        """Execute command in sandboxed environment.
+
+        Args:
+            command: Command and arguments to execute.
+            cwd: Working directory (must be within allowed paths).
+            timeout: Maximum execution time in seconds.
+
+        Returns:
+            Dict with 'success', 'stdout', 'stderr', 'exit_code'.
+        """
+        import os
+
+        if cwd and not self.is_path_allowed(cwd):
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': f'Working directory {cwd} is outside sandbox boundaries',
+                'exit_code': -1,
+            }
+
+        working_dir = cwd if cwd else str(self._root)
+
+        env = self.sanitize_environment()
+
+        try:
+            result = subprocess.run(
+                command,
+                cwd=working_dir,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            return {
+                'success': result.returncode == 0,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'exit_code': result.returncode,
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': f'Command timed out after {timeout} seconds',
+                'exit_code': -1,
+            }
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': str(e),
+                'exit_code': -1,
+            }
+
+    def set_resource_limits(self) -> bool:
+        """Set resource limits for the current process (Unix only).
+
+        Args:
+            None
+
+        Returns:
+            True if limits were set successfully, False otherwise.
+        """
+        try:
+            import resource
+
+            # Limit CPU time to 5 minutes
+            resource.setrlimit(resource.RLIMIT_CPU, (300, 300))
+
+            # Limit memory to 1GB
+            resource.setrlimit(resource.RLIMIT_AS, (1024 * 1024 * 1024, 1024 * 1024 * 1024))
+
+            # Limit number of processes
+            resource.setrlimit(resource.RLIMIT_NPROC, (100, 100))
+
+            return True
+        except (ImportError, ValueError, OSError):
+            # Not available on Windows or permission denied
+            return False

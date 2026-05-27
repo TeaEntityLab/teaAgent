@@ -556,3 +556,217 @@ def test_abort_merge_no_merge(tmp_path: Path) -> None:
 
     # abort_merge should fail when no merge is in progress
     assert not abort_merge(tmp_path)
+
+
+def test_extract_conflict_context(tmp_path: Path) -> None:
+    """Test extracting conflict context from a conflicted file."""
+    from teaagent.git_sandbox import extract_conflict_context
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+
+    # Create a file with conflict markers
+    conflicted_content = """<<<<<<< HEAD
+our version
+=======
+their version
+>>>>>>> sandbox-branch
+"""
+    (tmp_path / 'test.txt').write_text(conflicted_content)
+
+    context = extract_conflict_context(tmp_path, 'test.txt')
+    
+    assert context is not None
+    assert 'our version' in context['ours']
+    assert 'their version' in context['theirs']
+
+
+def test_apply_llm_resolution(tmp_path: Path) -> None:
+    """Test applying LLM-resolved content."""
+    from teaagent.git_sandbox import apply_llm_resolution
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    resolved_content = 'resolved content without markers'
+    assert apply_llm_resolution(tmp_path, 'test.txt', resolved_content)
+    
+    # Verify content was applied
+    assert (tmp_path / 'test.txt').read_text() == resolved_content
+
+
+def test_parallel_experiment_stack_start_all(tmp_path: Path) -> None:
+    """Test starting multiple parallel sandbox branches."""
+    from teaagent.git_sandbox import ParallelExperimentStack
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB', 'optC'])
+    results = stack.start_all()
+
+    assert len(results) == 3
+    assert all(results[opt].success for opt in ['optA', 'optB', 'optC'])
+    assert all(results[opt].branch_name for opt in ['optA', 'optB', 'optC'])
+
+
+def test_parallel_experiment_stack_get_sandbox(tmp_path: Path) -> None:
+    """Test getting a specific sandbox from the stack."""
+    from teaagent.git_sandbox import ParallelExperimentStack
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB'])
+    stack.start_all()
+
+    sandbox = stack.get_sandbox('optA')
+    assert sandbox is not None
+    assert sandbox._run_id == 'test-run-optA'
+
+    sandbox = stack.get_sandbox('optC')
+    assert sandbox is None
+
+
+def test_parallel_experiment_stack_cleanup_all(tmp_path: Path) -> None:
+    """Test cleaning up all sandbox branches."""
+    from teaagent.git_sandbox import ParallelExperimentStack
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB'])
+    stack.start_all()
+
+    # Cleanup all
+    results = stack.cleanup_all()
+    assert all(results.values())
+
+    # Verify branches are deleted
+    result = subprocess.run(['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True)
+    assert 'optA' not in result.stdout
+    assert 'optB' not in result.stdout
+
+
+def test_parallel_experiment_stack_cleanup_keep_best(tmp_path: Path) -> None:
+    """Test cleaning up all branches except the best one."""
+    from teaagent.git_sandbox import ParallelExperimentStack
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB'])
+    stack.start_all()
+
+    # Cleanup keeping optA
+    results = stack.cleanup_all(keep_best='optA')
+    assert results['optA'] is True  # Kept
+    assert results['optB'] is True  # Deleted
+
+    # Verify optA still exists, optB is deleted
+    result = subprocess.run(['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True)
+    assert 'optA' in result.stdout
+    assert 'optB' not in result.stdout
+
+
+def test_os_sandbox_is_path_allowed(tmp_path: Path) -> None:
+    """Test path allowance checking in OS sandbox."""
+    from teaagent.git_sandbox import OSSandbox
+
+    sandbox = OSSandbox(tmp_path)
+
+    # Paths within sandbox should be allowed
+    assert sandbox.is_path_allowed(str(tmp_path))
+    assert sandbox.is_path_allowed(str(tmp_path / 'subdir'))
+    assert sandbox.is_path_allowed(str(tmp_path / 'file.txt'))
+
+    # Paths outside sandbox should be denied
+    assert not sandbox.is_path_allowed('/etc/passwd')
+    assert not sandbox.is_path_allowed('/tmp')
+    assert not sandbox.is_path_allowed('/')
+
+
+def test_os_sandbox_sanitize_environment(tmp_path: Path) -> None:
+    """Test environment variable sanitization."""
+    from teaagent.git_sandbox import OSSandbox
+    import os
+
+    sandbox = OSSandbox(tmp_path)
+
+    # Set some sensitive environment variables
+    original_env = {
+        'PATH': '/usr/bin:/bin',
+        'HOME': '/home/user',
+        'SSH_PRIVATE_KEY': 'secret',
+        'API_KEY': '12345',
+        'SAFE_VAR': 'value',
+    }
+
+    sanitized = sandbox.sanitize_environment(original_env)
+
+    # Sensitive keys should be removed
+    assert 'SSH_PRIVATE_KEY' not in sanitized
+    assert 'API_KEY' not in sanitized
+
+    # Safe keys should remain
+    assert 'HOME' in sanitized
+    assert 'SAFE_VAR' in sanitized
+    assert sanitized['SAFE_VAR'] == 'value'
+
+    # PATH should be restricted
+    assert sanitized['PATH'] == '/usr/bin:/bin:/usr/local/bin'
+
+    # Sandbox indicator should be set
+    assert sanitized['TEAAGENT_SANDBOX'] == '1'
+
+
+def test_os_sandbox_execute_sandboxed(tmp_path: Path) -> None:
+    """Test executing commands in sandboxed environment."""
+    from teaagent.git_sandbox import OSSandbox
+
+    sandbox = OSSandbox(tmp_path)
+
+    # Simple command should work
+    result = sandbox.execute_sandboxed(['echo', 'hello'], cwd=str(tmp_path))
+    assert result['success']
+    assert 'hello' in result['stdout']
+
+    # Command outside allowed directory should fail
+    result = sandbox.execute_sandboxed(['ls', '/etc'], cwd='/etc')
+    assert not result['success']
+    assert 'outside sandbox boundaries' in result['stderr']
+
+
+def test_os_sandbox_set_resource_limits(tmp_path: Path) -> None:
+    """Test setting resource limits."""
+    from teaagent.git_sandbox import OSSandbox
+
+    sandbox = OSSandbox(tmp_path)
+
+    # Should return True on Unix systems where resource module is available
+    # May return False on Windows or if permissions are insufficient
+    result = sandbox.set_resource_limits()
+    # We don't assert the result since it depends on the OS and permissions
+    # Just verify it doesn't crash
+    assert isinstance(result, bool)

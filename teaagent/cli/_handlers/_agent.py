@@ -385,6 +385,7 @@ def _execute_agent_task(
                         for file in merge_result.conflicted_files:
                             print(f'  - {file}')
                         print(f'\nResolve conflicts:')
+                        print(f'  [l] Let LLM auto-resolve conflicts')
                         print(f'  [a] Accept Agent version (theirs)')
                         print(f'  [d] Accept Developer version (ours)')
                         print(f'  [b] Abort merge and keep sandbox branch')
@@ -395,9 +396,39 @@ def _execute_agent_task(
                             resolve_conflict_accept_theirs,
                             resolve_conflict_accept_ours,
                             abort_merge,
+                            resolve_conflicts_with_llm,
                         )
                         
-                        if resolution == 'a':
+                        if resolution == 'l':
+                            print(f'[TeaAgent] Using LLM to resolve conflicts...')
+                            llm_results = resolve_conflicts_with_llm(
+                                args.root,
+                                merge_result.conflicted_files,
+                                args.provider,
+                                args.model,
+                            )
+                            resolved_count = sum(1 for status in llm_results.values() if status == 'resolved')
+                            failed_count = sum(1 for status in llm_results.values() if status == 'failed')
+                            skipped_count = sum(1 for status in llm_results.values() if status == 'skipped')
+                            
+                            print(f'[TeaAgent] LLM resolution results:')
+                            print(f'  Resolved: {resolved_count}')
+                            print(f'  Failed: {failed_count}')
+                            print(f'  Skipped: {skipped_count}')
+                            
+                            if resolved_count == len(merge_result.conflicted_files):
+                                # All conflicts resolved, complete the merge
+                                subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
+                                subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                                if git_sandbox._stash_id:
+                                    from teaagent.git_sandbox import stash_pop
+                                    stash_pop(args.root)
+                                print(f'[TeaAgent] All conflicts resolved by LLM. Merge completed.')
+                            else:
+                                print(f'[TeaAgent] Some conflicts could not be resolved. Manual intervention required.')
+                                abort_merge(args.root)
+                                print(f'[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.')
+                        elif resolution == 'a':
                             for file in merge_result.conflicted_files:
                                 if resolve_conflict_accept_theirs(args.root, file):
                                     print(f'  Accepted Agent version for {file}')
