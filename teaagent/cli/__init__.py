@@ -184,7 +184,21 @@ def main(
 ) -> int:
     parser = build_parser()
     raw_argv = argv if argv is not None else sys.argv[1:]
-    args = parser.parse_args(_expand_argv(raw_argv))
+    
+    # If no subcommand provided, default to 'agent chat' for REPL-centric entry
+    expanded_argv = _expand_argv(raw_argv)
+    if not any(arg.startswith('-') for arg in expanded_argv) and not expanded_argv:
+        # No arguments at all - default to agent chat
+        expanded_argv = ['agent', 'chat']
+    elif expanded_argv and not expanded_argv[0].startswith('-'):
+        # First arg is not a flag - check if it's a known command
+        parser_check = build_parser()
+        temp_args = parser_check.parse_args(expanded_argv[:1] if expanded_argv else [])
+        if not hasattr(temp_args, 'command') or temp_args.command is None:
+            # Not a known command - prepend 'agent chat'
+            expanded_argv = ['agent', 'chat'] + expanded_argv
+    
+    args = parser.parse_args(expanded_argv)
     args._adapter_factory = _adapter_factory or create_llm_adapter  # type: ignore[attr-defined]
     args._serve_mcp_http = _serve_mcp_http or serve_mcp_http  # type: ignore[attr-defined]
     args._check_graphqlite = _check_graphqlite or check_graphqlite_runtime  # type: ignore[attr-defined]
@@ -223,7 +237,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help='Profile name under the config file profiles object.',
     )
-    subparsers = parser.add_subparsers(dest='command', required=True)
+    subparsers = parser.add_subparsers(dest='command', required=False)
 
     register_misc(
         subparsers,
@@ -313,6 +327,7 @@ def build_parser() -> argparse.ArgumentParser:
             'plan': agent_plan_command,
             'resume': agent_resume_command,
             'runs': agent_runs_list,
+            'chat': chat_command,
         },
     )
     register_agent(

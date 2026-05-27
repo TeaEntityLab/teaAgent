@@ -29,6 +29,35 @@ from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
 from teaagent.skill_candidates import SkillCandidateStore
 
 
+def _save_git_sandbox_consent(root: str, value: str) -> None:
+    """Save git_sandbox_consent preference to .teaagent/config.json."""
+    from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+    
+    root_path = Path(root).resolve()
+    tea_dir = root_path / '.teaagent'
+    json_path = tea_dir / 'config.json'
+    
+    # Ensure .teaagent directory exists
+    tea_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Load existing config or create new
+    if json_path.is_file():
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            config = {}
+    else:
+        config = {}
+    
+    # Update git_sandbox_consent
+    config['git_sandbox_consent'] = value
+    
+    # Save back to file
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2)
+
+
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
     if getattr(args, 'no_auto_skills', False):
         return frozenset()
@@ -249,11 +278,42 @@ def _execute_agent_task(
     git_sandbox = GitBranchSandbox(args.root, run_id='pending')
     git_sandbox_available = git_sandbox.is_available()
     auto_stash = getattr(args, 'git_sandbox_auto_stash', False)
+    
+    # Safe sandbox consent prompting
     if git_sandbox_available:
-        sandbox_result = git_sandbox.start(auto_stash=auto_stash)
-        if not sandbox_result.success:
-            print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
-            git_sandbox_available = False
+        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+        
+        defaults = load_workspace_defaults(args.root)
+        consent = defaults.get('git_sandbox_consent', 'prompt')
+        is_interactive = sys.stdin.isatty()
+        
+        # Option A: Auto-enable without prompt (always consent or non-interactive)
+        if consent == 'always' or not is_interactive:
+            print('[TeaAgent] Git repository detected. Safe git sandbox auto-enabled.')
+            sandbox_result = git_sandbox.start(auto_stash=auto_stash)
+            if not sandbox_result.success:
+                print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
+                git_sandbox_available = False
+        # Option B: Interactive prompting
+        else:
+            print('[TeaAgent] Git repository detected. Would you like to run in a safe sandbox branch? [Y/n/always]: ', end='')
+            choice = input().strip().lower()
+            
+            if choice in ('always', 'a'):
+                _save_git_sandbox_consent(args.root, 'always')
+                print('[TeaAgent] Preference saved. Safe git sandbox will be auto-enabled for this project.')
+                sandbox_result = git_sandbox.start(auto_stash=auto_stash)
+                if not sandbox_result.success:
+                    print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
+                    git_sandbox_available = False
+            elif choice in ('yes', 'y', ''):
+                sandbox_result = git_sandbox.start(auto_stash=auto_stash)
+                if not sandbox_result.success:
+                    print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
+                    git_sandbox_available = False
+            else:
+                print('[TeaAgent] Sandbox declined. Running in local workspace directly.')
+                git_sandbox_available = False
 
     undo_journal = UndoJournal(args.root)
     audit.add_sink(undo_journal)

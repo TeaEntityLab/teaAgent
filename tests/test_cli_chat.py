@@ -334,3 +334,71 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
         assert "Effort level set to: high" in captured.out
         assert "Budget limit: $50.00" in captured.out
         assert result == 0
+
+
+def test_cli_default_entry_launches_chat():
+    """Test that running CLI with no arguments defaults to agent chat command."""
+    from teaagent.cli import main
+    from unittest.mock import patch, MagicMock
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Mock the chat_command to verify it's called
+        chat_called = []
+        
+        def mock_chat_command(args):
+            chat_called.append(True)
+            return 0
+        
+        with patch('teaagent.cli.chat_command', side_effect=mock_chat_command):
+            # Simulate running with no arguments
+            result = main(argv=[], _adapter_factory=MagicMock(), _serve_mcp_http=MagicMock(), 
+                        _check_graphqlite=MagicMock(), _check_llm=MagicMock(), 
+                        _run_model_conformance=MagicMock())
+        
+        assert len(chat_called) == 1
+        assert result == 0
+
+
+def test_git_sandbox_consent_saved_to_config():
+    """Test that git_sandbox_consent is saved to config.json."""
+    from teaagent.cli._handlers._agent import _save_git_sandbox_consent
+    import json
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Save consent
+        _save_git_sandbox_consent(tmpdir, 'always')
+        
+        # Verify it was saved
+        config_path = Path(tmpdir) / '.teaagent' / 'config.json'
+        assert config_path.exists()
+        
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        assert config.get('git_sandbox_consent') == 'always'
+
+
+def test_git_sandbox_consent_updates_existing_config():
+    """Test that git_sandbox_consent updates existing config.json."""
+    from teaagent.cli._handlers._agent import _save_git_sandbox_consent
+    import json
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create existing config
+        config_path = Path(tmpdir) / '.teaagent' / 'config.json'
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        existing_config = {'provider': 'gpt', 'model': 'gpt-4'}
+        with open(config_path, 'w') as f:
+            json.dump(existing_config, f)
+        
+        # Save consent
+        _save_git_sandbox_consent(tmpdir, 'always')
+        
+        # Verify it was merged
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        assert config.get('git_sandbox_consent') == 'always'
+        assert config.get('provider') == 'gpt'
+        assert config.get('model') == 'gpt-4'
