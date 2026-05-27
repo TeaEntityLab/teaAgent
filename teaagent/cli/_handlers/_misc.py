@@ -67,8 +67,8 @@ def graphqlite_migrate(args: argparse.Namespace) -> int:
 
 
 def ultrawork_start_command(args: argparse.Namespace) -> int:
-    # Deprecated: redirect to BackgroundRunStore
-    from teaagent.ergonomics.background_run import BackgroundRunStore
+    # Deprecated: redirect to BackgroundRunStore via UltraworkStore
+    from teaagent.ultrawork import UltraworkStore
 
     command = [
         sys.executable,
@@ -87,26 +87,26 @@ def ultrawork_start_command(args: argparse.Namespace) -> int:
     ]
     if args.model:
         command.extend(['--model', args.model])
-    store = BackgroundRunStore(args.root)
+    store = UltraworkStore(args.root)
     record = store.start(command, label=args.label)
     print_json(record.to_dict())
     return 0
 
 
 def ultrawork_list_command(args: argparse.Namespace) -> int:
-    # Deprecated: redirect to BackgroundRunStore
-    from teaagent.ergonomics.background_run import BackgroundRunStore
+    # Deprecated: redirect to BackgroundRunStore via UltraworkStore
+    from teaagent.ultrawork import UltraworkStore
 
-    print_json(BackgroundRunStore(args.root, readonly=True).list())
+    print_json(UltraworkStore(args.root, readonly=True).list())
     return 0
 
 
 def ultrawork_show_command(args: argparse.Namespace) -> int:
-    # Deprecated: redirect to BackgroundRunStore
-    from teaagent.ergonomics.background_run import BackgroundRunStore
+    # Deprecated: redirect to BackgroundRunStore via UltraworkStore
+    from teaagent.ultrawork import UltraworkStore
 
     try:
-        print_json(BackgroundRunStore(args.root, readonly=True).get(args.worker_id))
+        print_json(UltraworkStore(args.root, readonly=True).show(args.worker_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -114,11 +114,11 @@ def ultrawork_show_command(args: argparse.Namespace) -> int:
 
 
 def ultrawork_logs_command(args: argparse.Namespace) -> int:
-    # Deprecated: redirect to BackgroundRunStore
-    from teaagent.ergonomics.background_run import BackgroundRunStore
+    # Deprecated: redirect to BackgroundRunStore via UltraworkStore
+    from teaagent.ultrawork import UltraworkStore
 
     try:
-        print_json(BackgroundRunStore(args.root, readonly=True).logs(args.worker_id, max_bytes=args.bytes))
+        print_json(UltraworkStore(args.root, readonly=True).logs(args.worker_id, max_bytes=args.bytes))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -126,11 +126,11 @@ def ultrawork_logs_command(args: argparse.Namespace) -> int:
 
 
 def ultrawork_stop_command(args: argparse.Namespace) -> int:
-    # Deprecated: redirect to BackgroundRunStore
-    from teaagent.ergonomics.background_run import BackgroundRunStore
+    # Deprecated: redirect to BackgroundRunStore via UltraworkStore
+    from teaagent.ultrawork import UltraworkStore
 
     try:
-        print_json(BackgroundRunStore(args.root).stop(args.worker_id))
+        print_json(UltraworkStore(args.root).stop(args.worker_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1

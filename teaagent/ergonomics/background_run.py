@@ -180,17 +180,22 @@ def _exit_code_from_wait_status(status: int) -> int:
     return status
 
 
+def _process_exists(pid: int) -> bool:
+    """Check if process exists using os.kill(pid, 0) without reaping."""
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
 def _refresh_process_state(data: dict[str, Any], record_path: Path, *, persist: bool = True) -> dict[str, Any]:
     if data.get('stopped_at'):
         data['alive'] = False
         return data
 
     pid = int(data['pid'])
-    try:
-        os.kill(pid, 0)
-        alive = True
-    except OSError:
-        alive = False
+    alive = _process_exists(pid)
 
     exit_code: Optional[int] = None
     if alive:

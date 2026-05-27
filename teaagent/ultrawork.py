@@ -54,6 +54,7 @@ class UltraworkStore:
         _deprecate_ultrawork()
         self._store = BackgroundRunStore(root, readonly=readonly)
         self.readonly = readonly
+        self._notify_config = notify_config
 
     def start(self, command: list[str], *, label: Optional[str] = None) -> WorkerRecord:
         record = self._store.start(command, label=label)
@@ -86,6 +87,18 @@ class UltraworkStore:
     def stop(self, worker_id: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
         data = self._store.stop(worker_id, timeout_seconds=timeout_seconds)
         data["worker_id"] = data.get("background_id")
+        if self._notify_config is not None:
+            from teaagent.notify import fire_notification
+
+            class _Rec:
+                pass
+
+            rec = _Rec()
+            rec.worker_id = worker_id  # type: ignore[attr-defined]
+            rec.pid = data.get('pid')  # type: ignore[attr-defined]
+            rec.started_at = data.get('started_at', '')  # type: ignore[attr-defined]
+            rec.command = data.get('command', [])  # type: ignore[attr-defined]
+            fire_notification(self._notify_config, rec, event='stopped')
         return data
 
     @staticmethod

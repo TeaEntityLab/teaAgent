@@ -48,7 +48,7 @@ def test_reconcile_marks_runtime_cap_exceeded(tmp_path) -> None:
     )
     with (
         patch(
-            'teaagent.ergonomics.background_run._is_alive',
+            'teaagent.ergonomics.background_run._process_exists',
             side_effect=[True, False],
         ),
         patch('teaagent.automation_limits.terminate_background_pid', return_value=True),
