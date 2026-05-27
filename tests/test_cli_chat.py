@@ -71,14 +71,20 @@ def test_run_chat_repl_keyboard_interrupt(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
         
+        inputs = ["/exit"]
+        call_count = [0]
+        
         def mock_input(prompt):
-            raise KeyboardInterrupt()
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise KeyboardInterrupt()
+            return inputs.pop(0)
         
         monkeypatch.setattr("builtins.input", mock_input)
         
         result = run_chat_repl(config)
-        # Should handle interrupt and continue
-        assert result is not None
+        # Should handle interrupt and continue to exit
+        assert result == 0
 
 
 def test_run_chat_repl_eof(monkeypatch):
