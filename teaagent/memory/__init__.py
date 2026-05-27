@@ -17,6 +17,7 @@ from teaagent.memory_legacy import (
     MemoryCatalog,
     MemoryEntry,
     memory_entries_to_prompt,
+    memory_entry_from_payload,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "MemoryCatalog",
     "MemoryEntry",
     "memory_entries_to_prompt",
+    "memory_entry_from_payload",
 ]
