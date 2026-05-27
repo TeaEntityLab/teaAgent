@@ -18,6 +18,7 @@ from teaagent.automations import (
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.daily import build_daily_brief
+from teaagent.git_sandbox import ParallelExperimentStack
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.plan import PlanContract
@@ -209,6 +210,11 @@ def _execute_agent_task(
     auto_approved_call_id: Optional[str] = None,
     plan_contract: Optional[Any] = None,
 ) -> int:
+    # Handle parallel experiments
+    parallel_options = getattr(args, 'parallel', None)
+    if parallel_options:
+        return _execute_parallel_experiment(args, task, parallel_options)
+
     task_spec = None
     if args.clarify:
         clarification = clarify_task(task)
@@ -1685,6 +1691,60 @@ def agent_subagent_review_apply_command(args: argparse.Namespace) -> int:
         return 1
     print_json(payload)
     return 0 if payload['ok'] else 2
+
+
+def _execute_parallel_experiment(args: argparse.Namespace, task: str, parallel_options: str) -> int:
+    """Execute parallel experiments using ParallelExperimentStack.
+
+    Args:
+        args: CLI arguments.
+        task: Task description.
+        parallel_options: Comma-separated options (e.g., opt1,opt2,opt3).
+
+    Returns:
+        Exit code.
+    """
+    from uuid import uuid4
+
+    options = [opt.strip() for opt in parallel_options.split(',') if opt.strip()]
+    if not options:
+        print_json({'status': 'error', 'message': 'No options provided for parallel experiment'})
+        return 1
+
+    run_id = uuid4().hex
+    root = Path(args.root).resolve()
+
+    # Create parallel experiment stack
+    stack = ParallelExperimentStack(root, run_id, options)
+
+    # Start all sandboxes
+    print_json({
+        'status': 'starting_parallel_experiments',
+        'run_id': run_id,
+        'options': options,
+        'message': f'Starting {len(options)} parallel experiment branches',
+    })
+
+    start_results = stack.start_all(auto_stash=getattr(args, 'git_sandbox_auto_stash', False))
+
+    failed = [opt for opt, success in start_results.items() if not success]
+    if failed:
+        print_json({
+            'status': 'error',
+            'message': f'Failed to start {len(failed)} sandbox branches',
+            'failed_options': failed,
+        })
+        return 1
+
+    print_json({
+        'status': 'parallel_experiments_started',
+        'run_id': run_id,
+        'options': options,
+        'branches': {opt: stack.get_sandbox(opt)._branch_name for opt in options},
+        'message': 'Use "teaagent experiment compare" to compare results, then "teaagent experiment select" to merge the best option',
+    })
+
+    return 0
 
 
 def print_json(value: Any) -> None:

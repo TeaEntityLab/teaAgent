@@ -121,6 +121,12 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         help='Automatically stash dirty worktree before creating git sandbox branch.',
     )
     p.add_argument(
+        '--parallel',
+        default=None,
+        metavar='OPTIONS',
+        help='Run parallel experiments with comma-separated options (e.g., opt1,opt2,opt3). Creates isolated sandbox branches for each option.',
+    )
+    p.add_argument(
         '--approve-call-id',
         action='append',
         default=[],
