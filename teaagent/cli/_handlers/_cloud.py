@@ -35,7 +35,11 @@ def cloud_show_command(args: Namespace) -> int:
     from teaagent.cloud_tasks import CloudTaskManager, CloudTaskStore
 
     manager = CloudTaskManager(store=CloudTaskStore(args.root, readonly=True))
-    task = manager.poll(args.task_id)
+    try:
+        task = manager.poll(args.task_id)
+    except ValueError as exc:
+        print(json.dumps({'status': 'error', 'message': str(exc)}))
+        return 1
     if args.json:
         print(json.dumps(task.to_dict()))
     else:

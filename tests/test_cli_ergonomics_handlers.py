@@ -989,6 +989,10 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
         cloud_list_command,
         cloud_show_command,
     )
+    from teaagent.cli._handlers._marketplace import (
+        skill_marketplace_list_command,
+        skill_search_command,
+    )
     from teaagent.cli._handlers._memory import (
         memory_list_command,
         memory_search_command,
@@ -1016,6 +1020,8 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
         ('memory show missing', lambda: memory_show_command(argparse.Namespace(root=str(tmp_path), memory_id='missing'))),
         ('skill candidate list', lambda: skill_candidate_list_command(argparse.Namespace(root=str(tmp_path)))),
         ('skill candidate show missing', lambda: skill_candidate_show_command(argparse.Namespace(root=str(tmp_path), candidate_id='missing'))),
+        ('skill search', lambda: skill_search_command(argparse.Namespace(root=str(tmp_path), query='test', tag=None, limit=20, json=True))),
+        ('skill marketplace list', lambda: skill_marketplace_list_command(argparse.Namespace(root=str(tmp_path), limit=50, json=True))),
         ('automation list', lambda: automation_list_command(argparse.Namespace(root=str(tmp_path)))),
         ('automation show missing', lambda: automation_show_command(argparse.Namespace(root=str(tmp_path), automation_id='missing'))),
         ('automation status', lambda: automation_status_command(argparse.Namespace(root=str(tmp_path)))),

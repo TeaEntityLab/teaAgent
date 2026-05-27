@@ -28,7 +28,7 @@ def skill_publish_command(args: Namespace) -> int:
 def skill_search_command(args: Namespace) -> int:
     from teaagent.marketplace import MarketplaceRegistry
 
-    registry = MarketplaceRegistry(args.root)
+    registry = MarketplaceRegistry(args.root, readonly=True)
     results = registry.search(args.query, tag=args.tag, limit=args.limit)
     if args.json:
         print(json.dumps([e.to_dict() for e in results]))
@@ -41,7 +41,7 @@ def skill_search_command(args: Namespace) -> int:
 def skill_marketplace_list_command(args: Namespace) -> int:
     from teaagent.marketplace import MarketplaceRegistry
 
-    registry = MarketplaceRegistry(args.root)
+    registry = MarketplaceRegistry(args.root, readonly=True)
     entries = registry.list(limit=args.limit)
     if args.json:
         print(json.dumps([e.to_dict() for e in entries]))

@@ -30,10 +30,12 @@ class MarketplaceEntry:
 class MarketplaceRegistry:
     """Local registry of published skill entries."""
 
-    def __init__(self, root: str | Path = '.') -> None:
+    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self._root = Path(root).resolve()
         self._dir = self._root / '.teaagent' / 'marketplace'
-        self._dir.mkdir(parents=True, exist_ok=True)
+        self.readonly = readonly
+        if not readonly:
+            self._dir.mkdir(parents=True, exist_ok=True)
 
     def _manifest(self) -> Path:
         return self._dir / 'registry.json'
@@ -61,6 +63,8 @@ class MarketplaceRegistry:
         skill_path: str = '',
         tags: Optional[list[str]] = None,
     ) -> MarketplaceEntry:
+        if self.readonly:
+            raise RuntimeError('Cannot publish to marketplace in readonly mode')
         now = datetime.now(timezone.utc).isoformat()
         entry = MarketplaceEntry(
             entry_id=str(uuid4()),
@@ -99,6 +103,8 @@ class MarketplaceRegistry:
         return self._read()[:limit]
 
     def remove(self, entry_id: str) -> bool:
+        if self.readonly:
+            raise RuntimeError('Cannot remove from marketplace in readonly mode')
         entries = [e for e in self._read() if e.entry_id != entry_id]
         before = len(entries)
         self._write(entries)
