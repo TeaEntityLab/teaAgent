@@ -250,3 +250,87 @@ def test_run_chat_repl_budget_command(monkeypatch, capsys):
         assert "Budget limit" in captured.out
         assert "Session cost" in captured.out
         assert result == 0
+
+
+def test_run_chat_repl_provider_command_updates_adapter(monkeypatch, capsys):
+    """Test REPL /provider command actually updates the adapter for subsequent calls."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        # Mock the create_llm_adapter to track calls
+        from unittest.mock import patch, MagicMock
+        adapter_mock = MagicMock()
+        adapter_calls = []
+        
+        def mock_create_adapter(provider, *, model=None):
+            adapter_calls.append((provider, model))
+            return adapter_mock
+        
+        inputs = ["/provider gpt", "/exit"]
+        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter):
+            monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+            result = run_chat_repl(config)
+        
+        captured = capsys.readouterr()
+        assert "Provider switched" in captured.out
+        # Verify adapter was recreated with new provider
+        assert len(adapter_calls) >= 2  # Initial + swap
+        assert result == 0
+
+
+def test_run_chat_repl_model_command_updates_adapter(monkeypatch, capsys):
+    """Test REPL /model command actually updates the adapter for subsequent calls."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        # Mock the create_llm_adapter to track calls
+        from unittest.mock import patch, MagicMock
+        adapter_mock = MagicMock()
+        adapter_calls = []
+        
+        def mock_create_adapter(provider, *, model=None):
+            adapter_calls.append((provider, model))
+            return adapter_mock
+        
+        inputs = ["/model gpt-4", "/exit"]
+        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter):
+            monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+            result = run_chat_repl(config)
+        
+        captured = capsys.readouterr()
+        assert "Model switched" in captured.out
+        # Verify adapter was recreated with new model
+        assert len(adapter_calls) >= 2  # Initial + swap
+        assert result == 0
+
+
+def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
+    """Test REPL /effort command actually updates the budget for subsequent calls."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        # Mock the create_llm_adapter to avoid actual API calls
+        from unittest.mock import patch, MagicMock
+        adapter_mock = MagicMock()
+        
+        def mock_create_adapter(provider, *, model=None):
+            return adapter_mock
+        
+        # Mock run_chat_agent to capture the config it receives
+        captured_configs = []
+        
+        def mock_run_chat_agent(*, task, adapter, config):
+            captured_configs.append(config)
+            from teaagent.runner import RunResult
+            return RunResult(success=True, final_answer="test", iterations=0, tool_calls=0)
+        
+        inputs = ["/effort high", "/exit"]
+        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter):
+            with patch('teaagent.cli._handlers._chat.run_chat_agent', side_effect=mock_run_chat_agent):
+                monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+                result = run_chat_repl(config)
+        
+        captured = capsys.readouterr()
+        assert "Effort level set to: high" in captured.out
+        assert "Budget limit: $50.00" in captured.out
+        assert result == 0

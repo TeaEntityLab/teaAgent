@@ -331,7 +331,7 @@ class ApprovalPolicy:
             timestamp=request.timestamp,
             requester_agent_id=request.requester_agent_id,
             required_approvals=self.multi_sig_config.required_approvals,
-            timeout_seconds=30,  # Default 30 second timeout
+            timeout_seconds=self.multi_sig_config.timeout_seconds,
         )
         
         # Broadcast to configured peer agents
@@ -343,7 +343,7 @@ class ApprovalPolicy:
         # Collect signatures from peers
         signature_messages = sync.collect_approval_signatures(
             request.request_id,
-            timeout_seconds=30,
+            timeout_seconds=self.multi_sig_config.timeout_seconds,
         )
         
         # Convert signature messages to PeerSignature objects

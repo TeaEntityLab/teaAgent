@@ -14,7 +14,7 @@ from typing import Optional
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.config_loader import ConfigResolver
 from teaagent.context import ContextCompactor
-from teaagent.llm import available_providers
+from teaagent.llm import available_providers, create_llm_adapter
 from teaagent.policy import parse_permission_mode
 
 
@@ -95,6 +95,11 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     runtime_model = config.model
     runtime_max_cost_cents = config.max_estimated_cost_cents or 1000
     
+    # Create initial adapter (will be recreated on model swap)
+    provider = config.model.split('/')[0] if config.model and '/' in config.model else 'gpt'
+    model = config.model.split('/', 1)[1] if config.model and '/' in config.model else None
+    adapter = create_llm_adapter(provider, model=model)
+    
     # Effort throttling configuration
     effort_level = "normal"  # low, normal, high
     max_cost_budget_cents = config.max_estimated_cost_cents or 1000  # Default $10
@@ -144,15 +149,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 print("[TeaAgent] No checkpoint to restore")
                 return False
             
-            # First, revert all working directory changes
-            subprocess.run(
-                ['git', 'checkout', '--', '.'],
-                cwd=config.root,
-                capture_output=True,
-                text=True,
-            )
-            
-            # Then try to pop the stash if it exists
+            # First check if the stash exists before destructive operations
             result = subprocess.run(
                 ['git', 'stash', 'list'],
                 cwd=config.root,
@@ -160,7 +157,18 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 text=True,
             )
             
-            if checkpoint_ref and checkpoint_ref in result.stdout:
+            stash_exists = checkpoint_ref and checkpoint_ref in result.stdout
+            
+            if stash_exists:
+                # Revert all working directory changes first
+                subprocess.run(
+                    ['git', 'checkout', '--', '.'],
+                    cwd=config.root,
+                    capture_output=True,
+                    text=True,
+                )
+                
+                # Then pop the stash
                 subprocess.run(
                     ['git', 'stash', 'pop'],
                     cwd=config.root,
@@ -169,7 +177,8 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 )
                 print(f"[TeaAgent] Restored checkpoint: {checkpoint_ref}")
             else:
-                print("[TeaAgent] Restored clean state (no stashed changes)")
+                print("[TeaAgent] No checkpoint stash found (clean workspace or checkpoint not created)")
+                return False
             
             return True
         except FileNotFoundError:
@@ -186,7 +195,8 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             if not path.exists():
                 print(f"[TeaAgent] Error: Path does not exist: {path}")
                 return False
-            if not str(path).startswith(str(config.root)):
+            # Use is_relative_to for robust path validation that handles symlinks
+            if not path.is_relative_to(config.root.resolve()):
                 print(f"[TeaAgent] Error: Path escapes workspace root: {path}")
                 return False
             targeted_files.add(path)
@@ -222,7 +232,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     
     def swap_provider(provider_name: str) -> bool:
         """Hot-swap the LLM provider during the session."""
-        nonlocal current_provider, current_model, runtime_model
+        nonlocal current_provider, current_model, runtime_model, adapter
         try:
             if provider_name not in available_providers():
                 print(f"[TeaAgent] Error: Unknown provider '{provider_name}'")
@@ -238,6 +248,10 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             
             runtime_model = current_model
             
+            # Recreate adapter with new provider
+            model_part = current_model.split('/', 1)[1] if '/' in current_model else None
+            adapter = create_llm_adapter(provider_name, model=model_part)
+            
             print(f"[TeaAgent] Provider switched to: {provider_name}")
             print(f"[TeaAgent] Current model: {current_model}")
             return True
@@ -247,7 +261,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     
     def swap_model(model_name: str) -> bool:
         """Hot-swap the model during the session."""
-        nonlocal current_model, runtime_model
+        nonlocal current_model, runtime_model, adapter
         try:
             if current_provider:
                 new_model = f"{current_provider}/{model_name}"
@@ -256,6 +270,10 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             
             current_model = new_model
             runtime_model = current_model
+            
+            # Recreate adapter with new model
+            provider = current_provider or 'gpt'
+            adapter = create_llm_adapter(provider, model=model_name)
             
             print(f"[TeaAgent] Model switched to: {current_model}")
             return True
@@ -305,7 +323,14 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     # If initial task provided, execute it first
     if initial_task:
         print(f"[TeaAgent] Executing initial task: {initial_task}")
-        result = run_chat_agent(config, initial_task)
+        # Create updated config with runtime values
+        from dataclasses import replace
+        updated_config = replace(
+            config,
+            model=runtime_model,
+            max_estimated_cost_cents=runtime_max_cost_cents,
+        )
+        result = run_chat_agent(task=initial_task, adapter=adapter, config=updated_config)
         if result != 0:
             return result
         # Placeholder cost tracking for initial task
@@ -457,7 +482,14 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             
             # Execute task
             print(f"[TeaAgent] Executing: {user_input}")
-            result = run_chat_agent(config, user_input)
+            # Create updated config with runtime values
+            from dataclasses import replace
+            updated_config = replace(
+                config,
+                model=runtime_model,
+                max_estimated_cost_cents=runtime_max_cost_cents,
+            )
+            result = run_chat_agent(task=user_input, adapter=adapter, config=updated_config)
             
             if result != 0:
                 print(f"[TeaAgent] Task failed with exit code {result}")
