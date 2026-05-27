@@ -48,6 +48,13 @@ def register(
         handlers.get('code_ontology_build'),
         handlers.get('code_ontology_query'),
     )
+    _experiment(
+        subparsers,
+        handlers.get('experiment_list'),
+        handlers.get('experiment_compare'),
+        handlers.get('experiment_select'),
+        handlers.get('experiment_cancel'),
+    )
     _ultrawork(
         subparsers,
         handlers['ultrawork_start'],
@@ -686,3 +693,84 @@ def _workspace(
         help='Server URL to embed in the OpenAPI servers list (optional).',
     )
     openapi.set_defaults(func=openapi_handler)
+
+
+def _experiment(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    list_handler: Optional[Callable],
+    compare_handler: Optional[Callable],
+    select_handler: Optional[Callable],
+    cancel_handler: Optional[Callable],
+) -> None:
+    experiment = subparsers.add_parser('experiment', help='Manage parallel sandbox experiments.')
+    subs = experiment.add_subparsers(dest='experiment_command', required=True)
+
+    list_cmd = subs.add_parser('list', help='List all sandbox branches.')
+    list_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    list_cmd.set_defaults(func=list_handler or _deprecation_warning)
+
+    compare = subs.add_parser('compare', help='Compare experimental branches.')
+    compare.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    compare.add_argument(
+        '--run-id',
+        required=True,
+        help='Run ID for the experiment.',
+    )
+    compare.add_argument(
+        '--options',
+        required=True,
+        help='Comma-separated list of options (e.g., opt1,opt2,opt3).',
+    )
+    compare.set_defaults(func=compare_handler or _deprecation_warning)
+
+    select = subs.add_parser('select', help='Select and merge the best experimental branch.')
+    select.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    select.add_argument(
+        '--run-id',
+        required=True,
+        help='Run ID for the experiment.',
+    )
+    select.add_argument(
+        '--options',
+        required=True,
+        help='Comma-separated list of options (e.g., opt1,opt2,opt3).',
+    )
+    select.add_argument(
+        '--select',
+        required=True,
+        help='Option to select and merge.',
+    )
+    select.add_argument(
+        '--squash',
+        action='store_true',
+        help='Squash commits when merging.',
+    )
+    select.set_defaults(func=select_handler or _deprecation_warning)
+
+    cancel = subs.add_parser('cancel', help='Cancel and delete experimental branches.')
+    cancel.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    cancel.add_argument(
+        '--run-id',
+        help='Run ID for the experiment (optional for orphaned cleanup).',
+    )
+    cancel.add_argument(
+        '--options',
+        help='Comma-separated list of options (optional for orphaned cleanup).',
+    )
+    cancel.set_defaults(func=cancel_handler or _deprecation_warning)

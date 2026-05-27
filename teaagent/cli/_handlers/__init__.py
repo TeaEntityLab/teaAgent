@@ -28,6 +28,12 @@ from ._agent import (
     automation_tick_command,
 )
 from ._chat import chat_command
+from ._experiment import (
+    experiment_cancel,
+    experiment_compare,
+    experiment_list,
+    experiment_select,
+)
 from ._audit import (
     audit_list_command,
     audit_prune_command,
@@ -250,4 +256,8 @@ __all__ = [
     'skill_search_command',
     'skill_marketplace_list_command',
     'skill_install_marketplace_command',
+    'experiment_cancel',
+    'experiment_compare',
+    'experiment_list',
+    'experiment_select',
 ]
