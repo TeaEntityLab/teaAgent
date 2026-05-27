@@ -1,21 +1,28 @@
 """Sigstore keyless signing support for TSB bundles.
 
 This module provides integration with Sigstore for keyless cryptographic
-signing of skill bundles, eliminating the need for manual SSH key management.
+signing of skill bundles using the programmatic sigstore-python API,
+eliminating the need for manual SSH key management and cosign CLI dependencies.
 """
 
 from __future__ import annotations
 
 import base64
 import json
-import subprocess
-import tempfile
 from pathlib import Path
 from typing import Any
 
+try:
+    from sigstore.sign import Signer
+    from sigstore.verify import VerificationMaterials, Verifier
+    from sigstore.verify.policy import Identity
+    SIGSTORE_AVAILABLE = True
+except ImportError:
+    SIGSTORE_AVAILABLE = False
+
 
 class SigstoreSigner:
-    """Sigstore keyless signer for TSB bundles."""
+    """Sigstore keyless signer for TSB bundles using programmatic API."""
     
     def __init__(self, identity_token: str | None = None) -> None:
         """Initialize Sigstore signer.
@@ -23,6 +30,10 @@ class SigstoreSigner:
         Args:
             identity_token: Optional OIDC identity token for signing.
         """
+        if not SIGSTORE_AVAILABLE:
+            raise ValueError(
+                "sigstore-python is not installed. Install with: pip install sigstore"
+            )
         self._identity_token = identity_token
     
     def sign(self, bundle_path: Path) -> dict[str, Any]:
@@ -35,127 +46,109 @@ class SigstoreSigner:
             Dictionary containing signature and verification materials.
             
         Raises:
-            ValueError: If signing fails or cosign is not available.
+            ValueError: If signing fails.
         """
-        # Check if cosign is available
         try:
-            subprocess.run(
-                ["cosign", "version"],
-                capture_output=True,
-                check=True,
-            )
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            raise ValueError(
-                "cosign is not installed. Please install it from: "
-                "https://docs.sigstore.dev/cosign/installation/"
-            )
-        
-        # Sign the bundle
-        try:
-            cmd = ["cosign", "sign-blob", str(bundle_path), "--output-signature", "-"]
+            # Read bundle content
+            bundle_bytes = bundle_path.read_bytes()
             
-            if self._identity_token:
-                cmd.extend(["--identity-token", self._identity_token])
+            # Create signer with optional identity token
+            signer = Signer()
             
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                check=True,
-                text=True,
+            # Sign the bundle
+            result = signer.sign(
+                input_=bundle_bytes,
+                identity_token=self._identity_token,
             )
             
-            signature = result.stdout.strip()
-            
-            # Get the certificate (for verification)
-            cert_cmd = ["cosign", "sign-blob", str(bundle_path), "--output-certificate", "-"]
-            if self._identity_token:
-                cert_cmd.extend(["--identity-token", self._identity_token])
-            
-            cert_result = subprocess.run(
-                cert_cmd,
-                capture_output=True,
-                check=True,
-                text=True,
-            )
-            
-            certificate = cert_result.stdout.strip()
-            
-            return {
-                "signature": signature,
-                "certificate": certificate,
+            # Extract verification materials
+            # The result contains the signature and certificate in a single bundle
+            # We serialize it to JSON for storage in the TSB
+            materials = {
+                "signature": base64.b64encode(result.signature).decode("utf-8"),
+                "certificate": result.certificate_pem,
                 "signer": "sigstore-keyless",
             }
             
-        except subprocess.CalledProcessError as exc:
-            raise ValueError(f"Sigstore signing failed: {exc.stderr}") from exc
+            return materials
+            
+        except Exception as exc:
+            raise ValueError(f"Sigstore signing failed: {exc}") from exc
     
-    def verify(self, bundle_path: Path, signature: str, certificate: str) -> bool:
+    def verify(
+        self,
+        bundle_path: Path,
+        signature: str,
+        certificate: str,
+        identity: str | None = None,
+        issuer: str | None = None,
+    ) -> bool:
         """Verify a bundle signature using Sigstore.
         
         Args:
             bundle_path: Path to bundle file.
             signature: Base64-encoded signature.
             certificate: PEM-encoded certificate.
+            identity: Optional identity to verify (e.g., email).
+            issuer: Optional OIDC issuer to verify.
             
         Returns:
             True if verification succeeds.
             
         Raises:
-            ValueError: If verification fails or cosign is not available.
+            ValueError: If verification fails.
         """
-        # Check if cosign is available
         try:
-            subprocess.run(
-                ["cosign", "version"],
-                capture_output=True,
-                check=True,
+            # Read bundle content
+            bundle_bytes = bundle_path.read_bytes()
+            
+            # Decode signature
+            signature_bytes = base64.b64decode(signature)
+            
+            # Create verification materials
+            materials = VerificationMaterials(
+                input_=bundle_bytes,
+                signature=signature_bytes,
+                certificate_pem=certificate,
             )
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            raise ValueError(
-                "cosign is not installed. Please install it from: "
-                "https://docs.sigstore.dev/cosign/installation/"
-            )
-        
-        # Write signature and certificate to temporary files
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp_path = Path(tmpdir)
             
-            sig_file = tmp_path / "signature.sig"
-            sig_file.write_text(signature, encoding="utf-8")
+            # Create verifier
+            verifier = Verifier.production()
             
-            cert_file = tmp_path / "certificate.pem"
-            cert_file.write_text(certificate, encoding="utf-8")
+            # Build identity policy if specified
+            policy = None
+            if identity and issuer:
+                policy = Identity(identity=identity, issuer=issuer)
             
-            try:
-                subprocess.run(
-                    [
-                        "cosign",
-                        "verify-blob",
-                        str(bundle_path),
-                        "--signature",
-                        str(sig_file),
-                        "--certificate",
-                        str(cert_file),
-                    ],
-                    capture_output=True,
-                    check=True,
-                )
-                return True
-            except subprocess.CalledProcessError as exc:
-                raise ValueError(f"Sigstore verification failed: {exc.stderr}") from exc
+            # Verify
+            result = verifier.verify(materials, policy=policy)
+            
+            return result is not None
+            
+        except Exception as exc:
+            raise ValueError(f"Sigstore verification failed: {exc}") from exc
 
 
-class ProvenanceGate:
-    """Gate for verifying skill provenance before installation."""
+class TSBProvenanceVerifier:
+    """Verifier for TSB provenance before installation."""
     
-    def __init__(self, require_signature: bool = True) -> None:
-        """Initialize provenance gate.
+    def __init__(
+        self,
+        require_signature: bool = True,
+        identity: str | None = None,
+        issuer: str | None = None,
+    ) -> None:
+        """Initialize provenance verifier.
         
         Args:
             require_signature: Whether to require cryptographic signatures.
+            identity: Optional OIDC identity to enforce (e.g., email).
+            issuer: Optional OIDC issuer to enforce (e.g., "https://accounts.google.com").
         """
         self._require_signature = require_signature
-        self._sigstore_signer = SigstoreSigner()
+        self._identity = identity
+        self._issuer = issuer
+        self._sigstore_signer = SigstoreSigner() if SIGSTORE_AVAILABLE else None
     
     def verify_provenance(
         self,
@@ -183,8 +176,17 @@ class ProvenanceGate:
             if not certificate:
                 return False, "Sigstore signing requires certificate"
             
+            if not SIGSTORE_AVAILABLE:
+                return False, "sigstore-python not installed for verification"
+            
             try:
-                self._sigstore_signer.verify(bundle_path, signature, certificate)
+                self._sigstore_signer.verify(
+                    bundle_path,
+                    signature,
+                    certificate,
+                    identity=self._identity,
+                    issuer=self._issuer,
+                )
                 return True, "Sigstore verification successful"
             except ValueError as exc:
                 return False, f"Sigstore verification failed: {exc}"
@@ -201,3 +203,7 @@ class ProvenanceGate:
             return True, f"Signature present from {signer_type}"
         
         return False, "No valid signature found"
+
+
+# Backward compatibility alias
+ProvenanceGate = TSBProvenanceVerifier

@@ -18,7 +18,7 @@ from typing import Any
 from teaagent.audit_chain import verify_audit_chain
 
 try:
-    from teaagent.sigstore_signer import SigstoreSigner, ProvenanceGate
+    from teaagent.sigstore_signer import SigstoreSigner, TSBProvenanceVerifier
     SIGSTORE_AVAILABLE = True
 except ImportError:
     SIGSTORE_AVAILABLE = False
@@ -31,7 +31,7 @@ class TSBMetadata:
     skill_version: str
     skill_author: str
     created_at: str
-    tsb_version: str = "1.0"
+    tsb_version: str = "1.1"  # Updated to v1.1 with path-aware hashing
     environment_type: str = "uv"
     python_version: str = "3.11"
 
@@ -235,13 +235,27 @@ class TSBBuilder:
             
             # Calculate hash of skill files and audit only (excluding manifest)
             # Use sorted iteration for deterministic hash across platforms
+            # Include relative paths in hash to prevent structural tampering (TSB v1.1)
             bundle_hash = hashlib.sha256()
-            skill_files = sorted((tmp_path / "skill").rglob("*"), key=lambda p: str(p))
-            for file_path in skill_files:
+            skill_files_sorted = sorted((tmp_path / "skill").rglob("*"), key=lambda p: str(p))
+            for file_path in skill_files_sorted:
                 if file_path.is_file():
+                    # Include relative path in hash to prevent file renaming attacks
+                    rel_path = str(file_path.relative_to(tmp_path / "skill"))
+                    bundle_hash.update(rel_path.encode("utf-8"))
                     bundle_hash.update(file_path.read_bytes())
             bundle_hash.update((tmp_path / "audit.jsonl").read_bytes())
             bundle_hash = bundle_hash.hexdigest()
+            
+            # Create initial tarball with placeholder manifest (for signing)
+            manifest_path = tmp_path / "manifest.json"
+            manifest_dict = self._manifest_to_dict(manifest)
+            manifest_path.write_text(json.dumps(manifest_dict, indent=2), encoding="utf-8")
+            
+            # Create temporary tarball for signing
+            temp_tsb_path = tmp_path / "temp.tsb"
+            with tarfile.open(temp_tsb_path, "w:gz") as tar:
+                tar.add(tmp_path, arcname="")
             
             # Sign bundle if key provided or using Sigstore
             signature = ""
@@ -251,14 +265,14 @@ class TSBBuilder:
             if self._use_sigstore and SIGSTORE_AVAILABLE:
                 try:
                     sigstore_signer = SigstoreSigner(identity_token=self._identity_token)
-                    sig_result = sigstore_signer.sign(output_path)
+                    sig_result = sigstore_signer.sign(temp_tsb_path)
                     signature = sig_result["signature"]
                     certificate = sig_result["certificate"]
                     signer_type = "sigstore-keyless"
                 except ValueError as exc:
                     raise ValueError(f"Sigstore signing failed: {exc}")
             elif self._author_key_path and self._author_key_path.exists():
-                signature = self._sign_bundle(output_path, self._author_key_path)
+                signature = self._sign_bundle(temp_tsb_path, self._author_key_path)
                 signer_type = "ssh"
             
             # Update manifest with final hashes and signature
@@ -276,7 +290,6 @@ class TSBBuilder:
             )
             
             # Write final manifest
-            manifest_path = tmp_path / "manifest.json"
             manifest_dict = self._manifest_to_dict(manifest)
             manifest_path.write_text(json.dumps(manifest_dict, indent=2), encoding="utf-8")
             
@@ -403,12 +416,16 @@ class TSBVerifier:
             
             # Verify bundle hash (hash of skill files and audit only, excluding manifest)
             # Use sorted iteration for deterministic hash across platforms
+            # Include relative paths in hash to prevent structural tampering (TSB v1.1)
             bundle_hash = hashlib.sha256()
             skill_path = tmp_path / "skill"
             if skill_path.exists():
                 skill_files = sorted(skill_path.rglob("*"), key=lambda p: str(p))
                 for file_path in skill_files:
                     if file_path.is_file():
+                        # Include relative path in hash to prevent file renaming attacks
+                        rel_path = str(file_path.relative_to(skill_path))
+                        bundle_hash.update(rel_path.encode("utf-8"))
                         bundle_hash.update(file_path.read_bytes())
             audit_path = tmp_path / "audit.jsonl"
             if audit_path.exists():
@@ -432,15 +449,20 @@ class TSBVerifier:
             
             # Verify signature if requested
             if verify_signature and manifest_data["attestation"]["author_signature"]:
-                # Use ProvenanceGate for verification if available
+                # Use TSBProvenanceVerifier for verification if available
                 if SIGSTORE_AVAILABLE:
                     try:
-                        gate = ProvenanceGate(require_signature=True)
-                        is_valid, message = gate.verify_provenance(self._tsb_path, manifest_data)
+                        # TODO: Make identity/issuer configurable via CLI or config
+                        verifier = TSBProvenanceVerifier(
+                            require_signature=True,
+                            identity=None,  # Optional: enforce specific email
+                            issuer=None,  # Optional: enforce specific OIDC issuer
+                        )
+                        is_valid, message = verifier.verify_provenance(self._tsb_path, manifest_data)
                         if not is_valid:
                             return False, f"Provenance verification failed: {message}"
                     except Exception as exc:
-                        return False, f"Provenance gate error: {exc}"
+                        return False, f"Provenance verifier error: {exc}"
                 else:
                     # Fallback: just check that a signature exists
                     if not manifest_data["attestation"]["author_signature"]:
@@ -457,9 +479,19 @@ class TSBVerifier:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             
-            # Extract tarball
+            # Extract tarball with path traversal protection (CVE-2007-4559, CVE-2025-4517)
             with tarfile.open(self._tsb_path, "r:gz") as tar:
-                tar.extractall(tmp_path)
+                # Use data_filter to prevent path traversal attacks
+                # Python 3.12+ supports filter='data', fallback to members-only extraction for older versions
+                if hasattr(tarfile, 'data_filter'):
+                    tar.extractall(tmp_path, filter='data')
+                else:
+                    # Fallback: extract members individually with path validation
+                    for member in tar.getmembers():
+                        # Prevent absolute path and parent directory traversal
+                        if member.name.startswith('/') or '..' in member.name.split('/'):
+                            raise ValueError(f"Path traversal attempt detected: {member.name}")
+                        tar.extract(member, tmp_path)
             
             # Copy skill directory
             skill_src = tmp_path / "skill"

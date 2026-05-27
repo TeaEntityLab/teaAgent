@@ -146,4 +146,6 @@ def register(
     )
     verify_tsb.add_argument('tsb_path', help='Path to TSB file.')
     verify_tsb.add_argument('--skip-signature', action='store_true', help='Skip signature verification.')
+    verify_tsb.add_argument('--identity', help='Require specific OIDC identity (e.g., email).')
+    verify_tsb.add_argument('--issuer', help='Require specific OIDC issuer (e.g., https://accounts.google.com).')
     verify_tsb.set_defaults(func=handlers.get('verify_tsb'))

@@ -86,7 +86,7 @@ class TSBMetadataTests(unittest.TestCase):
             skill_author="test-author",
             created_at="2024-01-01T00:00:00Z",
         )
-        self.assertEqual(metadata.tsb_version, "1.0")
+        self.assertEqual(metadata.tsb_version, "1.1")  # Updated to v1.1 with path-aware hashing
         self.assertEqual(metadata.environment_type, "uv")
         self.assertEqual(metadata.python_version, "3.11")
 

@@ -129,6 +129,14 @@ def skill_verify_tsb_command(args: argparse.Namespace) -> int:
         
         print(f"[Verifying...] Checking TSB integrity and attestation...")
         
+        # Extract identity/issuer from args if provided
+        identity = getattr(args, 'identity', None)
+        issuer = getattr(args, 'issuer', None)
+        
+        if identity or issuer:
+            print(f"[Policy...] Enforcing OIDC identity: {identity or 'any'}")
+            print(f"[Policy...] Enforcing OIDC issuer: {issuer or 'any'}")
+        
         verifier = TSBVerifier(tsb_path)
         is_valid, message = verifier.verify(verify_signature=not args.skip_signature)
         

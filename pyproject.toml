@@ -68,6 +68,9 @@ release = [
 security = [
     "pip-audit>=2",
 ]
+sigstore = [
+    "sigstore>=2.0.0",
+]
 dev = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
