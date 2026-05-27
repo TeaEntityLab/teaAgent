@@ -46,9 +46,11 @@ _TASK_STORE_LOCK = threading.Lock()
 class CloudTaskStore:
     """Persistent JSONL store for cloud task lifecycle."""
 
-    def __init__(self, path: str | Path = '.') -> None:
+    def __init__(self, path: str | Path = '.', *, readonly: bool = False) -> None:
         self._dir = Path(path).resolve() / '.teaagent' / 'cloud-tasks'
-        self._dir.mkdir(parents=True, exist_ok=True)
+        self.readonly = readonly
+        if not readonly:
+            self._dir.mkdir(parents=True, exist_ok=True)
 
     def _manifest(self) -> Path:
         return self._dir / 'tasks.jsonl'
@@ -76,6 +78,8 @@ class CloudTaskStore:
             f.write(json.dumps(task.to_dict()) + '\n')
 
     def create(self, name: str, prompt: str, runtime: str) -> CloudTask:
+        if self.readonly:
+            raise RuntimeError('Cannot create cloud task in readonly mode')
         now = datetime.now(timezone.utc).isoformat()
         task = CloudTask(
             task_id=str(uuid4()),
@@ -102,6 +106,8 @@ class CloudTaskStore:
         return sorted(tasks, key=lambda t: t.created_at, reverse=True)[:limit]
 
     def update(self, task_id: str, **changes: Any) -> CloudTask:
+        if self.readonly:
+            raise RuntimeError('Cannot update cloud task in readonly mode')
         tasks = self._read_all()
         for i, t in enumerate(tasks):
             if t.task_id == task_id:
@@ -118,6 +124,8 @@ class CloudTaskStore:
         raise ValueError(f'task {task_id!r} not found')
 
     def delete(self, task_id: str) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot delete cloud task in readonly mode')
         tasks = [t for t in self._read_all() if t.task_id != task_id]
         self._write_all(tasks)
 

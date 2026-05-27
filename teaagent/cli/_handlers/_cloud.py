@@ -21,7 +21,7 @@ def cloud_submit_command(args: Namespace) -> int:
 def cloud_list_command(args: Namespace) -> int:
     from teaagent.cloud_tasks import CloudTaskManager, CloudTaskStore
 
-    manager = CloudTaskManager(store=CloudTaskStore(args.root))
+    manager = CloudTaskManager(store=CloudTaskStore(args.root, readonly=True))
     tasks = manager.list_tasks(status=args.status, limit=args.limit)
     if args.json:
         print(json.dumps([t.to_dict() for t in tasks]))
@@ -34,7 +34,7 @@ def cloud_list_command(args: Namespace) -> int:
 def cloud_show_command(args: Namespace) -> int:
     from teaagent.cloud_tasks import CloudTaskManager, CloudTaskStore
 
-    manager = CloudTaskManager(store=CloudTaskStore(args.root))
+    manager = CloudTaskManager(store=CloudTaskStore(args.root, readonly=True))
     task = manager.poll(args.task_id)
     if args.json:
         print(json.dumps(task.to_dict()))
@@ -63,7 +63,7 @@ def cloud_cancel_command(args: Namespace) -> int:
 def cloud_capabilities_command(args: Namespace) -> int:
     from teaagent.cloud_tasks import CloudTaskManager, CloudTaskStore
 
-    manager = CloudTaskManager(store=CloudTaskStore(args.root))
+    manager = CloudTaskManager(store=CloudTaskStore(args.root, readonly=True))
     caps = manager.capabilities()
     if args.json:
         print(json.dumps(caps))

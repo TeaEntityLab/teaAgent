@@ -984,6 +984,11 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
         automation_show_command,
         automation_status_command,
     )
+    from teaagent.cli._handlers._cloud import (
+        cloud_capabilities_command,
+        cloud_list_command,
+        cloud_show_command,
+    )
     from teaagent.cli._handlers._memory import (
         memory_list_command,
         memory_search_command,
@@ -1017,6 +1022,9 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
         ('ultrawork list', lambda: ultrawork_list_command(argparse.Namespace(root=str(tmp_path)))),
         ('ultrawork show missing', lambda: ultrawork_show_command(argparse.Namespace(root=str(tmp_path), worker_id='missing'))),
         ('ultrawork logs missing', lambda: ultrawork_logs_command(argparse.Namespace(root=str(tmp_path), worker_id='missing', bytes=64000))),
+        ('cloud list', lambda: cloud_list_command(argparse.Namespace(root=str(tmp_path), status=None, limit=50, json=True))),
+        ('cloud show missing', lambda: cloud_show_command(argparse.Namespace(root=str(tmp_path), task_id='missing', json=True))),
+        ('cloud capabilities', lambda: cloud_capabilities_command(argparse.Namespace(root=str(tmp_path), json=True))),
         ('yesterday runs', lambda: list_yesterday_runs(tmp_path)),
         ('recall runs', lambda: list_recall_runs(tmp_path)),
         ('status short', lambda: build_status_short(root=tmp_path, provider='gpt', permission_mode=PermissionMode.PROMPT)),
