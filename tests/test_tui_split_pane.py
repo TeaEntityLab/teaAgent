@@ -14,9 +14,11 @@ def test_split_pane_detection_large_terminal(monkeypatch) -> None:
     tui = TeaAgentTUI(root='.')
 
     # Mock terminal size to 120x30
-    def mock_get_terminal_size():
-        return (120, 30)
+    def mock_get_terminal_size(fallback=None):
+        return os_terminal_size((120, 30))
 
+    import os
+    os_terminal_size = getattr(os, 'terminal_size', tuple)
     import shutil
     monkeypatch.setattr(shutil, 'get_terminal_size', mock_get_terminal_size)
 
@@ -28,9 +30,11 @@ def test_split_pane_detection_small_terminal(monkeypatch) -> None:
     tui = TeaAgentTUI(root='.')
 
     # Mock terminal size to 80x24
-    def mock_get_terminal_size():
-        return (80, 24)
+    def mock_get_terminal_size(fallback=None):
+        return os_terminal_size((80, 24))
 
+    import os
+    os_terminal_size = getattr(os, 'terminal_size', tuple)
     import shutil
     monkeypatch.setattr(shutil, 'get_terminal_size', mock_get_terminal_size)
 
@@ -42,7 +46,7 @@ def test_split_pane_detection_error_handling(monkeypatch) -> None:
     tui = TeaAgentTUI(root='.')
 
     # Mock terminal size to raise error
-    def mock_get_terminal_size():
+    def mock_get_terminal_size(fallback=None):
         raise OSError("Cannot determine terminal size")
 
     import shutil
