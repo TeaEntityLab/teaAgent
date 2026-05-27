@@ -1043,13 +1043,16 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
             shutil.rmtree(teaagent_dir)
         assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
 
-        # Execute command and validate return code (for CLI commands that return int)
+        # Execute command and validate return code
         try:
             result = cmd_fn()
-            if result is not None and isinstance(result, int):
+            if expected_codes is not None:
+                # CLI commands must return int and match expected codes
+                assert isinstance(result, int), f"{name} returned {type(result).__name__}, expected int"
                 assert result in expected_codes, f"{name} returned {result}, expected {expected_codes}"
+            # If expected_codes is None, allow data-returning functions (non-CLI)
         except Exception as exc:
-            # Fail on unexpected exceptions - only allow specific known error types
+            # Fail on unexpected exceptions
             raise AssertionError(f"{name} raised unexpected exception: {exc}") from exc
 
         # Verify .teaagent was NOT created
@@ -1068,9 +1071,12 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
             shutil.rmtree(teaagent_dir)
         assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
 
-        # Execute command
-        with contextlib.suppress(Exception):
+        # Execute command - should not raise exceptions for successful initialization
+        try:
             cmd_fn()
+        except Exception as exc:
+            # Fail on exceptions - mutating commands should complete successfully
+            raise AssertionError(f"{name} failed during initialization: {exc}") from exc
 
         # Verify .teaagent WAS created
         assert teaagent_dir.exists(), f"{name} should create .teaagent directory"
@@ -1081,40 +1087,88 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
 
 def _setup_config_and_add_memory(tmp_path: Path) -> None:
     """Helper to test memory add - should create .teaagent."""
-    import contextlib
-
     from teaagent.memory import MemoryCatalog
 
-    with contextlib.suppress(Exception):
-        MemoryCatalog(tmp_path).add('test memory')
+    MemoryCatalog(tmp_path).add('test memory')
 
 
 def _setup_config_and_propose_candidate(tmp_path: Path) -> None:
     """Helper to test skill candidate store initialization - should create .teaagent."""
-    import contextlib
-
     from teaagent.skill_candidates import SkillCandidateStore
 
     # Just instantiating SkillCandidateStore should create .teaagent/skill-candidates
-    with contextlib.suppress(Exception):
-        SkillCandidateStore(tmp_path)
+    SkillCandidateStore(tmp_path)
 
 
 def _setup_config_and_add_automation(tmp_path: Path) -> None:
     """Helper to test automation add - should create .teaagent."""
-    import contextlib
-
     from teaagent.automations import AutomationStore
 
-    with contextlib.suppress(Exception):
-        AutomationStore(tmp_path).create(
-            name='test',
-            task='test task',
-            schedule='every 1h',
-            provider='gpt',
-            model=None,
-            permission_mode='read-only',
-            context_profile='balanced',
-            max_iterations=10,
-            max_tool_calls=10,
-        )
+    AutomationStore(tmp_path).create(
+        name='test',
+        task='test task',
+        schedule='every 1h',
+        provider='gpt',
+        model=None,
+        permission_mode='read-only',
+        context_profile='balanced',
+        max_iterations=10,
+        max_tool_calls=10,
+    )
+
+
+def test_black_box_cli_zero_footprint_commands(tmp_path: Path) -> None:
+    """Black-box test using main(argv) to verify CLI contract end-to-end."""
+    import sys
+    from io import StringIO
+
+    from teaagent.cli import main
+
+    teaagent_dir = tmp_path / '.teaagent'
+
+    # Black-box CLI commands: should NOT create .teaagent
+    # Format: (name, argv, expected_return_code)
+    black_box_commands = [
+        ('memory show missing', ['memory', 'show', 'missing', '--root', str(tmp_path)], 1),
+        ('cloud show missing', ['cloud', 'show', 'missing', '--root', str(tmp_path), '--json'], 1),
+        ('skill search', ['skill', 'search', 'test', '--root', str(tmp_path), '--json'], 0),
+        ('ultrawork show missing', ['ultrawork', 'show', 'missing', '--root', str(tmp_path)], 1),
+    ]
+
+    for name, argv, expected_code in black_box_commands:
+        # Reset: ensure .teaagent doesn't exist
+        if teaagent_dir.exists():
+            import shutil
+
+            shutil.rmtree(teaagent_dir)
+        assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
+
+        # Capture stdout/stderr
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        old_argv = sys.argv
+
+        try:
+            sys.stdout = StringIO()
+            sys.stderr = StringIO()
+            sys.argv = ['teaagent'] + argv
+
+            # Execute via main()
+            result = main(argv)
+
+            # Verify return code
+            assert result == expected_code, f"{name} returned {result}, expected {expected_code}"
+
+        except SystemExit as exc:
+            # main() may call sys.exit
+            assert exc.code == expected_code, f"{name} exited with {exc.code}, expected {expected_code}"
+        except Exception as exc:
+            # Fail on unexpected exceptions
+            raise AssertionError(f"{name} raised unexpected exception: {exc}") from exc
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            sys.argv = old_argv
+
+        # Verify .teaagent was NOT created
+        assert not teaagent_dir.exists(), f"{name} should not create .teaagent directory"
