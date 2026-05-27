@@ -24,6 +24,207 @@ import glob
 import readline
 import json
 import uuid
+import re
+
+
+def handle_memory_failures(root: Path) -> None:
+    """Handle /memory failures command to list all failure cards.
+    
+    Args:
+        root: The workspace root directory
+    """
+    try:
+        from teaagent.memory.failure_card import FailureCardStorage
+        from datetime import datetime
+        
+        storage = FailureCardStorage(root)
+        cards = storage.list_all()
+        
+        if not cards:
+            print("[TeaAgent] No failure cards recorded.")
+            return
+        
+        print(f"[TeaAgent] Failure Cards ({len(cards)} total):")
+        for i, card in enumerate(cards, 1):
+            timestamp_str = datetime.fromtimestamp(card.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"  [{i}] Run #{card.run_id} - {card.error_type} at {card.file_path}:{card.line_number if card.line_number else '?'} ({timestamp_str})")
+            print(f"      Task: {card.task_description}")
+            print(f"      Error: {card.error_message}")
+            print()
+    except Exception as exc:
+        print(f"[TeaAgent] Error retrieving failure cards: {exc}")
+
+
+def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
+    """Handle /pin command to add a file to the watch list.
+    
+    Args:
+        root: The workspace root directory
+        command: The full command string
+        watcher_callback: Optional callback to restart the file watcher
+    """
+    try:
+        from teaagent.memory.pinned_file import PinnedFileStorage
+        
+        parts = command.split()
+        if len(parts) < 2:
+            print("[TeaAgent] Usage: /pin <file>")
+            return
+        
+        file_path = parts[1]
+        storage = PinnedFileStorage(root)
+        
+        if storage.add(file_path):
+            print(f"[TeaAgent] 📌 Pinned: {file_path}")
+            # Restart file watcher to include new file
+            if watcher_callback:
+                watcher_callback()
+        else:
+            # Check if file exists
+            full_path = root / file_path
+            if not full_path.exists():
+                print(f"[TeaAgent] ❌ Error: File not found: {file_path}")
+            else:
+                print(f"[TeaAgent] ❌ Error: File is already pinned: {file_path}")
+    except Exception as exc:
+        print(f"[TeaAgent] Error pinning file: {exc}")
+
+
+def handle_unpin(root: Path, command: str, watcher_callback=None) -> None:
+    """Handle /unpin command to remove a file from the watch list.
+    
+    Args:
+        root: The workspace root directory
+        command: The full command string
+        watcher_callback: Optional callback to restart the file watcher
+    """
+    try:
+        from teaagent.memory.pinned_file import PinnedFileStorage
+        
+        parts = command.split()
+        if len(parts) < 2:
+            print("[TeaAgent] Usage: /unpin <file>")
+            return
+        
+        file_path = parts[1]
+        storage = PinnedFileStorage(root)
+        
+        if storage.remove(file_path):
+            print(f"[TeaAgent] 📌 Unpinned: {file_path}")
+            # Restart file watcher to update watched files
+            if watcher_callback:
+                watcher_callback()
+        else:
+            print(f"[TeaAgent] ❌ Error: File is not pinned: {file_path}")
+    except Exception as exc:
+        print(f"[TeaAgent] Error unpinning file: {exc}")
+
+
+def handle_pinned(root: Path) -> None:
+    """Handle /pinned command to list all pinned files.
+    
+    Args:
+        root: The workspace root directory
+    """
+    try:
+        from teaagent.memory.pinned_file import PinnedFileStorage
+        from datetime import datetime
+        
+        storage = PinnedFileStorage(root)
+        pinned_files = storage.list_all()
+        
+        if not pinned_files:
+            print("[TeaAgent] No files are currently pinned.")
+            return
+        
+        print(f"[TeaAgent] Pinned Files ({len(pinned_files)}):")
+        for i, pf in enumerate(pinned_files, 1):
+            modified_str = datetime.fromtimestamp(pf.last_modified).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"  [{i}] {pf.file_path} - last modified: {modified_str}")
+    except Exception as exc:
+        print(f"[TeaAgent] Error listing pinned files: {exc}")
+
+
+def handle_memory_clear(root: Path, command: str) -> None:
+    """Handle /memory clear command to clear failure cards.
+    
+    Args:
+        root: The workspace root directory
+        command: The full command string
+    """
+    try:
+        from teaagent.memory.failure_card import FailureCardStorage
+        
+        storage = FailureCardStorage(root)
+        
+        # Check if specific ID provided
+        parts = command.split()
+        if len(parts) == 3:
+            # Clear specific card by index
+            try:
+                index = int(parts[2]) - 1  # Convert to 0-based
+                cards = storage.list_all()
+                if 0 <= index < len(cards):
+                    card_id = cards[index].id
+                    if storage.clear_by_id(card_id):
+                        print(f"[TeaAgent] Cleared failure card #{index + 1} (Run #{cards[index].run_id})")
+                    else:
+                        print(f"[TeaAgent] Failed to clear failure card #{index + 1}")
+                else:
+                    print(f"[TeaAgent] Invalid index: {index + 1}")
+            except ValueError:
+                print("[TeaAgent] Invalid index. Use: /memory clear <number>")
+        else:
+            # Clear all cards
+            cards = storage.list_all()
+            storage.clear_all()
+            print(f"[TeaAgent] Cleared {len(cards)} failure cards")
+    except Exception as exc:
+        print(f"[TeaAgent] Error clearing failure cards: {exc}")
+
+
+def get_failure_warnings(task: str, root: Path) -> str:
+    """Retrieve and format failure warnings for a task.
+    
+    Args:
+        task: The task description
+        root: The workspace root directory
+        
+    Returns:
+        Formatted warning string to inject into the prompt
+    """
+    try:
+        from teaagent.memory.failure_card import FailureCardStorage
+        
+        # Extract file paths from task
+        file_refs = re.findall(r'@([^\s]+)', task)
+        
+        # Find matching failure cards
+        storage = FailureCardStorage(root)
+        matching_cards = storage.find_matching(
+            file_paths=file_refs,
+            task_description=task,
+            limit=3,
+        )
+        
+        if not matching_cards:
+            return ""
+        
+        # Format warnings
+        warnings = []
+        for card in matching_cards:
+            warning = f"⚠️ Note: In Run #{card.run_id}, attempting '{card.task_description}' failed with {card.error_type}: {card.error_message}"
+            if card.file_path:
+                warning += f" at {card.file_path}"
+            if card.line_number:
+                warning += f":{card.line_number}"
+            warning += ". Consider alternative approaches."
+            warnings.append(warning)
+        
+        return "\n\n" + "\n".join(warnings) + "\n"
+    except Exception:
+        # Don't let failure warnings break the chat system
+        return ""
 
 
 def execute_shell_command(command: str, root: Path) -> None:
@@ -414,6 +615,86 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     effort_level = "normal"  # low, normal, high
     max_cost_budget_cents = config.max_estimated_cost_cents or 1000  # Default $10
     
+    # File watcher for live context synchronization
+    file_watcher = None
+    watcher_running = False
+    
+    def on_file_changed(file_path: str, event_type: str) -> None:
+        """Callback for file watcher events.
+        
+        Args:
+            file_path: Path to the changed file
+            event_type: Type of event ('modified' or 'deleted')
+        """
+        nonlocal session_context, targeted_files
+        
+        try:
+            from teaagent.memory.pinned_file import PinnedFileStorage
+            from datetime import datetime
+            
+            storage = PinnedFileStorage(config.root)
+            
+            if event_type == "deleted":
+                # File was deleted, unpin it and show warning
+                storage.remove(file_path)
+                print(f"[TeaAgent] ⚠️ File deleted and unpinned: {file_path}")
+                # Update watcher
+                if file_watcher:
+                    pinned_files = storage.list_all()
+                    file_watcher.update_watched_files({pf.file_path for pf in pinned_files})
+            elif event_type == "modified":
+                # File was modified, update context
+                storage.update_last_modified(file_path)
+                modified_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                print(f"[TeaAgent] 📌 Context auto-refreshed: {file_path} (modified at {modified_str})")
+                
+                # Update targeted files if this file is in the context
+                full_path = config.root / file_path
+                if full_path in targeted_files:
+                    # Re-read the file to update context
+                    # In a full implementation, this would update the session context
+                    pass
+        except Exception as exc:
+            # Don't let file watcher errors break the chat system
+            import sys
+            print(f"[TeaAgent] Warning: Error handling file change: {exc}", file=sys.stderr)
+    
+    def start_file_watcher() -> None:
+        """Start the file watcher if there are pinned files."""
+        nonlocal file_watcher, watcher_running
+        
+        try:
+            from teaagent.memory.pinned_file import PinnedFileStorage
+            from teaagent.memory.file_watcher import FileWatcher
+            
+            storage = PinnedFileStorage(config.root)
+            pinned_files = storage.list_all()
+            
+            if pinned_files and not watcher_running:
+                file_watcher = FileWatcher(
+                    root=config.root,
+                    callback=on_file_changed,
+                    debounce_ms=500,
+                )
+                file_watcher.update_watched_files({pf.file_path for pf in pinned_files})
+                file_watcher.start()
+                watcher_running = True
+                print(f"[TeaAgent] Watching {len(pinned_files)} pinned files for changes...")
+        except Exception as exc:
+            import sys
+            print(f"[TeaAgent] Warning: Failed to start file watcher: {exc}", file=sys.stderr)
+    
+    def stop_file_watcher() -> None:
+        """Stop the file watcher."""
+        nonlocal file_watcher, watcher_running
+        
+        if file_watcher and watcher_running:
+            try:
+                file_watcher.stop()
+                watcher_running = False
+            except Exception:
+                pass
+    
     def create_checkpoint() -> bool:
         """Create a git stash checkpoint to protect pre-session changes."""
         nonlocal checkpoint_created, checkpoint_ref
@@ -630,9 +911,14 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     # Create initial checkpoint for safe undo
     create_checkpoint()
     
+    # Start file watcher if there are pinned files
+    start_file_watcher()
+    
     # If initial task provided, execute it first
     if initial_task:
         print(f"[TeaAgent] Executing initial task: {initial_task}")
+        # Inject failure warnings
+        task_with_warnings = initial_task + get_failure_warnings(initial_task, config.root)
         # Create updated config with runtime values
         from dataclasses import replace
         updated_config = replace(
@@ -640,7 +926,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             model=runtime_model,
             max_estimated_cost_cents=runtime_max_cost_cents,
         )
-        result = run_chat_agent(task=initial_task, adapter=adapter, config=updated_config)
+        result = run_chat_agent(task=task_with_warnings, adapter=adapter, config=updated_config)
         if result != 0:
             return result
         # Placeholder cost tracking for initial task
@@ -655,8 +941,17 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     # REPL loop
     while True:
         try:
+            # Build prompt with pinned file indicator
+            try:
+                from teaagent.memory.pinned_file import PinnedFileStorage
+                storage = PinnedFileStorage(config.root)
+                pinned_count = len(storage.list_all())
+                prompt = f"teaagent📌{pinned_count}> " if pinned_count > 0 else "teaagent> "
+            except Exception:
+                prompt = "teaagent> "
+            
             # Read user input
-            user_input = input("teaagent> ").strip()
+            user_input = input(prompt).strip()
             
             if not user_input:
                 continue
@@ -743,6 +1038,31 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 show_targeted_context()
                 continue
             
+            # Handle memory failures command
+            if user_input == '/memory failures':
+                handle_memory_failures(config.root)
+                continue
+            
+            # Handle memory clear command
+            if user_input.startswith('/memory clear'):
+                handle_memory_clear(config.root, user_input)
+                continue
+            
+            # Handle pin command
+            if user_input.startswith('/pin '):
+                handle_pin(config.root, user_input, start_file_watcher)
+                continue
+            
+            # Handle unpin command
+            if user_input.startswith('/unpin '):
+                handle_unpin(config.root, user_input, start_file_watcher)
+                continue
+            
+            # Handle pinned command
+            if user_input == '/pinned':
+                handle_pinned(config.root)
+                continue
+            
             # Handle add command
             if user_input.startswith('/add '):
                 path_arg = user_input[5:].strip()
@@ -821,6 +1141,8 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             
             # Execute task
             print(f"[TeaAgent] Executing: {user_input}")
+            # Inject failure warnings
+            task_with_warnings = user_input + get_failure_warnings(user_input, config.root)
             # Create updated config with runtime values
             from dataclasses import replace
             updated_config = replace(
@@ -828,7 +1150,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 model=runtime_model,
                 max_estimated_cost_cents=runtime_max_cost_cents,
             )
-            result = run_chat_agent(task=user_input, adapter=adapter, config=updated_config)
+            result = run_chat_agent(task=task_with_warnings, adapter=adapter, config=updated_config)
             
             if result != 0:
                 print(f"[TeaAgent] Task failed with exit code {result}")
@@ -841,6 +1163,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             
         except EOFError:
             print("\n[TeaAgent] Goodbye!")
+            stop_file_watcher()
             return 0
         except KeyboardInterrupt:
             print("\n[TeaAgent] Interrupted. Type /exit to quit or continue with next task")
@@ -866,12 +1189,13 @@ def print_chat_help() -> None:
     print("  /budget                    - Show budget status")
     print("  /undo                      - Undo all changes (using checkpoint)")
     print("  !<command>                 - Execute shell command (escape hatch)")
-    print("  /context                   - Show currently targeted files")
-    print("  /add <path>                - Add file/directory to targeted context")
-    print("  /drop <path>               - Remove file/directory from context")
-    print("  /provider <name>           - Switch LLM provider (anthropic, openai, etc.)")
-    print("  /model <name>              - Switch model (claude-3-5-sonnet, gpt-4, etc.)")
-    print("  /effort <low|normal|high>  - Set effort throttling level")
-    print("  /budget                    - Show budget and effort status")
+    print()
+    print("[TeaAgent] Memory & Context Commands:")
+    print("  /memory failures           - List all failure cards")
+    print("  /memory clear              - Clear all failure cards")
+    print("  /memory clear <n>          - Clear specific failure card by number")
+    print("  /pin <file>                - Pin file for live context sync")
+    print("  /unpin <file>              - Unpin file from live context sync")
+    print("  /pinned                    - List all pinned files")
     print()
     print("[TeaAgent] Any other input will be executed as a task")

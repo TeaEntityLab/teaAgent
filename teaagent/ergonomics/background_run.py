@@ -189,6 +189,78 @@ def _process_exists(pid: int) -> bool:
         return False
 
 
+def _capture_failure_card(root: Path, run_id: str, exit_code: int) -> None:
+    """Capture a failure card when a background task fails.
+    
+    Args:
+        root: The workspace root directory
+        run_id: The run ID of the failed task
+        exit_code: The exit code of the failed task
+    """
+    try:
+        from teaagent.memory.failure_card import FailureCard, FailureCardStorage
+        from teaagent.run_store import RunStore
+        
+        # Only capture for non-zero exit codes (actual failures)
+        if exit_code == 0:
+            return
+        
+        store = RunStore(root)
+        try:
+            # Get task description
+            task = store.task_for_run(run_id)
+        except (FileNotFoundError, ValueError):
+            return
+        
+        # Get observations to extract error information
+        observations = store.observations_for_run(run_id)
+        
+        # Extract error from the last observation if it's an error
+        error_type = "UnknownError"
+        error_message = f"Task failed with exit code {exit_code}"
+        file_path = ""
+        line_number = None
+        
+        if observations:
+            last_obs = observations[-1]
+            if 'error' in last_obs:
+                error_message = str(last_obs['error'])
+                # Try to extract error type from message
+                if ':' in error_message:
+                    error_type = error_message.split(':', 1)[0].strip()
+            if 'tool_name' in last_obs:
+                # If it's a tool error, use the tool name as context
+                error_message = f"{last_obs['tool_name']}: {error_message}"
+        
+        # Try to extract file path from task or observations
+        if '@' in task:
+            # Extract file references from task
+            import re
+            file_refs = re.findall(r'@([^\s]+)', task)
+            if file_refs:
+                file_path = file_refs[0]
+        
+        # Create failure card
+        storage = FailureCardStorage(root)
+        card = FailureCard.create(
+            run_id=run_id,
+            error_type=error_type,
+            file_path=file_path,
+            error_message=error_message,
+            task_description=task,
+            context_files=[],
+            line_number=line_number,
+        )
+        storage.append(card)
+        
+        import sys
+        print(f"[TeaAgent] Failure card captured for run {run_id}", file=sys.stderr)
+    except Exception as exc:
+        # Don't let failure card capture break the background run system
+        import sys
+        print(f"[TeaAgent] Warning: Failed to capture failure card: {exc}", file=sys.stderr)
+
+
 def _refresh_process_state(data: dict[str, Any], record_path: Path, *, persist: bool = True) -> dict[str, Any]:
     if data.get('stopped_at'):
         data['alive'] = False
@@ -215,6 +287,9 @@ def _refresh_process_state(data: dict[str, Any], record_path: Path, *, persist: 
         data['stopped_at'] = _utc_now()
         if exit_code is not None:
             data['exit_code'] = exit_code
+            # Capture failure card if run failed
+            if exit_code != 0 and data.get('run_id'):
+                _capture_failure_card(record_path.parent.parent.parent, data['run_id'], exit_code)
         if persist:
             _persist_record_state(record_path, data)
     return data

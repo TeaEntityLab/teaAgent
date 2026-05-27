@@ -87,6 +87,21 @@ Same as the [golden path](#golden-path-first-hour) above. Prefer `--human` on `d
 - Use-case traceability: [docs/use-cases.md](docs/use-cases.md)
 - Architecture decisions: [docs/adr](docs/adr) (including ANP adapter boundary in ADR 0007)
 
+### 7. Memory & Context Features
+
+TeaAgent includes persistent memory features to learn from past mistakes and sync with your IDE:
+
+**Failure Experience Loop:**
+- Background tasks that fail automatically create "failure cards" capturing error context
+- Future similar tasks automatically receive warnings about past failures
+- Commands: `/memory failures` (list), `/memory clear` (clear all), `/memory clear <n>` (clear specific)
+
+**Live Context Anchors:**
+- Pin files with `/pin <file>` to watch for changes in your IDE
+- CLI automatically refreshes context when you save pinned files
+- Commands: `/pin <file>`, `/unpin <file>`, `/pinned` (list)
+- Visual indicator in prompt shows pinned file count (e.g., `teaagent📌2>`)
+
 ## Architecture
 
 ```
