@@ -1014,37 +1014,43 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
     teaagent_dir = tmp_path / '.teaagent'
 
     # Zero-footprint queries: should NOT create .teaagent
+    # Format: (name, cmd_fn, expected_return_codes or None for non-CLI functions)
     zero_footprint_queries = [
-        ('memory list', lambda: memory_list_command(argparse.Namespace(root=str(tmp_path), limit=10))),
-        ('memory search', lambda: memory_search_command(argparse.Namespace(root=str(tmp_path), query='test', limit=10))),
-        ('memory show missing', lambda: memory_show_command(argparse.Namespace(root=str(tmp_path), memory_id='missing'))),
-        ('skill candidate list', lambda: skill_candidate_list_command(argparse.Namespace(root=str(tmp_path)))),
-        ('skill candidate show missing', lambda: skill_candidate_show_command(argparse.Namespace(root=str(tmp_path), candidate_id='missing'))),
-        ('skill search', lambda: skill_search_command(argparse.Namespace(root=str(tmp_path), query='test', tag=None, limit=20, json=True))),
-        ('skill marketplace list', lambda: skill_marketplace_list_command(argparse.Namespace(root=str(tmp_path), limit=50, json=True))),
-        ('automation list', lambda: automation_list_command(argparse.Namespace(root=str(tmp_path)))),
-        ('automation show missing', lambda: automation_show_command(argparse.Namespace(root=str(tmp_path), automation_id='missing'))),
-        ('automation status', lambda: automation_status_command(argparse.Namespace(root=str(tmp_path)))),
-        ('ultrawork list', lambda: ultrawork_list_command(argparse.Namespace(root=str(tmp_path)))),
-        ('ultrawork show missing', lambda: ultrawork_show_command(argparse.Namespace(root=str(tmp_path), worker_id='missing'))),
-        ('ultrawork logs missing', lambda: ultrawork_logs_command(argparse.Namespace(root=str(tmp_path), worker_id='missing', bytes=64000))),
-        ('cloud list', lambda: cloud_list_command(argparse.Namespace(root=str(tmp_path), status=None, limit=50, json=True))),
-        ('cloud show missing', lambda: cloud_show_command(argparse.Namespace(root=str(tmp_path), task_id='missing', json=True))),
-        ('cloud capabilities', lambda: cloud_capabilities_command(argparse.Namespace(root=str(tmp_path), json=True))),
-        ('yesterday runs', lambda: list_yesterday_runs(tmp_path)),
-        ('recall runs', lambda: list_recall_runs(tmp_path)),
-        ('status short', lambda: build_status_short(root=tmp_path, provider='gpt', permission_mode=PermissionMode.PROMPT)),
+        ('memory list', lambda: memory_list_command(argparse.Namespace(root=str(tmp_path), limit=10)), {0}),
+        ('memory search', lambda: memory_search_command(argparse.Namespace(root=str(tmp_path), query='test', limit=10)), {0}),
+        ('memory show missing', lambda: memory_show_command(argparse.Namespace(root=str(tmp_path), memory_id='missing')), {1}),
+        ('skill candidate list', lambda: skill_candidate_list_command(argparse.Namespace(root=str(tmp_path))), {0}),
+        ('skill candidate show missing', lambda: skill_candidate_show_command(argparse.Namespace(root=str(tmp_path), candidate_id='missing')), {1}),
+        ('skill search', lambda: skill_search_command(argparse.Namespace(root=str(tmp_path), query='test', tag=None, limit=20, json=True)), {0}),
+        ('skill marketplace list', lambda: skill_marketplace_list_command(argparse.Namespace(root=str(tmp_path), limit=50, json=True)), {0}),
+        ('automation list', lambda: automation_list_command(argparse.Namespace(root=str(tmp_path))), {0}),
+        ('automation show missing', lambda: automation_show_command(argparse.Namespace(root=str(tmp_path), automation_id='missing')), {1}),
+        ('automation status', lambda: automation_status_command(argparse.Namespace(root=str(tmp_path))), {0}),
+        ('ultrawork list', lambda: ultrawork_list_command(argparse.Namespace(root=str(tmp_path))), {0}),
+        ('ultrawork show missing', lambda: ultrawork_show_command(argparse.Namespace(root=str(tmp_path), worker_id='missing')), {1}),
+        ('ultrawork logs missing', lambda: ultrawork_logs_command(argparse.Namespace(root=str(tmp_path), worker_id='missing', bytes=64000)), {1}),
+        ('cloud list', lambda: cloud_list_command(argparse.Namespace(root=str(tmp_path), status=None, limit=50, json=True)), {0}),
+        ('cloud show missing', lambda: cloud_show_command(argparse.Namespace(root=str(tmp_path), task_id='missing', json=True)), {1}),
+        ('cloud capabilities', lambda: cloud_capabilities_command(argparse.Namespace(root=str(tmp_path), json=True)), {0}),
+        ('yesterday runs', lambda: list_yesterday_runs(tmp_path), None),
+        ('recall runs', lambda: list_recall_runs(tmp_path), None),
+        ('status short', lambda: build_status_short(root=tmp_path, provider='gpt', permission_mode=PermissionMode.PROMPT), None),
     ]
 
-    for name, cmd_fn in zero_footprint_queries:
+    for name, cmd_fn, expected_codes in zero_footprint_queries:
         # Reset: ensure .teaagent doesn't exist
         if teaagent_dir.exists():
             shutil.rmtree(teaagent_dir)
         assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
 
-        # Execute command
-        with contextlib.suppress(Exception):
-            cmd_fn()
+        # Execute command and validate return code (for CLI commands that return int)
+        try:
+            result = cmd_fn()
+            if result is not None and isinstance(result, int):
+                assert result in expected_codes, f"{name} returned {result}, expected {expected_codes}"
+        except Exception as exc:
+            # Fail on unexpected exceptions - only allow specific known error types
+            raise AssertionError(f"{name} raised unexpected exception: {exc}") from exc
 
         # Verify .teaagent was NOT created
         assert not teaagent_dir.exists(), f"{name} should not create .teaagent directory"
