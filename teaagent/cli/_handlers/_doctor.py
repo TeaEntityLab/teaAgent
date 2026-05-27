@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
+from teaagent.git_sandbox import is_git_repository
 from teaagent.llm import available_providers
 from teaagent.llm._config import PROVIDER_CONFIGS
 from teaagent.wizard import (
@@ -681,6 +682,63 @@ def doctor_migration_command(args: argparse.Namespace) -> int:
     except Exception as exc:
         print_json({'ok': False, 'error': str(exc)})
         return 1
+
+
+def doctor_git_sandbox(args: argparse.Namespace) -> int:
+    """Check for orphaned git sandbox branches."""
+    from teaagent.git_sandbox import find_orphaned_sandbox_branches, prune_sandbox_branch
+
+    root = Path(getattr(args, 'root', '.')).resolve()
+    prune = getattr(args, 'prune', False)
+
+    if not is_git_repository(root):
+        payload = {
+            'ok': True,
+            'mode': 'checklist',
+            'root': str(root),
+            'is_git_repo': False,
+            'message': 'Not a git repository',
+            'orphaned_branches': [],
+        }
+        print_json(payload)
+        return 0
+
+    orphaned = find_orphaned_sandbox_branches(root)
+
+    if prune and orphaned:
+        pruned: list[str] = []
+        failed: list[dict[str, str]] = []
+        for branch_info in orphaned:
+            branch_name = branch_info['branch_name']
+            if prune_sandbox_branch(root, branch_name):
+                pruned.append(branch_name)
+            else:
+                failed.append({'branch': branch_name, 'error': 'deletion_failed'})
+
+        payload = {
+            'ok': len(failed) == 0,
+            'mode': 'prune',
+            'root': str(root),
+            'orphaned_branches': orphaned,
+            'pruned': pruned,
+            'failed': failed,
+            'message': f'Pruned {len(pruned)} branches' if pruned else 'No branches pruned',
+        }
+        print_json(payload)
+        return 0 if len(failed) == 0 else 1
+    else:
+        payload = {
+            'ok': len(orphaned) == 0,
+            'mode': 'check',
+            'root': str(root),
+            'orphaned_branches': orphaned,
+            'message': f'Found {len(orphaned)} orphaned branches' if orphaned else 'No orphaned branches',
+            'next_steps': [
+                'teaagent doctor git-sandbox --prune',
+            ] if orphaned else [],
+        }
+        print_json(payload)
+        return 0 if len(orphaned) == 0 else 1
 
 
 def _sanitize_doctor_payload(value: Any) -> Any:

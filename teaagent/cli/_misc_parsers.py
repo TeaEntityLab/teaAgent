@@ -27,6 +27,7 @@ def register(
         handlers.get('doctor_env_order'),
         handlers['doctor_all'],
         migration_handler=handlers.get('doctor_migration'),
+        git_sandbox_handler=handlers.get('doctor_git_sandbox'),
     )
     _completion(subparsers, handlers['completion'])
     _audit(
@@ -220,6 +221,7 @@ def _doctor(
     env_order_handler: Optional[Callable] = None,
     all_handler: Optional[Callable] = None,
     migration_handler: Optional[Callable] = None,
+    git_sandbox_handler: Optional[Callable] = None,
 ) -> None:
     doctor = subparsers.add_parser('doctor', help='Run environment checks.')
     subs = doctor.add_subparsers(dest='doctor_command', required=True)
@@ -376,6 +378,22 @@ def _doctor(
         help='SQLite database path to inspect for migration status.',
     )
     migration.set_defaults(func=migration_handler or graphqlite_handler)
+
+    git_sandbox = subs.add_parser(
+        'git-sandbox',
+        help='Check for orphaned git sandbox branches from incomplete agent runs.',
+    )
+    git_sandbox.add_argument(
+        '--prune',
+        action='store_true',
+        help='Delete orphaned sandbox branches after confirmation.',
+    )
+    git_sandbox.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root to inspect for orphaned branches. Defaults to current directory.',
+    )
+    git_sandbox.set_defaults(func=git_sandbox_handler or model_handler)
 
 
 def _configure(

@@ -380,6 +380,63 @@ def _execute_agent_task(
                     merge_result = git_sandbox.merge(squash=False)
                     if merge_result.success:
                         print(f'[TeaAgent] Merged sandbox branch successfully.')
+                    elif merge_result.has_conflicts:
+                        print(f'[TeaAgent] Merge conflicts detected in {len(merge_result.conflicted_files)} file(s):')
+                        for file in merge_result.conflicted_files:
+                            print(f'  - {file}')
+                        print(f'\nResolve conflicts:')
+                        print(f'  [a] Accept Agent version (theirs)')
+                        print(f'  [d] Accept Developer version (ours)')
+                        print(f'  [b] Abort merge and keep sandbox branch')
+                        print(f'  [m] Launch mergetool for manual resolution')
+                        resolution = input('Choice: ').strip().lower()
+                        
+                        from teaagent.git_sandbox import (
+                            resolve_conflict_accept_theirs,
+                            resolve_conflict_accept_ours,
+                            abort_merge,
+                        )
+                        
+                        if resolution == 'a':
+                            for file in merge_result.conflicted_files:
+                                if resolve_conflict_accept_theirs(args.root, file):
+                                    print(f'  Accepted Agent version for {file}')
+                                else:
+                                    print(f'  Failed to resolve {file}', file=sys.stderr)
+                            # Complete the merge
+                            subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
+                            subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                            if git_sandbox._stash_id:
+                                from teaagent.git_sandbox import stash_pop
+                                stash_pop(args.root)
+                            print(f'[TeaAgent] Conflicts resolved using Agent version.')
+                        elif resolution == 'd':
+                            for file in merge_result.conflicted_files:
+                                if resolve_conflict_accept_ours(args.root, file):
+                                    print(f'  Accepted Developer version for {file}')
+                                else:
+                                    print(f'  Failed to resolve {file}', file=sys.stderr)
+                            # Complete the merge
+                            subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
+                            subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                            if git_sandbox._stash_id:
+                                from teaagent.git_sandbox import stash_pop
+                                stash_pop(args.root)
+                            print(f'[TeaAgent] Conflicts resolved using Developer version.')
+                        elif resolution == 'b':
+                            abort_merge(args.root)
+                            print(f'[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.')
+                            print(f'[TeaAgent] To resolve manually: git checkout {git_sandbox._original_branch} && git merge {git_sandbox._branch_name}')
+                        elif resolution == 'm':
+                            print(f'[TeaAgent] Launching mergetool...')
+                            subprocess.run(['git', 'mergetool'], cwd=args.root)
+                            print(f'[TeaAgent] Please complete the merge manually, then run:')
+                            print(f'  git add <resolved-files>')
+                            print(f'  git commit')
+                            print(f'  git branch -D {git_sandbox._branch_name}')
+                        else:
+                            abort_merge(args.root)
+                            print(f'[TeaAgent] Invalid choice. Merge aborted. Sandbox branch preserved.')
                     else:
                         print(f'[TeaAgent ERROR] {merge_result.error}', file=sys.stderr)
                 elif choice == 's':

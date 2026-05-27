@@ -66,6 +66,7 @@ from teaagent.cli._handlers import (
     doctor_aigateway,
     doctor_all,
     doctor_env_order,
+    doctor_git_sandbox,
     doctor_graphqlite,
     doctor_mcp,
     doctor_migration_command,
@@ -239,6 +240,7 @@ def build_parser() -> argparse.ArgumentParser:
             'audit_prune': audit_prune_command,
             'audit_serve': audit_serve_command,
             'doctor_migration': doctor_migration_command,
+            'doctor_git_sandbox': doctor_git_sandbox,
         },
     )
     register_memory(

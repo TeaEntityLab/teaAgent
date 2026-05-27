@@ -8,7 +8,7 @@ commands instead of manual file copying.
 from __future__ import annotations
 
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -22,6 +22,8 @@ class GitSandboxResult:
     original_branch: Optional[str] = None
     error: Optional[str] = None
     stash_id: Optional[str] = None
+    has_conflicts: bool = False
+    conflicted_files: list[str] = field(default_factory=list)
 
 
 def is_git_repository(root: str | Path) -> bool:
@@ -321,6 +323,15 @@ class GitBranchSandbox:
                     check=True,
                 )
 
+            # Check for merge conflicts
+            if has_merge_conflicts(self._root):
+                return GitSandboxResult(
+                    success=False,
+                    error='Merge conflicts detected. Resolve conflicts manually or use conflict resolution tools.',
+                    has_conflicts=True,
+                    conflicted_files=get_conflicted_files(self._root),
+                )
+
             # Delete sandbox branch
             subprocess.run(
                 ['git', 'branch', '-D', self._branch_name],
@@ -411,3 +422,271 @@ class GitTransactionSink:
         call_id = payload.get('call_id')
         if isinstance(call_id, str):
             self._pending.pop(call_id, None)
+
+
+def find_orphaned_sandbox_branches(
+    root: str | Path,
+    background_store: Optional['BackgroundRunStore'] = None,
+) -> list[dict[str, Any]]:
+    """Find orphaned sandbox branches that have no corresponding active run.
+
+    Args:
+        root: Git repository root path.
+        background_store: Optional BackgroundRunStore to check for active runs.
+
+    Returns:
+        List of orphaned branch info dicts with keys: branch_name, run_id, reason.
+    """
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
+    root_path = Path(root).resolve()
+
+    if not is_git_repository(root_path):
+        return []
+
+    try:
+        # Get all branches
+        result = subprocess.run(
+            ['git', 'branch', '--format=%(refname:short)'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        branches = result.stdout.strip().split('\n') if result.stdout.strip() else []
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+
+    # Initialize background store if not provided
+    if background_store is None:
+        try:
+            background_store = BackgroundRunStore(root_path, readonly=True)
+        except Exception:
+            background_store = None
+
+    # Get active run IDs from background store
+    active_run_ids: set[str] = set()
+    if background_store:
+        try:
+            for record_file in background_store.dir.glob('*.json'):
+                try:
+                    data = json.loads(record_file.read_text(encoding='utf-8'))
+                    if data.get('status') not in {'stopped', 'failed', 'completed'}:
+                        background_id = data.get('background_id')
+                        if background_id:
+                            active_run_ids.add(background_id)
+                except (json.JSONDecodeError, IOError):
+                    continue
+        except Exception:
+            pass
+
+    orphaned: list[dict[str, Any]] = []
+
+    for branch in branches:
+        # Check if branch matches sandbox patterns
+        run_id = None
+        if branch.startswith('teaagent-sandbox-'):
+            run_id = branch.replace('teaagent-sandbox-', '')
+        elif branch.startswith('teaagent-run-'):
+            run_id = branch.replace('teaagent-run-', '')
+        else:
+            continue
+
+        if not run_id:
+            continue
+
+        # Check if run is still active
+        if run_id in active_run_ids:
+            continue
+
+        # Branch is orphaned
+        orphaned.append({
+            'branch_name': branch,
+            'run_id': run_id,
+            'reason': 'no_active_run',
+        })
+
+    return orphaned
+
+
+def prune_sandbox_branch(root: str | Path, branch_name: str) -> bool:
+    """Delete a sandbox branch.
+
+    Args:
+        root: Git repository root path.
+        branch_name: Branch name to delete.
+
+    Returns:
+        True if deletion succeeded, False otherwise.
+    """
+    root_path = Path(root).resolve()
+
+    if not is_git_repository(root_path):
+        return False
+
+    try:
+        subprocess.run(
+            ['git', 'branch', '-D', branch_name],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def has_merge_conflicts(root: str | Path) -> bool:
+    """Check if there are unmerged files (merge conflicts) in the worktree.
+
+    Args:
+        root: Git repository root path.
+
+    Returns:
+        True if there are merge conflicts, False otherwise.
+    """
+    root_path = Path(root).resolve()
+
+    if not is_git_repository(root_path):
+        return False
+
+    try:
+        result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        # Check for lines with 'UU' (both modified) or 'AA' (both added)
+        for line in result.stdout.strip().split('\n'):
+            if line.startswith(('UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD')):
+                return True
+        return False
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def get_conflicted_files(root: str | Path) -> list[str]:
+    """Get list of files with merge conflicts.
+
+    Args:
+        root: Git repository root path.
+
+    Returns:
+        List of file paths with conflicts.
+    """
+    root_path = Path(root).resolve()
+
+    if not is_git_repository(root_path):
+        return []
+
+    try:
+        result = subprocess.run(
+            ['git', 'diff', '--name-only', '--diff-filter=U'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip().split('\n') if result.stdout.strip() else []
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+
+
+def resolve_conflict_accept_ours(root: str | Path, file_path: str) -> bool:
+    """Accept our version (current branch) for a conflicted file.
+
+    Args:
+        root: Git repository root path.
+        file_path: Relative path to conflicted file.
+
+    Returns:
+        True if resolution succeeded, False otherwise.
+    """
+    root_path = Path(root).resolve()
+
+    if not is_git_repository(root_path):
+        return False
+
+    try:
+        subprocess.run(
+            ['git', 'checkout', '--ours', file_path],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        subprocess.run(
+            ['git', 'add', file_path],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def resolve_conflict_accept_theirs(root: str | Path, file_path: str) -> bool:
+    """Accept their version (incoming branch) for a conflicted file.
+
+    Args:
+        root: Git repository root path.
+        file_path: Relative path to conflicted file.
+
+    Returns:
+        True if resolution succeeded, False otherwise.
+    """
+    root_path = Path(root).resolve()
+
+    if not is_git_repository(root_path):
+        return False
+
+    try:
+        subprocess.run(
+            ['git', 'checkout', '--theirs', file_path],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        subprocess.run(
+            ['git', 'add', file_path],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def abort_merge(root: str | Path) -> bool:
+    """Abort the current merge operation.
+
+    Args:
+        root: Git repository root path.
+
+    Returns:
+        True if abort succeeded, False otherwise.
+    """
+    root_path = Path(root).resolve()
+
+    if not is_git_repository(root_path):
+        return False
+
+    try:
+        subprocess.run(
+            ['git', 'merge', '--abort'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
