@@ -317,7 +317,7 @@ class ApprovalPolicy:
         
         # Initialize federated sync for P2P broadcast
         sync = FederatedGraphSync(
-            root=self.root,
+            root=self.workspace_root,
             agent_id=self.agent_id or "unknown",
         )
         
