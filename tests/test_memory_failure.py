@@ -297,10 +297,10 @@ class TestFailureCardMatching:
         )
         storage.append(card)
         
-        # No match
+        # No match - use completely different keywords
         matching = storage.find_matching(
             file_paths=["src/other.py"],
-            task_description="Completely different task",
+            task_description="Implement feature with unique words",
         )
         assert len(matching) == 0
     

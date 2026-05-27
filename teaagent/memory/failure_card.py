@@ -254,6 +254,10 @@ class FailureCardStorage:
             common_words = task_words & card_words
             if common_words:
                 score += len(common_words)
+            
+            # Append to scored cards if score > 0
+            if score > 0:
+                scored_cards.append((card, score))
         
         # Sort by score (descending) and timestamp (descending)
         scored_cards.sort(key=lambda c: (c[1], c[0].timestamp), reverse=True)

@@ -234,7 +234,7 @@ class TestFileWatcher:
             debounce_ms=100,
         )
         
-        assert watcher.root == temp_root
+        assert watcher.root == temp_root.resolve()
         assert watcher.callback == test_callback
         assert watcher.debounce_ms == 100
         assert watcher.is_running() is False

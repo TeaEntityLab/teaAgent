@@ -38,7 +38,7 @@ class TestApproachHintGenerator:
     def test_generate_hints_default(self) -> None:
         """Test generating hints for generic task."""
         generator = ApproachHintGenerator()
-        hints = generator.generate_hints("Add a new feature", 2)
+        hints = generator.generate_hints("Implement something generic", 2)
         
         assert len(hints) == 2
         assert all("Approach" in h for h in hints)

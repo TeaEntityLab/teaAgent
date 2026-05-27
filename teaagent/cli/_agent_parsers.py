@@ -259,6 +259,12 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         help='Context budget profile for memory and replay limits.',
     )
     p.add_argument(
+        '--memory-limit',
+        type=int,
+        default=None,
+        help='Maximum number of memory entries to include in context.',
+    )
+    p.add_argument(
         '--skill',
         action='append',
         default=[],
