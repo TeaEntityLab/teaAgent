@@ -521,12 +521,12 @@ def chat_command(args: argparse.Namespace) -> int:
         max_estimated_cost_cents=args.max_estimated_cost_cents,
         allow_destructive=args.allow_destructive,
         memory_limit=args.memory_limit,
-        enable_subagent=args.enable_subagent,
+        enable_subagent=args.subagent,
         max_subagent_depth=args.max_subagent_depth,
         heartbeat_seconds=args.heartbeat,
         stream=args.stream,
-        enable_git_tools=args.enable_git_tools,
-        skill_search_dirs=args.skill_search_dirs,
+        enable_git_tools=getattr(args, 'enable_git_tools', False),
+        skill_search_dirs=getattr(args, 'skill_search_dirs', None),
     )
     
     # Run the chat REPL
