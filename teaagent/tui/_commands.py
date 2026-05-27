@@ -20,7 +20,7 @@ from teaagent.graphqlite_store import (
 )
 from teaagent.intent import clarify_task
 from teaagent.llm import available_providers
-from teaagent.model_routing import route_model
+from teaagent.model_routing import analyze_complexity, estimate_tokens, route_model
 from teaagent.policy import parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
@@ -103,6 +103,28 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 ' '.join(args), provider=tui.provider, model=tui.model
             ).to_dict()
         )
+        return True
+    if action == 'complexity':
+        if not args:
+            tui.output_fn('error: complexity requires a task')
+            return True
+        task = ' '.join(args)
+        complexity = analyze_complexity(task)
+        estimated = estimate_tokens(task, complexity)
+        tui._print_json({
+            'task': task,
+            'complexity': complexity,
+            'estimated_tokens': estimated,
+        })
+        return True
+    if action == 'estimate':
+        if not args:
+            tui.output_fn('error: estimate requires a task')
+            return True
+        task = ' '.join(args)
+        complexity = analyze_complexity(task)
+        estimated = estimate_tokens(task, complexity)
+        tui.output_fn(f'estimate: {task} -> complexity={complexity}, tokens={estimated}')
         return True
     if action == 'root':
         if len(args) != 1:

@@ -469,7 +469,9 @@ class TUITests(unittest.TestCase):
             payload = json.loads(output[-1])
             self.assertTrue(payload['ready'])
             self.assertEqual(payload['routing']['category'], 'review')
-            self.assertEqual(payload['model'], 'gpt-4o')
+            # With complexity-based routing, review tasks (medium complexity) use gpt-4o-mini
+            self.assertEqual(payload['model'], 'gpt-4o-mini')
+            self.assertIn('complexity', payload['routing'])
 
     def test_tui_memory_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -508,8 +510,10 @@ class TUITests(unittest.TestCase):
 
             route_payload = json.loads(output[1])
             ask_payload = json.loads(output[-1])
-            self.assertEqual(route_payload['model'], 'gpt-4o')
-            self.assertEqual(factory.calls[0], ('gpt', 'gpt-4o'))
+            # With complexity-based routing, review tasks (medium complexity) use gpt-4o-mini
+            self.assertEqual(route_payload['model'], 'gpt-4o-mini')
+            self.assertIn('complexity', route_payload)
+            self.assertEqual(factory.calls[0], ('gpt', 'gpt-4o-mini'))
             self.assertEqual(ask_payload['routing']['category'], 'review')
 
     def test_tui_ask_clarify_stops_before_adapter_when_ambiguous(self) -> None:

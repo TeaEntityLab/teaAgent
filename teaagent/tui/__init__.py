@@ -48,6 +48,8 @@ HELP_TEXT = """Commands:
   model <name|default>      Set or clear model override.
   route-model <on|off>      Enable or disable task-based model routing.
   route <task>              Preview model route for a task.
+  complexity <task>         Analyze task complexity (high/medium/low).
+  estimate <task>           Estimate token budget for a task.
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
   progress <on|off>         Stream brief audit-event progress lines during ask runs.
