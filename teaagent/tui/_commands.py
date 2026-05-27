@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 import shlex
+import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from teaagent.daily import build_daily_brief
+from teaagent.git_sandbox import (
+    ParallelExperimentStack,
+    abort_merge,
+    get_conflicted_files,
+    resolve_conflict_accept_ours,
+    resolve_conflict_accept_theirs,
+)
 from teaagent.graphqlite_store import (
     GraphQLiteRuntimeError,
     GraphQLiteUnavailableError,
@@ -555,6 +563,145 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui._print_json(tui._get_store().query(' '.join(args)))
         except (GraphQLiteRuntimeError, GraphQLiteUnavailableError) as exc:
             tui.output_fn(f'error: {exc}')
+        return True
+    if action == 'parallel':
+        if not args:
+            tui.output_fn('error: parallel requires options (e.g., parallel optA optB optC)')
+            return True
+        run_id = f'exp-{int(__import__("time").time())}'
+        tui._parallel_options = args
+        tui._parallel_stack = ParallelExperimentStack(tui.root, run_id, args)
+        results = tui._parallel_stack.start_all(auto_stash=True)
+        
+        success_count = sum(1 for r in results.values() if r.success)
+        tui.output_fn(f'parallel: started {success_count}/{len(args)} experiment branches')
+        for option, result in results.items():
+            if result.success:
+                tui.output_fn(f'  {option}: {result.branch_name}')
+            else:
+                tui.output_fn(f'  {option}: failed - {result.error}')
+        return True
+    if action == 'select':
+        if not tui._parallel_stack or not tui._parallel_options:
+            tui.output_fn('error: no active parallel experiments. Use "parallel optA optB optC" first.')
+            return True
+        if not args:
+            tui.output_fn('error: select requires an option name (e.g., select optA)')
+            return True
+        selected = args[0]
+        if selected not in tui._parallel_options:
+            tui.output_fn(f'error: unknown option "{selected}". Available: {", ".join(tui._parallel_options)}')
+            return True
+        
+        # Merge selected branch
+        sandbox = tui._parallel_stack.get_sandbox(selected)
+        if not sandbox:
+            tui.output_fn(f'error: sandbox for {selected} not found')
+            return True
+        
+        try:
+            # Switch to original branch
+            subprocess.run(['git', 'checkout', sandbox._original_branch], cwd=tui.root, check=True, capture_output=True)
+            # Merge selected branch
+            subprocess.run(['git', 'merge', sandbox._branch_name], cwd=tui.root, check=True, capture_output=True)
+            # Cleanup other branches
+            tui._parallel_stack.cleanup_all(keep_best=selected)
+            tui.output_fn(f'select: merged {selected} branch successfully')
+            tui._parallel_stack = None
+            tui._parallel_options = []
+        except subprocess.CalledProcessError as exc:
+            tui.output_fn(f'error: merge failed - {exc}')
+            return True
+        return True
+    if action == 'cancel':
+        if not tui._parallel_stack:
+            tui.output_fn('error: no active parallel experiments to cancel')
+            return True
+        tui._parallel_stack.cleanup_all()
+        tui.output_fn('cancel: cleaned up all experiment branches')
+        tui._parallel_stack = None
+        tui._parallel_options = []
+        return True
+    if action == 'conflict':
+        # Enter conflict resolution mode
+        conflicted = get_conflicted_files(tui.root)
+        if not conflicted:
+            tui.output_fn('conflict: no merge conflicts detected')
+            return True
+        tui._conflict_mode = True
+        tui._conflicted_files = conflicted
+        tui._current_conflict_index = 0
+        tui.output_fn(f'conflict: entered resolution mode with {len(conflicted)} conflicted file(s)')
+        return True
+    if action == 'o':
+        # Accept our version
+        if not tui._conflict_mode or not tui._conflicted_files:
+            tui.output_fn('error: not in conflict resolution mode. Use "conflict" first.')
+            return True
+        current_file = tui._conflicted_files[tui._current_conflict_index]
+        if resolve_conflict_accept_ours(tui.root, current_file):
+            tui.output_fn(f'accepted our version for {current_file}')
+            # Move to next file or exit if done
+            if tui._current_conflict_index < len(tui._conflicted_files) - 1:
+                tui._current_conflict_index += 1
+            else:
+                tui.output_fn('all conflicts resolved. Complete merge with: git commit')
+                tui._conflict_mode = False
+                tui._conflicted_files = []
+        else:
+            tui.output_fn(f'error: failed to resolve {current_file}')
+        return True
+    if action == 't':
+        # Accept their version
+        if not tui._conflict_mode or not tui._conflicted_files:
+            tui.output_fn('error: not in conflict resolution mode. Use "conflict" first.')
+            return True
+        current_file = tui._conflicted_files[tui._current_conflict_index]
+        if resolve_conflict_accept_theirs(tui.root, current_file):
+            tui.output_fn(f'accepted their version for {current_file}')
+            # Move to next file or exit if done
+            if tui._current_conflict_index < len(tui._conflicted_files) - 1:
+                tui._current_conflict_index += 1
+            else:
+                tui.output_fn('all conflicts resolved. Complete merge with: git commit')
+                tui._conflict_mode = False
+                tui._conflicted_files = []
+        else:
+            tui.output_fn(f'error: failed to resolve {current_file}')
+        return True
+    if action == 'n':
+        # Next conflicted file
+        if not tui._conflict_mode or not tui._conflicted_files:
+            tui.output_fn('error: not in conflict resolution mode. Use "conflict" first.')
+            return True
+        if tui._current_conflict_index < len(tui._conflicted_files) - 1:
+            tui._current_conflict_index += 1
+            tui.output_fn(f'conflict: moved to file {tui._current_conflict_index + 1}/{len(tui._conflicted_files)}')
+        else:
+            tui.output_fn('conflict: already at last file')
+        return True
+    if action == 'p':
+        # Previous conflicted file
+        if not tui._conflict_mode or not tui._conflicted_files:
+            tui.output_fn('error: not in conflict resolution mode. Use "conflict" first.')
+            return True
+        if tui._current_conflict_index > 0:
+            tui._current_conflict_index -= 1
+            tui.output_fn(f'conflict: moved to file {tui._current_conflict_index + 1}/{len(tui._conflicted_files)}')
+        else:
+            tui.output_fn('conflict: already at first file')
+        return True
+    if action == 'a':
+        # Abort merge
+        if not tui._conflict_mode:
+            tui.output_fn('error: not in conflict resolution mode')
+            return True
+        if abort_merge(tui.root):
+            tui.output_fn('conflict: merge aborted')
+            tui._conflict_mode = False
+            tui._conflicted_files = []
+        else:
+            tui.output_fn('error: failed to abort merge')
         return True
 
     if tui.chat:

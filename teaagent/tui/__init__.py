@@ -11,6 +11,13 @@ if TYPE_CHECKING:
 from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.git_sandbox import (
+    ParallelExperimentStack,
+    extract_conflict_context,
+    get_conflicted_files,
+    resolve_conflict_accept_ours,
+    resolve_conflict_accept_theirs,
+)
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
@@ -79,6 +86,15 @@ HELP_TEXT = """Commands:
   use <database>            Switch database path. Use :memory: for in-memory.
   smoke                     Create a SmokeTest node and query it.
   query <cypher>            Execute a Cypher query.
+  parallel <optA> <optB>... Start parallel experiment branches for comparison.
+  select <option>           Merge selected parallel experiment branch.
+  cancel                    Cancel and cleanup all parallel experiment branches.
+  conflict                  Enter conflict resolution mode for merge conflicts.
+  o                         Accept Our version (current branch) in conflict mode.
+  t                         Accept Their version (incoming branch) in conflict mode.
+  n                         Next conflicted file in conflict mode.
+  p                         Previous conflicted file in conflict mode.
+  a                         Abort merge in conflict mode.
   exit | quit               Leave the TUI.
 
 Slash aliases (/daily, /plan, /run, …) are accepted for the same commands.
@@ -120,6 +136,11 @@ class TeaAgentTUI:
         self._store: Optional[GraphQLiteGraphStore] = None
         self._session_store: Optional[SessionStore] = None
         self._session: Optional['PromptSession'] = None
+        self._parallel_stack: Optional[ParallelExperimentStack] = None
+        self._parallel_options: list[str] = []
+        self._conflict_mode: bool = False
+        self._conflicted_files: list[str] = []
+        self._current_conflict_index: int = 0
 
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
@@ -142,6 +163,19 @@ class TeaAgentTUI:
         print(f'TeaAgent TUI {__version__} - State Panel')
         print('=' * columns)
 
+        # Conflict resolution mode
+        if self._conflict_mode and self._conflicted_files:
+            print(f'\n[Conflict Resolution Mode]')
+            print(f'File {self._current_conflict_index + 1}/{len(self._conflicted_files)}: {self._conflicted_files[self._current_conflict_index]}')
+            print(f'\n[Commands]')
+            print(f'  [o] Accept Our version (current branch)')
+            print(f'  [t] Accept Their version (incoming branch)')
+            print(f'  [n] Next conflicted file')
+            print(f'  [p] Previous conflicted file')
+            print(f'  [a] Abort merge')
+            print('=' * columns)
+            return
+
         # Left panel: Chat area placeholder
         print('\n[Chat Area - Enter commands below]')
         print('-' * columns)
@@ -154,6 +188,17 @@ class TeaAgentTUI:
         print(f'Permission Mode: {self.permission_mode.value}')
         print(f'Destructive: {"allowed" if self.allow_destructive else "blocked"}')
         print(f'Chat: {"enabled" if self.chat else "disabled"}')
+
+        # Parallel experiments panel
+        if self._parallel_stack and self._parallel_options:
+            print(f'\n[Parallel Experiments]')
+            comparisons = self._parallel_stack.compare_branches()
+            for option in self._parallel_options:
+                if option in comparisons:
+                    stats = comparisons[option]
+                    print(f'  {option}: +{stats["insertions"]} -{stats["deletions"]} ({stats["files_changed"]} files)')
+            print(f'  [Enter] to merge selected branch')
+            print(f'  [q] to cancel experiments')
 
         # Recent runs
         try:
