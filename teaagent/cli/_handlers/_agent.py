@@ -457,6 +457,11 @@ def _execute_agent_task(
             # Prompt for resolution
             if result.status == 'completed':
                 print(f'\nApply changes back to \'{git_sandbox._original_branch}\'?')
+                # Show interactive diff before merge prompt
+                if not show_interactive_diff(args.root, git_sandbox._branch_name):
+                    print('[TeaAgent] Merge cancelled by user.')
+                    return 0
+                
                 print('  [m]erge (normal) / [s]quash and commit / [d]iscard / [k]eep branch for review: ', end='')
                 choice = input().strip().lower()
 
@@ -541,44 +546,176 @@ def _execute_agent_task(
                         elif resolution == 'b':
                             abort_merge(args.root)
                             print(f'[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.')
-                            print(f'[TeaAgent] To resolve manually: git checkout {git_sandbox._original_branch} && git merge {git_sandbox._branch_name}')
                         elif resolution == 'm':
                             print(f'[TeaAgent] Launching mergetool...')
                             subprocess.run(['git', 'mergetool'], cwd=args.root)
-                            print(f'[TeaAgent] Please complete the merge manually, then run:')
-                            print(f'  git add <resolved-files>')
-                            print(f'  git commit')
-                            print(f'  git branch -D {git_sandbox._branch_name}')
-                        else:
-                            abort_merge(args.root)
-                            print(f'[TeaAgent] Invalid choice. Merge aborted. Sandbox branch preserved.')
-                    else:
-                        print(f'[TeaAgent ERROR] {merge_result.error}', file=sys.stderr)
-                elif choice == 's':
-                    merge_result = git_sandbox.merge(squash=True)
-                    if merge_result.success:
-                        print(f'[TeaAgent] Squashed and merged sandbox branch successfully.')
-                    else:
-                        print(f'[TeaAgent ERROR] {merge_result.error}', file=sys.stderr)
-                elif choice == 'd':
-                    discard_result = git_sandbox.discard()
-                    if discard_result.success:
-                        print(f'[TeaAgent] Discarded sandbox branch changes.')
-                    else:
-                        print(f'[TeaAgent ERROR] {discard_result.error}', file=sys.stderr)
-                elif choice == 'k':
-                    keep_result = git_sandbox.keep()
-                    print(f'[TeaAgent] Keeping sandbox branch \'{keep_result.branch_name}\' for manual review.')
-                    print(f'[TeaAgent] To merge manually: git checkout {git_sandbox._original_branch} && git merge {keep_result.branch_name}')
-                    print(f'[TeaAgent] To discard manually: git checkout {git_sandbox._original_branch} && git branch -D {keep_result.branch_name}')
-                else:
-                    print(f'[TeaAgent] Invalid choice, keeping sandbox branch for manual review.')
-                    git_sandbox.keep()
+                            # After mergetool, complete the merge
+                            subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
+                            subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                            if git_sandbox._stash_id:
+                                from teaagent.git_sandbox import stash_pop
+                                stash_pop(args.root)
+                            print(f'[TeaAgent] Merge completed with manual resolution.')
+
+
+def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
+    """Show interactive diff before merge prompt.
+    
+    Args:
+        root: The workspace root directory
+        sandbox_branch: The sandbox branch name
+        
+    Returns:
+        True if user wants to proceed, False to cancel
+    """
+    import subprocess
+    from pathlib import Path
+    
+    root_path = Path(root).resolve()
+    
+    print(f'\n=== Sandbox Merge Preview ===')
+    print(f'Branch: {sandbox_branch}')
+    print()
+    
+    # Get diff summary
+    try:
+        # Get list of changed files
+        result = subprocess.run(
+            ['git', 'diff', '--stat', f'{sandbox_branch}'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            print('Changed files:')
+            print(result.stdout)
+        else:
+            print('No changes detected in sandbox branch.')
+            return True
+        
+        # Ask if user wants to see detailed diff
+        print('\nView detailed diff? [Y/n]: ', end='')
+        choice = input().strip().lower()
+        
+        if choice in ('n', 'no'):
+            return True
+        
+        # Show detailed diff with color
+        print('\n=== Detailed Changes ===')
+        result = subprocess.run(
+            ['git', 'diff', '--color=always', f'{sandbox_branch}'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+        )
+        
+        if result.stdout:
+            # Paginate output if it's long
+            lines = result.stdout.split('\n')
+            if len(lines) > 50:
+                # Show first 30 lines
+                print('\n'.join(lines[:30]))
+                print(f'\n... ({len(lines) - 30} more lines)')
+                print('Press Enter to see more, or q to quit: ', end='')
+                more = input().strip().lower()
+                if more != 'q':
+                    print('\n'.join(lines[30:]))
             else:
-                # Auto-discard on failure/aborted
-                discard_result = git_sandbox.discard()
-                if discard_result.success:
-                    print(f'[TeaAgent] Auto-discarded sandbox branch due to {result.status} status.')
+                print(result.stdout)
+        else:
+            print('No detailed changes available.')
+        
+        print('\n=== End of Diff ===')
+        
+    except FileNotFoundError:
+        print('[TeaAgent] Git not found in PATH')
+        return True
+    except Exception as exc:
+        print(f'[TeaAgent] Error getting diff: {exc}')
+        return True
+    
+    return True
+
+
+def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
+    """Show interactive diff before merge prompt.
+    
+    Args:
+        root: The workspace root directory
+        sandbox_branch: The sandbox branch name
+        
+    Returns:
+        True if user wants to proceed, False to cancel
+    """
+    import subprocess
+    from pathlib import Path
+    
+    root_path = Path(root).resolve()
+    
+    print(f'\n=== Sandbox Merge Preview ===')
+    print(f'Branch: {sandbox_branch}')
+    print()
+    
+    # Get diff summary
+    try:
+        # Get list of changed files
+        result = subprocess.run(
+            ['git', 'diff', '--stat', f'{sandbox_branch}'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            print('Changed files:')
+            print(result.stdout)
+        else:
+            print('No changes detected in sandbox branch.')
+            return True
+        
+        # Ask if user wants to see detailed diff
+        print('\nView detailed diff? [Y/n]: ', end='')
+        choice = input().strip().lower()
+        
+        if choice in ('n', 'no'):
+            return True
+        
+        # Show detailed diff with color
+        print('\n=== Detailed Changes ===')
+        result = subprocess.run(
+            ['git', 'diff', '--color=always', f'{sandbox_branch}'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+        )
+        
+        if result.stdout:
+            # Paginate output if it's long
+            lines = result.stdout.split('\n')
+            if len(lines) > 50:
+                # Show first 30 lines
+                print('\n'.join(lines[:30]))
+                print(f'\n... ({len(lines) - 30} more lines)')
+                print('Press Enter to see more, or q to quit: ', end='')
+                more = input().strip().lower()
+                if more != 'q':
+                    print('\n'.join(lines[30:]))
+            else:
+                print(result.stdout)
+        else:
+            print('No detailed changes available.')
+        
+        print('\n=== End of Diff ===')
+        
+    except FileNotFoundError:
+        print('[TeaAgent] Git not found in PATH')
+        return True
+    except Exception as exc:
+        print(f'[TeaAgent] Error getting diff: {exc}')
+        return True
+    
+    return True
 
     if _telemetry_sink is not None:
         from contextlib import suppress

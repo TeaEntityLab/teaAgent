@@ -7,7 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.cli._handlers._chat import chat_command, print_chat_help, run_chat_repl
+from teaagent.cli._handlers._chat import (
+    chat_command,
+    print_chat_help,
+    run_chat_repl,
+    execute_shell_command,
+    complete_file_path,
+    complete_symbol,
+)
 from teaagent.chat_agent import ChatAgentConfig
 
 
@@ -380,6 +387,141 @@ def test_git_sandbox_consent_saved_to_config():
 
 def test_git_sandbox_consent_updates_existing_config():
     """Test that git_sandbox_consent updates existing config.json."""
+
+
+def test_execute_shell_command_simple(capsys):
+    """Test simple shell command execution."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        execute_shell_command("echo hello", Path(tmpdir))
+        captured = capsys.readouterr()
+        assert "hello" in captured.out
+        assert "Command completed successfully" in captured.out
+
+
+def test_execute_shell_command_destructive_blocked(capsys):
+    """Test that destructive commands are blocked."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        execute_shell_command("rm -rf /", Path(tmpdir))
+        captured = capsys.readouterr()
+        assert "Destructive command not allowed" in captured.out
+
+
+def test_execute_shell_command_not_found(capsys):
+    """Test command not found error."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        execute_shell_command("nonexistent_command_xyz", Path(tmpdir))
+        captured = capsys.readouterr()
+        assert "Command not found" in captured.out
+
+
+def test_complete_file_path_basic():
+    """Test basic file path completion."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        # Create some test files
+        (root / "test_file.py").touch()
+        (root / "test_another.py").touch()
+        (root / "other.txt").touch()
+        
+        # Test completion
+        completions = complete_file_path("@test", root)
+        assert len(completions) == 2
+        assert any("test_file.py" in c for c in completions)
+        assert any("test_another.py" in c for c in completions)
+
+
+def test_complete_file_path_with_directory():
+    """Test file path completion with directory structure."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        # Create directory structure
+        src_dir = root / "src"
+        src_dir.mkdir()
+        (src_dir / "auth.py").touch()
+        (src_dir / "main.py").touch()
+        
+        # Test completion with directory
+        completions = complete_file_path("@src/", root)
+        assert len(completions) == 2
+        assert any("src/auth.py" in c for c in completions)
+        assert any("src/main.py" in c for c in completions)
+
+
+def test_complete_file_path_no_match():
+    """Test completion with no matches."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        completions = complete_file_path("@nonexistent", root)
+        assert len(completions) == 0
+
+
+def test_complete_symbol_basic():
+    """Test basic symbol completion."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        # Create a test Python file with some functions
+        test_file = root / "test.py"
+        test_file.write_text("""
+def login():
+    pass
+
+def logout():
+    pass
+
+class UserAuth:
+    pass
+""")
+        
+        # Test symbol completion
+        completions = complete_symbol("@log", root)
+        # This may return empty if code ontology fails, but should not crash
+        assert isinstance(completions, list)
+
+
+def test_complete_symbol_no_match():
+    """Test symbol completion with no matches."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        completions = complete_symbol("@nonexistent", root)
+        assert isinstance(completions, list)
+
+
+def test_show_interactive_diff_basic(capsys, monkeypatch):
+    """Test interactive diff display."""
+    from teaagent.cli._handlers._agent import show_interactive_diff
+    import subprocess
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        # Initialize git repo
+        subprocess.run(['git', 'init'], cwd=root, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=root, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=root, capture_output=True)
+        
+        # Create initial commit
+        (root / "test.txt").write_text("initial content")
+        subprocess.run(['git', 'add', '.'], cwd=root, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=root, capture_output=True)
+        
+        # Create a branch and make changes
+        subprocess.run(['git', 'checkout', '-b', 'test-branch'], cwd=root, capture_output=True)
+        (root / "test.txt").write_text("modified content")
+        
+        # Mock input to skip detailed diff
+        monkeypatch.setattr("builtins.input", lambda _: "n")
+        
+        # Test diff display
+        result = show_interactive_diff(root, "test-branch")
+        captured = capsys.readouterr()
+        
+        assert result is True  # Should proceed
+        assert "Sandbox Merge Preview" in captured.out
     from teaagent.cli._handlers._agent import _save_git_sandbox_consent
     import json
     

@@ -16,6 +16,184 @@ from teaagent.config_loader import ConfigResolver
 from teaagent.context import ContextCompactor
 from teaagent.llm import available_providers, create_llm_adapter
 from teaagent.policy import parse_permission_mode
+import subprocess
+import shlex
+import sys
+import os
+import glob
+import readline
+
+
+def execute_shell_command(command: str, root: Path) -> None:
+    """Execute a shell command safely and display output.
+    
+    Args:
+        command: The shell command to execute
+        root: The workspace root directory
+    """
+    # Security check: block destructive commands
+    destructive_patterns = [
+        'rm -rf /',
+        'rm -rf ~/',
+        'rm -rf .*',
+        'mkfs',
+        'dd if=',
+        ':(){:|:&};:',  # fork bomb
+        'chmod 777 /',
+        'chown -R',
+    ]
+    
+    command_lower = command.lower()
+    for pattern in destructive_patterns:
+        if pattern in command_lower:
+            print(f"[TeaAgent] Error: Destructive command not allowed in shell escape. Use full terminal.")
+            return
+    
+    # Parse command safely
+    try:
+        # Use shlex to properly parse the command while preserving quoted arguments
+        args = shlex.split(command)
+        if not args:
+            print("[TeaAgent] Error: Empty command")
+            return
+    except ValueError as exc:
+        print(f"[TeaAgent] Error: Invalid command syntax: {exc}")
+        return
+    
+    # Execute the command
+    try:
+        print(f"[TeaAgent] Executing: {command}")
+        result = subprocess.run(
+            args,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=30,  # Prevent hanging commands
+        )
+        
+        # Display output
+        if result.stdout:
+            print(result.stdout, end='')
+        if result.stderr:
+            print(result.stderr, end='', file=sys.stderr)
+        
+        # Show exit code if non-zero
+        if result.returncode != 0:
+            print(f"[TeaAgent] Command exited with code {result.returncode}")
+        else:
+            print(f"[TeaAgent] Command completed successfully")
+            
+    except subprocess.TimeoutExpired:
+        print("[TeaAgent] Error: Command timed out after 30 seconds")
+    except FileNotFoundError:
+        print(f"[TeaAgent] Error: Command not found: {args[0]}")
+    except Exception as exc:
+        print(f"[TeaAgent] Error executing command: {exc}")
+
+
+def complete_file_path(text: str, root: Path) -> list[str]:
+    """Complete file paths starting with @.
+    
+    Args:
+        text: The text to complete (including @ prefix)
+        root: The workspace root directory
+        
+    Returns:
+        List of completion suggestions
+    """
+    if not text.startswith('@'):
+        return []
+    
+    # Remove @ prefix and get partial path
+    partial_path = text[1:]
+    
+    # Determine the directory to search
+    if '/' in partial_path:
+        # Has directory component
+        dir_part = partial_path.rsplit('/', 1)[0]
+        file_part = partial_path.rsplit('/', 1)[1] if '/' in partial_path else ''
+        search_dir = root / dir_part
+    else:
+        # Just filename in root
+        dir_part = ''
+        file_part = partial_path
+        search_dir = root
+    
+    # Ensure search directory exists and is within root
+    try:
+        search_dir = search_dir.resolve()
+        if not search_dir.exists() or not search_dir.is_dir():
+            return []
+        if not search_dir.is_relative_to(root.resolve()):
+            return []
+    except Exception:
+        return []
+    
+    # Get matching files and directories
+    completions = []
+    try:
+        for item in search_dir.iterdir():
+            # Skip hidden files/directories (except .teaagent)
+            if item.name.startswith('.') and item.name != '.teaagent':
+                continue
+                
+            # Check if matches partial
+            if item.name.lower().startswith(file_part.lower()):
+                # Build completion path
+                if dir_part:
+                    completion = f"@{dir_part}/{item.name}"
+                else:
+                    completion = f"@{item.name}"
+                
+                # Add trailing slash for directories
+                if item.is_dir():
+                    completion += '/'
+                    
+                completions.append(completion)
+    except Exception:
+        pass
+    
+    return sorted(completions)
+
+
+def complete_symbol(text: str, root: Path) -> list[str]:
+    """Complete symbol names (classes, functions) starting with @.
+    
+    Args:
+        text: The text to complete (including @ prefix)
+        root: The workspace root directory
+        
+    Returns:
+        List of completion suggestions
+    """
+    if not text.startswith('@'):
+        return []
+    
+    # Remove @ prefix and get partial symbol name
+    partial_symbol = text[1:]
+    
+    # Try to use code ontology if available
+    try:
+        from teaagent.code_ontology import CodeOntologyBuilder
+        
+        # Build ontology for the workspace
+        builder = CodeOntologyBuilder(root)
+        ontology = builder.build()
+        
+        # Get all nodes (symbols)
+        completions = []
+        for node in ontology.nodes:
+            # Check if symbol name matches partial
+            if node.name.lower().startswith(partial_symbol.lower()):
+                # Format: @symbol_name (in file_path)
+                completion = f"@{node.name}"
+                completions.append(completion)
+        
+        return sorted(set(completions))
+    except Exception:
+        # Fallback: simple file-based symbol search
+        return []
+
 
 
 def chat_command(args: argparse.Namespace) -> int:
@@ -90,6 +268,32 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     # Hot-swappable model configuration
     current_provider = config.model.split('/')[0] if config.model and '/' in config.model else None
     current_model = config.model
+    
+    # Tab completion setup
+    def tab_completer(text: str, state: int) -> Optional[str]:
+        """Tab completion handler for readline."""
+        if state == 0:
+            # First call - generate completions
+            if text.startswith('@'):
+                # File/symbol completion
+                completions = complete_file_path(text, config.root)
+                if not completions:
+                    completions = complete_symbol(text, config.root)
+                tab_completer.matches = completions
+            else:
+                # Default to no completion
+                tab_completer.matches = []
+        
+        try:
+            return tab_completer.matches[state]
+        except (IndexError, AttributeError):
+            return None
+    
+    # Enable tab completion if in TTY mode
+    if sys.stdin.isatty():
+        readline.set_completer(tab_completer)
+        readline.parse_and_bind('tab: complete')
+        readline.set_completer_delims(' \t\n')  # Don't break on @
     
     # Runtime configuration for hot-swapping (avoids frozen dataclass issue)
     runtime_model = config.model
@@ -351,6 +555,15 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             if not user_input:
                 continue
             
+            # Handle shell escape hatch
+            if user_input.startswith('!'):
+                shell_command = user_input[1:].strip()
+                if shell_command:
+                    execute_shell_command(shell_command, config.root)
+                else:
+                    print("[TeaAgent] Usage: !<shell command>")
+                continue
+            
             # Handle exit commands
             if user_input in ('/exit', '/quit', 'q', 'quit', 'exit'):
                 print("[TeaAgent] Goodbye!")
@@ -370,6 +583,15 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 print(f"  - Compression ratio: {compaction_result.compression_ratio:.2%}")
                 print(f"  - Total compactions: {session_context.get('compaction_count', 0)}")
                 print(f"  - Observations retained: {len(session_context.get('observations', []))}")
+                continue
+            
+            # Handle clear command
+            if user_input == '/clear':
+                print("[TeaAgent] Clearing conversation history...")
+                session_context['observations'] = []
+                session_context['compaction_count'] = 0
+                targeted_files.clear()
+                print("[TeaAgent] Conversation history cleared. Starting fresh.")
                 continue
             
             # Handle cost command
@@ -514,9 +736,18 @@ def print_chat_help() -> None:
     print("  /exit, /quit, q, quit, exit  - Exit chat mode")
     print("  /help, /?, help, ?         - Show this help")
     print("  /cost                      - Show session cost")
-    print("  /compact                   - Context compaction info")
+    print("  /compact                   - Compact session context to save tokens")
+    print("  /clear                     - Clear conversation history")
     print("  /diff                      - Show git diff for current session")
+    print("  /context                   - Show targeted context files")
+    print("  /add <path>                - Add file/directory to context")
+    print("  /drop <path>               - Remove file/directory from context")
+    print("  /provider <name>           - Switch LLM provider")
+    print("  /model <name>              - Switch model")
+    print("  /effort <low|normal|high>  - Set effort throttling level")
+    print("  /budget                    - Show budget status")
     print("  /undo                      - Undo all changes (using checkpoint)")
+    print("  !<command>                 - Execute shell command (escape hatch)")
     print("  /context                   - Show currently targeted files")
     print("  /add <path>                - Add file/directory to targeted context")
     print("  /drop <path>               - Remove file/directory from context")
