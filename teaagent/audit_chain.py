@@ -71,6 +71,9 @@ def verify_audit_chain(log_path: Path) -> ChainVerificationResult:
     every chained event is intact.  On failure the ``error`` field
     contains a human-readable description of the first violation found.
     """
+    if not log_path.is_file():
+        return ChainVerificationResult(valid=True, event_count=0)
+    
     text = log_path.read_text(encoding='utf-8').strip()
     if not text:
         return ChainVerificationResult(valid=True, event_count=0)

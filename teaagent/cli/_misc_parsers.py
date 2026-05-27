@@ -36,6 +36,7 @@ def register(
         handlers['audit_show'],
         handlers['audit_prune'],
         serve_handler=handlers.get('audit_serve'),
+        verify_handler=handlers.get('audit_verify'),
     )
     _graphqlite(
         subparsers,
@@ -464,6 +465,7 @@ def _audit(
     show_handler: Callable,
     prune_handler: Callable,
     serve_handler: Optional[Callable] = None,
+    verify_handler: Optional[Callable] = None,
 ) -> None:
     audit = subparsers.add_parser('audit', help='Inspect and prune run audit logs.')
     subs = audit.add_subparsers(dest='audit_command', required=True)
@@ -507,6 +509,18 @@ def _audit(
             '--port', type=int, default=8080, help='Bind port. Default 8080.'
         )
         serve_cmd.set_defaults(func=serve_handler)
+
+    if verify_handler is not None:
+        verify_cmd = subs.add_parser(
+            'verify', help='Verify cryptographic audit chain integrity and generate attestation.'
+        )
+        verify_cmd.add_argument('--root', default='.', help='Workspace root.')
+        verify_cmd.add_argument(
+            '--signature',
+            default=None,
+            help='Path to SSH/GPG key for signing attestation (e.g., ~/.ssh/id_ed25519).',
+        )
+        verify_cmd.set_defaults(func=verify_handler)
 
 
 def _graphqlite(

@@ -62,6 +62,30 @@ class SyncState:
     peer_states: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class ApprovalRequestMessage:
+    """Message for multi-sig approval requests broadcast via P2P sync."""
+    request_id: str
+    tool_name: str
+    call_id: str
+    arguments: dict[str, Any]
+    request_hash: str
+    timestamp: float
+    requester_agent_id: str
+    required_approvals: int
+    timeout_seconds: int
+
+
+@dataclass(frozen=True)
+class ApprovalSignatureMessage:
+    """Message for peer signature responses."""
+    request_id: str
+    peer_id: str
+    signature: str
+    ssh_key_id: Optional[str] = None
+    timestamp: float = 0.0
+
+
 class FederatedGraphSync:
     """Manages federated synchronization of code ontology graphs."""
 
@@ -391,3 +415,129 @@ class FederatedGraphSync:
             )
         except (json.JSONDecodeError, KeyError):
             return None
+
+    def broadcast_approval_request(
+        self,
+        request: ApprovalRequestMessage,
+        peer_agent_ids: list[str],
+    ) -> dict[str, bool]:
+        """Broadcast approval request to peer agents for multi-sig quorum.
+        
+        Args:
+            request: Approval request message to broadcast.
+            peer_agent_ids: List of peer agent IDs to broadcast to.
+            
+        Returns:
+            Dictionary mapping peer IDs to broadcast success status.
+        """
+        results = {}
+        
+        for peer_id in peer_agent_ids:
+            try:
+                # In production, this would send via HTTP/webhook to peer agents
+                # For now, we write to a local file simulating the broadcast
+                broadcast_path = self._root / '.teaagent' / 'pending_approvals' / f'{request.request_id}_{peer_id}.json'
+                broadcast_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                data = {
+                    'request_id': request.request_id,
+                    'tool_name': request.tool_name,
+                    'call_id': request.call_id,
+                    'arguments': request.arguments,
+                    'request_hash': request.request_hash,
+                    'timestamp': request.timestamp,
+                    'requester_agent_id': request.requester_agent_id,
+                    'required_approvals': request.required_approvals,
+                    'timeout_seconds': request.timeout_seconds,
+                    'target_peer_id': peer_id,
+                }
+                
+                broadcast_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+                results[peer_id] = True
+            except Exception as exc:
+                results[peer_id] = False
+        
+        return results
+
+    def collect_approval_signatures(
+        self,
+        request_id: str,
+        timeout_seconds: int,
+    ) -> list[ApprovalSignatureMessage]:
+        """Collect approval signatures from peers for a request.
+        
+        Args:
+            request_id: The approval request ID to collect signatures for.
+            timeout_seconds: Maximum time to wait for signatures.
+            
+        Returns:
+            List of signature messages received from peers.
+        """
+        signatures = []
+        approvals_dir = self._root / '.teaagent' / 'pending_approvals'
+        
+        if not approvals_dir.exists():
+            return signatures
+        
+        # In production, this would poll for incoming signature messages
+        # For now, we check for signature files in the approvals directory
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout_seconds:
+            for sig_file in approvals_dir.glob(f'{request_id}_signature_*.json'):
+                try:
+                    data = json.loads(sig_file.read_text(encoding='utf-8'))
+                    sig_msg = ApprovalSignatureMessage(
+                        request_id=data['request_id'],
+                        peer_id=data['peer_id'],
+                        signature=data['signature'],
+                        ssh_key_id=data.get('ssh_key_id'),
+                        timestamp=data.get('timestamp', time.time()),
+                    )
+                    signatures.append(sig_msg)
+                    # Remove processed signature file
+                    sig_file.unlink()
+                except (json.JSONDecodeError, KeyError):
+                    continue
+            
+            if signatures:
+                break
+            
+            time.sleep(0.5)  # Poll interval
+        
+        return signatures
+
+    def submit_approval_signature(
+        self,
+        request_id: str,
+        peer_id: str,
+        signature: str,
+        ssh_key_id: Optional[str] = None,
+    ) -> bool:
+        """Submit an approval signature for a request.
+        
+        Args:
+            request_id: The approval request ID.
+            peer_id: The peer agent ID submitting the signature.
+            signature: The cryptographic signature.
+            ssh_key_id: Optional SSH key identifier.
+            
+        Returns:
+            True if signature was successfully submitted.
+        """
+        try:
+            sig_path = self._root / '.teaagent' / 'pending_approvals' / f'{request_id}_signature_{peer_id}.json'
+            sig_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            data = {
+                'request_id': request_id,
+                'peer_id': peer_id,
+                'signature': signature,
+                'ssh_key_id': ssh_key_id,
+                'timestamp': time.time(),
+            }
+            
+            sig_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+            return True
+        except Exception:
+            return False

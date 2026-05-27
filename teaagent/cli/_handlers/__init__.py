@@ -50,6 +50,7 @@ from ._audit import (
     audit_prune_command,
     audit_serve_command,
     audit_show_command,
+    audit_verify_command,
 )
 from ._cloud import (
     cloud_cancel_command,
@@ -217,6 +218,7 @@ __all__ = [
     'audit_list_command',
     'audit_prune_command',
     'audit_show_command',
+    'audit_verify_command',
     'chat_command',
     'clarify_command',
     'completion_command',

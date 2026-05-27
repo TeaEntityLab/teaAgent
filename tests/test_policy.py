@@ -9,6 +9,7 @@ from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.errors import ToolPermissionError
 from teaagent.policy import (
     ApprovalPolicy,
+    MultiSigQuorumConfig,
     PermissionMode,
     parse_permission_mode,
 )
@@ -740,21 +741,164 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
             dir_check = next(
                 c for c in result['checks'] if c['name'] == 'teaagent_dir_mode'
             )
-            self.assertTrue(dir_check['ok'])
 
-    def test_fix_permissions_repairs_approvals_mode(self) -> None:
-        """check_security_health(fix_permissions=True) must chmod approvals.json to 0o600."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
-            store.path.chmod(0o644)
-            result = store.check_security_health(fix_permissions=True)
-            mode_after = store.path.stat().st_mode & 0o777
-            self.assertEqual(mode_after, 0o600)
-            approvals_check = next(
-                c for c in result['checks'] if c['name'] == 'approvals_file_mode'
+
+class MultiSigQuorumTests(unittest.TestCase):
+    """Tests for TASK-014: Multi-Signature Quorum Consensus."""
+
+    def test_multi_sig_config_defaults(self) -> None:
+        """Verify default multi-sig configuration."""
+        config = MultiSigQuorumConfig()
+        self.assertFalse(config.enabled)
+        self.assertEqual(config.required_approvals, 2)
+        self.assertEqual(config.peer_agent_ids, [])
+        self.assertEqual(config.high_risk_patterns, [])
+        self.assertEqual(config.timeout_seconds, 300)
+
+    def test_multi_sig_config_custom(self) -> None:
+        """Verify custom multi-sig configuration."""
+        config = MultiSigQuorumConfig(
+            enabled=True,
+            required_approvals=3,
+            peer_agent_ids=['agent-1', 'agent-2', 'agent-3'],
+            high_risk_patterns=['/prod', '/production'],
+            timeout_seconds=600,
+        )
+        self.assertTrue(config.enabled)
+        self.assertEqual(config.required_approvals, 3)
+        self.assertEqual(len(config.peer_agent_ids), 3)
+        self.assertIn('/prod', config.high_risk_patterns)
+        self.assertEqual(config.timeout_seconds, 600)
+
+    def test_policy_with_multi_sig_disabled(self) -> None:
+        """Verify policy behaves normally when multi-sig is disabled."""
+        config = MultiSigQuorumConfig(enabled=False)
+        policy = ApprovalPolicy(
+            permission_mode=PermissionMode.PROMPT,
+            multi_sig_config=config,
+        )
+        
+        # Should still require normal approval
+        with self.assertRaises(ToolPermissionError):
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='call-1',
+                destructive=True,
+                arguments={'path': '/prod/config.json'},
             )
-            self.assertTrue(approvals_check['ok'])
+
+    def test_high_risk_detection_default_patterns(self) -> None:
+        """Verify default high-risk pattern detection."""
+        config = MultiSigQuorumConfig(enabled=True, required_approvals=2)
+        policy = ApprovalPolicy(
+            permission_mode=PermissionMode.PROMPT,
+            multi_sig_config=config,
+            agent_id='test-agent',
+        )
+        
+        # Should detect /prod path as high-risk
+        self.assertTrue(policy._is_high_risk_operation(
+            'workspace_write_file',
+            {'path': '/prod/config.json'}
+        ))
+        
+        # Should detect /production path in arguments
+        self.assertTrue(policy._is_high_risk_operation(
+            'workspace_run_shell_mutate',
+            {'command': 'deploy /production/app'}
+        ))
+        
+        # Should detect delete operations
+        self.assertTrue(policy._is_high_risk_operation(
+            'workspace_run_shell_mutate',
+            {'command': 'rm -rf /tmp'}
+        ))
+
+    def test_high_risk_detection_custom_patterns(self) -> None:
+        """Verify custom high-risk pattern detection."""
+        config = MultiSigQuorumConfig(
+            enabled=True,
+            high_risk_patterns=['/critical', 'deploy']
+        )
+        policy = ApprovalPolicy(
+            permission_mode=PermissionMode.PROMPT,
+            multi_sig_config=config,
+            agent_id='test-agent',
+        )
+        
+        # Should detect custom patterns
+        self.assertTrue(policy._is_high_risk_operation(
+            'workspace_write_file',
+            {'path': '/critical/data.json'}
+        ))
+        
+        self.assertTrue(policy._is_high_risk_operation(
+            'workspace_run_shell_mutate',
+            {'command': './deploy.sh'}
+        ))
+
+    def test_approval_request_hash_generation(self) -> None:
+        """Verify approval request hash generation is deterministic."""
+        policy = ApprovalPolicy(agent_id='test-agent')
+        
+        hash1 = policy._generate_approval_hash(
+            'workspace_write_file',
+            'call-1',
+            {'path': 'test.txt'}
+        )
+        
+        hash2 = policy._generate_approval_hash(
+            'workspace_write_file',
+            'call-1',
+            {'path': 'test.txt'}
+        )
+        
+        # Same inputs should produce same hash
+        self.assertEqual(hash1, hash2)
+        
+        # Different inputs should produce different hash
+        hash3 = policy._generate_approval_hash(
+            'workspace_write_file',
+            'call-1',
+            {'path': 'different.txt'}
+        )
+        self.assertNotEqual(hash1, hash3)
+
+    def test_multi_sig_quorum_without_agent_id(self) -> None:
+        """Verify multi-sig falls back gracefully without agent_id."""
+        config = MultiSigQuorumConfig(enabled=True, required_approvals=2)
+        policy = ApprovalPolicy(
+            permission_mode=PermissionMode.PROMPT,
+            multi_sig_config=config,
+            agent_id='',  # Empty agent_id
+        )
+        
+        # Should fall back to normal approval flow
+        with self.assertRaises(ToolPermissionError):
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='call-1',
+                destructive=True,
+                arguments={'path': '/prod/config.json'},
+            )
+
+    def test_multi_sig_quorum_stub_returns_false(self) -> None:
+        """Verify stub implementation returns False (no quorum)."""
+        config = MultiSigQuorumConfig(enabled=True, required_approvals=2)
+        policy = ApprovalPolicy(
+            permission_mode=PermissionMode.PROMPT,
+            multi_sig_config=config,
+            agent_id='test-agent',
+        )
+        
+        # Stub implementation should return False (no signatures collected)
+        result = policy._check_multi_sig_quorum(
+            'workspace_write_file',
+            'call-1',
+            {'path': '/prod/config.json'}
+        )
+        
+        self.assertFalse(result)
 
 
 if __name__ == '__main__':

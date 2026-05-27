@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Optional
 
 from teaagent.errors import ToolPermissionError
 
@@ -35,6 +39,38 @@ class JITApprovalState:
         return tool_name in self.session_approved_tools
 
 
+@dataclass(frozen=True)
+class PeerSignature:
+    """Cryptographic signature from a peer developer for multi-sig approval."""
+    peer_id: str
+    signature: str
+    timestamp: float
+    ssh_key_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class MultiSigQuorumConfig:
+    """Configuration for multi-signature quorum governance."""
+    enabled: bool = False
+    required_approvals: int = 2  # Number of peer signatures required
+    peer_agent_ids: list[str] = field(default_factory=list)  # Known peer agent IDs
+    high_risk_patterns: list[str] = field(default_factory=list)  # Patterns triggering multi-sig
+    timeout_seconds: int = 300  # Timeout for collecting signatures
+
+
+@dataclass(frozen=True)
+class ApprovalRequest:
+    """Request for peer approval broadcast via P2P sync."""
+    request_id: str
+    tool_name: str
+    call_id: str
+    arguments: dict[str, Any]
+    request_hash: str
+    timestamp: float
+    requester_agent_id: str
+    signatures: list[PeerSignature] = field(default_factory=list)
+
+
 class PermissionMode(str, Enum):
     READ_ONLY = 'read-only'
     WORKSPACE_WRITE = 'workspace-write'
@@ -57,6 +93,9 @@ class ApprovalPolicy:
         None  # Original run_id for scoped approval checking
     )
     enable_jit_prompt: bool = True  # Enable interactive TTY prompts for JIT approval
+    multi_sig_config: MultiSigQuorumConfig = field(default_factory=MultiSigQuorumConfig)
+    agent_id: str = ""  # Agent ID for multi-sig quorum identification
+    workspace_root: str = "."  # Workspace root for sync operations
 
     def assert_allowed(
         self,
@@ -119,6 +158,11 @@ class ApprovalPolicy:
                 # Consume the scoped approval after successful match (one-time use)
                 self.approval_store.consume_scoped_approval(matching_record.record_id)
                 return
+        # Check multi-sig quorum if enabled and this is a high-risk operation
+        if self.multi_sig_config.enabled and self._is_high_risk_operation(tool_name, arguments):
+            if self._check_multi_sig_quorum(tool_name, call_id, arguments):
+                return
+            # If multi-sig fails, proceed to normal approval flow
         # Legacy Fallback: bare call_id check for explicit CLI --approve-call-id backward compatibility.
         # This fallback is deprecated and scheduled for future removal.
         if destructive and call_id not in self.approved_call_ids:
@@ -174,6 +218,108 @@ class ApprovalPolicy:
             except (EOFError, KeyboardInterrupt):
                 print("\n[TeaAgent] Interrupted. Denying permission.")
                 return 'd'
+
+    def _is_high_risk_operation(self, tool_name: str, arguments: dict[str, Any] | None) -> bool:
+        """Check if operation matches high-risk patterns triggering multi-sig quorum."""
+        if not arguments:
+            return False
+        
+        # Check against configured high-risk patterns
+        for pattern in self.multi_sig_config.high_risk_patterns:
+            if pattern in tool_name:
+                return True
+            # Check if pattern appears in arguments (e.g., file paths)
+            args_str = json.dumps(arguments, sort_keys=True)
+            if pattern in args_str:
+                return True
+        
+        # Default high-risk patterns
+        default_high_risk = ['/prod', '/production', 'database', 'delete', 'rm -rf']
+        for pattern in default_high_risk:
+            if pattern in tool_name.lower():
+                return True
+            if arguments:
+                args_str = json.dumps(arguments, sort_keys=True).lower()
+                if pattern in args_str:
+                    return True
+        
+        return False
+
+    def _check_multi_sig_quorum(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None,
+    ) -> bool:
+        """Check multi-signature quorum for high-risk operations.
+        
+        Returns:
+            True if quorum is reached and operation is approved, False otherwise.
+        """
+        if not self.multi_sig_config.enabled:
+            return False
+        
+        if not self.agent_id:
+            print(f"[Governance] Multi-Signature Quorum enabled but agent_id not set. Falling back to standard approval.")
+            return False
+        
+        # Create approval request
+        request_hash = self._generate_approval_hash(tool_name, call_id, arguments)
+        request = ApprovalRequest(
+            request_id=hashlib.sha256(f"{self.agent_id}{call_id}{time.time()}".encode()).hexdigest()[:16],
+            tool_name=tool_name,
+            call_id=call_id,
+            arguments=arguments or {},
+            request_hash=request_hash,
+            timestamp=time.time(),
+            requester_agent_id=self.agent_id,
+        )
+        
+        # Broadcast approval request to peers
+        print(f"[Governance] Multi-Signature Quorum is enabled. Seeking {self.multi_sig_config.required_approvals} peer approvals...")
+        print(f"[Broadcast...] Sending JIT signature requests to peers {self.multi_sig_config.peer_agent_ids}...")
+        
+        # In a real implementation, this would broadcast via teaagent sync
+        # For now, we simulate the quorum check
+        signatures = self._collect_peer_signatures(request)
+        
+        if len(signatures) >= self.multi_sig_config.required_approvals:
+            print(f"[✓] Quorum Reached ({len(signatures)}/{self.multi_sig_config.required_approvals} approvals).")
+            for sig in signatures:
+                print(f"[{sig.peer_id}]: SIGNED (SSH-Key-ID: {sig.ssh_key_id or 'unknown'})")
+            return True
+        else:
+            print(f"[✗] Quorum Not Reached ({len(signatures)}/{self.multi_sig_config.required_approvals} required).")
+            return False
+
+    def _generate_approval_hash(self, tool_name: str, call_id: str, arguments: dict[str, Any] | None) -> str:
+        """Generate cryptographic hash for approval request."""
+        content = json.dumps({
+            'tool_name': tool_name,
+            'call_id': call_id,
+            'arguments': arguments or {},
+        }, sort_keys=True)
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def _collect_peer_signatures(self, request: ApprovalRequest) -> list[PeerSignature]:
+        """Collect peer signatures for approval request.
+        
+        In production, this would:
+        1. Broadcast the request via teaagent sync to peer agents
+        2. Wait for peers to sign with their SSH keys
+        3. Collect and verify signatures
+        
+        For now, this is a stub that returns empty list.
+        """
+        # TODO: Implement actual P2P broadcast via federated_sync
+        # This would integrate with the sync infrastructure to:
+        # - Create a sync message with the approval request
+        # - Broadcast to configured peer agent IDs
+        # - Wait for signature responses
+        # - Verify cryptographic signatures
+        
+        # Stub implementation - in production, this would block and wait
+        return []
 
 
 def parse_permission_mode(value: str) -> PermissionMode:
