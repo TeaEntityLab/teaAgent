@@ -39,7 +39,8 @@ class PreflightTests(unittest.TestCase):
 
             self.assertTrue(payload['ready'])
             self.assertEqual(payload['routing']['category'], 'review')
-            self.assertEqual(payload['model'], 'gpt-4o')
+            # With complexity-based routing, "review this patch for regressions" routes to gpt-4o-mini (medium complexity)
+            self.assertEqual(payload['model'], 'gpt-4o-mini')
             self.assertEqual(payload['permission_mode'], 'workspace-write')
             self.assertEqual(len(payload['memories']), 1)
 
@@ -76,7 +77,8 @@ class PreflightTests(unittest.TestCase):
             payload = json.loads(output.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload['routing']['category'], 'review')
-            self.assertEqual(payload['model'], 'gpt-4o')
+            # With complexity-based routing, "review this patch for regressions" routes to gpt-4o-mini (medium complexity)
+            self.assertEqual(payload['model'], 'gpt-4o-mini')
 
 
 if __name__ == '__main__':

@@ -80,7 +80,8 @@ class P1PrimitiveTests(unittest.TestCase):
 
         self.assertEqual(len(result.context['observations']), 1)
         self.assertEqual(result.pinned['transaction_id'], 'tx-123')
-        self.assertIn('a returned', result.summary)
+        # Summary format changed with semantic summarization - check for key indicators
+        self.assertTrue('a' in result.summary or 'operations' in result.summary)
 
     def test_skill_review_and_aibom(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

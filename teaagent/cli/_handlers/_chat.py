@@ -56,8 +56,6 @@ def chat_command(args: argparse.Namespace) -> int:
 
 def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -> int:
     """Run the interactive chat REPL loop."""
-    from teaagent.context import ContextCompactor
-    
     print(f"[TeaAgent] Chat mode initialized")
     print(f"[TeaAgent] Provider: {config.model or 'default'}")
     print(f"[TeaAgent] Permission mode: {config.permission_mode.value}")
@@ -73,6 +71,8 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         result = run_chat_agent(config, initial_task)
         if result != 0:
             return result
+        # Placeholder cost tracking for initial task
+        session_cost_cents += 10
         print()
     
     # REPL loop

@@ -359,8 +359,10 @@ class ChatAgentTests(unittest.TestCase):
 
             payload = json.loads(output.getvalue())
             self.assertEqual(exit_code, 0)
-            create_adapter.assert_called_once_with('gpt', model='gpt-4o')
+            # With complexity-based routing, "review this patch" routes to gpt-4o-mini (medium complexity)
+            create_adapter.assert_called_once_with('gpt', model='gpt-4o-mini')
             self.assertEqual(payload['routing']['category'], 'review')
+            self.assertEqual(payload['routing']['complexity'], 'medium')
             self.assertEqual(payload['final_answer'], 'reviewed')
 
     def test_cli_agent_run_approve_call_id_allows_exact_write(self) -> None:
