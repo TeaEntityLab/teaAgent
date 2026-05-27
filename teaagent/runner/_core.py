@@ -17,7 +17,7 @@ from teaagent.errors import (
     ToolPermissionError,
 )
 from teaagent.file_policy import FilePolicy
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.tools import ToolRegistry
 
@@ -49,6 +49,7 @@ class AgentRunner:
         cancel_token: Optional[threading.Event] = None,
         file_policy: Optional[FilePolicy] = None,
         auto_mode_config: Optional[AutoModeConfig] = None,
+        jit_state: Optional[JITApprovalState] = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -61,6 +62,7 @@ class AgentRunner:
         self.checkpoint_store = checkpoint_store
         self.cancel_token = cancel_token
         self.file_policy = file_policy
+        self.jit_state = jit_state or JITApprovalState()
         self.auto_mode_guard: Optional[AutoModeGuard] = None
         if auto_mode_config is not None and auto_mode_config.enabled:
             self.auto_mode_guard = AutoModeGuard(config=auto_mode_config)
@@ -170,6 +172,7 @@ class AgentRunner:
                         call_id=decision.call_id,
                         destructive=tool.annotations.destructive,
                         arguments=decision.arguments,
+                        jit_state=self.jit_state,
                     )
                 except ToolPermissionError as exc:
                     secret = None
