@@ -57,6 +57,10 @@ from ._env import (
     env_provision_command,
     env_verify_command,
 )
+from ._skill_publish import (
+    skill_publish_command,
+    skill_verify_tsb_command,
+)
 from ._cloud import (
     cloud_cancel_command,
     cloud_capabilities_command,
@@ -227,6 +231,8 @@ __all__ = [
     'env_lock_command',
     'env_provision_command',
     'env_verify_command',
+    'skill_publish_command',
+    'skill_verify_tsb_command',
     'chat_command',
     'clarify_command',
     'completion_command',

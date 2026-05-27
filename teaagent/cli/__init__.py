@@ -117,6 +117,7 @@ from teaagent.cli._handlers import (
     skill_marketplace_list_command,
     skill_publish_command,
     skill_search_command,
+    skill_verify_tsb_command,
     start_tui,
     status_short_command,
     ultrawork_list_command,
@@ -290,6 +291,8 @@ def build_parser() -> argparse.ArgumentParser:
             'search': skill_search_command,
             'marketplace-list': skill_marketplace_list_command,
             'install-from-marketplace': skill_install_marketplace_command,
+            'publish_tsb': skill_publish_command,
+            'verify_tsb': skill_verify_tsb_command,
         },
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases

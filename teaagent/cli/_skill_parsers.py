@@ -123,3 +123,25 @@ def register(
     install_mkt.add_argument('name', help='Skill name to search and install.')
     install_mkt.add_argument('--root', default='.', help='Workspace root.')
     install_mkt.set_defaults(func=handlers['install-from-marketplace'])
+
+    publish_tsb = subs.add_parser(
+        'publish-tsb',
+        help='Publish a skill as a cryptographically attested TSB bundle.',
+    )
+    publish_tsb.add_argument('skill_path', help='Path to skill directory.')
+    publish_tsb.add_argument('audit_log', help='Path to audit log file.')
+    publish_tsb.add_argument('--output', help='Output TSB file path.')
+    publish_tsb.add_argument('--name', help='Skill name (defaults to directory name).')
+    publish_tsb.add_argument('--version', default='1.0.0', help='Skill version.')
+    publish_tsb.add_argument('--author', help='Author name.')
+    publish_tsb.add_argument('--key', help='Path to SSH/GPG key for signing.')
+    publish_tsb.add_argument('--environment-type', default='uv', help='Environment type (uv, nix, docker).')
+    publish_tsb.set_defaults(func=handlers.get('publish_tsb'))
+
+    verify_tsb = subs.add_parser(
+        'verify-tsb',
+        help='Verify a TSB bundle integrity and attestation.',
+    )
+    verify_tsb.add_argument('tsb_path', help='Path to TSB file.')
+    verify_tsb.add_argument('--skip-signature', action='store_true', help='Skip signature verification.')
+    verify_tsb.set_defaults(func=handlers.get('verify_tsb'))
