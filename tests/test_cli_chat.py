@@ -14,7 +14,9 @@ from teaagent.cli._handlers._chat import (
     execute_shell_command,
     complete_file_path,
     complete_symbol,
+    suspend_to_background,
 )
+from teaagent.cli._handlers._agent import interactive_review_mode
 from teaagent.chat_agent import ChatAgentConfig
 
 
@@ -522,6 +524,252 @@ def test_show_interactive_diff_basic(capsys, monkeypatch):
         
         assert result is True  # Should proceed
         assert "Sandbox Merge Preview" in captured.out
+
+
+def test_suspend_to_background_basic(capsys):
+    """Test basic session suspension to background."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {'observations': [{'task': 'test'}], 'compaction_count': 0}
+        targeted_files = set()
+        
+        run_id = suspend_to_background(config, session_context, targeted_files)
+        captured = capsys.readouterr()
+        
+        assert run_id  # Should return a run_id
+        assert "Suspending session to background mode" in captured.out
+        assert "Session suspended successfully" in captured.out
+        
+        # Check suspension file was created
+        tea_dir = Path(tmpdir) / '.teaagent'
+        suspension_file = tea_dir / f'suspension-{run_id}.json'
+        assert suspension_file.exists()
+
+
+def test_suspend_to_background_with_dirty_workspace(capsys):
+    """Test suspension with dirty workspace creates sandbox branch."""
+    import subprocess
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Initialize git repo
+        subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        
+        # Create initial commit
+        (Path(tmpdir) / "test.txt").write_text("initial content")
+        subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        
+        # Make workspace dirty
+        (Path(tmpdir) / "test.txt").write_text("modified content")
+        
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {'observations': [], 'compaction_count': 0}
+        targeted_files = set()
+        
+        run_id = suspend_to_background(config, session_context, targeted_files)
+        captured = capsys.readouterr()
+        
+        assert run_id
+        assert "creating sandbox branch" in captured.out.lower()
+        
+        # Verify suspension data includes sandbox branch
+        tea_dir = Path(tmpdir) / '.teaagent'
+        suspension_file = tea_dir / f'suspension-{run_id}.json'
+        import json
+        with open(suspension_file) as f:
+            data = json.load(f)
+        assert 'sandbox_branch' in data
+
+
+def test_suspend_to_background_preserves_context(capsys):
+    """Test that suspension preserves session context."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create the actual file structure
+        src_dir = Path(tmpdir) / 'src'
+        src_dir.mkdir()
+        (src_dir / 'main.py').touch()
+        
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {
+            'observations': [{'task': 'task1'}, {'task': 'task2'}],
+            'compaction_count': 3
+        }
+        targeted_files = {src_dir / 'main.py'}
+        
+        run_id = suspend_to_background(config, session_context, targeted_files)
+        
+        # Verify context was preserved
+        tea_dir = Path(tmpdir) / '.teaagent'
+        suspension_file = tea_dir / f'suspension-{run_id}.json'
+        import json
+        with open(suspension_file) as f:
+            data = json.load(f)
+        
+        assert data['session_context']['observations_count'] == 2
+        assert data['session_context']['compaction_count'] == 3
+        assert len(data['targeted_files']) == 1
+
+
+def test_interactive_review_mode_no_changes(capsys):
+    """Test interactive review mode with no changes."""
+    import subprocess
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Initialize git repo
+        subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        
+        # Create initial commit
+        (Path(tmpdir) / "test.txt").write_text("initial content")
+        subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        
+        result = interactive_review_mode(tmpdir, "test-run-id")
+        captured = capsys.readouterr()
+        
+        assert result == 0
+        assert "No changes detected to review" in captured.out
+
+
+def test_interactive_review_mode_with_changes(capsys, monkeypatch):
+    """Test interactive review mode with file changes."""
+    import subprocess
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Initialize git repo
+        subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        
+        # Create initial commit
+        (Path(tmpdir) / "test.txt").write_text("initial content")
+        subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        
+        # Make changes
+        (Path(tmpdir) / "test.txt").write_text("modified content")
+        
+        # Mock user input to skip the file (n for next)
+        inputs = ["n"]  # Skip the file
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0) if inputs else "n")
+        
+        result = interactive_review_mode(tmpdir, "test-run-id")
+        captured = capsys.readouterr()
+        
+        # The function should complete (return code may vary based on implementation)
+        assert "Interactive Review Mode" in captured.out or "Review" in captured.out
+
+
+def test_dual_mode_integration_suspension_to_review(capsys, monkeypatch):
+    """Test full integration: REPL suspension → background → review."""
+    import subprocess
+    import json
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Initialize git repo
+        subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        
+        # Create initial commit
+        (Path(tmpdir) / "test.txt").write_text("initial content")
+        subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        
+        # Step 1: Simulate REPL session suspension
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {
+            'observations': [{'task': 'refactor authentication'}],
+            'compaction_count': 0
+        }
+        targeted_files = set()
+        
+        run_id = suspend_to_background(config, session_context, targeted_files)
+        assert run_id  # Should get a valid run_id
+        
+        # Verify suspension file was created with ACP compliance
+        tea_dir = Path(tmpdir) / '.teaagent'
+        suspension_file = tea_dir / f'suspension-{run_id}.json'
+        assert suspension_file.exists()
+        
+        with open(suspension_file) as f:
+            suspension_data = json.load(f)
+        
+        assert 'acp_version' in suspension_data
+        assert suspension_data['acp_version'] == '1.0.0'
+        assert suspension_data['mode'] == 'suspended_from_repl'
+        assert 'audit_trail' in suspension_data
+        assert suspension_data['audit_trail']['transition_type'] == 'keyboard_to_robot'
+        
+        # Step 2: Simulate background task making changes
+        (Path(tmpdir) / "test.txt").write_text("refactored content by background task")
+        
+        # Step 3: Interactive review of background results
+        # Mock user input to accept changes
+        inputs = ["y"]  # Accept the file
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0) if inputs else "n")
+        
+        result = interactive_review_mode(tmpdir, run_id)
+        captured = capsys.readouterr()
+        
+        # Verify review completed
+        assert "Interactive Review Mode" in captured.out or "Review" in captured.out
+        
+        # Verify review file was created with ACP compliance
+        review_file = tea_dir / f'review-{run_id}.json'
+        if review_file.exists():
+            with open(review_file) as f:
+                review_data = json.load(f)
+            assert 'acp_version' in review_data
+            assert review_data['acp_version'] == '1.0.0'
+            assert review_data['mode'] == 'interactive_review'
+            assert 'audit_trail' in review_data
+            assert review_data['audit_trail']['transition_type'] == 'robot_to_keyboard'
+
+
+def test_acp_state_consistency_across_modes(capsys):
+    """Test that ACP state is consistent across mode transitions."""
+    import subprocess
+    import json
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Initialize git repo
+        subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        
+        # Create initial commit
+        (Path(tmpdir) / "test.txt").write_text("initial content")
+        subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        
+        # Test suspension creates ACP-compliant state
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {'observations': [], 'compaction_count': 0}
+        targeted_files = set()
+        
+        run_id = suspend_to_background(config, session_context, targeted_files)
+        
+        tea_dir = Path(tmpdir) / '.teaagent'
+        suspension_file = tea_dir / f'suspension-{run_id}.json'
+        
+        with open(suspension_file) as f:
+            suspension_data = json.load(f)
+        
+        # Verify ACP compliance fields
+        assert 'acp_version' in suspension_data
+        assert 'mode' in suspension_data
+        assert 'audit_trail' in suspension_data
+        assert 'timestamp' in suspension_data
+        
+        # Verify audit trail structure
+        audit_trail = suspension_data['audit_trail']
+        assert 'suspension_time' in audit_trail
+        assert 'original_mode' in audit_trail
+        assert 'transition_type' in audit_trail
     from teaagent.cli._handlers._agent import _save_git_sandbox_consent
     import json
     

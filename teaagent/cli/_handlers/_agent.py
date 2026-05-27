@@ -27,6 +27,8 @@ from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
 from teaagent.skill_candidates import SkillCandidateStore
+import subprocess
+import os
 
 
 def _save_git_sandbox_consent(root: str, value: str) -> None:
@@ -716,6 +718,152 @@ def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
         return True
     
     return True
+
+
+def interactive_review_mode(root: str | Path, run_id: str) -> int:
+    """Launch interactive review mode for background task results.
+    
+    Args:
+        root: The workspace root directory
+        run_id: The background task run_id to review
+        
+    Returns:
+        Exit code (0 for success, non-zero for errors)
+    """
+    from pathlib import Path
+    
+    root_path = Path(root).resolve()
+    
+    print(f'\n=== Interactive Review Mode ===')
+    print(f'Reviewing results from run: {run_id}')
+    print()
+    
+    # Get changed files from the run
+    try:
+        # First, check if we can get changes from git
+        result = subprocess.run(
+            ['git', 'diff', '--name-only'],
+            cwd=root_path,
+            capture_output=True,
+            text=True,
+        )
+        
+        if result.returncode != 0 or not result.stdout.strip():
+            print('[TeaAgent] No changes detected to review.')
+            return 0
+        
+        changed_files = result.stdout.strip().split('\n')
+        print(f'Found {len(changed_files)} changed file(s) to review:')
+        for i, file in enumerate(changed_files, 1):
+            print(f'  {i}. {file}')
+        
+        print()
+        print('Review commands:')
+        print('  y - Accept file changes')
+        print('  e - Edit file in external editor')
+        print('  r - Reject and request AI reconsideration')
+        print('  n - Next file (skip)')
+        print('  q - Quit review')
+        print()
+        
+        # Interactive review loop
+        current_index = 0
+        review_decisions = {}
+        
+        while current_index < len(changed_files):
+            file_path = changed_files[current_index]
+            print(f'\n--- Reviewing file {current_index + 1}/{len(changed_files)}: {file_path} ---')
+            
+            # Show diff for this file
+            diff_result = subprocess.run(
+                ['git', 'diff', '--color=always', file_path],
+                cwd=root_path,
+                capture_output=True,
+                text=True,
+            )
+            
+            if diff_result.stdout:
+                # Show limited diff (first 20 lines)
+                diff_lines = diff_result.stdout.split('\n')
+                print('\n'.join(diff_lines[:20]))
+                if len(diff_lines) > 20:
+                    print(f'... ({len(diff_lines) - 20} more lines)')
+            
+            print(f'\nAction for {file_path} [y/e/r/n/q]: ', end='')
+            choice = input().strip().lower()
+            
+            if choice == 'y':
+                review_decisions[file_path] = 'accepted'
+                print(f'✓ Accepted {file_path}')
+                current_index += 1
+            elif choice == 'e':
+                # Open in external editor
+                editor = os.environ.get('EDITOR', 'vim')
+                subprocess.run([editor, str(root_path / file_path)], cwd=root_path)
+                review_decisions[file_path] = 'edited'
+                print(f'✓ Edited {file_path}')
+                current_index += 1
+            elif choice == 'r':
+                review_decisions[file_path] = 'rejected'
+                print(f'✗ Rejected {file_path} (marked for AI reconsideration)')
+                current_index += 1
+            elif choice == 'n':
+                print(f'→ Skipped {file_path}')
+                current_index += 1
+            elif choice == 'q':
+                print('Review quit by user.')
+                return 0  # Early exit on quit
+            else:
+                print('Invalid choice. Please try again.')
+        
+        # Summary
+        print(f'\n=== Review Summary ===')
+        accepted = sum(1 for d in review_decisions.values() if d == 'accepted')
+        edited = sum(1 for d in review_decisions.values() if d == 'edited')
+        rejected = sum(1 for d in review_decisions.values() if d == 'rejected')
+        
+        print(f'Accepted: {accepted}')
+        print(f'Edited: {edited}')
+        print(f'Rejected: {rejected}')
+        print(f'Skipped: {len(changed_files) - len(review_decisions)}')
+        
+        # Save review decisions with ACP compliance
+        tea_dir = root_path / '.teaagent'
+        tea_dir.mkdir(parents=True, exist_ok=True)
+        review_file = tea_dir / f'review-{run_id}.json'
+        
+        try:
+            with open(review_file, 'w') as f:
+                json.dump({
+                    'run_id': run_id,
+                    'timestamp': time.time(),
+                    'acp_version': '1.0.0',  # ACP protocol version
+                    'mode': 'interactive_review',  # Track current mode
+                    'decisions': review_decisions,
+                    'audit_trail': {
+                        'review_time': time.time(),
+                        'original_mode': 'robot',
+                        'transition_type': 'robot_to_keyboard',
+                        'files_reviewed': len(changed_files),
+                    }
+                }, f, indent=2)
+            print(f'\nReview decisions saved to {review_file}')
+        except Exception as exc:
+            print(f'Warning: Could not save review decisions: {exc}')
+        
+        return 0
+        
+    except FileNotFoundError:
+        print('[TeaAgent] Git not found in PATH')
+        return 1
+    except Exception as exc:
+        print(f'[TeaAgent] Error during review: {exc}')
+        return 1
+
+
+def interactive_review_command(args: argparse.Namespace) -> int:
+    """CLI command for interactive review mode."""
+    return interactive_review_mode(args.root, args.run_id)
 
     if _telemetry_sink is not None:
         from contextlib import suppress

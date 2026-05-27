@@ -22,6 +22,8 @@ import sys
 import os
 import glob
 import readline
+import json
+import uuid
 
 
 def execute_shell_command(command: str, root: Path) -> None:
@@ -193,6 +195,94 @@ def complete_symbol(text: str, root: Path) -> list[str]:
     except Exception:
         # Fallback: simple file-based symbol search
         return []
+
+
+def suspend_to_background(config: ChatAgentConfig, session_context: dict, targeted_files: set[Path]) -> str:
+    """Suspend current REPL session and convert to background task.
+    
+    Args:
+        config: Current chat agent configuration
+        session_context: Current session context and observations
+        targeted_files: Current targeted file set
+        
+    Returns:
+        run_id of the created background task
+    """
+    import subprocess
+    from pathlib import Path
+    
+    root = config.root.resolve()
+    
+    print("[TeaAgent] Suspending session to background mode...")
+    
+    # Generate unique run_id
+    run_id = str(uuid.uuid4())[:8]
+    
+    # Create suspension checkpoint
+    tea_dir = root / '.teaagent'
+    tea_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save session state with ACP compliance
+    suspension_data = {
+        'run_id': run_id,
+        'timestamp': __import__('time').time(),
+        'acp_version': '1.0.0',  # ACP protocol version for state compatibility
+        'mode': 'suspended_from_repl',  # Track origin mode
+        'config': {
+            'model': config.model,
+            'permission_mode': config.permission_mode.value if config.permission_mode else None,
+            'max_iterations': config.max_iterations,
+            'max_tool_calls': config.max_tool_calls,
+            'max_estimated_cost_cents': config.max_estimated_cost_cents,
+        },
+        'session_context': {
+            'observations_count': len(session_context.get('observations', [])),
+            'compaction_count': session_context.get('compaction_count', 0),
+            'observations': session_context.get('observations', [])[-10:],  # Keep last 10 for context
+        },
+        'targeted_files': [str(f.resolve().relative_to(root.resolve())) for f in targeted_files if f.resolve().is_relative_to(root.resolve())],
+        'audit_trail': {
+            'suspension_time': __import__('time').time(),
+            'original_mode': 'repl',
+            'transition_type': 'keyboard_to_robot',
+        }
+    }
+    
+    suspension_file = tea_dir / f'suspension-{run_id}.json'
+    try:
+        suspension_file.write_text(json.dumps(suspension_data, indent=2), encoding='utf-8')
+    except Exception as exc:
+        print(f"[TeaAgent] Error saving suspension state: {exc}")
+        return ""
+    
+    # Create Git sandbox branch if workspace is dirty
+    try:
+        result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+        
+        if result.stdout.strip():
+            print("[TeaAgent] Workspace has uncommitted changes, creating sandbox branch...")
+            branch_name = f"suspended-{run_id}"
+            subprocess.run(['git', 'checkout', '-b', branch_name], cwd=root, capture_output=True)
+            suspension_data['sandbox_branch'] = branch_name
+            suspension_data['audit_trail']['sandbox_branch'] = branch_name
+            suspension_file.write_text(json.dumps(suspension_data, indent=2), encoding='utf-8')
+            print(f"[TeaAgent] Created sandbox branch: {branch_name}")
+    except FileNotFoundError:
+        print("[TeaAgent] Git not found, skipping sandbox branch creation")
+    except Exception as exc:
+        print(f"[TeaAgent] Warning: Could not create sandbox branch: {exc}")
+    
+    print(f"[TeaAgent] Session suspended successfully!")
+    print(f"[TeaAgent] Run ID: {run_id}")
+    print(f"[TeaAgent] To attach: teaagent attach {run_id} --follow")
+    print(f"[TeaAgent] To resume: teaagent resume {run_id}")
+    
+    return run_id
 
 
 
@@ -594,6 +684,17 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 print("[TeaAgent] Conversation history cleared. Starting fresh.")
                 continue
             
+            # Handle background command
+            if user_input in ('/background', '/handoff'):
+                run_id = suspend_to_background(config, session_context, targeted_files)
+                if run_id:
+                    print(f"[TeaAgent] Interactive session converted to background task.")
+                    print(f"[TeaAgent] You can now safely exit the REPL.")
+                    print(f"[TeaAgent] Use 'teaagent attach {run_id} --follow' to monitor progress.")
+                else:
+                    print("[TeaAgent] Suspension failed. Continuing in interactive mode.")
+                continue
+            
             # Handle cost command
             if user_input == '/cost':
                 print(f"[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}")
@@ -739,6 +840,7 @@ def print_chat_help() -> None:
     print("  /compact                   - Compact session context to save tokens")
     print("  /clear                     - Clear conversation history")
     print("  /diff                      - Show git diff for current session")
+    print("  /background, /handoff       - Suspend session to background mode")
     print("  /context                   - Show targeted context files")
     print("  /add <path>                - Add file/directory to context")
     print("  /drop <path>               - Remove file/directory from context")

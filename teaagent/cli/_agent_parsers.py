@@ -36,6 +36,8 @@ def register(
         )
     if 'chat' in handlers:
         _chat(subs, handlers['chat'])
+    if 'interactive_review' in handlers:
+        _interactive_review(subs, handlers['interactive_review'])
     if 'automation_add' in handlers:
         _automation(
             subs,
@@ -526,6 +528,18 @@ def _chat(
     if defaults:
         base_defaults.update(defaults)
     p.set_defaults(**base_defaults)
+
+
+def _interactive_review(
+    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Callable,
+) -> None:  # type: ignore[type-arg]
+    p = subs.add_parser('interactive-review', help='Interactive review mode for background task results.')
+    p.add_argument('run_id', help='Background task run ID to review.')
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.set_defaults(func=handler, agent_command='interactive_review')
 
 
 def _resume(
