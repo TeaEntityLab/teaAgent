@@ -242,14 +242,23 @@ def _execute_agent_task(
     # Initialize git sandbox if available (will be updated with actual run_id later)
     git_sandbox = GitBranchSandbox(args.root, run_id='pending')
     git_sandbox_available = git_sandbox.is_available()
+    auto_stash = getattr(args, 'git_sandbox_auto_stash', False)
     if git_sandbox_available:
-        sandbox_result = git_sandbox.start()
+        sandbox_result = git_sandbox.start(auto_stash=auto_stash)
         if not sandbox_result.success:
             print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
             git_sandbox_available = False
 
     undo_journal = UndoJournal(args.root)
     audit.add_sink(undo_journal)
+
+    # Add git transaction sink if sandbox is active
+    git_transaction_sink = None
+    if git_sandbox_available:
+        from teaagent.git_sandbox import GitTransactionSink
+
+        git_transaction_sink = GitTransactionSink(git_sandbox)
+        audit.add_sink(git_transaction_sink)
 
     _telemetry_sink = None
     if getattr(args, 'telemetry_otlp_endpoint', None) or getattr(
@@ -339,16 +348,65 @@ def _execute_agent_task(
     if undo_journal.has_entries:
         undo_journal.save_to(store.undo_path(result.run_id))
 
-    # Update git sandbox with actual run_id and commit changes
+    # Handle git sandbox resolution
     if git_sandbox_available:
-        # Re-create sandbox with actual run_id
+        # Re-create sandbox with actual run_id for proper branch naming
         git_sandbox = GitBranchSandbox(args.root, run_id=result.run_id)
         if git_sandbox.is_available():
-            git_sandbox.start()
+            # Show diff summary
+            try:
+                import subprocess
+                diff_result = subprocess.run(
+                    ['git', 'diff', '--stat', f'{git_sandbox._original_branch}..HEAD'],
+                    cwd=args.root,
+                    capture_output=True,
+                    text=True,
+                )
+                if diff_result.stdout.strip():
+                    print(f'\n[TeaAgent] Changes in sandbox branch:')
+                    print(diff_result.stdout)
+                else:
+                    print('\n[TeaAgent] No changes made in sandbox branch.')
+            except Exception:
+                print('\n[TeaAgent] Could not generate diff summary.')
+
+            # Prompt for resolution
             if result.status == 'completed':
-                commit_result = git_sandbox.commit(f'teaagent run: {task[:50]}')
-                if not commit_result.success:
-                    print(f'[TeaAgent WARNING] Git commit failed: {commit_result.error}', file=sys.stderr)
+                print(f'\nApply changes back to \'{git_sandbox._original_branch}\'?')
+                print('  [m]erge (normal) / [s]quash and commit / [d]iscard / [k]eep branch for review: ', end='')
+                choice = input().strip().lower()
+
+                if choice == 'm':
+                    merge_result = git_sandbox.merge(squash=False)
+                    if merge_result.success:
+                        print(f'[TeaAgent] Merged sandbox branch successfully.')
+                    else:
+                        print(f'[TeaAgent ERROR] {merge_result.error}', file=sys.stderr)
+                elif choice == 's':
+                    merge_result = git_sandbox.merge(squash=True)
+                    if merge_result.success:
+                        print(f'[TeaAgent] Squashed and merged sandbox branch successfully.')
+                    else:
+                        print(f'[TeaAgent ERROR] {merge_result.error}', file=sys.stderr)
+                elif choice == 'd':
+                    discard_result = git_sandbox.discard()
+                    if discard_result.success:
+                        print(f'[TeaAgent] Discarded sandbox branch changes.')
+                    else:
+                        print(f'[TeaAgent ERROR] {discard_result.error}', file=sys.stderr)
+                elif choice == 'k':
+                    keep_result = git_sandbox.keep()
+                    print(f'[TeaAgent] Keeping sandbox branch \'{keep_result.branch_name}\' for manual review.')
+                    print(f'[TeaAgent] To merge manually: git checkout {git_sandbox._original_branch} && git merge {keep_result.branch_name}')
+                    print(f'[TeaAgent] To discard manually: git checkout {git_sandbox._original_branch} && git branch -D {keep_result.branch_name}')
+                else:
+                    print(f'[TeaAgent] Invalid choice, keeping sandbox branch for manual review.')
+                    git_sandbox.keep()
+            else:
+                # Auto-discard on failure/aborted
+                discard_result = git_sandbox.discard()
+                if discard_result.success:
+                    print(f'[TeaAgent] Auto-discarded sandbox branch due to {result.status} status.')
 
     if _telemetry_sink is not None:
         from contextlib import suppress

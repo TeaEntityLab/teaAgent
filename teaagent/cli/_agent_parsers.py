@@ -109,6 +109,16 @@ def add_agent_run_arguments(p: argparse.ArgumentParser) -> None:
         help='Allow destructive tools such as write, patch, and shell.',
     )
     p.add_argument(
+        '--git-sandbox',
+        action='store_true',
+        help='Run agent task in a git sandbox branch for safe rollbacks.',
+    )
+    p.add_argument(
+        '--git-sandbox-auto-stash',
+        action='store_true',
+        help='Automatically stash dirty worktree before creating git sandbox branch.',
+    )
+    p.add_argument(
         '--approve-call-id',
         action='append',
         default=[],
