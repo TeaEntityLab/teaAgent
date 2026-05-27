@@ -304,22 +304,60 @@ class ApprovalPolicy:
     def _collect_peer_signatures(self, request: ApprovalRequest) -> list[PeerSignature]:
         """Collect peer signatures for approval request.
         
-        In production, this would:
+        This integrates with federated_sync to:
         1. Broadcast the request via teaagent sync to peer agents
         2. Wait for peers to sign with their SSH keys
         3. Collect and verify signatures
-        
-        For now, this is a stub that returns empty list.
         """
-        # TODO: Implement actual P2P broadcast via federated_sync
-        # This would integrate with the sync infrastructure to:
-        # - Create a sync message with the approval request
-        # - Broadcast to configured peer agent IDs
-        # - Wait for signature responses
-        # - Verify cryptographic signatures
+        from teaagent.federated_sync import (
+            ApprovalRequestMessage,
+            ApprovalSignatureMessage,
+            FederatedGraphSync,
+        )
         
-        # Stub implementation - in production, this would block and wait
-        return []
+        # Initialize federated sync for P2P broadcast
+        sync = FederatedGraphSync(
+            root=self.root,
+            agent_id=self.agent_id or "unknown",
+        )
+        
+        # Create approval request message for broadcast
+        approval_request = ApprovalRequestMessage(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            call_id=request.call_id,
+            arguments=request.arguments or {},
+            request_hash=request.request_hash,
+            timestamp=request.timestamp,
+            requester_agent_id=request.requester_agent_id,
+            required_approvals=self.multi_sig_config.required_approvals,
+            timeout_seconds=30,  # Default 30 second timeout
+        )
+        
+        # Broadcast to configured peer agents
+        broadcast_results = sync.broadcast_approval_request(
+            approval_request,
+            self.multi_sig_config.peer_agent_ids,
+        )
+        
+        # Collect signatures from peers
+        signature_messages = sync.collect_approval_signatures(
+            request.request_id,
+            timeout_seconds=30,
+        )
+        
+        # Convert signature messages to PeerSignature objects
+        peer_signatures = []
+        for sig_msg in signature_messages:
+            peer_sig = PeerSignature(
+                peer_id=sig_msg.peer_id,
+                signature=sig_msg.signature,
+                timestamp=sig_msg.timestamp,
+                ssh_key_id=sig_msg.ssh_key_id,
+            )
+            peer_signatures.append(peer_sig)
+        
+        return peer_signatures
 
 
 def parse_permission_mode(value: str) -> PermissionMode:
