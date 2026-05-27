@@ -64,6 +64,19 @@ def register(
         handlers['ultrawork_stop'],
     )
     _workspace(subparsers, handlers['workspace_tools'], handlers['workspace_openapi'])
+    _sync(
+        subparsers,
+        handlers.get('sync_export'),
+        handlers.get('sync_import'),
+        handlers.get('sync_status'),
+    )
+    _replay(
+        subparsers,
+        handlers.get('replay_list'),
+        handlers.get('replay_steps'),
+        handlers.get('replay_fork'),
+        handlers.get('replay_resume'),
+    )
 
 
 def _add_workspace_bootstrap_args(p: argparse.ArgumentParser) -> None:
@@ -805,3 +818,139 @@ def _experiment(
         help='Comma-separated list of options (optional for orphaned cleanup).',
     )
     cancel.set_defaults(func=cancel_handler or _deprecation_warning)
+
+
+def _sync(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    export_handler: Optional[Callable],
+    import_handler: Optional[Callable],
+    status_handler: Optional[Callable],
+) -> None:
+    """Register sync subcommands."""
+    sync_parser = subparsers.add_parser('sync', help='Federated multi-agent graph synchronization')
+    subs = sync_parser.add_subparsers(dest='sync_command', required=True)
+
+    export_cmd = subs.add_parser('export', help='Export sync message for P2P transfer')
+    export_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    export_cmd.add_argument(
+        '--agent-id',
+        required=True,
+        help='Agent ID for the sync message.',
+    )
+    export_cmd.add_argument(
+        '--output',
+        required=True,
+        help='Output path for sync message JSON file.',
+    )
+    export_cmd.set_defaults(func=export_handler or _deprecation_warning)
+
+    import_cmd = subs.add_parser('import', help='Import and apply sync message')
+    import_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    import_cmd.add_argument(
+        '--agent-id',
+        required=True,
+        help='Local agent ID receiving the sync.',
+    )
+    import_cmd.add_argument(
+        '--input',
+        required=True,
+        help='Input path for sync message JSON file.',
+    )
+    import_cmd.set_defaults(func=import_handler or _deprecation_warning)
+
+    status_cmd = subs.add_parser('status', help='Show federated sync status')
+    status_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    status_cmd.add_argument(
+        '--agent-id',
+        required=True,
+        help='Agent ID to check status for.',
+    )
+    status_cmd.set_defaults(func=status_handler or _deprecation_warning)
+
+
+def _replay(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    list_handler: Optional[Callable],
+    steps_handler: Optional[Callable],
+    fork_handler: Optional[Callable],
+    resume_handler: Optional[Callable],
+) -> None:
+    """Register replay subcommands."""
+    replay_parser = subparsers.add_parser('replay', help='Time-travel replay and debugging')
+    subs = replay_parser.add_subparsers(dest='replay_command', required=True)
+
+    list_cmd = subs.add_parser('list', help='List available runs for replay')
+    list_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    list_cmd.add_argument(
+        '--limit',
+        type=int,
+        default=50,
+        help='Maximum number of runs to list.',
+    )
+    list_cmd.set_defaults(func=list_handler or _deprecation_warning)
+
+    steps_cmd = subs.add_parser('steps', help='List steps in a run')
+    steps_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    steps_cmd.add_argument(
+        '--run-id',
+        required=True,
+        help='Run ID to inspect.',
+    )
+    steps_cmd.set_defaults(func=steps_handler or _deprecation_warning)
+
+    fork_cmd = subs.add_parser('fork', help='Fork a new branch at a specific step')
+    fork_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    fork_cmd.add_argument(
+        '--run-id',
+        required=True,
+        help='Run ID to fork from.',
+    )
+    fork_cmd.add_argument(
+        '--step',
+        type=int,
+        required=True,
+        help='Step number to fork at.',
+    )
+    fork_cmd.add_argument(
+        '--branch-name',
+        required=True,
+        help='Name for the new replay branch.',
+    )
+    fork_cmd.set_defaults(func=fork_handler or _deprecation_warning)
+
+    resume_cmd = subs.add_parser('resume', help='Resume execution from a replay checkpoint')
+    resume_cmd.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    resume_cmd.add_argument(
+        '--branch-name',
+        required=True,
+        help='Branch name to resume.',
+    )
+    resume_cmd.set_defaults(func=resume_handler or _deprecation_warning)

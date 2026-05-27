@@ -34,6 +34,17 @@ from ._experiment import (
     experiment_list,
     experiment_select,
 )
+from ._sync import (
+    sync_export,
+    sync_import,
+    sync_status,
+)
+from ._replay import (
+    replay_fork,
+    replay_list,
+    replay_resume,
+    replay_steps,
+)
 from ._audit import (
     audit_list_command,
     audit_prune_command,
@@ -260,4 +271,11 @@ __all__ = [
     'experiment_compare',
     'experiment_list',
     'experiment_select',
+    'sync_export',
+    'sync_import',
+    'sync_status',
+    'replay_list',
+    'replay_steps',
+    'replay_fork',
+    'replay_resume',
 ]
