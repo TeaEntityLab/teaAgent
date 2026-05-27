@@ -55,10 +55,13 @@ def is_worktree_clean(root: str | Path) -> bool:
 
 
 def stash_save(root: str | Path, label: str) -> Optional[str]:
-    """Save current changes to git stash and return stash ID."""
+    """Save current changes to git stash and return stash ID.
+
+    Uses `git stash push -u` to include untracked files.
+    """
     try:
         result = subprocess.run(
-            ['git', 'stash', 'save', label],
+            ['git', 'stash', 'push', '-u', '-m', label],
             cwd=Path(root).resolve(),
             capture_output=True,
             text=True,
@@ -222,18 +225,25 @@ class GitBranchSandbox:
             )
 
         try:
-            # Switch back to original branch
+            # Clean sandbox branch before checkout to avoid conflicts
             subprocess.run(
-                ['git', 'checkout', self._original_branch],
+                ['git', 'reset', '--hard', 'HEAD'],
+                cwd=self._root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            subprocess.run(
+                ['git', 'clean', '-fd'],
                 cwd=self._root,
                 capture_output=True,
                 text=True,
                 check=True,
             )
 
-            # Hard reset to discard any changes from sandbox branch
+            # Switch back to original branch
             subprocess.run(
-                ['git', 'reset', '--hard', 'HEAD'],
+                ['git', 'checkout', self._original_branch],
                 cwd=self._root,
                 capture_output=True,
                 text=True,
@@ -386,8 +396,14 @@ class GitTransactionSink:
         tool_info = self._pending.pop(call_id)
         tool_name = tool_info['tool_name']
 
-        # Only commit for destructive path-based tools
-        if tool_name in {'workspace_write_file', 'workspace_apply_patch', 'workspace_edit_at_hash'}:
+        # Commit for destructive path-based tools and mutating shell tools
+        if tool_name in {
+            'workspace_write_file',
+            'workspace_apply_patch',
+            'workspace_edit_at_hash',
+            'workspace_run_shell_mutate',
+            'workspace_run_shell',
+        }:
             self._sandbox.commit_transaction(tool_name, call_id)
 
     def _on_tool_failed(self, payload: dict[str, object]) -> None:

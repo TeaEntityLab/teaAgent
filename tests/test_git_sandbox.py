@@ -80,6 +80,35 @@ def test_stash_save_and_pop(tmp_path: Path) -> None:
     assert (tmp_path / 'test.txt').read_text() == 'modified'
 
 
+def test_stash_untracked_files(tmp_path: Path) -> None:
+    """Test stashing untracked files with -u flag."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    # Create untracked file
+    (tmp_path / 'untracked.txt').write_text('untracked content')
+
+    # Worktree should be dirty (untracked files)
+    assert not is_worktree_clean(tmp_path)
+
+    # Stash with -u flag should handle untracked files
+    stash_id = stash_save(tmp_path, 'test untracked stash')
+    assert stash_id is not None
+
+    # Worktree should be clean after stashing
+    assert is_worktree_clean(tmp_path)
+    assert not (tmp_path / 'untracked.txt').exists()
+
+    # Pop stash
+    assert stash_pop(tmp_path)
+    assert (tmp_path / 'untracked.txt').exists()
+    assert (tmp_path / 'untracked.txt').read_text() == 'untracked content'
+
+
 def test_git_sandbox_not_available_non_git(tmp_path: Path) -> None:
     """Test that git sandbox is not available in non-git directory."""
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
@@ -238,6 +267,32 @@ def test_git_sandbox_discard(tmp_path: Path) -> None:
     assert (tmp_path / 'test.txt').read_text() == 'original'
 
 
+def test_rollback_with_dirty_sandbox(tmp_path: Path) -> None:
+    """Test rollback succeeds even with uncommitted changes on sandbox branch."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
+    sandbox.start()
+
+    # Make uncommitted changes (dirty sandbox)
+    (tmp_path / 'test.txt').write_text('modified')
+    (tmp_path / 'new_file.txt').write_text('new content')
+
+    # Rollback should succeed despite dirty sandbox
+    rollback_result = sandbox.rollback()
+    assert rollback_result.success
+
+    # Verify file is restored to original state
+    assert (tmp_path / 'test.txt').read_text() == 'original'
+    # Verify untracked file is cleaned
+    assert not (tmp_path / 'new_file.txt').exists()
+
+
 def test_git_sandbox_keep(tmp_path: Path) -> None:
     """Test keeping sandbox branch for manual review."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
@@ -331,3 +386,35 @@ def test_git_transaction_sink_ignores_failed_calls(tmp_path: Path) -> None:
         check=True,
     )
     assert '[TeaAgent Transaction]' not in result.stdout
+
+
+def test_git_transaction_sink_commits_shell_mutate(tmp_path: Path) -> None:
+    """Test GitTransactionSink commits for shell mutate tools."""
+    from teaagent.audit import AuditEvent
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+
+    sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
+    sandbox.start()
+
+    sink = GitTransactionSink(sandbox)
+
+    # Simulate shell mutate tool call
+    sink(AuditEvent('tool_call_started', 'run_1', payload={'tool_name': 'workspace_run_shell_mutate', 'call_id': 'call_shell_123'}))
+    (tmp_path / 'test.txt').write_text('formatted by shell')
+    sink(AuditEvent('tool_call_completed', 'run_1', payload={'call_id': 'call_shell_123'}))
+
+    # Verify commit was made
+    result = subprocess.run(
+        ['git', 'log', '--oneline', '-n', '1'],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert '[TeaAgent Transaction] workspace_run_shell_mutate - call_shell_123' in result.stdout
