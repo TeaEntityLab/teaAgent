@@ -38,12 +38,40 @@ def _wrap_approval_store_errors(func: Callable[[], int]) -> int:
 
 
 def yesterday_command(args: argparse.Namespace) -> int:
-    print_json(list_yesterday_runs(args.root, limit=args.limit))
+    runs = list_yesterday_runs(args.root, limit=args.limit)
+    if sys.stdout.isatty():
+        from teaagent.ergonomics.human_output import format_ascii_table
+        headers = ["Run ID", "Task", "Status", "Created At"]
+        keys = ["run_id", "task", "status", "created_at"]
+        truncated = []
+        for r in runs:
+            tr = dict(r)
+            task = tr.get("task", "")
+            if len(task) > 40:
+                tr["task"] = task[:37] + "..."
+            truncated.append(tr)
+        print(format_ascii_table(headers, truncated, keys))
+    else:
+        print_json(runs)
     return 0
 
 
 def recall_command(args: argparse.Namespace) -> int:
-    print_json(list_recall_runs(args.root, limit=args.limit))
+    runs = list_recall_runs(args.root, limit=args.limit)
+    if sys.stdout.isatty():
+        from teaagent.ergonomics.human_output import format_ascii_table
+        headers = ["Run ID", "Task", "Status", "Created At"]
+        keys = ["run_id", "task", "status", "created_at"]
+        truncated = []
+        for r in runs:
+            tr = dict(r)
+            task = tr.get("task", "")
+            if len(task) > 40:
+                tr["task"] = task[:37] + "..."
+            truncated.append(tr)
+        print(format_ascii_table(headers, truncated, keys))
+    else:
+        print_json(runs)
     return 0
 
 
@@ -69,7 +97,19 @@ def status_short_command(args: argparse.Namespace) -> int:
 def background_list_command(args: argparse.Namespace) -> int:
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
-    print_json(BackgroundRunStore(args.root, readonly=True).list())
+    runs = BackgroundRunStore(args.root, readonly=True).list()
+    if sys.stdout.isatty():
+        from teaagent.ergonomics.human_output import format_ascii_table
+        headers = ["Background ID", "PID", "Label", "Alive", "Started At"]
+        keys = ["background_id", "pid", "label", "alive", "started_at"]
+        truncated = []
+        for r in runs:
+            tr = dict(r)
+            tr["background_id"] = tr.get("background_id", "")[:10]
+            truncated.append(tr)
+        print(format_ascii_table(headers, truncated, keys))
+    else:
+        print_json(runs)
     return 0
 
 

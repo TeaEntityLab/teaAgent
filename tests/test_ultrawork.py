@@ -29,7 +29,7 @@ class UltraworkStoreTests(unittest.TestCase):
             self.assertTrue(Path(record.log_path).exists())
             persisted = json.loads(
                 (
-                    Path(tmp) / '.teaagent' / 'ultrawork' / f'{record.worker_id}.json'
+                    Path(tmp) / '.teaagent' / 'background' / f'{record.worker_id}.json'
                 ).read_text()
             )
             self.assertEqual(persisted['pid'], record.pid)

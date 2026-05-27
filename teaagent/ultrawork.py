@@ -1,35 +1,20 @@
 from __future__ import annotations
 
-import json
-import os
-import signal
-import subprocess
-import time
-from contextlib import suppress
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+import sys
+import warnings
 from pathlib import Path
 from typing import Any, Optional
-from uuid import uuid4
+from dataclasses import dataclass
 
-from teaagent.storage import atomic_write_text
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+from teaagent.ergonomics.background_run import BackgroundRunStore, BackgroundRunRecord
 
 
-_PROC_HANDLES: dict[str, 'subprocess.Popen[bytes]'] = {}
-
-
-def _reap(pid: int) -> bool:
-    try:
-        finished_pid, _ = os.waitpid(pid, os.WNOHANG)
-    except ChildProcessError:
-        return False
-    except OSError:
-        return False
-    return finished_pid == pid
+def _deprecate_ultrawork() -> None:
+    print(
+        "[TeaAgent WARNING] 'ultrawork' module and commands are deprecated. "
+        "Please use 'teaagent.ergonomics.background_run' and 'teaagent background' instead.",
+        file=sys.stderr,
+    )
 
 
 @dataclass(frozen=True)
@@ -44,138 +29,66 @@ class WorkerRecord:
     stop_signal: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {
+            "worker_id": self.worker_id,
+            "pid": self.pid,
+            "command": self.command,
+            "started_at": self.started_at,
+            "log_path": self.log_path,
+            "label": self.label,
+            "stopped_at": self.stopped_at,
+            "stop_signal": self.stop_signal,
+        }
 
 
 class UltraworkStore:
-    """Detached background workers persisted under .teaagent/ultrawork/."""
+    """Deprecated: Backward-compatibility wrapper delegating to BackgroundRunStore."""
 
-    def __init__(self, root: str | Path = '.', *, notify_config: Any = None, readonly: bool = False) -> None:
-        self.root = Path(root).resolve()
-        self.dir = self.root / '.teaagent' / 'ultrawork'
+    def __init__(
+        self,
+        root: str | Path = ".",
+        *,
+        notify_config: Any = None,
+        readonly: bool = False,
+    ) -> None:
+        _deprecate_ultrawork()
+        self._store = BackgroundRunStore(root, readonly=readonly)
         self.readonly = readonly
-        if not readonly:
-            self.dir.mkdir(parents=True, exist_ok=True)
-        self._notify_config = notify_config
 
     def start(self, command: list[str], *, label: Optional[str] = None) -> WorkerRecord:
-        if self.readonly:
-            raise RuntimeError('Cannot start ultrawork worker in readonly mode')
-        if not command:
-            raise ValueError('ultrawork command must not be empty')
-        worker_id = uuid4().hex
-        log_path = self.dir / f'{worker_id}.log'
-        record_path = self.dir / f'{worker_id}.json'
-        log_handle = log_path.open('w', encoding='utf-8')
-        try:
-            proc = subprocess.Popen(
-                command,
-                stdout=log_handle,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
-                cwd=self.root,
-            )
-        finally:
-            log_handle.close()
-        record = WorkerRecord(
-            worker_id=worker_id,
-            pid=proc.pid,
-            command=list(command),
-            started_at=_utc_now(),
-            log_path=str(log_path),
-            label=label,
+        record = self._store.start(command, label=label)
+        return WorkerRecord(
+            worker_id=record.background_id,
+            pid=record.pid,
+            command=record.command,
+            started_at=record.started_at,
+            log_path=record.log_path,
+            label=record.label,
+            stopped_at=record.stopped_at,
         )
-        atomic_write_text(record_path, json.dumps(record.to_dict(), sort_keys=True))
-        _PROC_HANDLES[worker_id] = proc
-        return record
 
     def list(self) -> list[dict[str, Any]]:
-        records = []
-        for path in sorted(
-            self.dir.glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True
-        ):
-            data = json.loads(path.read_text(encoding='utf-8'))
-            data['alive'] = self._is_alive(int(data['pid']))
-            records.append(data)
-        return records
+        rows = self._store.list()
+        for row in rows:
+            row["worker_id"] = row.get("background_id")
+        return rows
 
     def show(self, worker_id: str) -> dict[str, Any]:
-        record_path = self.dir / f'{worker_id}.json'
-        if not record_path.exists():
-            raise FileNotFoundError(f"ultrawork worker '{worker_id}' not found")
-        data = json.loads(record_path.read_text(encoding='utf-8'))
-        data['alive'] = self._is_alive(int(data['pid']))
+        data = self._store.get(worker_id)
+        data["worker_id"] = data.get("background_id")
         return data
 
     def logs(self, worker_id: str, *, max_bytes: int = 64_000) -> dict[str, Any]:
-        data = self.show(worker_id)
-        log_path = Path(str(data['log_path']))
-        if not log_path.exists():
-            content = ''
-        else:
-            with log_path.open('rb') as fh:
-                if max_bytes > 0:
-                    fh.seek(0, os.SEEK_END)
-                    size = fh.tell()
-                    fh.seek(max(0, size - max_bytes), os.SEEK_SET)
-                content = fh.read().decode('utf-8', errors='replace')
-        return {
-            'worker_id': data['worker_id'],
-            'log_path': data['log_path'],
-            'content': content,
-        }
+        res = self._store.logs(worker_id, max_bytes=max_bytes)
+        res["worker_id"] = res.get("background_id")
+        return res
 
     def stop(self, worker_id: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
-        data = self.show(worker_id)
-        pid = int(data['pid'])
-        signal_name = 'SIGTERM'
-        proc = _PROC_HANDLES.get(worker_id)
-        if self._is_alive(pid):
-            with suppress(ProcessLookupError):
-                os.kill(pid, signal.SIGTERM)
-            deadline = time.time() + max(0.0, timeout_seconds)
-            while time.time() < deadline and self._is_alive(pid):
-                time.sleep(0.05)
-            if self._is_alive(pid):
-                with suppress(ProcessLookupError):
-                    os.kill(pid, signal.SIGKILL)
-                    signal_name = 'SIGKILL'
-        if proc is not None:
-            with suppress(subprocess.TimeoutExpired):
-                proc.wait(timeout=max(0.1, timeout_seconds))
-            _PROC_HANDLES.pop(worker_id, None)
-        data['stopped_at'] = _utc_now()
-        data['stop_signal'] = signal_name
-        data['alive'] = False
-        record_path = self.dir / f'{worker_id}.json'
-        atomic_write_text(
-            record_path,
-            json.dumps({k: v for k, v in data.items() if k != 'alive'}, sort_keys=True),
-        )
-        if self._notify_config is not None:
-            from teaagent.notify import fire_notification
-
-            class _Rec:
-                pass
-
-            rec = _Rec()
-            rec.worker_id = worker_id  # type: ignore[attr-defined]
-            rec.pid = data.get('pid')  # type: ignore[attr-defined]
-            rec.started_at = data.get('started_at', '')  # type: ignore[attr-defined]
-            rec.command = data.get('command', [])  # type: ignore[attr-defined]
-            fire_notification(self._notify_config, rec, event='stopped')
+        data = self._store.stop(worker_id, timeout_seconds=timeout_seconds)
+        data["worker_id"] = data.get("background_id")
         return data
 
     @staticmethod
     def _is_alive(pid: int) -> bool:
-        if pid <= 0:
-            return False
-        if _reap(pid):
-            return False
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True
-        return True
+        from teaagent.ergonomics.background_run import _is_alive as run_is_alive
+        return run_is_alive(pid)

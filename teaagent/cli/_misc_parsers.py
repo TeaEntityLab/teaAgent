@@ -504,8 +504,32 @@ def _ultrawork(
     logs_handler: Callable,
     stop_handler: Callable,
 ) -> None:
+    import sys
+
+    def _deprecation_warning(args: argparse.Namespace) -> int:
+        print(
+            '[TeaAgent WARNING] "ultrawork" commands are deprecated. '
+            'Please use "teaagent background" or "teaagent run --detach" instead.',
+            file=sys.stderr,
+        )
+        # Route to the appropriate handler based on subcommand
+        cmd = args.ultrawork_command
+        if cmd == 'start':
+            return start_handler(args)
+        elif cmd == 'list':
+            return list_handler(args)
+        elif cmd == 'show':
+            return show_handler(args)
+        elif cmd == 'logs':
+            return logs_handler(args)
+        elif cmd == 'stop':
+            return stop_handler(args)
+        return 1
+
     ultrawork = subparsers.add_parser(
-        'ultrawork', help='Manage detached background agent workers.'
+        'ultrawork',
+        help='DEPRECATED: Manage detached background agent workers (use background instead).',
+        description='DEPRECATED: Use "teaagent background" or "teaagent run --detach" instead.',
     )
     subs = ultrawork.add_subparsers(dest='ultrawork_command', required=True)
 
@@ -531,16 +555,16 @@ def _ultrawork(
     start.add_argument(
         '--label', default=None, help='Optional human label for this worker.'
     )
-    start.set_defaults(func=start_handler)
+    start.set_defaults(func=_deprecation_warning)
 
     lst = subs.add_parser('list', help='List background workers.')
     lst.add_argument('--root', default='.', help='Workspace root.')
-    lst.set_defaults(func=list_handler)
+    lst.set_defaults(func=_deprecation_warning)
 
     show = subs.add_parser('show', help='Show one worker record.')
     show.add_argument('worker_id', help='Worker id to inspect.')
     show.add_argument('--root', default='.', help='Workspace root.')
-    show.set_defaults(func=show_handler)
+    show.set_defaults(func=_deprecation_warning)
 
     logs = subs.add_parser('logs', help='Show one worker log tail.')
     logs.add_argument('worker_id', help='Worker id to inspect.')
@@ -548,12 +572,12 @@ def _ultrawork(
     logs.add_argument(
         '--bytes', type=int, default=64_000, help='Maximum log bytes to return.'
     )
-    logs.set_defaults(func=logs_handler)
+    logs.set_defaults(func=_deprecation_warning)
 
     stop = subs.add_parser('stop', help='Stop a running worker.')
     stop.add_argument('worker_id', help='Worker id to stop.')
     stop.add_argument('--root', default='.', help='Workspace root.')
-    stop.set_defaults(func=stop_handler)
+    stop.set_defaults(func=_deprecation_warning)
 
 
 def _workspace(

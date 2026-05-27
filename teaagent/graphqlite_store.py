@@ -24,6 +24,19 @@ class GraphQLiteConfig:
     database: str = ':memory:'
 
 
+class DummyKnowledgeGraph:
+    """Mock KnowledgeGraph fallback when sqlite runtime extension loading is unavailable."""
+
+    def upsert_node(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def upsert_edge(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def query(self, *args: Any, **kwargs: Any) -> list[Any]:
+        return []
+
+
 class GraphQLiteGraphStore:
     """GraphQLite-backed store for Graph RAG entity and relation data."""
 
@@ -34,7 +47,16 @@ class GraphQLiteGraphStore:
         graph_factory: Optional[GraphFactory] = None,
     ) -> None:
         self.config = config or GraphQLiteConfig()
-        self.graph = (graph_factory or load_graphqlite_graph)(self.config.database)
+        try:
+            self.graph = (graph_factory or load_graphqlite_graph)(self.config.database)
+        except (GraphQLiteUnavailableError, GraphQLiteRuntimeError) as exc:
+            import sys
+            print(
+                f"[TeaAgent WARNING] GraphQLite runtime is unavailable: {exc}. "
+                f"Gracefully degrading to file-level semantic index & hybrid search fallback.",
+                file=sys.stderr,
+            )
+            self.graph = DummyKnowledgeGraph()
 
     def upsert_document(self, document: Document) -> None:
         self.graph.upsert_node(

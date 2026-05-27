@@ -67,6 +67,9 @@ def graphqlite_migrate(args: argparse.Namespace) -> int:
 
 
 def ultrawork_start_command(args: argparse.Namespace) -> int:
+    # Deprecated: redirect to BackgroundRunStore
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
     command = [
         sys.executable,
         '-m',
@@ -84,19 +87,26 @@ def ultrawork_start_command(args: argparse.Namespace) -> int:
     ]
     if args.model:
         command.extend(['--model', args.model])
-    record = UltraworkStore(args.root).start(command, label=args.label)
+    store = BackgroundRunStore(args.root)
+    record = store.start(command, label=args.label)
     print_json(record.to_dict())
     return 0
 
 
 def ultrawork_list_command(args: argparse.Namespace) -> int:
-    print_json(UltraworkStore(args.root, readonly=True).list())
+    # Deprecated: redirect to BackgroundRunStore
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
+    print_json(BackgroundRunStore(args.root, readonly=True).list())
     return 0
 
 
 def ultrawork_show_command(args: argparse.Namespace) -> int:
+    # Deprecated: redirect to BackgroundRunStore
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
     try:
-        print_json(UltraworkStore(args.root, readonly=True).show(args.worker_id))
+        print_json(BackgroundRunStore(args.root, readonly=True).get(args.worker_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -104,8 +114,11 @@ def ultrawork_show_command(args: argparse.Namespace) -> int:
 
 
 def ultrawork_logs_command(args: argparse.Namespace) -> int:
+    # Deprecated: redirect to BackgroundRunStore
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
     try:
-        print_json(UltraworkStore(args.root, readonly=True).logs(args.worker_id, max_bytes=args.bytes))
+        print_json(BackgroundRunStore(args.root, readonly=True).logs(args.worker_id, max_bytes=args.bytes))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -113,8 +126,11 @@ def ultrawork_logs_command(args: argparse.Namespace) -> int:
 
 
 def ultrawork_stop_command(args: argparse.Namespace) -> int:
+    # Deprecated: redirect to BackgroundRunStore
+    from teaagent.ergonomics.background_run import BackgroundRunStore
+
     try:
-        print_json(UltraworkStore(args.root).stop(args.worker_id))
+        print_json(BackgroundRunStore(args.root).stop(args.worker_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -335,4 +351,48 @@ def _provider_env_var(provider: str) -> str:
 
 
 def print_json(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))
+    """Print JSON with TTY-aware formatting."""
+    import sys
+
+    if sys.stdout.isatty():
+        # Human-readable output for TTY
+        if isinstance(value, list) and value:
+            print_table(value)
+        elif isinstance(value, dict):
+            print_dict(value)
+        else:
+            print(json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2))
+    else:
+        # Raw JSON for pipes/redirects
+        print(json.dumps(value, ensure_ascii=False, sort_keys=True))
+
+
+def print_table(data: list[dict[str, Any]]) -> None:
+    """Print list of dicts as a formatted table."""
+    if not data:
+        print("(empty)")
+        return
+
+    # Extract headers from first item
+    headers = list(data[0].keys())
+    col_widths = {h: len(str(h)) for h in headers}
+
+    # Calculate column widths
+    for row in data:
+        for h in headers:
+            col_widths[h] = max(col_widths[h], len(str(row.get(h, ''))))
+
+    # Print header
+    header_line = "  ".join(f"{h:<{col_widths[h]}}" for h in headers)
+    print(header_line)
+    print("  ".join("-" * col_widths[h] for h in headers))
+
+    # Print rows
+    for row in data:
+        print("  ".join(f"{str(row.get(h, '')):<{col_widths[h]}}" for h in headers))
+
+
+def print_dict(data: dict[str, Any]) -> None:
+    """Print dict as formatted key-value pairs."""
+    for key, value in data.items():
+        print(f"{key}: {value}")

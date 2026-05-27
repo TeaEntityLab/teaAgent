@@ -342,14 +342,49 @@ class TeaAgentTUI:
             return True
         self._print_json({'status': 'approval_required', 'approval': request.to_dict()})
         fn = self.input_fn or input
-        answer = fn(f'approve {request.call_id} ({request.tool_name})? [y/N] ')
-        approved = answer.strip().lower() in {'y', 'yes'}
-        self.output_fn(
-            f'approval: {"approved" if approved else "denied"} {request.call_id}'
-        )
-        if approved and not request.run_id:
-            self.approved_call_ids.add(request.call_id)
-        return approved
+        answer = fn(f'approve {request.call_id} ({request.tool_name})? [y]es / [n]o / always for this [p]ath / always for this [t]ool / [s]top run: ').strip().lower()
+        if answer in {'y', 'yes'}:
+            self.output_fn(f'approval: approved {request.call_id}')
+            if not request.run_id:
+                self.approved_call_ids.add(request.call_id)
+            return True
+        elif answer in {'s', 'stop'}:
+            self.output_fn('approval: stop run requested by operator')
+            raise SystemExit('Task aborted by operator.')
+        elif answer == 'p':
+            path = None
+            if request.arguments:
+                path = request.arguments.get('path') or request.arguments.get('TargetFile') or request.arguments.get('target_file') or request.arguments.get('AbsolutePath')
+            if path:
+                store.grant(
+                    request.tool_name,
+                    scope='session',
+                    permission_mode=self.permission_mode.value,
+                    path_globs=[str(path)],
+                    ttl_hours=8.0,
+                )
+                self.output_fn(f'approval: registered session grant for {request.tool_name} matching path: {path}')
+            else:
+                store.grant(
+                    request.tool_name,
+                    scope='session',
+                    permission_mode=self.permission_mode.value,
+                    ttl_hours=8.0,
+                )
+                self.output_fn(f'approval: registered global session grant for {request.tool_name}')
+            return True
+        elif answer == 't':
+            store.grant(
+                request.tool_name,
+                scope='session',
+                permission_mode=self.permission_mode.value,
+                ttl_hours=8.0,
+            )
+            self.output_fn(f'approval: registered global session grant for {request.tool_name}')
+            return True
+            
+        self.output_fn(f'approval: denied {request.call_id}')
+        return False
 
     def _run_result_payload(
         self,

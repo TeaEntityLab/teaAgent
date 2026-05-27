@@ -121,6 +121,51 @@ class BackgroundRunStore:
             rows.append(data)
         return rows
 
+    def logs(self, background_id: str, *, max_bytes: int = 64_000) -> dict[str, Any]:
+        data = self.get(background_id)
+        log_path = Path(str(data['log_path']))
+        if not log_path.exists():
+            content = ''
+        else:
+            with log_path.open('rb') as fh:
+                if max_bytes > 0:
+                    fh.seek(0, os.SEEK_END)
+                    size = fh.tell()
+                    fh.seek(max(0, size - max_bytes), os.SEEK_SET)
+                content = fh.read().decode('utf-8', errors='replace')
+        return {
+            'background_id': data['background_id'],
+            'log_path': data['log_path'],
+            'content': content,
+        }
+
+    def stop(self, background_id: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
+        import signal
+        import time
+        from contextlib import suppress
+
+        data = self.get(background_id)
+        pid = int(data['pid'])
+        signal_name = 'SIGTERM'
+        if _is_alive(pid):
+            with suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGTERM)
+            deadline = time.time() + max(0.0, timeout_seconds)
+            while time.time() < deadline and _is_alive(pid):
+                time.sleep(0.05)
+            if _is_alive(pid):
+                with suppress(ProcessLookupError):
+                    os.kill(pid, signal.SIGKILL)
+                    signal_name = 'SIGKILL'
+        
+        data['stopped_at'] = _utc_now()
+        data['stop_signal'] = signal_name
+        data['alive'] = False
+        if not self.readonly:
+            _persist_record_state(self._record_path(background_id), data)
+        return data
+
+
 
 def _persist_record_state(path: Path, data: dict[str, Any]) -> None:
     persisted = {k: v for k, v in data.items() if k != 'alive'}
@@ -141,7 +186,12 @@ def _refresh_process_state(data: dict[str, Any], record_path: Path, *, persist: 
         return data
 
     pid = int(data['pid'])
-    alive = _is_alive(pid)
+    try:
+        os.kill(pid, 0)
+        alive = True
+    except OSError:
+        alive = False
+
     exit_code: Optional[int] = None
     if alive:
         try:
@@ -165,7 +215,21 @@ def _refresh_process_state(data: dict[str, Any], record_path: Path, *, persist: 
     return data
 
 
+def _reap(pid: int) -> bool:
+    try:
+        finished_pid, _ = os.waitpid(pid, os.WNOHANG)
+    except ChildProcessError:
+        return False
+    except OSError:
+        return False
+    return finished_pid == pid
+
+
 def _is_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if _reap(pid):
+        return False
     try:
         os.kill(pid, 0)
     except OSError:

@@ -415,12 +415,48 @@ def make_cli_approval_handler(
             file=sys.stderr,
         )
         print(
-            f'Approve destructive tool call {request.call_id} ({request.tool_name})? [y/N] ',
+            f'Approve {request.call_id} ({request.tool_name})? [y]es / [n]o / always for this [p]ath / always for this [t]ool / [s]top run: ',
             end='',
             file=sys.stderr,
         )
-        answer = input()
-        return answer.strip().lower() in {'y', 'yes'}
+        answer = input().strip().lower()
+        if answer in {'y', 'yes'}:
+            return True
+        elif answer in {'s', 'stop'}:
+            print('[TeaAgent] Operator aborted task execution.', file=sys.stderr)
+            raise SystemExit('Task aborted by operator.')
+        elif answer == 'p':
+            path = None
+            if request.arguments:
+                path = request.arguments.get('path') or request.arguments.get('TargetFile') or request.arguments.get('target_file') or request.arguments.get('AbsolutePath')
+            if path:
+                store.grant(
+                    request.tool_name,
+                    scope='session',
+                    permission_mode=permission_mode,
+                    path_globs=[str(path)],
+                    ttl_hours=8.0,
+                )
+                print(f'[TeaAgent] Registered session grant for {request.tool_name} matching path: {path}', file=sys.stderr)
+            else:
+                store.grant(
+                    request.tool_name,
+                    scope='session',
+                    permission_mode=permission_mode,
+                    ttl_hours=8.0,
+                )
+                print(f'[TeaAgent] No path found in tool arguments. Registered global session grant for {request.tool_name}', file=sys.stderr)
+            return True
+        elif answer == 't':
+            store.grant(
+                request.tool_name,
+                scope='session',
+                permission_mode=permission_mode,
+                ttl_hours=8.0,
+            )
+            print(f'[TeaAgent] Registered global session grant for {request.tool_name}', file=sys.stderr)
+            return True
+        return False
 
     return _handler
 
