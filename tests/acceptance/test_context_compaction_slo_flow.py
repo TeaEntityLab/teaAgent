@@ -86,7 +86,8 @@ def test_compact_preserves_recent_observations():
     assert len(result.context['observations']) == 3
     assert result.context['observations'][0]['result']['path'].endswith('c.py')
     assert result.context['compaction_count'] == 1
-    assert 'read_file' in result.summary
+    # Semantic summary should mention files
+    assert 'files' in result.summary.lower() or 'read' in result.summary.lower()
     assert result.tokens_saved > 0
 
 
@@ -149,5 +150,68 @@ def test_compaction_latency_within_slo():
 
 def test_estimate_tokens():
     compactor = ContextCompactor()
-    assert compactor.estimate_tokens('hello world') == 2
-    assert compactor.estimate_tokens('a' * 100) == 25
+    # Text estimation (3.5 chars per token)
+    assert compactor.estimate_tokens('hello world') == 3  # 11 chars / 3.5 ≈ 3
+    # Plain text uses 3.5 chars per token
+    assert compactor.estimate_tokens('a' * 100) == 28  # 100 / 3.5 ≈ 28
+    # Code-heavy content uses 4 chars per token
+    code = 'def foo(): { return bar; }'
+    assert compactor.estimate_tokens(code) > 0
+
+
+def test_semantic_summarization():
+    compactor = ContextCompactor(enable_semantic_compression=True)
+    observations = [
+        {'tool_name': 'read_file', 'result': {'path': 'a.py'}},
+        {'tool_name': 'read_file', 'result': {'path': 'b.py'}},
+        {'tool_name': 'read_file', 'result': {'path': 'c.py'}},
+        {'tool_name': 'search_text', 'result': {'matches': ['line1', 'line2']}},
+    ]
+    summary = compactor._semantic_summarize(observations)
+    assert 'Read 3 files' in summary
+    assert 'a.py' in summary
+    assert 'Searched' in summary
+
+
+def test_compact_chat_history():
+    compactor = ContextCompactor()
+    messages = [
+        {'role': 'system', 'content': 'You are a helpful assistant.'},
+        {'role': 'user', 'content': 'Hello ' * 100},
+        {'role': 'assistant', 'content': 'Hi there ' * 100},
+        {'role': 'user', 'content': 'How are you?'},
+        {'role': 'assistant', 'content': 'I am good.'},
+    ]
+    compacted = compactor.compact_chat_history(messages, max_tokens=200)
+    # System message should be preserved
+    assert any(m.get('role') == 'system' for m in compacted)
+    # Should have fewer messages due to token limit
+    assert len(compacted) < len(messages)
+
+
+def test_compact_chat_history_preserves_recent():
+    compactor = ContextCompactor()
+    messages = [
+        {'role': 'system', 'content': 'System prompt'},
+        {'role': 'user', 'content': 'Old message'},
+        {'role': 'assistant', 'content': 'Old response'},
+        {'role': 'user', 'content': 'Recent message'},
+        {'role': 'assistant', 'content': 'Recent response'},
+    ]
+    compacted = compactor.compact_chat_history(messages, max_tokens=1000)
+    # Should preserve recent messages
+    assert any('Recent' in m.get('content', '') for m in compacted)
+
+
+def test_compression_ratio():
+    compactor = ContextCompactor(enable_semantic_compression=True)
+    context = {
+        'task': 'test',
+        'observations': [
+            {'tool_name': 'read_file', 'result': {'path': f'file_{i}.py'}}
+            for i in range(10)
+        ],
+    }
+    result = compactor.compact(context)
+    assert result.compression_ratio >= 0.0
+    assert result.compression_ratio <= 1.0
