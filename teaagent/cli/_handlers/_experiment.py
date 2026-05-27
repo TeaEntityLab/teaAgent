@@ -213,8 +213,17 @@ def experiment_select(args: argparse.Namespace) -> int:
         })
         return 1
 
-    # Merge selected branch
-    merge_result = selected_sandbox.merge(squash=args.squash)
+    # Merge selected branch with self-healing if configured
+    enable_self_healing = not getattr(args, 'no_self_healing', False)
+    conflict_provider = getattr(args, 'conflict_provider', None)
+    conflict_model = getattr(args, 'conflict_model', None)
+
+    merge_result = selected_sandbox.merge(
+        squash=args.squash,
+        enable_self_healing=enable_self_healing,
+        conflict_provider=conflict_provider,
+        conflict_model=conflict_model,
+    )
 
     if not merge_result.success:
         print_json({

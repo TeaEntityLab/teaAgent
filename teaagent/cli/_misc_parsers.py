@@ -773,6 +773,21 @@ def _experiment(
         action='store_true',
         help='Squash commits when merging.',
     )
+    select.add_argument(
+        '--conflict-provider',
+        default=None,
+        help='LLM provider for automatic conflict resolution (e.g., openai, anthropic).',
+    )
+    select.add_argument(
+        '--conflict-model',
+        default=None,
+        help='Model name for automatic conflict resolution.',
+    )
+    select.add_argument(
+        '--no-self-healing',
+        action='store_true',
+        help='Disable LSP self-healing for conflict resolution.',
+    )
     select.set_defaults(func=select_handler or _deprecation_warning)
 
     cancel = subs.add_parser('cancel', help='Cancel and delete experimental branches.')

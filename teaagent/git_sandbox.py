@@ -11,7 +11,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
 
 @dataclass(frozen=True)
@@ -38,6 +38,127 @@ class TestExecutionResult:
     exit_code: int
     output: str
     error: str = ''
+
+
+class VFSSandbox:
+    """In-memory virtual file system overlay for zero-pollution parallel experiments.
+
+    Intercepts file writes and stores them in memory until explicitly flushed.
+    Reads fall through to the actual filesystem for files not in memory.
+    """
+
+    def __init__(self, root: str | Path):
+        """Initialize VFS sandbox.
+
+        Args:
+            root: Repository root path.
+        """
+        self._root = Path(root).resolve()
+        self._memory_files: Dict[str, str] = {}
+        self._deleted_files: set[str] = set()
+
+    def write_file(self, path: str, content: str) -> None:
+        """Write file to memory overlay.
+
+        Args:
+            path: Relative path from root.
+            content: File content.
+        """
+        self._memory_files[path] = content
+        self._deleted_files.discard(path)
+
+    def read_file(self, path: str) -> str:
+        """Read file from memory overlay or filesystem.
+
+        Args:
+            path: Relative path from root.
+
+        Returns:
+            File content.
+        """
+        if path in self._memory_files:
+            return self._memory_files[path]
+        if path in self._deleted_files:
+            raise FileNotFoundError(f'File deleted in VFS: {path}')
+
+        full_path = self._root / path
+        if full_path.exists():
+            return full_path.read_text(encoding='utf-8')
+        raise FileNotFoundError(f'File not found: {path}')
+
+    def delete_file(self, path: str) -> None:
+        """Mark file as deleted in memory overlay.
+
+        Args:
+            path: Relative path from root.
+        """
+        self._memory_files.pop(path, None)
+        self._deleted_files.add(path)
+
+    def file_exists(self, path: str) -> bool:
+        """Check if file exists in memory overlay or filesystem.
+
+        Args:
+            path: Relative path from root.
+
+        Returns:
+            True if file exists.
+        """
+        if path in self._memory_files:
+            return True
+        if path in self._deleted_files:
+            return False
+        return (self._root / path).exists()
+
+    def list_files(self) -> list[str]:
+        """List all files in memory overlay.
+
+        Returns:
+            List of file paths.
+        """
+        return list(self._memory_files.keys())
+
+    def flush_to_disk(self) -> dict[str, bool]:
+        """Flush all memory files to disk.
+
+        Returns:
+            Dict mapping file paths to flush success status.
+        """
+        results: dict[str, bool] = {}
+
+        for path, content in self._memory_files.items():
+            try:
+                full_path = self._root / path
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                full_path.write_text(content, encoding='utf-8')
+                results[path] = True
+            except Exception:
+                results[path] = False
+
+        # Delete files marked for deletion
+        for path in self._deleted_files:
+            try:
+                full_path = self._root / path
+                if full_path.exists():
+                    full_path.unlink()
+                results[path] = True
+            except Exception:
+                results[path] = False
+
+        return results
+
+    def clear(self) -> None:
+        """Clear all memory files and deletions."""
+        self._memory_files.clear()
+        self._deleted_files.clear()
+
+    def get_memory_size(self) -> int:
+        """Get total size of memory files in bytes.
+
+        Returns:
+            Size in bytes.
+        """
+        return sum(len(content) for content in self._memory_files.values())
 
 
 def is_git_repository(root: str | Path) -> bool:
@@ -286,11 +407,21 @@ class GitBranchSandbox:
                 error=str(exc),
             )
 
-    def merge(self, *, squash: bool = False) -> GitSandboxResult:
+    def merge(
+        self,
+        *,
+        squash: bool = False,
+        enable_self_healing: bool = True,
+        conflict_provider: str | None = None,
+        conflict_model: str | None = None,
+    ) -> GitSandboxResult:
         """Merge sandbox branch back to original branch.
 
         Args:
             squash: If True, squash all commits into a single commit.
+            enable_self_healing: Whether to enable LSP self-healing for conflicts.
+            conflict_provider: LLM provider for conflict resolution.
+            conflict_model: Model name for conflict resolution.
 
         Returns:
             GitSandboxResult with success status.
@@ -339,12 +470,55 @@ class GitBranchSandbox:
 
             # Check for merge conflicts
             if has_merge_conflicts(self._root):
-                return GitSandboxResult(
-                    success=False,
-                    error='Merge conflicts detected. Resolve conflicts manually or use conflict resolution tools.',
-                    has_conflicts=True,
-                    conflicted_files=get_conflicted_files(self._root),
-                )
+                conflicted_files = get_conflicted_files(self._root)
+
+                # Attempt self-healing conflict resolution if enabled
+                if enable_self_healing and conflict_provider and conflict_model:
+                    resolution_results = resolve_conflicts_with_llm(
+                        self._root,
+                        conflicted_files,
+                        conflict_provider,
+                        conflict_model,
+                        enable_self_healing=True,
+                        max_iterations=3,
+                    )
+
+                    # Check if all conflicts were resolved
+                    manual_files = [
+                        f for f, status in resolution_results.items()
+                        if status in ('manual', 'failed')
+                    ]
+
+                    if not manual_files:
+                        # All conflicts resolved, stage and commit
+                        subprocess.run(
+                            ['git', 'add', '.'],
+                            cwd=self._root,
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                        )
+                        subprocess.run(
+                            ['git', 'commit', '-m', f'chore: resolved merge conflicts for run {self._run_id}'],
+                            cwd=self._root,
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                        )
+                    else:
+                        return GitSandboxResult(
+                            success=False,
+                            error=f'Self-healing incomplete. {len(manual_files)} files require manual resolution: {manual_files}',
+                            has_conflicts=True,
+                            conflicted_files=manual_files,
+                        )
+                else:
+                    return GitSandboxResult(
+                        success=False,
+                        error='Merge conflicts detected. Resolve conflicts manually or use conflict resolution tools.',
+                        has_conflicts=True,
+                        conflicted_files=conflicted_files,
+                    )
 
             # Delete sandbox branch
             subprocess.run(
@@ -793,20 +967,24 @@ def resolve_conflicts_with_llm(
     conflicted_files: list[str],
     provider: str,
     model: str,
+    *,
+    enable_self_healing: bool = True,
+    max_iterations: int = 3,
 ) -> dict[str, str]:
-    """Resolve merge conflicts using LLM.
+    """Resolve merge conflicts using LLM with optional self-healing.
 
     Args:
         root: Git repository root path.
         conflicted_files: List of conflicted file paths.
         provider: LLM provider to use.
         model: Model name to use.
+        enable_self_healing: Whether to enable LSP/compiler feedback loop.
+        max_iterations: Maximum self-healing iterations per file.
 
     Returns:
-        Dict mapping file paths to resolution status ('resolved', 'failed', 'skipped').
+        Dict mapping file paths to resolution status ('resolved', 'failed', 'skipped', 'manual').
     """
-    from teaagent.llm._config import PROVIDER_CONFIGS
-    from teaagent.llm._adapters import get_adapter
+    from teaagent.llm._config import PROVIDER_CONFIGS, create_llm_adapter
 
     root_path = Path(root).resolve()
     results: dict[str, str] = {}
@@ -818,7 +996,7 @@ def resolve_conflicts_with_llm(
         return results
 
     try:
-        adapter = get_adapter(provider, model=model)
+        adapter = create_llm_adapter(provider, model=model)
     except Exception:
         for file_path in conflicted_files:
             results[file_path] = 'skipped'
@@ -830,8 +1008,12 @@ def resolve_conflicts_with_llm(
             results[file_path] = 'failed'
             continue
 
-        # Build prompt for LLM
-        prompt = f"""You are a code merge conflict resolver. Resolve the following merge conflict by intelligently combining both versions.
+        # Self-healing loop
+        resolved_content = None
+        for iteration in range(max_iterations + 1):
+            # Build prompt for LLM
+            if iteration == 0:
+                prompt = f"""You are a code merge conflict resolver. Resolve the following merge conflict by intelligently combining both versions.
 
 File: {file_path}
 
@@ -858,19 +1040,102 @@ Instructions:
 5. If the changes are truly incompatible, prefer the incoming (their) version for agent changes
 
 Resolved file content:"""
-
-        try:
-            response = adapter.complete(prompt, max_tokens=8192, temperature=0.1)
-            resolved_content = response.strip()
-            
-            if apply_llm_resolution(root_path, file_path, resolved_content):
-                results[file_path] = 'resolved'
             else:
+                # Self-healing iteration with error feedback
+                prompt = f"""You are a code merge conflict resolver. The previous merge attempt failed with errors. Fix the issues.
+
+File: {file_path}
+
+Previous attempt had these errors:
+{context.get('lsp_errors', 'No error details available')}
+
+Previous merged content:
+```
+{resolved_content}
+```
+
+Instructions:
+1. Fix the syntax/type errors shown above
+2. Ensure the code is valid and compiles
+3. Preserve the merge intent from the original conflict
+4. Output ONLY the corrected file content, no explanations
+
+Corrected file content:"""
+
+            try:
+                response = adapter.complete(prompt, max_tokens=8192, temperature=0.1)
+                resolved_content = response.strip()
+
+                # Apply resolution
+                if not apply_llm_resolution(root_path, file_path, resolved_content):
+                    results[file_path] = 'failed'
+                    break
+
+                # LSP validation if self-healing enabled
+                if enable_self_healing and iteration < max_iterations:
+                    lsp_errors = run_lsp_validation(root_path, file_path)
+                    if lsp_errors:
+                        context['lsp_errors'] = lsp_errors
+                        continue  # Try again with error feedback
+
+                # Success
+                results[file_path] = 'resolved'
+                break
+
+            except Exception:
                 results[file_path] = 'failed'
-        except Exception:
-            results[file_path] = 'failed'
+                break
+
+        # Mark for manual resolution if max iterations reached without success
+        if file_path not in results:
+            results[file_path] = 'manual'
 
     return results
+
+
+def run_lsp_validation(root: Path, file_path: str) -> str:
+    """Run LSP/compiler validation on a file.
+
+    Args:
+        root: Repository root path.
+        file_path: Path to the file to validate.
+
+    Returns:
+        Error message string, or empty string if no errors.
+    """
+    import subprocess
+
+    full_path = root / file_path
+
+    # Determine file type and run appropriate linter
+    if file_path.endswith('.py'):
+        try:
+            result = subprocess.run(
+                ['ruff', 'check', str(full_path)],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode != 0:
+                return result.stdout or result.stderr
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+        try:
+            result = subprocess.run(
+                ['mypy', str(full_path)],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode != 0:
+                return result.stdout or result.stderr
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+    return ''
 
 
 class ParallelExperimentStack:
