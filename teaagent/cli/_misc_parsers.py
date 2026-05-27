@@ -729,6 +729,22 @@ def _experiment(
         required=True,
         help='Comma-separated list of options (e.g., opt1,opt2,opt3).',
     )
+    compare.add_argument(
+        '--run-tests',
+        action='store_true',
+        help='Run test suite on each branch for quality matrix comparison.',
+    )
+    compare.add_argument(
+        '--test-command',
+        default='pytest -xvs',
+        help='Test command to run (default: pytest -xvs).',
+    )
+    compare.add_argument(
+        '--test-timeout',
+        type=int,
+        default=300,
+        help='Test timeout in seconds per branch (default: 300).',
+    )
     compare.set_defaults(func=compare_handler or _deprecation_warning)
 
     select = subs.add_parser('select', help='Select and merge the best experimental branch.')

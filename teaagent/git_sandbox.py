@@ -8,6 +8,7 @@ commands instead of manual file copying.
 from __future__ import annotations
 
 import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -24,6 +25,19 @@ class GitSandboxResult:
     stash_id: Optional[str] = None
     has_conflicts: bool = False
     conflicted_files: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class TestExecutionResult:
+    """Result of test execution on a sandbox branch."""
+
+    option: str
+    branch_name: str
+    passed: bool
+    duration_seconds: float
+    exit_code: int
+    output: str
+    error: str = ''
 
 
 def is_git_repository(root: str | Path) -> bool:
@@ -999,11 +1013,14 @@ class ParallelExperimentStack:
 
         return comparisons
 
-    def cleanup_all(self, keep_best: Optional[str] = None) -> dict[str, bool]:
+    def cleanup_all(
+        self, keep_best: Optional[str] = None, cleanup_memory: bool = True
+    ) -> dict[str, bool]:
         """Delete all sandbox branches, optionally keeping the best one.
 
         Args:
             keep_best: Option name to keep (e.g., 'optA').
+            cleanup_memory: Whether to clean up memory entries for deleted branches.
 
         Returns:
             Dict mapping option names to deletion success status.
@@ -1023,6 +1040,23 @@ class ParallelExperimentStack:
             except subprocess.CalledProcessError:
                 pass  # Continue with cleanup even if checkout fails
 
+        # Clean up memory for deleted branches
+        if cleanup_memory:
+            try:
+                from teaagent.memory import MemoryCatalog
+
+                catalog = MemoryCatalog(self._root)
+                for option, sandbox in self._sandboxes.items():
+                    if keep_best and option == keep_best:
+                        continue
+                    # Quarantine memory for deleted branch
+                    catalog.quarantine_by_branch(
+                        sandbox._branch_name,
+                        reason=f'Experiment branch {option} deleted during cleanup',
+                    )
+            except Exception:
+                pass  # Continue with git cleanup even if memory cleanup fails
+
         for option, sandbox in self._sandboxes.items():
             if keep_best and option == keep_best:
                 results[option] = True  # Kept, not deleted
@@ -1039,6 +1073,129 @@ class ParallelExperimentStack:
                 results[option] = True
             except subprocess.CalledProcessError:
                 results[option] = False
+
+        return results
+
+    def run_tests(
+        self,
+        test_command: list[str],
+        timeout_seconds: int = 300,
+    ) -> dict[str, TestExecutionResult]:
+        """Run tests on all sandbox branches and collect results.
+
+        Args:
+            test_command: Test command to run (e.g., ['pytest', '-xvs']).
+            timeout_seconds: Maximum time to wait for tests per branch.
+
+        Returns:
+            Dict mapping option names to their test results.
+        """
+        results: dict[str, TestExecutionResult] = {}
+
+        if not is_git_repository(self._root):
+            for option in self._options:
+                results[option] = TestExecutionResult(
+                    option=option,
+                    branch_name='',
+                    passed=False,
+                    duration_seconds=0.0,
+                    exit_code=-1,
+                    output='',
+                    error='Not a git repository',
+                )
+            return results
+
+        # Switch back to original branch first
+        original_branch = self._original_branch
+        if original_branch:
+            try:
+                subprocess.run(
+                    ['git', 'checkout', original_branch],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+            except subprocess.CalledProcessError:
+                pass
+
+        for option, sandbox in self._sandboxes.items():
+            try:
+                # Switch to sandbox branch
+                subprocess.run(
+                    ['git', 'checkout', sandbox._branch_name],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+
+                # Run tests with timeout
+                start_time = time.time()
+                try:
+                    result = subprocess.run(
+                        test_command,
+                        cwd=self._root,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout_seconds,
+                    )
+                    duration = time.time() - start_time
+                    passed = result.returncode == 0
+
+                    results[option] = TestExecutionResult(
+                        option=option,
+                        branch_name=sandbox._branch_name,
+                        passed=passed,
+                        duration_seconds=duration,
+                        exit_code=result.returncode,
+                        output=result.stdout,
+                        error=result.stderr,
+                    )
+                except subprocess.TimeoutExpired:
+                    duration = time.time() - start_time
+                    results[option] = TestExecutionResult(
+                        option=option,
+                        branch_name=sandbox._branch_name,
+                        passed=False,
+                        duration_seconds=duration,
+                        exit_code=-1,
+                        output='',
+                        error=f'Tests timed out after {timeout_seconds} seconds',
+                    )
+            except subprocess.CalledProcessError as e:
+                results[option] = TestExecutionResult(
+                    option=option,
+                    branch_name=sandbox._branch_name,
+                    passed=False,
+                    duration_seconds=0.0,
+                    exit_code=e.returncode,
+                    output='',
+                    error=str(e),
+                )
+            except Exception as e:
+                results[option] = TestExecutionResult(
+                    option=option,
+                    branch_name=sandbox._branch_name,
+                    passed=False,
+                    duration_seconds=0.0,
+                    exit_code=-1,
+                    output='',
+                    error=str(e),
+                )
+
+        # Switch back to original branch
+        if original_branch:
+            try:
+                subprocess.run(
+                    ['git', 'checkout', original_branch],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+            except subprocess.CalledProcessError:
+                pass
 
         return results
 

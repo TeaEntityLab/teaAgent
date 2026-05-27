@@ -138,11 +138,29 @@ def experiment_compare(args: argparse.Namespace) -> int:
     # Compare branches
     comparisons = stack.compare_branches()
 
+    # Run tests if requested
+    test_results = {}
+    if getattr(args, 'run_tests', False):
+        test_command_str = getattr(args, 'test_command', 'pytest -xvs')
+        test_command = test_command_str.split()
+        timeout = getattr(args, 'test_timeout', 300)
+        test_results_raw = stack.run_tests(test_command, timeout_seconds=timeout)
+        # Convert TestResult to dict for JSON serialization
+        for option, result in test_results_raw.items():
+            test_results[option] = {
+                'passed': result.passed,
+                'duration_seconds': result.duration_seconds,
+                'exit_code': result.exit_code,
+                'output': result.output[:1000] if result.output else '',  # Truncate output
+                'error': result.error[:500] if result.error else '',  # Truncate error
+            }
+
     print_json({
         'ok': True,
         'run_id': args.run_id,
         'options': options,
         'comparisons': comparisons,
+        'test_results': test_results if test_results else None,
     })
     return 0
 

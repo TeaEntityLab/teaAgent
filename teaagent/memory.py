@@ -23,6 +23,8 @@ class MemoryEntry:
     content: str
     tags: tuple[str, ...] = field(default_factory=tuple)
     created_at: str = field(default_factory=utc_now)
+    branch_name: str | None = None  # Git branch name for memory isolation
+    run_id: str | None = None  # Run ID for memory isolation
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -30,6 +32,8 @@ class MemoryEntry:
             'content': self.content,
             'tags': list(self.tags),
             'created_at': self.created_at,
+            'branch_name': self.branch_name,
+            'run_id': self.run_id,
         }
 
 
@@ -42,11 +46,22 @@ class MemoryCatalog:
         if not readonly:
             self.path.parent.mkdir(parents=True, exist_ok=True)
 
-    def add(self, content: str, *, tags: tuple[str, ...] = ()) -> MemoryEntry:
+    def add(
+        self,
+        content: str,
+        *,
+        tags: tuple[str, ...] = (),
+        branch_name: str | None = None,
+        run_id: str | None = None,
+    ) -> MemoryEntry:
         if self.readonly:
             raise RuntimeError('Cannot add memory in readonly mode')
         entry = MemoryEntry(
-            memory_id=uuid4().hex, content=content.strip(), tags=normalize_tags(tags)
+            memory_id=uuid4().hex,
+            content=content.strip(),
+            tags=normalize_tags(tags),
+            branch_name=branch_name,
+            run_id=run_id,
         )
         if not entry.content:
             raise ValueError('memory content cannot be empty')
@@ -59,11 +74,17 @@ class MemoryCatalog:
         *,
         tags: tuple[str, ...] = (),
         provenance: dict[str, Any],
+        branch_name: str | None = None,
+        run_id: str | None = None,
     ) -> MemoryEntry:
         if self.readonly:
             raise RuntimeError('Cannot add quarantined memory in readonly mode')
         entry = MemoryEntry(
-            memory_id=uuid4().hex, content=content.strip(), tags=normalize_tags(tags)
+            memory_id=uuid4().hex,
+            content=content.strip(),
+            tags=normalize_tags(tags),
+            branch_name=branch_name,
+            run_id=run_id,
         )
         if not entry.content:
             raise ValueError('memory content cannot be empty')
@@ -120,6 +141,116 @@ class MemoryCatalog:
                 entries.append(entry)
         return entries
 
+    def delete_by_branch(self, branch_name: str) -> int:
+        """Delete all memory entries associated with a specific branch.
+
+        Args:
+            branch_name: Git branch name to filter by.
+
+        Returns:
+            Number of entries deleted.
+        """
+        if self.readonly:
+            raise RuntimeError('Cannot delete memory in readonly mode')
+        if not self.path.exists():
+            return 0
+
+        entries = self._read_entries()
+        filtered = [
+            entry for entry in entries if entry.branch_name != branch_name
+        ]
+        deleted_count = len(entries) - len(filtered)
+
+        if deleted_count > 0:
+            # Rewrite file with filtered entries
+            self.path.write_text(
+                '\n'.join(
+                    json.dumps(entry.to_dict(), sort_keys=True) for entry in filtered
+                ),
+                encoding='utf-8',
+            )
+
+        return deleted_count
+
+    def delete_by_run_id(self, run_id: str) -> int:
+        """Delete all memory entries associated with a specific run ID.
+
+        Args:
+            run_id: Run ID to filter by.
+
+        Returns:
+            Number of entries deleted.
+        """
+        if self.readonly:
+            raise RuntimeError('Cannot delete memory in readonly mode')
+        if not self.path.exists():
+            return 0
+
+        entries = self._read_entries()
+        filtered = [entry for entry in entries if entry.run_id != run_id]
+        deleted_count = len(entries) - len(filtered)
+
+        if deleted_count > 0:
+            # Rewrite file with filtered entries
+            self.path.write_text(
+                '\n'.join(
+                    json.dumps(entry.to_dict(), sort_keys=True) for entry in filtered
+                ),
+                encoding='utf-8',
+            )
+
+        return deleted_count
+
+    def quarantine_by_branch(self, branch_name: str, reason: str) -> int:
+        """Move all memory entries for a branch to quarantine.
+
+        Args:
+            branch_name: Git branch name to quarantine.
+            reason: Reason for quarantine (stored in provenance).
+
+        Returns:
+            Number of entries quarantined.
+        """
+        if self.readonly:
+            raise RuntimeError('Cannot quarantine memory in readonly mode')
+        if not self.path.exists():
+            return 0
+
+        entries = self._read_entries()
+        to_quarantine = [
+            entry for entry in entries if entry.branch_name == branch_name
+        ]
+        quarantined_count = len(to_quarantine)
+
+        if quarantined_count > 0:
+            # Remove from main catalog
+            filtered = [
+                entry for entry in entries if entry.branch_name != branch_name
+            ]
+            self.path.write_text(
+                '\n'.join(
+                    json.dumps(entry.to_dict(), sort_keys=True) for entry in filtered
+                ),
+                encoding='utf-8',
+            )
+
+            # Add to quarantine
+            for entry in to_quarantine:
+                row = {
+                    **entry.to_dict(),
+                    'quarantine': True,
+                    'provenance': {
+                        'reason': reason,
+                        'original_branch': branch_name,
+                        'quarantined_at': utc_now(),
+                    },
+                }
+                append_jsonl_line(
+                    self.quarantine_path, json.dumps(row, sort_keys=True)
+                )
+
+        return quarantined_count
+
 
 def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
     if not isinstance(payload, dict):
@@ -128,6 +259,8 @@ def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
     content = payload.get('content')
     tags = payload.get('tags', [])
     created_at = payload.get('created_at', utc_now())
+    branch_name = payload.get('branch_name')
+    run_id = payload.get('run_id')
     if not isinstance(memory_id, str) or not memory_id:
         return None
     if not isinstance(content, str) or not content:
@@ -136,8 +269,17 @@ def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
         return None
     if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
         return None
+    if branch_name is not None and not isinstance(branch_name, str):
+        return None
+    if run_id is not None and not isinstance(run_id, str):
+        return None
     return MemoryEntry(
-        memory_id=memory_id, content=content, tags=tuple(tags), created_at=created_at
+        memory_id=memory_id,
+        content=content,
+        tags=tuple(tags),
+        created_at=created_at,
+        branch_name=branch_name,
+        run_id=run_id,
     )
 
 
