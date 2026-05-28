@@ -7,11 +7,16 @@ from typing import Any
 
 try:
     import tomllib
+
+    TOMLLIB_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover - py3.10
     try:
         import tomli as tomllib  # type: ignore[no-redef, unused-ignore]
+
+        TOMLLIB_AVAILABLE = True
     except ModuleNotFoundError:
         tomllib = None  # type: ignore[assignment,misc]
+        TOMLLIB_AVAILABLE = False
 
 DEFAULT_KEYS = {
     'provider': None,

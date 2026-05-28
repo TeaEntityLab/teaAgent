@@ -16,11 +16,16 @@ from typing import Any
 # Use tomllib from stdlib for Python 3.11+, fall back to tomli
 if sys.version_info >= (3, 11):
     import tomllib
-else:
-    from contextlib import suppress
 
-    with suppress(ImportError):
+    TOMLLIB_AVAILABLE = True
+else:
+    try:
         import tomli as tomllib  # type: ignore
+
+        TOMLLIB_AVAILABLE = True
+    except ImportError:
+        tomllib = None
+        TOMLLIB_AVAILABLE = False
 
 
 @dataclass(frozen=True)
@@ -81,9 +86,10 @@ def parse_teaagent_toml(path: Path) -> EnvironmentSpec:
     if not path.is_file():
         raise FileNotFoundError(f'teaagent.toml not found at {path}')
 
-    if tomllib is None:
-        raise ValueError(
-            'tomli is required for Python < 3.11. Install with: pip install tomli'
+    if not TOMLLIB_AVAILABLE:
+        raise ImportError(
+            'tomli is required for TOML parsing on Python < 3.11. '
+            'Install with: pip install teaagent[config]'
         )
 
     try:
