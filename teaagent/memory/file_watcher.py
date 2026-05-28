@@ -15,8 +15,17 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Callable, Optional, Set
 
-from watchdog.events import FileDeletedEvent, FileModifiedEvent, FileSystemEventHandler
-from watchdog.observers import Observer
+try:
+    from watchdog.events import (
+        FileDeletedEvent,
+        FileModifiedEvent,
+        FileSystemEventHandler,
+    )
+    from watchdog.observers import Observer
+
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    WATCHDOG_AVAILABLE = False
 
 
 class FileChangeHandler(FileSystemEventHandler):
@@ -116,6 +125,11 @@ class FileWatcher:
             callback: Function to call when a watched file changes (file_path, event_type)
             debounce_ms: Debounce time in milliseconds
         """
+        if not WATCHDOG_AVAILABLE:
+            raise ImportError(
+                'watchdog library is required for file watching. '
+                'Install with: pip install teaagent[file-watching]'
+            )
         self.root = Path(root).resolve()
         self.callback = callback
         self.debounce_ms = debounce_ms
