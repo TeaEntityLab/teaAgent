@@ -116,7 +116,9 @@ def test_poll_resource_limits_aborts_on_violation() -> None:
     ):
         sandbox = DockerSandbox(audit_logger=logger, run_id='run-3')
         sandbox.container_id = 'container-1'
-        result = sandbox.poll_resource_limits(duration_seconds=1.0, interval_seconds=0.1)
+        result = sandbox.poll_resource_limits(
+            duration_seconds=1.0, interval_seconds=0.1
+        )
 
     assert result is not None
     assert result.status == 'aborted'

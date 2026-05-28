@@ -125,9 +125,7 @@ def fitness_metrics_from_result(
     token_values = [
         float(item.test_results.get('tokens', 1.0)) for item in peer_results
     ]
-    time_values = [
-        max(item.execution_time_ms / 1000.0, 0.001) for item in peer_results
-    ]
+    time_values = [max(item.execution_time_ms / 1000.0, 0.001) for item in peer_results]
     min_tokens = min(token_values) if token_values else 1.0
     min_time = min(time_values) if time_values else 1.0
     return PromptFitnessMetrics(
