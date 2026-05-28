@@ -243,5 +243,79 @@ class SubagentIsolationTests(unittest.TestCase):
             self.assertFalse(ctx.container_path.exists())
 
 
+def test_docker_isolation_with_resource_limits():
+    """Test Docker isolation with CPU and memory limits."""
+    with TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _init_git_repo(root)
+
+        # Mock Docker to be available
+        with patch('subprocess.run') as mock_run:
+            # First call: docker --version check
+            mock_run.return_value = MagicMock(returncode=0, stdout='Docker version 20.10.0', stderr='')
+
+            context, error = prepare_subagent_isolation(
+                root,
+                isolation='docker',
+                session_key='test-session',
+                cpu_quota=2.0,
+                memory_limit='1g',
+            )
+
+            # Should have called docker run with resource limits
+            docker_calls = [call for call in mock_run.call_args_list if 'docker' in str(call)]
+            assert len(docker_calls) >= 2  # version check + run
+
+            # Check the run command includes resource limits
+            run_call = docker_calls[1]
+            run_args = run_call[0][0]
+            assert '--cpus' in run_args
+            assert '2.0' in run_args
+            assert '--memory' in run_args
+            assert '1g' in run_args
+
+
+def test_docker_isolation_without_resource_limits():
+    """Test Docker isolation without resource limits."""
+    with TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _init_git_repo(root)
+
+        # Mock Docker to be available
+        with patch('subprocess.run') as mock_run:
+            # First call: docker --version check
+            mock_run.return_value = MagicMock(returncode=0, stdout='Docker version 20.10.0', stderr='')
+
+            context, error = prepare_subagent_isolation(
+                root,
+                isolation='docker',
+                session_key='test-session',
+            )
+
+            # Should have called docker run without resource limits
+            docker_calls = [call for call in mock_run.call_args_list if 'docker' in str(call)]
+            assert len(docker_calls) >= 2  # version check + run
+
+            # Check the run command does not include resource limits
+            run_call = docker_calls[1]
+            run_args = run_call[0][0]
+            assert '--cpus' not in run_args
+            assert '--memory' not in run_args
+
+
+def test_isolation_context_with_resource_limits():
+    """Test IsolationContext includes resource limits."""
+    context = IsolationContext(
+        parent_root=Path('/root'),
+        child_root=Path('/workspace'),
+        isolation='docker',
+        cpu_quota=1.5,
+        memory_limit='512m',
+    )
+
+    assert context.cpu_quota == 1.5
+    assert context.memory_limit == '512m'
+
+
 if __name__ == '__main__':
     unittest.main()

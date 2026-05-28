@@ -29,6 +29,8 @@ class IsolationContext:
     worktree_path: Optional[Path] = None
     container_path: Optional[Path] = None
     container_id: Optional[str] = None
+    cpu_quota: Optional[float] = None
+    memory_limit: Optional[str] = None
 
     def cleanup(self) -> None:
         if self.worktree_path is not None:
@@ -112,6 +114,8 @@ def prepare_subagent_isolation(
     *,
     isolation: str,
     session_key: str,
+    cpu_quota: Optional[float] = None,
+    memory_limit: Optional[str] = None,
 ) -> tuple[IsolationContext | None, str]:
     root = parent_root.resolve()
 
@@ -215,23 +219,32 @@ def prepare_subagent_isolation(
             shutil.rmtree(temp_dir, ignore_errors=True)
             return None, f'docker workspace copy failed: {exc}'
 
+        # Build Docker run command with resource limits
+        docker_cmd = [
+            'docker',
+            'run',
+            '-d',
+            '--name',
+            f'teaagent-subagent-{session_key}',
+            '-v',
+            f'{temp_dir}:/workspace:ro',
+            '-w',
+            '/workspace',
+        ]
+
+        # Add CPU quota if specified
+        if cpu_quota is not None:
+            docker_cmd.extend(['--cpus', str(cpu_quota)])
+
+        # Add memory limit if specified
+        if memory_limit is not None:
+            docker_cmd.extend(['--memory', memory_limit])
+
+        docker_cmd.extend(['python:3.11-slim', 'sleep', 'infinity'])
+
         # Create and start a Docker container
-        container_name = f'teaagent-subagent-{session_key}'
         docker_run = subprocess.run(
-            [
-                'docker',
-                'run',
-                '-d',
-                '--name',
-                container_name,
-                '-v',
-                f'{temp_dir}:/workspace:ro',
-                '-w',
-                '/workspace',
-                'python:3.11-slim',
-                'sleep',
-                'infinity',
-            ],
+            docker_cmd,
             check=False,
             capture_output=True,
             text=True,
@@ -243,6 +256,10 @@ def prepare_subagent_isolation(
 
         container_id = docker_run.stdout.strip()
         logger.info(f'Created Docker container: {container_id}')
+        if cpu_quota:
+            logger.info(f'CPU quota: {cpu_quota} cores')
+        if memory_limit:
+            logger.info(f'Memory limit: {memory_limit}')
 
         return (
             IsolationContext(
@@ -251,6 +268,8 @@ def prepare_subagent_isolation(
                 isolation=isolation,
                 container_path=temp_dir,
                 container_id=container_id,
+                cpu_quota=cpu_quota,
+                memory_limit=memory_limit,
             ),
             '',
         )
