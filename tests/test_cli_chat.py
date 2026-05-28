@@ -38,6 +38,7 @@ def test_chat_command_with_invalid_args():
 def test_chat_command_smoke_test():
     """Test chat command starts and exits cleanly via /exit command."""
     import argparse
+
     from teaagent.cli._handlers._chat import chat_command
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -368,8 +369,8 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
             return RunResult(success=True, final_answer="test", iterations=0, tool_calls=0)
 
         inputs = ["/effort high", "/exit"]
-        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter):
-            with patch('teaagent.cli._handlers._chat.run_chat_agent', side_effect=mock_run_chat_agent):
+        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter), \
+             patch('teaagent.cli._handlers._chat.run_chat_agent', side_effect=mock_run_chat_agent):
                 monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
                 result = run_chat_repl(config)
 
@@ -385,22 +386,21 @@ def test_cli_default_entry_launches_chat():
 
     from teaagent.cli import main
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Mock the chat_command to verify it's called
-        chat_called = []
+    # Mock the chat_command to verify it's called
+    chat_called = []
 
-        def mock_chat_command(args):
-            chat_called.append(True)
-            return 0
+    def mock_chat_command(args):
+        chat_called.append(True)
+        return 0
 
-        with patch('teaagent.cli.chat_command', side_effect=mock_chat_command):
-            # Simulate running with no arguments
-            result = main(argv=[], _adapter_factory=MagicMock(), _serve_mcp_http=MagicMock(),
-                        _check_graphqlite=MagicMock(), _check_llm=MagicMock(),
-                        _run_model_conformance=MagicMock())
+    with patch('teaagent.cli.chat_command', side_effect=mock_chat_command):
+        # Simulate running with no arguments
+        result = main(argv=[], _adapter_factory=MagicMock(), _serve_mcp_http=MagicMock(),
+                    _check_graphqlite=MagicMock(), _check_llm=MagicMock(),
+                    _run_model_conformance=MagicMock())
 
-        assert len(chat_called) == 1
-        assert result == 0
+    assert len(chat_called) == 1
+    assert result == 0
 
 
 def test_git_sandbox_consent_saved_to_config():
@@ -790,7 +790,7 @@ def test_interactive_review_mode_with_changes(capsys, monkeypatch):
         inputs = ["n"]  # Skip the file
         monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0) if inputs else "n")
 
-        result = interactive_review_mode(tmpdir, "test-run-id")
+        interactive_review_mode(tmpdir, "test-run-id")
         captured = capsys.readouterr()
 
         # The function should complete
@@ -846,7 +846,7 @@ def test_dual_mode_integration_suspension_to_review(capsys, monkeypatch):
         inputs = ["y"]  # Accept the file
         monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0) if inputs else "n")
 
-        result = interactive_review_mode(tmpdir, run_id)
+        interactive_review_mode(tmpdir, run_id)
         captured = capsys.readouterr()
 
         # Verify review completed

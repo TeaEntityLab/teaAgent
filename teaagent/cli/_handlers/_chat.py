@@ -25,7 +25,7 @@ from teaagent.policy import parse_permission_mode
 
 def handle_memory_failures(root: Path) -> None:
     """Handle /memory failures command to list all failure cards.
-    
+
     Args:
         root: The workspace root directory
     """
@@ -54,7 +54,7 @@ def handle_memory_failures(root: Path) -> None:
 
 def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
     """Handle /pin command to add a file to the watch list.
-    
+
     Args:
         root: The workspace root directory
         command: The full command string
@@ -89,7 +89,7 @@ def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
 
 def handle_unpin(root: Path, command: str, watcher_callback=None) -> None:
     """Handle /unpin command to remove a file from the watch list.
-    
+
     Args:
         root: The workspace root directory
         command: The full command string
@@ -119,7 +119,7 @@ def handle_unpin(root: Path, command: str, watcher_callback=None) -> None:
 
 def handle_pinned(root: Path) -> None:
     """Handle /pinned command to list all pinned files.
-    
+
     Args:
         root: The workspace root directory
     """
@@ -145,7 +145,7 @@ def handle_pinned(root: Path) -> None:
 
 def handle_memory_clear(root: Path, command: str) -> None:
     """Handle /memory clear command to clear failure cards.
-    
+
     Args:
         root: The workspace root directory
         command: The full command string
@@ -183,11 +183,11 @@ def handle_memory_clear(root: Path, command: str) -> None:
 
 def get_failure_warnings(task: str, root: Path) -> str:
     """Retrieve and format failure warnings for a task.
-    
+
     Args:
         task: The task description
         root: The workspace root directory
-        
+
     Returns:
         Formatted warning string to inject into the prompt
     """
@@ -227,7 +227,7 @@ def get_failure_warnings(task: str, root: Path) -> str:
 
 def execute_shell_command(command: str, root: Path) -> None:
     """Execute a shell command safely and display output.
-    
+
     Args:
         command: The shell command to execute
         root: The workspace root directory
@@ -294,11 +294,11 @@ def execute_shell_command(command: str, root: Path) -> None:
 
 def complete_file_path(text: str, root: Path) -> list[str]:
     """Complete file paths starting with @.
-    
+
     Args:
         text: The text to complete (including @ prefix)
         root: The workspace root directory
-        
+
     Returns:
         List of completion suggestions
     """
@@ -359,11 +359,11 @@ def complete_file_path(text: str, root: Path) -> list[str]:
 
 def complete_symbol(text: str, root: Path) -> list[str]:
     """Complete symbol names (classes, functions) starting with @.
-    
+
     Args:
         text: The text to complete (including @ prefix)
         root: The workspace root directory
-        
+
     Returns:
         List of completion suggestions
     """
@@ -398,12 +398,12 @@ def complete_symbol(text: str, root: Path) -> list[str]:
 
 def suspend_to_background(config: ChatAgentConfig, session_context: dict, targeted_files: set[Path]) -> str:
     """Suspend current REPL session and convert to background task.
-    
+
     Args:
         config: Current chat agent configuration
         session_context: Current session context and observations
         targeted_files: Current targeted file set
-        
+
     Returns:
         run_id of the created background task, or empty string on failure
     """
@@ -623,7 +623,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
 
     def on_file_changed(file_path: str, event_type: str) -> None:
         """Callback for file watcher events.
-        
+
         Args:
             file_path: Path to the changed file
             event_type: Type of event ('modified' or 'deleted')
