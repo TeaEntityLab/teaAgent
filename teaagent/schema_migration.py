@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,24 @@ class SQLiteMigrationStore:
         conn = sqlite3.connect(str(self._path), timeout=10)
         conn.execute('PRAGMA journal_mode=WAL')
         return conn
+
+    def checkpoint(self, mode: str = 'TRUNCATE') -> bool:
+        """Perform WAL checkpoint to clean up -wal and -shm files.
+
+        Args:
+            mode: Checkpoint mode ('PASSIVE', 'FULL', 'RESTART', 'TRUNCATE')
+
+        Returns:
+            True if checkpoint succeeded, False otherwise
+        """
+        try:
+            with self._connect() as conn:
+                conn.execute(f'PRAGMA wal_checkpoint({mode})')
+                logger.debug(f"WAL checkpoint ({mode}) completed successfully")
+                return True
+        except sqlite3.Error as exc:
+            logger.warning(f"WAL checkpoint failed: {exc}")
+            return False
 
     def _init_table(self) -> None:
         with self._connect() as conn:
@@ -124,6 +145,10 @@ class MigrationRunner:
             except Exception:
                 skipped.append(migration.version)
                 raise
+
+        # Perform WAL checkpoint after applying migrations to clean up sidecar files
+        if applied:
+            self._store.checkpoint(mode='TRUNCATE')
 
         return MigrationResult(
             applied=applied,

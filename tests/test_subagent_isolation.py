@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import unittest
+import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
@@ -63,8 +64,14 @@ class SubagentIsolationTests(unittest.TestCase):
     def test_normalize_subagent_isolation_defaults_and_rejects_unknown(self) -> None:
         self.assertEqual(normalize_subagent_isolation(None), 'shared')
         self.assertEqual(normalize_subagent_isolation('worktree'), 'worktree')
-        self.assertEqual(normalize_subagent_isolation('container'), 'container')
+        self.assertEqual(normalize_subagent_isolation('directory-snapshot'), 'directory-snapshot')
         self.assertIsNone(normalize_subagent_isolation('invalid'))
+
+    def test_normalize_subagent_isolation_deprecated_container_alias(self) -> None:
+        # Test that 'container' is deprecated but still works via alias
+        # normalize_subagent_isolation handles the alias without warning
+        result = normalize_subagent_isolation('container')
+        self.assertEqual(result, 'directory-snapshot')
 
     def test_prepare_worktree_requires_git_repository(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -138,7 +145,7 @@ class SubagentIsolationTests(unittest.TestCase):
             self.assertIn('worktree_path', payload['lineage'])
             self.assertEqual(captured['child_root'].resolve(), worktree.resolve())
 
-    def test_prepare_container_creates_snapshot_and_cleans_up(self) -> None:
+    def test_prepare_directory_snapshot_creates_snapshot_and_cleans_up(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / 'src').mkdir()
@@ -150,7 +157,7 @@ class SubagentIsolationTests(unittest.TestCase):
             )
 
             ctx, error = prepare_subagent_isolation(
-                root, isolation='container', session_key='child-1'
+                root, isolation='directory-snapshot', session_key='child-1'
             )
             self.assertEqual(error, '')
             assert ctx is not None
@@ -159,12 +166,12 @@ class SubagentIsolationTests(unittest.TestCase):
             ctx.cleanup()
             self.assertFalse(ctx.container_path.exists())
 
-    def test_run_subagent_container_uses_isolated_root(self) -> None:
+    def test_run_subagent_directory_snapshot_uses_isolated_root(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / '.teaagent').mkdir()
-            container = root / '.teaagent' / 'subagent-containers' / 'child-1'
-            container.mkdir(parents=True)
+            snapshot = root / '.teaagent' / 'subagent-snapshots' / 'child-1'
+            snapshot.mkdir(parents=True)
             config = ChatAgentConfig(root=root)
             manager = SubagentManager(
                 root=root, parent_config=config, parent_adapter=MagicMock()
@@ -172,15 +179,15 @@ class SubagentIsolationTests(unittest.TestCase):
             captured: dict[str, Path] = {}
             iso_ctx = IsolationContext(
                 parent_root=root,
-                child_root=container,
-                isolation='container',
-                container_path=container,
+                child_root=snapshot,
+                isolation='directory-snapshot',
+                container_path=snapshot,
             )
 
             def capture_run(**kwargs: object) -> RunResult:
                 cfg = kwargs['config']
                 captured['child_root'] = cfg.root  # type: ignore[attr-defined]
-                return _stub_result('child-ct')
+                return _stub_result('child-ds')
 
             with (
                 patch(
@@ -194,13 +201,44 @@ class SubagentIsolationTests(unittest.TestCase):
                     task='inspect app',
                     parent_run_id='parent-1',
                     depth=0,
-                    isolation='container',
+                    isolation='directory-snapshot',
                 )
 
             self.assertEqual(payload['status'], 'completed')
-            self.assertEqual(payload['lineage']['isolation'], 'container')
+            self.assertEqual(payload['lineage']['isolation'], 'directory-snapshot')
             self.assertIn('container_path', payload['lineage'])
-            self.assertEqual(captured['child_root'].resolve(), container.resolve())
+            self.assertEqual(captured['child_root'].resolve(), snapshot.resolve())
+
+    def test_deprecated_container_alias_still_works(self) -> None:
+        """Test that deprecated 'container' alias still works for backward compatibility."""
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'src').mkdir()
+            (root / 'src' / 'app.py').write_text('print("hi")\n', encoding='utf-8')
+            (root / '.teaagent').mkdir()
+            (root / '.teaagent' / 'runs').mkdir()
+            (root / '.teaagent' / 'runs' / 'parent.jsonl').write_text(
+                'parent\n', encoding='utf-8'
+            )
+
+            # Test that prepare_subagent_isolation triggers the deprecation warning
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                ctx, error = prepare_subagent_isolation(
+                    root, isolation='container', session_key='child-1'
+                )
+                # Should trigger deprecation warning
+                self.assertTrue(len(w) > 0)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+                self.assertIn('container', str(w[0].message))
+                self.assertIn('directory-snapshot', str(w[0].message))
+            
+            self.assertEqual(error, '')
+            assert ctx is not None
+            self.assertEqual(ctx.isolation, 'directory-snapshot')
+            self.assertTrue((ctx.child_root / 'src' / 'app.py').is_file())
+            ctx.cleanup()
+            self.assertFalse(ctx.container_path.exists())
 
 
 if __name__ == '__main__':

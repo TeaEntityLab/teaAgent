@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import subprocess
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -11,7 +13,10 @@ from uuid import uuid4
 from teaagent.subagents._types import DEFAULT_SUBAGENT_ISOLATION
 from teaagent.workspace_tools._config import _load_gitignore_matcher
 
-SUPPORTED_SUBAGENT_ISOLATIONS = frozenset({'shared', 'worktree', 'container'})
+logger = logging.getLogger(__name__)
+
+SUPPORTED_SUBAGENT_ISOLATIONS = frozenset({'shared', 'worktree', 'directory-snapshot'})
+DEPRECATED_ISOLATION_ALIASES = {'container': 'directory-snapshot'}
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,8 @@ class IsolationContext:
                 env=env,
             )
         if self.container_path is not None:
+            # container_path is used for directory-snapshot compatibility
+            logger.debug(f"Cleaning up directory snapshot: {self.container_path}")
             shutil.rmtree(self.container_path, ignore_errors=True)
 
 
@@ -59,6 +66,11 @@ def normalize_subagent_isolation(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     normalized = value.strip().lower()
+
+    # Handle deprecated isolation mode names (normalized without warning here)
+    if normalized in DEPRECATED_ISOLATION_ALIASES:
+        return DEPRECATED_ISOLATION_ALIASES[normalized]
+
     if normalized in SUPPORTED_SUBAGENT_ISOLATIONS:
         return normalized
     return None
@@ -90,6 +102,25 @@ def prepare_subagent_isolation(
     session_key: str,
 ) -> tuple[IsolationContext | None, str]:
     root = parent_root.resolve()
+
+    # Check for deprecated isolation mode and trigger warning
+    if isolation in DEPRECATED_ISOLATION_ALIASES:
+        new_name = DEPRECATED_ISOLATION_ALIASES[isolation]
+        warnings.warn(
+            f"Subagent isolation mode '{isolation}' is deprecated and will be "
+            f"removed in a future version. Use '{new_name}' instead. "
+            f"Note: '{new_name}' does not provide OS-level container isolation - "
+            f"it only creates a directory snapshot.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        logger.warning(
+            f"Subagent isolation mode '{isolation}' is deprecated. "
+            f"Using '{new_name}' instead. "
+            f"Note: This mode does not provide OS-level container isolation."
+        )
+        isolation = new_name
+
     if isolation == DEFAULT_SUBAGENT_ISOLATION:
         return (
             IsolationContext(parent_root=root, child_root=root, isolation=isolation),
@@ -131,23 +162,23 @@ def prepare_subagent_isolation(
             '',
         )
 
-    if isolation == 'container':
-        containers_dir = root / '.teaagent' / 'subagent-containers'
-        containers_dir.mkdir(parents=True, exist_ok=True)
-        container_path = containers_dir / session_key
-        if container_path.exists():
-            return None, f'container path already exists: {container_path}'
+    if isolation == 'directory-snapshot':
+        snapshots_dir = root / '.teaagent' / 'subagent-snapshots'
+        snapshots_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_path = snapshots_dir / session_key
+        if snapshot_path.exists():
+            return None, f'directory-snapshot path already exists: {snapshot_path}'
         try:
-            _copy_workspace_snapshot(root, container_path)
+            _copy_workspace_snapshot(root, snapshot_path)
         except OSError as exc:
-            shutil.rmtree(container_path, ignore_errors=True)
-            return None, f'container workspace snapshot failed: {exc}'
+            shutil.rmtree(snapshot_path, ignore_errors=True)
+            return None, f'directory-snapshot workspace copy failed: {exc}'
         return (
             IsolationContext(
                 parent_root=root,
-                child_root=container_path.resolve(),
+                child_root=snapshot_path.resolve(),
                 isolation=isolation,
-                container_path=container_path.resolve(),
+                container_path=snapshot_path.resolve(),  # Keep field name for compatibility
             ),
             '',
         )

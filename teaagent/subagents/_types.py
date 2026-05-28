@@ -35,7 +35,7 @@ class SubagentLineage:
     isolation: str = DEFAULT_SUBAGENT_ISOLATION
     batch_index: Optional[int] = None
     worktree_path: Optional[str] = None
-    container_path: Optional[str] = None
+    container_path: Optional[str] = None  # Renamed from 'container' to 'directory-snapshot', field kept for compatibility
 
     def to_dict(self) -> dict[str, str | int]:
         payload: dict[str, str | int] = {
@@ -64,7 +64,7 @@ class SubagentSession:
     batch_index: Optional[int] = None
     isolation: str = DEFAULT_SUBAGENT_ISOLATION
     worktree_path: Optional[str] = None
-    container_path: Optional[str] = None
+    container_path: Optional[str] = None  # Renamed from 'container' to 'directory-snapshot', field kept for compatibility
     completed_at: Optional[str] = None
     iterations: int = 0
     tool_calls: int = 0

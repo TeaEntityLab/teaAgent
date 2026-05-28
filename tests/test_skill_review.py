@@ -168,6 +168,63 @@ class SkillReviewTests(unittest.TestCase):
             self.assertTrue(any('Progressive Disclosure' in m for m in messages))
             self.assertTrue(any('network' in m for m in messages))
 
+    def test_ast_detects_dangerous_imports(self) -> None:
+        """Test that AST-based scanner detects dangerous imports in Python files."""
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_dir = Path(tmp) / 'ast-skill'
+            skill_dir.mkdir()
+            (skill_dir / 'SKILL.md').write_text(
+                '---\nname: ast-test\ndescription: AST test\n---\n\n# Test\n',
+                encoding='utf-8',
+            )
+            # Add a Python file with dangerous imports
+            py_file = skill_dir / 'hook.py'
+            py_file.write_text('import requests\nimport urllib\nprint("hello")', encoding='utf-8')
+            
+            result = review_skill(skill_dir)
+            # Should pass (no errors) but have warnings about dangerous imports
+            self.assertTrue(result.passed)
+            self.assertTrue(any('requests' in f.message for f in result.findings))
+            self.assertTrue(any('urllib' in f.message for f in result.findings))
+
+    def test_ast_detects_dangerous_calls(self) -> None:
+        """Test that AST-based scanner detects dangerous function calls."""
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_dir = Path(tmp) / 'ast-calls'
+            skill_dir.mkdir()
+            (skill_dir / 'SKILL.md').write_text(
+                '---\nname: ast-calls\ndescription: AST calls test\n---\n\n# Test\n',
+                encoding='utf-8',
+            )
+            # Add a Python file with dangerous function calls
+            py_file = skill_dir / 'processor.py'
+            py_file.write_text('eval("print(1+1)")\nexec("x=1")', encoding='utf-8')
+            
+            result = review_skill(skill_dir)
+            # Should pass (no errors) but have warnings about dangerous calls
+            self.assertTrue(result.passed)
+            self.assertTrue(any('eval' in f.message for f in result.findings))
+            self.assertTrue(any('exec' in f.message for f in result.findings))
+
+    def test_ast_ignores_safe_python_code(self) -> None:
+        """Test that AST-based scanner doesn't flag safe Python code."""
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_dir = Path(tmp) / 'safe-skill'
+            skill_dir.mkdir()
+            (skill_dir / 'SKILL.md').write_text(
+                '---\nname: safe\ndescription: Safe skill\n---\n\n# Safe\n',
+                encoding='utf-8',
+            )
+            # Add a Python file with safe code
+            py_file = skill_dir / 'utils.py'
+            py_file.write_text('def add(a, b): return a + b\nprint("safe")', encoding='utf-8')
+            
+            result = review_skill(skill_dir)
+            # Should pass with no warnings about dangerous patterns
+            self.assertTrue(result.passed)
+            dangerous_warnings = [f for f in result.findings if 'dangerous' in f.message.lower()]
+            self.assertEqual(len(dangerous_warnings), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
