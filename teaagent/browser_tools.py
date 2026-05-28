@@ -210,6 +210,8 @@ def register_browser_tools(
     When Playwright is not installed, all tools return an immediate error
     message so the agent can fail gracefully.
     """
+    if 'browser_navigate' in registry.list_tools():
+        return
 
     if not HAS_PLAYWRIGHT:
         _register_disabled(registry)

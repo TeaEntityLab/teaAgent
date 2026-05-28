@@ -22,20 +22,21 @@ permissions:
 jobs:
   publish-tsb:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v6
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.14'
-      
+          python-version: '3.12'
+
       - name: Install TeaAgent
         run: |
+          python -m pip install --upgrade pip
           pip install -e .
-      
+
       - name: Determine skill path
         id: skill-path
         run: |
@@ -48,7 +49,7 @@ jobs:
             echo "path=examples/skills/$(echo $TAG | cut -d'-' -f1)" >> $GITHUB_OUTPUT
             echo "version=$(echo $TAG | cut -d'-' -f2-)" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Validate skill directory
         run: |
           SKILL_PATH=${{ steps.skill-path.outputs.path }}
@@ -61,78 +62,78 @@ jobs:
             exit 1
           fi
           echo "Validating skill: $SKILL_PATH"
-      
+
       - name: Generate audit log
         run: |
           SKILL_PATH=${{ steps.skill-path.outputs.path }}
           VERSION=${{ steps.skill-path.outputs.version }}
-          
+
           # Create audit log for the skill
           cat > audit.jsonl << EOF
           {"event": "skill_build", "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)", "version": "$VERSION", "path": "$SKILL_PATH"}
           {"event": "ci_build", "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)", "run_id": "${{ github.run_id }}", "run_number": "${{ github.run_number }}"}
           {"event": "git_commit", "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)", "sha": "${{ github.sha }}", "ref": "${{ github.ref }}"}
           EOF
-      
+
       - name: Build TSB bundle
         run: |
           SKILL_PATH=${{ steps.skill-path.outputs.path }}
           VERSION=${{ steps.skill-path.outputs.version }}
           OUTPUT_DIR=dist
-          
+
           mkdir -p $OUTPUT_DIR
-          
+
           teaagent skill build-tsb \
             --skill-path $SKILL_PATH \
             --audit-log audit.jsonl \
             --output $OUTPUT_DIR/skill-${VERSION}.tsb \
             --skill-version $VERSION
-      
+
       - name: Verify TSB bundle
         run: |
           OUTPUT_DIR=dist
           VERSION=${{ steps.skill-path.outputs.version }}
-          
+
           teaagent skill verify-tsb \
             $OUTPUT_DIR/skill-${VERSION}.tsb \
             --skip-signature  # Skip signature verification before signing
-      
+
       - name: Sign TSB with Sigstore (OIDC)
         run: |
           OUTPUT_DIR=dist
           VERSION=${{ steps.skill-path.outputs.version }}
-          
+
           # OIDC token is automatically detected from GitHub Actions environment
           teaagent skill publish-tsb \
             --tsb-path $OUTPUT_DIR/skill-${VERSION}.tsb \
             --author-key none  # Use keyless signing with OIDC
-      
+
       - name: Verify signed TSB
         run: |
           OUTPUT_DIR=dist
           VERSION=${{ steps.skill-path.outputs.version }}
-          
+
           # Verify with identity policy (GitHub Actions issuer)
           teaagent skill verify-tsb \
             $OUTPUT_DIR/skill-${VERSION}.tsb \
             --issuer "https://token.actions.githubusercontent.com"
-      
+
       - name: Upload TSB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: skill-tsb
           path: dist/*.tsb
           retention-days: 90
-      
+
       - name: Create GitHub Release
         if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/*.tsb
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Publish to TeaAgent Skill Registry (optional)
         if: github.event_name == 'push'
         env:
@@ -140,7 +141,7 @@ jobs:
         run: |
           OUTPUT_DIR=dist
           VERSION=${{ steps.skill-path.outputs.version }}
-          
+
           if [ -n "$REGISTRY_TOKEN" ]; then
             # Upload to skill registry (placeholder - implement registry API)
             echo "Publishing to TeaAgent Skill Registry..."

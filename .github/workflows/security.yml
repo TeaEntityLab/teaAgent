@@ -27,8 +27,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,oauth,telemetry]"
           pip install pip-audit
-      - name: Run pip-audit
+      - name: Run pip-audit (editable install)
         run: pip-audit --skip-editable
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+      - name: Run pip-audit (uv.lock)
+        run: |
+          uv export --format requirements-txt -o /tmp/teaagent-uv-requirements.txt
+          pip-audit -r /tmp/teaagent-uv-requirements.txt
 
   codeql:
     name: CodeQL (${{ matrix.language }})
