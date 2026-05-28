@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -41,6 +42,58 @@ class DockerSandbox:
         self.audit_logger = audit_logger
         self.run_id = run_id
         self.container_id: str | None = None
+        self._monitor_interval_seconds: float = 2.0
+
+    def _resource_monitor(self) -> ResourceMonitor:
+        return ResourceMonitor(
+            container_id=self.container_id,
+            cpu_limit_cores=self.cpu_cores,
+            memory_limit_mb=self.memory_limit_mb,
+            check_interval_seconds=self._monitor_interval_seconds,
+        )
+
+    def check_resource_limits(self) -> SandboxResult | None:
+        """Poll container usage once and abort on critical violations."""
+        if not self.container_id:
+            return None
+        monitor = self._resource_monitor()
+        usage = monitor.get_current_usage()
+        if usage is None:
+            return None
+        violations = monitor.check_violations(usage)
+        if not any(v.severity == 'critical' for v in violations):
+            return None
+        self._audit(
+            'resource_violation_detected',
+            container_id=self.container_id,
+            count=len(violations),
+        )
+        self.abort('resource violation')
+        return SandboxResult(
+            status='aborted',
+            container_id=self.container_id,
+            message='resource violation',
+        )
+
+    def poll_resource_limits(
+        self,
+        *,
+        duration_seconds: float = 2.0,
+        interval_seconds: float | None = None,
+    ) -> SandboxResult | None:
+        """Poll resource usage until duration elapses or a violation aborts."""
+        interval = (
+            self._monitor_interval_seconds
+            if interval_seconds is None
+            else interval_seconds
+        )
+        deadline = time.time() + duration_seconds
+        while time.time() < deadline:
+            aborted = self.check_resource_limits()
+            if aborted is not None:
+                return aborted
+            time.sleep(interval)
+        return None
 
     def preflight(self) -> dict[str, str]:
         result = subprocess.run(
@@ -110,6 +163,7 @@ class DockerSandbox:
             )
         self.container_id = result.stdout.strip()
         self._audit('docker_sandbox_started', container_id=self.container_id)
+        self._resource_monitor().start()
         return SandboxResult(status='started', container_id=self.container_id)
 
     def execute_code(self, code: str, *, timeout_seconds: int = 30) -> SandboxResult:
@@ -132,29 +186,17 @@ class DockerSandbox:
             text=True,
             timeout=timeout_seconds,
         )
-        monitor = ResourceMonitor(
-            container_id=self.container_id,
-            cpu_limit_cores=self.cpu_cores,
-            memory_limit_mb=self.memory_limit_mb,
-        )
-        usage = monitor.get_current_usage()
-        if usage is not None:
-            violations = monitor.check_violations(usage)
-            if any(v.severity == 'critical' for v in violations):
-                self._audit(
-                    'resource_violation_detected',
-                    container_id=self.container_id,
-                    count=len(violations),
-                )
-                self.abort('resource violation')
-                return SandboxResult(
-                    status='aborted',
-                    container_id=self.container_id,
-                    message='resource violation',
-                    stdout=result.stdout,
-                    stderr=result.stderr,
-                    exit_code=result.returncode,
-                )
+        violation = self.check_resource_limits()
+        if violation is not None:
+            violation = SandboxResult(
+                status=violation.status,
+                container_id=violation.container_id,
+                message=violation.message,
+                stdout=result.stdout,
+                stderr=result.stderr,
+                exit_code=result.returncode,
+            )
+            return violation
 
         return SandboxResult(
             status='completed' if result.returncode == 0 else 'error',
@@ -180,6 +222,7 @@ class DockerSandbox:
     def cleanup(self) -> None:
         if not self.container_id:
             return
+        self._resource_monitor().stop()
         subprocess.run(
             ['docker', 'rm', '-f', self.container_id],
             check=False,

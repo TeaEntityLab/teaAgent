@@ -7,6 +7,7 @@ automated code review between subagents.
 
 from __future__ import annotations
 
+import json
 import logging
 import subprocess
 import threading
@@ -77,6 +78,8 @@ class SwarmReport:
     code_reviews: list[CodeReview]
     best_result: Optional[SubagentResult] = None
     total_execution_time_ms: float = 0.0
+    tournament_winner_id: Optional[str] = None
+    tournament_winner_score: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -111,6 +114,63 @@ def compute_prompt_fitness_score(metrics: PromptFitnessMetrics) -> float:
         + 0.2 * (metrics.min_time_seconds / metrics.time_seconds)
         + 0.1 * (1.0 / float(metrics.errors + 1))
     )
+
+
+def fitness_metrics_from_result(
+    result: SubagentResult,
+    *,
+    peer_results: list[SubagentResult],
+) -> PromptFitnessMetrics:
+    """Build tournament metrics from a subagent result and peer baselines."""
+    token_values = [
+        float(item.test_results.get('tokens', 1.0)) for item in peer_results
+    ]
+    time_values = [
+        max(item.execution_time_ms / 1000.0, 0.001) for item in peer_results
+    ]
+    min_tokens = min(token_values) if token_values else 1.0
+    min_time = min(time_values) if time_values else 1.0
+    return PromptFitnessMetrics(
+        success=1 if result.success else 0,
+        tokens=float(result.test_results.get('tokens', min_tokens)),
+        min_tokens=min_tokens,
+        time_seconds=max(result.execution_time_ms / 1000.0, 0.001),
+        min_time_seconds=min_time,
+        errors=int(result.test_results.get('errors', 0)),
+    )
+
+
+def rank_prompt_tournament(
+    candidates: list[tuple[str, str, PromptFitnessMetrics]],
+) -> list[tuple[str, float, str]]:
+    """Rank prompt variants by fitness score (highest first)."""
+    ranked: list[tuple[str, float, str]] = []
+    for task_id, prompt, metrics in candidates:
+        ranked.append((task_id, compute_prompt_fitness_score(metrics), prompt))
+    ranked.sort(key=lambda item: item[1], reverse=True)
+    return ranked
+
+
+def save_prompt_to_gene_pool(
+    root: str | Path,
+    *,
+    prompt: str,
+    score: float,
+    task_id: str = '',
+) -> Path:
+    """Append a high-scoring prompt variant to the local gene pool store."""
+    pool_dir = Path(root).resolve() / '.teaagent'
+    pool_dir.mkdir(parents=True, exist_ok=True)
+    path = pool_dir / 'prompt_gene_pool.jsonl'
+    entry = {
+        'prompt': prompt,
+        'score': score,
+        'task_id': task_id,
+        'saved_at': time.time(),
+    }
+    with path.open('a', encoding='utf-8') as handle:
+        handle.write(json.dumps(entry, separators=(',', ':')) + '\n')
+    return path
 
 
 class Subagent:
@@ -207,9 +267,11 @@ class SwarmManager:
         peer_registry: Optional[PeerRegistry] = None,
         consensus_config: Optional[ConsensusConfig] = None,
         lock_timeout_seconds: int = 60,
+        prompt_by_task_id: dict[str, str] | None = None,
     ) -> None:
         self._root = Path(root).resolve()
         self._max_parallel = max_parallel
+        self._prompt_by_task_id = dict(prompt_by_task_id or {})
         self._subagents: list[Subagent] = []
         self._results: list[SubagentResult] = []
         self._enable_consensus = enable_consensus
@@ -330,8 +392,9 @@ class SwarmManager:
             successful = sum(1 for r in results if r.success)
             failed = len(results) - successful
 
-            # Find best result (simple heuristic: first successful result)
-            best_result = next((r for r in results if r.success), None)
+            winner_id, winner_score, best_result = self._select_tournament_winner(
+                results
+            )
 
             return SwarmReport(
                 total_subagents=len(self._subagents),
@@ -341,10 +404,46 @@ class SwarmManager:
                 code_reviews=[],  # Will be populated by code review phase
                 best_result=best_result,
                 total_execution_time_ms=total_time,
+                tournament_winner_id=winner_id,
+                tournament_winner_score=winner_score,
             )
         finally:
             # Stop heartbeat monitoring
             self._stop_heartbeat_monitor()
+
+    def _select_tournament_winner(
+        self, results: list[SubagentResult]
+    ) -> tuple[Optional[str], float, Optional[SubagentResult]]:
+        """Select best branch via prompt fitness tournament when prompts are set."""
+        if not self._prompt_by_task_id:
+            best_result = next((r for r in results if r.success), None)
+            return None, 0.0, best_result
+
+        candidates: list[tuple[str, str, PromptFitnessMetrics]] = []
+        for result in results:
+            prompt = self._prompt_by_task_id.get(result.task_id)
+            if prompt is None:
+                continue
+            metrics = fitness_metrics_from_result(result, peer_results=results)
+            candidates.append((result.task_id, prompt, metrics))
+
+        if not candidates:
+            best_result = next((r for r in results if r.success), None)
+            return None, 0.0, best_result
+
+        ranked = rank_prompt_tournament(candidates)
+        winner_id, winner_score, winner_prompt = ranked[0]
+        save_prompt_to_gene_pool(
+            self._root,
+            prompt=winner_prompt,
+            score=winner_score,
+            task_id=winner_id,
+        )
+        best_result = next(
+            (r for r in results if r.task_id == winner_id),
+            next((r for r in results if r.success), None),
+        )
+        return winner_id, winner_score, best_result
 
     def _check_consensus_for_tasks(self) -> dict[str, Any]:
         """Check consensus for tasks that require it.

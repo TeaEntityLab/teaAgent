@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.docker_sandbox import DockerSandbox
 from teaagent.skill_loader import load_skills_with_report
 from teaagent.skill_review import SkillReviewResult, review_skill
 
@@ -53,6 +54,31 @@ class SkillWriter:
             tool_code=tool_code,
         )
 
+    def sandbox_validate(self, draft: SkillDraft) -> tuple[bool, str]:
+        """Compile-check tool code in Docker when available."""
+        sandbox = DockerSandbox(
+            workspace_mount_path=self._root, run_id='skill-validate'
+        )
+        preflight = sandbox.preflight()
+        if preflight['status'] != 'ok':
+            return True, 'docker unavailable; skipped sandbox validation'
+        started = sandbox.start()
+        if started.status != 'started':
+            return True, started.message or 'docker start failed; skipped validation'
+        try:
+            check_code = f"compile({draft.tool_code!r}, 'tool.py', 'exec')"
+            result = sandbox.execute_code(check_code)
+            if result.status == 'aborted':
+                return False, result.message
+            if result.exit_code != 0:
+                detail = (
+                    result.stderr or result.stdout or 'sandbox compile failed'
+                ).strip()
+                return False, detail
+            return True, 'sandbox validation passed'
+        finally:
+            sandbox.cleanup()
+
     def static_validate(self, draft: SkillDraft) -> SkillReviewResult:
         temp_dir = self._skills_dir / draft.name
         temp_dir.mkdir(parents=True, exist_ok=True)
@@ -61,6 +87,22 @@ class SkillWriter:
         return review_skill(temp_dir)
 
     def publish(self, draft: SkillDraft) -> SkillWriterResult:
+        review = self.static_validate(draft)
+        if not review.passed:
+            return SkillWriterResult(
+                ok=False,
+                message='static skill review failed',
+                review=review,
+            )
+
+        sandbox_ok, sandbox_message = self.sandbox_validate(draft)
+        if not sandbox_ok:
+            return SkillWriterResult(
+                ok=False,
+                message=f'sandbox validation failed: {sandbox_message}',
+                review=review,
+            )
+
         skill_dir = self._skills_dir / draft.name
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / 'SKILL.md').write_text(draft.skill_md, encoding='utf-8')

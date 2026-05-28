@@ -143,14 +143,23 @@ class JITApprovalServer:
 
         self._requests[request_id] = record
 
-        # Broadcast to all connected clients (if server is running)
+        # Broadcast to all connected clients (if async server is running)
         if self._clients:
-            asyncio.create_task(self._broadcast_request(record))
+            self._schedule_broadcast(self._broadcast_request(record))
 
         # Wait for approval or timeout
         result = self._wait_for_approval(record)
 
         return result
+
+    def _schedule_broadcast(self, coro: Any) -> None:
+        """Schedule SSE broadcast only when an event loop is active."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            coro.close()
+            return
+        loop.create_task(coro)
 
     async def _broadcast_request(self, record: ApprovalRequestRecord) -> None:
         """Broadcast a request to all connected clients.
@@ -229,8 +238,7 @@ class JITApprovalServer:
             record.request.reason,
         )
 
-        # Broadcast approval
-        asyncio.create_task(self._broadcast_approval(record))
+        self._schedule_broadcast(self._broadcast_approval(record))
 
         logger.info(f'Approved request {request_id}')
 
@@ -255,8 +263,7 @@ class JITApprovalServer:
         record.rejected_at = time.time()
         record.request.approved = False
 
-        # Broadcast rejection
-        asyncio.create_task(self._broadcast_rejection(record))
+        self._schedule_broadcast(self._broadcast_rejection(record))
 
         logger.info(f'Rejected request {request_id}')
 

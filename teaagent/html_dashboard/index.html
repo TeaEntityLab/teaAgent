@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TeaAgent Control Plane</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>TeaAgent Control Plane</h1>
+    <p class="subtitle">Workflow graph, focus stack, and JIT approvals</p>
+  </header>
+  <main class="grid">
+    <section id="workflow-panel" class="panel">
+      <h2>Workflow</h2>
+      <pre id="workflow-state" class="mono">Waiting for stream…</pre>
+      <form id="polish-form" class="inline-form">
+        <input type="text" id="polish-notes" placeholder="Polish notes" />
+        <button type="submit">Save polish notes</button>
+      </form>
+    </section>
+    <section id="focus-panel" class="panel">
+      <h2>Focus stack</h2>
+      <ul id="focus-list"></ul>
+    </section>
+    <section id="jit-panel" class="panel wide">
+      <h2>JIT approvals &amp; diffs</h2>
+      <div id="pending-list"></div>
+      <pre id="diff-view" class="mono"></pre>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

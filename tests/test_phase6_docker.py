@@ -81,3 +81,42 @@ def test_resource_violation_aborts_container() -> None:
     event_names = [c[0][0] for c in logger.record.call_args_list]
     assert 'resource_violation_detected' in event_names
     assert 'docker_sandbox_aborted' in event_names
+
+
+def test_poll_resource_limits_aborts_on_violation() -> None:
+    logger = MagicMock()
+    fake_usage = ResourceUsage(
+        timestamp=datetime.now(timezone.utc),
+        cpu_percent=300.0,
+        memory_mb=2048.0,
+        cpu_limit_cores=1.0,
+        memory_limit_mb=512.0,
+    )
+    fake_violation = ResourceViolation(
+        resource_type=ResourceType.MEMORY,
+        current_value=2048.0,
+        limit=512.0,
+        timestamp=datetime.now(timezone.utc),
+        severity='critical',
+    )
+    with (
+        patch(
+            'teaagent.docker_sandbox.subprocess.run',
+            return_value=_Completed(returncode=0, stdout='killed\n'),
+        ),
+        patch(
+            'teaagent.docker_sandbox.ResourceMonitor.get_current_usage',
+            return_value=fake_usage,
+        ),
+        patch(
+            'teaagent.docker_sandbox.ResourceMonitor.check_violations',
+            return_value=[fake_violation],
+        ),
+        patch('teaagent.docker_sandbox.time.sleep', return_value=None),
+    ):
+        sandbox = DockerSandbox(audit_logger=logger, run_id='run-3')
+        sandbox.container_id = 'container-1'
+        result = sandbox.poll_resource_limits(duration_seconds=1.0, interval_seconds=0.1)
+
+    assert result is not None
+    assert result.status == 'aborted'
