@@ -509,22 +509,27 @@ def chat_command(args: argparse.Namespace) -> int:
     permission_mode = parse_permission_mode(args.permission_mode) if args.permission_mode else None
 
     # Build chat agent config
-    chat_config = ChatAgentConfig.from_root(
-        root,
-        model=model,
-        permission_mode=permission_mode,
-        max_iterations=args.max_iterations,
-        max_tool_calls=args.max_tool_calls,
-        max_estimated_cost_cents=args.max_estimated_cost_cents,
-        allow_destructive=args.allow_destructive,
-        memory_limit=getattr(args, 'memory_limit', None),
-        enable_subagent=args.subagent,
-        max_subagent_depth=args.max_subagent_depth,
-        heartbeat_seconds=args.heartbeat,
-        stream=args.stream,
-        enable_git_tools=getattr(args, 'enable_git_tools', False),
-        skill_search_dirs=getattr(args, 'skill_search_dirs', None),
-    )
+    # Only override memory_limit if explicitly provided by user
+    config_kwargs = {
+        'model': model,
+        'permission_mode': permission_mode,
+        'max_iterations': args.max_iterations,
+        'max_tool_calls': args.max_tool_calls,
+        'max_estimated_cost_cents': args.max_estimated_cost_cents,
+        'allow_destructive': args.allow_destructive,
+        'enable_subagent': args.subagent,
+        'max_subagent_depth': args.max_subagent_depth,
+        'heartbeat_seconds': args.heartbeat,
+        'stream': args.stream,
+        'enable_git_tools': getattr(args, 'enable_git_tools', False),
+        'skill_search_dirs': getattr(args, 'skill_search_dirs', None),
+    }
+
+    # Only add memory_limit if explicitly provided by user
+    if hasattr(args, 'memory_limit') and args.memory_limit is not None:
+        config_kwargs['memory_limit'] = args.memory_limit
+
+    chat_config = ChatAgentConfig.from_root(root, **config_kwargs)
 
     # Run the chat REPL
     try:
