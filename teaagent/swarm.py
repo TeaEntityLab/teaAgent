@@ -79,6 +79,40 @@ class SwarmReport:
     total_execution_time_ms: float = 0.0
 
 
+@dataclass(frozen=True)
+class PromptFitnessMetrics:
+    """Normalized metrics used by prompt tournament scoring."""
+
+    success: int
+    tokens: float
+    min_tokens: float
+    time_seconds: float
+    min_time_seconds: float
+    errors: int
+
+
+def compute_prompt_fitness_score(metrics: PromptFitnessMetrics) -> float:
+    """Compute prompt fitness score with hard success gate.
+
+    If success is 0, score is forced to 0.
+    """
+    if metrics.success <= 0:
+        return 0.0
+    if metrics.tokens <= 0 or metrics.min_tokens <= 0:
+        raise ValueError('tokens and min_tokens must be positive')
+    if metrics.time_seconds <= 0 or metrics.min_time_seconds <= 0:
+        raise ValueError('time_seconds and min_time_seconds must be positive')
+    if metrics.errors < 0:
+        raise ValueError('errors must be non-negative')
+
+    return (
+        0.4 * float(metrics.success)
+        + 0.3 * (metrics.min_tokens / metrics.tokens)
+        + 0.2 * (metrics.min_time_seconds / metrics.time_seconds)
+        + 0.1 * (1.0 / float(metrics.errors + 1))
+    )
+
+
 class Subagent:
     """Individual subagent with isolated sandbox execution."""
 
