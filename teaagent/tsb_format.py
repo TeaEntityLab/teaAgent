@@ -65,7 +65,7 @@ class RedactionRule:
 
 class RedactionFilter:
     """Filters sensitive data from audit logs before packaging."""
-    
+
     DEFAULT_RULES = [
         RedactionRule("api_key", "[REDACTED]"),
         RedactionRule("secret", "[REDACTED]"),
@@ -77,7 +77,7 @@ class RedactionFilter:
         RedactionRule("/Users/", "[HOME]/"),
         RedactionRule("/tmp/", "[TEMP]/"),
     ]
-    
+
     def __init__(self, custom_rules: list[RedactionRule] | None = None) -> None:
         """Initialize redaction filter.
         
@@ -85,7 +85,7 @@ class RedactionFilter:
             custom_rules: Additional redaction rules beyond defaults.
         """
         self.rules = self.DEFAULT_RULES + (custom_rules or [])
-    
+
     def redact_string(self, text: str) -> str:
         """Apply redaction rules to a string.
         
@@ -103,7 +103,7 @@ class RedactionFilter:
             else:
                 result = result.replace(rule.pattern, rule.replacement)
         return result
-    
+
     def redact_dict(self, data: dict[str, Any]) -> dict[str, Any]:
         """Recursively redact sensitive data from a dictionary.
         
@@ -117,25 +117,30 @@ class RedactionFilter:
         for key, value in data.items():
             # Check if key matches sensitive patterns
             key_is_sensitive = any(
-                rule.pattern.lower() in key.lower() 
-                for rule in self.rules 
+                rule.pattern.lower() in key.lower()
+                for rule in self.rules
                 if not rule.is_regex
             )
-            
-            if isinstance(value, str):
-                # Redact if key is sensitive or value contains sensitive patterns
-                if key_is_sensitive:
-                    result[key] = "[REDACTED]"
-                else:
-                    result[key] = self.redact_string(value)
+
+            if key_is_sensitive:
+                # Completely redact values under sensitive keys
+                result[key] = "[REDACTED]"
+            elif isinstance(value, str):
+                result[key] = self.redact_string(value)
             elif isinstance(value, dict):
                 result[key] = self.redact_dict(value)
             elif isinstance(value, list):
-                result[key] = [self.redact_dict(item) if isinstance(item, dict) else item for item in value]
+                # Recursively redact list items, with special handling for sensitive data
+                result[key] = [
+                    self.redact_dict(item) if isinstance(item, dict)
+                    else self.redact_string(item) if isinstance(item, str)
+                    else item
+                    for item in value
+                ]
             else:
                 result[key] = value
         return result
-    
+
     def redact_audit_log(self, audit_log_path: Path) -> str:
         """Redact sensitive data from an audit log file.
         
@@ -146,10 +151,10 @@ class RedactionFilter:
             Redacted audit log content.
         """
         import json
-        
+
         lines = audit_log_path.read_text(encoding="utf-8").strip().split("\n")
         redacted_lines = []
-        
+
         for line in lines:
             try:
                 event = json.loads(line)
@@ -158,13 +163,13 @@ class RedactionFilter:
             except json.JSONDecodeError:
                 # Keep non-JSON lines as-is but apply string redaction
                 redacted_lines.append(self.redact_string(line))
-        
+
         return "\n".join(redacted_lines)
 
 
 class TSBBuilder:
     """Builder for creating Provenanced Skill Bundles."""
-    
+
     def __init__(
         self,
         skill_path: Path,
@@ -188,7 +193,7 @@ class TSBBuilder:
         self._use_sigstore = use_sigstore
         self._identity_token = identity_token
         self._redaction_filter = RedactionFilter()
-    
+
     def build_tsb(
         self,
         output_path: Path,
@@ -208,7 +213,7 @@ class TSBBuilder:
         # Create temporary directory for bundle
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            
+
             # Copy skill files
             skill_files = []
             for file_path in self._skill_path.rglob("*"):
@@ -218,21 +223,21 @@ class TSBBuilder:
                     dest_path.parent.mkdir(parents=True, exist_ok=True)
                     dest_path.write_bytes(file_path.read_bytes())
                     skill_files.append(str(rel_path))
-            
+
             # Redact and copy audit log
             redacted_audit = self._redaction_filter.redact_audit_log(self._audit_log_path)
             audit_path = tmp_path / "audit.jsonl"
             audit_path.write_text(redacted_audit, encoding="utf-8")
-            
+
             # Verify audit chain integrity
             if not skip_audit_verification:
                 verification = verify_audit_chain(audit_path)
                 if not verification.valid:
                     raise ValueError(f"Audit chain verification failed: {verification.error}")
-            
+
             # Calculate hashes
             audit_hash = hashlib.sha256(redacted_audit.encode()).hexdigest()
-            
+
             # Create manifest
             manifest = TSBManifest(
                 metadata=metadata,
@@ -243,7 +248,7 @@ class TSBBuilder:
                 ),
                 files=skill_files,
             )
-            
+
             # Calculate hash of skill files and audit only (excluding manifest)
             # Use sorted iteration for deterministic hash across platforms
             # Include relative paths in hash to prevent structural tampering (TSB v1.1)
@@ -257,22 +262,22 @@ class TSBBuilder:
                     bundle_hash.update(file_path.read_bytes())
             bundle_hash.update((tmp_path / "audit.jsonl").read_bytes())
             bundle_hash = bundle_hash.hexdigest()
-            
+
             # Create initial tarball with placeholder manifest (for signing)
             manifest_path = tmp_path / "manifest.json"
             manifest_dict = self._manifest_to_dict(manifest)
             manifest_path.write_text(json.dumps(manifest_dict, indent=2), encoding="utf-8")
-            
+
             # Create temporary tarball for signing
             temp_tsb_path = tmp_path / "temp.tsb"
             with tarfile.open(temp_tsb_path, "w:gz") as tar:
                 tar.add(tmp_path, arcname="")
-            
+
             # Sign bundle if key provided or using Sigstore
             signature = ""
             certificate = ""
             signer_type = ""
-            
+
             if self._use_sigstore and SIGSTORE_AVAILABLE:
                 try:
                     sigstore_signer = SigstoreSigner(identity_token=self._identity_token)
@@ -285,7 +290,7 @@ class TSBBuilder:
             elif self._author_key_path and self._author_key_path.exists():
                 signature = self._sign_bundle(temp_tsb_path, self._author_key_path)
                 signer_type = "ssh"
-            
+
             # Update manifest with final hashes and signature
             manifest = TSBManifest(
                 metadata=manifest.metadata,
@@ -299,17 +304,17 @@ class TSBBuilder:
                 ),
                 files=manifest.files,
             )
-            
+
             # Write final manifest
             manifest_dict = self._manifest_to_dict(manifest)
             manifest_path.write_text(json.dumps(manifest_dict, indent=2), encoding="utf-8")
-            
+
             # Create final tarball
             with tarfile.open(output_path, "w:gz") as tar:
                 tar.add(tmp_path, arcname="")
-            
+
             return manifest
-    
+
     def _sign_bundle(self, bundle_path: Path, key_path: Path) -> str:
         """Sign the bundle using SSH key.
         
@@ -325,7 +330,7 @@ class TSBBuilder:
         """
         import base64
         import subprocess
-        
+
         try:
             # Use ssh-keygen to sign
             result = subprocess.run(
@@ -349,7 +354,7 @@ class TSBBuilder:
         except (subprocess.CalledProcessError, FileNotFoundError) as exc:
             # Do NOT fall back to hash-based signature - this is security theater
             raise ValueError(f"Failed to sign bundle with ssh-keygen: {exc}. Please ensure ssh-keygen is installed and the key is valid.")
-    
+
     def _manifest_to_dict(self, manifest: TSBManifest) -> dict[str, Any]:
         """Convert manifest to dictionary."""
         return {
@@ -376,7 +381,7 @@ class TSBBuilder:
 
 class TSBVerifier:
     """Verifier for Provenanced Skill Bundles."""
-    
+
     def __init__(self, tsb_path: Path, offline: bool = False) -> None:
         """Initialize TSB verifier.
         
@@ -386,7 +391,7 @@ class TSBVerifier:
         """
         self._tsb_path = Path(tsb_path).resolve()
         self._offline = offline
-    
+
     def verify(
         self,
         verify_signature: bool = True,
@@ -409,7 +414,7 @@ class TSBVerifier:
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            
+
             # Extract tarball with path traversal protection
             try:
                 with tarfile.open(self._tsb_path, "r:gz") as tar:
@@ -426,17 +431,17 @@ class TSBVerifier:
                             tar.extract(member, tmp_path)
             except Exception as exc:
                 return False, f"Failed to extract TSB: {exc}"
-            
+
             # Read manifest
             manifest_path = tmp_path / "manifest.json"
             if not manifest_path.exists():
                 return False, "Manifest not found in TSB"
-            
+
             try:
                 manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as exc:
                 return False, f"Invalid manifest JSON: {exc}"
-            
+
             # Verify bundle hash (hash of skill files and audit only, excluding manifest)
             # Use sorted iteration for deterministic hash across platforms
             # Include relative paths in hash to prevent structural tampering (TSB v1.1)
@@ -454,22 +459,22 @@ class TSBVerifier:
             if audit_path.exists():
                 bundle_hash.update(audit_path.read_bytes())
             bundle_hash = bundle_hash.hexdigest()
-            
+
             if manifest_data["attestation"]["bundle_hash"] != bundle_hash:
                 return False, f"Bundle hash mismatch: expected {manifest_data['attestation']['bundle_hash']}, got {bundle_hash}"
-            
+
             # Verify audit chain
             audit_path = tmp_path / "audit.jsonl"
             if audit_path.exists() and not skip_audit_verification:
                 verification = verify_audit_chain(audit_path)
                 if not verification.valid:
                     return False, f"Audit chain verification failed: {verification.error}"
-                
+
                 # Verify audit hash
                 audit_hash = hashlib.sha256(audit_path.read_bytes()).hexdigest()
                 if manifest_data["attestation"]["audit_chain_hash"] != audit_hash:
                     return False, f"Audit hash mismatch: expected {manifest_data['attestation']['audit_chain_hash']}, got {audit_hash}"
-            
+
             # Verify signature if requested
             if verify_signature:
                 # Require signature when verification is enabled, unless allow_unsigned is set
@@ -479,7 +484,7 @@ class TSBVerifier:
                         return True, "TSB verification successful (unsigned bundle allowed in development mode)"
                     else:
                         return False, "Signature verification requested but bundle is unsigned. Use allow_unsigned=True for development (unsafe for production)."
-                
+
                 # Use TSBProvenanceVerifier for verification if available
                 if SIGSTORE_AVAILABLE:
                     try:
@@ -495,12 +500,12 @@ class TSBVerifier:
                     except Exception as exc:
                         return False, f"Provenance verifier error: {exc}"
                 else:
-                    # Fallback: signature exists but we can't verify it without sigstore
-                    # This is a security risk but better than nothing
-                    pass
-            
+                    # Fallback: sigstore not available, cannot verify signatures securely
+                    # Fail closed for security - don't accept unverified signatures
+                    return False, "Signature verification requires sigstore-python. Install with: pip install sigstore"
+
             return True, "TSB verification successful"
-    
+
     def extract_skill(self, output_path: Path) -> None:
         """Extract skill files from TSB.
         
@@ -509,7 +514,7 @@ class TSBVerifier:
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            
+
             # Extract tarball with path traversal protection (CVE-2007-4559, CVE-2025-4517)
             with tarfile.open(self._tsb_path, "r:gz") as tar:
                 # Use data_filter to prevent path traversal attacks
@@ -523,7 +528,7 @@ class TSBVerifier:
                         if member.name.startswith('/') or '..' in member.name.split('/'):
                             raise ValueError(f"Path traversal attempt detected: {member.name}")
                         tar.extract(member, tmp_path)
-            
+
             # Copy skill directory
             skill_src = tmp_path / "skill"
             if skill_src.exists():

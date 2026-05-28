@@ -550,7 +550,192 @@ def _chat(
     defaults: Optional[dict[str, object]] = None,
 ) -> None:
     p = subs.add_parser('chat', help=help)
-    add_agent_run_arguments(p)
+    # Add task as first positional argument for initial task
+    p.add_argument('task', nargs='?', default=None, help='Initial task to execute (optional).')
+    # Add other run arguments (provider becomes optional after task)
+    p.add_argument(
+        'provider',
+        nargs='?',
+        default=None,
+        metavar='provider',
+        help='Model provider (optional when set in .teaagent/config.toml).',
+    )
+    # Add remaining run arguments without duplicating task/provider
+    p.add_argument(
+        '--from-plan',
+        default=None,
+        metavar='PATH',
+        help='Load task and provenance from a .teaagent/plans/*.md artifact.',
+    )
+    p.add_argument(
+        '--allow-external-plan',
+        action='store_true',
+        help=('Allow plan paths elsewhere under --root (not only .teaagent/plans/).'),
+    )
+    p.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument('--model', default=None, help='Override model name.')
+    p.add_argument(
+        '--route-model',
+        action='store_true',
+        help='Choose a provider-specific model from the task category when --model is not set.',
+    )
+    p.add_argument(
+        '--max-iterations', type=int, default=10, help='Maximum agent loop iterations.'
+    )
+    p.add_argument('--max-tool-calls', type=int, default=10, help='Maximum tool calls.')
+    p.add_argument(
+        '--max-estimated-cost-cents',
+        type=int,
+        default=0,
+        help='Abort the run when estimated cost exceeds this cap (0 uses default budget).',
+    )
+    p.add_argument(
+        '--clarify',
+        action='store_true',
+        help='Run deterministic ambiguity scoring before calling the model.',
+    )
+    p.add_argument(
+        '--allow-destructive',
+        action='store_true',
+        help='Allow destructive tools such as write, patch, and shell.',
+    )
+    p.add_argument(
+        '--git-sandbox',
+        action='store_true',
+        help='Run agent task in a git sandbox branch for safe rollbacks.',
+    )
+    p.add_argument(
+        '--git-sandbox-auto-stash',
+        action='store_true',
+        help='Automatically stash dirty worktree before creating git sandbox branch.',
+    )
+    p.add_argument(
+        '--parallel',
+        default=None,
+        metavar='N',
+        type=int,
+        help='Run tournament mode with N parallel approaches. Creates isolated sandbox branches for each approach.',
+    )
+    p.add_argument(
+        '--approach',
+        action='append',
+        default=[],
+        help='Custom approach hint for tournament mode. Can be repeated.',
+    )
+    p.add_argument(
+        '--no-benchmark',
+        action='store_true',
+        help='Skip performance benchmarking in tournament mode.',
+    )
+    p.add_argument(
+        '--approve-call-id',
+        action='append',
+        default=[],
+        help='Approve one exact destructive tool call id. Can be repeated.',
+    )
+    p.add_argument(
+        '--hitl-approval',
+        action='store_true',
+        help='Prompt before executing unapproved destructive tool calls in prompt permission mode.',
+    )
+    p.add_argument(
+        '--permission-mode',
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help='Permission mode for workspace tools.',
+    )
+    p.add_argument(
+        '--subagent',
+        action='store_true',
+        help="Expose the 'subagent' tool so the model can delegate sub-tasks.",
+    )
+    p.add_argument(
+        '--max-subagent-depth',
+        type=int,
+        default=1,
+        help='Maximum nested subagent depth.',
+    )
+    p.add_argument(
+        '--heartbeat',
+        type=float,
+        default=0.0,
+        help='Emit a heartbeat audit event every N seconds while running. 0 disables.',
+    )
+    p.add_argument(
+        '--code-analysis',
+        action='store_true',
+        help='Enable LSP-backed code analysis tools (code_definition/code_references/code_diagnostics).',
+    )
+    p.add_argument(
+        '--validate',
+        action='store_true',
+        help='Enable LSP/static analysis validation with self-healing loop.',
+    )
+    p.add_argument(
+        '--no-validate',
+        action='store_true',
+        help='Disable validation even if configured.',
+    )
+    p.add_argument(
+        '--telemetry-otlp-endpoint',
+        default=None,
+        metavar='URL',
+        help='Export OpenTelemetry traces to this OTLP HTTP endpoint (e.g. http://localhost:4318/v1/traces).',
+    )
+    p.add_argument(
+        '--telemetry-service-name',
+        default='teaagent',
+        help='OTel service.name resource attribute. Default: teaagent.',
+    )
+    p.add_argument(
+        '--telemetry-console',
+        action='store_true',
+        help='Also print OpenTelemetry spans to stderr (debug).',
+    )
+    p.add_argument(
+        '--checkpoint-store',
+        default=None,
+        metavar='PATH',
+        help='SQLite path for run checkpoint storage. Saves context after each tool call.',
+    )
+    p.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Plan the run (preflight + token budget) without calling the model.',
+    )
+    p.add_argument(
+        '--human',
+        action='store_true',
+        help='With --dry-run, print a beginner-friendly summary instead of JSON.',
+    )
+    p.add_argument(
+        '--background',
+        action='store_true',
+        help='Run detached; use agent attach <run_id> --follow to stream events.',
+    )
+    p.add_argument(
+        '--progress',
+        action='store_true',
+        default=None,
+        help='Stream brief progress lines to stderr during the run (default: on when stderr is a TTY).',
+    )
+    p.add_argument(
+        '--no-progress',
+        action='store_true',
+        help='Disable progress lines even on a TTY.',
+    )
+    p.add_argument(
+        '--stream',
+        action='store_true',
+        help='Stream user-visible model text during the run (final-answer content only).',
+    )
+    p.add_argument(
+        '--stream-raw',
+        action='store_true',
+        help='Stream raw model text during the run (including tool calls).',
+    )
     base_defaults = {'func': handler, 'agent_command': 'chat'}
     if defaults:
         base_defaults.update(defaults)

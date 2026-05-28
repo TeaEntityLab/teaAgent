@@ -2,22 +2,20 @@
 
 from __future__ import annotations
 
-import json
 import tarfile
 import tempfile
 import unittest
 from pathlib import Path
 
+from teaagent.sigstore_signer import TSBProvenanceVerifier
 from teaagent.tsb_format import (
     RedactionFilter,
     RedactionRule,
     TSBAttestation,
     TSBBuilder,
-    TSBManifest,
     TSBMetadata,
     TSBVerifier,
 )
-from teaagent.sigstore_signer import TSBProvenanceVerifier
 
 
 class RedactionRuleTests(unittest.TestCase):
@@ -56,6 +54,33 @@ class RedactionFilterTests(unittest.TestCase):
         # The redaction filter replaces sensitive patterns in strings
         self.assertIn("[REDACTED]", result["config"]["api_key"])
         self.assertEqual(result["config"]["other"], "value")
+
+    def test_redact_nested_sensitive_key(self) -> None:
+        """Test that values under sensitive keys are completely redacted."""
+        filter = RedactionFilter()
+        data = {"api_key": {"raw": "secret123", "type": "production"}}
+        result = filter.redact_dict(data)
+        # Entire value under sensitive key should be redacted
+        self.assertEqual(result["api_key"], "[REDACTED]")
+        self.assertNotIn("secret123", str(result))
+
+    def test_redact_list_with_sensitive_data(self) -> None:
+        """Test that sensitive data in lists is redacted."""
+        filter = RedactionFilter()
+        data = {"tokens": ["abc123", "def456"]}
+        result = filter.redact_dict(data)
+        # Entire value under sensitive key should be redacted
+        self.assertEqual(result["tokens"], "[REDACTED]")
+        self.assertNotIn("abc123", str(result))
+
+    def test_redact_list_with_dicts(self) -> None:
+        """Test that dicts in lists are recursively redacted."""
+        filter = RedactionFilter()
+        data = {"items": [{"api_key": "secret123"}, {"name": "test"}]}
+        result = filter.redact_dict(data)
+        # Nested dict with sensitive key should be redacted
+        self.assertEqual(result["items"][0]["api_key"], "[REDACTED]")
+        self.assertEqual(result["items"][1]["name"], "test")
 
     def test_redact_paths(self) -> None:
         filter = RedactionFilter()
@@ -108,25 +133,25 @@ class TSBBuilderTests(unittest.TestCase):
             skill_path = Path(tmp) / "skill"
             skill_path.mkdir()
             (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
-            
+
             audit_path = Path(tmp) / "audit.jsonl"
             audit_path.write_text(
                 '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
                 encoding="utf-8",
             )
-            
+
             output_path = Path(tmp) / "skill.tsb"
-            
+
             metadata = TSBMetadata(
                 skill_name="test-skill",
                 skill_version="1.0.0",
                 skill_author="test-author",
                 created_at="2024-01-01T00:00:00Z",
             )
-            
+
             builder = TSBBuilder(skill_path, audit_path)
             manifest = builder.build_tsb(output_path, metadata, skip_audit_verification=True)
-            
+
             self.assertTrue(output_path.exists())
             self.assertEqual(manifest.metadata.skill_name, "test-skill")
             self.assertTrue(len(manifest.attestation.bundle_hash) > 0)
@@ -137,25 +162,25 @@ class TSBBuilderTests(unittest.TestCase):
             skill_path = Path(tmp) / "skill"
             skill_path.mkdir()
             (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
-            
+
             audit_path = Path(tmp) / "audit.jsonl"
             audit_path.write_text(
                 '{"event_id": "e1", "api_key": "secret123", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
                 encoding="utf-8",
             )
-            
+
             output_path = Path(tmp) / "skill.tsb"
-            
+
             metadata = TSBMetadata(
                 skill_name="test-skill",
                 skill_version="1.0.0",
                 skill_author="test-author",
                 created_at="2024-01-01T00:00:00Z",
             )
-            
+
             builder = TSBBuilder(skill_path, audit_path)
             manifest = builder.build_tsb(output_path, metadata, skip_audit_verification=True)
-            
+
             # Verify the TSB contains redacted audit log
             with tarfile.open(output_path, "r:gz") as tar:
                 audit_member = tar.extractfile("audit.jsonl")
@@ -170,28 +195,28 @@ class TSBVerifierTests(unittest.TestCase):
             skill_path = Path(tmp) / "skill"
             skill_path.mkdir()
             (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
-            
+
             audit_path = Path(tmp) / "audit.jsonl"
             audit_path.write_text(
                 '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
                 encoding="utf-8",
             )
-            
+
             tsb_path = Path(tmp) / "skill.tsb"
-            
+
             metadata = TSBMetadata(
                 skill_name="test-skill",
                 skill_version="1.0.0",
                 skill_author="test-author",
                 created_at="2024-01-01T00:00:00Z",
             )
-            
+
             builder = TSBBuilder(skill_path, audit_path)
             builder.build_tsb(tsb_path, metadata, skip_audit_verification=True)
-            
+
             verifier = TSBVerifier(tsb_path)
             is_valid, message = verifier.verify(verify_signature=False, skip_audit_verification=True)
-            
+
             self.assertTrue(is_valid, f"Verification failed: {message}")
 
     def test_verify_unsigned_tsb_rejected(self) -> None:
@@ -200,29 +225,29 @@ class TSBVerifierTests(unittest.TestCase):
             skill_path = Path(tmp) / "skill"
             skill_path.mkdir()
             (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
-            
+
             audit_path = Path(tmp) / "audit.jsonl"
             audit_path.write_text(
                 '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
                 encoding="utf-8",
             )
-            
+
             tsb_path = Path(tmp) / "skill.tsb"
-            
+
             metadata = TSBMetadata(
                 skill_name="test-skill",
                 skill_version="1.0.0",
                 skill_author="test-author",
                 created_at="2024-01-01T00:00:00Z",
             )
-            
+
             builder = TSBBuilder(skill_path, audit_path)
             builder.build_tsb(tsb_path, metadata, skip_audit_verification=True)
-            
+
             verifier = TSBVerifier(tsb_path)
             # Unsigned bundle should be rejected when verify_signature=True
             is_valid, message = verifier.verify(verify_signature=True, skip_audit_verification=True)
-            
+
             self.assertFalse(is_valid, "Unsigned TSB should be rejected")
             self.assertIn("unsigned", message.lower(), f"Error message should mention unsigned: {message}")
 
@@ -232,29 +257,29 @@ class TSBVerifierTests(unittest.TestCase):
             skill_path = Path(tmp) / "skill"
             skill_path.mkdir()
             (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
-            
+
             audit_path = Path(tmp) / "audit.jsonl"
             audit_path.write_text(
                 '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
                 encoding="utf-8",
             )
-            
+
             tsb_path = Path(tmp) / "skill.tsb"
-            
+
             metadata = TSBMetadata(
                 skill_name="test-skill",
                 skill_version="1.0.0",
                 skill_author="test-author",
                 created_at="2024-01-01T00:00:00Z",
             )
-            
+
             builder = TSBBuilder(skill_path, audit_path)
             builder.build_tsb(tsb_path, metadata, skip_audit_verification=True)
-            
+
             verifier = TSBVerifier(tsb_path)
             # Unsigned bundle should be allowed when allow_unsigned=True
             is_valid, message = verifier.verify(verify_signature=True, allow_unsigned=True, skip_audit_verification=True)
-            
+
             self.assertTrue(is_valid, f"Unsigned TSB should be allowed with allow_unsigned=True: {message}")
             self.assertIn("development mode", message.lower(), f"Message should mention development mode: {message}")
 
@@ -275,10 +300,10 @@ class TSBVerifierTests(unittest.TestCase):
                 "signer": "ssh",
             },
         }
-        
+
         verifier = TSBProvenanceVerifier(require_signature=True)
         is_valid, message = verifier.verify_provenance(Path("fake.tsb"), manifest)
-        
+
         self.assertFalse(is_valid, "SSH signatures should be rejected")
         self.assertIn("ssh", message.lower(), f"Error message should mention SSH: {message}")
         self.assertIn("not implemented", message.lower(), f"Error message should mention not implemented: {message}")
@@ -288,32 +313,32 @@ class TSBVerifierTests(unittest.TestCase):
             skill_path = Path(tmp) / "skill"
             skill_path.mkdir()
             (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
-            
+
             audit_path = Path(tmp) / "audit.jsonl"
             audit_path.write_text(
                 '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
                 encoding="utf-8",
             )
-            
+
             tsb_path = Path(tmp) / "skill.tsb"
-            
+
             metadata = TSBMetadata(
                 skill_name="test-skill",
                 skill_version="1.0.0",
                 skill_author="test-author",
                 created_at="2024-01-01T00:00:00Z",
             )
-            
+
             builder = TSBBuilder(skill_path, audit_path)
             builder.build_tsb(tsb_path, metadata, skip_audit_verification=True)
-            
+
             # Tamper with the TSB
             with open(tsb_path, "ab") as f:
                 f.write(b"tampered")
-            
+
             verifier = TSBVerifier(tsb_path)
             is_valid, message = verifier.verify(verify_signature=False)
-            
+
             self.assertFalse(is_valid)
             self.assertIn("mismatch", message.lower())
 
@@ -323,29 +348,29 @@ class TSBVerifierTests(unittest.TestCase):
             skill_path.mkdir()
             (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
             (skill_path / "README.md").write_text("# README", encoding="utf-8")
-            
+
             audit_path = Path(tmp) / "audit.jsonl"
             audit_path.write_text(
                 '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
                 encoding="utf-8",
             )
-            
+
             tsb_path = Path(tmp) / "skill.tsb"
             output_path = Path(tmp) / "extracted"
-            
+
             metadata = TSBMetadata(
                 skill_name="test-skill",
                 skill_version="1.0.0",
                 skill_author="test-author",
                 created_at="2024-01-01T00:00:00Z",
             )
-            
+
             builder = TSBBuilder(skill_path, audit_path)
             builder.build_tsb(tsb_path, metadata, skip_audit_verification=True)
-            
+
             verifier = TSBVerifier(tsb_path)
             verifier.extract_skill(output_path)
-            
+
             self.assertTrue(output_path.exists())
             self.assertTrue((output_path / "SKILL.md").exists())
             self.assertTrue((output_path / "README.md").exists())
