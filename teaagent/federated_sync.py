@@ -499,9 +499,11 @@ class FederatedGraphSync:
 
         # In production, this would poll for incoming signature messages
         # For now, we check for signature files in the approvals directory
-        start_time = time.time()
+        poll_interval = 0.1  # Shorter poll interval for better responsiveness
+        max_polls = int(timeout_seconds / poll_interval)
+        polls = 0
 
-        while time.time() - start_time < timeout_seconds:
+        while polls < max_polls:
             for sig_file in approvals_dir.glob(f'{request_id}_signature_*.json'):
                 try:
                     data = json.loads(sig_file.read_text(encoding='utf-8'))
@@ -521,7 +523,8 @@ class FederatedGraphSync:
             if signatures:
                 break
 
-            time.sleep(0.5)  # Poll interval
+            time.sleep(poll_interval)
+            polls += 1
 
         return signatures
 

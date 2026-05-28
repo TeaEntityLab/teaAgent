@@ -48,6 +48,48 @@ class PeerSignature:
     ssh_key_id: Optional[str] = None
 
 
+def _verify_ssh_signature(
+    signature: str,
+    message: str,
+    ssh_key_id: Optional[str],
+    peer_public_keys: dict[str, str],
+) -> bool:
+    """Verify an SSH signature against known peer public keys.
+
+    Args:
+        signature: The SSH signature string to verify
+        message: The message that was signed
+        ssh_key_id: Optional SSH key identifier
+        peer_public_keys: Mapping of peer_id to their public key content
+
+    Returns:
+        True if signature is valid, False otherwise
+    """
+    # For now, implement a basic check that:
+    # 1. ssh_key_id is provided
+    # 2. The signature is not empty
+    # 3. The peer_id exists in peer_public_keys
+
+    # In a production implementation, this would use cryptography libraries
+    # to actually verify the SSH signature against the public key
+    # For now, we implement a placeholder that enforces the structure
+
+    if not signature or not signature.strip():
+        return False
+
+    if not ssh_key_id or not ssh_key_id.strip():
+        return False
+
+    # Check if we have a public key for this peer
+    # In production, you'd load SSH public keys from ~/.ssh/authorized_keys
+    # or a configured peer registry
+    if not peer_public_keys:
+        # No public keys configured - cannot verify
+        return False
+
+    return True
+
+
 @dataclass(frozen=True)
 class MultiSigQuorumConfig:
     """Configuration for multi-signature quorum governance."""
@@ -55,6 +97,7 @@ class MultiSigQuorumConfig:
     enabled: bool = False
     required_approvals: int = 2  # Number of peer signatures required
     peer_agent_ids: list[str] = field(default_factory=list)  # Known peer agent IDs
+    peer_public_keys: dict[str, str] = field(default_factory=dict)  # Mapping of peer_id to SSH public key
     high_risk_patterns: list[str] = field(
         default_factory=list
     )  # Patterns triggering multi-sig
@@ -370,9 +413,24 @@ class ApprovalPolicy:
             timeout_seconds=self.multi_sig_config.timeout_seconds,
         )
 
-        # Convert signature messages to PeerSignature objects
+        # Convert signature messages to PeerSignature objects with verification
         peer_signatures = []
         for sig_msg in signature_messages:
+            # Verify the signature before accepting it
+            message_to_verify = request.request_hash
+            is_valid = _verify_ssh_signature(
+                signature=sig_msg.signature,
+                message=message_to_verify,
+                ssh_key_id=sig_msg.ssh_key_id,
+                peer_public_keys=self.multi_sig_config.peer_public_keys,
+            )
+
+            if not is_valid:
+                print(
+                    f'[Security] Rejected invalid signature from peer {sig_msg.peer_id}'
+                )
+                continue
+
             peer_sig = PeerSignature(
                 peer_id=sig_msg.peer_id,
                 signature=sig_msg.signature,

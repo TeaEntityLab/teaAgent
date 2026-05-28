@@ -786,6 +786,54 @@ class ShellClassifierPropertyTests(unittest.TestCase):
                 f'escape path in {cmd!r} should trigger mutate',
             )
 
+    def test_dangerous_rg_flags_trigger_mutate(self) -> None:
+        """Test that dangerous ripgrep flags are blocked."""
+        mutate = [
+            'rg --pre "echo pwned" .',
+            'rg --pre-open "evil.sh" .',
+            'rg -O .',
+            'rg --open-files-in-viewer .',
+        ]
+        for cmd in mutate:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'mutate',
+                f'dangerous rg flag in {cmd!r} should trigger mutate',
+            )
+
+    def test_dangerous_git_flags_trigger_mutate(self) -> None:
+        """Test that dangerous git flags are blocked."""
+        mutate = [
+            'git diff --output=/etc/passwd',
+            'git show --output=~/.ssh/authorized_keys',
+            'git log -o /tmp/pwn',
+        ]
+        for cmd in mutate:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'mutate',
+                f'dangerous git flag in {cmd!r} should trigger mutate',
+            )
+
+    def test_safe_inspect_commands_still_allowed(self) -> None:
+        """Test that legitimate inspect commands are still allowed."""
+        inspect = [
+            'rg pattern .',
+            'rg -i pattern .',
+            'git status',
+            'git diff',
+            'git log',
+            'git show HEAD',
+            'ls -la',
+            'cat file.txt',
+        ]
+        for cmd in inspect:
+            self.assertEqual(
+                classify_shell_command_policy(cmd),
+                'inspect',
+                f'safe command {cmd!r} should be classified as inspect',
+            )
+
 
 if __name__ == '__main__':
     unittest.main()
