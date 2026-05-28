@@ -255,6 +255,130 @@ def register(registry):
         all_agents = self._plugin_registry.list_agents()
         return [agent.name for agent in all_agents]
 
+    def evolve_agent_prompt(
+        self,
+        agent_name: str,
+        performance_feedback: str,
+        success_metrics: dict[str, float],
+    ) -> AgentPlugin:
+        """Evolve an agent's prompt based on performance feedback.
+
+        Args:
+            agent_name: Name of the agent to evolve.
+            performance_feedback: Feedback on agent performance.
+            success_metrics: Dictionary of success metrics (accuracy, speed, etc.).
+
+        Returns:
+            Evolved AgentPlugin instance.
+        """
+        existing = self._plugin_registry.get_agent(agent_name)
+        if not existing:
+            raise ValueError(f'Agent not found: {agent_name}')
+
+        # Generate evolution prompt
+        evolution_prompt = self._generate_evolution_prompt(
+            existing.system_prompt, performance_feedback, success_metrics
+        )
+
+        # Apply evolved prompt
+        return self.hot_reload_agent(agent_name, evolution_prompt)
+
+    def _generate_evolution_prompt(
+        self,
+        current_prompt: str,
+        performance_feedback: str,
+        success_metrics: dict[str, float],
+    ) -> str:
+        """Generate an evolved prompt based on performance feedback.
+
+        Args:
+            current_prompt: Current system prompt.
+            performance_feedback: Feedback on performance.
+            success_metrics: Success metrics dictionary.
+
+        Returns:
+            Evolved system prompt.
+        """
+        if self._llm_adapter is None:
+            # Simple heuristic evolution
+            return self._heuristic_evolve_prompt(
+                current_prompt, performance_feedback, success_metrics
+            )
+
+        return self._llm_evolve_prompt(
+            current_prompt, performance_feedback, success_metrics
+        )
+
+    def _heuristic_evolve_prompt(
+        self,
+        current_prompt: str,
+        performance_feedback: str,
+        success_metrics: dict[str, float],
+    ) -> str:
+        """Heuristic prompt evolution without LLM."""
+        # Add performance feedback section
+        evolution_section = f"""
+
+## Performance Feedback
+{performance_feedback}
+
+## Success Metrics
+{', '.join(f'{k}: {v}' for k, v in success_metrics.items())}
+
+## Evolution Instructions
+Based on the feedback above, adjust your approach to improve performance.
+Focus on areas with low success metrics.
+"""
+
+        return current_prompt + evolution_section
+
+    def _llm_evolve_prompt(
+        self,
+        current_prompt: str,
+        performance_feedback: str,
+        success_metrics: dict[str, float],
+    ) -> str:
+        """LLM-based prompt evolution."""
+        evolution_prompt = f"""Evolve the following agent system prompt based on performance feedback.
+
+Current Prompt:
+{current_prompt}
+
+Performance Feedback:
+{performance_feedback}
+
+Success Metrics:
+{', '.join(f'{k}: {v}' for k, v in success_metrics.items())}
+
+Instructions:
+1. Analyze the performance feedback and success metrics.
+2. Identify areas where the agent underperforms.
+3. Refine the system prompt to address these weaknesses.
+4. Maintain the core purpose and constraints of the agent.
+5. Return the evolved system prompt as markdown.
+
+Respond with the evolved system prompt as markdown (no JSON wrapper).
+"""
+
+        try:
+            request = LLMRequest(
+                messages=[
+                    LLMMessage(
+                        role='system',
+                        content='You are an expert at evolving AI agent prompts based on performance feedback.',
+                    ),
+                    LLMMessage(role='user', content=evolution_prompt),
+                ],
+            )
+
+            response = self._llm_adapter.generate(request)
+            return response.content.strip()
+        except Exception as exc:
+            logger.warning(f'LLM prompt evolution failed, falling back to heuristic: {exc}')
+            return self._heuristic_evolve_prompt(
+                current_prompt, performance_feedback, success_metrics
+            )
+
     def remove_agent(self, agent_name: str) -> None:
         """Remove a dynamically generated agent.
 

@@ -5,12 +5,14 @@ This module implements the Cooragent workflow engine that:
 2. Supports polish mode for hot-reloading agent prompts
 3. Shows unified diff when prompts are modified
 4. Manages workflow state and resumption
+5. Self-healing validation loops with ruff/mypy/pytest (Phase 5)
 """
 
 from __future__ import annotations
 
 import difflib
 import logging
+import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -33,6 +35,14 @@ class WorkflowState(Enum):
 
 
 @dataclass
+class ValidationResult:
+    """Result of validation checks."""
+
+    passed: bool
+    errors: list[str] = field(default_factory=list)
+
+
+@dataclass
 class StepExecution:
     """Result of a single workflow step execution."""
 
@@ -41,6 +51,9 @@ class StepExecution:
     output: str = ''
     error: Optional[str] = None
     execution_time_seconds: float = 0.0
+    validation_passed: bool = True
+    validation_errors: list[str] = field(default_factory=list)
+    self_healing_attempts: int = 0
 
 
 @dataclass
@@ -61,10 +74,14 @@ class WorkflowEngine:
         self,
         plugin_registry: PluginRegistry,
         agent_factory: AgentFactory,
+        enable_self_healing: bool = True,
+        max_self_healing_attempts: int = 3,
     ) -> None:
         self._plugin_registry = plugin_registry
         self._agent_factory = agent_factory
         self._active_workflow: Optional[WorkflowExecution] = None
+        self._enable_self_healing = enable_self_healing
+        self._max_self_healing_attempts = max_self_healing_attempts
 
     def execute_workflow(self, plan: WorkflowPlan) -> WorkflowExecution:
         """Execute a workflow plan from start to finish.
@@ -122,12 +139,18 @@ class WorkflowEngine:
             output = f'Step {step.step_id} executed by {step.agent_name}'
 
             execution_time = time.time() - start_time
-            return StepExecution(
+            result = StepExecution(
                 step_id=step.step_id,
                 success=True,
                 output=output,
                 execution_time_seconds=execution_time,
             )
+
+            # Run post-execution validation if enabled
+            if self._enable_self_healing:
+                result = self._validate_and_heal_step(step, result)
+
+            return result
         except Exception as exc:
             execution_time = time.time() - start_time
             return StepExecution(
@@ -136,6 +159,151 @@ class WorkflowEngine:
                 error=str(exc),
                 execution_time_seconds=execution_time,
             )
+
+    def _validate_and_heal_step(
+        self, step: WorkflowStep, result: StepExecution
+    ) -> StepExecution:
+        """Run validation and attempt self-healing if needed.
+
+        Args:
+            step: WorkflowStep that was executed.
+            result: StepExecution result to validate.
+
+        Returns:
+            Updated StepExecution with validation results.
+        """
+        validation_result = self._run_validation(step)
+
+        if validation_result.passed:
+            result.validation_passed = True
+            return result
+
+        # Validation failed, attempt self-healing
+        result.validation_passed = False
+        result.validation_errors = validation_result.errors
+
+        if result.self_healing_attempts >= self._max_self_healing_attempts:
+            logger.warning(
+                f'Max self-healing attempts ({self._max_self_healing_attempts}) '
+                f'reached for step {step.step_id}'
+            )
+            return result
+
+        result.self_healing_attempts += 1
+        logger.info(
+            f'Attempting self-healing (attempt {result.self_healing_attempts}) '
+            f'for step {step.step_id}'
+        )
+
+        # Generate self-correction prompt
+        correction_prompt = self._generate_self_correction_prompt(
+            step, validation_result.errors
+        )
+
+        # Hot-reload agent with correction prompt
+        try:
+            self._agent_factory.hot_reload_agent(step.agent_name, correction_prompt)
+            logger.info(f'Hot-reloaded agent {step.agent_name} with self-correction')
+
+            # Re-execute the step
+            return self._execute_step(step)
+        except Exception as exc:
+            logger.error(f'Self-healing failed: {exc}')
+            return result
+
+    def _run_validation(self, step: WorkflowStep) -> 'ValidationResult':
+        """Run validation checks on the workspace.
+
+        Args:
+            step: WorkflowStep to validate.
+
+        Returns:
+            ValidationResult with pass/fail status and errors.
+        """
+        errors = []
+
+        # Check for ruff
+        try:
+            result = subprocess.run(
+                ['ruff', 'check', '.'],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                errors.append(f'Ruff linting failed:\n{result.stdout}')
+        except FileNotFoundError:
+            logger.debug('Ruff not found, skipping ruff validation')
+        except subprocess.TimeoutExpired:
+            errors.append('Ruff validation timed out')
+        except Exception as exc:
+            logger.warning(f'Ruff validation error: {exc}')
+
+        # Check for mypy
+        try:
+            result = subprocess.run(
+                ['mypy', '.'],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                errors.append(f'Mypy type checking failed:\n{result.stdout}')
+        except FileNotFoundError:
+            logger.debug('Mypy not found, skipping mypy validation')
+        except subprocess.TimeoutExpired:
+            errors.append('Mypy validation timed out')
+        except Exception as exc:
+            logger.warning(f'Mypy validation error: {exc}')
+
+        # Run pytest if tests exist
+        try:
+            result = subprocess.run(
+                ['python3', '-m', 'pytest', '-xvs'],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            if result.returncode != 0:
+                errors.append(f'Pytest failed:\n{result.stdout}')
+        except FileNotFoundError:
+            logger.debug('Pytest not found, skipping test validation')
+        except subprocess.TimeoutExpired:
+            errors.append('Pytest validation timed out')
+        except Exception as exc:
+            logger.warning(f'Pytest validation error: {exc}')
+
+        return ValidationResult(passed=len(errors) == 0, errors=errors)
+
+    def _generate_self_correction_prompt(
+        self, step: WorkflowStep, errors: list[str]
+    ) -> str:
+        """Generate a self-correction prompt for the agent.
+
+        Args:
+            step: WorkflowStep that failed validation.
+            errors: List of validation errors.
+
+        Returns:
+            Self-correction prompt string.
+        """
+        error_summary = '\n'.join(f'- {e}' for e in errors)
+
+        return f"""# Self-Correction Instructions
+
+You are in self-healing mode. The previous execution of your task failed validation.
+
+## Validation Errors
+{error_summary}
+
+## Instructions
+1. Analyze the validation errors above.
+2. Fix the issues in your code.
+3. Ensure the code passes ruff, mypy, and pytest.
+4. Re-execute the task with the corrected code.
+
+Focus on fixing the specific errors reported. Do not make unnecessary changes.
+"""
 
     def enter_polish_mode(self, execution: WorkflowExecution) -> None:
         """Enter polish mode for a paused workflow.
