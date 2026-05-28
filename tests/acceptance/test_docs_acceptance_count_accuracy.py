@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -13,9 +14,9 @@ _ACCEPTANCE_DIR = _REPO / 'tests' / 'acceptance'
 
 
 def _collect_acceptance_count() -> int:
-    # Use uv run pytest
+    # Use sys.executable -m pytest
     result = subprocess.run(
-        ['uv', 'run', 'pytest', str(_ACCEPTANCE_DIR), '--collect-only', '-q'],
+        [sys.executable, '-m', 'pytest', str(_ACCEPTANCE_DIR), '--collect-only', '-q'],
         capture_output=True,
         text=True,
         check=False,

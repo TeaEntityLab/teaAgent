@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 STATUS_PATTERN = re.compile(r'`(\d+)\s+passed`')
@@ -16,9 +17,9 @@ def parse_passed_count(pytest_output: str) -> int:
 
 
 def run_acceptance_pytest() -> int:
-    # Use uv run pytest
+    # Use sys.executable -m pytest
     result = subprocess.run(
-        ['uv', 'run', 'pytest', 'tests/acceptance', '-q'],
+        [sys.executable, '-m', 'pytest', 'tests/acceptance', '-q'],
         capture_output=True,
         text=True,
         check=False,
@@ -30,9 +31,9 @@ def run_acceptance_pytest() -> int:
 
 
 def collect_acceptance_test_count(acceptance_tests_dir: Path) -> int:
-    # Use uv run pytest
+    # Use sys.executable -m pytest
     result = subprocess.run(
-        ['uv', 'run', 'pytest', str(acceptance_tests_dir), '--collect-only', '-q'],
+        [sys.executable, '-m', 'pytest', str(acceptance_tests_dir), '--collect-only', '-q'],
         capture_output=True,
         text=True,
         check=False,

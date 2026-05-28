@@ -147,9 +147,9 @@ def _collect_acceptance_test_files(acceptance_dir: Path) -> set[str]:
 
 
 def _collect_acceptance_test_count(acceptance_dir: Path) -> int:
-    # Use uv run pytest
+    # Use sys.executable -m pytest
     result = subprocess.run(
-        ['uv', 'run', 'pytest', str(acceptance_dir), '--collect-only', '-q'],
+        [sys.executable, '-m', 'pytest', str(acceptance_dir), '--collect-only', '-q'],
         capture_output=True,
         text=True,
         check=False,
