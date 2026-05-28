@@ -42,7 +42,10 @@ def memory_add_command(args: argparse.Namespace) -> int:
 
 def memory_list_command(args: argparse.Namespace) -> int:
     print_json(
-        [entry.to_dict() for entry in MemoryCatalog(args.root, readonly=True).list(limit=args.limit)]
+        [
+            entry.to_dict()
+            for entry in MemoryCatalog(args.root, readonly=True).list(limit=args.limit)
+        ]
     )
     return 0
 
@@ -51,7 +54,9 @@ def memory_search_command(args: argparse.Namespace) -> int:
     print_json(
         [
             entry.to_dict()
-            for entry in MemoryCatalog(args.root, readonly=True).search(args.query, limit=args.limit)
+            for entry in MemoryCatalog(args.root, readonly=True).search(
+                args.query, limit=args.limit
+            )
         ]
     )
     return 0
@@ -59,7 +64,9 @@ def memory_search_command(args: argparse.Namespace) -> int:
 
 def memory_show_command(args: argparse.Namespace) -> int:
     try:
-        print_json(MemoryCatalog(args.root, readonly=True).show(args.memory_id).to_dict())
+        print_json(
+            MemoryCatalog(args.root, readonly=True).show(args.memory_id).to_dict()
+        )
         return 0
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})

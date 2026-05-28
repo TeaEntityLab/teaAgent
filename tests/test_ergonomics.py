@@ -727,7 +727,9 @@ def test_resume_policy_strict_exact_match_wiring(tmp_path: Path) -> None:
     assert 'requires explicit approval' in str(exc_args.value)
 
 
-def test_legacy_approval_list_returns_stable_id_without_migration(tmp_path: Path) -> None:
+def test_legacy_approval_list_returns_stable_id_without_migration(
+    tmp_path: Path,
+) -> None:
     """Verify that readonly list_grants returns leg-* IDs without writing migration."""
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 

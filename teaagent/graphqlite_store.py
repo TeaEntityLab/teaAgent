@@ -51,9 +51,10 @@ class GraphQLiteGraphStore:
             self.graph = (graph_factory or load_graphqlite_graph)(self.config.database)
         except (GraphQLiteUnavailableError, GraphQLiteRuntimeError) as exc:
             import sys
+
             print(
-                f"[TeaAgent WARNING] GraphQLite runtime is unavailable: {exc}. "
-                f"Gracefully degrading to file-level semantic index & hybrid search fallback.",
+                f'[TeaAgent WARNING] GraphQLite runtime is unavailable: {exc}. '
+                f'Gracefully degrading to file-level semantic index & hybrid search fallback.',
                 file=sys.stderr,
             )
             self.graph = DummyKnowledgeGraph()

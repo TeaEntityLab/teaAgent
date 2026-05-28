@@ -91,7 +91,15 @@ def test_documented_smoke_commands_run_locally_without_network() -> None:
     for argv, verify in cases:
         result = _run_local(argv, cwd=root)
         # Allow preflight to fail in sandbox environments with restricted git/network access
-        if 'preflight' in argv and result.returncode != 0 and ('git' in result.stderr.lower() or 'network' in result.stderr.lower() or 'permission' in result.stderr.lower()):
+        if (
+            'preflight' in argv
+            and result.returncode != 0
+            and (
+                'git' in result.stderr.lower()
+                or 'network' in result.stderr.lower()
+                or 'permission' in result.stderr.lower()
+            )
+        ):
             # Expected failure in restricted environments
             continue
         assert result.returncode == 0, (

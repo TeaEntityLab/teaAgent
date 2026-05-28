@@ -14,7 +14,6 @@ from ._agent import (
     agent_subagent_review_list_command,
     agent_subagent_review_show_command,
     agent_undo_command,
-    interactive_review_command,
     automation_add_command,
     automation_delete_command,
     automation_list_command,
@@ -27,24 +26,7 @@ from ._agent import (
     automation_status_command,
     automation_template_command,
     automation_tick_command,
-)
-from ._chat import chat_command
-from ._experiment import (
-    experiment_cancel,
-    experiment_compare,
-    experiment_list,
-    experiment_select,
-)
-from ._sync import (
-    sync_export,
-    sync_import,
-    sync_status,
-)
-from ._replay import (
-    replay_fork,
-    replay_list,
-    replay_resume,
-    replay_steps,
+    interactive_review_command,
 )
 from ._audit import (
     audit_list_command,
@@ -53,15 +35,7 @@ from ._audit import (
     audit_show_command,
     audit_verify_command,
 )
-from ._env import (
-    env_lock_command,
-    env_provision_command,
-    env_verify_command,
-)
-from ._skill_publish import (
-    skill_publish_command,
-    skill_verify_tsb_command,
-)
+from ._chat import chat_command
 from ._cloud import (
     cloud_cancel_command,
     cloud_capabilities_command,
@@ -80,6 +54,11 @@ from ._doctor import (
     doctor_model,
     doctor_project,
     doctor_providers,
+)
+from ._env import (
+    env_lock_command,
+    env_provision_command,
+    env_verify_command,
 )
 from ._ergonomics import (
     approval_approve_command,
@@ -109,6 +88,12 @@ from ._ergonomics import (
     watch_command,
     yesterday_command,
 )
+from ._experiment import (
+    experiment_cancel,
+    experiment_compare,
+    experiment_list,
+    experiment_select,
+)
 from ._gateway import (
     gateway_list_command,
     gateway_start_command,
@@ -116,7 +101,6 @@ from ._gateway import (
 from ._marketplace import (
     skill_install_marketplace_command,
     skill_marketplace_list_command,
-    skill_publish_command,
     skill_search_command,
 )
 from ._mcp import mcp_serve_command
@@ -153,6 +137,12 @@ from ._model import (
     model_route,
     model_smoke,
 )
+from ._replay import (
+    replay_fork,
+    replay_list,
+    replay_resume,
+    replay_steps,
+)
 from ._skill import (
     skill_candidate_eval_command,
     skill_candidate_install_command,
@@ -161,6 +151,15 @@ from ._skill import (
     skill_candidate_review_command,
     skill_candidate_show_command,
     skill_explain_command,
+)
+from ._skill_publish import (
+    skill_publish_command,
+    skill_verify_tsb_command,
+)
+from ._sync import (
+    sync_export,
+    sync_import,
+    sync_status,
 )
 
 __all__ = [

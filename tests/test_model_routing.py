@@ -34,7 +34,9 @@ class ModelRoutingTests(unittest.TestCase):
     def test_analyze_complexity_high(self) -> None:
         self.assertEqual(analyze_complexity('redesign the system architecture'), 'high')
         self.assertEqual(analyze_complexity('implement distributed caching'), 'high')
-        self.assertEqual(analyze_complexity('add authentication and encryption'), 'high')
+        self.assertEqual(
+            analyze_complexity('add authentication and encryption'), 'high'
+        )
 
     def test_analyze_complexity_medium(self) -> None:
         self.assertEqual(analyze_complexity('add a new feature'), 'medium')
@@ -50,18 +52,18 @@ class ModelRoutingTests(unittest.TestCase):
         # Low complexity
         tokens = estimate_tokens('fix typo', 'low')
         self.assertGreater(tokens, 2000)  # Base buffer
-        
+
         # Medium complexity
         tokens = estimate_tokens('add feature', 'medium')
         self.assertGreater(tokens, 2000)
-        
+
         # High complexity
         tokens = estimate_tokens('redesign architecture', 'high')
         self.assertGreater(tokens, 2000)
 
     def test_route_model_includes_complexity(self) -> None:
         route = route_model('redesign the system architecture', provider='claude')
-        
+
         self.assertEqual(route.complexity, 'high')
         self.assertGreater(route.estimated_tokens, 0)
 
@@ -70,7 +72,7 @@ class ModelRoutingTests(unittest.TestCase):
         route = route_model('redesign architecture', provider='gpt')
         self.assertEqual(route.model, 'gpt-4o')
         self.assertEqual(route.complexity, 'high')
-        
+
         # Low complexity should use cheaper model
         route = route_model('update documentation', provider='gpt')
         self.assertEqual(route.model, 'gpt-4o-mini')

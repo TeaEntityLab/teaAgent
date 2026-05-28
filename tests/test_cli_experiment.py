@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
-from pathlib import Path
 
 from teaagent.cli._handlers._experiment import (
     experiment_cancel,
@@ -31,10 +29,26 @@ class ExperimentCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             # Initialize git repo
             import subprocess
+
             subprocess.run(['git', 'init'], cwd=tmp, capture_output=True, check=True)
-            subprocess.run(['git', 'config', 'user.email', 'test@test.com'], cwd=tmp, capture_output=True, check=True)
-            subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=tmp, capture_output=True, check=True)
-            subprocess.run(['git', 'commit', '--allow-empty', '-m', 'init'], cwd=tmp, capture_output=True, check=True)
+            subprocess.run(
+                ['git', 'config', 'user.email', 'test@test.com'],
+                cwd=tmp,
+                capture_output=True,
+                check=True,
+            )
+            subprocess.run(
+                ['git', 'config', 'user.name', 'Test'],
+                cwd=tmp,
+                capture_output=True,
+                check=True,
+            )
+            subprocess.run(
+                ['git', 'commit', '--allow-empty', '-m', 'init'],
+                cwd=tmp,
+                capture_output=True,
+                check=True,
+            )
 
             class Args:
                 root = tmp
@@ -45,6 +59,7 @@ class ExperimentCommandTests(unittest.TestCase):
     def test_experiment_compare_non_git_repo(self) -> None:
         """Test experiment compare in non-git repository."""
         with tempfile.TemporaryDirectory() as tmp:
+
             class Args:
                 root = tmp
                 run_id = 'test-run'
@@ -56,6 +71,7 @@ class ExperimentCommandTests(unittest.TestCase):
     def test_experiment_compare_no_options(self) -> None:
         """Test experiment compare with no options."""
         with tempfile.TemporaryDirectory() as tmp:
+
             class Args:
                 root = tmp
                 run_id = 'test-run'
@@ -67,6 +83,7 @@ class ExperimentCommandTests(unittest.TestCase):
     def test_experiment_select_non_git_repo(self) -> None:
         """Test experiment select in non-git repository."""
         with tempfile.TemporaryDirectory() as tmp:
+
             class Args:
                 root = tmp
                 run_id = 'test-run'
@@ -80,6 +97,7 @@ class ExperimentCommandTests(unittest.TestCase):
     def test_experiment_select_invalid_option(self) -> None:
         """Test experiment select with invalid option."""
         with tempfile.TemporaryDirectory() as tmp:
+
             class Args:
                 root = tmp
                 run_id = 'test-run'
@@ -93,6 +111,7 @@ class ExperimentCommandTests(unittest.TestCase):
     def test_experiment_cancel_non_git_repo(self) -> None:
         """Test experiment cancel in non-git repository."""
         with tempfile.TemporaryDirectory() as tmp:
+
             class Args:
                 root = tmp
                 run_id = 'test-run'
@@ -106,10 +125,26 @@ class ExperimentCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             # Initialize git repo
             import subprocess
+
             subprocess.run(['git', 'init'], cwd=tmp, capture_output=True, check=True)
-            subprocess.run(['git', 'config', 'user.email', 'test@test.com'], cwd=tmp, capture_output=True, check=True)
-            subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=tmp, capture_output=True, check=True)
-            subprocess.run(['git', 'commit', '--allow-empty', '-m', 'init'], cwd=tmp, capture_output=True, check=True)
+            subprocess.run(
+                ['git', 'config', 'user.email', 'test@test.com'],
+                cwd=tmp,
+                capture_output=True,
+                check=True,
+            )
+            subprocess.run(
+                ['git', 'config', 'user.name', 'Test'],
+                cwd=tmp,
+                capture_output=True,
+                check=True,
+            )
+            subprocess.run(
+                ['git', 'commit', '--allow-empty', '-m', 'init'],
+                cwd=tmp,
+                capture_output=True,
+                check=True,
+            )
 
             class Args:
                 root = tmp

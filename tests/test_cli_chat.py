@@ -23,16 +23,16 @@ def test_print_chat_help(capsys):
     """Test that chat help prints correctly."""
     print_chat_help()
     captured = capsys.readouterr()
-    assert "Chat Commands:" in captured.out
-    assert "/exit" in captured.out
-    assert "/help" in captured.out
+    assert 'Chat Commands:' in captured.out
+    assert '/exit' in captured.out
+    assert '/help' in captured.out
 
 
 def test_chat_command_with_invalid_args():
     """Test chat command with invalid arguments."""
     # Skip this test as it requires full config setup
     # The actual functionality is tested via integration tests
-    pytest.skip("Requires full config setup")
+    pytest.skip('Requires full config setup')
 
 
 def test_chat_command_smoke_test():
@@ -61,12 +61,13 @@ def test_chat_command_smoke_test():
 
         # Mock input to return /exit immediately
         import builtins
+
         original_input = builtins.input
-        builtins.input = lambda _: "/exit"
+        builtins.input = lambda _: '/exit'
 
         try:
             result = chat_command(args)
-            assert result == 0, f"Expected exit code 0, got {result}"
+            assert result == 0, f'Expected exit code 0, got {result}'
         finally:
             builtins.input = original_input
 
@@ -77,8 +78,8 @@ def test_run_chat_repl_exit_command(monkeypatch):
         config = ChatAgentConfig.from_root(tmpdir)
 
         # Mock input to return /exit immediately
-        inputs = ["/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         assert result == 0
@@ -89,8 +90,8 @@ def test_run_chat_repl_quit_command(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["quit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['quit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         assert result == 0
@@ -101,12 +102,12 @@ def test_run_chat_repl_help_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/help", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/help', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Chat Commands:" in captured.out
+        assert 'Chat Commands:' in captured.out
         assert result == 0
 
 
@@ -115,7 +116,7 @@ def test_run_chat_repl_keyboard_interrupt(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/exit"]
+        inputs = ['/exit']
         call_count = [0]
 
         def mock_input(prompt):
@@ -124,7 +125,7 @@ def test_run_chat_repl_keyboard_interrupt(monkeypatch):
                 raise KeyboardInterrupt()
             return inputs.pop(0)
 
-        monkeypatch.setattr("builtins.input", mock_input)
+        monkeypatch.setattr('builtins.input', mock_input)
 
         result = run_chat_repl(config)
         # Should handle interrupt and continue to exit
@@ -139,7 +140,7 @@ def test_run_chat_repl_eof(monkeypatch):
         def mock_input(prompt):
             raise EOFError()
 
-        monkeypatch.setattr("builtins.input", mock_input)
+        monkeypatch.setattr('builtins.input', mock_input)
 
         result = run_chat_repl(config)
         assert result == 0
@@ -150,8 +151,8 @@ def test_run_chat_repl_empty_input(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["", "  ", "\t", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['', '  ', '\t', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         assert result == 0
@@ -162,12 +163,12 @@ def test_run_chat_repl_context_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/context", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/context', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "No files currently targeted" in captured.out
+        assert 'No files currently targeted' in captured.out
         assert result == 0
 
 
@@ -177,16 +178,16 @@ def test_run_chat_repl_add_command(monkeypatch, capsys):
         config = ChatAgentConfig.from_root(tmpdir)
 
         # Create a test file
-        test_file = Path(tmpdir) / "test.py"
+        test_file = Path(tmpdir) / 'test.py'
         test_file.write_text("print('test')")
 
-        inputs = ["/add test.py", "/context", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/add test.py', '/context', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Added to context" in captured.out
-        assert "test.py" in captured.out
+        assert 'Added to context' in captured.out
+        assert 'test.py' in captured.out
         assert result == 0
 
 
@@ -196,16 +197,16 @@ def test_run_chat_repl_drop_command(monkeypatch, capsys):
         config = ChatAgentConfig.from_root(tmpdir)
 
         # Create a test file
-        test_file = Path(tmpdir) / "test.py"
+        test_file = Path(tmpdir) / 'test.py'
         test_file.write_text("print('test')")
 
-        inputs = ["/add test.py", "/drop test.py", "/context", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/add test.py', '/drop test.py', '/context', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Removed from context" in captured.out
-        assert "No files currently targeted" in captured.out
+        assert 'Removed from context' in captured.out
+        assert 'No files currently targeted' in captured.out
         assert result == 0
 
 
@@ -214,12 +215,12 @@ def test_run_chat_repl_cost_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/cost", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/cost', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Session cost" in captured.out
+        assert 'Session cost' in captured.out
         assert result == 0
 
 
@@ -228,12 +229,12 @@ def test_run_chat_repl_compact_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/compact", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/compact', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Compaction complete" in captured.out
+        assert 'Compaction complete' in captured.out
         assert result == 0
 
 
@@ -242,12 +243,12 @@ def test_run_chat_repl_provider_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/provider claude", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/provider claude', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Provider switched" in captured.out
+        assert 'Provider switched' in captured.out
         assert result == 0
 
 
@@ -256,12 +257,12 @@ def test_run_chat_repl_model_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/model claude-3-5-sonnet", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/model claude-3-5-sonnet', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Model switched" in captured.out
+        assert 'Model switched' in captured.out
         assert result == 0
 
 
@@ -270,13 +271,13 @@ def test_run_chat_repl_effort_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/effort low", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/effort low', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Effort level set to: low" in captured.out
-        assert "Budget limit" in captured.out
+        assert 'Effort level set to: low' in captured.out
+        assert 'Budget limit' in captured.out
         assert result == 0
 
 
@@ -285,14 +286,14 @@ def test_run_chat_repl_budget_command(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["/budget", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/budget', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
 
         result = run_chat_repl(config)
         captured = capsys.readouterr()
-        assert "Effort level" in captured.out
-        assert "Budget limit" in captured.out
-        assert "Session cost" in captured.out
+        assert 'Effort level' in captured.out
+        assert 'Budget limit' in captured.out
+        assert 'Session cost' in captured.out
         assert result == 0
 
 
@@ -303,6 +304,7 @@ def test_run_chat_repl_provider_command_updates_adapter(monkeypatch, capsys):
 
         # Mock the create_llm_adapter to track calls
         from unittest.mock import MagicMock, patch
+
         adapter_mock = MagicMock()
         adapter_calls = []
 
@@ -310,13 +312,16 @@ def test_run_chat_repl_provider_command_updates_adapter(monkeypatch, capsys):
             adapter_calls.append((provider, model))
             return adapter_mock
 
-        inputs = ["/provider gpt", "/exit"]
-        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter):
-            monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/provider gpt', '/exit']
+        with patch(
+            'teaagent.cli._handlers._chat.create_llm_adapter',
+            side_effect=mock_create_adapter,
+        ):
+            monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
             result = run_chat_repl(config)
 
         captured = capsys.readouterr()
-        assert "Provider switched" in captured.out
+        assert 'Provider switched' in captured.out
         # Verify adapter was recreated with new provider
         assert len(adapter_calls) >= 2  # Initial + swap
         assert result == 0
@@ -329,6 +334,7 @@ def test_run_chat_repl_model_command_updates_adapter(monkeypatch, capsys):
 
         # Mock the create_llm_adapter to track calls
         from unittest.mock import MagicMock, patch
+
         adapter_mock = MagicMock()
         adapter_calls = []
 
@@ -336,13 +342,16 @@ def test_run_chat_repl_model_command_updates_adapter(monkeypatch, capsys):
             adapter_calls.append((provider, model))
             return adapter_mock
 
-        inputs = ["/model gpt-4", "/exit"]
-        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter):
-            monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['/model gpt-4', '/exit']
+        with patch(
+            'teaagent.cli._handlers._chat.create_llm_adapter',
+            side_effect=mock_create_adapter,
+        ):
+            monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
             result = run_chat_repl(config)
 
         captured = capsys.readouterr()
-        assert "Model switched" in captured.out
+        assert 'Model switched' in captured.out
         # Verify adapter was recreated with new model
         assert len(adapter_calls) >= 2  # Initial + swap
         assert result == 0
@@ -355,6 +364,7 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
 
         # Mock the create_llm_adapter to avoid actual API calls
         from unittest.mock import MagicMock, patch
+
         adapter_mock = MagicMock()
 
         def mock_create_adapter(provider, *, model=None):
@@ -366,17 +376,28 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
         def mock_run_chat_agent(*, task, adapter, config):
             captured_configs.append(config)
             from teaagent.runner import RunResult
-            return RunResult(success=True, final_answer="test", iterations=0, tool_calls=0)
 
-        inputs = ["/effort high", "/exit"]
-        with patch('teaagent.cli._handlers._chat.create_llm_adapter', side_effect=mock_create_adapter), \
-             patch('teaagent.cli._handlers._chat.run_chat_agent', side_effect=mock_run_chat_agent):
-                monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
-                result = run_chat_repl(config)
+            return RunResult(
+                success=True, final_answer='test', iterations=0, tool_calls=0
+            )
+
+        inputs = ['/effort high', '/exit']
+        with (
+            patch(
+                'teaagent.cli._handlers._chat.create_llm_adapter',
+                side_effect=mock_create_adapter,
+            ),
+            patch(
+                'teaagent.cli._handlers._chat.run_chat_agent',
+                side_effect=mock_run_chat_agent,
+            ),
+        ):
+            monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
+            result = run_chat_repl(config)
 
         captured = capsys.readouterr()
-        assert "Effort level set to: high" in captured.out
-        assert "Budget limit: $50.00" in captured.out
+        assert 'Effort level set to: high' in captured.out
+        assert 'Budget limit: $50.00' in captured.out
         assert result == 0
 
 
@@ -395,9 +416,14 @@ def test_cli_default_entry_launches_chat():
 
     with patch('teaagent.cli.chat_command', side_effect=mock_chat_command):
         # Simulate running with no arguments
-        result = main(argv=[], _adapter_factory=MagicMock(), _serve_mcp_http=MagicMock(),
-                    _check_graphqlite=MagicMock(), _check_llm=MagicMock(),
-                    _run_model_conformance=MagicMock())
+        result = main(
+            argv=[],
+            _adapter_factory=MagicMock(),
+            _serve_mcp_http=MagicMock(),
+            _check_graphqlite=MagicMock(),
+            _check_llm=MagicMock(),
+            _run_model_conformance=MagicMock(),
+        )
 
     assert len(chat_called) == 1
     assert result == 0
@@ -441,12 +467,16 @@ def test_chat_parser_initial_task(monkeypatch, capsys):
     # Test that 'teaagent chat hello' parses task='hello', provider=None
     args = parser.parse_args(['chat', 'hello'])
     assert args.task == 'hello', f"Expected task='hello', got task={args.task}"
-    assert args.provider is None, f"Expected provider=None, got provider={args.provider}"
+    assert args.provider is None, (
+        f'Expected provider=None, got provider={args.provider}'
+    )
 
     # Test that 'teaagent chat hello openai' parses task='hello', provider='openai'
     args = parser.parse_args(['chat', 'hello', 'openai'])
     assert args.task == 'hello', f"Expected task='hello', got task={args.task}"
-    assert args.provider == 'openai', f"Expected provider='openai', got provider={args.provider}"
+    assert args.provider == 'openai', (
+        f"Expected provider='openai', got provider={args.provider}"
+    )
 
 
 def test_shell_escape_blocked_in_chat_repl(monkeypatch, capsys):
@@ -454,39 +484,39 @@ def test_shell_escape_blocked_in_chat_repl(monkeypatch, capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
 
-        inputs = ["!echo test", "/exit"]
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        inputs = ['!echo test', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
         result = run_chat_repl(config)
 
         captured = capsys.readouterr()
-        assert "disabled for security" in captured.out.lower()
-        assert "full terminal" in captured.out.lower()
+        assert 'disabled for security' in captured.out.lower()
+        assert 'full terminal' in captured.out.lower()
         assert result == 0
 
 
 def test_execute_shell_command_simple(capsys):
     """Test simple shell command execution."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        execute_shell_command("echo hello", Path(tmpdir))
+        execute_shell_command('echo hello', Path(tmpdir))
         captured = capsys.readouterr()
-        assert "hello" in captured.out
-        assert "Command completed successfully" in captured.out
+        assert 'hello' in captured.out
+        assert 'Command completed successfully' in captured.out
 
 
 def test_execute_shell_command_destructive_blocked(capsys):
     """Test that destructive commands are blocked."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        execute_shell_command("rm -rf /", Path(tmpdir))
+        execute_shell_command('rm -rf /', Path(tmpdir))
         captured = capsys.readouterr()
-        assert "Destructive command not allowed" in captured.out
+        assert 'Destructive command not allowed' in captured.out
 
 
 def test_execute_shell_command_not_found(capsys):
     """Test command not found error."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        execute_shell_command("nonexistent_command_xyz", Path(tmpdir))
+        execute_shell_command('nonexistent_command_xyz', Path(tmpdir))
         captured = capsys.readouterr()
-        assert "Command not found" in captured.out
+        assert 'Command not found' in captured.out
 
 
 def test_complete_file_path_basic():
@@ -495,15 +525,15 @@ def test_complete_file_path_basic():
         root = Path(tmpdir)
 
         # Create some test files
-        (root / "test_file.py").touch()
-        (root / "test_another.py").touch()
-        (root / "other.txt").touch()
+        (root / 'test_file.py').touch()
+        (root / 'test_another.py').touch()
+        (root / 'other.txt').touch()
 
         # Test completion
-        completions = complete_file_path("@test", root)
+        completions = complete_file_path('@test', root)
         assert len(completions) == 2
-        assert any("test_file.py" in c for c in completions)
-        assert any("test_another.py" in c for c in completions)
+        assert any('test_file.py' in c for c in completions)
+        assert any('test_another.py' in c for c in completions)
 
 
 def test_complete_file_path_with_directory():
@@ -512,16 +542,16 @@ def test_complete_file_path_with_directory():
         root = Path(tmpdir)
 
         # Create directory structure
-        src_dir = root / "src"
+        src_dir = root / 'src'
         src_dir.mkdir()
-        (src_dir / "auth.py").touch()
-        (src_dir / "main.py").touch()
+        (src_dir / 'auth.py').touch()
+        (src_dir / 'main.py').touch()
 
         # Test completion with directory
-        completions = complete_file_path("@src/", root)
+        completions = complete_file_path('@src/', root)
         assert len(completions) == 2
-        assert any("src/auth.py" in c for c in completions)
-        assert any("src/main.py" in c for c in completions)
+        assert any('src/auth.py' in c for c in completions)
+        assert any('src/main.py' in c for c in completions)
 
 
 def test_complete_file_path_no_match():
@@ -529,7 +559,7 @@ def test_complete_file_path_no_match():
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
 
-        completions = complete_file_path("@nonexistent", root)
+        completions = complete_file_path('@nonexistent', root)
         assert len(completions) == 0
 
 
@@ -539,7 +569,7 @@ def test_complete_symbol_basic():
         root = Path(tmpdir)
 
         # Create a test Python file with some functions
-        test_file = root / "test.py"
+        test_file = root / 'test.py'
         test_file.write_text("""
 def login():
     pass
@@ -552,7 +582,7 @@ class UserAuth:
 """)
 
         # Test symbol completion
-        completions = complete_symbol("@log", root)
+        completions = complete_symbol('@log', root)
         # This may return empty if code ontology fails, but should not crash
         assert isinstance(completions, list)
 
@@ -562,7 +592,7 @@ def test_complete_symbol_no_match():
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
 
-        completions = complete_symbol("@nonexistent", root)
+        completions = complete_symbol('@nonexistent', root)
         assert isinstance(completions, list)
 
 
@@ -577,27 +607,37 @@ def test_show_interactive_diff_basic(capsys, monkeypatch):
 
         # Initialize git repo
         subprocess.run(['git', 'init'], cwd=root, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=root, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=root, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=root,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=root, capture_output=True
+        )
 
         # Create initial commit
-        (root / "test.txt").write_text("initial content")
+        (root / 'test.txt').write_text('initial content')
         subprocess.run(['git', 'add', '.'], cwd=root, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=root, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'initial'], cwd=root, capture_output=True
+        )
 
         # Create a branch and make changes
-        subprocess.run(['git', 'checkout', '-b', 'test-branch'], cwd=root, capture_output=True)
-        (root / "test.txt").write_text("modified content")
+        subprocess.run(
+            ['git', 'checkout', '-b', 'test-branch'], cwd=root, capture_output=True
+        )
+        (root / 'test.txt').write_text('modified content')
 
         # Mock input to skip detailed diff
-        monkeypatch.setattr("builtins.input", lambda _: "n")
+        monkeypatch.setattr('builtins.input', lambda _: 'n')
 
         # Test diff display
-        result = show_interactive_diff(root, "test-branch")
+        result = show_interactive_diff(root, 'test-branch')
         captured = capsys.readouterr()
 
         assert result is True  # Should proceed
-        assert "Sandbox Merge Preview" in captured.out
+        assert 'Sandbox Merge Preview' in captured.out
 
 
 def test_suspend_to_background_basic(capsys):
@@ -611,8 +651,8 @@ def test_suspend_to_background_basic(capsys):
         captured = capsys.readouterr()
 
         assert run_id  # Should return a run_id
-        assert "Suspending session to background mode" in captured.out
-        assert "Session suspended successfully" in captured.out
+        assert 'Suspending session to background mode' in captured.out
+        assert 'Session suspended successfully' in captured.out
 
         # Check suspension file was created
         tea_dir = Path(tmpdir) / '.teaagent'
@@ -627,16 +667,24 @@ def test_suspend_to_background_with_dirty_workspace(capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize git repo
         subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmpdir,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True
+        )
 
         # Create initial commit
-        (Path(tmpdir) / "test.txt").write_text("initial content")
+        (Path(tmpdir) / 'test.txt').write_text('initial content')
         subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True
+        )
 
         # Make workspace dirty
-        (Path(tmpdir) / "test.txt").write_text("modified content")
+        (Path(tmpdir) / 'test.txt').write_text('modified content')
 
         config = ChatAgentConfig.from_root(tmpdir)
         session_context = {'observations': [], 'compaction_count': 0}
@@ -646,12 +694,13 @@ def test_suspend_to_background_with_dirty_workspace(capsys):
         captured = capsys.readouterr()
 
         assert run_id
-        assert "creating sandbox branch" in captured.out.lower()
+        assert 'creating sandbox branch' in captured.out.lower()
 
         # Verify suspension data includes sandbox branch
         tea_dir = Path(tmpdir) / '.teaagent'
         suspension_file = tea_dir / f'suspension-{run_id}.json'
         import json
+
         with open(suspension_file) as f:
             data = json.load(f)
         assert 'sandbox_branch' in data
@@ -668,7 +717,7 @@ def test_suspend_to_background_preserves_context(capsys):
         config = ChatAgentConfig.from_root(tmpdir)
         session_context = {
             'observations': [{'task': 'task1'}, {'task': 'task2'}],
-            'compaction_count': 3
+            'compaction_count': 3,
         }
         targeted_files = {src_dir / 'main.py'}
 
@@ -678,6 +727,7 @@ def test_suspend_to_background_preserves_context(capsys):
         tea_dir = Path(tmpdir) / '.teaagent'
         suspension_file = tea_dir / f'suspension-{run_id}.json'
         import json
+
         with open(suspension_file) as f:
             data = json.load(f)
 
@@ -694,13 +744,21 @@ def test_interactive_review_mode_no_changes(capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize git repo
         subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmpdir,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True
+        )
 
         # Create initial commit
-        (Path(tmpdir) / "test.txt").write_text("initial content")
+        (Path(tmpdir) / 'test.txt').write_text('initial content')
         subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True
+        )
 
         # Create suspension file for the run_id
         tea_dir = Path(tmpdir) / '.teaagent'
@@ -714,15 +772,19 @@ def test_interactive_review_mode_no_changes(capsys):
             'config': {},
             'session_context': {'observations_count': 0, 'compaction_count': 0},
             'targeted_files': [],
-            'audit_trail': {'suspension_time': __import__('time').time(), 'original_mode': 'repl', 'transition_type': 'keyboard_to_robot'}
+            'audit_trail': {
+                'suspension_time': __import__('time').time(),
+                'original_mode': 'repl',
+                'transition_type': 'keyboard_to_robot',
+            },
         }
         suspension_file.write_text(json.dumps(suspension_data, indent=2))
 
-        result = interactive_review_mode(tmpdir, "test-run-id")
+        result = interactive_review_mode(tmpdir, 'test-run-id')
         captured = capsys.readouterr()
 
         assert result == 0
-        assert "No changes detected to review" in captured.out
+        assert 'No changes detected to review' in captured.out
 
 
 def test_interactive_review_mode_invalid_run_id(capsys):
@@ -732,23 +794,31 @@ def test_interactive_review_mode_invalid_run_id(capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize git repo
         subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmpdir,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True
+        )
 
         # Create initial commit
-        (Path(tmpdir) / "test.txt").write_text("initial content")
+        (Path(tmpdir) / 'test.txt').write_text('initial content')
         subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True
+        )
 
         # Make changes
-        (Path(tmpdir) / "test.txt").write_text("modified content")
+        (Path(tmpdir) / 'test.txt').write_text('modified content')
 
-        result = interactive_review_mode(tmpdir, "invalid-run-id")
+        result = interactive_review_mode(tmpdir, 'invalid-run-id')
         captured = capsys.readouterr()
 
         # Should fail with error about missing suspension data
         assert result == 1
-        assert "No suspension data found" in captured.out
+        assert 'No suspension data found' in captured.out
 
 
 def test_interactive_review_mode_with_changes(capsys, monkeypatch):
@@ -759,13 +829,21 @@ def test_interactive_review_mode_with_changes(capsys, monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize git repo
         subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmpdir,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True
+        )
 
         # Create initial commit
-        (Path(tmpdir) / "test.txt").write_text("initial content")
+        (Path(tmpdir) / 'test.txt').write_text('initial content')
         subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True
+        )
 
         # Create suspension file for the run_id
         tea_dir = Path(tmpdir) / '.teaagent'
@@ -779,22 +857,28 @@ def test_interactive_review_mode_with_changes(capsys, monkeypatch):
             'config': {},
             'session_context': {'observations_count': 0, 'compaction_count': 0},
             'targeted_files': [],
-            'audit_trail': {'suspension_time': __import__('time').time(), 'original_mode': 'repl', 'transition_type': 'keyboard_to_robot'}
+            'audit_trail': {
+                'suspension_time': __import__('time').time(),
+                'original_mode': 'repl',
+                'transition_type': 'keyboard_to_robot',
+            },
         }
         suspension_file.write_text(json.dumps(suspension_data, indent=2))
 
         # Make changes
-        (Path(tmpdir) / "test.txt").write_text("modified content")
+        (Path(tmpdir) / 'test.txt').write_text('modified content')
 
         # Mock user input to skip the file (n for next)
-        inputs = ["n"]  # Skip the file
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0) if inputs else "n")
+        inputs = ['n']  # Skip the file
+        monkeypatch.setattr(
+            'builtins.input', lambda _: inputs.pop(0) if inputs else 'n'
+        )
 
-        interactive_review_mode(tmpdir, "test-run-id")
+        interactive_review_mode(tmpdir, 'test-run-id')
         captured = capsys.readouterr()
 
         # The function should complete
-        assert "Interactive Review Mode" in captured.out or "Review" in captured.out
+        assert 'Interactive Review Mode' in captured.out or 'Review' in captured.out
 
 
 def test_dual_mode_integration_suspension_to_review(capsys, monkeypatch):
@@ -805,19 +889,27 @@ def test_dual_mode_integration_suspension_to_review(capsys, monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize git repo
         subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmpdir,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True
+        )
 
         # Create initial commit
-        (Path(tmpdir) / "test.txt").write_text("initial content")
+        (Path(tmpdir) / 'test.txt').write_text('initial content')
         subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True
+        )
 
         # Step 1: Simulate REPL session suspension
         config = ChatAgentConfig.from_root(tmpdir)
         session_context = {
             'observations': [{'task': 'refactor authentication'}],
-            'compaction_count': 0
+            'compaction_count': 0,
         }
         targeted_files = set()
 
@@ -839,18 +931,20 @@ def test_dual_mode_integration_suspension_to_review(capsys, monkeypatch):
         assert suspension_data['audit_trail']['transition_type'] == 'keyboard_to_robot'
 
         # Step 2: Simulate background task making changes
-        (Path(tmpdir) / "test.txt").write_text("refactored content by background task")
+        (Path(tmpdir) / 'test.txt').write_text('refactored content by background task')
 
         # Step 3: Interactive review of background results
         # Mock user input to accept changes
-        inputs = ["y"]  # Accept the file
-        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0) if inputs else "n")
+        inputs = ['y']  # Accept the file
+        monkeypatch.setattr(
+            'builtins.input', lambda _: inputs.pop(0) if inputs else 'n'
+        )
 
         interactive_review_mode(tmpdir, run_id)
         captured = capsys.readouterr()
 
         # Verify review completed
-        assert "Interactive Review Mode" in captured.out or "Review" in captured.out
+        assert 'Interactive Review Mode' in captured.out or 'Review' in captured.out
 
         # Verify review file was created with ACP compliance
         review_file = tea_dir / f'review-{run_id}.json'
@@ -872,13 +966,21 @@ def test_acp_state_consistency_across_modes(capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize git repo
         subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmpdir,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True
+        )
 
         # Create initial commit
-        (Path(tmpdir) / "test.txt").write_text("initial content")
+        (Path(tmpdir) / 'test.txt').write_text('initial content')
         subprocess.run(['git', 'add', '.'], cwd=tmpdir, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'initial'], cwd=tmpdir, capture_output=True
+        )
 
         # Test suspension creates ACP-compliant state
         config = ChatAgentConfig.from_root(tmpdir)

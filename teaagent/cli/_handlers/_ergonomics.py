@@ -41,14 +41,15 @@ def yesterday_command(args: argparse.Namespace) -> int:
     runs = list_yesterday_runs(args.root, limit=args.limit)
     if sys.stdout.isatty():
         from teaagent.ergonomics.human_output import format_ascii_table
-        headers = ["Run ID", "Task", "Status", "Created At"]
-        keys = ["run_id", "task", "status", "created_at"]
+
+        headers = ['Run ID', 'Task', 'Status', 'Created At']
+        keys = ['run_id', 'task', 'status', 'created_at']
         truncated = []
         for r in runs:
             tr = dict(r)
-            task = tr.get("task", "")
+            task = tr.get('task', '')
             if len(task) > 40:
-                tr["task"] = task[:37] + "..."
+                tr['task'] = task[:37] + '...'
             truncated.append(tr)
         print(format_ascii_table(headers, truncated, keys))
     else:
@@ -60,14 +61,15 @@ def recall_command(args: argparse.Namespace) -> int:
     runs = list_recall_runs(args.root, limit=args.limit)
     if sys.stdout.isatty():
         from teaagent.ergonomics.human_output import format_ascii_table
-        headers = ["Run ID", "Task", "Status", "Created At"]
-        keys = ["run_id", "task", "status", "created_at"]
+
+        headers = ['Run ID', 'Task', 'Status', 'Created At']
+        keys = ['run_id', 'task', 'status', 'created_at']
         truncated = []
         for r in runs:
             tr = dict(r)
-            task = tr.get("task", "")
+            task = tr.get('task', '')
             if len(task) > 40:
-                tr["task"] = task[:37] + "..."
+                tr['task'] = task[:37] + '...'
             truncated.append(tr)
         print(format_ascii_table(headers, truncated, keys))
     else:
@@ -100,12 +102,13 @@ def background_list_command(args: argparse.Namespace) -> int:
     runs = BackgroundRunStore(args.root, readonly=True).list()
     if sys.stdout.isatty():
         from teaagent.ergonomics.human_output import format_ascii_table
-        headers = ["Background ID", "PID", "Label", "Alive", "Started At"]
-        keys = ["background_id", "pid", "label", "alive", "started_at"]
+
+        headers = ['Background ID', 'PID', 'Label', 'Alive', 'Started At']
+        keys = ['background_id', 'pid', 'label', 'alive', 'started_at']
         truncated = []
         for r in runs:
             tr = dict(r)
-            tr["background_id"] = tr.get("background_id", "")[:10]
+            tr['background_id'] = tr.get('background_id', '')[:10]
             truncated.append(tr)
         print(format_ascii_table(headers, truncated, keys))
     else:
@@ -580,7 +583,9 @@ def approval_approve_command(args: argparse.Namespace) -> int:
             if not ns.provider:
                 ns.provider = defaults.get('provider')
             if not ns.provider:
-                print_json({'status': 'error', 'message': 'provider required for resume'})
+                print_json(
+                    {'status': 'error', 'message': 'provider required for resume'}
+                )
                 return 1
             return agent_resume_command(ns)
         else:
@@ -604,6 +609,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
                 }
             )
             return 0
+
     return _wrap_approval_store_errors(_approve)
 
 
@@ -1117,6 +1123,7 @@ def approval_next_command(args: argparse.Namespace) -> int:
             }
         )
         return 0
+
     return _wrap_approval_store_errors(_next)
 
 

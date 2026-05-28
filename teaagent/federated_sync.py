@@ -11,28 +11,31 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
+from teaagent.graphqlite_store import GraphQLiteGraphStore
 
 
 @dataclass(frozen=True)
 class GraphChange:
     """Represents a single change to the graph."""
+
     change_id: str
     timestamp: float
     node_id: Optional[str] = None
     edge_id: Optional[str] = None
-    change_type: str = ""  # "node_add", "node_update", "node_delete", "edge_add", "edge_delete"
+    change_type: str = (
+        ''  # "node_add", "node_update", "node_delete", "edge_add", "edge_delete"
+    )
     data: dict[str, Any] = field(default_factory=dict)
-    source_agent_id: str = ""
+    source_agent_id: str = ''
 
 
 @dataclass(frozen=True)
 class SyncMessage:
     """Message sent between agents for graph synchronization."""
+
     message_id: str
     sender_agent_id: str
     timestamp: float
@@ -44,6 +47,7 @@ class SyncMessage:
 @dataclass(frozen=True)
 class SyncAck:
     """Acknowledgment message for sync confirmation."""
+
     message_id: str
     receiver_agent_id: str
     timestamp: float
@@ -55,6 +59,7 @@ class SyncAck:
 @dataclass(frozen=True)
 class SyncState:
     """Current synchronization state for an agent."""
+
     agent_id: str
     graph_version: str
     last_sync_time: float
@@ -65,6 +70,7 @@ class SyncState:
 @dataclass(frozen=True)
 class ApprovalRequestMessage:
     """Message for multi-sig approval requests broadcast via P2P sync."""
+
     request_id: str
     tool_name: str
     call_id: str
@@ -79,6 +85,7 @@ class ApprovalRequestMessage:
 @dataclass(frozen=True)
 class ApprovalSignatureMessage:
     """Message for peer signature responses."""
+
     request_id: str
     peer_id: str
     signature: str
@@ -107,11 +114,11 @@ class FederatedGraphSync:
         if not self._sync_state_path.exists():
             return SyncState(
                 agent_id=self._agent_id,
-                graph_version="0",
+                graph_version='0',
                 last_sync_time=0.0,
                 sequence_number=0,
             )
-        
+
         try:
             data = json.loads(self._sync_state_path.read_text(encoding='utf-8'))
             return SyncState(
@@ -124,7 +131,7 @@ class FederatedGraphSync:
         except (json.JSONDecodeError, KeyError):
             return SyncState(
                 agent_id=self._agent_id,
-                graph_version="0",
+                graph_version='0',
                 last_sync_time=0.0,
                 sequence_number=0,
             )
@@ -149,7 +156,11 @@ class FederatedGraphSync:
     def _update_graph_version(self) -> str:
         """Update graph version based on current state."""
         # Simple version increment - in production, use content hash
-        current_version = int(self._sync_state.graph_version) if self._sync_state.graph_version.isdigit() else 0
+        current_version = (
+            int(self._sync_state.graph_version)
+            if self._sync_state.graph_version.isdigit()
+            else 0
+        )
         new_version = str(current_version + 1)
         self._sync_state = SyncState(
             agent_id=self._sync_state.agent_id,
@@ -211,14 +222,16 @@ class FederatedGraphSync:
         self._save_sync_state()
 
         message = SyncMessage(
-            message_id=hashlib.sha256(f"{self._agent_id}{time.time()}".encode()).hexdigest()[:16],
+            message_id=hashlib.sha256(
+                f'{self._agent_id}{time.time()}'.encode()
+            ).hexdigest()[:16],
             sender_agent_id=self._agent_id,
             timestamp=time.time(),
             changes=list(self._pending_changes),
             sequence_number=self._sync_state.sequence_number,
             graph_version=self._sync_state.graph_version,
         )
-        
+
         self._pending_changes.clear()
         return message
 
@@ -235,7 +248,7 @@ class FederatedGraphSync:
                 timestamp=time.time(),
                 accepted_changes=[],
                 rejected_changes=[c.change_id for c in message.changes],
-                conflicts=["No graph store available"],
+                conflicts=['No graph store available'],
             )
 
         for change in message.changes:
@@ -246,7 +259,7 @@ class FederatedGraphSync:
                     rejected_changes.append(change.change_id)
             except Exception as exc:
                 rejected_changes.append(change.change_id)
-                conflicts.append(f"{change.change_id}: {str(exc)}")
+                conflicts.append(f'{change.change_id}: {str(exc)}')
 
         # Update peer state
         self._sync_state.peer_states[message.sender_agent_id] = {
@@ -271,15 +284,15 @@ class FederatedGraphSync:
 
     def _apply_change(self, change: GraphChange) -> bool:
         """Apply a single change to the graph store."""
-        if change.change_type == "node_add":
+        if change.change_type == 'node_add':
             return self._apply_node_add(change)
-        elif change.change_type == "node_update":
+        elif change.change_type == 'node_update':
             return self._apply_node_update(change)
-        elif change.change_type == "node_delete":
+        elif change.change_type == 'node_delete':
             return self._apply_node_delete(change)
-        elif change.change_type == "edge_add":
+        elif change.change_type == 'edge_add':
             return self._apply_edge_add(change)
-        elif change.change_type == "edge_delete":
+        elif change.change_type == 'edge_delete':
             return self._apply_edge_delete(change)
         return False
 
@@ -390,7 +403,7 @@ class FederatedGraphSync:
         path = Path(path)
         if not path.exists():
             return None
-        
+
         try:
             data = json.loads(path.read_text(encoding='utf-8'))
             changes = [
@@ -422,23 +435,28 @@ class FederatedGraphSync:
         peer_agent_ids: list[str],
     ) -> dict[str, bool]:
         """Broadcast approval request to peer agents for multi-sig quorum.
-        
+
         Args:
             request: Approval request message to broadcast.
             peer_agent_ids: List of peer agent IDs to broadcast to.
-            
+
         Returns:
             Dictionary mapping peer IDs to broadcast success status.
         """
         results = {}
-        
+
         for peer_id in peer_agent_ids:
             try:
                 # In production, this would send via HTTP/webhook to peer agents
                 # For now, we write to a local file simulating the broadcast
-                broadcast_path = self._root / '.teaagent' / 'pending_approvals' / f'{request.request_id}_{peer_id}.json'
+                broadcast_path = (
+                    self._root
+                    / '.teaagent'
+                    / 'pending_approvals'
+                    / f'{request.request_id}_{peer_id}.json'
+                )
                 broadcast_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 data = {
                     'request_id': request.request_id,
                     'tool_name': request.tool_name,
@@ -451,12 +469,12 @@ class FederatedGraphSync:
                     'timeout_seconds': request.timeout_seconds,
                     'target_peer_id': peer_id,
                 }
-                
+
                 broadcast_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
                 results[peer_id] = True
-            except Exception as exc:
+            except Exception:
                 results[peer_id] = False
-        
+
         return results
 
     def collect_approval_signatures(
@@ -465,24 +483,24 @@ class FederatedGraphSync:
         timeout_seconds: int,
     ) -> list[ApprovalSignatureMessage]:
         """Collect approval signatures from peers for a request.
-        
+
         Args:
             request_id: The approval request ID to collect signatures for.
             timeout_seconds: Maximum time to wait for signatures.
-            
+
         Returns:
             List of signature messages received from peers.
         """
         signatures = []
         approvals_dir = self._root / '.teaagent' / 'pending_approvals'
-        
+
         if not approvals_dir.exists():
             return signatures
-        
+
         # In production, this would poll for incoming signature messages
         # For now, we check for signature files in the approvals directory
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout_seconds:
             for sig_file in approvals_dir.glob(f'{request_id}_signature_*.json'):
                 try:
@@ -499,12 +517,12 @@ class FederatedGraphSync:
                     sig_file.unlink()
                 except (json.JSONDecodeError, KeyError):
                     continue
-            
+
             if signatures:
                 break
-            
+
             time.sleep(0.5)  # Poll interval
-        
+
         return signatures
 
     def submit_approval_signature(
@@ -515,20 +533,25 @@ class FederatedGraphSync:
         ssh_key_id: Optional[str] = None,
     ) -> bool:
         """Submit an approval signature for a request.
-        
+
         Args:
             request_id: The approval request ID.
             peer_id: The peer agent ID submitting the signature.
             signature: The cryptographic signature.
             ssh_key_id: Optional SSH key identifier.
-            
+
         Returns:
             True if signature was successfully submitted.
         """
         try:
-            sig_path = self._root / '.teaagent' / 'pending_approvals' / f'{request_id}_signature_{peer_id}.json'
+            sig_path = (
+                self._root
+                / '.teaagent'
+                / 'pending_approvals'
+                / f'{request_id}_signature_{peer_id}.json'
+            )
             sig_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             data = {
                 'request_id': request_id,
                 'peer_id': peer_id,
@@ -536,7 +559,7 @@ class FederatedGraphSync:
                 'ssh_key_id': ssh_key_id,
                 'timestamp': time.time(),
             }
-            
+
             sig_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
             return True
         except Exception:

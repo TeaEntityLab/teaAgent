@@ -10,7 +10,7 @@ import argparse
 import json
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from teaagent.git_sandbox import (
     ParallelExperimentStack,
@@ -32,11 +32,13 @@ def experiment_list(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
 
     if not is_git_repository(root):
-        print_json({
-            'ok': False,
-            'error': 'Not a git repository',
-            'branches': [],
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': 'Not a git repository',
+                'branches': [],
+            }
+        )
         return 1
 
     # Find orphaned branches
@@ -51,13 +53,16 @@ def experiment_list(args: argparse.Namespace) -> int:
             text=True,
             check=True,
         )
-        all_branches = result.stdout.strip().split('\n') if result.stdout.strip() else []
+        all_branches = (
+            result.stdout.strip().split('\n') if result.stdout.strip() else []
+        )
     except subprocess.CalledProcessError:
         all_branches = []
 
     # Filter sandbox branches
     sandbox_branches = [
-        b for b in all_branches
+        b
+        for b in all_branches
         if b.startswith('teaagent-sandbox-') or b.startswith('teaagent-run-')
     ]
 
@@ -87,19 +92,23 @@ def experiment_list(args: argparse.Namespace) -> int:
         elif branch.startswith('teaagent-run-'):
             run_id = branch.replace('teaagent-run-', '')
 
-        branches_info.append({
-            'branch_name': branch,
-            'run_id': run_id,
-            'orphaned': is_orphaned,
-            'current': is_current,
-        })
+        branches_info.append(
+            {
+                'branch_name': branch,
+                'run_id': run_id,
+                'orphaned': is_orphaned,
+                'current': is_current,
+            }
+        )
 
-    print_json({
-        'ok': True,
-        'current_branch': current_branch,
-        'branches': branches_info,
-        'orphaned_count': len(orphaned),
-    })
+    print_json(
+        {
+            'ok': True,
+            'current_branch': current_branch,
+            'branches': branches_info,
+            'orphaned_count': len(orphaned),
+        }
+    )
     return 0
 
 
@@ -115,21 +124,25 @@ def experiment_compare(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
 
     if not is_git_repository(root):
-        print_json({
-            'ok': False,
-            'error': 'Not a git repository',
-            'comparisons': {},
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': 'Not a git repository',
+                'comparisons': {},
+            }
+        )
         return 1
 
     # Parse options
     options = args.options.split(',') if args.options else []
     if not options:
-        print_json({
-            'ok': False,
-            'error': 'No options specified. Use --options opt1,opt2,...',
-            'comparisons': {},
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': 'No options specified. Use --options opt1,opt2,...',
+                'comparisons': {},
+            }
+        )
         return 1
 
     # Create parallel experiment stack
@@ -151,17 +164,21 @@ def experiment_compare(args: argparse.Namespace) -> int:
                 'passed': result.passed,
                 'duration_seconds': result.duration_seconds,
                 'exit_code': result.exit_code,
-                'output': result.output[:1000] if result.output else '',  # Truncate output
+                'output': result.output[:1000]
+                if result.output
+                else '',  # Truncate output
                 'error': result.error[:500] if result.error else '',  # Truncate error
             }
 
-    print_json({
-        'ok': True,
-        'run_id': args.run_id,
-        'options': options,
-        'comparisons': comparisons,
-        'test_results': test_results if test_results else None,
-    })
+    print_json(
+        {
+            'ok': True,
+            'run_id': args.run_id,
+            'options': options,
+            'comparisons': comparisons,
+            'test_results': test_results if test_results else None,
+        }
+    )
     return 0
 
 
@@ -177,10 +194,12 @@ def experiment_select(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
 
     if not is_git_repository(root):
-        print_json({
-            'ok': False,
-            'error': 'Not a git repository',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': 'Not a git repository',
+            }
+        )
         return 1
 
     # Parse options
@@ -188,17 +207,21 @@ def experiment_select(args: argparse.Namespace) -> int:
     selected = args.select
 
     if not options:
-        print_json({
-            'ok': False,
-            'error': 'No options specified. Use --options opt1,opt2,...',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': 'No options specified. Use --options opt1,opt2,...',
+            }
+        )
         return 1
 
     if selected not in options:
-        print_json({
-            'ok': False,
-            'error': f'Selected option "{selected}" not in options: {options}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Selected option "{selected}" not in options: {options}',
+            }
+        )
         return 1
 
     # Create parallel experiment stack
@@ -207,10 +230,12 @@ def experiment_select(args: argparse.Namespace) -> int:
     # Get the selected sandbox
     selected_sandbox = stack.get_sandbox(selected)
     if not selected_sandbox:
-        print_json({
-            'ok': False,
-            'error': f'Sandbox for option "{selected}" not found',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Sandbox for option "{selected}" not found',
+            }
+        )
         return 1
 
     # Merge selected branch with self-healing if configured
@@ -226,26 +251,30 @@ def experiment_select(args: argparse.Namespace) -> int:
     )
 
     if not merge_result.success:
-        print_json({
-            'ok': False,
-            'error': merge_result.error,
-            'has_conflicts': merge_result.has_conflicts,
-            'conflicted_files': merge_result.conflicted_files,
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': merge_result.error,
+                'has_conflicts': merge_result.has_conflicts,
+                'conflicted_files': merge_result.conflicted_files,
+            }
+        )
         return 1
 
     # Cleanup other branches
     cleanup_results = stack.cleanup_all(keep_best=selected)
 
-    print_json({
-        'ok': True,
-        'selected': selected,
-        'merge_result': {
-            'success': merge_result.success,
-            'branch_name': merge_result.branch_name,
-        },
-        'cleanup_results': cleanup_results,
-    })
+    print_json(
+        {
+            'ok': True,
+            'selected': selected,
+            'merge_result': {
+                'success': merge_result.success,
+                'branch_name': merge_result.branch_name,
+            },
+            'cleanup_results': cleanup_results,
+        }
+    )
     return 0
 
 
@@ -261,11 +290,13 @@ def experiment_cancel(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
 
     if not is_git_repository(root):
-        print_json({
-            'ok': False,
-            'error': 'Not a git repository',
-            'deleted': [],
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': 'Not a git repository',
+                'deleted': [],
+            }
+        )
         return 1
 
     # Parse options
@@ -279,11 +310,13 @@ def experiment_cancel(args: argparse.Namespace) -> int:
             if prune_sandbox_branch(root, branch_info['branch_name']):
                 deleted.append(branch_info['branch_name'])
 
-        print_json({
-            'ok': True,
-            'deleted': deleted,
-            'orphaned_only': True,
-        })
+        print_json(
+            {
+                'ok': True,
+                'deleted': deleted,
+                'orphaned_only': True,
+            }
+        )
         return 0
 
     # Delete specific experimental branches
@@ -292,11 +325,13 @@ def experiment_cancel(args: argparse.Namespace) -> int:
 
     deleted = [opt for opt, success in cleanup_results.items() if success]
 
-    print_json({
-        'ok': True,
-        'deleted': deleted,
-        'cleanup_results': cleanup_results,
-    })
+    print_json(
+        {
+            'ok': True,
+            'deleted': deleted,
+            'cleanup_results': cleanup_results,
+        }
+    )
     return 0
 
 

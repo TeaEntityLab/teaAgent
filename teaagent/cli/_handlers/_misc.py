@@ -70,69 +70,82 @@ def graphqlite_migrate(args: argparse.Namespace) -> int:
 def code_ontology_build(args: argparse.Namespace) -> int:
     """Build code ontology graph from source files."""
     root = Path(args.root).resolve()
-    
+
     # Initialize GraphQLite store
     db_path = root / '.teaagent' / 'graphqlite.db'
     store = GraphQLiteGraphStore(GraphQLiteConfig(database=str(db_path)))
-    
+
     # Build ontology
     extensions = getattr(args, 'extensions', None)
     if extensions:
         ext_list = extensions.split(',')
     else:
         ext_list = ['.py']
-    
+
     ontology = CodeOntologyGraph(root, graph_store=store)
     ontology.build(extensions=ext_list)
-    
+
     nodes = ontology.builder.get_nodes()
     edges = ontology.builder.get_edges()
-    
-    print_json({
-        'status': 'success',
-        'root': str(root),
-        'nodes_count': len(nodes),
-        'edges_count': len(edges),
-        'extensions': ext_list,
-        'database': str(db_path),
-    })
+
+    print_json(
+        {
+            'status': 'success',
+            'root': str(root),
+            'nodes_count': len(nodes),
+            'edges_count': len(edges),
+            'extensions': ext_list,
+            'database': str(db_path),
+        }
+    )
     return 0
 
 
 def code_ontology_query(args: argparse.Namespace) -> int:
     """Query code ontology for dependencies."""
     root = Path(args.root).resolve()
-    
+
     db_path = root / '.teaagent' / 'graphqlite.db'
     if not db_path.is_file():
-        print_json({'status': 'error', 'message': 'Code ontology database not found. Run "teaagent code-ontology build" first.'})
+        print_json(
+            {
+                'status': 'error',
+                'message': 'Code ontology database not found. Run "teaagent code-ontology build" first.',
+            }
+        )
         return 1
-    
+
     store = GraphQLiteGraphStore(GraphQLiteConfig(database=str(db_path)))
     ontology = CodeOntologyGraph(root, graph_store=store)
-    
+
     entity = args.entity
     direction = getattr(args, 'direction', 'both')
-    
+
     if direction not in ('upstream', 'downstream', 'both'):
-        print_json({'status': 'error', 'message': 'direction must be upstream, downstream, or both'})
+        print_json(
+            {
+                'status': 'error',
+                'message': 'direction must be upstream, downstream, or both',
+            }
+        )
         return 1
-    
+
     results = ontology.query_dependencies(entity, direction=direction)
-    
-    print_json({
-        'status': 'success',
-        'entity': entity,
-        'direction': direction,
-        'results': results,
-        'count': len(results),
-    })
+
+    print_json(
+        {
+            'status': 'success',
+            'entity': entity,
+            'direction': direction,
+            'results': results,
+            'count': len(results),
+        }
+    )
     return 0
 
 
 def ultrawork_start_command(args: argparse.Namespace) -> int:
     # Deprecated: redirect to BackgroundRunStore via UltraworkStore
-    from teaagent.ultrawork import UltraworkStore
 
     command = [
         sys.executable,
@@ -159,7 +172,6 @@ def ultrawork_start_command(args: argparse.Namespace) -> int:
 
 def ultrawork_list_command(args: argparse.Namespace) -> int:
     # Deprecated: redirect to BackgroundRunStore via UltraworkStore
-    from teaagent.ultrawork import UltraworkStore
 
     print_json(UltraworkStore(args.root, readonly=True).list())
     return 0
@@ -167,7 +179,6 @@ def ultrawork_list_command(args: argparse.Namespace) -> int:
 
 def ultrawork_show_command(args: argparse.Namespace) -> int:
     # Deprecated: redirect to BackgroundRunStore via UltraworkStore
-    from teaagent.ultrawork import UltraworkStore
 
     try:
         print_json(UltraworkStore(args.root, readonly=True).show(args.worker_id))
@@ -179,10 +190,13 @@ def ultrawork_show_command(args: argparse.Namespace) -> int:
 
 def ultrawork_logs_command(args: argparse.Namespace) -> int:
     # Deprecated: redirect to BackgroundRunStore via UltraworkStore
-    from teaagent.ultrawork import UltraworkStore
 
     try:
-        print_json(UltraworkStore(args.root, readonly=True).logs(args.worker_id, max_bytes=args.bytes))
+        print_json(
+            UltraworkStore(args.root, readonly=True).logs(
+                args.worker_id, max_bytes=args.bytes
+            )
+        )
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -191,7 +205,6 @@ def ultrawork_logs_command(args: argparse.Namespace) -> int:
 
 def ultrawork_stop_command(args: argparse.Namespace) -> int:
     # Deprecated: redirect to BackgroundRunStore via UltraworkStore
-    from teaagent.ultrawork import UltraworkStore
 
     try:
         print_json(UltraworkStore(args.root).stop(args.worker_id))
@@ -434,7 +447,7 @@ def print_json(value: Any) -> None:
 def print_table(data: list[dict[str, Any]]) -> None:
     """Print list of dicts as a formatted table."""
     if not data:
-        print("(empty)")
+        print('(empty)')
         return
 
     # Extract headers from first item
@@ -447,16 +460,16 @@ def print_table(data: list[dict[str, Any]]) -> None:
             col_widths[h] = max(col_widths[h], len(str(row.get(h, ''))))
 
     # Print header
-    header_line = "  ".join(f"{h:<{col_widths[h]}}" for h in headers)
+    header_line = '  '.join(f'{h:<{col_widths[h]}}' for h in headers)
     print(header_line)
-    print("  ".join("-" * col_widths[h] for h in headers))
+    print('  '.join('-' * col_widths[h] for h in headers))
 
     # Print rows
     for row in data:
-        print("  ".join(f"{str(row.get(h, '')):<{col_widths[h]}}" for h in headers))
+        print('  '.join(f'{str(row.get(h, "")):<{col_widths[h]}}' for h in headers))
 
 
 def print_dict(data: dict[str, Any]) -> None:
     """Print dict as formatted key-value pairs."""
     for key, value in data.items():
-        print(f"{key}: {value}")
+        print(f'{key}: {value}')

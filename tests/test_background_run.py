@@ -116,11 +116,11 @@ def test_readonly_background_dead_record_does_not_write_file(tmp_path: Path) -> 
     # Get record with readonly store
     readonly_store = BackgroundRunStore(tmp_path, readonly=True)
     shown = readonly_store.get('dead-readonly')
-    
+
     # Should return enriched data with stopped_at
     assert shown['alive'] is False
     assert 'stopped_at' in shown
-    
+
     # But file should not be modified
     current_content = record_path.read_text(encoding='utf-8')
     assert current_content == original_content
@@ -131,7 +131,7 @@ def test_readonly_background_dead_record_does_not_write_file(tmp_path: Path) -> 
     assert len(rows) == 1
     assert rows[0]['alive'] is False
     assert 'stopped_at' in rows[0]
-    
+
     # File still not modified
     current_content = record_path.read_text(encoding='utf-8')
     assert current_content == original_content
@@ -139,19 +139,19 @@ def test_readonly_background_dead_record_does_not_write_file(tmp_path: Path) -> 
 
 def test_background_stop_and_logs(tmp_path: Path) -> None:
     import sys
+
     store = BackgroundRunStore(tmp_path)
     record = store.start(
-        [sys.executable, '-c', "import time; time.sleep(5.0)"],
+        [sys.executable, '-c', 'import time; time.sleep(5.0)'],
         label='sleep-smoke',
     )
     assert record.background_id
-    
+
     # Check log tail initially (should be empty or contain nothing yet)
     logs = store.logs(record.background_id)
     assert logs['background_id'] == record.background_id
-    
+
     # Stop the worker
     stopped = store.stop(record.background_id, timeout_seconds=1.0)
     assert stopped['alive'] is False
     assert stopped['stop_signal'] in ('SIGTERM', 'SIGKILL')
-

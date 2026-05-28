@@ -9,7 +9,6 @@ from pathlib import Path
 
 from teaagent.git_sandbox import (
     GitBranchSandbox,
-    ParallelExperimentStack,
     resolve_conflicts_with_llm,
     run_lsp_validation,
 )

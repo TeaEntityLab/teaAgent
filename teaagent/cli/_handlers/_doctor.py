@@ -647,11 +647,11 @@ def doctor_all(args: argparse.Namespace) -> int:
     """Unified doctor command checking all subsystems with optional auto-repair."""
     checks: dict[str, Any] = {}
     repair_actions: list[str] = []
-    
+
     # GraphQLite check
     gql_ok, gql_message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
     checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
-    
+
     # Providers check
     provider_results = []
     configured_providers = args.provider
@@ -663,26 +663,31 @@ def doctor_all(args: argparse.Namespace) -> int:
         ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
         provider_results.append({'provider': provider, 'ok': ok, 'message': message})
     checks['providers'] = provider_results
-    
+
     # Security check
     root = Path(getattr(args, 'root', '.')).resolve()
     security = ApprovalPresetStore(root, readonly=True).check_security_health()
     checks['security'] = security
-    
+
     # Git sandbox check
     git_repo_ok = is_git_repository(root)
-    checks['git_sandbox'] = {'ok': git_repo_ok, 'message': 'Git repository available' if git_repo_ok else 'Not a git repository'}
-    
+    checks['git_sandbox'] = {
+        'ok': git_repo_ok,
+        'message': 'Git repository available'
+        if git_repo_ok
+        else 'Not a git repository',
+    }
+
     # Environment variables check
     env_checks = {
         'WORKERS_AI_BASE_URL': bool(os.environ.get('WORKERS_AI_BASE_URL')),
         'CLOUDFLARE_API_TOKEN': bool(os.environ.get('CLOUDFLARE_API_TOKEN')),
     }
     checks['environment'] = env_checks
-    
+
     # Overall status
     ok = gql_ok and all(item['ok'] for item in provider_results) and security['ok']
-    
+
     # Auto-repair logic
     repair = getattr(args, 'repair', False)
     if repair:
@@ -696,17 +701,22 @@ def doctor_all(args: argparse.Namespace) -> int:
                     for f in approval_dir.iterdir():
                         if f.is_file():
                             f.chmod(0o600)
-                    repair_actions.append('Fixed approval store permissions to 0700/0600')
-                    security = ApprovalPresetStore(root, readonly=True).check_security_health()
+                    repair_actions.append(
+                        'Fixed approval store permissions to 0700/0600'
+                    )
+                    security = ApprovalPresetStore(
+                        root, readonly=True
+                    ).check_security_health()
                     checks['security'] = security
             except Exception as exc:
                 repair_actions.append(f'Failed to fix permissions: {exc}')
-        
+
         # Run database migrations if needed
         if not gql_ok:
             try:
                 from teaagent.graphqlite_store import GraphQLiteGraphStore
-                store = GraphQLiteGraphStore(root)
+
+                GraphQLiteGraphStore(root)
                 # Attempt to initialize/migrate
                 repair_actions.append('Attempted GraphQLite database migration')
                 # Re-check after migration
@@ -714,7 +724,7 @@ def doctor_all(args: argparse.Namespace) -> int:
                 checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
             except Exception as exc:
                 repair_actions.append(f'Failed to migrate database: {exc}')
-    
+
     payload = {
         'ok': ok,
         'checks': checks,
@@ -746,7 +756,10 @@ def doctor_migration_command(args: argparse.Namespace) -> int:
 
 def doctor_git_sandbox(args: argparse.Namespace) -> int:
     """Check for orphaned git sandbox branches."""
-    from teaagent.git_sandbox import find_orphaned_sandbox_branches, prune_sandbox_branch
+    from teaagent.git_sandbox import (
+        find_orphaned_sandbox_branches,
+        prune_sandbox_branch,
+    )
 
     root = Path(getattr(args, 'root', '.')).resolve()
     prune = getattr(args, 'prune', False)
@@ -782,7 +795,9 @@ def doctor_git_sandbox(args: argparse.Namespace) -> int:
             'orphaned_branches': orphaned,
             'pruned': pruned,
             'failed': failed,
-            'message': f'Pruned {len(pruned)} branches' if pruned else 'No branches pruned',
+            'message': f'Pruned {len(pruned)} branches'
+            if pruned
+            else 'No branches pruned',
         }
         print_json(payload)
         return 0 if len(failed) == 0 else 1
@@ -792,10 +807,14 @@ def doctor_git_sandbox(args: argparse.Namespace) -> int:
             'mode': 'check',
             'root': str(root),
             'orphaned_branches': orphaned,
-            'message': f'Found {len(orphaned)} orphaned branches' if orphaned else 'No orphaned branches',
+            'message': f'Found {len(orphaned)} orphaned branches'
+            if orphaned
+            else 'No orphaned branches',
             'next_steps': [
                 'teaagent doctor git-sandbox --prune',
-            ] if orphaned else [],
+            ]
+            if orphaned
+            else [],
         }
         print_json(payload)
         return 0 if len(orphaned) == 0 else 1

@@ -738,7 +738,7 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
             result = store.check_security_health(fix_permissions=True)
             mode_after = teaagent_dir.stat().st_mode & 0o777
             self.assertEqual(mode_after, 0o700)
-            dir_check = next(
+            next(
                 c for c in result['checks'] if c['name'] == 'teaagent_dir_mode'
             )
 
@@ -777,7 +777,7 @@ class MultiSigQuorumTests(unittest.TestCase):
             permission_mode=PermissionMode.PROMPT,
             multi_sig_config=config,
         )
-        
+
         # Should still require normal approval
         with self.assertRaises(ToolPermissionError):
             policy.assert_allowed(
@@ -795,72 +795,70 @@ class MultiSigQuorumTests(unittest.TestCase):
             multi_sig_config=config,
             agent_id='test-agent',
         )
-        
+
         # Should detect /prod path as high-risk
-        self.assertTrue(policy._is_high_risk_operation(
-            'workspace_write_file',
-            {'path': '/prod/config.json'}
-        ))
-        
+        self.assertTrue(
+            policy._is_high_risk_operation(
+                'workspace_write_file', {'path': '/prod/config.json'}
+            )
+        )
+
         # Should detect /production path in arguments
-        self.assertTrue(policy._is_high_risk_operation(
-            'workspace_run_shell_mutate',
-            {'command': 'deploy /production/app'}
-        ))
-        
+        self.assertTrue(
+            policy._is_high_risk_operation(
+                'workspace_run_shell_mutate', {'command': 'deploy /production/app'}
+            )
+        )
+
         # Should detect delete operations
-        self.assertTrue(policy._is_high_risk_operation(
-            'workspace_run_shell_mutate',
-            {'command': 'rm -rf /tmp'}
-        ))
+        self.assertTrue(
+            policy._is_high_risk_operation(
+                'workspace_run_shell_mutate', {'command': 'rm -rf /tmp'}
+            )
+        )
 
     def test_high_risk_detection_custom_patterns(self) -> None:
         """Verify custom high-risk pattern detection."""
         config = MultiSigQuorumConfig(
-            enabled=True,
-            high_risk_patterns=['/critical', 'deploy']
+            enabled=True, high_risk_patterns=['/critical', 'deploy']
         )
         policy = ApprovalPolicy(
             permission_mode=PermissionMode.PROMPT,
             multi_sig_config=config,
             agent_id='test-agent',
         )
-        
+
         # Should detect custom patterns
-        self.assertTrue(policy._is_high_risk_operation(
-            'workspace_write_file',
-            {'path': '/critical/data.json'}
-        ))
-        
-        self.assertTrue(policy._is_high_risk_operation(
-            'workspace_run_shell_mutate',
-            {'command': './deploy.sh'}
-        ))
+        self.assertTrue(
+            policy._is_high_risk_operation(
+                'workspace_write_file', {'path': '/critical/data.json'}
+            )
+        )
+
+        self.assertTrue(
+            policy._is_high_risk_operation(
+                'workspace_run_shell_mutate', {'command': './deploy.sh'}
+            )
+        )
 
     def test_approval_request_hash_generation(self) -> None:
         """Verify approval request hash generation is deterministic."""
         policy = ApprovalPolicy(agent_id='test-agent')
-        
+
         hash1 = policy._generate_approval_hash(
-            'workspace_write_file',
-            'call-1',
-            {'path': 'test.txt'}
+            'workspace_write_file', 'call-1', {'path': 'test.txt'}
         )
-        
+
         hash2 = policy._generate_approval_hash(
-            'workspace_write_file',
-            'call-1',
-            {'path': 'test.txt'}
+            'workspace_write_file', 'call-1', {'path': 'test.txt'}
         )
-        
+
         # Same inputs should produce same hash
         self.assertEqual(hash1, hash2)
-        
+
         # Different inputs should produce different hash
         hash3 = policy._generate_approval_hash(
-            'workspace_write_file',
-            'call-1',
-            {'path': 'different.txt'}
+            'workspace_write_file', 'call-1', {'path': 'different.txt'}
         )
         self.assertNotEqual(hash1, hash3)
 
@@ -872,7 +870,7 @@ class MultiSigQuorumTests(unittest.TestCase):
             multi_sig_config=config,
             agent_id='',  # Empty agent_id
         )
-        
+
         # Should fall back to normal approval flow
         with self.assertRaises(ToolPermissionError):
             policy.assert_allowed(
@@ -890,14 +888,12 @@ class MultiSigQuorumTests(unittest.TestCase):
             multi_sig_config=config,
             agent_id='test-agent',
         )
-        
+
         # Stub implementation should return False (no signatures collected)
         result = policy._check_multi_sig_quorum(
-            'workspace_write_file',
-            'call-1',
-            {'path': '/prod/config.json'}
+            'workspace_write_file', 'call-1', {'path': '/prod/config.json'}
         )
-        
+
         self.assertFalse(result)
 
 

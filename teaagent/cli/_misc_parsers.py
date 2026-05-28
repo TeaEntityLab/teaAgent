@@ -7,6 +7,12 @@ from teaagent.llm import available_providers
 from teaagent.policy import PermissionMode
 
 
+def _deprecation_warning(args: argparse.Namespace) -> int:
+    """Handler for deprecated commands."""
+    print('This command is deprecated and not yet implemented.')
+    return 1
+
+
 def register(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
     handlers: dict[str, Callable],
@@ -518,7 +524,8 @@ def _audit(
 
     if verify_handler is not None:
         verify_cmd = subs.add_parser(
-            'verify', help='Verify cryptographic audit chain integrity and generate attestation.'
+            'verify',
+            help='Verify cryptographic audit chain integrity and generate attestation.',
         )
         verify_cmd.add_argument('--root', default='.', help='Workspace root.')
         verify_cmd.add_argument(
@@ -735,7 +742,9 @@ def _experiment(
     select_handler: Optional[Callable],
     cancel_handler: Optional[Callable],
 ) -> None:
-    experiment = subparsers.add_parser('experiment', help='Manage parallel sandbox experiments.')
+    experiment = subparsers.add_parser(
+        'experiment', help='Manage parallel sandbox experiments.'
+    )
     subs = experiment.add_subparsers(dest='experiment_command', required=True)
 
     list_cmd = subs.add_parser('list', help='List all sandbox branches.')
@@ -780,7 +789,9 @@ def _experiment(
     )
     compare.set_defaults(func=compare_handler or _deprecation_warning)
 
-    select = subs.add_parser('select', help='Select and merge the best experimental branch.')
+    select = subs.add_parser(
+        'select', help='Select and merge the best experimental branch.'
+    )
     select.add_argument(
         '--root',
         default='.',
@@ -847,7 +858,9 @@ def _sync(
     status_handler: Optional[Callable],
 ) -> None:
     """Register sync subcommands."""
-    sync_parser = subparsers.add_parser('sync', help='Federated multi-agent graph synchronization')
+    sync_parser = subparsers.add_parser(
+        'sync', help='Federated multi-agent graph synchronization'
+    )
     subs = sync_parser.add_subparsers(dest='sync_command', required=True)
 
     export_cmd = subs.add_parser('export', help='Export sync message for P2P transfer')
@@ -908,7 +921,9 @@ def _replay(
     resume_handler: Optional[Callable],
 ) -> None:
     """Register replay subcommands."""
-    replay_parser = subparsers.add_parser('replay', help='Time-travel replay and debugging')
+    replay_parser = subparsers.add_parser(
+        'replay', help='Time-travel replay and debugging'
+    )
     subs = replay_parser.add_subparsers(dest='replay_command', required=True)
 
     list_cmd = subs.add_parser('list', help='List available runs for replay')
@@ -962,7 +977,9 @@ def _replay(
     )
     fork_cmd.set_defaults(func=fork_handler or _deprecation_warning)
 
-    resume_cmd = subs.add_parser('resume', help='Resume execution from a replay checkpoint')
+    resume_cmd = subs.add_parser(
+        'resume', help='Resume execution from a replay checkpoint'
+    )
     resume_cmd.add_argument(
         '--root',
         default='.',
@@ -983,17 +1000,25 @@ def _env(
     lock_handler: Callable,
 ) -> None:
     """Register environment subcommands."""
-    env_parser = subparsers.add_parser('env', help='Hermetic environment provisioning and verification')
+    env_parser = subparsers.add_parser(
+        'env', help='Hermetic environment provisioning and verification'
+    )
     subs = env_parser.add_subparsers(dest='env_command', required=True)
 
-    provision_cmd = subs.add_parser('provision', help='Provision hermetic environment from teaagent.toml')
+    provision_cmd = subs.add_parser(
+        'provision', help='Provision hermetic environment from teaagent.toml'
+    )
     provision_cmd.add_argument('--root', default='.', help='Workspace root.')
     provision_cmd.set_defaults(func=provision_handler)
 
-    verify_cmd = subs.add_parser('verify', help='Verify environment compliance against lockfile')
+    verify_cmd = subs.add_parser(
+        'verify', help='Verify environment compliance against lockfile'
+    )
     verify_cmd.add_argument('--root', default='.', help='Workspace root.')
     verify_cmd.set_defaults(func=verify_handler)
 
-    lock_cmd = subs.add_parser('lock', help='Generate lockfile from current environment')
+    lock_cmd = subs.add_parser(
+        'lock', help='Generate lockfile from current environment'
+    )
     lock_cmd.add_argument('--root', default='.', help='Workspace root.')
     lock_cmd.set_defaults(func=lock_handler)

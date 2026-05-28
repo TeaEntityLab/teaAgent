@@ -5,7 +5,6 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import unittest
-from pathlib import Path
 
 from teaagent.git_sandbox import ParallelExperimentStack, TestExecutionResult
 
@@ -34,7 +33,7 @@ class QualityMatrixTests(unittest.TestCase):
             results = stack.run_tests(['echo', 'test'])
 
             self.assertEqual(len(results), 2)
-            for option, result in results.items():
+            for _option, result in results.items():
                 self.assertFalse(result.passed)
                 self.assertIn('Not a git repository', result.error)
 

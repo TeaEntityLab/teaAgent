@@ -9,8 +9,8 @@ This module provides persistent memory features including:
 from __future__ import annotations
 
 from teaagent.memory.failure_card import FailureCard, FailureCardStorage
-from teaagent.memory.pinned_file import PinnedFile, PinnedFileStorage
 from teaagent.memory.file_watcher import FileWatcher
+from teaagent.memory.pinned_file import PinnedFile, PinnedFileStorage
 
 # Import from the legacy memory module
 from teaagent.memory_legacy import (
@@ -21,13 +21,13 @@ from teaagent.memory_legacy import (
 )
 
 __all__ = [
-    "FailureCard",
-    "FailureCardStorage",
-    "PinnedFile",
-    "PinnedFileStorage",
-    "FileWatcher",
-    "MemoryCatalog",
-    "MemoryEntry",
-    "memory_entries_to_prompt",
-    "memory_entry_from_payload",
+    'FailureCard',
+    'FailureCardStorage',
+    'PinnedFile',
+    'PinnedFileStorage',
+    'FileWatcher',
+    'MemoryCatalog',
+    'MemoryEntry',
+    'memory_entries_to_prompt',
+    'memory_entry_from_payload',
 ]

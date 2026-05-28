@@ -119,8 +119,8 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True):
-            with patch('builtins.input', return_value='d'):
+        with patch('sys.stdin.isatty', return_value=True), \
+             patch('builtins.input', return_value='d'):
                 with self.assertRaises(ToolPermissionError) as cm:
                     policy.assert_allowed(
                         tool_name='workspace_write_file',
@@ -136,8 +136,8 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         jit_state = JITApprovalState()
         arguments = {'path': '/tmp/test.txt'}
 
-        with patch('sys.stdin.isatty', return_value=True):
-            with patch('builtins.input', return_value='e'):
+        with patch('sys.stdin.isatty', return_value=True), \
+             patch('builtins.input', return_value='e'):
                 with self.assertRaises(ToolPermissionError) as cm:
                     policy.assert_allowed(
                         tool_name='workspace_write_file',
@@ -155,8 +155,8 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True):
-            with patch('builtins.input', return_value='o'):
+        with patch('sys.stdin.isatty', return_value=True), \
+             patch('builtins.input', return_value='o'):
                 # Should not raise error
                 policy.assert_allowed(
                     tool_name='workspace_write_file',
@@ -172,8 +172,8 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True):
-            with patch('builtins.input', return_value='s'):
+        with patch('sys.stdin.isatty', return_value=True), \
+             patch('builtins.input', return_value='s'):
                 # Should not raise error
                 policy.assert_allowed(
                     tool_name='workspace_write_file',
@@ -182,15 +182,17 @@ class ApprovalPolicyJITTests(unittest.TestCase):
                     jit_state=jit_state,
                 )
                 # Tool should be session-approved
-                self.assertTrue(jit_state.is_tool_session_approved('workspace_write_file'))
+                self.assertTrue(
+                    jit_state.is_tool_session_approved('workspace_write_file')
+                )
 
     def test_jit_prompt_interrupted(self) -> None:
         """Test JIT prompt with keyboard interrupt."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True):
-            with patch('builtins.input', side_effect=KeyboardInterrupt):
+        with patch('sys.stdin.isatty', return_value=True), \
+             patch('builtins.input', side_effect=KeyboardInterrupt):
                 with self.assertRaises(ToolPermissionError) as cm:
                     policy.assert_allowed(
                         tool_name='workspace_write_file',
@@ -205,8 +207,8 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True):
-            with patch('builtins.input', side_effect=['x', 'y', 'o']):
+        with patch('sys.stdin.isatty', return_value=True), \
+             patch('builtins.input', side_effect=['x', 'y', 'o']):
                 # Should not raise error after valid input
                 policy.assert_allowed(
                     tool_name='workspace_write_file',

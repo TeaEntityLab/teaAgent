@@ -38,18 +38,22 @@ def handle_memory_failures(root: Path) -> None:
         cards = storage.list_all()
 
         if not cards:
-            print("[TeaAgent] No failure cards recorded.")
+            print('[TeaAgent] No failure cards recorded.')
             return
 
-        print(f"[TeaAgent] Failure Cards ({len(cards)} total):")
+        print(f'[TeaAgent] Failure Cards ({len(cards)} total):')
         for i, card in enumerate(cards, 1):
-            timestamp_str = datetime.fromtimestamp(card.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"  [{i}] Run #{card.run_id} - {card.error_type} at {card.file_path}:{card.line_number if card.line_number else '?'} ({timestamp_str})")
-            print(f"      Task: {card.task_description}")
-            print(f"      Error: {card.error_message}")
+            timestamp_str = datetime.fromtimestamp(card.timestamp).strftime(
+                '%Y-%m-%d %H:%M:%S'
+            )
+            print(
+                f'  [{i}] Run #{card.run_id} - {card.error_type} at {card.file_path}:{card.line_number if card.line_number else "?"} ({timestamp_str})'
+            )
+            print(f'      Task: {card.task_description}')
+            print(f'      Error: {card.error_message}')
             print()
     except Exception as exc:
-        print(f"[TeaAgent] Error retrieving failure cards: {exc}")
+        print(f'[TeaAgent] Error retrieving failure cards: {exc}')
 
 
 def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
@@ -65,14 +69,14 @@ def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
 
         parts = command.split()
         if len(parts) < 2:
-            print("[TeaAgent] Usage: /pin <file>")
+            print('[TeaAgent] Usage: /pin <file>')
             return
 
         file_path = parts[1]
         storage = PinnedFileStorage(root)
 
         if storage.add(file_path):
-            print(f"[TeaAgent] 📌 Pinned: {file_path}")
+            print(f'[TeaAgent] 📌 Pinned: {file_path}')
             # Restart file watcher to include new file
             if watcher_callback:
                 watcher_callback()
@@ -80,11 +84,11 @@ def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
             # Check if file exists
             full_path = root / file_path
             if not full_path.exists():
-                print(f"[TeaAgent] ❌ Error: File not found: {file_path}")
+                print(f'[TeaAgent] ❌ Error: File not found: {file_path}')
             else:
-                print(f"[TeaAgent] ❌ Error: File is already pinned: {file_path}")
+                print(f'[TeaAgent] ❌ Error: File is already pinned: {file_path}')
     except Exception as exc:
-        print(f"[TeaAgent] Error pinning file: {exc}")
+        print(f'[TeaAgent] Error pinning file: {exc}')
 
 
 def handle_unpin(root: Path, command: str, watcher_callback=None) -> None:
@@ -100,21 +104,21 @@ def handle_unpin(root: Path, command: str, watcher_callback=None) -> None:
 
         parts = command.split()
         if len(parts) < 2:
-            print("[TeaAgent] Usage: /unpin <file>")
+            print('[TeaAgent] Usage: /unpin <file>')
             return
 
         file_path = parts[1]
         storage = PinnedFileStorage(root)
 
         if storage.remove(file_path):
-            print(f"[TeaAgent] 📌 Unpinned: {file_path}")
+            print(f'[TeaAgent] 📌 Unpinned: {file_path}')
             # Restart file watcher to update watched files
             if watcher_callback:
                 watcher_callback()
         else:
-            print(f"[TeaAgent] ❌ Error: File is not pinned: {file_path}")
+            print(f'[TeaAgent] ❌ Error: File is not pinned: {file_path}')
     except Exception as exc:
-        print(f"[TeaAgent] Error unpinning file: {exc}")
+        print(f'[TeaAgent] Error unpinning file: {exc}')
 
 
 def handle_pinned(root: Path) -> None:
@@ -132,15 +136,17 @@ def handle_pinned(root: Path) -> None:
         pinned_files = storage.list_all()
 
         if not pinned_files:
-            print("[TeaAgent] No files are currently pinned.")
+            print('[TeaAgent] No files are currently pinned.')
             return
 
-        print(f"[TeaAgent] Pinned Files ({len(pinned_files)}):")
+        print(f'[TeaAgent] Pinned Files ({len(pinned_files)}):')
         for i, pf in enumerate(pinned_files, 1):
-            modified_str = datetime.fromtimestamp(pf.last_modified).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"  [{i}] {pf.file_path} - last modified: {modified_str}")
+            modified_str = datetime.fromtimestamp(pf.last_modified).strftime(
+                '%Y-%m-%d %H:%M:%S'
+            )
+            print(f'  [{i}] {pf.file_path} - last modified: {modified_str}')
     except Exception as exc:
-        print(f"[TeaAgent] Error listing pinned files: {exc}")
+        print(f'[TeaAgent] Error listing pinned files: {exc}')
 
 
 def handle_memory_clear(root: Path, command: str) -> None:
@@ -165,20 +171,22 @@ def handle_memory_clear(root: Path, command: str) -> None:
                 if 0 <= index < len(cards):
                     card_id = cards[index].id
                     if storage.clear_by_id(card_id):
-                        print(f"[TeaAgent] Cleared failure card #{index + 1} (Run #{cards[index].run_id})")
+                        print(
+                            f'[TeaAgent] Cleared failure card #{index + 1} (Run #{cards[index].run_id})'
+                        )
                     else:
-                        print(f"[TeaAgent] Failed to clear failure card #{index + 1}")
+                        print(f'[TeaAgent] Failed to clear failure card #{index + 1}')
                 else:
-                    print(f"[TeaAgent] Invalid index: {index + 1}")
+                    print(f'[TeaAgent] Invalid index: {index + 1}')
             except ValueError:
-                print("[TeaAgent] Invalid index. Use: /memory clear <number>")
+                print('[TeaAgent] Invalid index. Use: /memory clear <number>')
         else:
             # Clear all cards
             cards = storage.list_all()
             storage.clear_all()
-            print(f"[TeaAgent] Cleared {len(cards)} failure cards")
+            print(f'[TeaAgent] Cleared {len(cards)} failure cards')
     except Exception as exc:
-        print(f"[TeaAgent] Error clearing failure cards: {exc}")
+        print(f'[TeaAgent] Error clearing failure cards: {exc}')
 
 
 def get_failure_warnings(task: str, root: Path) -> str:
@@ -206,23 +214,23 @@ def get_failure_warnings(task: str, root: Path) -> str:
         )
 
         if not matching_cards:
-            return ""
+            return ''
 
         # Format warnings
         warnings = []
         for card in matching_cards:
             warning = f"⚠️ Note: In Run #{card.run_id}, attempting '{card.task_description}' failed with {card.error_type}: {card.error_message}"
             if card.file_path:
-                warning += f" at {card.file_path}"
+                warning += f' at {card.file_path}'
             if card.line_number:
-                warning += f":{card.line_number}"
-            warning += ". Consider alternative approaches."
+                warning += f':{card.line_number}'
+            warning += '. Consider alternative approaches.'
             warnings.append(warning)
 
-        return "\n\n" + "\n".join(warnings) + "\n"
+        return '\n\n' + '\n'.join(warnings) + '\n'
     except Exception:
         # Don't let failure warnings break the chat system
-        return ""
+        return ''
 
 
 def execute_shell_command(command: str, root: Path) -> None:
@@ -247,7 +255,9 @@ def execute_shell_command(command: str, root: Path) -> None:
     command_lower = command.lower()
     for pattern in destructive_patterns:
         if pattern in command_lower:
-            print("[TeaAgent] Error: Destructive command not allowed in shell escape. Use full terminal.")
+            print(
+                '[TeaAgent] Error: Destructive command not allowed in shell escape. Use full terminal.'
+            )
             return
 
     # Parse command safely
@@ -255,15 +265,15 @@ def execute_shell_command(command: str, root: Path) -> None:
         # Use shlex to properly parse the command while preserving quoted arguments
         args = shlex.split(command)
         if not args:
-            print("[TeaAgent] Error: Empty command")
+            print('[TeaAgent] Error: Empty command')
             return
     except ValueError as exc:
-        print(f"[TeaAgent] Error: Invalid command syntax: {exc}")
+        print(f'[TeaAgent] Error: Invalid command syntax: {exc}')
         return
 
     # Execute the command
     try:
-        print(f"[TeaAgent] Executing: {command}")
+        print(f'[TeaAgent] Executing: {command}')
         result = subprocess.run(
             args,
             cwd=root,
@@ -280,16 +290,16 @@ def execute_shell_command(command: str, root: Path) -> None:
 
         # Show exit code if non-zero
         if result.returncode != 0:
-            print(f"[TeaAgent] Command exited with code {result.returncode}")
+            print(f'[TeaAgent] Command exited with code {result.returncode}')
         else:
-            print("[TeaAgent] Command completed successfully")
+            print('[TeaAgent] Command completed successfully')
 
     except subprocess.TimeoutExpired:
-        print("[TeaAgent] Error: Command timed out after 30 seconds")
+        print('[TeaAgent] Error: Command timed out after 30 seconds')
     except FileNotFoundError:
-        print(f"[TeaAgent] Error: Command not found: {args[0]}")
+        print(f'[TeaAgent] Error: Command not found: {args[0]}')
     except Exception as exc:
-        print(f"[TeaAgent] Error executing command: {exc}")
+        print(f'[TeaAgent] Error executing command: {exc}')
 
 
 def complete_file_path(text: str, root: Path) -> list[str]:
@@ -342,9 +352,9 @@ def complete_file_path(text: str, root: Path) -> list[str]:
             if item.name.lower().startswith(file_part.lower()):
                 # Build completion path
                 if dir_part:
-                    completion = f"@{dir_part}/{item.name}"
+                    completion = f'@{dir_part}/{item.name}'
                 else:
-                    completion = f"@{item.name}"
+                    completion = f'@{item.name}'
 
                 # Add trailing slash for directories
                 if item.is_dir():
@@ -387,7 +397,7 @@ def complete_symbol(text: str, root: Path) -> list[str]:
             # Check if symbol name matches partial
             if node.name.lower().startswith(partial_symbol.lower()):
                 # Format: @symbol_name (in file_path)
-                completion = f"@{node.name}"
+                completion = f'@{node.name}'
                 completions.append(completion)
 
         return sorted(set(completions))
@@ -396,7 +406,9 @@ def complete_symbol(text: str, root: Path) -> list[str]:
         return []
 
 
-def suspend_to_background(config: ChatAgentConfig, session_context: dict, targeted_files: set[Path]) -> str:
+def suspend_to_background(
+    config: ChatAgentConfig, session_context: dict, targeted_files: set[Path]
+) -> str:
     """Suspend current REPL session and convert to background task.
 
     Args:
@@ -411,7 +423,7 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
 
     root = config.root.resolve()
 
-    print("[TeaAgent] Suspending session to background mode...")
+    print('[TeaAgent] Suspending session to background mode...')
 
     # Generate unique run_id
     run_id = str(uuid.uuid4())[:8]
@@ -428,7 +440,9 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
         'mode': 'suspended_from_repl',  # Track origin mode
         'config': {
             'model': config.model,
-            'permission_mode': config.permission_mode.value if config.permission_mode else None,
+            'permission_mode': config.permission_mode.value
+            if config.permission_mode
+            else None,
             'max_iterations': config.max_iterations,
             'max_tool_calls': config.max_tool_calls,
             'max_estimated_cost_cents': config.max_estimated_cost_cents,
@@ -436,22 +450,30 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
         'session_context': {
             'observations_count': len(session_context.get('observations', [])),
             'compaction_count': session_context.get('compaction_count', 0),
-            'observations': session_context.get('observations', [])[-10:],  # Keep last 10 for context
+            'observations': session_context.get('observations', [])[
+                -10:
+            ],  # Keep last 10 for context
         },
-        'targeted_files': [str(f.resolve().relative_to(root.resolve())) for f in targeted_files if f.resolve().is_relative_to(root.resolve())],
+        'targeted_files': [
+            str(f.resolve().relative_to(root.resolve()))
+            for f in targeted_files
+            if f.resolve().is_relative_to(root.resolve())
+        ],
         'audit_trail': {
             'suspension_time': __import__('time').time(),
             'original_mode': 'repl',
             'transition_type': 'keyboard_to_robot',
-        }
+        },
     }
 
     suspension_file = tea_dir / f'suspension-{run_id}.json'
     try:
-        suspension_file.write_text(json.dumps(suspension_data, indent=2), encoding='utf-8')
+        suspension_file.write_text(
+            json.dumps(suspension_data, indent=2), encoding='utf-8'
+        )
     except Exception as exc:
-        print(f"[TeaAgent] Error saving suspension state: {exc}")
-        return ""
+        print(f'[TeaAgent] Error saving suspension state: {exc}')
+        return ''
 
     # Create Git sandbox branch if workspace is dirty
     try:
@@ -463,8 +485,10 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
         )
 
         if result.stdout.strip():
-            print("[TeaAgent] Workspace has uncommitted changes, creating sandbox branch...")
-            branch_name = f"suspended-{run_id}"
+            print(
+                '[TeaAgent] Workspace has uncommitted changes, creating sandbox branch...'
+            )
+            branch_name = f'suspended-{run_id}'
 
             # Check if branch already exists
             check_result = subprocess.run(
@@ -477,27 +501,31 @@ def suspend_to_background(config: ChatAgentConfig, session_context: dict, target
             if check_result.stdout.strip():
                 # Branch exists, use timestamp to make unique
                 import time as time_module
-                branch_name = f"suspended-{run_id}-{int(time_module.time())}"
 
-            subprocess.run(['git', 'checkout', '-b', branch_name], cwd=root, capture_output=True)
+                branch_name = f'suspended-{run_id}-{int(time_module.time())}'
+
+            subprocess.run(
+                ['git', 'checkout', '-b', branch_name], cwd=root, capture_output=True
+            )
             suspension_data['sandbox_branch'] = branch_name
             suspension_data['audit_trail']['sandbox_branch'] = branch_name
-            suspension_file.write_text(json.dumps(suspension_data, indent=2), encoding='utf-8')
-            print(f"[TeaAgent] Created sandbox branch: {branch_name}")
+            suspension_file.write_text(
+                json.dumps(suspension_data, indent=2), encoding='utf-8'
+            )
+            print(f'[TeaAgent] Created sandbox branch: {branch_name}')
     except FileNotFoundError:
-        print("[TeaAgent] Git not found, skipping sandbox branch creation")
+        print('[TeaAgent] Git not found, skipping sandbox branch creation')
     except Exception as exc:
-        print(f"[TeaAgent] Warning: Could not create sandbox branch: {exc}")
+        print(f'[TeaAgent] Warning: Could not create sandbox branch: {exc}')
 
-    print("[TeaAgent] Session suspended successfully!")
-    print(f"[TeaAgent] Run ID: {run_id}")
-    print(f"[TeaAgent] To attach: teaagent attach {run_id} --follow")
-    print(f"[TeaAgent] To resume: teaagent resume {run_id}")
-    print(f"[TeaAgent] To review: teaagent agent interactive-review {run_id}")
-    print("[TeaAgent] Note: Background execution requires manual setup")
+    print('[TeaAgent] Session suspended successfully!')
+    print(f'[TeaAgent] Run ID: {run_id}')
+    print(f'[TeaAgent] To attach: teaagent attach {run_id} --follow')
+    print(f'[TeaAgent] To resume: teaagent resume {run_id}')
+    print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
+    print('[TeaAgent] Note: Background execution requires manual setup')
 
     return run_id
-
 
 
 def chat_command(args: argparse.Namespace) -> int:
@@ -506,7 +534,9 @@ def chat_command(args: argparse.Namespace) -> int:
 
     # Override with CLI arguments (config loading happens in ChatAgentConfig.from_root)
     model = args.model
-    permission_mode = parse_permission_mode(args.permission_mode) if args.permission_mode else None
+    permission_mode = (
+        parse_permission_mode(args.permission_mode) if args.permission_mode else None
+    )
 
     # Build chat agent config
     # Only override memory_limit if explicitly provided by user
@@ -535,19 +565,19 @@ def chat_command(args: argparse.Namespace) -> int:
     try:
         return run_chat_repl(chat_config, args.task)
     except KeyboardInterrupt:
-        print("\n[TeaAgent] Chat interrupted by user")
+        print('\n[TeaAgent] Chat interrupted by user')
         return 130
     except Exception as exc:
-        print(f"[TeaAgent] Error: {exc}", file=sys.stderr)
+        print(f'[TeaAgent] Error: {exc}', file=sys.stderr)
         return 1
 
 
 def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -> int:
     """Run the interactive chat REPL loop."""
-    print("[TeaAgent] Chat mode initialized")
-    print(f"[TeaAgent] Provider: {config.model or 'default'}")
-    print(f"[TeaAgent] Permission mode: {config.permission_mode.value}")
-    print("[TeaAgent] Type your task or /exit to quit")
+    print('[TeaAgent] Chat mode initialized')
+    print(f'[TeaAgent] Provider: {config.model or "default"}')
+    print(f'[TeaAgent] Permission mode: {config.permission_mode.value}')
+    print('[TeaAgent] Type your task or /exit to quit')
     print()
 
     # Session cost accumulator
@@ -575,7 +605,9 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     checkpoint_ref = None
 
     # Hot-swappable model configuration
-    current_provider = config.model.split('/')[0] if config.model and '/' in config.model else None
+    current_provider = (
+        config.model.split('/')[0] if config.model and '/' in config.model else None
+    )
     current_model = config.model
 
     # Tab completion setup
@@ -609,12 +641,16 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     runtime_max_cost_cents = config.max_estimated_cost_cents or 1000
 
     # Create initial adapter (will be recreated on model swap)
-    provider = config.model.split('/')[0] if config.model and '/' in config.model else 'gpt'
-    model = config.model.split('/', 1)[1] if config.model and '/' in config.model else None
+    provider = (
+        config.model.split('/')[0] if config.model and '/' in config.model else 'gpt'
+    )
+    model = (
+        config.model.split('/', 1)[1] if config.model and '/' in config.model else None
+    )
     adapter = create_llm_adapter(provider, model=model)
 
     # Effort throttling configuration
-    effort_level = "normal"  # low, normal, high
+    effort_level = 'normal'  # low, normal, high
     max_cost_budget_cents = config.max_estimated_cost_cents or 1000  # Default $10
 
     # File watcher for live context synchronization
@@ -637,19 +673,23 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
 
             storage = PinnedFileStorage(config.root)
 
-            if event_type == "deleted":
+            if event_type == 'deleted':
                 # File was deleted, unpin it and show warning
                 storage.remove(file_path)
-                print(f"[TeaAgent] ⚠️ File deleted and unpinned: {file_path}")
+                print(f'[TeaAgent] ⚠️ File deleted and unpinned: {file_path}')
                 # Update watcher
                 if file_watcher:
                     pinned_files = storage.list_all()
-                    file_watcher.update_watched_files({pf.file_path for pf in pinned_files})
-            elif event_type == "modified":
+                    file_watcher.update_watched_files(
+                        {pf.file_path for pf in pinned_files}
+                    )
+            elif event_type == 'modified':
                 # File was modified, update context
                 storage.update_last_modified(file_path)
                 modified_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print(f"[TeaAgent] 📌 Context auto-refreshed: {file_path} (modified at {modified_str})")
+                print(
+                    f'[TeaAgent] 📌 Context auto-refreshed: {file_path} (modified at {modified_str})'
+                )
 
                 # Update targeted files if this file is in the context
                 full_path = config.root / file_path
@@ -660,7 +700,11 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         except Exception as exc:
             # Don't let file watcher errors break the chat system
             import sys
-            print(f"[TeaAgent] Warning: Error handling file change: {exc}", file=sys.stderr)
+
+            print(
+                f'[TeaAgent] Warning: Error handling file change: {exc}',
+                file=sys.stderr,
+            )
 
     def start_file_watcher() -> None:
         """Start the file watcher if there are pinned files."""
@@ -682,10 +726,16 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 file_watcher.update_watched_files({pf.file_path for pf in pinned_files})
                 file_watcher.start()
                 watcher_running = True
-                print(f"[TeaAgent] Watching {len(pinned_files)} pinned files for changes...")
+                print(
+                    f'[TeaAgent] Watching {len(pinned_files)} pinned files for changes...'
+                )
         except Exception as exc:
             import sys
-            print(f"[TeaAgent] Warning: Failed to start file watcher: {exc}", file=sys.stderr)
+
+            print(
+                f'[TeaAgent] Warning: Failed to start file watcher: {exc}',
+                file=sys.stderr,
+            )
 
     def stop_file_watcher() -> None:
         """Stop the file watcher."""
@@ -702,10 +752,11 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         """Create a git stash checkpoint to protect pre-session changes."""
         nonlocal checkpoint_created, checkpoint_ref
         import subprocess
+
         try:
             # Create a timestamped checkpoint
             timestamp = __import__('time').time()
-            checkpoint_ref = f"teaagent-checkpoint-{int(timestamp)}"
+            checkpoint_ref = f'teaagent-checkpoint-{int(timestamp)}'
 
             # Stash current changes with checkpoint reference
             result = subprocess.run(
@@ -717,30 +768,33 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
 
             if result.returncode == 0:
                 checkpoint_created = True
-                print(f"[TeaAgent] Created checkpoint: {checkpoint_ref}")
+                print(f'[TeaAgent] Created checkpoint: {checkpoint_ref}')
                 return True
             else:
                 # If stash fails (no changes to stash), that's okay
-                if "No local changes to save" in result.stdout:
+                if 'No local changes to save' in result.stdout:
                     checkpoint_created = True
-                    print("[TeaAgent] No changes to stash (clean workspace)")
+                    print('[TeaAgent] No changes to stash (clean workspace)')
                     return True
-                print(f"[TeaAgent] Warning: Could not create checkpoint: {result.stderr}")
+                print(
+                    f'[TeaAgent] Warning: Could not create checkpoint: {result.stderr}'
+                )
                 return False
         except FileNotFoundError:
-            print("[TeaAgent] Git not found in PATH")
+            print('[TeaAgent] Git not found in PATH')
             return False
         except Exception as exc:
-            print(f"[TeaAgent] Error creating checkpoint: {exc}")
+            print(f'[TeaAgent] Error creating checkpoint: {exc}')
             return False
 
     def restore_checkpoint() -> bool:
         """Restore the git checkpoint to undo changes."""
         nonlocal checkpoint_created, checkpoint_ref
         import subprocess
+
         try:
             if not checkpoint_created:
-                print("[TeaAgent] No checkpoint to restore")
+                print('[TeaAgent] No checkpoint to restore')
                 return False
 
             # First check if the stash exists before destructive operations
@@ -769,17 +823,19 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                     capture_output=True,
                     text=True,
                 )
-                print(f"[TeaAgent] Restored checkpoint: {checkpoint_ref}")
+                print(f'[TeaAgent] Restored checkpoint: {checkpoint_ref}')
             else:
-                print("[TeaAgent] No checkpoint stash found (clean workspace or checkpoint not created)")
+                print(
+                    '[TeaAgent] No checkpoint stash found (clean workspace or checkpoint not created)'
+                )
                 return False
 
             return True
         except FileNotFoundError:
-            print("[TeaAgent] Git not found in PATH")
+            print('[TeaAgent] Git not found in PATH')
             return False
         except Exception as exc:
-            print(f"[TeaAgent] Error restoring checkpoint: {exc}")
+            print(f'[TeaAgent] Error restoring checkpoint: {exc}')
             return False
 
     def add_targeted_file(path_str: str) -> bool:
@@ -787,17 +843,17 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         try:
             path = (config.root / path_str).resolve()
             if not path.exists():
-                print(f"[TeaAgent] Error: Path does not exist: {path}")
+                print(f'[TeaAgent] Error: Path does not exist: {path}')
                 return False
             # Use is_relative_to for robust path validation that handles symlinks
             if not path.is_relative_to(config.root.resolve()):
-                print(f"[TeaAgent] Error: Path escapes workspace root: {path}")
+                print(f'[TeaAgent] Error: Path escapes workspace root: {path}')
                 return False
             targeted_files.add(path)
-            print(f"[TeaAgent] Added to context: {path}")
+            print(f'[TeaAgent] Added to context: {path}')
             return True
         except Exception as exc:
-            print(f"[TeaAgent] Error adding path: {exc}")
+            print(f'[TeaAgent] Error adding path: {exc}')
             return False
 
     def drop_targeted_file(path_str: str) -> bool:
@@ -806,23 +862,23 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             path = (config.root / path_str).resolve()
             if path in targeted_files:
                 targeted_files.remove(path)
-                print(f"[TeaAgent] Removed from context: {path}")
+                print(f'[TeaAgent] Removed from context: {path}')
                 return True
             else:
-                print(f"[TeaAgent] Path not in context: {path}")
+                print(f'[TeaAgent] Path not in context: {path}')
                 return False
         except Exception as exc:
-            print(f"[TeaAgent] Error removing path: {exc}")
+            print(f'[TeaAgent] Error removing path: {exc}')
             return False
 
     def show_targeted_context() -> None:
         """Display currently targeted files and context info."""
         if not targeted_files:
-            print("[TeaAgent] No files currently targeted (full workspace context)")
+            print('[TeaAgent] No files currently targeted (full workspace context)')
         else:
-            print(f"[TeaAgent] Targeted files ({len(targeted_files)}):")
+            print(f'[TeaAgent] Targeted files ({len(targeted_files)}):')
             for path in sorted(targeted_files):
-                print(f"  - {path.relative_to(config.root)}")
+                print(f'  - {path.relative_to(config.root)}')
 
     def swap_provider(provider_name: str) -> bool:
         """Hot-swap the LLM provider during the session."""
@@ -830,27 +886,31 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         try:
             if provider_name not in available_providers():
                 print(f"[TeaAgent] Error: Unknown provider '{provider_name}'")
-                print(f"[TeaAgent] Available providers: {', '.join(available_providers())}")
+                print(
+                    f'[TeaAgent] Available providers: {", ".join(available_providers())}'
+                )
                 return False
 
             current_provider = provider_name
             # Rebuild the model string with new provider
             if current_model and '/' in current_model:
-                current_model = f"{provider_name}/{current_model.split('/', 1)[1]}"
+                current_model = f'{provider_name}/{current_model.split("/", 1)[1]}'
             else:
                 current_model = provider_name
 
             runtime_model = current_model
 
             # Recreate adapter with new provider
-            model_part = current_model.split('/', 1)[1] if '/' in current_model else None
+            model_part = (
+                current_model.split('/', 1)[1] if '/' in current_model else None
+            )
             adapter = create_llm_adapter(provider_name, model=model_part)
 
-            print(f"[TeaAgent] Provider switched to: {provider_name}")
-            print(f"[TeaAgent] Current model: {current_model}")
+            print(f'[TeaAgent] Provider switched to: {provider_name}')
+            print(f'[TeaAgent] Current model: {current_model}')
             return True
         except Exception as exc:
-            print(f"[TeaAgent] Error switching provider: {exc}")
+            print(f'[TeaAgent] Error switching provider: {exc}')
             return False
 
     def swap_model(model_name: str) -> bool:
@@ -858,7 +918,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         nonlocal current_model, runtime_model, adapter
         try:
             if current_provider:
-                new_model = f"{current_provider}/{model_name}"
+                new_model = f'{current_provider}/{model_name}'
             else:
                 new_model = model_name
 
@@ -869,10 +929,10 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             provider = current_provider or 'gpt'
             adapter = create_llm_adapter(provider, model=model_name)
 
-            print(f"[TeaAgent] Model switched to: {current_model}")
+            print(f'[TeaAgent] Model switched to: {current_model}')
             return True
         except Exception as exc:
-            print(f"[TeaAgent] Error switching model: {exc}")
+            print(f'[TeaAgent] Error switching model: {exc}')
             return False
 
     def set_effort_level(level: str) -> bool:
@@ -881,7 +941,9 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         try:
             level = level.lower()
             if level not in ('low', 'normal', 'high'):
-                print("[TeaAgent] Error: Effort level must be 'low', 'normal', or 'high'")
+                print(
+                    "[TeaAgent] Error: Effort level must be 'low', 'normal', or 'high'"
+                )
                 return False
 
             effort_level = level
@@ -897,19 +959,21 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 max_cost_budget_cents = 5000  # $50 budget
                 runtime_max_cost_cents = 5000
 
-            print(f"[TeaAgent] Effort level set to: {level}")
-            print(f"[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}")
+            print(f'[TeaAgent] Effort level set to: {level}')
+            print(f'[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}')
             return True
         except Exception as exc:
-            print(f"[TeaAgent] Error setting effort level: {exc}")
+            print(f'[TeaAgent] Error setting effort level: {exc}')
             return False
 
     def show_effort_status() -> None:
         """Display current effort throttling status."""
-        print(f"[TeaAgent] Effort level: {effort_level}")
-        print(f"[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}")
-        print(f"[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}")
-        print(f"[TeaAgent] Remaining budget: ${(max_cost_budget_cents - session_cost_cents) / 100:.2f}")
+        print(f'[TeaAgent] Effort level: {effort_level}')
+        print(f'[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}')
+        print(f'[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}')
+        print(
+            f'[TeaAgent] Remaining budget: ${(max_cost_budget_cents - session_cost_cents) / 100:.2f}'
+        )
 
     # Automatic checkpoint creation disabled for data safety
     # Users should explicitly create checkpoints when needed to avoid hiding changes
@@ -920,26 +984,33 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
 
     # If initial task provided, execute it first
     if initial_task:
-        print(f"[TeaAgent] Executing initial task: {initial_task}")
+        print(f'[TeaAgent] Executing initial task: {initial_task}')
         # Inject failure warnings
-        task_with_warnings = initial_task + get_failure_warnings(initial_task, config.root)
+        task_with_warnings = initial_task + get_failure_warnings(
+            initial_task, config.root
+        )
         # Create updated config with runtime values
         from dataclasses import replace
+
         updated_config = replace(
             config,
             model=runtime_model,
             max_estimated_cost_cents=runtime_max_cost_cents,
         )
-        result = run_chat_agent(task=task_with_warnings, adapter=adapter, config=updated_config)
+        result = run_chat_agent(
+            task=task_with_warnings, adapter=adapter, config=updated_config
+        )
         if result != 0:
             return result
         # Placeholder cost tracking for initial task
         session_cost_cents += 10
-        session_context['observations'].append({
-            'task': initial_task,
-            'result': result,
-            'cost_cents': 10,
-        })
+        session_context['observations'].append(
+            {
+                'task': initial_task,
+                'result': result,
+                'cost_cents': 10,
+            }
+        )
         print()
 
     # REPL loop
@@ -948,11 +1019,14 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             # Build prompt with pinned file indicator
             try:
                 from teaagent.memory.pinned_file import PinnedFileStorage
+
                 storage = PinnedFileStorage(config.root)
                 pinned_count = len(storage.list_all())
-                prompt = f"teaagent📌{pinned_count}> " if pinned_count > 0 else "teaagent> "
+                prompt = (
+                    f'teaagent📌{pinned_count}> ' if pinned_count > 0 else 'teaagent> '
+                )
             except Exception:
-                prompt = "teaagent> "
+                prompt = 'teaagent> '
 
             # Read user input
             user_input = input(prompt).strip()
@@ -963,12 +1037,14 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             # Handle shell escape hatch - DISABLED for security
             # Shell escape bypasses approval/audit governance. Use full terminal instead.
             if user_input.startswith('!'):
-                print("[TeaAgent] Error: Shell escape is disabled for security. Use the full terminal to execute shell commands.")
+                print(
+                    '[TeaAgent] Error: Shell escape is disabled for security. Use the full terminal to execute shell commands.'
+                )
                 continue
 
             # Handle exit commands
             if user_input in ('/exit', '/quit', 'q', 'quit', 'exit'):
-                print("[TeaAgent] Goodbye!")
+                print('[TeaAgent] Goodbye!')
                 return 0
 
             # Handle help
@@ -978,54 +1054,69 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
 
             # Handle compact command
             if user_input == '/compact':
-                print("[TeaAgent] Compacting session context...")
+                print('[TeaAgent] Compacting session context...')
                 compaction_result = compactor.compact(session_context)
-                print("[TeaAgent] Compaction complete:")
-                print(f"  - Tokens saved: ~{compaction_result.tokens_saved}")
-                print(f"  - Compression ratio: {compaction_result.compression_ratio:.2%}")
-                print(f"  - Total compactions: {session_context.get('compaction_count', 0)}")
-                print(f"  - Observations retained: {len(session_context.get('observations', []))}")
+                print('[TeaAgent] Compaction complete:')
+                print(f'  - Tokens saved: ~{compaction_result.tokens_saved}')
+                print(
+                    f'  - Compression ratio: {compaction_result.compression_ratio:.2%}'
+                )
+                print(
+                    f'  - Total compactions: {session_context.get("compaction_count", 0)}'
+                )
+                print(
+                    f'  - Observations retained: {len(session_context.get("observations", []))}'
+                )
                 continue
 
             # Handle clear command
             if user_input == '/clear':
-                print("[TeaAgent] Clearing conversation history...")
+                print('[TeaAgent] Clearing conversation history...')
                 session_context['observations'] = []
                 session_context['compaction_count'] = 0
                 targeted_files.clear()
-                print("[TeaAgent] Conversation history cleared. Starting fresh.")
+                print('[TeaAgent] Conversation history cleared. Starting fresh.')
                 continue
 
             # Handle checkpoint command
             if user_input == '/checkpoint':
-                print("[TeaAgent] Creating manual checkpoint...")
+                print('[TeaAgent] Creating manual checkpoint...')
                 if create_checkpoint():
-                    print("[TeaAgent] Checkpoint created successfully")
+                    print('[TeaAgent] Checkpoint created successfully')
                 else:
-                    print("[TeaAgent] Checkpoint creation failed")
+                    print('[TeaAgent] Checkpoint creation failed')
                 continue
 
             # Handle background command
             if user_input in ('/background', '/handoff'):
                 run_id = suspend_to_background(config, session_context, targeted_files)
                 if run_id:
-                    print("[TeaAgent] Interactive session converted to background task.")
-                    print("[TeaAgent] You can now safely exit the REPL.")
-                    print(f"[TeaAgent] Use 'teaagent attach {run_id} --follow' to monitor progress.")
+                    print(
+                        '[TeaAgent] Interactive session converted to background task.'
+                    )
+                    print('[TeaAgent] You can now safely exit the REPL.')
+                    print(
+                        f"[TeaAgent] Use 'teaagent attach {run_id} --follow' to monitor progress."
+                    )
                 else:
-                    print("[TeaAgent] Suspension failed. Continuing in interactive mode.")
+                    print(
+                        '[TeaAgent] Suspension failed. Continuing in interactive mode.'
+                    )
                 continue
 
             # Handle cost command
             if user_input == '/cost':
-                print(f"[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}")
-                print("[TeaAgent] Estimated cost for next task will be shown before execution")
+                print(f'[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}')
+                print(
+                    '[TeaAgent] Estimated cost for next task will be shown before execution'
+                )
                 continue
 
             # Handle diff command
             if user_input == '/diff':
-                print("[TeaAgent] Showing git diff for current session...")
+                print('[TeaAgent] Showing git diff for current session...')
                 import subprocess
+
                 try:
                     result = subprocess.run(
                         ['git', 'diff', '--color=always'],
@@ -1036,11 +1127,11 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                     if result.stdout:
                         print(result.stdout)
                     else:
-                        print("[TeaAgent] No changes detected in working directory")
+                        print('[TeaAgent] No changes detected in working directory')
                 except FileNotFoundError:
-                    print("[TeaAgent] Git not found in PATH")
+                    print('[TeaAgent] Git not found in PATH')
                 except Exception as exc:
-                    print(f"[TeaAgent] Error running git diff: {exc}")
+                    print(f'[TeaAgent] Error running git diff: {exc}')
                 continue
 
             # Handle context command
@@ -1079,7 +1170,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 if path_arg:
                     add_targeted_file(path_arg)
                 else:
-                    print("[TeaAgent] Usage: /add <path>")
+                    print('[TeaAgent] Usage: /add <path>')
                 continue
 
             # Handle drop command
@@ -1088,7 +1179,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 if path_arg:
                     drop_targeted_file(path_arg)
                 else:
-                    print("[TeaAgent] Usage: /drop <path>")
+                    print('[TeaAgent] Usage: /drop <path>')
                 continue
 
             # Handle provider command
@@ -1097,8 +1188,10 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 if provider_arg:
                     swap_provider(provider_arg)
                 else:
-                    print("[TeaAgent] Usage: /provider <name>")
-                    print(f"[TeaAgent] Available providers: {', '.join(available_providers())}")
+                    print('[TeaAgent] Usage: /provider <name>')
+                    print(
+                        f'[TeaAgent] Available providers: {", ".join(available_providers())}'
+                    )
                 continue
 
             # Handle model command
@@ -1107,8 +1200,8 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 if model_arg:
                     swap_model(model_arg)
                 else:
-                    print("[TeaAgent] Usage: /model <name>")
-                    print(f"[TeaAgent] Current model: {current_model}")
+                    print('[TeaAgent] Usage: /model <name>')
+                    print(f'[TeaAgent] Current model: {current_model}')
                 continue
 
             # Handle effort command
@@ -1117,7 +1210,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 if effort_arg:
                     set_effort_level(effort_arg)
                 else:
-                    print("[TeaAgent] Usage: /effort <low|normal|high>")
+                    print('[TeaAgent] Usage: /effort <low|normal|high>')
                     show_effort_status()
                 continue
 
@@ -1128,12 +1221,13 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
 
             # Handle undo command
             if user_input == '/undo':
-                print("[TeaAgent] Undoing last change using checkpoint...")
+                print('[TeaAgent] Undoing last change using checkpoint...')
                 if restore_checkpoint():
-                    print("[TeaAgent] Undo completed successfully")
+                    print('[TeaAgent] Undo completed successfully')
                 else:
-                    print("[TeaAgent] Undo failed - falling back to git checkout")
+                    print('[TeaAgent] Undo failed - falling back to git checkout')
                     import subprocess
+
                     try:
                         result = subprocess.run(
                             ['git', 'checkout', '--', '.'],
@@ -1142,28 +1236,33 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                             text=True,
                         )
                         if result.returncode == 0:
-                            print("[TeaAgent] Fallback undo completed")
+                            print('[TeaAgent] Fallback undo completed')
                         else:
-                            print(f"[TeaAgent] Error: {result.stderr}")
+                            print(f'[TeaAgent] Error: {result.stderr}')
                     except Exception as exc:
-                        print(f"[TeaAgent] Error in fallback undo: {exc}")
+                        print(f'[TeaAgent] Error in fallback undo: {exc}')
                 continue
 
             # Execute task
-            print(f"[TeaAgent] Executing: {user_input}")
+            print(f'[TeaAgent] Executing: {user_input}')
             # Inject failure warnings
-            task_with_warnings = user_input + get_failure_warnings(user_input, config.root)
+            task_with_warnings = user_input + get_failure_warnings(
+                user_input, config.root
+            )
             # Create updated config with runtime values
             from dataclasses import replace
+
             updated_config = replace(
                 config,
                 model=runtime_model,
                 max_estimated_cost_cents=runtime_max_cost_cents,
             )
-            result = run_chat_agent(task=task_with_warnings, adapter=adapter, config=updated_config)
+            result = run_chat_agent(
+                task=task_with_warnings, adapter=adapter, config=updated_config
+            )
 
             if result != 0:
-                print(f"[TeaAgent] Task failed with exit code {result}")
+                print(f'[TeaAgent] Task failed with exit code {result}')
             else:
                 # In a full implementation, we would track actual cost here
                 # For now, we'll increment a placeholder
@@ -1172,41 +1271,45 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             print()
 
         except EOFError:
-            print("\n[TeaAgent] Goodbye!")
+            print('\n[TeaAgent] Goodbye!')
             stop_file_watcher()
             return 0
         except KeyboardInterrupt:
-            print("\n[TeaAgent] Interrupted. Type /exit to quit or continue with next task")
+            print(
+                '\n[TeaAgent] Interrupted. Type /exit to quit or continue with next task'
+            )
             continue
 
 
 def print_chat_help() -> None:
     """Print chat REPL help."""
-    print("[TeaAgent] Chat Commands:")
-    print("  /exit, /quit, q, quit, exit  - Exit chat mode")
-    print("  /help, /?, help, ?         - Show this help")
-    print("  /cost                      - Show session cost")
-    print("  /compact                   - Compact session context to save tokens")
-    print("  /clear                     - Clear conversation history")
-    print("  /diff                      - Show git diff for current session")
-    print("  /background, /handoff       - Suspend session to background mode")
-    print("  /context                   - Show targeted context files")
-    print("  /add <path>                - Add file/directory to context")
-    print("  /drop <path>               - Remove file/directory from context")
-    print("  /provider <name>           - Switch LLM provider")
-    print("  /model <name>              - Switch model")
-    print("  /effort <low|normal|high>  - Set effort throttling level")
-    print("  /budget                    - Show budget status")
-    print("  /checkpoint                - Create manual git checkpoint")
-    print("  /undo                      - Undo all changes (using checkpoint)")
-    print("  !<command>                 - DISABLED: Use full terminal for shell commands")
+    print('[TeaAgent] Chat Commands:')
+    print('  /exit, /quit, q, quit, exit  - Exit chat mode')
+    print('  /help, /?, help, ?         - Show this help')
+    print('  /cost                      - Show session cost')
+    print('  /compact                   - Compact session context to save tokens')
+    print('  /clear                     - Clear conversation history')
+    print('  /diff                      - Show git diff for current session')
+    print('  /background, /handoff       - Suspend session to background mode')
+    print('  /context                   - Show targeted context files')
+    print('  /add <path>                - Add file/directory to context')
+    print('  /drop <path>               - Remove file/directory from context')
+    print('  /provider <name>           - Switch LLM provider')
+    print('  /model <name>              - Switch model')
+    print('  /effort <low|normal|high>  - Set effort throttling level')
+    print('  /budget                    - Show budget status')
+    print('  /checkpoint                - Create manual git checkpoint')
+    print('  /undo                      - Undo all changes (using checkpoint)')
+    print(
+        '  !<command>                 - DISABLED: Use full terminal for shell commands'
+    )
     print()
-    print("[TeaAgent] Memory & Context Commands:")
-    print("  /memory failures           - List all failure cards")
-    print("  /memory clear              - Clear all failure cards")
-    print("  /memory clear <n>          - Clear specific failure card by number")
-    print("  /pin <file>                - Pin file for live context sync")
-    print("  /unpin <file>              - Unpin file from live context sync")
-    print("  /pinned                    - List all pinned files")
+    print('[TeaAgent] Memory & Context Commands:')
+    print('  /memory failures           - List all failure cards')
+    print('  /memory clear              - Clear all failure cards')
+    print('  /memory clear <n>          - Clear specific failure card by number')
+    print('  /pin <file>                - Pin file for live context sync')
+    print('  /unpin <file>              - Unpin file from live context sync')
+    print('  /pinned                    - List all pinned files')
     print()
-    print("[TeaAgent] Any other input will be executed as a task")
+    print('[TeaAgent] Any other input will be executed as a task')

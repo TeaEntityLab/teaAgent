@@ -5,15 +5,13 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import pytest
-
 from teaagent.git_sandbox import (
     GitBranchSandbox,
     GitTransactionSink,
     is_git_repository,
     is_worktree_clean,
-    stash_save,
     stash_pop,
+    stash_save,
 )
 
 
@@ -31,11 +29,28 @@ def test_is_git_repository_git_repo(tmp_path: Path) -> None:
 def test_is_worktree_clean_clean(tmp_path: Path) -> None:
     """Test that clean worktree returns True."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('content')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     assert is_worktree_clean(tmp_path)
 
@@ -43,11 +58,28 @@ def test_is_worktree_clean_clean(tmp_path: Path) -> None:
 def test_is_worktree_clean_dirty(tmp_path: Path) -> None:
     """Test that dirty worktree returns False."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('content')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Modify file
     (tmp_path / 'test.txt').write_text('modified')
@@ -58,11 +90,28 @@ def test_is_worktree_clean_dirty(tmp_path: Path) -> None:
 def test_stash_save_and_pop(tmp_path: Path) -> None:
     """Test stashing and popping changes."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Modify file
     (tmp_path / 'test.txt').write_text('modified')
@@ -83,11 +132,28 @@ def test_stash_save_and_pop(tmp_path: Path) -> None:
 def test_stash_untracked_files(tmp_path: Path) -> None:
     """Test stashing untracked files with -u flag."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Create untracked file
     (tmp_path / 'untracked.txt').write_text('untracked content')
@@ -118,8 +184,18 @@ def test_git_sandbox_not_available_non_git(tmp_path: Path) -> None:
 def test_git_sandbox_available_in_git_repo(tmp_path: Path) -> None:
     """Test that git sandbox is available in a git repository."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     assert sandbox.is_available()
@@ -128,11 +204,28 @@ def test_git_sandbox_available_in_git_repo(tmp_path: Path) -> None:
 def test_git_sandbox_start_clean(tmp_path: Path) -> None:
     """Test starting sandbox on clean worktree."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     start_result = sandbox.start()
@@ -144,11 +237,28 @@ def test_git_sandbox_start_clean(tmp_path: Path) -> None:
 def test_git_sandbox_start_dirty_no_stash(tmp_path: Path) -> None:
     """Test starting sandbox on dirty worktree without auto-stash."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Make worktree dirty
     (tmp_path / 'test.txt').write_text('modified')
@@ -163,11 +273,28 @@ def test_git_sandbox_start_dirty_no_stash(tmp_path: Path) -> None:
 def test_git_sandbox_start_dirty_with_stash(tmp_path: Path) -> None:
     """Test starting sandbox on dirty worktree with auto-stash."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Make worktree dirty
     (tmp_path / 'test.txt').write_text('modified')
@@ -182,11 +309,28 @@ def test_git_sandbox_start_dirty_with_stash(tmp_path: Path) -> None:
 def test_git_sandbox_commit_transaction(tmp_path: Path) -> None:
     """Test committing a transaction with tool metadata."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -212,11 +356,28 @@ def test_git_sandbox_commit_transaction(tmp_path: Path) -> None:
 def test_git_sandbox_merge_squash(tmp_path: Path) -> None:
     """Test squashing merge."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -241,17 +402,36 @@ def test_git_sandbox_merge_squash(tmp_path: Path) -> None:
     )
     lines = result.stdout.strip().split('\n')
     assert 'chore: applied TeaAgent modifications for run test-run' in lines[0]
-    assert '[TeaAgent Transaction]' not in lines[0]  # Squashed commit shouldn't have transaction marker
+    assert (
+        '[TeaAgent Transaction]' not in lines[0]
+    )  # Squashed commit shouldn't have transaction marker
 
 
 def test_git_sandbox_discard(tmp_path: Path) -> None:
     """Test discarding sandbox changes."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -270,11 +450,28 @@ def test_git_sandbox_discard(tmp_path: Path) -> None:
 def test_rollback_with_dirty_sandbox(tmp_path: Path) -> None:
     """Test rollback succeeds even with uncommitted changes on sandbox branch."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -296,11 +493,28 @@ def test_rollback_with_dirty_sandbox(tmp_path: Path) -> None:
 def test_git_sandbox_keep(tmp_path: Path) -> None:
     """Test keeping sandbox branch for manual review."""
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -329,11 +543,28 @@ def test_git_transaction_sink(tmp_path: Path) -> None:
     from teaagent.audit import AuditEvent
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -341,7 +572,13 @@ def test_git_transaction_sink(tmp_path: Path) -> None:
     sink = GitTransactionSink(sandbox)
 
     # Simulate tool call lifecycle
-    sink(AuditEvent('tool_call_started', 'run_1', payload={'tool_name': 'workspace_write_file', 'call_id': 'call_123'}))
+    sink(
+        AuditEvent(
+            'tool_call_started',
+            'run_1',
+            payload={'tool_name': 'workspace_write_file', 'call_id': 'call_123'},
+        )
+    )
     (tmp_path / 'test.txt').write_text('modified')
     sink(AuditEvent('tool_call_completed', 'run_1', payload={'call_id': 'call_123'}))
 
@@ -361,11 +598,28 @@ def test_git_transaction_sink_ignores_failed_calls(tmp_path: Path) -> None:
     from teaagent.audit import AuditEvent
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -373,7 +627,13 @@ def test_git_transaction_sink_ignores_failed_calls(tmp_path: Path) -> None:
     sink = GitTransactionSink(sandbox)
 
     # Simulate failed tool call
-    sink(AuditEvent('tool_call_started', 'run_1', payload={'tool_name': 'workspace_write_file', 'call_id': 'call_123'}))
+    sink(
+        AuditEvent(
+            'tool_call_started',
+            'run_1',
+            payload={'tool_name': 'workspace_write_file', 'call_id': 'call_123'},
+        )
+    )
     (tmp_path / 'test.txt').write_text('modified')
     sink(AuditEvent('tool_call_failed', 'run_1', payload={'call_id': 'call_123'}))
 
@@ -393,11 +653,28 @@ def test_git_transaction_sink_commits_shell_mutate(tmp_path: Path) -> None:
     from teaagent.audit import AuditEvent
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
     sandbox.start()
@@ -405,9 +682,22 @@ def test_git_transaction_sink_commits_shell_mutate(tmp_path: Path) -> None:
     sink = GitTransactionSink(sandbox)
 
     # Simulate shell mutate tool call
-    sink(AuditEvent('tool_call_started', 'run_1', payload={'tool_name': 'workspace_run_shell_mutate', 'call_id': 'call_shell_123'}))
+    sink(
+        AuditEvent(
+            'tool_call_started',
+            'run_1',
+            payload={
+                'tool_name': 'workspace_run_shell_mutate',
+                'call_id': 'call_shell_123',
+            },
+        )
+    )
     (tmp_path / 'test.txt').write_text('formatted by shell')
-    sink(AuditEvent('tool_call_completed', 'run_1', payload={'call_id': 'call_shell_123'}))
+    sink(
+        AuditEvent(
+            'tool_call_completed', 'run_1', payload={'call_id': 'call_shell_123'}
+        )
+    )
 
     # Verify commit was made
     result = subprocess.run(
@@ -417,7 +707,10 @@ def test_git_transaction_sink_commits_shell_mutate(tmp_path: Path) -> None:
         text=True,
         check=True,
     )
-    assert '[TeaAgent Transaction] workspace_run_shell_mutate - call_shell_123' in result.stdout
+    assert (
+        '[TeaAgent Transaction] workspace_run_shell_mutate - call_shell_123'
+        in result.stdout
+    )
 
 
 def test_find_orphaned_sandbox_branches(tmp_path: Path) -> None:
@@ -425,15 +718,39 @@ def test_find_orphaned_sandbox_branches(tmp_path: Path) -> None:
     from teaagent.git_sandbox import find_orphaned_sandbox_branches
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Create orphaned sandbox branch
-    subprocess.run(['git', 'checkout', '-b', 'teaagent-sandbox-orphaned-123'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'checkout', '-b', 'teaagent-sandbox-orphaned-123'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True
+    )
 
     # Find orphaned branches
     orphaned = find_orphaned_sandbox_branches(tmp_path)
@@ -449,25 +766,53 @@ def test_prune_sandbox_branch(tmp_path: Path) -> None:
     from teaagent.git_sandbox import prune_sandbox_branch
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Create sandbox branch
-    subprocess.run(['git', 'checkout', '-b', 'teaagent-sandbox-test-456'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'checkout', '-b', 'teaagent-sandbox-test-456'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True
+    )
 
     # Verify branch exists
-    result = subprocess.run(['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True
+    )
     assert 'teaagent-sandbox-test-456' in result.stdout
 
     # Prune branch
     assert prune_sandbox_branch(tmp_path, 'teaagent-sandbox-test-456')
 
     # Verify branch is deleted
-    result = subprocess.run(['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True
+    )
     assert 'teaagent-sandbox-test-456' not in result.stdout
 
 
@@ -476,34 +821,71 @@ def test_find_orphaned_sandbox_branches_with_active_run(tmp_path: Path) -> None:
     from teaagent.git_sandbox import find_orphaned_sandbox_branches
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Create background store directory and active run file manually
     bg_dir = tmp_path / '.teaagent' / 'background'
     bg_dir.mkdir(parents=True, exist_ok=True)
     import json
+
     from teaagent.ergonomics.background_run import _utc_now
+
     record_path = bg_dir / 'active-run-789.json'
-    record_path.write_text(json.dumps({
-        'background_id': 'active-run-789',
-        'pid': 12345,
-        'command': ['sleep', '100'],
-        'started_at': _utc_now(),
-        'log_path': '/tmp/test.log',
-        'status': 'running',
-    }))
+    record_path.write_text(
+        json.dumps(
+            {
+                'background_id': 'active-run-789',
+                'pid': 12345,
+                'command': ['sleep', '100'],
+                'started_at': _utc_now(),
+                'log_path': '/tmp/test.log',
+                'status': 'running',
+            }
+        )
+    )
 
     # Create sandbox branch matching active run
-    subprocess.run(['git', 'checkout', '-b', 'teaagent-sandbox-active-run-789'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'checkout', '-b', 'teaagent-sandbox-active-run-789'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True
+    )
 
     # Create orphaned branch
-    subprocess.run(['git', 'checkout', '-b', 'teaagent-sandbox-orphaned-123'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'checkout', '-b', 'teaagent-sandbox-orphaned-123'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'checkout', '-'], cwd=tmp_path, check=True, capture_output=True
+    )
 
     # Find orphaned branches (auto-detects background store)
     orphaned = find_orphaned_sandbox_branches(tmp_path)
@@ -520,11 +902,28 @@ def test_has_merge_conflicts_no_conflicts(tmp_path: Path) -> None:
     from teaagent.git_sandbox import has_merge_conflicts
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     assert not has_merge_conflicts(tmp_path)
 
@@ -534,11 +933,28 @@ def test_get_conflicted_files_no_conflicts(tmp_path: Path) -> None:
     from teaagent.git_sandbox import get_conflicted_files
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     assert get_conflicted_files(tmp_path) == []
 
@@ -548,11 +964,28 @@ def test_abort_merge_no_merge(tmp_path: Path) -> None:
     from teaagent.git_sandbox import abort_merge
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # abort_merge should fail when no merge is in progress
     assert not abort_merge(tmp_path)
@@ -563,8 +996,18 @@ def test_extract_conflict_context(tmp_path: Path) -> None:
     from teaagent.git_sandbox import extract_conflict_context
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Create a file with conflict markers
     conflicted_content = """<<<<<<< HEAD
@@ -576,7 +1019,7 @@ their version
     (tmp_path / 'test.txt').write_text(conflicted_content)
 
     context = extract_conflict_context(tmp_path, 'test.txt')
-    
+
     assert context is not None
     assert 'our version' in context['ours']
     assert 'their version' in context['theirs']
@@ -587,15 +1030,32 @@ def test_apply_llm_resolution(tmp_path: Path) -> None:
     from teaagent.git_sandbox import apply_llm_resolution
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     resolved_content = 'resolved content without markers'
     assert apply_llm_resolution(tmp_path, 'test.txt', resolved_content)
-    
+
     # Verify content was applied
     assert (tmp_path / 'test.txt').read_text() == resolved_content
 
@@ -605,11 +1065,28 @@ def test_parallel_experiment_stack_start_all(tmp_path: Path) -> None:
     from teaagent.git_sandbox import ParallelExperimentStack
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB', 'optC'])
     results = stack.start_all()
@@ -624,11 +1101,28 @@ def test_parallel_experiment_stack_get_sandbox(tmp_path: Path) -> None:
     from teaagent.git_sandbox import ParallelExperimentStack
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB'])
     stack.start_all()
@@ -646,11 +1140,28 @@ def test_parallel_experiment_stack_cleanup_all(tmp_path: Path) -> None:
     from teaagent.git_sandbox import ParallelExperimentStack
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB'])
     stack.start_all()
@@ -660,7 +1171,9 @@ def test_parallel_experiment_stack_cleanup_all(tmp_path: Path) -> None:
     assert all(results.values())
 
     # Verify branches are deleted
-    result = subprocess.run(['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True
+    )
     assert 'optA' not in result.stdout
     assert 'optB' not in result.stdout
 
@@ -670,11 +1183,28 @@ def test_parallel_experiment_stack_cleanup_keep_best(tmp_path: Path) -> None:
     from teaagent.git_sandbox import ParallelExperimentStack
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     (tmp_path / 'test.txt').write_text('original')
-    subprocess.run(['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     stack = ParallelExperimentStack(tmp_path, 'test-run', ['optA', 'optB'])
     stack.start_all()
@@ -685,7 +1215,9 @@ def test_parallel_experiment_stack_cleanup_keep_best(tmp_path: Path) -> None:
     assert results['optB'] is True  # Deleted
 
     # Verify optA still exists, optB is deleted
-    result = subprocess.run(['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ['git', 'branch'], cwd=tmp_path, capture_output=True, text=True, check=True
+    )
     assert 'optA' in result.stdout
     assert 'optB' not in result.stdout
 
@@ -709,8 +1241,8 @@ def test_os_sandbox_is_path_allowed(tmp_path: Path) -> None:
 
 def test_os_sandbox_sanitize_environment(tmp_path: Path) -> None:
     """Test environment variable sanitization."""
+
     from teaagent.git_sandbox import OSSandbox
-    import os
 
     sandbox = OSSandbox(tmp_path)
 

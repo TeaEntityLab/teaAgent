@@ -98,7 +98,9 @@ class SyncCLITests(unittest.TestCase):
             sync = FederatedGraphSync(tmp, 'test-agent', graph_store=None)
 
             sync.record_node_change('node-1', 'node_add', {'label': 'Test'})
-            sync.record_edge_change('edge-1', 'edge_add', {'from': 'node-1', 'to': 'node-2'})
+            sync.record_edge_change(
+                'edge-1', 'edge_add', {'from': 'node-1', 'to': 'node-2'}
+            )
 
             message = sync.create_sync_message()
 

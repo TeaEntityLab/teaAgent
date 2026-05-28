@@ -7,11 +7,13 @@ commands instead of manual file copying.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Any, Dict, Optional
 
 
 @dataclass(frozen=True)
@@ -452,7 +454,12 @@ class GitBranchSandbox:
                     check=True,
                 )
                 subprocess.run(
-                    ['git', 'commit', '-m', f'chore: applied TeaAgent modifications for run {self._run_id}'],
+                    [
+                        'git',
+                        'commit',
+                        '-m',
+                        f'chore: applied TeaAgent modifications for run {self._run_id}',
+                    ],
                     cwd=self._root,
                     capture_output=True,
                     text=True,
@@ -478,7 +485,7 @@ class GitBranchSandbox:
                         # This is a different merge error (e.g., unrelated histories, local changes)
                         return GitSandboxResult(
                             success=False,
-                            error=f"Merge failed (not a conflict): {e.stderr or e.stdout or 'Unknown error'}",
+                            error=f'Merge failed (not a conflict): {e.stderr or e.stdout or "Unknown error"}',
                         )
 
             # Check for merge conflicts
@@ -498,7 +505,8 @@ class GitBranchSandbox:
 
                     # Check if all conflicts were resolved
                     manual_files = [
-                        f for f, status in resolution_results.items()
+                        f
+                        for f, status in resolution_results.items()
                         if status in ('manual', 'failed')
                     ]
 
@@ -512,7 +520,12 @@ class GitBranchSandbox:
                             check=True,
                         )
                         subprocess.run(
-                            ['git', 'commit', '-m', f'chore: resolved merge conflicts for run {self._run_id}'],
+                            [
+                                'git',
+                                'commit',
+                                '-m',
+                                f'chore: resolved merge conflicts for run {self._run_id}',
+                            ],
                             cwd=self._root,
                             capture_output=True,
                             text=True,
@@ -589,7 +602,11 @@ class GitTransactionSink:
             self._on_tool_started(payload)
         elif event.event_type == 'tool_call_completed':
             self._on_tool_completed(payload)
-        elif event.event_type in {'tool_call_failed', 'tool_call_blocked', 'tool_call_denied'}:
+        elif event.event_type in {
+            'tool_call_failed',
+            'tool_call_blocked',
+            'tool_call_denied',
+        }:
             self._on_tool_failed(payload)
 
     def _on_tool_started(self, payload: dict[str, object]) -> None:
@@ -627,7 +644,7 @@ class GitTransactionSink:
 
 def find_orphaned_sandbox_branches(
     root: str | Path,
-    background_store: Optional['BackgroundRunStore'] = None,
+    background_store: Optional[object] = None,
 ) -> list[dict[str, Any]]:
     """Find orphaned sandbox branches that have no corresponding active run.
 
@@ -701,11 +718,13 @@ def find_orphaned_sandbox_branches(
             continue
 
         # Branch is orphaned
-        orphaned.append({
-            'branch_name': branch,
-            'run_id': run_id,
-            'reason': 'no_active_run',
-        })
+        orphaned.append(
+            {
+                'branch_name': branch,
+                'run_id': run_id,
+                'reason': 'no_active_run',
+            }
+        )
 
     return orphaned
 
@@ -893,7 +912,9 @@ def abort_merge(root: str | Path) -> bool:
         return False
 
 
-def extract_conflict_context(root: str | Path, file_path: str) -> Optional[dict[str, str]]:
+def extract_conflict_context(
+    root: str | Path, file_path: str
+) -> Optional[dict[str, str]]:
     """Extract conflict markers and context from a conflicted file.
 
     Args:
@@ -911,12 +932,12 @@ def extract_conflict_context(root: str | Path, file_path: str) -> Optional[dict[
 
     try:
         content = file_full_path.read_text(encoding='utf-8')
-        
+
         # Extract conflict sections
         lines = content.split('\n')
         sections = {'ours': '', 'theirs': '', 'base': ''}
         current_section = None
-        
+
         for line in lines:
             if line.startswith('<<<<<<<'):
                 current_section = 'ours'
@@ -928,7 +949,7 @@ def extract_conflict_context(root: str | Path, file_path: str) -> Optional[dict[
                 current_section = None
             elif current_section:
                 sections[current_section] += line + '\n'
-        
+
         # Try to get base version using git show
         try:
             result = subprocess.run(
@@ -941,13 +962,15 @@ def extract_conflict_context(root: str | Path, file_path: str) -> Optional[dict[
             sections['base'] = result.stdout
         except (subprocess.CalledProcessError, FileNotFoundError):
             sections['base'] = ''
-        
+
         return sections
     except (IOError, UnicodeDecodeError):
         return None
 
 
-def apply_llm_resolution(root: str | Path, file_path: str, resolved_content: str) -> bool:
+def apply_llm_resolution(
+    root: str | Path, file_path: str, resolved_content: str
+) -> bool:
     """Apply LLM-resolved content to a conflicted file.
 
     Args:
@@ -1207,10 +1230,9 @@ class ParallelExperimentStack:
 
         # Create sandbox for each option
         for option in self._options:
-            branch_name = f'teaagent-sandbox-{self._run_id}-{option}'
-            sandbox = GitBranchSandbox(self._root, run_id=f'{self._run_id}-{option}')
-            self._sandboxes[option] = sandbox
-            results[option] = sandbox.start(auto_stash=auto_stash)
+            GitBranchSandbox(self._root, run_id=f'{self._run_id}-{option}')
+            self._sandboxes[option] = GitBranchSandbox(self._root, run_id=f'{self._run_id}-{option}')
+            results[option] = self._sandboxes[option].start(auto_stash=auto_stash)
 
         return results
 
@@ -1239,41 +1261,41 @@ class ParallelExperimentStack:
         for option, sandbox in self._sandboxes.items():
             try:
                 result = subprocess.run(
-                    ['git', 'diff', '--stat', self._original_branch, sandbox._branch_name],
+                    [
+                        'git',
+                        'diff',
+                        '--stat',
+                        self._original_branch,
+                        sandbox._branch_name,
+                    ],
                     cwd=self._root,
                     capture_output=True,
                     text=True,
                     check=True,
                 )
                 stats = result.stdout.strip()
-                
+
                 # Parse stats
                 files_changed = 0
                 insertions = 0
                 deletions = 0
-                
+
                 for line in stats.split('\n'):
                     if 'file' in line or 'files' in line:
                         parts = line.split()
                         if parts:
-                            try:
+                            with suppress(ValueError):
                                 files_changed = int(parts[0])
-                            except ValueError:
-                                pass
                     if 'insertion' in line or 'insertions' in line:
                         parts = line.split()
                         if parts:
-                            try:
+                            with suppress(ValueError):
                                 insertions = int(parts[0])
-                            except ValueError:
-                                pass
                     if 'deletion' in line or 'deletions' in line:
                         parts = line.split()
                         if parts:
-                            try:
+                            with suppress(ValueError):
                                 deletions = int(parts[0])
-                            except ValueError:
-                                pass
 
                 comparisons[option] = {
                     'files_changed': files_changed,
@@ -1307,7 +1329,7 @@ class ParallelExperimentStack:
 
         # Switch back to original branch first
         if self._original_branch:
-            try:
+            with suppress(subprocess.CalledProcessError):
                 subprocess.run(
                     ['git', 'checkout', self._original_branch],
                     cwd=self._root,
@@ -1315,8 +1337,6 @@ class ParallelExperimentStack:
                     text=True,
                     check=True,
                 )
-            except subprocess.CalledProcessError:
-                pass  # Continue with cleanup even if checkout fails
 
         # Clean up memory for deleted branches
         if cleanup_memory:
@@ -1386,7 +1406,7 @@ class ParallelExperimentStack:
         # Switch back to original branch first
         original_branch = self._original_branch
         if original_branch:
-            try:
+            with suppress(subprocess.CalledProcessError):
                 subprocess.run(
                     ['git', 'checkout', original_branch],
                     cwd=self._root,
@@ -1394,8 +1414,6 @@ class ParallelExperimentStack:
                     text=True,
                     check=True,
                 )
-            except subprocess.CalledProcessError:
-                pass
 
         for option, sandbox in self._sandboxes.items():
             try:
@@ -1464,7 +1482,7 @@ class ParallelExperimentStack:
 
         # Switch back to original branch
         if original_branch:
-            try:
+            with suppress(subprocess.CalledProcessError):
                 subprocess.run(
                     ['git', 'checkout', original_branch],
                     cwd=self._root,
@@ -1472,8 +1490,6 @@ class ParallelExperimentStack:
                     text=True,
                     check=True,
                 )
-            except subprocess.CalledProcessError:
-                pass
 
         return results
 
@@ -1519,7 +1535,9 @@ class OSSandbox:
         except (ValueError, OSError):
             return False
 
-    def sanitize_environment(self, env: Optional[dict[str, str]] = None) -> dict[str, str]:
+    def sanitize_environment(
+        self, env: Optional[dict[str, str]] = None
+    ) -> dict[str, str]:
         """Sanitize environment variables for safe execution.
 
         Args:
@@ -1575,7 +1593,6 @@ class OSSandbox:
         Returns:
             Dict with 'success', 'stdout', 'stderr', 'exit_code'.
         """
-        import os
 
         if cwd and not self.is_path_allowed(cwd):
             return {
@@ -1635,7 +1652,9 @@ class OSSandbox:
             resource.setrlimit(resource.RLIMIT_CPU, (300, 300))
 
             # Limit memory to 1GB
-            resource.setrlimit(resource.RLIMIT_AS, (1024 * 1024 * 1024, 1024 * 1024 * 1024))
+            resource.setrlimit(
+                resource.RLIMIT_AS, (1024 * 1024 * 1024, 1024 * 1024 * 1024)
+            )
 
             # Limit number of processes
             resource.setrlimit(resource.RLIMIT_NPROC, (100, 100))

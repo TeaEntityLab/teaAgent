@@ -93,7 +93,7 @@ class DiffApprovalHandler:
         """Apply color to text if colors are enabled."""
         if not self._enable_colors:
             return text
-        return f"{color}{text}{_COLOR_RESET}"
+        return f'{color}{text}{_COLOR_RESET}'
 
     def __call__(self, request: ApprovalRequest) -> bool:
         self._output('')
@@ -234,7 +234,9 @@ class DiffApprovalHandler:
                 line = self._colorize(line, _COLOR_CYAN)
             self._output(f'  {line}')
         if len(diff) > _MAX_DIFF_LINES:
-            more = self._colorize(f'... ({len(diff) - _MAX_DIFF_LINES} more lines)', _COLOR_YELLOW)
+            more = self._colorize(
+                f'... ({len(diff) - _MAX_DIFF_LINES} more lines)', _COLOR_YELLOW
+            )
             self._output(f'  {more}')
 
     def _explain(self, request: ApprovalRequest) -> None:

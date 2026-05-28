@@ -10,7 +10,6 @@ This module provides:
 from __future__ import annotations
 
 import subprocess
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
@@ -19,7 +18,7 @@ from typing import Dict, Optional
 @dataclass
 class BenchmarkMetrics:
     """Benchmark metrics for an approach."""
-    
+
     approach_id: str
     correctness: float  # 0-100 scale
     performance: float  # 0-100 scale
@@ -33,28 +32,28 @@ class BenchmarkMetrics:
 
 class BenchmarkRunner:
     """Runner for benchmarking tournament approaches."""
-    
-    def __init__(self, root: Path, baseline_branch: str = "main") -> None:
+
+    def __init__(self, root: Path, baseline_branch: str = 'main') -> None:
         """Initialize benchmark runner.
-        
+
         Args:
             root: The workspace root directory
             baseline_branch: The baseline branch for comparison
         """
         self.root = Path(root).resolve()
         self.baseline_branch = baseline_branch
-    
+
     def benchmark_approach(
         self,
         branch: str,
         approach_id: str,
     ) -> BenchmarkMetrics:
         """Benchmark a single approach.
-        
+
         Args:
             branch: The branch to benchmark
             output: The approach ID
-            
+
         Returns:
             BenchmarkMetrics
         """
@@ -66,21 +65,21 @@ class BenchmarkRunner:
             text=True,
             check=True,
         )
-        
+
         # Measure correctness (test pass rate)
         test_pass_rate = self._measure_correctness()
-        
+
         # Measure performance (execution time)
         execution_time = self._measure_performance()
-        
+
         # Measure code quality (lint warnings, lines changed)
         lint_warnings, lines_changed = self._measure_code_quality(branch)
-        
+
         # Normalize metrics to 0-100 scale
         correctness = test_pass_rate * 100
         performance = self._normalize_performance(execution_time)
         code_quality = self._normalize_code_quality(lint_warnings, lines_changed)
-        
+
         return BenchmarkMetrics(
             approach_id=approach_id,
             correctness=correctness,
@@ -92,10 +91,10 @@ class BenchmarkRunner:
             lines_changed=lines_changed,
             metadata={},
         )
-    
+
     def _measure_correctness(self) -> float:
         """Measure test pass rate.
-        
+
         Returns:
             Test pass rate (0-1 scale)
         """
@@ -108,50 +107,50 @@ class BenchmarkRunner:
                 text=True,
                 timeout=60,
             )
-            
+
             # Parse output for pass rate
             # Simplified parsing - in production would be more sophisticated
             output = result.stdout + result.stderr
-            if "passed" in output:
+            if 'passed' in output:
                 # Extract pass count
                 parts = output.split()
                 for i, part in enumerate(parts):
-                    if part == "passed" and i > 0:
+                    if part == 'passed' and i > 0:
                         try:
-                            passed = int(parts[i-1])
+                            passed = int(parts[i - 1])
                             # Assume total tests is passed + failed
                             total = passed
-                            if "failed" in output:
+                            if 'failed' in output:
                                 for j, p in enumerate(parts):
-                                    if p == "failed" and j > 0:
-                                        total += int(parts[j-1])
+                                    if p == 'failed' and j > 0:
+                                        total += int(parts[j - 1])
                                         break
                             return passed / total if total > 0 else 0.0
                         except ValueError:
                             pass
-            
+
             return 1.0 if result.returncode == 0 else 0.0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return 0.0
         except Exception:
             return 0.0
-    
+
     def _measure_performance(self) -> float:
         """Measure execution time.
-        
+
         Returns:
             Execution time in seconds
         """
         # In a full implementation, this would run a specific benchmark
         # For now, return a placeholder
         return 1.0
-    
+
     def _measure_code_quality(self, branch: str) -> tuple[int, int]:
         """Measure code quality metrics.
-        
+
         Args:
             branch: The branch to measure
-            
+
         Returns:
             Tuple of (lint_warnings, lines_changed)
         """
@@ -164,7 +163,7 @@ class BenchmarkRunner:
                 text=True,
                 check=True,
             )
-            
+
             # Parse lines changed
             lines_changed = 0
             for line in result.stdout.split('\n'):
@@ -176,7 +175,7 @@ class BenchmarkRunner:
                                 lines_changed += int(part)
                     except ValueError:
                         pass
-            
+
             # Run linter to count warnings
             lint_warnings = 0
             try:
@@ -188,20 +187,22 @@ class BenchmarkRunner:
                     timeout=30,
                 )
                 # Count warning lines
-                lint_warnings = len([line for line in lint_result.stdout.split('\n') if line.strip()])
+                lint_warnings = len(
+                    [line for line in lint_result.stdout.split('\n') if line.strip()]
+                )
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 pass
-            
+
             return lint_warnings, lines_changed
         except subprocess.CalledProcessError:
             return 0, 0
-    
+
     def _normalize_performance(self, execution_time: float) -> float:
         """Normalize performance metric to 0-100 scale.
-        
+
         Args:
             execution_time: Execution time in seconds
-            
+
         Returns:
             Normalized performance score (0-100)
         """
@@ -213,14 +214,14 @@ class BenchmarkRunner:
         ratio = baseline / execution_time
         # Clamp to 0-100
         return min(100.0, max(0.0, ratio * 50))
-    
+
     def _normalize_code_quality(self, lint_warnings: int, lines_changed: int) -> float:
         """Normalize code quality metric to 0-100 scale.
-        
+
         Args:
             lint_warnings: Number of lint warnings
             lines_changed: Number of lines changed
-            
+
         Returns:
             Normalized code quality score (0-100)
         """

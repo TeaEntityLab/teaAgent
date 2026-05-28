@@ -890,17 +890,23 @@ def test_runstore_readonly_prevents_mutation(tmp_path: Path) -> None:
     store = RunStore(tmp_path, readonly=True)
 
     # audit_logger should raise
-    with pytest.raises(RuntimeError, match='Cannot create audit logger in readonly mode'):
+    with pytest.raises(
+        RuntimeError, match='Cannot create audit logger in readonly mode'
+    ):
         store.audit_logger()
 
     # undo_dir should raise
-    with pytest.raises(RuntimeError, match='Cannot access undo directory in readonly mode'):
+    with pytest.raises(
+        RuntimeError, match='Cannot access undo directory in readonly mode'
+    ):
         store.undo_dir()
 
     # logger_for_result should raise (use mock audit logger to avoid audit_logger call)
     mock_audit = MagicMock()
     mock_audit.path = None
-    with pytest.raises(RuntimeError, match='Cannot persist logger result in readonly mode'):
+    with pytest.raises(
+        RuntimeError, match='Cannot persist logger result in readonly mode'
+    ):
         store.logger_for_result(
             RunResult(
                 run_id='test',
@@ -913,7 +919,9 @@ def test_runstore_readonly_prevents_mutation(tmp_path: Path) -> None:
         )
 
     # record_undo_applied should raise
-    with pytest.raises(RuntimeError, match='Cannot record undo applied in readonly mode'):
+    with pytest.raises(
+        RuntimeError, match='Cannot record undo applied in readonly mode'
+    ):
         store.record_undo_applied(
             'test',
             status='ok',
@@ -973,10 +981,11 @@ def test_readonly_query_commands_do_not_create_teaagent_dir(tmp_path: Path) -> N
     assert not teaagent_dir.exists()
 
 
-def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: Path) -> None:
+def test_table_driven_zero_footprint_queries_vs_mutating_initializers(
+    tmp_path: Path,
+) -> None:
     """Table-driven test distinguishing zero-footprint queries from mutating initializers."""
     import argparse
-    import contextlib
     import shutil
 
     from teaagent.cli._handlers._agent import (
@@ -1016,52 +1025,159 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
     # Zero-footprint queries: should NOT create .teaagent
     # Format: (name, cmd_fn, expected_return_codes or None for non-CLI functions)
     zero_footprint_queries = [
-        ('memory list', lambda: memory_list_command(argparse.Namespace(root=str(tmp_path), limit=10)), {0}),
-        ('memory search', lambda: memory_search_command(argparse.Namespace(root=str(tmp_path), query='test', limit=10)), {0}),
-        ('memory show missing', lambda: memory_show_command(argparse.Namespace(root=str(tmp_path), memory_id='missing')), {1}),
-        ('skill candidate list', lambda: skill_candidate_list_command(argparse.Namespace(root=str(tmp_path))), {0}),
-        ('skill candidate show missing', lambda: skill_candidate_show_command(argparse.Namespace(root=str(tmp_path), candidate_id='missing')), {1}),
-        ('skill search', lambda: skill_search_command(argparse.Namespace(root=str(tmp_path), query='test', tag=None, limit=20, json=True)), {0}),
-        ('skill marketplace list', lambda: skill_marketplace_list_command(argparse.Namespace(root=str(tmp_path), limit=50, json=True)), {0}),
-        ('automation list', lambda: automation_list_command(argparse.Namespace(root=str(tmp_path))), {0}),
-        ('automation show missing', lambda: automation_show_command(argparse.Namespace(root=str(tmp_path), automation_id='missing')), {1}),
-        ('automation status', lambda: automation_status_command(argparse.Namespace(root=str(tmp_path))), {0}),
-        ('ultrawork list', lambda: ultrawork_list_command(argparse.Namespace(root=str(tmp_path))), {0}),
-        ('ultrawork show missing', lambda: ultrawork_show_command(argparse.Namespace(root=str(tmp_path), worker_id='missing')), {1}),
-        ('ultrawork logs missing', lambda: ultrawork_logs_command(argparse.Namespace(root=str(tmp_path), worker_id='missing', bytes=64000)), {1}),
-        ('cloud list', lambda: cloud_list_command(argparse.Namespace(root=str(tmp_path), status=None, limit=50, json=True)), {0}),
-        ('cloud show missing', lambda: cloud_show_command(argparse.Namespace(root=str(tmp_path), task_id='missing', json=True)), {1}),
-        ('cloud capabilities', lambda: cloud_capabilities_command(argparse.Namespace(root=str(tmp_path), json=True)), {0}),
+        (
+            'memory list',
+            lambda: memory_list_command(
+                argparse.Namespace(root=str(tmp_path), limit=10)
+            ),
+            {0},
+        ),
+        (
+            'memory search',
+            lambda: memory_search_command(
+                argparse.Namespace(root=str(tmp_path), query='test', limit=10)
+            ),
+            {0},
+        ),
+        (
+            'memory show missing',
+            lambda: memory_show_command(
+                argparse.Namespace(root=str(tmp_path), memory_id='missing')
+            ),
+            {1},
+        ),
+        (
+            'skill candidate list',
+            lambda: skill_candidate_list_command(
+                argparse.Namespace(root=str(tmp_path))
+            ),
+            {0},
+        ),
+        (
+            'skill candidate show missing',
+            lambda: skill_candidate_show_command(
+                argparse.Namespace(root=str(tmp_path), candidate_id='missing')
+            ),
+            {1},
+        ),
+        (
+            'skill search',
+            lambda: skill_search_command(
+                argparse.Namespace(
+                    root=str(tmp_path), query='test', tag=None, limit=20, json=True
+                )
+            ),
+            {0},
+        ),
+        (
+            'skill marketplace list',
+            lambda: skill_marketplace_list_command(
+                argparse.Namespace(root=str(tmp_path), limit=50, json=True)
+            ),
+            {0},
+        ),
+        (
+            'automation list',
+            lambda: automation_list_command(argparse.Namespace(root=str(tmp_path))),
+            {0},
+        ),
+        (
+            'automation show missing',
+            lambda: automation_show_command(
+                argparse.Namespace(root=str(tmp_path), automation_id='missing')
+            ),
+            {1},
+        ),
+        (
+            'automation status',
+            lambda: automation_status_command(argparse.Namespace(root=str(tmp_path))),
+            {0},
+        ),
+        (
+            'ultrawork list',
+            lambda: ultrawork_list_command(argparse.Namespace(root=str(tmp_path))),
+            {0},
+        ),
+        (
+            'ultrawork show missing',
+            lambda: ultrawork_show_command(
+                argparse.Namespace(root=str(tmp_path), worker_id='missing')
+            ),
+            {1},
+        ),
+        (
+            'ultrawork logs missing',
+            lambda: ultrawork_logs_command(
+                argparse.Namespace(root=str(tmp_path), worker_id='missing', bytes=64000)
+            ),
+            {1},
+        ),
+        (
+            'cloud list',
+            lambda: cloud_list_command(
+                argparse.Namespace(root=str(tmp_path), status=None, limit=50, json=True)
+            ),
+            {0},
+        ),
+        (
+            'cloud show missing',
+            lambda: cloud_show_command(
+                argparse.Namespace(root=str(tmp_path), task_id='missing', json=True)
+            ),
+            {1},
+        ),
+        (
+            'cloud capabilities',
+            lambda: cloud_capabilities_command(
+                argparse.Namespace(root=str(tmp_path), json=True)
+            ),
+            {0},
+        ),
         ('yesterday runs', lambda: list_yesterday_runs(tmp_path), None),
         ('recall runs', lambda: list_recall_runs(tmp_path), None),
-        ('status short', lambda: build_status_short(root=tmp_path, provider='gpt', permission_mode=PermissionMode.PROMPT), None),
+        (
+            'status short',
+            lambda: build_status_short(
+                root=tmp_path, provider='gpt', permission_mode=PermissionMode.PROMPT
+            ),
+            None,
+        ),
     ]
 
     for name, cmd_fn, expected_codes in zero_footprint_queries:
         # Reset: ensure .teaagent doesn't exist
         if teaagent_dir.exists():
             shutil.rmtree(teaagent_dir)
-        assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
+        assert not teaagent_dir.exists(), f'Pre-check failed for {name}'
 
         # Execute command and validate return code
         try:
             result = cmd_fn()
             if expected_codes is not None:
                 # CLI commands must return int and match expected codes
-                assert isinstance(result, int), f"{name} returned {type(result).__name__}, expected int"
-                assert result in expected_codes, f"{name} returned {result}, expected {expected_codes}"
+                assert isinstance(result, int), (
+                    f'{name} returned {type(result).__name__}, expected int'
+                )
+                assert result in expected_codes, (
+                    f'{name} returned {result}, expected {expected_codes}'
+                )
             # If expected_codes is None, allow data-returning functions (non-CLI)
         except Exception as exc:
             # Fail on unexpected exceptions
-            raise AssertionError(f"{name} raised unexpected exception: {exc}") from exc
+            raise AssertionError(f'{name} raised unexpected exception: {exc}') from exc
 
         # Verify .teaagent was NOT created
-        assert not teaagent_dir.exists(), f"{name} should not create .teaagent directory"
+        assert not teaagent_dir.exists(), (
+            f'{name} should not create .teaagent directory'
+        )
 
     # Mutating initializers: SHOULD create .teaagent
     mutating_initializers = [
         ('memory add', lambda: _setup_config_and_add_memory(tmp_path)),
-        ('skill candidate propose', lambda: _setup_config_and_propose_candidate(tmp_path)),
+        (
+            'skill candidate propose',
+            lambda: _setup_config_and_propose_candidate(tmp_path),
+        ),
         ('automation add', lambda: _setup_config_and_add_automation(tmp_path)),
     ]
 
@@ -1069,17 +1185,17 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(tmp_path: 
         # Reset: ensure .teaagent doesn't exist
         if teaagent_dir.exists():
             shutil.rmtree(teaagent_dir)
-        assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
+        assert not teaagent_dir.exists(), f'Pre-check failed for {name}'
 
         # Execute command - should not raise exceptions for successful initialization
         try:
             cmd_fn()
         except Exception as exc:
             # Fail on exceptions - mutating commands should complete successfully
-            raise AssertionError(f"{name} failed during initialization: {exc}") from exc
+            raise AssertionError(f'{name} failed during initialization: {exc}') from exc
 
         # Verify .teaagent WAS created
-        assert teaagent_dir.exists(), f"{name} should create .teaagent directory"
+        assert teaagent_dir.exists(), f'{name} should create .teaagent directory'
 
         # Clean up for next iteration
         shutil.rmtree(teaagent_dir)
@@ -1129,10 +1245,26 @@ def test_black_box_cli_zero_footprint_commands(tmp_path: Path) -> None:
     # Black-box CLI commands: should NOT create .teaagent
     # Format: (name, argv, expected_return_code)
     black_box_commands = [
-        ('memory show missing', ['memory', 'show', 'missing', '--root', str(tmp_path)], 1),
-        ('cloud show missing', ['cloud', 'show', 'missing', '--root', str(tmp_path), '--json'], 1),
-        ('skill search', ['skill', 'search', 'test', '--root', str(tmp_path), '--json'], 0),
-        ('ultrawork show missing', ['ultrawork', 'show', 'missing', '--root', str(tmp_path)], 1),
+        (
+            'memory show missing',
+            ['memory', 'show', 'missing', '--root', str(tmp_path)],
+            1,
+        ),
+        (
+            'cloud show missing',
+            ['cloud', 'show', 'missing', '--root', str(tmp_path), '--json'],
+            1,
+        ),
+        (
+            'skill search',
+            ['skill', 'search', 'test', '--root', str(tmp_path), '--json'],
+            0,
+        ),
+        (
+            'ultrawork show missing',
+            ['ultrawork', 'show', 'missing', '--root', str(tmp_path)],
+            1,
+        ),
     ]
 
     for name, argv, expected_code in black_box_commands:
@@ -1141,7 +1273,7 @@ def test_black_box_cli_zero_footprint_commands(tmp_path: Path) -> None:
             import shutil
 
             shutil.rmtree(teaagent_dir)
-        assert not teaagent_dir.exists(), f"Pre-check failed for {name}"
+        assert not teaagent_dir.exists(), f'Pre-check failed for {name}'
 
         # Capture stdout/stderr
         old_stdout = sys.stdout
@@ -1157,18 +1289,24 @@ def test_black_box_cli_zero_footprint_commands(tmp_path: Path) -> None:
             result = main(argv)
 
             # Verify return code
-            assert result == expected_code, f"{name} returned {result}, expected {expected_code}"
+            assert result == expected_code, (
+                f'{name} returned {result}, expected {expected_code}'
+            )
 
         except SystemExit as exc:
             # main() may call sys.exit
-            assert exc.code == expected_code, f"{name} exited with {exc.code}, expected {expected_code}"
+            assert exc.code == expected_code, (
+                f'{name} exited with {exc.code}, expected {expected_code}'
+            )
         except Exception as exc:
             # Fail on unexpected exceptions
-            raise AssertionError(f"{name} raised unexpected exception: {exc}") from exc
+            raise AssertionError(f'{name} raised unexpected exception: {exc}') from exc
         finally:
             sys.stdout = old_stdout
             sys.stderr = old_stderr
             sys.argv = old_argv
 
         # Verify .teaagent was NOT created
-        assert not teaagent_dir.exists(), f"{name} should not create .teaagent directory"
+        assert not teaagent_dir.exists(), (
+            f'{name} should not create .teaagent directory'
+        )

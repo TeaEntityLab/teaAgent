@@ -10,10 +10,10 @@ This module provides:
 from __future__ import annotations
 
 from teaagent.validation.tool_detector import detect_available_tools
-from teaagent.validation.validators import ValidationRunner, ValidationResult
+from teaagent.validation.validators import ValidationResult, ValidationRunner
 
 __all__ = [
-    "detect_available_tools",
-    "ValidationRunner",
-    "ValidationResult",
+    'detect_available_tools',
+    'ValidationRunner',
+    'ValidationResult',
 ]

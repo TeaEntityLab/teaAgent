@@ -61,14 +61,14 @@ def test_format_setup_summary_lists_safe_command() -> None:
 
 def test_format_ascii_table() -> None:
     from teaagent.ergonomics.human_output import format_ascii_table
-    headers = ["Name", "Age"]
-    keys = ["name", "age"]
+
+    headers = ['Name', 'Age']
+    keys = ['name', 'age']
     rows = [
-        {"name": "Alice", "age": 30},
-        {"name": "Bob", "age": 25},
+        {'name': 'Alice', 'age': 30},
+        {'name': 'Bob', 'age': 25},
     ]
     tbl = format_ascii_table(headers, rows, keys)
-    assert "Alice" in tbl
-    assert "Bob" in tbl
-    assert "Age" in tbl
-
+    assert 'Alice' in tbl
+    assert 'Bob' in tbl
+    assert 'Age' in tbl

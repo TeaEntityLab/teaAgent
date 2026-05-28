@@ -32,17 +32,21 @@ def replay_list(args: argparse.Namespace) -> int:
     try:
         summaries = run_store.list_runs(limit=limit)
     except Exception as exc:
-        print_json({
-            'ok': False,
-            'error': f'Failed to list runs: {exc}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Failed to list runs: {exc}',
+            }
+        )
         return 1
 
-    print_json({
-        'ok': True,
-        'count': len(summaries),
-        'runs': [s.to_dict() for s in summaries],
-    })
+    print_json(
+        {
+            'ok': True,
+            'count': len(summaries),
+            'runs': [s.to_dict() for s in summaries],
+        }
+    )
     return 0
 
 
@@ -62,37 +66,45 @@ def replay_steps(args: argparse.Namespace) -> int:
     run_path = run_store.run_path(run_id)
 
     if not run_path.exists():
-        print_json({
-            'ok': False,
-            'error': f'Run not found: {run_id}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Run not found: {run_id}',
+            }
+        )
         return 1
 
     try:
         audit = AuditLogger(path=run_path)
         entries = audit.events
     except Exception as exc:
-        print_json({
-            'ok': False,
-            'error': f'Failed to read audit log: {exc}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Failed to read audit log: {exc}',
+            }
+        )
         return 1
 
     steps = []
     for i, entry in enumerate(entries):
-        steps.append({
-            'step_number': i,
-            'event_type': entry.event_type,
-            'timestamp': entry.created_at,
-            'summary': entry.payload.get('summary', ''),
-        })
+        steps.append(
+            {
+                'step_number': i,
+                'event_type': entry.event_type,
+                'timestamp': entry.created_at,
+                'summary': entry.payload.get('summary', ''),
+            }
+        )
 
-    print_json({
-        'ok': True,
-        'run_id': run_id,
-        'total_steps': len(steps),
-        'steps': steps,
-    })
+    print_json(
+        {
+            'ok': True,
+            'run_id': run_id,
+            'total_steps': len(steps),
+            'steps': steps,
+        }
+    )
     return 0
 
 
@@ -114,27 +126,33 @@ def replay_fork(args: argparse.Namespace) -> int:
     run_path = run_store.run_path(run_id)
 
     if not run_path.exists():
-        print_json({
-            'ok': False,
-            'error': f'Run not found: {run_id}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Run not found: {run_id}',
+            }
+        )
         return 1
 
     try:
         audit = AuditLogger(path=run_path)
         entries = audit.events
     except Exception as exc:
-        print_json({
-            'ok': False,
-            'error': f'Failed to read audit log: {exc}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Failed to read audit log: {exc}',
+            }
+        )
         return 1
 
     if step_number < 0 or step_number >= len(entries):
-        print_json({
-            'ok': False,
-            'error': f'Invalid step number: {step_number}. Run has {len(entries)} steps.',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Invalid step number: {step_number}. Run has {len(entries)} steps.',
+            }
+        )
         return 1
 
     # Get the entry at the fork point
@@ -160,23 +178,29 @@ def replay_fork(args: argparse.Namespace) -> int:
     }
 
     try:
-        checkpoint_path.write_text(json.dumps(checkpoint_data, indent=2), encoding='utf-8')
+        checkpoint_path.write_text(
+            json.dumps(checkpoint_data, indent=2), encoding='utf-8'
+        )
     except Exception as exc:
-        print_json({
-            'ok': False,
-            'error': f'Failed to write checkpoint: {exc}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Failed to write checkpoint: {exc}',
+            }
+        )
         return 1
 
-    print_json({
-        'ok': True,
-        'run_id': run_id,
-        'fork_step': step_number,
-        'branch_name': branch_name,
-        'checkpoint_path': str(checkpoint_path),
-        'fork_event_type': fork_entry.event_type,
-        'fork_summary': fork_entry.payload.get('summary', ''),
-    })
+    print_json(
+        {
+            'ok': True,
+            'run_id': run_id,
+            'fork_step': step_number,
+            'branch_name': branch_name,
+            'checkpoint_path': str(checkpoint_path),
+            'fork_event_type': fork_entry.event_type,
+            'fork_summary': fork_entry.payload.get('summary', ''),
+        }
+    )
     return 0
 
 
@@ -195,24 +219,30 @@ def replay_resume(args: argparse.Namespace) -> int:
     checkpoint_path = root / '.teaagent' / 'replay' / f'{branch_name}.json'
 
     if not checkpoint_path.exists():
-        print_json({
-            'ok': False,
-            'error': f'Checkpoint not found for branch: {branch_name}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Checkpoint not found for branch: {branch_name}',
+            }
+        )
         return 1
 
     try:
         checkpoint_data = json.loads(checkpoint_path.read_text(encoding='utf-8'))
     except Exception as exc:
-        print_json({
-            'ok': False,
-            'error': f'Failed to read checkpoint: {exc}',
-        })
+        print_json(
+            {
+                'ok': False,
+                'error': f'Failed to read checkpoint: {exc}',
+            }
+        )
         return 1
 
-    print_json({
-        'ok': True,
-        'message': 'Replay checkpoint loaded. Use teaagent run to continue execution.',
-        'checkpoint': checkpoint_data,
-    })
+    print_json(
+        {
+            'ok': True,
+            'message': 'Replay checkpoint loaded. Use teaagent run to continue execution.',
+            'checkpoint': checkpoint_data,
+        }
+    )
     return 0

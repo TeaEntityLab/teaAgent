@@ -55,7 +55,6 @@ from teaagent.cli._handlers import (
     background_list_command,
     background_show_command,
     chat_command,
-    interactive_review_command,
     ci_review_command,
     clarify_command,
     cloud_cancel_command,
@@ -187,7 +186,7 @@ def main(
     parser = build_parser()
     raw_argv = argv if argv is not None else sys.argv[1:]
     expanded_argv = _expand_argv(raw_argv)
-    
+
     args = parser.parse_args(expanded_argv)
     if getattr(args, 'command', None) is None:
         new_argv = raw_argv + ['chat']

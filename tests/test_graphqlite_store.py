@@ -76,16 +76,24 @@ class GraphQLiteStoreTests(unittest.TestCase):
         self.assertTrue(available, message)
         self.assertEqual(message, 'graphqlite runtime is available')
 
-
     def test_graphqlite_fallback_to_dummy(self) -> None:
         from unittest.mock import patch
-        from teaagent.graphqlite_store import GraphQLiteRuntimeError, DummyKnowledgeGraph
-        
-        with patch('teaagent.graphqlite_store.load_graphqlite_graph', side_effect=GraphQLiteRuntimeError("missing extensions")):
+
+        from teaagent.graphqlite_store import (
+            DummyKnowledgeGraph,
+            GraphQLiteRuntimeError,
+        )
+
+        with patch(
+            'teaagent.graphqlite_store.load_graphqlite_graph',
+            side_effect=GraphQLiteRuntimeError('missing extensions'),
+        ):
             store = GraphQLiteGraphStore(GraphQLiteConfig(database=':memory:'))
             self.assertIsInstance(store.graph, DummyKnowledgeGraph)
             # Ensure it does not crash on ops
-            store.upsert_document(Document(doc_id='doc-1', text='Alice owns Acme', source='graph'))
+            store.upsert_document(
+                Document(doc_id='doc-1', text='Alice owns Acme', source='graph')
+            )
             self.assertEqual(store.query('MATCH (n) RETURN n'), [])
 
 

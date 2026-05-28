@@ -214,25 +214,37 @@ def format_setup_summary(payload: dict[str, Any], *, root: str = '.') -> str:
     return '\n'.join(lines)
 
 
-def format_ascii_table(headers: list[str], rows: list[dict[str, Any]], keys: list[str]) -> str:
+def format_ascii_table(
+    headers: list[str], rows: list[dict[str, Any]], keys: list[str]
+) -> str:
     """Format a list of records into a beautifully aligned ASCII table."""
     if not rows:
-        return "(no records)"
-    
+        return '(no records)'
+
     # Calculate column widths
-    widths = {key: len(header) for key, header in zip(keys, headers)}
+    widths = {key: len(header) for key, header in zip(keys, headers, strict=True)}
     for row in rows:
         for key in keys:
             val = str(row.get(key, '') or '')
             widths[key] = max(widths[key], len(val))
-            
+
     # Form separator and header lines
-    sep = "+" + "+".join("-" * (widths[key] + 2) for key in keys) + "+"
-    header_line = "|" + "|".join(f" {header:<{widths[key]}} " for key, header in zip(keys, headers)) + "|"
-    
+    sep = '+' + '+'.join('-' * (widths[key] + 2) for key in keys) + '+'
+    header_line = (
+        '|'
+        + '|'.join(f' {header:<{widths[key]}} ' for key, header in zip(keys, headers, strict=True))
+        + '|'
+    )
+
     lines = [sep, header_line, sep]
     for row in rows:
-        row_line = "|" + "|".join(f" {str(row.get(key, '') or ''):<{widths[key]}} " for key in keys) + "|"
+        row_line = (
+            '|'
+            + '|'.join(
+                f' {str(row.get(key, "") or ""):<{widths[key]}} ' for key in keys
+            )
+            + '|'
+        )
         lines.append(row_line)
     lines.append(sep)
-    return "\n".join(lines)
+    return '\n'.join(lines)

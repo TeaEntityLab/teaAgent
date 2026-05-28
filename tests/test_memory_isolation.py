@@ -178,7 +178,7 @@ class MemoryIsolationTests(unittest.TestCase):
         """Test that quarantine preserves original entry data."""
         with tempfile.TemporaryDirectory() as tmp:
             catalog = MemoryCatalog(tmp)
-            entry = catalog.add(
+            catalog.add(
                 'Important content',
                 tags=('important',),
                 branch_name='branch-a',

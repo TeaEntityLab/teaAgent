@@ -9,7 +9,6 @@ from teaagent.code_analysis._config import CodeAnalysisConfig
 from teaagent.code_analysis._manager import LSPServerManager
 from teaagent.code_analysis._prompt import extract_candidate_paths
 from teaagent.code_ontology import CodeOntologyGraph
-from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.hybrid_search import indexed_db_path, search_if_indexed
 from teaagent.memory import MemoryCatalog
 from teaagent.rag import tokenize
@@ -295,34 +294,36 @@ def _code_ontology_hits(root: Path, task: str, *, limit: int) -> list[dict[str, 
     """Extract code ontology dependency information for context."""
     try:
         from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
-        
+
         db_path = root / '.teaagent' / 'graphqlite.db'
         if not db_path.is_file():
             return []
-        
+
         store = GraphQLiteGraphStore(GraphQLiteConfig(database=str(db_path)))
         ontology = CodeOntologyGraph(root, graph_store=store)
-        
+
         # Extract entity names from task
         tokens = tokenize(task)
         entity_names = [t for t in tokens if len(t) > 2 and t.isidentifier()]
-        
+
         hits: list[dict[str, Any]] = []
         for entity_name in entity_names[:5]:  # Limit to top 5 entities
             # Query dependencies
             deps = ontology.query_dependencies(entity_name, direction='both')
             for dep in deps[:3]:  # Limit to top 3 dependencies per entity
                 if isinstance(dep, dict) and 'file_path' in dep:
-                    hits.append({
-                        'path': dep.get('file_path', ''),
-                        'snippet': f"Dependency chain for {entity_name}: {dep.get('name', '')} ({dep.get('node_type', '')})",
-                        'source': 'code_ontology',
-                        'entity': entity_name,
-                        'relation': 'dependency',
-                    })
+                    hits.append(
+                        {
+                            'path': dep.get('file_path', ''),
+                            'snippet': f'Dependency chain for {entity_name}: {dep.get("name", "")} ({dep.get("node_type", "")})',
+                            'source': 'code_ontology',
+                            'entity': entity_name,
+                            'relation': 'dependency',
+                        }
+                    )
                     if len(hits) >= limit:
                         return hits
-        
+
         return hits
     except Exception:
         return []
@@ -425,7 +426,7 @@ def _graph_rag_evidence(
                 'reason': 'graphqlite_read',
             }
             combined.extend(graphqlite_hits)
-        
+
         # Add code ontology dependency information
         ontology_hits = _code_ontology_hits(root, task, limit=hit_limit)
         if ontology_hits:
@@ -488,7 +489,9 @@ def build_context_pack(
     ]
     memories = [
         entry.to_dict()
-        for entry in MemoryCatalog(root_path, readonly=readonly).search(task, limit=memory_limit)
+        for entry in MemoryCatalog(root_path, readonly=readonly).search(
+            task, limit=memory_limit
+        )
     ]
     graph_rag = _graph_rag_evidence(
         root_path, task, search_graph=search_graph, hit_limit=graph_hit_limit

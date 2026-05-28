@@ -153,9 +153,7 @@ class MemoryCatalog:
             return 0
 
         entries = self._read_entries()
-        filtered = [
-            entry for entry in entries if entry.branch_name != branch_name
-        ]
+        filtered = [entry for entry in entries if entry.branch_name != branch_name]
         deleted_count = len(entries) - len(filtered)
 
         if deleted_count > 0:
@@ -214,16 +212,12 @@ class MemoryCatalog:
             return 0
 
         entries = self._read_entries()
-        to_quarantine = [
-            entry for entry in entries if entry.branch_name == branch_name
-        ]
+        to_quarantine = [entry for entry in entries if entry.branch_name == branch_name]
         quarantined_count = len(to_quarantine)
 
         if quarantined_count > 0:
             # Remove from main catalog
-            filtered = [
-                entry for entry in entries if entry.branch_name != branch_name
-            ]
+            filtered = [entry for entry in entries if entry.branch_name != branch_name]
             self.path.write_text(
                 '\n'.join(
                     json.dumps(entry.to_dict(), sort_keys=True) for entry in filtered
@@ -242,9 +236,7 @@ class MemoryCatalog:
                         'quarantined_at': utc_now(),
                     },
                 }
-                append_jsonl_line(
-                    self.quarantine_path, json.dumps(row, sort_keys=True)
-                )
+                append_jsonl_line(self.quarantine_path, json.dumps(row, sort_keys=True))
 
         return quarantined_count
 

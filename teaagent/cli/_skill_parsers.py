@@ -135,9 +135,17 @@ def register(
     publish_tsb.add_argument('--version', default='1.0.0', help='Skill version.')
     publish_tsb.add_argument('--author', help='Author name.')
     publish_tsb.add_argument('--key', help='Path to SSH/GPG key for signing.')
-    publish_tsb.add_argument('--sigstore', action='store_true', help='Use Sigstore keyless signing instead of SSH key.')
-    publish_tsb.add_argument('--identity-token', help='OIDC identity token for Sigstore signing.')
-    publish_tsb.add_argument('--environment-type', default='uv', help='Environment type (uv, nix, docker).')
+    publish_tsb.add_argument(
+        '--sigstore',
+        action='store_true',
+        help='Use Sigstore keyless signing instead of SSH key.',
+    )
+    publish_tsb.add_argument(
+        '--identity-token', help='OIDC identity token for Sigstore signing.'
+    )
+    publish_tsb.add_argument(
+        '--environment-type', default='uv', help='Environment type (uv, nix, docker).'
+    )
     publish_tsb.set_defaults(func=handlers.get('publish_tsb'))
 
     verify_tsb = subs.add_parser(
@@ -145,8 +153,19 @@ def register(
         help='Verify a TSB bundle integrity and attestation.',
     )
     verify_tsb.add_argument('tsb_path', help='Path to TSB file.')
-    verify_tsb.add_argument('--skip-signature', action='store_true', help='Skip signature verification.')
-    verify_tsb.add_argument('--identity', help='Require specific OIDC identity (e.g., email).')
-    verify_tsb.add_argument('--issuer', help='Require specific OIDC issuer (e.g., https://accounts.google.com).')
-    verify_tsb.add_argument('--offline', action='store_true', help='Skip Rekor/Fulcio online verification for air-gapped environments.')
+    verify_tsb.add_argument(
+        '--skip-signature', action='store_true', help='Skip signature verification.'
+    )
+    verify_tsb.add_argument(
+        '--identity', help='Require specific OIDC identity (e.g., email).'
+    )
+    verify_tsb.add_argument(
+        '--issuer',
+        help='Require specific OIDC issuer (e.g., https://accounts.google.com).',
+    )
+    verify_tsb.add_argument(
+        '--offline',
+        action='store_true',
+        help='Skip Rekor/Fulcio online verification for air-gapped environments.',
+    )
     verify_tsb.set_defaults(func=handlers.get('verify_tsb'))

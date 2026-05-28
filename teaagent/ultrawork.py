@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import sys
-import warnings
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
-from dataclasses import dataclass
 
-from teaagent.ergonomics.background_run import BackgroundRunStore, BackgroundRunRecord
+from teaagent.ergonomics.background_run import BackgroundRunStore
 
 
 def _deprecate_ultrawork() -> None:
@@ -30,14 +29,14 @@ class WorkerRecord:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "worker_id": self.worker_id,
-            "pid": self.pid,
-            "command": self.command,
-            "started_at": self.started_at,
-            "log_path": self.log_path,
-            "label": self.label,
-            "stopped_at": self.stopped_at,
-            "stop_signal": self.stop_signal,
+            'worker_id': self.worker_id,
+            'pid': self.pid,
+            'command': self.command,
+            'started_at': self.started_at,
+            'log_path': self.log_path,
+            'label': self.label,
+            'stopped_at': self.stopped_at,
+            'stop_signal': self.stop_signal,
         }
 
 
@@ -46,7 +45,7 @@ class UltraworkStore:
 
     def __init__(
         self,
-        root: str | Path = ".",
+        root: str | Path = '.',
         *,
         notify_config: Any = None,
         readonly: bool = False,
@@ -71,22 +70,22 @@ class UltraworkStore:
     def list(self) -> list[dict[str, Any]]:
         rows = self._store.list()
         for row in rows:
-            row["worker_id"] = row.get("background_id")
+            row['worker_id'] = row.get('background_id')
         return rows
 
     def show(self, worker_id: str) -> dict[str, Any]:
         data = self._store.get(worker_id)
-        data["worker_id"] = data.get("background_id")
+        data['worker_id'] = data.get('background_id')
         return data
 
     def logs(self, worker_id: str, *, max_bytes: int = 64_000) -> dict[str, Any]:
         res = self._store.logs(worker_id, max_bytes=max_bytes)
-        res["worker_id"] = res.get("background_id")
+        res['worker_id'] = res.get('background_id')
         return res
 
     def stop(self, worker_id: str, *, timeout_seconds: float = 2.0) -> dict[str, Any]:
         data = self._store.stop(worker_id, timeout_seconds=timeout_seconds)
-        data["worker_id"] = data.get("background_id")
+        data['worker_id'] = data.get('background_id')
         if self._notify_config is not None:
             from teaagent.notify import fire_notification
 
@@ -104,4 +103,5 @@ class UltraworkStore:
     @staticmethod
     def _is_alive(pid: int) -> bool:
         from teaagent.ergonomics.background_run import _is_alive as run_is_alive
+
         return run_is_alive(pid)

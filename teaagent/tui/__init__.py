@@ -13,10 +13,6 @@ from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.git_sandbox import (
     ParallelExperimentStack,
-    extract_conflict_context,
-    get_conflicted_files,
-    resolve_conflict_accept_ours,
-    resolve_conflict_accept_theirs,
 )
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
@@ -167,14 +163,16 @@ class TeaAgentTUI:
 
         # Conflict resolution mode
         if self._conflict_mode and self._conflicted_files:
-            print(f'\n[Conflict Resolution Mode]')
-            print(f'File {self._current_conflict_index + 1}/{len(self._conflicted_files)}: {self._conflicted_files[self._current_conflict_index]}')
-            print(f'\n[Commands]')
-            print(f'  [o] Accept Our version (current branch)')
-            print(f'  [t] Accept Their version (incoming branch)')
-            print(f'  [n] Next conflicted file')
-            print(f'  [p] Previous conflicted file')
-            print(f'  [a] Abort merge')
+            print('\n[Conflict Resolution Mode]')
+            print(
+                f'File {self._current_conflict_index + 1}/{len(self._conflicted_files)}: {self._conflicted_files[self._current_conflict_index]}'
+            )
+            print('\n[Commands]')
+            print('  [o] Accept Our version (current branch)')
+            print('  [t] Accept Their version (incoming branch)')
+            print('  [n] Next conflicted file')
+            print('  [p] Previous conflicted file')
+            print('  [a] Abort merge')
             print('=' * columns)
             return
 
@@ -193,14 +191,16 @@ class TeaAgentTUI:
 
         # Parallel experiments panel
         if self._parallel_stack and self._parallel_options:
-            print(f'\n[Parallel Experiments]')
+            print('\n[Parallel Experiments]')
             comparisons = self._parallel_stack.compare_branches()
             for option in self._parallel_options:
                 if option in comparisons:
                     stats = comparisons[option]
-                    print(f'  {option}: +{stats["insertions"]} -{stats["deletions"]} ({stats["files_changed"]} files)')
-            print(f'  [Enter] to merge selected branch')
-            print(f'  [q] to cancel experiments')
+                    print(
+                        f'  {option}: +{stats["insertions"]} -{stats["deletions"]} ({stats["files_changed"]} files)'
+                    )
+            print('  [Enter] to merge selected branch')
+            print('  [q] to cancel experiments')
 
         # Recent runs
         try:
@@ -241,7 +241,9 @@ class TeaAgentTUI:
         # Check if we should use split-pane layout
         use_split_pane = self._should_use_split_pane()
         if use_split_pane:
-            self.output_fn('[TeaAgent] Split-pane layout enabled (terminal size >= 120x30)')
+            self.output_fn(
+                '[TeaAgent] Split-pane layout enabled (terminal size >= 120x30)'
+            )
 
         # Initialize prompt_toolkit session if available and no custom input_fn is provided
         if self.input_fn is None:
@@ -459,7 +461,13 @@ class TeaAgentTUI:
             return True
         self._print_json({'status': 'approval_required', 'approval': request.to_dict()})
         fn = self.input_fn or input
-        answer = fn(f'approve {request.call_id} ({request.tool_name})? [y]es / [n]o / always for this [p]ath / always for this [t]ool / [s]top run: ').strip().lower()
+        answer = (
+            fn(
+                f'approve {request.call_id} ({request.tool_name})? [y]es / [n]o / always for this [p]ath / always for this [t]ool / [s]top run: '
+            )
+            .strip()
+            .lower()
+        )
         if answer in {'y', 'yes'}:
             self.output_fn(f'approval: approved {request.call_id}')
             if not request.run_id:
@@ -471,7 +479,12 @@ class TeaAgentTUI:
         elif answer == 'p':
             path = None
             if request.arguments:
-                path = request.arguments.get('path') or request.arguments.get('TargetFile') or request.arguments.get('target_file') or request.arguments.get('AbsolutePath')
+                path = (
+                    request.arguments.get('path')
+                    or request.arguments.get('TargetFile')
+                    or request.arguments.get('target_file')
+                    or request.arguments.get('AbsolutePath')
+                )
             if path:
                 store.grant(
                     request.tool_name,
@@ -480,7 +493,9 @@ class TeaAgentTUI:
                     path_globs=[str(path)],
                     ttl_hours=8.0,
                 )
-                self.output_fn(f'approval: registered session grant for {request.tool_name} matching path: {path}')
+                self.output_fn(
+                    f'approval: registered session grant for {request.tool_name} matching path: {path}'
+                )
             else:
                 store.grant(
                     request.tool_name,
@@ -488,7 +503,9 @@ class TeaAgentTUI:
                     permission_mode=self.permission_mode.value,
                     ttl_hours=8.0,
                 )
-                self.output_fn(f'approval: registered global session grant for {request.tool_name}')
+                self.output_fn(
+                    f'approval: registered global session grant for {request.tool_name}'
+                )
             return True
         elif answer == 't':
             store.grant(
@@ -497,9 +514,11 @@ class TeaAgentTUI:
                 permission_mode=self.permission_mode.value,
                 ttl_hours=8.0,
             )
-            self.output_fn(f'approval: registered global session grant for {request.tool_name}')
+            self.output_fn(
+                f'approval: registered global session grant for {request.tool_name}'
+            )
             return True
-            
+
         self.output_fn(f'approval: denied {request.call_id}')
         return False
 

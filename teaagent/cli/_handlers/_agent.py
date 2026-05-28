@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import signal
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -27,37 +29,6 @@ from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
 from teaagent.skill_candidates import SkillCandidateStore
-import subprocess
-import os
-
-
-def _save_git_sandbox_consent(root: str, value: str) -> None:
-    """Save git_sandbox_consent preference to .teaagent/config.json."""
-    from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-    
-    root_path = Path(root).resolve()
-    tea_dir = root_path / '.teaagent'
-    json_path = tea_dir / 'config.json'
-    
-    # Ensure .teaagent directory exists
-    tea_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Load existing config or create new
-    if json_path.is_file():
-        try:
-            with open(json_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            config = {}
-    else:
-        config = {}
-    
-    # Update git_sandbox_consent
-    config['git_sandbox_consent'] = value
-    
-    # Save back to file
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(config, f, indent=2)
 
 
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
@@ -156,15 +127,16 @@ def _save_git_sandbox_consent(root: str | Path, value: str) -> None:
     json_path = tea_dir / 'config.json'
     config = {}
     if json_path.is_file():
-        try:
+        from contextlib import suppress
+        with suppress(Exception):
             config = json.loads(json_path.read_text(encoding='utf-8'))
-        except Exception:
-            pass
     config['git_sandbox_consent'] = value
     try:
-        json_path.write_text(json.dumps(config, sort_keys=True, indent=2), encoding='utf-8')
+        json_path.write_text(
+            json.dumps(config, sort_keys=True, indent=2), encoding='utf-8'
+        )
     except Exception as exc:
-        print(f"Warning: Failed to save configuration: {exc}", file=sys.stderr)
+        print(f'Warning: Failed to save configuration: {exc}', file=sys.stderr)
 
 
 def agent_resume_command(args: argparse.Namespace) -> int:
@@ -291,48 +263,70 @@ def _execute_agent_task(
         merged_context_extra['plan_contract'] = plan_contract.to_dict()
     store = RunStore(args.root)
     audit = store.audit_logger()
-    from teaagent.run_undo import UndoJournal
     from teaagent.git_sandbox import GitBranchSandbox
+    from teaagent.run_undo import UndoJournal
 
     # Initialize git sandbox if available (will be updated with actual run_id later)
     git_sandbox = GitBranchSandbox(args.root, run_id='pending')
     git_sandbox_available = git_sandbox.is_available()
     auto_stash = getattr(args, 'git_sandbox_auto_stash', False)
-    
+
     # Safe sandbox consent prompting
     if git_sandbox_available:
         from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-        
+
         defaults = load_workspace_defaults(args.root)
         consent = defaults.get('git_sandbox_consent', 'prompt')
         is_interactive = sys.stdin.isatty()
-        
+
         # Option A: Auto-enable without prompt (always consent or non-interactive)
         if consent == 'always' or not is_interactive:
-            print('[TeaAgent] Git repository detected. Safe git sandbox auto-enabled.', file=sys.stderr)
+            print(
+                '[TeaAgent] Git repository detected. Safe git sandbox auto-enabled.',
+                file=sys.stderr,
+            )
             sandbox_result = git_sandbox.start(auto_stash=auto_stash)
             if not sandbox_result.success:
-                print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
+                print(
+                    f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}',
+                    file=sys.stderr,
+                )
                 git_sandbox_available = False
         # Option B: Interactive prompting
         else:
-            print('[TeaAgent] Git repository detected. Would you like to run in a safe sandbox branch? [Y/n/always]: ', end='', file=sys.stderr)
+            print(
+                '[TeaAgent] Git repository detected. Would you like to run in a safe sandbox branch? [Y/n/always]: ',
+                end='',
+                file=sys.stderr,
+            )
             choice = input().strip().lower()
-            
+
             if choice in ('always', 'a'):
                 _save_git_sandbox_consent(args.root, 'always')
-                print('[TeaAgent] Preference saved. Safe git sandbox will be auto-enabled for this project.', file=sys.stderr)
+                print(
+                    '[TeaAgent] Preference saved. Safe git sandbox will be auto-enabled for this project.',
+                    file=sys.stderr,
+                )
                 sandbox_result = git_sandbox.start(auto_stash=auto_stash)
                 if not sandbox_result.success:
-                    print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
+                    print(
+                        f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}',
+                        file=sys.stderr,
+                    )
                     git_sandbox_available = False
             elif choice in ('yes', 'y', ''):
                 sandbox_result = git_sandbox.start(auto_stash=auto_stash)
                 if not sandbox_result.success:
-                    print(f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}', file=sys.stderr)
+                    print(
+                        f'[TeaAgent WARNING] Git sandbox initialization failed: {sandbox_result.error}',
+                        file=sys.stderr,
+                    )
                     git_sandbox_available = False
             else:
-                print('[TeaAgent] Sandbox declined. Running in local workspace directly.', file=sys.stderr)
+                print(
+                    '[TeaAgent] Sandbox declined. Running in local workspace directly.',
+                    file=sys.stderr,
+                )
                 git_sandbox_available = False
 
     undo_journal = UndoJournal(args.root)
@@ -442,6 +436,7 @@ def _execute_agent_task(
             # Show diff summary
             try:
                 import subprocess
+
                 diff_result = subprocess.run(
                     ['git', 'diff', '--stat', f'{git_sandbox._original_branch}..HEAD'],
                     cwd=args.root,
@@ -449,7 +444,7 @@ def _execute_agent_task(
                     text=True,
                 )
                 if diff_result.stdout.strip():
-                    print(f'\n[TeaAgent] Changes in sandbox branch:')
+                    print('\n[TeaAgent] Changes in sandbox branch:')
                     print(diff_result.stdout)
                 else:
                     print('\n[TeaAgent] No changes made in sandbox branch.')
@@ -458,106 +453,184 @@ def _execute_agent_task(
 
             # Prompt for resolution
             if result.status == 'completed':
-                print(f'\nApply changes back to \'{git_sandbox._original_branch}\'?')
+                print(f"\nApply changes back to '{git_sandbox._original_branch}'?")
                 # Show interactive diff before merge prompt
                 if not show_interactive_diff(args.root, git_sandbox._branch_name):
                     print('[TeaAgent] Merge cancelled by user.')
                     return 0
-                
-                print('  [m]erge (normal) / [s]quash and commit / [d]iscard / [k]eep branch for review: ', end='')
+
+                print(
+                    '  [m]erge (normal) / [s]quash and commit / [d]iscard / [k]eep branch for review: ',
+                    end='',
+                )
                 choice = input().strip().lower()
 
                 if choice == 'm':
                     merge_result = git_sandbox.merge(squash=False)
                     if merge_result.success:
-                        print(f'[TeaAgent] Merged sandbox branch successfully.')
+                        print('[TeaAgent] Merged sandbox branch successfully.')
                     elif merge_result.has_conflicts:
-                        print(f'[TeaAgent] Merge conflicts detected in {len(merge_result.conflicted_files)} file(s):')
+                        print(
+                            f'[TeaAgent] Merge conflicts detected in {len(merge_result.conflicted_files)} file(s):'
+                        )
                         for file in merge_result.conflicted_files:
                             print(f'  - {file}')
-                        print(f'\nResolve conflicts:')
-                        print(f'  [l] Let LLM auto-resolve conflicts')
-                        print(f'  [a] Accept Agent version (theirs)')
-                        print(f'  [d] Accept Developer version (ours)')
-                        print(f'  [b] Abort merge and keep sandbox branch')
-                        print(f'  [m] Launch mergetool for manual resolution')
+                        print('\nResolve conflicts:')
+                        print('  [l] Let LLM auto-resolve conflicts')
+                        print('  [a] Accept Agent version (theirs)')
+                        print('  [d] Accept Developer version (ours)')
+                        print('  [b] Abort merge and keep sandbox branch')
+                        print('  [m] Launch mergetool for manual resolution')
                         resolution = input('Choice: ').strip().lower()
-                        
+
                         from teaagent.git_sandbox import (
-                            resolve_conflict_accept_theirs,
-                            resolve_conflict_accept_ours,
                             abort_merge,
+                            resolve_conflict_accept_ours,
+                            resolve_conflict_accept_theirs,
                             resolve_conflicts_with_llm,
                         )
-                        
+
                         if resolution == 'l':
-                            print(f'[TeaAgent] Using LLM to resolve conflicts...')
+                            print('[TeaAgent] Using LLM to resolve conflicts...')
                             llm_results = resolve_conflicts_with_llm(
                                 args.root,
                                 merge_result.conflicted_files,
                                 args.provider,
                                 args.model,
                             )
-                            resolved_count = sum(1 for status in llm_results.values() if status == 'resolved')
-                            failed_count = sum(1 for status in llm_results.values() if status == 'failed')
-                            skipped_count = sum(1 for status in llm_results.values() if status == 'skipped')
-                            
-                            print(f'[TeaAgent] LLM resolution results:')
+                            resolved_count = sum(
+                                1
+                                for status in llm_results.values()
+                                if status == 'resolved'
+                            )
+                            failed_count = sum(
+                                1
+                                for status in llm_results.values()
+                                if status == 'failed'
+                            )
+                            skipped_count = sum(
+                                1
+                                for status in llm_results.values()
+                                if status == 'skipped'
+                            )
+
+                            print('[TeaAgent] LLM resolution results:')
                             print(f'  Resolved: {resolved_count}')
                             print(f'  Failed: {failed_count}')
                             print(f'  Skipped: {skipped_count}')
-                            
+
                             if resolved_count == len(merge_result.conflicted_files):
                                 # All conflicts resolved, complete the merge
-                                subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
-                                subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                                subprocess.run(
+                                    ['git', 'commit', '--no-edit'],
+                                    cwd=args.root,
+                                    check=True,
+                                    capture_output=True,
+                                )
+                                subprocess.run(
+                                    ['git', 'branch', '-D', git_sandbox._branch_name],
+                                    cwd=args.root,
+                                    check=True,
+                                    capture_output=True,
+                                )
                                 if git_sandbox._stash_id:
                                     from teaagent.git_sandbox import stash_pop
+
                                     stash_pop(args.root)
-                                print(f'[TeaAgent] All conflicts resolved by LLM. Merge completed.')
+                                print(
+                                    '[TeaAgent] All conflicts resolved by LLM. Merge completed.'
+                                )
                             else:
-                                print(f'[TeaAgent] Some conflicts could not be resolved. Manual intervention required.')
+                                print(
+                                    '[TeaAgent] Some conflicts could not be resolved. Manual intervention required.'
+                                )
                                 abort_merge(args.root)
-                                print(f'[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.')
+                                print(
+                                    '[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.'
+                                )
                         elif resolution == 'a':
                             for file in merge_result.conflicted_files:
                                 if resolve_conflict_accept_theirs(args.root, file):
                                     print(f'  Accepted Agent version for {file}')
                                 else:
-                                    print(f'  Failed to resolve {file}', file=sys.stderr)
+                                    print(
+                                        f'  Failed to resolve {file}', file=sys.stderr
+                                    )
                             # Complete the merge
-                            subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
-                            subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                            subprocess.run(
+                                ['git', 'commit', '--no-edit'],
+                                cwd=args.root,
+                                check=True,
+                                capture_output=True,
+                            )
+                            subprocess.run(
+                                ['git', 'branch', '-D', git_sandbox._branch_name],
+                                cwd=args.root,
+                                check=True,
+                                capture_output=True,
+                            )
                             if git_sandbox._stash_id:
                                 from teaagent.git_sandbox import stash_pop
+
                                 stash_pop(args.root)
-                            print(f'[TeaAgent] Conflicts resolved using Agent version.')
+                            print('[TeaAgent] Conflicts resolved using Agent version.')
                         elif resolution == 'd':
                             for file in merge_result.conflicted_files:
                                 if resolve_conflict_accept_ours(args.root, file):
                                     print(f'  Accepted Developer version for {file}')
                                 else:
-                                    print(f'  Failed to resolve {file}', file=sys.stderr)
+                                    print(
+                                        f'  Failed to resolve {file}', file=sys.stderr
+                                    )
                             # Complete the merge
-                            subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
-                            subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                            subprocess.run(
+                                ['git', 'commit', '--no-edit'],
+                                cwd=args.root,
+                                check=True,
+                                capture_output=True,
+                            )
+                            subprocess.run(
+                                ['git', 'branch', '-D', git_sandbox._branch_name],
+                                cwd=args.root,
+                                check=True,
+                                capture_output=True,
+                            )
                             if git_sandbox._stash_id:
                                 from teaagent.git_sandbox import stash_pop
+
                                 stash_pop(args.root)
-                            print(f'[TeaAgent] Conflicts resolved using Developer version.')
+                            print(
+                                '[TeaAgent] Conflicts resolved using Developer version.'
+                            )
                         elif resolution == 'b':
                             abort_merge(args.root)
-                            print(f'[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.')
+                            print(
+                                '[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.'
+                            )
                         elif resolution == 'm':
-                            print(f'[TeaAgent] Launching mergetool...')
+                            print('[TeaAgent] Launching mergetool...')
                             subprocess.run(['git', 'mergetool'], cwd=args.root)
                             # After mergetool, complete the merge
-                            subprocess.run(['git', 'commit', '--no-edit'], cwd=args.root, check=True, capture_output=True)
-                            subprocess.run(['git', 'branch', '-D', git_sandbox._branch_name], cwd=args.root, check=True, capture_output=True)
+                            subprocess.run(
+                                ['git', 'commit', '--no-edit'],
+                                cwd=args.root,
+                                check=True,
+                                capture_output=True,
+                            )
+                            subprocess.run(
+                                ['git', 'branch', '-D', git_sandbox._branch_name],
+                                cwd=args.root,
+                                check=True,
+                                capture_output=True,
+                            )
                             if git_sandbox._stash_id:
                                 from teaagent.git_sandbox import stash_pop
+
                                 stash_pop(args.root)
-                            print(f'[TeaAgent] Merge completed with manual resolution.', file=sys.stderr)
+                            print(
+                                '[TeaAgent] Merge completed with manual resolution.',
+                                file=sys.stderr,
+                            )
 
     if _telemetry_sink is not None:
         from contextlib import suppress
@@ -597,23 +670,23 @@ def _execute_agent_task(
 
 def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
     """Show interactive diff before merge prompt.
-    
+
     Args:
         root: The workspace root directory
         sandbox_branch: The sandbox branch name
-        
+
     Returns:
         True if user wants to proceed, False to cancel
     """
     import subprocess
     from pathlib import Path
-    
+
     root_path = Path(root).resolve()
-    
-    print(f'\n=== Sandbox Merge Preview ===')
+
+    print('\n=== Sandbox Merge Preview ===')
     print(f'Branch: {sandbox_branch}')
     print()
-    
+
     # Get diff summary
     try:
         # Get list of changed files
@@ -623,21 +696,21 @@ def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
             capture_output=True,
             text=True,
         )
-        
+
         if result.returncode == 0 and result.stdout.strip():
             print('Changed files:')
             print(result.stdout)
         else:
             print('No changes detected in sandbox branch.')
             return True
-        
+
         # Ask if user wants to see detailed diff
         print('\nView detailed diff? [Y/n]: ', end='')
         choice = input().strip().lower()
-        
+
         if choice in ('n', 'no'):
             return True
-        
+
         # Show detailed diff with color
         print('\n=== Detailed Changes ===')
         result = subprocess.run(
@@ -646,7 +719,7 @@ def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
             capture_output=True,
             text=True,
         )
-        
+
         if result.stdout:
             # Paginate output if it's long
             lines = result.stdout.split('\n')
@@ -662,42 +735,42 @@ def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
                 print(result.stdout)
         else:
             print('No detailed changes available.')
-        
+
         print('\n=== End of Diff ===')
-        
+
     except FileNotFoundError:
         print('[TeaAgent] Git not found in PATH')
         return True
     except Exception as exc:
         print(f'[TeaAgent] Error getting diff: {exc}')
         return True
-    
+
     return True
 
 
 def interactive_review_mode(root: str | Path, run_id: str) -> int:
     """Launch interactive review mode for background task results.
-    
+
     Args:
         root: The workspace root directory
         run_id: The background task run_id to review
-        
+
     Returns:
         Exit code (0 for success, non-zero for errors)
     """
     from pathlib import Path
-    
+
     root_path = Path(root).resolve()
-    
+
     # Verify suspension file exists for this run_id
     tea_dir = root_path / '.teaagent'
     suspension_file = tea_dir / f'suspension-{run_id}.json'
-    
+
     if not suspension_file.exists():
         print(f'[TeaAgent] Error: No suspension data found for run_id {run_id}')
         print(f'[TeaAgent] Expected file: {suspension_file}')
         return 1
-    
+
     # Load and validate suspension data
     try:
         with open(suspension_file) as f:
@@ -708,17 +781,19 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
     except Exception as exc:
         print(f'[TeaAgent] Error loading suspension data: {exc}')
         return 1
-    
+
     # Verify ACP compliance
     if 'acp_version' not in suspension_data:
         print('[TeaAgent] Warning: Suspension data missing ACP version field')
-    
-    print(f'\n=== Interactive Review Mode ===')
+
+    print('\n=== Interactive Review Mode ===')
     print(f'Reviewing results from run: {run_id}')
     print(f'Original mode: {suspension_data.get("mode", "unknown")}')
-    print(f'Suspended at: {__import__("time").ctime(suspension_data.get("timestamp", 0))}')
+    print(
+        f'Suspended at: {__import__("time").ctime(suspension_data.get("timestamp", 0))}'
+    )
     print()
-    
+
     # Get changed files from the run
     try:
         # First, check if we can get changes from git
@@ -728,16 +803,16 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
             capture_output=True,
             text=True,
         )
-        
+
         if result.returncode != 0 or not result.stdout.strip():
             print('[TeaAgent] No changes detected to review.')
             return 0
-        
+
         changed_files = result.stdout.strip().split('\n')
         print(f'Found {len(changed_files)} changed file(s) to review:')
         for i, file in enumerate(changed_files, 1):
             print(f'  {i}. {file}')
-        
+
         print()
         print('Review commands:')
         print('  y - Accept file changes')
@@ -746,15 +821,17 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
         print('  n - Next file (skip)')
         print('  q - Quit review')
         print()
-        
+
         # Interactive review loop
         current_index = 0
         review_decisions = {}
-        
+
         while current_index < len(changed_files):
             file_path = changed_files[current_index]
-            print(f'\n--- Reviewing file {current_index + 1}/{len(changed_files)}: {file_path} ---')
-            
+            print(
+                f'\n--- Reviewing file {current_index + 1}/{len(changed_files)}: {file_path} ---'
+            )
+
             # Show diff for this file
             diff_result = subprocess.run(
                 ['git', 'diff', '--color=always', file_path],
@@ -762,17 +839,17 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
                 capture_output=True,
                 text=True,
             )
-            
+
             if diff_result.stdout:
                 # Show limited diff (first 20 lines)
                 diff_lines = diff_result.stdout.split('\n')
                 print('\n'.join(diff_lines[:20]))
                 if len(diff_lines) > 20:
                     print(f'... ({len(diff_lines) - 20} more lines)')
-            
+
             print(f'\nAction for {file_path} [y/e/r/n/q]: ', end='')
             choice = input().strip().lower()
-            
+
             if choice == 'y':
                 review_decisions[file_path] = 'accepted'
                 print(f'✓ Accepted {file_path}')
@@ -788,7 +865,11 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
                 review_decisions[file_path] = 'rejected'
                 print(f'✗ Rejected {file_path} (marked for AI reconsideration)')
                 # Apply rejection by reverting the file
-                subprocess.run(['git', 'checkout', '--', file_path], cwd=root_path, capture_output=True)
+                subprocess.run(
+                    ['git', 'checkout', '--', file_path],
+                    cwd=root_path,
+                    capture_output=True,
+                )
                 print(f'  Reverted changes to {file_path}')
                 current_index += 1
             elif choice == 'n':
@@ -799,43 +880,47 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
                 return 0  # Early exit on quit
             else:
                 print('Invalid choice. Please try again.')
-        
+
         # Summary
-        print(f'\n=== Review Summary ===')
+        print('\n=== Review Summary ===')
         accepted = sum(1 for d in review_decisions.values() if d == 'accepted')
         edited = sum(1 for d in review_decisions.values() if d == 'edited')
         rejected = sum(1 for d in review_decisions.values() if d == 'rejected')
-        
+
         print(f'Accepted: {accepted}')
         print(f'Edited: {edited}')
         print(f'Rejected: {rejected}')
         print(f'Skipped: {len(changed_files) - len(review_decisions)}')
-        
+
         # Save review decisions with ACP compliance
         review_file = tea_dir / f'review-{run_id}.json'
-        
+
         try:
             with open(review_file, 'w') as f:
-                json.dump({
-                    'run_id': run_id,
-                    'timestamp': time.time(),
-                    'acp_version': '1.0.0',  # ACP protocol version
-                    'mode': 'interactive_review',  # Track current mode
-                    'decisions': review_decisions,
-                    'audit_trail': {
-                        'review_time': time.time(),
-                        'original_mode': suspension_data.get('mode', 'unknown'),
-                        'transition_type': 'robot_to_keyboard',
-                        'files_reviewed': len(changed_files),
-                        'suspension_data': suspension_data.get('audit_trail', {}),
-                    }
-                }, f, indent=2)
+                json.dump(
+                    {
+                        'run_id': run_id,
+                        'timestamp': time.time(),
+                        'acp_version': '1.0.0',  # ACP protocol version
+                        'mode': 'interactive_review',  # Track current mode
+                        'decisions': review_decisions,
+                        'audit_trail': {
+                            'review_time': time.time(),
+                            'original_mode': suspension_data.get('mode', 'unknown'),
+                            'transition_type': 'robot_to_keyboard',
+                            'files_reviewed': len(changed_files),
+                            'suspension_data': suspension_data.get('audit_trail', {}),
+                        },
+                    },
+                    f,
+                    indent=2,
+                )
             print(f'\nReview decisions saved to {review_file}')
         except Exception as exc:
             print(f'Warning: Could not save review decisions: {exc}')
-        
+
         return 0
-        
+
     except FileNotFoundError:
         print('[TeaAgent] Git not found in PATH')
         return 1
@@ -847,41 +932,6 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
 def interactive_review_command(args: argparse.Namespace) -> int:
     """CLI command for interactive review mode."""
     return interactive_review_mode(args.root, args.run_id)
-
-    if _telemetry_sink is not None:
-        from contextlib import suppress
-
-        with suppress(Exception):
-            _telemetry_sink.force_flush()
-    events = store.show_run(result.run_id)
-    payload = run_result_payload(
-        result,
-        routing=routing.to_dict() if routing else None,
-        audit_summary=summarize_audit_events(events),
-        permission_mode=resolved_permission_mode.value,
-    )
-    if plan_contract is not None:
-        payload['plan_contract'] = plan_contract.to_dict()
-    if resumed_from:
-        payload['resumed_from'] = resumed_from
-        payload['task'] = task
-        if initial_observations:
-            payload['replayed_observations'] = len(initial_observations)
-        if initial_context_extra and initial_context_extra.get('resume_compaction'):
-            payload['resume_compaction'] = initial_context_extra['resume_compaction']
-        if auto_approved_call_id is not None:
-            payload['auto_approved_call_id'] = auto_approved_call_id
-    if getattr(args, 'json_stream', False):
-        from teaagent.streaming.events import StreamEvent, emit_stream_event
-
-        emit_stream_event(StreamEvent('run_result', payload))
-    else:
-        print_json(payload)
-    if getattr(args, 'notify', False):
-        from teaagent.ergonomics.notify import notify
-
-        notify('TeaAgent', f'Run {result.run_id} {result.status}')
-    return 0 if result.status == 'completed' else 1
 
 
 def run_result_payload(
@@ -948,7 +998,12 @@ def make_cli_approval_handler(
         elif answer == 'p':
             path = None
             if request.arguments:
-                path = request.arguments.get('path') or request.arguments.get('TargetFile') or request.arguments.get('target_file') or request.arguments.get('AbsolutePath')
+                path = (
+                    request.arguments.get('path')
+                    or request.arguments.get('TargetFile')
+                    or request.arguments.get('target_file')
+                    or request.arguments.get('AbsolutePath')
+                )
             if path:
                 store.grant(
                     request.tool_name,
@@ -957,7 +1012,10 @@ def make_cli_approval_handler(
                     path_globs=[str(path)],
                     ttl_hours=8.0,
                 )
-                print(f'[TeaAgent] Registered session grant for {request.tool_name} matching path: {path}', file=sys.stderr)
+                print(
+                    f'[TeaAgent] Registered session grant for {request.tool_name} matching path: {path}',
+                    file=sys.stderr,
+                )
             else:
                 store.grant(
                     request.tool_name,
@@ -965,7 +1023,10 @@ def make_cli_approval_handler(
                     permission_mode=permission_mode,
                     ttl_hours=8.0,
                 )
-                print(f'[TeaAgent] No path found in tool arguments. Registered global session grant for {request.tool_name}', file=sys.stderr)
+                print(
+                    f'[TeaAgent] No path found in tool arguments. Registered global session grant for {request.tool_name}',
+                    file=sys.stderr,
+                )
             return True
         elif answer == 't':
             store.grant(
@@ -974,7 +1035,10 @@ def make_cli_approval_handler(
                 permission_mode=permission_mode,
                 ttl_hours=8.0,
             )
-            print(f'[TeaAgent] Registered global session grant for {request.tool_name}', file=sys.stderr)
+            print(
+                f'[TeaAgent] Registered global session grant for {request.tool_name}',
+                file=sys.stderr,
+            )
             return True
         return False
 
@@ -1061,7 +1125,10 @@ def agent_undo_command(args: argparse.Namespace) -> int:
             )
             return 0
         else:
-            print(f'[TeaAgent WARNING] Git rollback failed: {rollback_result.error}, falling back to UndoJournal', file=sys.stderr)
+            print(
+                f'[TeaAgent WARNING] Git rollback failed: {rollback_result.error}, falling back to UndoJournal',
+                file=sys.stderr,
+            )
 
     # Fallback to UndoJournal
     undo_path = store.undo_path(run_id)
@@ -2039,7 +2106,9 @@ def agent_subagent_review_apply_command(args: argparse.Namespace) -> int:
     return 0 if payload['ok'] else 2
 
 
-def _execute_parallel_experiment(args: argparse.Namespace, task: str, parallel_options: str) -> int:
+def _execute_parallel_experiment(
+    args: argparse.Namespace, task: str, parallel_options: str
+) -> int:
     """Execute parallel experiments using ParallelExperimentStack.
 
     Args:
@@ -2054,7 +2123,12 @@ def _execute_parallel_experiment(args: argparse.Namespace, task: str, parallel_o
 
     options = [opt.strip() for opt in parallel_options.split(',') if opt.strip()]
     if not options:
-        print_json({'status': 'error', 'message': 'No options provided for parallel experiment'})
+        print_json(
+            {
+                'status': 'error',
+                'message': 'No options provided for parallel experiment',
+            }
+        )
         return 1
 
     run_id = uuid4().hex
@@ -2064,31 +2138,39 @@ def _execute_parallel_experiment(args: argparse.Namespace, task: str, parallel_o
     stack = ParallelExperimentStack(root, run_id, options)
 
     # Start all sandboxes
-    print_json({
-        'status': 'starting_parallel_experiments',
-        'run_id': run_id,
-        'options': options,
-        'message': f'Starting {len(options)} parallel experiment branches',
-    })
+    print_json(
+        {
+            'status': 'starting_parallel_experiments',
+            'run_id': run_id,
+            'options': options,
+            'message': f'Starting {len(options)} parallel experiment branches',
+        }
+    )
 
-    start_results = stack.start_all(auto_stash=getattr(args, 'git_sandbox_auto_stash', False))
+    start_results = stack.start_all(
+        auto_stash=getattr(args, 'git_sandbox_auto_stash', False)
+    )
 
     failed = [opt for opt, success in start_results.items() if not success]
     if failed:
-        print_json({
-            'status': 'error',
-            'message': f'Failed to start {len(failed)} sandbox branches',
-            'failed_options': failed,
-        })
+        print_json(
+            {
+                'status': 'error',
+                'message': f'Failed to start {len(failed)} sandbox branches',
+                'failed_options': failed,
+            }
+        )
         return 1
 
-    print_json({
-        'status': 'parallel_experiments_started',
-        'run_id': run_id,
-        'options': options,
-        'branches': {opt: stack.get_sandbox(opt)._branch_name for opt in options},
-        'message': 'Use "teaagent experiment compare" to compare results, then "teaagent experiment select" to merge the best option',
-    })
+    print_json(
+        {
+            'status': 'parallel_experiments_started',
+            'run_id': run_id,
+            'options': options,
+            'branches': {opt: stack.get_sandbox(opt)._branch_name for opt in options},
+            'message': 'Use "teaagent experiment compare" to compare results, then "teaagent experiment select" to merge the best option',
+        }
+    )
 
     return 0
 
