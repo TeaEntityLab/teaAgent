@@ -80,7 +80,9 @@ class TestToolPermissionManager:
         """Test checking tool access for allowed tool."""
         manager = ToolPermissionManager()
 
-        manager.grant_agent_tool_access('test-agent', ('read_file',), allow_destructive=False)
+        manager.grant_agent_tool_access(
+            'test-agent', ('read_file',), allow_destructive=False
+        )
 
         has_access, reason = manager.check_tool_access('test-agent', 'read_file')
         assert has_access is True
@@ -90,7 +92,9 @@ class TestToolPermissionManager:
         """Test checking tool access for non-whitelisted tool."""
         manager = ToolPermissionManager()
 
-        manager.grant_agent_tool_access('test-agent', ('read_file',), allow_destructive=False)
+        manager.grant_agent_tool_access(
+            'test-agent', ('read_file',), allow_destructive=False
+        )
 
         has_access, reason = manager.check_tool_access('test-agent', 'write_file')
         assert has_access is False
@@ -101,7 +105,9 @@ class TestToolPermissionManager:
         manager = ToolPermissionManager()
 
         # Grant destructive tool access
-        manager.grant_agent_tool_access('test-agent', ('write_file',), allow_destructive=True)
+        manager.grant_agent_tool_access(
+            'test-agent', ('write_file',), allow_destructive=True
+        )
 
         has_access, reason = manager.check_tool_access('test-agent', 'write_file')
         assert has_access is False
@@ -133,13 +139,16 @@ class TestToolPermissionManager:
 
     def test_request_tool_approval_with_callback(self):
         """Test tool approval request with custom callback."""
+
         def mock_approve(request: PermissionRequest) -> bool:
             return request.tool_name == 'write_file'
 
         manager = ToolPermissionManager(approval_callback=mock_approve)
 
         # First grant the agent access to the tool (with destructive allowed)
-        manager.grant_agent_tool_access('test-agent', ('write_file',), allow_destructive=True)
+        manager.grant_agent_tool_access(
+            'test-agent', ('write_file',), allow_destructive=True
+        )
 
         request = manager.request_tool_approval(
             'test-agent', 'write_file', 'Need to write file'
@@ -159,7 +168,9 @@ class TestToolPermissionManager:
         """Test revoking agent tool access."""
         manager = ToolPermissionManager()
 
-        manager.grant_agent_tool_access('test-agent', ('read_file', 'write_file'), allow_destructive=True)
+        manager.grant_agent_tool_access(
+            'test-agent', ('read_file', 'write_file'), allow_destructive=True
+        )
         manager.revoke_agent_tool_access('test-agent', 'write_file')
 
         agent_tools = manager.get_agent_tools('test-agent')

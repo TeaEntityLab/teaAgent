@@ -18,9 +18,7 @@ class TestContextBus:
         """Test that context bus initializes with database."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / 'context_bus.db'
-            config = ContextBusConfig(
-                db_path=db_path, workflow_id='test-workflow'
-            )
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
 
             bus = ContextBus(config)
 
@@ -33,9 +31,7 @@ class TestContextBus:
         """Test publishing a Delta card."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / 'context_bus.db'
-            config = ContextBusConfig(
-                db_path=db_path, workflow_id='test-workflow'
-            )
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
 
             bus = ContextBus(config)
 
@@ -57,9 +53,7 @@ class TestContextBus:
         """Test subscribing to Delta cards."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / 'context_bus.db'
-            config = ContextBusConfig(
-                db_path=db_path, workflow_id='test-workflow'
-            )
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
 
             bus = ContextBus(config)
 
@@ -90,9 +84,7 @@ class TestContextBus:
         """Test subscribing to Delta cards filtered by agent."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / 'context_bus.db'
-            config = ContextBusConfig(
-                db_path=db_path, workflow_id='test-workflow'
-            )
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
 
             bus = ContextBus(config)
 
@@ -124,9 +116,7 @@ class TestContextBus:
         """Test subscribing to Delta cards filtered by type."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / 'context_bus.db'
-            config = ContextBusConfig(
-                db_path=db_path, workflow_id='test-workflow'
-            )
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
 
             bus = ContextBus(config)
 
@@ -158,9 +148,7 @@ class TestContextBus:
         """Test clearing Delta cards."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / 'context_bus.db'
-            config = ContextBusConfig(
-                db_path=db_path, workflow_id='test-workflow'
-            )
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
 
             bus = ContextBus(config)
 

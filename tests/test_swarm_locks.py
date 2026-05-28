@@ -62,9 +62,7 @@ class TestSwarmLockTimeout:
 
         # Add multiple subagents
         for i in range(3):
-            task = SubagentTask(
-                task_id=f'task_{i}', description=f'Test task {i}'
-            )
+            task = SubagentTask(task_id=f'task_{i}', description=f'Test task {i}')
             manager.add_subagent(task)
 
         # Update heartbeats

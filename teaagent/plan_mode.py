@@ -77,9 +77,15 @@ class ContextGatherer:
                 )
 
             # Use Skill-RAG for collaborative retrieval if enabled and retriever provided
-            if self.use_skill_rag and retriever is not None and answer_generator is not None:
+            if (
+                self.use_skill_rag
+                and retriever is not None
+                and answer_generator is not None
+            ):
                 try:
-                    self._gather_with_skill_rag(needs, retriever, answer_generator, memories)
+                    self._gather_with_skill_rag(
+                        needs, retriever, answer_generator, memories
+                    )
                 except Exception:
                     # Fall back to regular gather_fn if Skill-RAG fails
                     gather_fn(needs)

@@ -115,7 +115,10 @@ class ContextBus:
             delta: DeltaCard to publish.
         """
         with self._lock:
-            cursor = self._connection.cursor()
+            conn = self._connection
+            if conn is None:
+                raise RuntimeError('Context bus connection is not initialized')
+            cursor = conn.cursor()
 
             cursor.execute(
                 """
@@ -134,7 +137,7 @@ class ContextBus:
                 ),
             )
 
-            self._connection.commit()
+            conn.commit()
             logger.info(f'Published Delta {delta.delta_id} from {delta.source_agent}')
 
     def subscribe_deltas(
@@ -154,10 +157,13 @@ class ContextBus:
             List of matching Delta cards.
         """
         with self._lock:
-            cursor = self._connection.cursor()
+            conn = self._connection
+            if conn is None:
+                raise RuntimeError('Context bus connection is not initialized')
+            cursor = conn.cursor()
 
             query = 'SELECT * FROM delta_cards WHERE workflow_id = ?'
-            params = [self._workflow_id]
+            params: list[Any] = [self._workflow_id]
 
             if source_agent:
                 query += ' AND source_agent = ?'
@@ -232,25 +238,31 @@ class ContextBus:
     def _clear_deltas(self) -> None:
         """Clear all Delta cards for the current workflow."""
         with self._lock:
-            cursor = self._connection.cursor()
+            conn = self._connection
+            if conn is None:
+                raise RuntimeError('Context bus connection is not initialized')
+            cursor = conn.cursor()
             cursor.execute(
                 'DELETE FROM delta_cards WHERE workflow_id = ?',
                 (self._workflow_id,),
             )
-            self._connection.commit()
+            conn.commit()
 
     def cleanup_old_deltas(self) -> None:
         """Clean up old Delta cards based on age."""
         cutoff_time = time.time() - self._config.max_delta_age_seconds
 
         with self._lock:
-            cursor = self._connection.cursor()
+            conn = self._connection
+            if conn is None:
+                raise RuntimeError('Context bus connection is not initialized')
+            cursor = conn.cursor()
             cursor.execute(
                 'DELETE FROM delta_cards WHERE timestamp < ?',
                 (cutoff_time,),
             )
             deleted = cursor.rowcount
-            self._connection.commit()
+            conn.commit()
 
             if deleted > 0:
                 logger.info(f'Cleaned up {deleted} old Delta cards')
@@ -262,7 +274,10 @@ class ContextBus:
             Number of Delta cards.
         """
         with self._lock:
-            cursor = self._connection.cursor()
+            conn = self._connection
+            if conn is None:
+                raise RuntimeError('Context bus connection is not initialized')
+            cursor = conn.cursor()
             cursor.execute(
                 'SELECT COUNT(*) FROM delta_cards WHERE workflow_id = ?',
                 (self._workflow_id,),

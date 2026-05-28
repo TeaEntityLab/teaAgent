@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 TOKEN_RE = re.compile(r'[A-Za-z0-9_]+')
 
@@ -165,9 +165,9 @@ def skill_rag_retrieve(
     retriever: InMemoryRetriever,
     answer_generator: Callable[[str, str], str],
     *,
-    prober=None,
+    prober: Any = None,
     max_rounds: int = 3,
-) -> dict:
+) -> dict[str, Any]:
     """Perform Skill-RAG retrieval with failure-aware adaptation.
 
     This function integrates the Skill-RAG framework to prevent query-evidence
@@ -201,9 +201,9 @@ def skill_rag_retrieve(
     result = engine.run(query, retriever, answer_generator)
 
     return {
-        "answer": result.answer,
-        "context": result.context,
-        "rounds": result.rounds,
-        "final_state": result.final_state.value,
-        "skills_used": result.skills_used,
+        'answer': result.answer,
+        'context': result.context,
+        'rounds': result.rounds,
+        'final_state': result.final_state.value,
+        'skills_used': result.skills_used,
     }

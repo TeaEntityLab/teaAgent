@@ -33,7 +33,14 @@ def run_acceptance_pytest() -> int:
 def collect_acceptance_test_count(acceptance_tests_dir: Path) -> int:
     # Use sys.executable -m pytest
     result = subprocess.run(
-        [sys.executable, '-m', 'pytest', str(acceptance_tests_dir), '--collect-only', '-q'],
+        [
+            sys.executable,
+            '-m',
+            'pytest',
+            str(acceptance_tests_dir),
+            '--collect-only',
+            '-q',
+        ],
         capture_output=True,
         text=True,
         check=False,

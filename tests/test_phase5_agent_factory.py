@@ -40,9 +40,7 @@ class TestAgentFactoryEvolution:
         factory = AgentFactory(registry, llm_adapter=None, persist_to_disk=False)
 
         with pytest.raises(ValueError, match='not found'):
-            factory.evolve_agent_prompt(
-                'nonexistent', 'Feedback', {'accuracy': 0.5}
-            )
+            factory.evolve_agent_prompt('nonexistent', 'Feedback', {'accuracy': 0.5})
 
     def test_evolution_preserves_tools(self):
         """Test that evolution preserves agent tools."""

@@ -15,7 +15,7 @@ import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from teaagent.tool_permissions import PermissionRequest, ToolPermissionManager
 
@@ -60,12 +60,12 @@ class JITApprovalServer:
         self._timeout_seconds = timeout_seconds
         self._requests: dict[str, ApprovalRequestRecord] = {}
         self._server: Optional[asyncio.Server] = None
-        self._clients: set[asyncio.Queue] = set()
+        self._clients: set[asyncio.Queue[dict[str, Any]]] = set()
 
     async def start(self) -> None:
         """Start the SSE server."""
         self._server = await asyncio.start_server(
-            self._host, self._port, self._handle_connection
+            self._handle_connection, self._host, self._port
         )
         logger.info(f'JIT Approval Server started on {self._host}:{self._port}')
 
@@ -83,7 +83,7 @@ class JITApprovalServer:
         """Handle incoming SSE client connections."""
         # Simple SSE implementation
         # In production, use a proper SSE library like sse-starlette or aiohttp-sse
-        queue = asyncio.Queue()
+        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self._clients.add(queue)
 
         try:
@@ -102,7 +102,7 @@ class JITApprovalServer:
             self._clients.discard(queue)
 
     async def _send_sse_event(
-        self, writer: asyncio.StreamWriter, event_type: str, data: dict
+        self, writer: asyncio.StreamWriter, event_type: str, data: dict[str, Any]
     ) -> None:
         """Send an SSE event to the client."""
         message = f'event: {event_type}\n'
@@ -172,7 +172,9 @@ class JITApprovalServer:
         for queue in self._clients:
             await queue.put(event)
 
-    def _wait_for_approval(self, record: ApprovalRequestRecord) -> ApprovalRequestRecord:
+    def _wait_for_approval(
+        self, record: ApprovalRequestRecord
+    ) -> ApprovalRequestRecord:
         """Wait for approval or timeout.
 
         Args:
@@ -211,7 +213,9 @@ class JITApprovalServer:
             return
 
         if record.status != ApprovalStatus.PENDING:
-            logger.warning(f'Request {request_id} already processed: {record.status.value}')
+            logger.warning(
+                f'Request {request_id} already processed: {record.status.value}'
+            )
             return
 
         record.status = ApprovalStatus.APPROVED
@@ -242,7 +246,9 @@ class JITApprovalServer:
             return
 
         if record.status != ApprovalStatus.PENDING:
-            logger.warning(f'Request {request_id} already processed: {record.status.value}')
+            logger.warning(
+                f'Request {request_id} already processed: {record.status.value}'
+            )
             return
 
         record.status = ApprovalStatus.REJECTED

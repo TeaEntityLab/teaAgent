@@ -15,14 +15,14 @@ class TestGathererSkillRAGIntegration:
 
         documents = [
             Document(
-                doc_id="1",
-                text="Paris is the capital city of France. It is known for the Eiffel Tower, the Louvre Museum, and its rich cultural heritage. Paris has been a major center of art, fashion, and cuisine for centuries."
+                doc_id='1',
+                text='Paris is the capital city of France. It is known for the Eiffel Tower, the Louvre Museum, and its rich cultural heritage. Paris has been a major center of art, fashion, and cuisine for centuries.',
             )
         ]
         retriever = InMemoryRetriever(documents)
 
         def answer_generator(query, context):
-            return f"Answer based on context: {context[:50]}..."
+            return f'Answer based on context: {context[:50]}...'
 
         call_count = [0]
 
@@ -30,15 +30,15 @@ class TestGathererSkillRAGIntegration:
             call_count[0] += 1
             # Return insufficient on first call, sufficient after Skill-RAG adds context
             if call_count[0] == 1:
-                return False, ["capital_info"]
+                return False, ['capital_info']
             return len(memories) >= 1, []
 
         def gather_fn(needs):
-            memories.append(f"Flat retrieval for: {needs}")
+            memories.append(f'Flat retrieval for: {needs}')
 
         memories = []
         gatherer.gather_context(
-            task="What is the capital of France?",
+            task='What is the capital of France?',
             memories=memories,
             llm_check_fn=llm_check_fn,
             gather_fn=gather_fn,
@@ -62,11 +62,11 @@ class TestGathererSkillRAGIntegration:
 
         def gather_fn(needs):
             gather_called.append(needs)
-            memories.append(f"Flat retrieval for: {needs}")
+            memories.append(f'Flat retrieval for: {needs}')
 
         memories = []
         gatherer.gather_context(
-            task="Test task",
+            task='Test task',
             memories=memories,
             llm_check_fn=llm_check_fn,
             gather_fn=gather_fn,
@@ -80,29 +80,29 @@ class TestGathererSkillRAGIntegration:
         """Test that gatherer falls back to flat retrieval when Skill-RAG fails."""
         gatherer = ContextGatherer(use_skill_rag=True, skill_rag_max_rounds=2)
 
-        documents = [Document(doc_id="1", text="Test document")]
+        documents = [Document(doc_id='1', text='Test document')]
         retriever = InMemoryRetriever(documents)
 
         def answer_generator(query, context):
-            raise Exception("Simulated Skill-RAG failure")
+            raise Exception('Simulated Skill-RAG failure')
 
         call_count = [0]
 
         def llm_check_fn(task, memories):
             call_count[0] += 1
             if call_count[0] == 1:
-                return False, ["test_need"]
+                return False, ['test_need']
             return len(memories) >= 1, []
 
         gather_called = []
 
         def gather_fn(needs):
             gather_called.append(needs)
-            memories.append(f"Fallback retrieval for: {needs}")
+            memories.append(f'Fallback retrieval for: {needs}')
 
         memories = []
         gatherer.gather_context(
-            task="Test task",
+            task='Test task',
             memories=memories,
             llm_check_fn=llm_check_fn,
             gather_fn=gather_fn,
@@ -122,23 +122,23 @@ class TestGathererSkillRAGIntegration:
             soft_limit=1, hard_limit=2, use_skill_rag=True, skill_rag_max_rounds=1
         )
 
-        documents = [Document(doc_id="1", text="Limited information")]
+        documents = [Document(doc_id='1', text='Limited information')]
         retriever = InMemoryRetriever(documents)
 
         def answer_generator(query, context):
-            return "Answer"
+            return 'Answer'
 
         def llm_check_fn(task, memories):
             # Always return insufficient
-            return False, ["more_info"]
+            return False, ['more_info']
 
         def gather_fn(needs):
-            memories.append(f"Retrieval: {needs}")
+            memories.append(f'Retrieval: {needs}')
 
         memories = []
         with pytest.raises(InsufficientContextError):
             gatherer.gather_context(
-                task="Test task",
+                task='Test task',
                 memories=memories,
                 llm_check_fn=llm_check_fn,
                 gather_fn=gather_fn,
@@ -155,32 +155,30 @@ class TestGathererSkillRAGIntegration:
         This test verifies that using Skill-RAG's evidence_focusing skill
         reduces context token volume by at least 50% compared to flat retrieval.
         """
-        gatherer_skill_rag = ContextGatherer(
-            use_skill_rag=True, skill_rag_max_rounds=3
-        )
+        gatherer_skill_rag = ContextGatherer(use_skill_rag=True, skill_rag_max_rounds=3)
         gatherer_flat = ContextGatherer(use_skill_rag=False)
 
         # Create a large document corpus
         documents = [
             Document(
                 doc_id=str(i),
-                text=f"Document {i} with lots of irrelevant information. " * 20
-                + "Key fact: The capital of France is Paris. "
-                + "More irrelevant text. " * 20,
+                text=f'Document {i} with lots of irrelevant information. ' * 20
+                + 'Key fact: The capital of France is Paris. '
+                + 'More irrelevant text. ' * 20,
             )
             for i in range(10)
         ]
         retriever = InMemoryRetriever(documents)
 
         def answer_generator(query, context):
-            return "The capital of France is Paris."
+            return 'The capital of France is Paris.'
 
         call_count = [0]
 
         def llm_check_fn(task, memories):
             call_count[0] += 1
             if call_count[0] == 1:
-                return False, ["capital_info"]
+                return False, ['capital_info']
             return len(memories) >= 1, []
 
         # Measure flat retrieval token usage
@@ -190,7 +188,7 @@ class TestGathererSkillRAGIntegration:
         def flat_llm_check_fn(task, memories):
             flat_call_count[0] += 1
             if flat_call_count[0] == 1:
-                return False, ["capital_info"]
+                return False, ['capital_info']
             return len(memories) >= 1, []
 
         def flat_gather_fn(needs):
@@ -199,7 +197,7 @@ class TestGathererSkillRAGIntegration:
                 flat_memories.append(doc.text)
 
         gatherer_flat.gather_context(
-            task="What is the capital of France?",
+            task='What is the capital of France?',
             memories=flat_memories,
             llm_check_fn=flat_llm_check_fn,
             gather_fn=flat_gather_fn,
@@ -210,10 +208,10 @@ class TestGathererSkillRAGIntegration:
 
         def skill_rag_gather_fn(needs):
             # Skill-RAG should return focused results
-            skill_rag_memories.append(f"Focused: {needs}")
+            skill_rag_memories.append(f'Focused: {needs}')
 
         gatherer_skill_rag.gather_context(
-            task="What is the capital of France?",
+            task='What is the capital of France?',
             memories=skill_rag_memories,
             llm_check_fn=llm_check_fn,
             gather_fn=skill_rag_gather_fn,
@@ -239,11 +237,11 @@ class TestGathererSkillRAGIntegration:
 
         def gather_fn(needs):
             gather_called.append(needs)
-            memories.append(f"Flat retrieval for: {needs}")
+            memories.append(f'Flat retrieval for: {needs}')
 
         memories = []
         gatherer.gather_context(
-            task="Test task",
+            task='Test task',
             memories=memories,
             llm_check_fn=llm_check_fn,
             gather_fn=gather_fn,
@@ -256,33 +254,31 @@ class TestGathererSkillRAGIntegration:
 
     def test_gatherer_skill_rag_max_rounds_respected(self):
         """Test that Skill-RAG max_rounds parameter is respected."""
-        gatherer = ContextGatherer(
-            use_skill_rag=True, skill_rag_max_rounds=1
-        )
+        gatherer = ContextGatherer(use_skill_rag=True, skill_rag_max_rounds=1)
 
-        documents = [Document(doc_id="1", text="Test document")]
+        documents = [Document(doc_id='1', text='Test document')]
         retriever = InMemoryRetriever(documents)
 
         rounds_used = []
 
         def answer_generator(query, context):
             rounds_used.append(1)
-            return "Answer"
+            return 'Answer'
 
         call_count = [0]
 
         def llm_check_fn(task, memories):
             call_count[0] += 1
             if call_count[0] == 1:
-                return False, ["test_need"]
+                return False, ['test_need']
             return len(memories) >= 1, []
 
         def gather_fn(needs):
-            memories.append(f"Retrieval: {needs}")
+            memories.append(f'Retrieval: {needs}')
 
         memories = []
         gatherer.gather_context(
-            task="Test task",
+            task='Test task',
             memories=memories,
             llm_check_fn=llm_check_fn,
             gather_fn=gather_fn,

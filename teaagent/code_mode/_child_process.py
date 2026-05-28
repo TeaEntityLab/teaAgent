@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import sys
 import traceback
 from contextlib import suppress
 from dataclasses import dataclass
@@ -23,8 +24,12 @@ class ChildProcessCodeModeBackend:
         inputs: dict[str, Any],
         sandbox: CodeModeSandbox,
     ) -> CodeModeResult:
-        parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
-        process = multiprocessing.Process(
+        ctx: Any = multiprocessing
+        with suppress(ValueError):
+            # Prefer fork on POSIX to avoid spawn startup overhead in short timeouts.
+            ctx = multiprocessing.get_context('fork')
+        parent_conn, child_conn = ctx.Pipe(duplex=False)
+        process = ctx.Process(
             target=_execute_code_mode_child,
             args=(code, inputs, sandbox, child_conn),
         )
@@ -81,7 +86,9 @@ def _apply_resource_limits(sandbox: CodeModeSandbox) -> None:
         return
     _, cpu_hard = resource.getrlimit(resource.RLIMIT_CPU)
     resource.setrlimit(resource.RLIMIT_CPU, (sandbox.cpu_seconds, cpu_hard))
-    if hasattr(resource, 'RLIMIT_AS'):
+    # RLIMIT_AS is unreliable on macOS and can terminate the child before it
+    # initializes, which surfaces as a parent-side timeout for safe snippets.
+    if hasattr(resource, 'RLIMIT_AS') and sys.platform != 'darwin':
         _, hard = resource.getrlimit(resource.RLIMIT_AS)
         soft = sandbox.memory_bytes
         if hard != resource.RLIM_INFINITY:

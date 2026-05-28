@@ -97,8 +97,14 @@ class AgentFactory:
 
     def _generate_template_prompt(self, spec: AgentSpecification) -> str:
         """Generate system prompt using template (no LLM)."""
-        personality = ', '.join(spec.personality_traits) if spec.personality_traits else 'professional'
-        constraints = '\n'.join(f'- {c}' for c in spec.constraints) if spec.constraints else ''
+        personality = (
+            ', '.join(spec.personality_traits)
+            if spec.personality_traits
+            else 'professional'
+        )
+        constraints = (
+            '\n'.join(f'- {c}' for c in spec.constraints) if spec.constraints else ''
+        )
 
         prompt = f"""# {spec.name}
 
@@ -148,6 +154,8 @@ Respond with the system prompt as markdown (no JSON wrapper).
 """
 
         try:
+            if self._llm_adapter is None:
+                raise RuntimeError('LLM adapter is not configured')
             request = LLMRequest(
                 messages=[
                     LLMMessage(
@@ -158,10 +166,12 @@ Respond with the system prompt as markdown (no JSON wrapper).
                 ],
             )
 
-            response = self._llm_adapter.generate(request)
+            response = self._llm_adapter.complete(request)
             return response.content.strip()
         except Exception as exc:
-            logger.warning(f'LLM prompt generation failed, falling back to template: {exc}')
+            logger.warning(
+                f'LLM prompt generation failed, falling back to template: {exc}'
+            )
             return self._generate_template_prompt(spec)
 
     def _persist_agent(self, agent: AgentPlugin) -> None:
@@ -210,9 +220,7 @@ def register(registry):
 
         logger.info(f'Persisted agent to disk: {agent_dir}')
 
-    def hot_reload_agent(
-        self, agent_name: str, new_system_prompt: str
-    ) -> AgentPlugin:
+    def hot_reload_agent(self, agent_name: str, new_system_prompt: str) -> AgentPlugin:
         """Hot-reload an agent with a new system prompt (polish mode).
 
         Args:
@@ -361,6 +369,8 @@ Respond with the evolved system prompt as markdown (no JSON wrapper).
 """
 
         try:
+            if self._llm_adapter is None:
+                raise RuntimeError('LLM adapter is not configured')
             request = LLMRequest(
                 messages=[
                     LLMMessage(
@@ -371,10 +381,12 @@ Respond with the evolved system prompt as markdown (no JSON wrapper).
                 ],
             )
 
-            response = self._llm_adapter.generate(request)
+            response = self._llm_adapter.complete(request)
             return response.content.strip()
         except Exception as exc:
-            logger.warning(f'LLM prompt evolution failed, falling back to heuristic: {exc}')
+            logger.warning(
+                f'LLM prompt evolution failed, falling back to heuristic: {exc}'
+            )
             return self._heuristic_evolve_prompt(
                 current_prompt, performance_feedback, success_metrics
             )

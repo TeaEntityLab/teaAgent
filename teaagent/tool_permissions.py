@@ -151,7 +151,10 @@ class ToolPermissionManager:
         return ToolSafetyLevel.DESTRUCTIVE
 
     def grant_agent_tool_access(
-        self, agent_name: str, tool_names: tuple[str, ...], allow_destructive: bool = False
+        self,
+        agent_name: str,
+        tool_names: tuple[str, ...],
+        allow_destructive: bool = False,
     ) -> None:
         """Grant an agent access to specific tools.
 
@@ -278,7 +281,9 @@ class ToolPermissionManager:
         """
         return self._agent_tool_whitelist.get(agent_name, set()).copy()
 
-    def apply_safe_defaults(self, agent_name: str, requested_tools: tuple[str, ...]) -> tuple[str, ...]:
+    def apply_safe_defaults(
+        self, agent_name: str, requested_tools: tuple[str, ...]
+    ) -> tuple[str, ...]:
         """Apply safe defaults to filter destructive tools.
 
         Args:
@@ -288,5 +293,7 @@ class ToolPermissionManager:
         Returns:
             Filtered tuple of safe tools only.
         """
-        self.grant_agent_tool_access(agent_name, requested_tools, allow_destructive=False)
+        self.grant_agent_tool_access(
+            agent_name, requested_tools, allow_destructive=False
+        )
         return tuple(self.get_agent_tools(agent_name))

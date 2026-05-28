@@ -54,7 +54,8 @@ class TestJITApprovalServer:
         """Test that requesting approval creates a record."""
         permission_manager = ToolPermissionManager()
         server = JITApprovalServer(
-            permission_manager=permission_manager, timeout_seconds=1  # Short timeout for tests
+            permission_manager=permission_manager,
+            timeout_seconds=1,  # Short timeout for tests
         )
 
         # Manually create record without calling request_approval (which blocks)

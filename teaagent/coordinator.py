@@ -175,6 +175,8 @@ Respond with JSON:
 """
 
         try:
+            if self._llm_adapter is None:
+                raise RuntimeError('LLM adapter is not configured')
             request = LLMRequest(
                 messages=[
                     LLMMessage(
@@ -186,7 +188,7 @@ Respond with JSON:
                 response_format={'type': 'json_object'},
             )
 
-            response = self._llm_adapter.generate(request)
+            response = self._llm_adapter.complete(request)
             import json
 
             data = json.loads(response.content)
@@ -200,7 +202,9 @@ Respond with JSON:
                 estimated_steps=data.get('estimated_steps', 1),
             )
         except Exception as exc:
-            logger.warning(f'LLM classification failed, falling back to heuristic: {exc}')
+            logger.warning(
+                f'LLM classification failed, falling back to heuristic: {exc}'
+            )
             return self._classify_task_heuristic(task_description)
 
     def generate_workflow_plan(
@@ -239,9 +243,7 @@ Respond with JSON:
             return self._generate_llm_workflow_plan(task_description, classification)
 
         # Fallback to heuristic multi-step planning
-        return self._generate_heuristic_workflow_plan(
-            task_description, classification
-        )
+        return self._generate_heuristic_workflow_plan(task_description, classification)
 
     def _generate_heuristic_workflow_plan(
         self, task_description: str, classification: TaskClassification
@@ -344,9 +346,7 @@ Respond with JSON:
         self, task_description: str, classification: TaskClassification
     ) -> WorkflowPlan:
         """Generate workflow plan using LLM for better planning."""
-        available_agents = [
-            agent.name for agent in self._plugin_registry.list_agents()
-        ]
+        available_agents = [agent.name for agent in self._plugin_registry.list_agents()]
 
         planning_prompt = f"""Generate a structured workflow plan for the following task.
 
@@ -373,6 +373,8 @@ Respond with JSON:
 """
 
         try:
+            if self._llm_adapter is None:
+                raise RuntimeError('LLM adapter is not configured')
             request = LLMRequest(
                 messages=[
                     LLMMessage(
@@ -384,7 +386,7 @@ Respond with JSON:
                 response_format={'type': 'json_object'},
             )
 
-            response = self._llm_adapter.generate(request)
+            response = self._llm_adapter.complete(request)
             import json
 
             data = json.loads(response.content)
@@ -407,12 +409,16 @@ Respond with JSON:
                 estimated_duration_seconds=data.get('estimated_duration_seconds', 300),
             )
         except Exception as exc:
-            logger.warning(f'LLM workflow planning failed, falling back to heuristic: {exc}')
+            logger.warning(
+                f'LLM workflow planning failed, falling back to heuristic: {exc}'
+            )
             return self._generate_heuristic_workflow_plan(
                 task_description, classification
             )
 
-    def route_task(self, task_description: str) -> tuple[TaskClassification, WorkflowPlan]:
+    def route_task(
+        self, task_description: str
+    ) -> tuple[TaskClassification, WorkflowPlan]:
         """Classify task and generate workflow plan in one call.
 
         Args:
