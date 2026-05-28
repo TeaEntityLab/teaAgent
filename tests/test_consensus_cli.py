@@ -7,8 +7,8 @@ from pathlib import Path
 from teaagent.cli._handlers._consensus import (
     consensus_config_set_command,
     consensus_history_command,
-    consensus_peers_add_command,
     consensus_peers_activate_command,
+    consensus_peers_add_command,
     consensus_peers_deactivate_command,
     consensus_peers_list_command,
     consensus_peers_remove_command,

@@ -9,7 +9,6 @@ from pathlib import Path
 from teaagent.consensus import (
     ConsensusConfig,
     ConsensusEngine,
-    ConsensusStatus,
     PeerIdentity,
     PeerRegistry,
     RiskLevel,
@@ -113,13 +112,14 @@ def consensus_peers_deactivate_command(args: argparse.Namespace) -> int:
 
 def consensus_status_command(args: argparse.Namespace) -> int:
     """Show consensus status."""
-    storage_path = Path(args.storage) if args.storage else None
     peer_storage = Path(args.peer_storage) if args.peer_storage else None
     consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
 
     registry = PeerRegistry(storage_path=peer_storage)
     config = ConsensusConfig()
-    engine = ConsensusEngine(peer_registry=registry, config=config, storage_path=consensus_storage)
+    engine = ConsensusEngine(
+        peer_registry=registry, config=config, storage_path=consensus_storage
+    )
 
     # Show peer status
     peers = registry.list_active()
@@ -143,14 +143,6 @@ def consensus_status_command(args: argparse.Namespace) -> int:
 
 def consensus_history_command(args: argparse.Namespace) -> int:
     """Show consensus voting history."""
-    storage_path = Path(args.storage) if args.storage else None
-    peer_storage = Path(args.peer_storage) if args.peer_storage else None
-    consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
-
-    registry = PeerRegistry(storage_path=peer_storage)
-    config = ConsensusConfig()
-    engine = ConsensusEngine(peer_registry=registry, config=config, storage_path=consensus_storage)
-
     # Get all consensus states (including completed)
     # This is a simplified version - in production, would query from storage
     print('Consensus history:')
@@ -184,13 +176,14 @@ def consensus_config_set_command(args: argparse.Namespace) -> int:
 
 def consensus_request_command(args: argparse.Namespace) -> int:
     """Request consensus for a task."""
-    storage_path = Path(args.storage) if args.storage else None
     peer_storage = Path(args.peer_storage) if args.peer_storage else None
     consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
 
     registry = PeerRegistry(storage_path=peer_storage)
     config = ConsensusConfig()
-    engine = ConsensusEngine(peer_registry=registry, config=config, storage_path=consensus_storage)
+    engine = ConsensusEngine(
+        peer_registry=registry, config=config, storage_path=consensus_storage
+    )
 
     try:
         state = engine.request_consensus(
@@ -219,13 +212,14 @@ def consensus_vote_command(args: argparse.Namespace) -> int:
     """Submit a vote on a proposal."""
     import hashlib
 
-    storage_path = Path(args.storage) if args.storage else None
     peer_storage = Path(args.peer_storage) if args.peer_storage else None
     consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
 
     registry = PeerRegistry(storage_path=peer_storage)
     config = ConsensusConfig()
-    engine = ConsensusEngine(peer_registry=registry, config=config, storage_path=consensus_storage)
+    engine = ConsensusEngine(
+        peer_registry=registry, config=config, storage_path=consensus_storage
+    )
 
     # Get the proposal to sign
     state = engine.get_consensus_status(args.proposal_id)
@@ -239,7 +233,9 @@ def consensus_vote_command(args: argparse.Namespace) -> int:
         print(f'Peer "{args.peer_name}" not found.')
         return 1
 
-    signature = hashlib.sha256((state.proposal.task_description + peer.ssh_public_key).encode()).hexdigest()
+    signature = hashlib.sha256(
+        (state.proposal.task_description + peer.ssh_public_key).encode()
+    ).hexdigest()
 
     success = engine.submit_vote(
         proposal_id=args.proposal_id,
@@ -252,7 +248,10 @@ def consensus_vote_command(args: argparse.Namespace) -> int:
     if success:
         print(f'Vote submitted successfully for proposal {args.proposal_id}')
         updated_state = engine.get_consensus_status(args.proposal_id)
-        print(f'Current votes: {updated_state.get_total_votes()}/{len(updated_state.required_peers)}')
+        if updated_state:
+            print(
+                f'Current votes: {updated_state.get_total_votes()}/{len(updated_state.required_peers)}'
+            )
         return 0
     else:
         print('Failed to submit vote.')

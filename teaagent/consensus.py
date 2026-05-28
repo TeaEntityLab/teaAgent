@@ -19,38 +19,38 @@ from typing import Dict, List, Optional, Set
 class RiskLevel(Enum):
     """Risk classification for proposals and tool calls."""
 
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
+    LOW = 'low'
+    MEDIUM = 'medium'
+    HIGH = 'high'
+    CRITICAL = 'critical'
 
 
 class VoteDecision(Enum):
     """Possible vote decisions from peers."""
 
-    APPROVE = "approve"
-    REJECT = "reject"
-    ABSTAIN = "abstain"
+    APPROVE = 'approve'
+    REJECT = 'reject'
+    ABSTAIN = 'abstain'
 
 
 class ConsensusStatus(Enum):
     """Status of a consensus process."""
 
-    PENDING = "pending"
-    VOTING = "voting"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    TIMEOUT = "timeout"
-    CANCELLED = "cancelled"
+    PENDING = 'pending'
+    VOTING = 'voting'
+    APPROVED = 'approved'
+    REJECTED = 'rejected'
+    TIMEOUT = 'timeout'
+    CANCELLED = 'cancelled'
 
 
 class VotingThreshold(Enum):
     """Voting threshold configurations."""
 
-    SIMPLE_MAJORITY = "simple_majority"  # > 50%
-    SUPERMAJORITY = "supermajority"  # > 66.6%
-    UNANIMOUS = "unanimous"  # 100%
-    CUSTOM = "custom"  # Custom percentage
+    SIMPLE_MAJORITY = 'simple_majority'  # > 50%
+    SUPERMAJORITY = 'supermajority'  # > 66.6%
+    UNANIMOUS = 'unanimous'  # 100%
+    CUSTOM = 'custom'  # Custom percentage
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,9 @@ class PeerIdentity:
             # This is a simplified version - in production, use proper SSH key parsing
             # For now, we'll use a simple hash-based verification
             # In production, this should use proper SSH signature verification
-            expected_sig = hashlib.sha256((message + self.ssh_public_key).encode()).hexdigest()
+            expected_sig = hashlib.sha256(
+                (message + self.ssh_public_key).encode()
+            ).hexdigest()
             return signature == expected_sig
         except Exception:
             return False
@@ -156,7 +158,9 @@ class Proposal:
             risk_level=RiskLevel(data['risk_level']),
             proposed_by=data['proposed_by'],
             created_at=datetime.fromisoformat(data['created_at']),
-            expires_at=datetime.fromisoformat(data['expires_at']) if data.get('expires_at') else None,
+            expires_at=datetime.fromisoformat(data['expires_at'])
+            if data.get('expires_at')
+            else None,
             metadata=data.get('metadata', {}),
         )
 
@@ -253,7 +257,9 @@ class ConsensusState:
             'voting_threshold': self.voting_threshold.value,
             'custom_threshold': self.custom_threshold,
             'started_at': self.started_at.isoformat() if self.started_at else None,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'completed_at': self.completed_at.isoformat()
+            if self.completed_at
+            else None,
             'required_peers': list(self.required_peers),
         }
 
@@ -266,8 +272,12 @@ class ConsensusState:
             votes=[Vote.from_dict(v) for v in data['votes']],
             voting_threshold=VotingThreshold(data['voting_threshold']),
             custom_threshold=data.get('custom_threshold'),
-            started_at=datetime.fromisoformat(data['started_at']) if data.get('started_at') else None,
-            completed_at=datetime.fromisoformat(data['completed_at']) if data.get('completed_at') else None,
+            started_at=datetime.fromisoformat(data['started_at'])
+            if data.get('started_at')
+            else None,
+            completed_at=datetime.fromisoformat(data['completed_at'])
+            if data.get('completed_at')
+            else None,
             required_peers=set(data.get('required_peers', [])),
         )
 
@@ -300,7 +310,9 @@ class ConsensusConfig:
     def from_dict(cls, data: Dict) -> ConsensusConfig:
         """Create config from dictionary."""
         return cls(
-            default_voting_threshold=VotingThreshold(data.get('default_voting_threshold', 'supermajority')),
+            default_voting_threshold=VotingThreshold(
+                data.get('default_voting_threshold', 'supermajority')
+            ),
             default_custom_threshold=data.get('default_custom_threshold'),
             consensus_timeout_seconds=data.get('consensus_timeout_seconds', 300),
             require_all_peers=data.get('require_all_peers', False),
@@ -699,7 +711,11 @@ class VotingMechanism:
         Returns:
             List of active consensus states
         """
-        return [state for state in self._active_votes.values() if state.status == ConsensusStatus.VOTING]
+        return [
+            state
+            for state in self._active_votes.values()
+            if state.status == ConsensusStatus.VOTING
+        ]
 
     def cleanup_completed(self, older_than_seconds: int = 3600) -> int:
         """Clean up completed voting states.
@@ -714,9 +730,18 @@ class VotingMechanism:
         to_remove = []
 
         for proposal_id, state in self._active_votes.items():
-            if state.status in (ConsensusStatus.APPROVED, ConsensusStatus.REJECTED, ConsensusStatus.TIMEOUT, ConsensusStatus.CANCELLED):
-                if state.completed_at and state.completed_at < cutoff:
-                    to_remove.append(proposal_id)
+            if (
+                state.status
+                in (
+                    ConsensusStatus.APPROVED,
+                    ConsensusStatus.REJECTED,
+                    ConsensusStatus.TIMEOUT,
+                    ConsensusStatus.CANCELLED,
+                )
+                and state.completed_at
+                and state.completed_at < cutoff
+            ):
+                to_remove.append(proposal_id)
 
         for proposal_id in to_remove:
             del self._active_votes[proposal_id]
@@ -785,7 +810,9 @@ class ConsensusEngine:
         # Calculate expiration
         expires_at = None
         if expires_in_seconds:
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in_seconds)
+            expires_at = datetime.now(timezone.utc) + timedelta(
+                seconds=expires_in_seconds
+            )
 
         # Create proposal
         proposal = Proposal(
@@ -834,7 +861,9 @@ class ConsensusEngine:
             return False
 
         # Verify the signature is from the claimed peer
-        if not self.peer_registry.verify_peer(peer_name, state.proposal.task_description, signature):
+        if not self.peer_registry.verify_peer(
+            peer_name, state.proposal.task_description, signature
+        ):
             return False
 
         # Cast the vote
@@ -863,9 +892,12 @@ class ConsensusEngine:
         state = self.voting_mechanism.get_state(proposal_id)
 
         # Check for timeout
-        if state and state.status == ConsensusStatus.VOTING:
-            if self.voting_mechanism.check_timeout(proposal_id):
-                self._save_state()
+        if (
+            state
+            and state.status == ConsensusStatus.VOTING
+            and self.voting_mechanism.check_timeout(proposal_id)
+        ):
+            self._save_state()
 
         # Check for expiration
         if state and state.proposal.is_expired():
@@ -893,11 +925,25 @@ class ConsensusEngine:
             'proposal_id': proposal_id,
             'task_description': state.proposal.task_description,
             'risk_level': state.proposal.risk_level.value,
-            'approved_by': [vote.peer_name for vote in state.votes if vote.decision == VoteDecision.APPROVE],
-            'rejected_by': [vote.peer_name for vote in state.votes if vote.decision == VoteDecision.REJECT],
-            'abstained_by': [vote.peer_name for vote in state.votes if vote.decision == VoteDecision.ABSTAIN],
+            'approved_by': [
+                vote.peer_name
+                for vote in state.votes
+                if vote.decision == VoteDecision.APPROVE
+            ],
+            'rejected_by': [
+                vote.peer_name
+                for vote in state.votes
+                if vote.decision == VoteDecision.REJECT
+            ],
+            'abstained_by': [
+                vote.peer_name
+                for vote in state.votes
+                if vote.decision == VoteDecision.ABSTAIN
+            ],
             'signatures': [vote.signature for vote in state.votes],
-            'approved_at': state.completed_at.isoformat() if state.completed_at else None,
+            'approved_at': state.completed_at.isoformat()
+            if state.completed_at
+            else None,
             'voting_threshold': state.voting_threshold.value,
         }
 
@@ -974,9 +1020,9 @@ class ConsensusEngine:
             Unique proposal ID
         """
         timestamp = datetime.now(timezone.utc).isoformat()
-        hash_input = f"{task_description}:{proposed_by}:{timestamp}"
+        hash_input = f'{task_description}:{proposed_by}:{timestamp}'
         hash_value = hashlib.sha256(hash_input.encode()).hexdigest()[:16]
-        return f"prop-{hash_value}"
+        return f'prop-{hash_value}'
 
     def _save_state(self) -> None:
         """Save consensus state to storage."""
@@ -984,7 +1030,10 @@ class ConsensusEngine:
             return
 
         data = {
-            'consensus_states': [state.to_dict() for state in self.voting_mechanism._active_votes.values()],
+            'consensus_states': [
+                state.to_dict()
+                for state in self.voting_mechanism._active_votes.values()
+            ],
         }
 
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)

@@ -303,7 +303,12 @@ def test_swarm_disable_consensus_mode():
         registry.register(peer)
 
         config = ConsensusConfig()
-        manager = SwarmManager(tmpdir, enable_consensus=True, peer_registry=registry, consensus_config=config)
+        manager = SwarmManager(
+            tmpdir,
+            enable_consensus=True,
+            peer_registry=registry,
+            consensus_config=config,
+        )
 
         assert manager._enable_consensus is True
 
@@ -320,7 +325,12 @@ def test_swarm_task_with_consensus_required():
         registry.register(peer)
 
         config = ConsensusConfig()
-        manager = SwarmManager(tmpdir, enable_consensus=True, peer_registry=registry, consensus_config=config)
+        manager = SwarmManager(
+            tmpdir,
+            enable_consensus=True,
+            peer_registry=registry,
+            consensus_config=config,
+        )
 
         task = SubagentTask(
             task_id='task-1',
@@ -347,7 +357,12 @@ def test_swarm_task_without_consensus():
         registry.register(peer)
 
         config = ConsensusConfig()
-        manager = SwarmManager(tmpdir, enable_consensus=True, peer_registry=registry, consensus_config=config)
+        manager = SwarmManager(
+            tmpdir,
+            enable_consensus=True,
+            peer_registry=registry,
+            consensus_config=config,
+        )
 
         task = SubagentTask(
             task_id='task-1',

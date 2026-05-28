@@ -43,6 +43,18 @@ from ._cloud import (
     cloud_show_command,
     cloud_submit_command,
 )
+from ._consensus import (
+    consensus_config_set_command,
+    consensus_history_command,
+    consensus_peers_activate_command,
+    consensus_peers_add_command,
+    consensus_peers_deactivate_command,
+    consensus_peers_list_command,
+    consensus_peers_remove_command,
+    consensus_request_command,
+    consensus_status_command,
+    consensus_vote_command,
+)
 from ._doctor import (
     doctor_aigateway,
     doctor_all,
@@ -142,23 +154,17 @@ from ._plugin import (
     plugin_show_command,
     plugin_verify_command,
 )
-from ._consensus import (
-    consensus_peers_list_command,
-    consensus_peers_add_command,
-    consensus_peers_remove_command,
-    consensus_peers_activate_command,
-    consensus_peers_deactivate_command,
-    consensus_config_set_command,
-    consensus_status_command,
-    consensus_history_command,
-    consensus_request_command,
-    consensus_vote_command,
-)
 from ._replay import (
     replay_fork,
     replay_list,
     replay_resume,
     replay_steps,
+)
+from ._sandbox import (
+    sandbox_check_compatibility_command,
+    sandbox_check_wasm_command,
+    sandbox_monitor_command,
+    sandbox_route_command,
 )
 from ._skill import (
     skill_candidate_eval_command,
@@ -325,4 +331,8 @@ __all__ = [
     'consensus_history_command',
     'consensus_request_command',
     'consensus_vote_command',
+    'sandbox_route_command',
+    'sandbox_monitor_command',
+    'sandbox_check_wasm_command',
+    'sandbox_check_compatibility_command',
 ]

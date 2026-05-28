@@ -252,7 +252,9 @@ def test_docker_isolation_with_resource_limits():
         # Mock Docker to be available
         with patch('subprocess.run') as mock_run:
             # First call: docker --version check
-            mock_run.return_value = MagicMock(returncode=0, stdout='Docker version 20.10.0', stderr='')
+            mock_run.return_value = MagicMock(
+                returncode=0, stdout='Docker version 20.10.0', stderr=''
+            )
 
             context, error = prepare_subagent_isolation(
                 root,
@@ -263,7 +265,9 @@ def test_docker_isolation_with_resource_limits():
             )
 
             # Should have called docker run with resource limits
-            docker_calls = [call for call in mock_run.call_args_list if 'docker' in str(call)]
+            docker_calls = [
+                call for call in mock_run.call_args_list if 'docker' in str(call)
+            ]
             assert len(docker_calls) >= 2  # version check + run
 
             # Check the run command includes resource limits
@@ -284,7 +288,9 @@ def test_docker_isolation_without_resource_limits():
         # Mock Docker to be available
         with patch('subprocess.run') as mock_run:
             # First call: docker --version check
-            mock_run.return_value = MagicMock(returncode=0, stdout='Docker version 20.10.0', stderr='')
+            mock_run.return_value = MagicMock(
+                returncode=0, stdout='Docker version 20.10.0', stderr=''
+            )
 
             context, error = prepare_subagent_isolation(
                 root,
@@ -293,7 +299,9 @@ def test_docker_isolation_without_resource_limits():
             )
 
             # Should have called docker run without resource limits
-            docker_calls = [call for call in mock_run.call_args_list if 'docker' in str(call)]
+            docker_calls = [
+                call for call in mock_run.call_args_list if 'docker' in str(call)
+            ]
             assert len(docker_calls) >= 2  # version check + run
 
             # Check the run command does not include resource limits

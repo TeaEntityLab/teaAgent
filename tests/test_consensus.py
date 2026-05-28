@@ -2,11 +2,11 @@
 
 import hashlib
 import time
-
-import pytest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+import pytest
 
 from teaagent.consensus import (
     ConsensusConfig,
@@ -260,10 +260,18 @@ class TestConsensusState:
         )
         state = ConsensusState(proposal=proposal)
 
-        state.add_vote(Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1'))
-        state.add_vote(Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2'))
-        state.add_vote(Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3'))
-        state.add_vote(Vote(peer_name='peer4', decision=VoteDecision.ABSTAIN, signature='sig4'))
+        state.add_vote(
+            Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1')
+        )
+        state.add_vote(
+            Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2')
+        )
+        state.add_vote(
+            Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3')
+        )
+        state.add_vote(
+            Vote(peer_name='peer4', decision=VoteDecision.ABSTAIN, signature='sig4')
+        )
 
         assert state.get_vote_count(VoteDecision.APPROVE) == 2
         assert state.get_vote_count(VoteDecision.REJECT) == 1
@@ -331,10 +339,14 @@ class TestConsensusState:
             required_peers={'peer1', 'peer2', 'peer3'},
         )
 
-        state.add_vote(Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1'))
+        state.add_vote(
+            Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1')
+        )
         assert state.has_quorum() is False
 
-        state.add_vote(Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2'))
+        state.add_vote(
+            Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2')
+        )
         assert state.has_quorum() is True
 
     def test_is_approved_simple_majority(self) -> None:
@@ -351,9 +363,15 @@ class TestConsensusState:
             required_peers={'peer1', 'peer2', 'peer3'},
         )
 
-        state.add_vote(Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1'))
-        state.add_vote(Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2'))
-        state.add_vote(Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3'))
+        state.add_vote(
+            Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1')
+        )
+        state.add_vote(
+            Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2')
+        )
+        state.add_vote(
+            Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3')
+        )
 
         assert state.is_approved() is True  # 2/3 approve > 50%
 
@@ -371,9 +389,15 @@ class TestConsensusState:
             required_peers={'peer1', 'peer2', 'peer3'},
         )
 
-        state.add_vote(Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1'))
-        state.add_vote(Vote(peer_name='peer2', decision=VoteDecision.REJECT, signature='sig2'))
-        state.add_vote(Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3'))
+        state.add_vote(
+            Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1')
+        )
+        state.add_vote(
+            Vote(peer_name='peer2', decision=VoteDecision.REJECT, signature='sig2')
+        )
+        state.add_vote(
+            Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3')
+        )
 
         assert state.is_approved() is False  # 1/3 approve < 50%
 
@@ -391,9 +415,15 @@ class TestConsensusState:
             required_peers={'peer1', 'peer2', 'peer3'},
         )
 
-        state.add_vote(Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1'))
-        state.add_vote(Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2'))
-        state.add_vote(Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3'))
+        state.add_vote(
+            Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1')
+        )
+        state.add_vote(
+            Vote(peer_name='peer2', decision=VoteDecision.APPROVE, signature='sig2')
+        )
+        state.add_vote(
+            Vote(peer_name='peer3', decision=VoteDecision.REJECT, signature='sig3')
+        )
 
         assert state.is_approved() is False  # Not unanimous
 
@@ -417,7 +447,9 @@ class TestConsensusState:
             status=ConsensusStatus.VOTING,
             required_peers={'peer1', 'peer2'},
         )
-        state.add_vote(Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1'))
+        state.add_vote(
+            Vote(peer_name='peer1', decision=VoteDecision.APPROVE, signature='sig1')
+        )
 
         data = state.to_dict()
         restored = ConsensusState.from_dict(data)
@@ -972,7 +1004,9 @@ class TestConsensusEngine:
             proposed_by='admin',
         )
 
-        signature = hashlib.sha256((state.proposal.task_description + peer1.ssh_public_key).encode()).hexdigest()
+        signature = hashlib.sha256(
+            (state.proposal.task_description + peer1.ssh_public_key).encode()
+        ).hexdigest()
         success = engine.submit_vote(
             proposal_id=state.proposal.id,
             peer_name='peer1',
@@ -1066,8 +1100,12 @@ class TestConsensusEngine:
         )
 
         # Submit approving votes
-        sig1 = hashlib.sha256((state.proposal.task_description + peer1.ssh_public_key).encode()).hexdigest()
-        sig2 = hashlib.sha256((state.proposal.task_description + peer2.ssh_public_key).encode()).hexdigest()
+        sig1 = hashlib.sha256(
+            (state.proposal.task_description + peer1.ssh_public_key).encode()
+        ).hexdigest()
+        sig2 = hashlib.sha256(
+            (state.proposal.task_description + peer2.ssh_public_key).encode()
+        ).hexdigest()
         engine.submit_vote(state.proposal.id, 'peer1', VoteDecision.APPROVE, sig1)
         engine.submit_vote(state.proposal.id, 'peer2', VoteDecision.APPROVE, sig2)
 
@@ -1135,7 +1173,10 @@ class TestConsensusEngine:
         assert success is True
 
         retrieved = engine.get_consensus_status(state.proposal.id)
-        assert retrieved.proposal.metadata['conflict_resolution'] == 'Manual override approved'
+        assert (
+            retrieved.proposal.metadata['conflict_resolution']
+            == 'Manual override approved'
+        )
 
     def test_list_active_consensus(self) -> None:
         """Test listing active consensus requests."""
@@ -1174,7 +1215,9 @@ class TestConsensusEngine:
             registry.register(peer1)
 
             config = ConsensusConfig()
-            engine1 = ConsensusEngine(peer_registry=registry, config=config, storage_path=storage_path)
+            engine1 = ConsensusEngine(
+                peer_registry=registry, config=config, storage_path=storage_path
+            )
 
             state = engine1.request_consensus(
                 task_description='Deploy to production',
@@ -1183,7 +1226,9 @@ class TestConsensusEngine:
             )
 
             # Create new engine instance (should load from file)
-            engine2 = ConsensusEngine(peer_registry=registry, config=config, storage_path=storage_path)
+            engine2 = ConsensusEngine(
+                peer_registry=registry, config=config, storage_path=storage_path
+            )
             loaded_state = engine2.get_consensus_status(state.proposal.id)
 
             assert loaded_state is not None

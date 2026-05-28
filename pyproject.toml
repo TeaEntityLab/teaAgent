@@ -65,6 +65,9 @@ telemetry = [
     "opentelemetry-sdk>=1.20",
     "opentelemetry-exporter-otlp-proto-http>=1.20",
 ]
+wasm = [
+    "wasmer>=4.0",
+]
 release = [
     "build>=1",
     "twine>=5",
@@ -92,6 +95,7 @@ dev = [
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
     "opentelemetry-exporter-otlp-proto-http>=1.20",
+    "wasmer>=4.0",
 ]
 
 [project.scripts]

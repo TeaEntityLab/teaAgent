@@ -64,6 +64,16 @@ from teaagent.cli._handlers import (
     cloud_submit_command,
     completion_command,
     configure_command,
+    consensus_config_set_command,
+    consensus_history_command,
+    consensus_peers_activate_command,
+    consensus_peers_add_command,
+    consensus_peers_deactivate_command,
+    consensus_peers_list_command,
+    consensus_peers_remove_command,
+    consensus_request_command,
+    consensus_status_command,
+    consensus_vote_command,
     daily_journal_command,
     doctor_aigateway,
     doctor_all,
@@ -103,16 +113,6 @@ from teaagent.cli._handlers import (
     plugin_list_command,
     plugin_show_command,
     plugin_verify_command,
-    consensus_peers_list_command,
-    consensus_peers_add_command,
-    consensus_peers_remove_command,
-    consensus_peers_activate_command,
-    consensus_peers_deactivate_command,
-    consensus_config_set_command,
-    consensus_status_command,
-    consensus_history_command,
-    consensus_request_command,
-    consensus_vote_command,
     recall_command,
     recipes_list_command,
     recipes_run_command,
@@ -120,6 +120,10 @@ from teaagent.cli._handlers import (
     replay_list,
     replay_resume,
     replay_steps,
+    sandbox_check_compatibility_command,
+    sandbox_check_wasm_command,
+    sandbox_monitor_command,
+    sandbox_route_command,
     session_list_command,
     session_resume_command,
     session_show_command,
@@ -218,6 +222,7 @@ def main(
 def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._agent_parsers import register as register_agent
     from teaagent.cli._cloud_parsers import register as register_cloud
+    from teaagent.cli._consensus_parsers import register as register_consensus
     from teaagent.cli._ergonomics_parsers import register as register_ergonomics
     from teaagent.cli._gateway_parsers import register as register_gateway
     from teaagent.cli._mcp_parsers import register as register_mcp
@@ -225,7 +230,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._misc_parsers import register as register_misc
     from teaagent.cli._model_parsers import register as register_model
     from teaagent.cli._plugin_parsers import register as register_plugin
-    from teaagent.cli._consensus_parsers import register as register_consensus
+    from teaagent.cli._sandbox_parsers import register as register_sandbox
     from teaagent.cli._skill_parsers import register as register_skill
 
     parser = argparse.ArgumentParser(
@@ -344,6 +349,15 @@ def build_parser() -> argparse.ArgumentParser:
             'history': consensus_history_command,
             'request': consensus_request_command,
             'vote': consensus_vote_command,
+        },
+    )
+    register_sandbox(
+        subparsers,
+        {
+            'route': sandbox_route_command,
+            'monitor': sandbox_monitor_command,
+            'check_wasm': sandbox_check_wasm_command,
+            'check_compatibility': sandbox_check_compatibility_command,
         },
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases

@@ -263,7 +263,7 @@ class SwarmManager:
         if not self._consensus_engine:
             return {'all_approved': True, 'task_results': {}}
 
-        task_results = {}
+        task_results: dict[str, dict[str, Any]] = {}
         all_approved = True
 
         for subagent in self._subagents:
@@ -278,15 +278,28 @@ class SwarmManager:
 
                     # Wait for consensus (simplified - in production, this would be async)
                     # For now, we'll check if it's already approved or fallback
-                    status = self._consensus_engine.get_consensus_status(state.proposal.id)
+                    status = self._consensus_engine.get_consensus_status(
+                        state.proposal.id
+                    )
 
                     if status and status.status == ConsensusStatus.APPROVED:
-                        task_results[subagent._task.task_id] = {'approved': True, 'attestation': self._consensus_engine.generate_attestation(state.proposal.id)}  # type: ignore[dict-item]
+                        task_results[subagent._task.task_id] = {
+                            'approved': True,
+                            'attestation': self._consensus_engine.generate_attestation(
+                                state.proposal.id
+                            ),
+                        }
                     else:
-                        task_results[subagent._task.task_id] = {'approved': False, 'reason': 'Consensus not reached'}  # type: ignore[dict-item]
+                        task_results[subagent._task.task_id] = {
+                            'approved': False,
+                            'reason': 'Consensus not reached',
+                        }
                         all_approved = False
                 except Exception as exc:
-                    task_results[subagent._task.task_id] = {'approved': False, 'reason': str(exc)}  # type: ignore[dict-item]
+                    task_results[subagent._task.task_id] = {
+                        'approved': False,
+                        'reason': str(exc),
+                    }
                     all_approved = False
 
         return {'all_approved': all_approved, 'task_results': task_results}
@@ -301,7 +314,8 @@ class SwarmManager:
         self._subagents = [
             subagent
             for subagent in self._subagents
-            if not subagent._task.require_consensus or task_results.get(subagent._task.task_id, {}).get('approved', False)
+            if not subagent._task.require_consensus
+            or task_results.get(subagent._task.task_id, {}).get('approved', False)
         ]
 
     def enable_consensus_mode(
