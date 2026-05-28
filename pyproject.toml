@@ -63,7 +63,7 @@ managed-vertex = [
 telemetry = [
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
-    "opentelemetry-exporter-otlp-proto-http>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.42.1",
 ]
 wasm = [
     "wasmer>=1.0.0",
@@ -94,7 +94,7 @@ dev = [
     "tree-sitter-language-pack>=1.0.0",
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
-    "opentelemetry-exporter-otlp-proto-http>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.42.1",
 ]
 
 [project.scripts]
