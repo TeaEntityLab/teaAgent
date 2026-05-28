@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 TOKEN_RE = re.compile(r'[A-Za-z0-9_]+')
 
@@ -158,3 +158,52 @@ def agentic_retrieve(
         source = route_source(subquery)
         result_sets.append(retriever.search(subquery, source=source, limit=limit))
     return reciprocal_rank_fusion(result_sets)[:limit]
+
+
+def skill_rag_retrieve(
+    query: str,
+    retriever: InMemoryRetriever,
+    answer_generator: Callable[[str, str], str],
+    *,
+    prober=None,
+    max_rounds: int = 3,
+) -> dict:
+    """Perform Skill-RAG retrieval with failure-aware adaptation.
+
+    This function integrates the Skill-RAG framework to prevent query-evidence
+    misalignment and query drift during multi-turn retrieval by proactively
+    detecting retrieval failures and routing to appropriate remediation skills.
+
+    Args:
+        query: The user's query.
+        retriever: An InMemoryRetriever instance for document retrieval.
+        answer_generator: A callable that takes (query, context) and returns an answer.
+        prober: Optional SkillRAGProber instance. Defaults to PromptBasedProber.
+        max_rounds: Maximum number of retrieval rounds (default: 3).
+
+    Returns:
+        A dictionary containing:
+            - answer: The final generated answer.
+            - context: The retrieved context.
+            - rounds: Number of retrieval rounds used.
+            - final_state: The final ProberState.
+            - skills_used: List of skills applied during retrieval.
+    """
+    from teaagent.skill_rag import (
+        PromptBasedProber,
+        SkillRAGEngine,
+    )
+
+    if prober is None:
+        prober = PromptBasedProber()
+
+    engine = SkillRAGEngine(prober=prober, max_rounds=max_rounds)
+    result = engine.run(query, retriever, answer_generator)
+
+    return {
+        "answer": result.answer,
+        "context": result.context,
+        "rounds": result.rounds,
+        "final_state": result.final_state.value,
+        "skills_used": result.skills_used,
+    }
