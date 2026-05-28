@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -17,6 +18,7 @@ from teaagent.errors import (
     ToolPermissionError,
 )
 from teaagent.file_policy import FilePolicy
+from teaagent.plugins import load_plugins
 from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.tools import ToolRegistry
@@ -50,6 +52,7 @@ class AgentRunner:
         file_policy: Optional[FilePolicy] = None,
         auto_mode_config: Optional[AutoModeConfig] = None,
         jit_state: Optional[JITApprovalState] = None,
+        workspace_root: Optional[Path] = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -66,6 +69,17 @@ class AgentRunner:
         self.auto_mode_guard: Optional[AutoModeGuard] = None
         if auto_mode_config is not None and auto_mode_config.enabled:
             self.auto_mode_guard = AutoModeGuard(config=auto_mode_config)
+
+        # Load entry-point plugins if workspace root is provided
+        if workspace_root is not None:
+            plugin_result = load_plugins(registry)
+            if not plugin_result.ok:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f'Failed to load {len(plugin_result.failed)} plugin(s): {plugin_result.failed}'
+                )
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:

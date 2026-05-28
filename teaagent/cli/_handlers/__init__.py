@@ -137,6 +137,11 @@ from ._model import (
     model_route,
     model_smoke,
 )
+from ._plugin import (
+    plugin_list_command,
+    plugin_show_command,
+    plugin_verify_command,
+)
 from ._replay import (
     replay_fork,
     replay_list,
@@ -295,4 +300,7 @@ __all__ = [
     'replay_steps',
     'replay_fork',
     'replay_resume',
+    'plugin_list_command',
+    'plugin_show_command',
+    'plugin_verify_command',
 ]

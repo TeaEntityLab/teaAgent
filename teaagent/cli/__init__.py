@@ -100,6 +100,9 @@ from teaagent.cli._handlers import (
     model_providers,
     model_route,
     model_smoke,
+    plugin_list_command,
+    plugin_show_command,
+    plugin_verify_command,
     recall_command,
     recipes_list_command,
     recipes_run_command,
@@ -211,6 +214,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._memory_parsers import register as register_memory
     from teaagent.cli._misc_parsers import register as register_misc
     from teaagent.cli._model_parsers import register as register_model
+    from teaagent.cli._plugin_parsers import register as register_plugin
     from teaagent.cli._skill_parsers import register as register_skill
 
     parser = argparse.ArgumentParser(
@@ -306,6 +310,14 @@ def build_parser() -> argparse.ArgumentParser:
             'install-from-marketplace': skill_install_marketplace_command,
             'publish_tsb': skill_publish_command,
             'verify_tsb': skill_verify_tsb_command,
+        },
+    )
+    register_plugin(
+        subparsers,
+        {
+            'list': plugin_list_command,
+            'show': plugin_show_command,
+            'verify': plugin_verify_command,
         },
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases

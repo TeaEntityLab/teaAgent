@@ -67,10 +67,10 @@ class SQLiteMigrationStore:
         try:
             with self._connect() as conn:
                 conn.execute(f'PRAGMA wal_checkpoint({mode})')
-                logger.debug(f"WAL checkpoint ({mode}) completed successfully")
+                logger.debug(f'WAL checkpoint ({mode}) completed successfully')
                 return True
         except sqlite3.Error as exc:
-            logger.warning(f"WAL checkpoint failed: {exc}")
+            logger.warning(f'WAL checkpoint failed: {exc}')
             return False
 
     def _init_table(self) -> None:

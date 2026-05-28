@@ -119,7 +119,10 @@ class SubagentContainerIsolationFlowTests(unittest.TestCase):
                 try:
                     result = registry.execute(
                         'subagent',
-                        {'task': 'inspect app', 'isolation': 'container'},  # Use deprecated alias
+                        {
+                            'task': 'inspect app',
+                            'isolation': 'container',
+                        },  # Use deprecated alias
                     )
                 finally:
                     reset_parent_run_id(token)

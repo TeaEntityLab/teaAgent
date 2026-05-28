@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import logging
 import re
 import threading
 from collections.abc import Callable
@@ -13,6 +14,15 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.storage import append_jsonl_line
+
+try:
+    from teaagent.telemetry import TelemetryConfig, configure_telemetry
+
+    _OPENTELEMETRY_AVAILABLE = True
+except ImportError:
+    _OPENTELEMETRY_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 _GENESIS_HASH = 'genesis'
 
@@ -115,6 +125,44 @@ class AuditLogger:
 
     def add_sink(self, sink: Callable[[AuditEvent], None]) -> None:
         self._sinks.append(sink)
+
+    def enable_opentelemetry(
+        self,
+        *,
+        endpoint: Optional[str] = None,
+        service_name: str = 'teaagent',
+        service_version: str = '1.0.0',
+    ) -> None:
+        """Enable OpenTelemetry export for audit events.
+
+        Args:
+            endpoint: OpenTelemetry endpoint (e.g., "http://localhost:4317")
+            service_name: Service name for telemetry
+            service_version: Service version for telemetry
+        """
+        if not _OPENTELEMETRY_AVAILABLE:
+            logger.warning(
+                'OpenTelemetry not available - install opentelemetry-api and opentelemetry-sdk'
+            )
+            return
+
+        try:
+            config = TelemetryConfig(
+                otlp_endpoint=endpoint,
+                service_name=service_name,
+                service_version=service_version,
+            )
+            otel_sink_tuple = configure_telemetry(config)
+            otel_sink = otel_sink_tuple[0]  # Extract just the sink
+
+            # Wrap the sink's handle_event method as a callable
+            def otel_wrapper(event: AuditEvent) -> None:
+                otel_sink.handle_event(event)
+
+            self.add_sink(otel_wrapper)
+            logger.info(f'OpenTelemetry sink added: {endpoint}')
+        except Exception as e:
+            logger.error(f'Failed to enable OpenTelemetry: {e}')
 
     def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
         event = AuditEvent(

@@ -15,7 +15,9 @@ from teaagent.workspace_tools._config import _load_gitignore_matcher
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_SUBAGENT_ISOLATIONS = frozenset({'shared', 'worktree', 'directory-snapshot'})
+SUPPORTED_SUBAGENT_ISOLATIONS = frozenset(
+    {'shared', 'worktree', 'directory-snapshot', 'docker'}
+)
 DEPRECATED_ISOLATION_ALIASES = {'container': 'directory-snapshot'}
 
 
@@ -26,6 +28,7 @@ class IsolationContext:
     isolation: str
     worktree_path: Optional[Path] = None
     container_path: Optional[Path] = None
+    container_id: Optional[str] = None
 
     def cleanup(self) -> None:
         if self.worktree_path is not None:
@@ -48,8 +51,17 @@ class IsolationContext:
             )
         if self.container_path is not None:
             # container_path is used for directory-snapshot compatibility
-            logger.debug(f"Cleaning up directory snapshot: {self.container_path}")
+            logger.debug(f'Cleaning up directory snapshot: {self.container_path}')
             shutil.rmtree(self.container_path, ignore_errors=True)
+        if self.container_id is not None:
+            # Cleanup Docker container
+            logger.debug(f'Cleaning up Docker container: {self.container_id}')
+            subprocess.run(
+                ['docker', 'rm', '-f', self.container_id],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
 
 
 def _git_subprocess_env() -> dict[str, str]:
@@ -110,14 +122,14 @@ def prepare_subagent_isolation(
             f"Subagent isolation mode '{isolation}' is deprecated and will be "
             f"removed in a future version. Use '{new_name}' instead. "
             f"Note: '{new_name}' does not provide OS-level container isolation - "
-            f"it only creates a directory snapshot.",
+            f'it only creates a directory snapshot.',
             DeprecationWarning,
             stacklevel=2,
         )
         logger.warning(
             f"Subagent isolation mode '{isolation}' is deprecated. "
             f"Using '{new_name}' instead. "
-            f"Note: This mode does not provide OS-level container isolation."
+            f'Note: This mode does not provide OS-level container isolation.'
         )
         isolation = new_name
 
@@ -179,6 +191,66 @@ def prepare_subagent_isolation(
                 child_root=snapshot_path.resolve(),
                 isolation=isolation,
                 container_path=snapshot_path.resolve(),  # Keep field name for compatibility
+            ),
+            '',
+        )
+
+    if isolation == 'docker':
+        # Check if Docker is available
+        docker_check = subprocess.run(
+            ['docker', '--version'],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if docker_check.returncode != 0:
+            return None, 'docker isolation requires Docker to be installed and running'
+
+        # Copy workspace to a temporary directory first
+        temp_dir = root / '.teaagent' / 'subagent-docker-temp' / session_key
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            _copy_workspace_snapshot(root, temp_dir)
+        except OSError as exc:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return None, f'docker workspace copy failed: {exc}'
+
+        # Create and start a Docker container
+        container_name = f'teaagent-subagent-{session_key}'
+        docker_run = subprocess.run(
+            [
+                'docker',
+                'run',
+                '-d',
+                '--name',
+                container_name,
+                '-v',
+                f'{temp_dir}:/workspace:ro',
+                '-w',
+                '/workspace',
+                'python:3.11-slim',
+                'sleep',
+                'infinity',
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        if docker_run.returncode != 0:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return None, f'docker container creation failed: {docker_run.stderr}'
+
+        container_id = docker_run.stdout.strip()
+        logger.info(f'Created Docker container: {container_id}')
+
+        return (
+            IsolationContext(
+                parent_root=root,
+                child_root=Path('/workspace'),
+                isolation=isolation,
+                container_path=temp_dir,
+                container_id=container_id,
             ),
             '',
         )

@@ -64,7 +64,9 @@ class SubagentIsolationTests(unittest.TestCase):
     def test_normalize_subagent_isolation_defaults_and_rejects_unknown(self) -> None:
         self.assertEqual(normalize_subagent_isolation(None), 'shared')
         self.assertEqual(normalize_subagent_isolation('worktree'), 'worktree')
-        self.assertEqual(normalize_subagent_isolation('directory-snapshot'), 'directory-snapshot')
+        self.assertEqual(
+            normalize_subagent_isolation('directory-snapshot'), 'directory-snapshot'
+        )
         self.assertIsNone(normalize_subagent_isolation('invalid'))
 
     def test_normalize_subagent_isolation_deprecated_container_alias(self) -> None:
@@ -223,7 +225,7 @@ class SubagentIsolationTests(unittest.TestCase):
 
             # Test that prepare_subagent_isolation triggers the deprecation warning
             with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
+                warnings.simplefilter('always')
                 ctx, error = prepare_subagent_isolation(
                     root, isolation='container', session_key='child-1'
                 )
@@ -232,7 +234,7 @@ class SubagentIsolationTests(unittest.TestCase):
                 self.assertTrue(issubclass(w[0].category, DeprecationWarning))
                 self.assertIn('container', str(w[0].message))
                 self.assertIn('directory-snapshot', str(w[0].message))
-            
+
             self.assertEqual(error, '')
             assert ctx is not None
             self.assertEqual(ctx.isolation, 'directory-snapshot')

@@ -179,8 +179,10 @@ class SkillReviewTests(unittest.TestCase):
             )
             # Add a Python file with dangerous imports
             py_file = skill_dir / 'hook.py'
-            py_file.write_text('import requests\nimport urllib\nprint("hello")', encoding='utf-8')
-            
+            py_file.write_text(
+                'import requests\nimport urllib\nprint("hello")', encoding='utf-8'
+            )
+
             result = review_skill(skill_dir)
             # Should pass (no errors) but have warnings about dangerous imports
             self.assertTrue(result.passed)
@@ -199,7 +201,7 @@ class SkillReviewTests(unittest.TestCase):
             # Add a Python file with dangerous function calls
             py_file = skill_dir / 'processor.py'
             py_file.write_text('eval("print(1+1)")\nexec("x=1")', encoding='utf-8')
-            
+
             result = review_skill(skill_dir)
             # Should pass (no errors) but have warnings about dangerous calls
             self.assertTrue(result.passed)
@@ -217,12 +219,16 @@ class SkillReviewTests(unittest.TestCase):
             )
             # Add a Python file with safe code
             py_file = skill_dir / 'utils.py'
-            py_file.write_text('def add(a, b): return a + b\nprint("safe")', encoding='utf-8')
-            
+            py_file.write_text(
+                'def add(a, b): return a + b\nprint("safe")', encoding='utf-8'
+            )
+
             result = review_skill(skill_dir)
             # Should pass with no warnings about dangerous patterns
             self.assertTrue(result.passed)
-            dangerous_warnings = [f for f in result.findings if 'dangerous' in f.message.lower()]
+            dangerous_warnings = [
+                f for f in result.findings if 'dangerous' in f.message.lower()
+            ]
             self.assertEqual(len(dangerous_warnings), 0)
 
 

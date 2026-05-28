@@ -222,7 +222,10 @@ class TestFileWatcher:
 
     def test_file_watcher_initialization(self, temp_root: Path) -> None:
         """Test file watcher initialization."""
-        from teaagent.memory.file_watcher import FileWatcher
+        from teaagent.memory.file_watcher import WATCHDOG_AVAILABLE, FileWatcher
+
+        if not WATCHDOG_AVAILABLE:
+            pytest.skip('watchdog library not available')
 
         callback_called = []
 
@@ -242,7 +245,10 @@ class TestFileWatcher:
 
     def test_file_watcher_start_stop(self, temp_root: Path) -> None:
         """Test starting and stopping the file watcher."""
-        from teaagent.memory.file_watcher import FileWatcher
+        from teaagent.memory.file_watcher import WATCHDOG_AVAILABLE, FileWatcher
+
+        if not WATCHDOG_AVAILABLE:
+            pytest.skip('watchdog library not available')
 
         def test_callback(file_path: str, event_type: str) -> None:
             pass
@@ -262,7 +268,10 @@ class TestFileWatcher:
 
     def test_update_watched_files(self, temp_root: Path) -> None:
         """Test updating the set of watched files."""
-        from teaagent.memory.file_watcher import FileWatcher
+        from teaagent.memory.file_watcher import WATCHDOG_AVAILABLE, FileWatcher
+
+        if not WATCHDOG_AVAILABLE:
+            pytest.skip('watchdog library not available')
 
         def test_callback(file_path: str, event_type: str) -> None:
             pass

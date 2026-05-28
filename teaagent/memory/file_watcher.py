@@ -28,6 +28,27 @@ try:
     WATCHDOG_AVAILABLE = True
 except ImportError:
     WATCHDOG_AVAILABLE = False
+    # Create dummy types for type checking when watchdog is not available
+    FileSystemEventHandler = object  # type: ignore[misc,assignment]
+    DirDeletedEvent = object  # type: ignore[misc,assignment]
+    DirModifiedEvent = object  # type: ignore[misc,assignment]
+    FileDeletedEvent = object  # type: ignore[misc,assignment]
+    FileModifiedEvent = object  # type: ignore[misc,assignment]
+
+    class Observer:  # type: ignore[misc,no-redef]
+        """Dummy Observer class when watchdog is not available."""
+
+        def schedule(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        def start(self) -> None:
+            pass
+
+        def stop(self) -> None:
+            pass
+
+        def join(self, timeout: Optional[float] = None) -> None:
+            pass
 
 
 class FileChangeHandler(FileSystemEventHandler):

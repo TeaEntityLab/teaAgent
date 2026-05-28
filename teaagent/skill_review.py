@@ -21,16 +21,38 @@ BLOCKLIST_PATTERNS = (
 
 # Dangerous imports that could indicate network access or system operations
 DANGEROUS_IMPORTS = {
-    'requests', 'urllib', 'urllib2', 'urllib3', 'httpx', 'aiohttp',
-    'socket', 'subprocess', 'os', 'sys', 'shutil', 'pathlib',
-    'pickle', 'marshal', 'eval', 'exec', 'compile',
+    'requests',
+    'urllib',
+    'urllib2',
+    'urllib3',
+    'httpx',
+    'aiohttp',
+    'socket',
+    'subprocess',
+    'os',
+    'sys',
+    'shutil',
+    'pathlib',
+    'pickle',
+    'marshal',
+    'eval',
+    'exec',
+    'compile',
 }
 
 # Potentially dangerous function calls
 DANGEROUS_CALLS = {
-    'eval', 'exec', 'compile', '__import__',
-    'open', 'subprocess.run', 'subprocess.call', 'subprocess.Popen',
-    'os.system', 'os.popen', 'os.spawn',
+    'eval',
+    'exec',
+    'compile',
+    '__import__',
+    'open',
+    'subprocess.run',
+    'subprocess.call',
+    'subprocess.Popen',
+    'os.system',
+    'os.popen',
+    'os.spawn',
 }
 
 logger = logging.getLogger(__name__)
@@ -52,7 +74,9 @@ class SkillReviewResult:
         return not any(finding.severity == 'error' for finding in self.findings)
 
 
-def _analyze_python_file_for_dangerous_patterns(file_path: Path) -> list[SkillReviewFinding]:
+def _analyze_python_file_for_dangerous_patterns(
+    file_path: Path,
+) -> list[SkillReviewFinding]:
     """Analyze Python files for dangerous imports and function calls using AST."""
     findings: list[SkillReviewFinding] = []
 
@@ -60,7 +84,7 @@ def _analyze_python_file_for_dangerous_patterns(file_path: Path) -> list[SkillRe
         source = file_path.read_text(encoding='utf-8')
         tree = ast.parse(source, filename=str(file_path))
     except (SyntaxError, OSError) as exc:
-        logger.warning(f"Failed to parse {file_path}: {exc}")
+        logger.warning(f'Failed to parse {file_path}: {exc}')
         return findings
 
     class DangerousPatternVisitor(ast.NodeVisitor):
@@ -92,8 +116,11 @@ def _analyze_python_file_for_dangerous_patterns(file_path: Path) -> list[SkillRe
             elif isinstance(node.func, ast.Attribute):
                 # Handle calls like subprocess.run
                 if isinstance(node.func.value, ast.Name):
-                    full_name = f"{node.func.value.id}.{node.func.attr}"
-                    if full_name in DANGEROUS_CALLS or node.func.attr in DANGEROUS_CALLS:
+                    full_name = f'{node.func.value.id}.{node.func.attr}'
+                    if (
+                        full_name in DANGEROUS_CALLS
+                        or node.func.attr in DANGEROUS_CALLS
+                    ):
                         self.calls_found.add(full_name)
             self.generic_visit(node)
 
@@ -106,7 +133,7 @@ def _analyze_python_file_for_dangerous_patterns(file_path: Path) -> list[SkillRe
             SkillReviewFinding(
                 'warning',
                 f'Python file imports potentially dangerous modules: {", ".join(sorted(visitor.imports_found))}. '
-                'Review for network access, file operations, or code execution risks.'
+                'Review for network access, file operations, or code execution risks.',
             )
         )
 
@@ -115,7 +142,7 @@ def _analyze_python_file_for_dangerous_patterns(file_path: Path) -> list[SkillRe
             SkillReviewFinding(
                 'warning',
                 f'Python file calls potentially dangerous functions: {", ".join(sorted(visitor.calls_found))}. '
-                'Review for dynamic code execution or system operation risks.'
+                'Review for dynamic code execution or system operation risks.',
             )
         )
 
@@ -190,6 +217,6 @@ def review_skill(
                 py_findings = _analyze_python_file_for_dangerous_patterns(py_file)
                 findings.extend(py_findings)
             except Exception as exc:
-                logger.warning(f"Error analyzing {py_file}: {exc}")
+                logger.warning(f'Error analyzing {py_file}: {exc}')
 
     return SkillReviewResult(skill_path=skill_file, findings=findings)

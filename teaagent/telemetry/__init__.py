@@ -1,15 +1,21 @@
-"""OpenTelemetry exporter for TeaAgent."""
+"""Telemetry and observability integrations.
 
-from ._audit import OTelAuditSink, configure_telemetry
-from ._availability import HAS_OTEL
-from ._config import TelemetryConfig, TelemetryNotAvailable
-from ._metrics import (
+This package provides integrations for exporting telemetry data to
+external observability platforms like OpenTelemetry.
+"""
+
+from __future__ import annotations
+
+from teaagent.telemetry._audit import OTelAuditSink, configure_telemetry
+from teaagent.telemetry._availability import HAS_OTEL
+from teaagent.telemetry._config import TelemetryConfig, TelemetryNotAvailable
+from teaagent.telemetry._metrics import (
     InMemoryMetricsSink,
     MetricSnapshot,
     OTelMetricsSink,
     configure_metrics,
 )
-from ._transport import TracingHTTPTransport
+from teaagent.telemetry._transport import TracingHTTPTransport
 
 __all__ = [
     'HAS_OTEL',
@@ -17,9 +23,9 @@ __all__ = [
     'MetricSnapshot',
     'OTelAuditSink',
     'OTelMetricsSink',
-    'TracingHTTPTransport',
     'TelemetryConfig',
     'TelemetryNotAvailable',
+    'TracingHTTPTransport',
     'configure_metrics',
     'configure_telemetry',
 ]
