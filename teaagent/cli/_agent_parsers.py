@@ -736,6 +736,36 @@ def _chat(
         action='store_true',
         help='Stream raw model text during the run (including tool calls).',
     )
+    # Add memory and context options that are required by chat handler
+    p.add_argument(
+        '--context-profile',
+        choices=['minimal', 'balanced', 'comprehensive'],
+        default='balanced',
+        help='Context budget profile for memory and replay limits.',
+    )
+    p.add_argument(
+        '--memory-limit',
+        type=int,
+        default=None,
+        help='Maximum number of memory entries to include in context.',
+    )
+    p.add_argument(
+        '--skill',
+        action='append',
+        default=[],
+        metavar='NAME',
+        help='Load only this skill by name (repeatable).',
+    )
+    p.add_argument(
+        '--no-auto-skills',
+        action='store_true',
+        help='Do not eager-load discovered skills into the system prompt.',
+    )
+    p.add_argument(
+        '--skill-index-only',
+        action='store_true',
+        help='Only use skill index for skill resolution (no local discovery).',
+    )
     base_defaults = {'func': handler, 'agent_command': 'chat'}
     if defaults:
         base_defaults.update(defaults)
