@@ -7,9 +7,70 @@ without making any modifications. This is similar to Claude Code's
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Callable, Optional
+
+logger = logging.getLogger(__name__)
+
+
+class InsufficientContextError(Exception):
+    """Raised when context gathering exceeds hard limit without sufficient information."""
+
+    pass
+
+
+@dataclass
+class ContextGatherer:
+    """Self-sufficient context gatherer with turn limits."""
+
+    soft_limit: int = 3
+    hard_limit: int = 5
+    current_turn: int = 0
+
+    def gather_context(
+        self,
+        task: str,
+        memories: list[str],
+        llm_check_fn: Callable[[str, list[str]], tuple[bool, list[str]]],
+        gather_fn: Callable[[list[str]], None],
+    ) -> None:
+        """Gather context with turn-based self-checking.
+
+        Args:
+            task: Current task description.
+            memories: Current memory/context list.
+            llm_check_fn: Function that checks context sufficiency.
+                Returns (is_sufficient, needs_list).
+            gather_fn: Function that gathers additional context based on needs.
+
+        Raises:
+            InsufficientContextError: If hard limit exceeded without sufficient context.
+        """
+        self.current_turn = 0
+
+        while self.current_turn < self.hard_limit:
+            self.current_turn += 1
+
+            is_sufficient, needs = llm_check_fn(task, memories)
+
+            if is_sufficient:
+                return
+
+            if self.current_turn > self.soft_limit:
+                logger.warning(
+                    f'Context sufficiency check round {self.current_turn}/{self.hard_limit}: '
+                    f'Context may be insufficient. Needs: {needs}'
+                )
+
+            if self.current_turn >= self.hard_limit:
+                raise InsufficientContextError(
+                    f'Context gathering exceeded hard limit ({self.hard_limit} turns) '
+                    f'without achieving sufficiency. Unmet needs: {needs}'
+                )
+
+            gather_fn(needs)
 
 
 class PlanModeState(Enum):

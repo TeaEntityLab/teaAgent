@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from dataclasses import dataclass
@@ -65,6 +66,110 @@ class PromptBundle:
     user: str
 
 
+async def run_aci_injector(
+    task: str,
+    retriever: Any,
+    cache_db_path: str,
+    timeout_ms: int = 1500,
+) -> str:  # pragma: no cover
+    """Run ACI (Anticipatory Context Injection) with timeout protection.
+
+    Performs parallel RAG retrieval and cache lookup. If retrieval exceeds
+    timeout, degrades to cache-only injection to ensure zero latency.
+
+    Args:
+        task: Current task description.
+        retriever: RAG retriever instance (e.g., InMemoryRetriever).
+        cache_db_path: Path to SQLite cache database.
+        timeout_ms: Hard timeout in milliseconds (default 1500ms).
+
+    Returns:
+        String containing injected context for system prompt.
+    """
+
+    async def fetch_rag_context() -> str:
+        await asyncio.sleep(0)
+        results = retriever.search(task, limit=3)
+        if not results:
+            return ''
+        return '\n'.join(
+            f'- {r.document.text[:200]}... (score: {r.score:.2f})' for r in results
+        )
+
+    async def fetch_cache_context() -> str:
+        await asyncio.sleep(0)
+        try:
+            import sqlite3
+
+            conn = sqlite3.connect(cache_db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT text, source FROM prefetch_cache ORDER BY created_at DESC LIMIT 5'
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            if not rows:
+                return ''
+            return '\n'.join(
+                f'- Cache [{source}]: {text[:150]}...' for text, source in rows
+            )
+        except Exception:
+            return ''
+
+    try:
+        rag_task = asyncio.create_task(fetch_rag_context())
+        cache_task = asyncio.create_task(fetch_cache_context())
+
+        done, pending = await asyncio.wait(  # type: ignore
+            [rag_task, cache_task],
+            timeout=timeout_ms / 1000,
+            return_when=asyncio.ALL_COMPLETED,
+        )
+
+        for task in pending:  # type: ignore
+            task.cancel()  # type: ignore
+
+        context_parts = []
+        if rag_task in done:
+            rag_result = rag_task.result()
+            if rag_result:
+                context_parts.append(f'RAG Context:\n{rag_result}')
+
+        if cache_task in done:
+            cache_result = cache_task.result()
+            if cache_result:
+                context_parts.append(f'Cache Context:\n{cache_result}')
+
+        if context_parts:
+            return '\n\n'.join(context_parts)
+        return ''
+
+    except asyncio.TimeoutError:
+        cache_result = await fetch_cache_context()
+        if cache_result:
+            return f'Cache Context (degraded):\n{cache_result}'
+        return ''
+    except Exception:
+        return ''
+
+
+def run_aci_injector_sync(
+    task: str,
+    retriever: Any,
+    cache_db_path: str,
+    timeout_ms: int = 1500,
+) -> str:
+    """Synchronous wrapper for run_aci_injector."""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(
+        run_aci_injector(task, retriever, cache_db_path, timeout_ms)
+    )
+
+
 def assemble_agent_prompt(
     *,
     task: str,
@@ -74,12 +179,20 @@ def assemble_agent_prompt(
     task_spec: Optional[str] = None,
     skills: Optional[list[SkillContent]] = None,
     skill_index: Optional[list[SkillIndexEntry]] = None,
+    aci_retriever: Optional[Any] = None,
+    aci_cache_db: Optional[str] = None,
 ) -> PromptBundle:
     system_parts = [
         DECISION_INSTRUCTIONS,
         'Available tools:',
         json.dumps(registry.mcp_metadata(), indent=2, sort_keys=True),
     ]
+
+    if aci_retriever and aci_cache_db:
+        aci_context = run_aci_injector_sync(task, aci_retriever, aci_cache_db)
+        if aci_context:
+            system_parts.append(f'Anticipatory Context:\n{aci_context}')
+
     if project_instructions:
         system_parts.append('Project instructions:')
         system_parts.append(project_instructions)

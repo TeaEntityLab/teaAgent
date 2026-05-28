@@ -1,14 +1,131 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Iterable, Optional, TextIO
 
 from teaagent.errors import AgentHarnessError
+from teaagent.resource_monitor import is_process_alive
+from teaagent.storage import file_lock
 from teaagent.tools import ToolRegistry
 
 PROTOCOL_VERSION = '2024-11-05'
 SERVER_INFO = {'name': 'teaagent', 'version': '0.1.0'}
+REGISTRY_PATH = Path.home() / '.teaagent' / 'workspace_registry.json'
+
+
+@dataclass
+class WorkspaceLock:
+    """Represents a workspace lock with owner PID."""
+
+    workspace_path: str
+    owner_pid: int
+    acquired_at: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'workspace_path': self.workspace_path,
+            'owner_pid': self.owner_pid,
+            'acquired_at': self.acquired_at,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'WorkspaceLock':
+        return cls(
+            workspace_path=data.get('workspace_path', ''),
+            owner_pid=data.get('owner_pid', 0),
+            acquired_at=data.get('acquired_at', ''),
+        )
+
+
+class WorkspaceRegistry:
+    """Thread-safe workspace registry with file_lock protection."""
+
+    def __init__(self, registry_path: Path = REGISTRY_PATH) -> None:
+        self.registry_path = registry_path
+        self.registry_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def acquire_lock(self, workspace_path: str) -> WorkspaceLock:
+        """Acquire a lock for a workspace with automatic zombie cleanup.
+
+        Args:
+            workspace_path: Path to the workspace directory.
+
+        Returns:
+            WorkspaceLock instance.
+        """
+        current_pid = os.getpid()
+        import datetime
+
+        lock = WorkspaceLock(
+            workspace_path=workspace_path,
+            owner_pid=current_pid,
+            acquired_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        )
+
+        with file_lock(self.registry_path):
+            existing = self._load_registry()
+            existing_locks = [
+                WorkspaceLock.from_dict(lock_data)
+                for lock_data in existing.get('locks', [])
+            ]
+
+            active_locks = []
+            for existing_lock in existing_locks:
+                if existing_lock.workspace_path == workspace_path:
+                    if is_process_alive(existing_lock.owner_pid):
+                        raise RuntimeError(
+                            f'Workspace {workspace_path} is locked by PID {existing_lock.owner_pid}'
+                        )
+                else:
+                    if is_process_alive(existing_lock.owner_pid):
+                        active_locks.append(existing_lock)
+
+            active_locks.append(lock)
+            self._save_registry(
+                {'locks': [lock_item.to_dict() for lock_item in active_locks]}
+            )
+
+        return lock
+
+    def release_lock(self, workspace_path: str) -> None:
+        """Release lock for a workspace.
+
+        Args:
+            workspace_path: Path to the workspace directory.
+        """
+        with file_lock(self.registry_path):
+            existing = self._load_registry()
+            existing_locks = [
+                WorkspaceLock.from_dict(lock_data)
+                for lock_data in existing.get('locks', [])
+            ]
+
+            active_locks = [
+                lock_item
+                for lock_item in existing_locks
+                if lock_item.workspace_path != workspace_path
+            ]
+
+            self._save_registry(
+                {'locks': [lock_item.to_dict() for lock_item in active_locks]}
+            )
+
+    def _load_registry(self) -> dict[str, Any]:
+        if not self.registry_path.exists():
+            return {'locks': []}
+        try:
+            return json.loads(self.registry_path.read_text(encoding='utf-8'))
+        except (json.JSONDecodeError, IOError):
+            return {'locks': []}
+
+    def _save_registry(self, data: dict[str, Any]) -> None:
+        self.registry_path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8'
+        )
 
 
 def handle_mcp_request(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Optional
 
 TOKEN_RE = re.compile(r'[A-Za-z0-9_]+')
@@ -45,6 +46,64 @@ class InMemoryRetriever:
                         query=query,
                     )
                 )
+        return sorted(scored, key=lambda result: result.score, reverse=True)[:limit]
+
+    def temporal_range_search(
+        self,
+        query: str,
+        *,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        source: Optional[str] = None,
+        limit: int = 5,
+    ) -> list[RetrievalResult]:
+        """Search documents within a time range.
+
+        Args:
+            query: Search query string.
+            start_time: ISO format start time (e.g., '2024-01-01T00:00:00Z').
+            end_time: ISO format end time (e.g., '2024-12-31T23:59:59Z').
+            source: Optional source filter.
+            limit: Maximum number of results.
+
+        Returns:
+            List of retrieval results filtered by time range.
+        """
+        query_terms = set(tokenize(query))
+        scored: list[RetrievalResult] = []
+
+        start_dt = datetime.fromisoformat(start_time) if start_time else None
+        end_dt = datetime.fromisoformat(end_time) if end_time else None
+
+        for document in self.documents:
+            if source is not None and document.source != source:
+                continue
+
+            doc_time_str = document.metadata.get('created_at')
+            if not doc_time_str:
+                continue
+
+            try:
+                doc_dt = datetime.fromisoformat(doc_time_str)
+            except ValueError:
+                continue
+
+            if start_dt and doc_dt < start_dt:
+                continue
+            if end_dt and doc_dt > end_dt:
+                continue
+
+            terms = set(tokenize(document.text))
+            overlap = query_terms & terms
+            if overlap:
+                scored.append(
+                    RetrievalResult(
+                        document=document,
+                        score=len(overlap) / max(len(query_terms), 1),
+                        query=query,
+                    )
+                )
+
         return sorted(scored, key=lambda result: result.score, reverse=True)[:limit]
 
 

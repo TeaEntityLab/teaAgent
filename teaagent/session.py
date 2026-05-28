@@ -3,8 +3,88 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
+
+
+class FocusState(Enum):
+    """Focus state for topic tracking."""
+
+    CREATED = 'created'
+    KEPT = 'kept'
+    PUSHED = 'pushed'
+    RETURNED = 'returned'
+    CLEARED = 'cleared'
+
+
+@dataclass
+class FocusFrame:
+    """A single frame in the focus stack representing a topic."""
+
+    topic: str
+    state: FocusState = FocusState.CREATED
+    message_start_index: int = 0
+    message_end_index: int = 0
+    conclusion: str = ''
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'topic': self.topic,
+            'state': self.state.value,
+            'message_start_index': self.message_start_index,
+            'message_end_index': self.message_end_index,
+            'conclusion': self.conclusion,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'FocusFrame':
+        return cls(
+            topic=data.get('topic', ''),
+            state=FocusState(data.get('state', FocusState.CREATED.value)),
+            message_start_index=data.get('message_start_index', 0),
+            message_end_index=data.get('message_end_index', 0),
+            conclusion=data.get('conclusion', ''),
+        )
+
+
+@dataclass
+class FocusStackManager:
+    """Manages a stack of focus frames for topic tracking."""
+
+    frames: list[FocusFrame] = field(default_factory=list)
+
+    def push(self, topic: str, message_index: int) -> None:
+        """Push a new topic onto the stack."""
+        if self.frames:
+            self.frames[-1].state = FocusState.PUSHED
+        self.frames.append(
+            FocusFrame(
+                topic=topic, state=FocusState.CREATED, message_start_index=message_index
+            )
+        )
+
+    def pop(self, conclusion: str = '') -> Optional[FocusFrame]:
+        """Pop the current topic from the stack."""
+        if not self.frames:
+            return None
+        frame = self.frames.pop()
+        frame.state = FocusState.RETURNED
+        frame.conclusion = conclusion
+        if self.frames:
+            self.frames[-1].state = FocusState.KEPT
+        return frame
+
+    def current(self) -> Optional[FocusFrame]:
+        """Get the current focus frame."""
+        return self.frames[-1] if self.frames else None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {'frames': [f.to_dict() for f in self.frames]}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'FocusStackManager':
+        return cls(frames=[FocusFrame.from_dict(f) for f in data.get('frames', [])])
 
 
 @dataclass(frozen=True)
@@ -27,6 +107,7 @@ class ChatSession:
     updated_at: str = field(default_factory=lambda: _utcnow())
     messages: list[ChatMessage] = field(default_factory=list)
     label: str = ''
+    focus_stack: FocusStackManager = field(default_factory=FocusStackManager)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -35,6 +116,7 @@ class ChatSession:
             'updated_at': self.updated_at,
             'messages': [m.to_dict() for m in self.messages],
             'label': self.label,
+            'focus_stack': self.focus_stack.to_dict(),
         }
 
     @classmethod
@@ -45,7 +127,33 @@ class ChatSession:
             updated_at=data.get('updated_at', ''),
             messages=[ChatMessage.from_dict(m) for m in data.get('messages', [])],
             label=data.get('label', ''),
+            focus_stack=FocusStackManager.from_dict(data.get('focus_stack', {})),
         )
+
+    def compress_returned_topic(
+        self, frame: FocusFrame, compaction_manager: Any
+    ) -> None:
+        """Compress messages from a returned topic into a summary card.
+
+        Args:
+            frame: The focus frame that was returned.
+            compaction_manager: CompactionManager instance for compression.
+        """
+        if frame.message_start_index >= len(self.messages):
+            return
+
+        messages_to_compress = self.messages[
+            frame.message_start_index : frame.message_end_index
+        ]
+        if not messages_to_compress:
+            return
+
+        summary_text = f'[Topic Summarized: {frame.topic}]\n{frame.conclusion}'
+        summary_message = ChatMessage(role='system', content=summary_text)
+
+        self.messages[frame.message_start_index : frame.message_end_index] = [
+            summary_message
+        ]
 
 
 class SessionStore:
