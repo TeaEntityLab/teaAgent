@@ -153,6 +153,7 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Context Compaction**: Automatic context compression at 75-92% token usage (Claude Code compatible).
 - **Plan Mode**: Read-only exploration mode for safe codebase analysis.
 - **ACP Adapter**: Agent Client Protocol integration for VS Code, Zed, and JetBrains IDEs.
+- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation, ToolPermissionManager for safety control, and WorkflowEngine for multi-step execution with polish mode.
 
 See [docs/architecture.md](docs/architecture.md) for component details, data flow, and extension points.
 

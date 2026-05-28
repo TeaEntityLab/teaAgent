@@ -26,6 +26,10 @@ safety boundaries around tool execution.
 │  run_shell_inspect · run_shell_mutate · list_files           │
 │  search_text · git_status                                    │
 ├─────────────────────────────────────────────────────────────┤
+│              Multi-Agent Coordination Layer (Phase 4)         │
+│  TaskCoordinator · AgentFactory · ToolPermissionManager       │
+│  WorkflowEngine (polish mode, multi-step execution)          │
+├─────────────────────────────────────────────────────────────┤
 │                      State Layer                             │
 │  AuditLogger · RunStore · MemoryCatalog · UltraworkStore     │
 ├─────────────────────────────────────────────────────────────┤

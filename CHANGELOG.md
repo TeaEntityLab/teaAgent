@@ -4,6 +4,14 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added Cooragent multi-agent integration with task coordination, dynamic agent generation, tool permissions, and workflow execution:
+  - `teaagent/coordinator.py`: Task classification by type (code_review, testing, documentation, refactoring, debugging, feature_implementation, general) with LLM-based and heuristic classification
+  - `teaagent/agent_factory.py`: Dynamic agent generation with LLM-structured system prompts, memory/disk registration, and hot-reload support
+  - `teaagent/tool_permissions.py`: Tool safety classification (safe, inspect, destructive) with safe defaults and JIT approval for destructive tools
+  - `teaagent/workflow_engine.py`: Multi-step workflow execution with polish mode, unified diff display, and workflow state management
+  - Added 35 tests across 4 test files for Phase 4 components
+- Added Skill-RAG integration with ContextGatherer for collaborative retrieval with token reduction benefits
+- Added Swarm lock management with 60-second timeout and heartbeat monitoring
 - Added `ANPGovernedService` to wire ANP inbound tool calls through `AgentRunner` with federation audit events, outbound delegation timeouts, and budget enforcement; accepted ADR 0007.
 - Hardened OpenAI-compatible content extraction for `reasoning_content`, `text` content parts, and nested `result.output_text` (opencodezen-go/kimi-style payloads).
 - Refreshed MCP discovery card, provider-authoring conformance docs, ANP acceptance tier (P1), nightly smoke providers (`workers-ai`, `aigateway`), and `scripts/refresh_agent_readme_survey.md`.
