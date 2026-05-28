@@ -23,11 +23,13 @@ class InsufficientContextError(Exception):
 
 @dataclass
 class ContextGatherer:
-    """Self-sufficient context gatherer with turn limits."""
+    """Self-sufficient context gatherer with turn limits and Skill-RAG integration."""
 
     soft_limit: int = 3
     hard_limit: int = 5
     current_turn: int = 0
+    use_skill_rag: bool = True
+    skill_rag_max_rounds: int = 3
 
     def gather_context(
         self,
@@ -35,8 +37,10 @@ class ContextGatherer:
         memories: list[str],
         llm_check_fn: Callable[[str, list[str]], tuple[bool, list[str]]],
         gather_fn: Callable[[list[str]], None],
+        retriever: Optional[Any] = None,
+        answer_generator: Optional[Callable[[str, str], str]] = None,
     ) -> None:
-        """Gather context with turn-based self-checking.
+        """Gather context with turn-based self-checking and optional Skill-RAG.
 
         Args:
             task: Current task description.
@@ -44,6 +48,8 @@ class ContextGatherer:
             llm_check_fn: Function that checks context sufficiency.
                 Returns (is_sufficient, needs_list).
             gather_fn: Function that gathers additional context based on needs.
+            retriever: Optional InMemoryRetriever for Skill-RAG integration.
+            answer_generator: Optional answer generator for Skill-RAG.
 
         Raises:
             InsufficientContextError: If hard limit exceeded without sufficient context.
@@ -70,7 +76,56 @@ class ContextGatherer:
                     f'without achieving sufficiency. Unmet needs: {needs}'
                 )
 
-            gather_fn(needs)
+            # Use Skill-RAG for collaborative retrieval if enabled and retriever provided
+            if self.use_skill_rag and retriever is not None and answer_generator is not None:
+                try:
+                    self._gather_with_skill_rag(needs, retriever, answer_generator, memories)
+                except Exception:
+                    # Fall back to regular gather_fn if Skill-RAG fails
+                    gather_fn(needs)
+            else:
+                gather_fn(needs)
+
+    def _gather_with_skill_rag(
+        self,
+        needs: list[str],
+        retriever: Any,
+        answer_generator: Callable[[str, str], str],
+        memories: list[str],
+    ) -> None:
+        """Gather context using Skill-RAG for precision retrieval.
+
+        This method uses the Skill-RAG engine to perform multi-round adaptive
+        retrieval, which can reduce context token volume by 50%+ through
+        evidence_focusing and query rewriting.
+
+        Args:
+            needs: List of information needs to gather.
+            retriever: InMemoryRetriever instance.
+            answer_generator: Answer generator callable.
+            memories: Memory list to append retrieved context to.
+        """
+        from teaagent.rag import skill_rag_retrieve
+
+        for need in needs:
+            try:
+                result = skill_rag_retrieve(
+                    query=need,
+                    retriever=retriever,
+                    answer_generator=answer_generator,
+                    max_rounds=self.skill_rag_max_rounds,
+                )
+                logger.info(
+                    f'Skill-RAG retrieval for need "{need}": '
+                    f'{result["rounds"]} rounds, state={result["final_state"]}, '
+                    f'skills={result["skills_used"]}'
+                )
+                # Append the retrieved context to memories
+                memories.append(f'[Skill-RAG: {need}]\n{result["context"]}')
+            except Exception as exc:
+                logger.warning(f'Skill-RAG retrieval failed for need "{need}": {exc}')
+                # Fall back to regular gather_fn if Skill-RAG fails
+                raise
 
 
 class PlanModeState(Enum):
