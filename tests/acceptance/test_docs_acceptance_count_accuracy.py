@@ -13,12 +13,9 @@ _ACCEPTANCE_DIR = _REPO / 'tests' / 'acceptance'
 
 
 def _collect_acceptance_count() -> int:
-    # Use virtual environment python to ensure dependencies are available
-    venv_python = _REPO / '.venv' / 'bin' / 'python'
-    python_cmd = str(venv_python) if venv_python.exists() else 'python3'
-
+    # Use uv run pytest
     result = subprocess.run(
-        [python_cmd, '-m', 'pytest', str(_ACCEPTANCE_DIR), '--collect-only', '-q'],
+        ['uv', 'run', 'pytest', str(_ACCEPTANCE_DIR), '--collect-only', '-q'],
         capture_output=True,
         text=True,
         check=False,

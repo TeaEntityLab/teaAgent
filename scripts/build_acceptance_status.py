@@ -16,13 +16,9 @@ def parse_passed_count(pytest_output: str) -> int:
 
 
 def run_acceptance_pytest() -> int:
-    # Use virtual environment python if available
-    repo_root = Path(__file__).resolve().parent.parent
-    venv_python = repo_root / '.venv' / 'bin' / 'python'
-    python_cmd = str(venv_python) if venv_python.exists() else 'python3'
-
+    # Use uv run pytest
     result = subprocess.run(
-        [python_cmd, '-m', 'pytest', 'tests/acceptance', '-q'],
+        ['uv', 'run', 'pytest', 'tests/acceptance', '-q'],
         capture_output=True,
         text=True,
         check=False,
@@ -34,13 +30,9 @@ def run_acceptance_pytest() -> int:
 
 
 def collect_acceptance_test_count(acceptance_tests_dir: Path) -> int:
-    # Use virtual environment python if available
-    repo_root = Path(__file__).resolve().parent.parent
-    venv_python = repo_root / '.venv' / 'bin' / 'python'
-    python_cmd = str(venv_python) if venv_python.exists() else 'python3'
-
+    # Use uv run pytest
     result = subprocess.run(
-        [python_cmd, '-m', 'pytest', str(acceptance_tests_dir), '--collect-only', '-q'],
+        ['uv', 'run', 'pytest', str(acceptance_tests_dir), '--collect-only', '-q'],
         capture_output=True,
         text=True,
         check=False,
