@@ -7,7 +7,10 @@ automated code review between subagents.
 
 from __future__ import annotations
 
+import logging
 import subprocess
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -22,6 +25,9 @@ from teaagent.consensus import (
     RiskLevel,
 )
 from teaagent.git_sandbox import GitBranchSandbox
+from teaagent.resource_monitor import is_process_alive
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -166,6 +172,7 @@ class SwarmManager:
         enable_consensus: bool = False,
         peer_registry: Optional[PeerRegistry] = None,
         consensus_config: Optional[ConsensusConfig] = None,
+        lock_timeout_seconds: int = 60,
     ) -> None:
         self._root = Path(root).resolve()
         self._max_parallel = max_parallel
@@ -175,6 +182,11 @@ class SwarmManager:
         self._peer_registry = peer_registry or PeerRegistry()
         self._consensus_config = consensus_config or ConsensusConfig()
         self._consensus_engine: Optional[ConsensusEngine] = None
+        self._lock_timeout_seconds = lock_timeout_seconds
+        self._subagent_pids: dict[str, int] = {}
+        self._subagent_heartbeats: dict[str, float] = {}
+        self._heartbeat_thread: Optional[threading.Thread] = None
+        self._heartbeat_stop_event = threading.Event()
 
         if self._enable_consensus:
             self._consensus_engine = ConsensusEngine(
@@ -186,6 +198,45 @@ class SwarmManager:
         """Add a subagent task to the swarm."""
         subagent = Subagent(task, self._root)
         self._subagents.append(subagent)
+
+    def _start_heartbeat_monitor(self) -> None:
+        """Start background heartbeat monitoring for subagent timeout detection."""
+        if self._heartbeat_thread is not None:
+            return
+
+        self._heartbeat_stop_event.clear()
+        self._heartbeat_thread = threading.Thread(
+            target=self._heartbeat_monitor_loop, daemon=True
+        )
+        self._heartbeat_thread.start()
+
+    def _stop_heartbeat_monitor(self) -> None:
+        """Stop heartbeat monitoring."""
+        if self._heartbeat_thread is not None:
+            self._heartbeat_stop_event.set()
+            self._heartbeat_thread.join(timeout=5)
+            self._heartbeat_thread = None
+
+    def _heartbeat_monitor_loop(self) -> None:
+        """Background loop to monitor subagent heartbeats and detect timeouts."""
+        while not self._heartbeat_stop_event.wait(5):  # Check every 5 seconds
+            current_time = time.time()
+            for task_id, last_heartbeat in list(self._subagent_heartbeats.items()):
+                if current_time - last_heartbeat > self._lock_timeout_seconds:
+                    pid = self._subagent_pids.get(task_id)
+                    if pid and not is_process_alive(pid):
+                        logger.warning(
+                            f'Subagent {task_id} (PID {pid}) appears dead, '
+                            f'timeout after {self._lock_timeout_seconds}s'
+                        )
+                        # Mark as failed and remove from tracking
+                        self._subagent_heartbeats.pop(task_id, None)
+                        self._subagent_pids.pop(task_id, None)
+
+    def _update_subagent_heartbeat(self, task_id: str, pid: int) -> None:
+        """Update heartbeat timestamp for a subagent."""
+        self._subagent_pids[task_id] = pid
+        self._subagent_heartbeats[task_id] = time.time()
 
     def execute_swarm(self) -> SwarmReport:
         """Execute all subagents in parallel and collect results."""
@@ -202,57 +253,64 @@ class SwarmManager:
                 code_reviews=[],
             )
 
-        # Check consensus for high-risk tasks if enabled
-        if self._enable_consensus and self._consensus_engine:
-            consensus_results = self._check_consensus_for_tasks()
-            if not consensus_results.get('all_approved', True):
-                # Some tasks were not approved, filter them out
-                self._filter_subagents_by_consensus(consensus_results)
+        # Start heartbeat monitoring
+        self._start_heartbeat_monitor()
 
-        # Execute subagents in parallel with thread pool
-        results = []
-        with ThreadPoolExecutor(max_workers=self._max_parallel) as executor:
-            future_to_subagent = {
-                executor.submit(subagent.execute): subagent
-                for subagent in self._subagents
-            }
+        try:
+            # Check consensus for high-risk tasks if enabled
+            if self._enable_consensus and self._consensus_engine:
+                consensus_results = self._check_consensus_for_tasks()
+                if not consensus_results.get('all_approved', True):
+                    # Some tasks were not approved, filter them out
+                    self._filter_subagents_by_consensus(consensus_results)
 
-            for future in as_completed(future_to_subagent):
-                subagent = future_to_subagent[future]
-                try:
-                    result = future.result()
-                    results.append(result)
-                except Exception as exc:
-                    results.append(
-                        SubagentResult(
-                            task_id=subagent._task.task_id,
-                            success=False,
-                            error=str(exc),
+            # Execute subagents in parallel with thread pool
+            results = []
+            with ThreadPoolExecutor(max_workers=self._max_parallel) as executor:
+                future_to_subagent = {
+                    executor.submit(subagent.execute): subagent
+                    for subagent in self._subagents
+                }
+
+                for future in as_completed(future_to_subagent):
+                    subagent = future_to_subagent[future]
+                    try:
+                        result = future.result()
+                        results.append(result)
+                    except Exception as exc:
+                        results.append(
+                            SubagentResult(
+                                task_id=subagent._task.task_id,
+                                success=False,
+                                error=str(exc),
+                            )
                         )
-                    )
 
-        # Cleanup all subagents
-        for subagent in self._subagents:
-            subagent.cleanup()
+            # Cleanup all subagents
+            for subagent in self._subagents:
+                subagent.cleanup()
 
-        self._results = results
-        total_time = (time.perf_counter() - start_time) * 1000
+            self._results = results
+            total_time = (time.perf_counter() - start_time) * 1000
 
-        successful = sum(1 for r in results if r.success)
-        failed = len(results) - successful
+            successful = sum(1 for r in results if r.success)
+            failed = len(results) - successful
 
-        # Find best result (simple heuristic: first successful result)
-        best_result = next((r for r in results if r.success), None)
+            # Find best result (simple heuristic: first successful result)
+            best_result = next((r for r in results if r.success), None)
 
-        return SwarmReport(
-            total_subagents=len(self._subagents),
-            successful_subagents=successful,
-            failed_subagents=failed,
-            results=results,
-            code_reviews=[],  # Will be populated by code review phase
-            best_result=best_result,
-            total_execution_time_ms=total_time,
-        )
+            return SwarmReport(
+                total_subagents=len(self._subagents),
+                successful_subagents=successful,
+                failed_subagents=failed,
+                results=results,
+                code_reviews=[],  # Will be populated by code review phase
+                best_result=best_result,
+                total_execution_time_ms=total_time,
+            )
+        finally:
+            # Stop heartbeat monitoring
+            self._stop_heartbeat_monitor()
 
     def _check_consensus_for_tasks(self) -> dict[str, Any]:
         """Check consensus for tasks that require it.
