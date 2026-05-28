@@ -45,6 +45,12 @@ def test_surface_recipes_doc_covers_required_surfaces() -> None:
 
 
 def _run_local(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+    # Use virtual environment teaagent if available
+    if command[0] == 'teaagent':
+        venv_teaagent = cwd / '.venv' / 'bin' / 'teaagent'
+        if venv_teaagent.exists():
+            command = [str(venv_teaagent)] + command[1:]
+
     return subprocess.run(
         command,
         cwd=cwd,

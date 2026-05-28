@@ -147,8 +147,13 @@ def _collect_acceptance_test_files(acceptance_dir: Path) -> set[str]:
 
 
 def _collect_acceptance_test_count(acceptance_dir: Path) -> int:
+    # Use virtual environment python if available
+    repo_root = Path(__file__).resolve().parent.parent
+    venv_python = repo_root / '.venv' / 'bin' / 'python'
+    python_cmd = str(venv_python) if venv_python.exists() else 'python3'
+
     result = subprocess.run(
-        ['python3', '-m', 'pytest', str(acceptance_dir), '--collect-only', '-q'],
+        [python_cmd, '-m', 'pytest', str(acceptance_dir), '--collect-only', '-q'],
         capture_output=True,
         text=True,
         check=False,
