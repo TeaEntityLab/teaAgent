@@ -142,6 +142,18 @@ from ._plugin import (
     plugin_show_command,
     plugin_verify_command,
 )
+from ._consensus import (
+    consensus_peers_list_command,
+    consensus_peers_add_command,
+    consensus_peers_remove_command,
+    consensus_peers_activate_command,
+    consensus_peers_deactivate_command,
+    consensus_config_set_command,
+    consensus_status_command,
+    consensus_history_command,
+    consensus_request_command,
+    consensus_vote_command,
+)
 from ._replay import (
     replay_fork,
     replay_list,
@@ -303,4 +315,14 @@ __all__ = [
     'plugin_list_command',
     'plugin_show_command',
     'plugin_verify_command',
+    'consensus_peers_list_command',
+    'consensus_peers_add_command',
+    'consensus_peers_remove_command',
+    'consensus_peers_activate_command',
+    'consensus_peers_deactivate_command',
+    'consensus_config_set_command',
+    'consensus_status_command',
+    'consensus_history_command',
+    'consensus_request_command',
+    'consensus_vote_command',
 ]

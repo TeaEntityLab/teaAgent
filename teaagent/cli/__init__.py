@@ -103,6 +103,16 @@ from teaagent.cli._handlers import (
     plugin_list_command,
     plugin_show_command,
     plugin_verify_command,
+    consensus_peers_list_command,
+    consensus_peers_add_command,
+    consensus_peers_remove_command,
+    consensus_peers_activate_command,
+    consensus_peers_deactivate_command,
+    consensus_config_set_command,
+    consensus_status_command,
+    consensus_history_command,
+    consensus_request_command,
+    consensus_vote_command,
     recall_command,
     recipes_list_command,
     recipes_run_command,
@@ -215,6 +225,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._misc_parsers import register as register_misc
     from teaagent.cli._model_parsers import register as register_model
     from teaagent.cli._plugin_parsers import register as register_plugin
+    from teaagent.cli._consensus_parsers import register as register_consensus
     from teaagent.cli._skill_parsers import register as register_skill
 
     parser = argparse.ArgumentParser(
@@ -318,6 +329,21 @@ def build_parser() -> argparse.ArgumentParser:
             'list': plugin_list_command,
             'show': plugin_show_command,
             'verify': plugin_verify_command,
+        },
+    )
+    register_consensus(
+        subparsers,
+        {
+            'peers_list': consensus_peers_list_command,
+            'peers_add': consensus_peers_add_command,
+            'peers_remove': consensus_peers_remove_command,
+            'peers_activate': consensus_peers_activate_command,
+            'peers_deactivate': consensus_peers_deactivate_command,
+            'config_set': consensus_config_set_command,
+            'status': consensus_status_command,
+            'history': consensus_history_command,
+            'request': consensus_request_command,
+            'vote': consensus_vote_command,
         },
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases

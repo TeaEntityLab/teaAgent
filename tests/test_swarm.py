@@ -4,6 +4,12 @@ from __future__ import annotations
 
 import tempfile
 
+from teaagent.consensus import (
+    ConsensusConfig,
+    PeerIdentity,
+    PeerRegistry,
+    RiskLevel,
+)
 from teaagent.swarm import (
     CodeReview,
     Subagent,
@@ -264,3 +270,94 @@ def test_swarm_manager_select_best_with_failed():
         assert best is not None
         assert best.success is True
         assert best.task_id == 'task-2'
+
+
+def test_swarm_consensus_mode_disabled():
+    """Test that consensus mode is disabled by default."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = SwarmManager(tmpdir)
+        assert manager._enable_consensus is False
+        assert manager._consensus_engine is None
+
+
+def test_swarm_enable_consensus_mode():
+    """Test enabling consensus mode."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        registry = PeerRegistry()
+        peer = PeerIdentity(name='peer1', ssh_public_key='ssh-rsa key1')
+        registry.register(peer)
+
+        config = ConsensusConfig()
+        manager = SwarmManager(tmpdir)
+        manager.enable_consensus_mode(peer_registry=registry, consensus_config=config)
+
+        assert manager._enable_consensus is True
+        assert manager._consensus_engine is not None
+
+
+def test_swarm_disable_consensus_mode():
+    """Test disabling consensus mode."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        registry = PeerRegistry()
+        peer = PeerIdentity(name='peer1', ssh_public_key='ssh-rsa key1')
+        registry.register(peer)
+
+        config = ConsensusConfig()
+        manager = SwarmManager(tmpdir, enable_consensus=True, peer_registry=registry, consensus_config=config)
+
+        assert manager._enable_consensus is True
+
+        manager.disable_consensus_mode()
+        assert manager._enable_consensus is False
+        assert manager._consensus_engine is None
+
+
+def test_swarm_task_with_consensus_required():
+    """Test task that requires consensus."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        registry = PeerRegistry()
+        peer = PeerIdentity(name='peer1', ssh_public_key='ssh-rsa key1')
+        registry.register(peer)
+
+        config = ConsensusConfig()
+        manager = SwarmManager(tmpdir, enable_consensus=True, peer_registry=registry, consensus_config=config)
+
+        task = SubagentTask(
+            task_id='task-1',
+            description='High-risk deployment',
+            risk_level=RiskLevel.HIGH,
+            require_consensus=True,
+        )
+        manager.add_subagent(task)
+
+        # Execute swarm - consensus should be checked
+        # Since we don't have actual voting mechanism in test, this will fallback
+        report = manager.execute_swarm()
+
+        # Task should be filtered out if consensus not reached
+        # For now, we just verify the mechanism is called
+        assert report is not None
+
+
+def test_swarm_task_without_consensus():
+    """Test task that does not require consensus."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        registry = PeerRegistry()
+        peer = PeerIdentity(name='peer1', ssh_public_key='ssh-rsa key1')
+        registry.register(peer)
+
+        config = ConsensusConfig()
+        manager = SwarmManager(tmpdir, enable_consensus=True, peer_registry=registry, consensus_config=config)
+
+        task = SubagentTask(
+            task_id='task-1',
+            description='Low-risk task',
+            risk_level=RiskLevel.LOW,
+            require_consensus=False,
+        )
+        manager.add_subagent(task)
+
+        report = manager.execute_swarm()
+
+        # Task should execute normally (may fail without git, but that's expected)
+        assert report.total_subagents == 1

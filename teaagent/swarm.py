@@ -14,6 +14,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.consensus import (
+    ConsensusConfig,
+    ConsensusEngine,
+    ConsensusStatus,
+    PeerRegistry,
+    RiskLevel,
+)
 from teaagent.git_sandbox import GitBranchSandbox
 
 
@@ -25,6 +32,8 @@ class SubagentTask:
     description: str
     context: dict[str, Any] = field(default_factory=dict)
     priority: int = 0
+    risk_level: RiskLevel = RiskLevel.MEDIUM
+    require_consensus: bool = False
 
 
 @dataclass(frozen=True)
@@ -150,11 +159,28 @@ class Subagent:
 class SwarmManager:
     """Orchestrates multiple subagents with parallel execution."""
 
-    def __init__(self, root: str | Path, max_parallel: int = 3) -> None:
+    def __init__(
+        self,
+        root: str | Path,
+        max_parallel: int = 3,
+        enable_consensus: bool = False,
+        peer_registry: Optional[PeerRegistry] = None,
+        consensus_config: Optional[ConsensusConfig] = None,
+    ) -> None:
         self._root = Path(root).resolve()
         self._max_parallel = max_parallel
         self._subagents: list[Subagent] = []
         self._results: list[SubagentResult] = []
+        self._enable_consensus = enable_consensus
+        self._peer_registry = peer_registry or PeerRegistry()
+        self._consensus_config = consensus_config or ConsensusConfig()
+        self._consensus_engine: Optional[ConsensusEngine] = None
+
+        if self._enable_consensus:
+            self._consensus_engine = ConsensusEngine(
+                peer_registry=self._peer_registry,
+                config=self._consensus_config,
+            )
 
     def add_subagent(self, task: SubagentTask) -> None:
         """Add a subagent task to the swarm."""
@@ -175,6 +201,13 @@ class SwarmManager:
                 results=[],
                 code_reviews=[],
             )
+
+        # Check consensus for high-risk tasks if enabled
+        if self._enable_consensus and self._consensus_engine:
+            consensus_results = self._check_consensus_for_tasks()
+            if not consensus_results.get('all_approved', True):
+                # Some tasks were not approved, filter them out
+                self._filter_subagents_by_consensus(consensus_results)
 
         # Execute subagents in parallel with thread pool
         results = []
@@ -220,6 +253,83 @@ class SwarmManager:
             best_result=best_result,
             total_execution_time_ms=total_time,
         )
+
+    def _check_consensus_for_tasks(self) -> dict[str, Any]:
+        """Check consensus for tasks that require it.
+
+        Returns:
+            Dictionary with 'all_approved' boolean and 'task_results' mapping
+        """
+        if not self._consensus_engine:
+            return {'all_approved': True, 'task_results': {}}
+
+        task_results = {}
+        all_approved = True
+
+        for subagent in self._subagents:
+            if subagent._task.require_consensus:
+                # Request consensus for this task
+                try:
+                    state = self._consensus_engine.request_consensus(
+                        task_description=subagent._task.description,
+                        risk_level=subagent._task.risk_level,
+                        proposed_by='swarm-orchestrator',
+                    )
+
+                    # Wait for consensus (simplified - in production, this would be async)
+                    # For now, we'll check if it's already approved or fallback
+                    status = self._consensus_engine.get_consensus_status(state.proposal.id)
+
+                    if status and status.status == ConsensusStatus.APPROVED:
+                        task_results[subagent._task.task_id] = {'approved': True, 'attestation': self._consensus_engine.generate_attestation(state.proposal.id)}  # type: ignore[dict-item]
+                    else:
+                        task_results[subagent._task.task_id] = {'approved': False, 'reason': 'Consensus not reached'}  # type: ignore[dict-item]
+                        all_approved = False
+                except Exception as exc:
+                    task_results[subagent._task.task_id] = {'approved': False, 'reason': str(exc)}  # type: ignore[dict-item]
+                    all_approved = False
+
+        return {'all_approved': all_approved, 'task_results': task_results}
+
+    def _filter_subagents_by_consensus(self, consensus_results: dict[str, Any]) -> None:
+        """Filter out subagents whose tasks were not approved by consensus.
+
+        Args:
+            consensus_results: Results from consensus checking
+        """
+        task_results = consensus_results.get('task_results', {})
+        self._subagents = [
+            subagent
+            for subagent in self._subagents
+            if not subagent._task.require_consensus or task_results.get(subagent._task.task_id, {}).get('approved', False)
+        ]
+
+    def enable_consensus_mode(
+        self,
+        peer_registry: Optional[PeerRegistry] = None,
+        consensus_config: Optional[ConsensusConfig] = None,
+    ) -> None:
+        """Enable consensus mode for the swarm.
+
+        Args:
+            peer_registry: Peer registry (uses existing if None)
+            consensus_config: Consensus config (uses existing if None)
+        """
+        self._enable_consensus = True
+        if peer_registry:
+            self._peer_registry = peer_registry
+        if consensus_config:
+            self._consensus_config = consensus_config
+
+        self._consensus_engine = ConsensusEngine(
+            peer_registry=self._peer_registry,
+            config=self._consensus_config,
+        )
+
+    def disable_consensus_mode(self) -> None:
+        """Disable consensus mode for the swarm."""
+        self._enable_consensus = False
+        self._consensus_engine = None
 
     def run_code_reviews(self, report: SwarmReport) -> list[CodeReview]:
         """Run automated code reviews between subagent results."""
