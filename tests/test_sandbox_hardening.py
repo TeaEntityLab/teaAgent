@@ -209,6 +209,24 @@ class ExecuteCodeModeAuditTests(unittest.TestCase):
         result = execute_code_mode('x = 42', audit_logger=None)
         self.assertEqual(result.variables.get('x'), 42)
 
+    def test_container_backend_falls_back_when_docker_unavailable(self) -> None:
+        logger = self._mock_logger()
+        backend = ContainerCodeModeBackend(image='python:3.12-slim')
+        with patch(
+            'teaagent.code_mode.DockerSandbox.preflight',
+            return_value={'status': 'fallback', 'reason': 'daemon down'},
+        ):
+            result = execute_code_mode(
+                'x = 1',
+                backend=backend,
+                audit_logger=logger,
+                run_id='run-fallback',
+            )
+        self.assertEqual(result.variables.get('x'), 1)
+        events = [call[0][0] for call in logger.record.call_args_list]
+        self.assertIn('docker_preflight_failed', events)
+        self.assertIn('sandbox_fallback_to_wasm', events)
+
 
 if __name__ == '__main__':
     unittest.main()
