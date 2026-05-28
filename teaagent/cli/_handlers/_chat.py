@@ -517,7 +517,7 @@ def chat_command(args: argparse.Namespace) -> int:
         max_tool_calls=args.max_tool_calls,
         max_estimated_cost_cents=args.max_estimated_cost_cents,
         allow_destructive=args.allow_destructive,
-        memory_limit=args.memory_limit,
+        memory_limit=getattr(args, 'memory_limit', None),
         enable_subagent=args.subagent,
         max_subagent_depth=args.max_subagent_depth,
         heartbeat_seconds=args.heartbeat,
