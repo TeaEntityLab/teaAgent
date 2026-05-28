@@ -100,6 +100,11 @@ dev = [
 [project.scripts]
 teaagent = "teaagent.cli:main"
 
+[tool.uv]
+constraint-dependencies = [
+    "jaraco-context>=6.1.0",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
