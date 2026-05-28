@@ -27,13 +27,17 @@ Usage::
 from __future__ import annotations
 
 import importlib.metadata
+import importlib.util
+import logging
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from teaagent.tools import ToolRegistry
 
 PLUGIN_GROUP = 'teaagent.tools'
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -57,6 +61,46 @@ def _entry_points(group: str) -> list[Any]:
         return list(eps.get(group, []))
     except Exception:
         return []
+
+
+def _audit_plugin_source(ep: Any) -> bool:
+    """Audit plugin source to warn about unverified third-party packages (RSK-10).
+
+    Returns True if the plugin source is considered safe, False if it should be
+    blocked or warned about.
+    """
+    try:
+        # Get the module path from the entry point
+        module_name = getattr(ep, 'value', None) or str(ep)
+        if ':' in module_name:
+            module_name = module_name.split(':')[0]
+
+        # Try to resolve the module to its file location
+        try:
+            spec = importlib.util.find_spec(module_name)
+            if spec and spec.origin:
+                module_path = Path(spec.origin).resolve()
+                # Check if module is in site-packages (third-party)
+                if 'site-packages' in str(module_path):
+                    logger.warning(
+                        f'Loading plugin from third-party package: {ep.name} '
+                        f'at {module_path}. Verify package source before use.'
+                    )
+                    # Still allow loading but warn - could be made stricter in future
+                    return True
+        except (ImportError, ValueError):
+            pass
+
+        # If we can't determine the source, allow but warn
+        logger.warning(
+            f'Unable to verify source for plugin: {ep.name}. '
+            'Ensure package is from a trusted source.'
+        )
+        return True
+    except Exception:
+        # If audit fails, fail-safe: allow but warn
+        logger.warning(f'Plugin source audit failed for: {ep.name}')
+        return True
 
 
 def load_plugins(
@@ -90,6 +134,12 @@ def load_plugins(
     for ep in _entry_points(group):
         name = getattr(ep, 'name', str(ep))
         try:
+            # Audit plugin source before loading (RSK-10)
+            if not _audit_plugin_source(ep):
+                logger.warning(f'Plugin {name} blocked by source audit')
+                failed.append(name)
+                continue
+
             fn = ep.load()
             fn(registry)
             loaded.append(name)

@@ -104,7 +104,14 @@ class SessionStore:
         return False
 
     def _path(self, session_id: str) -> Path:
-        return self._dir / f'{session_id}.json'
+        # Prevent directory traversal attacks (RSK-11)
+        if '..' in session_id or '/' in session_id or '\\' in session_id:
+            raise ValueError('Invalid session_id: contains path traversal characters')
+        # Allow only safe characters (alphanumeric, dash, underscore)
+        safe_id = ''.join(c for c in session_id if c.isalnum() or c in '-_')
+        if safe_id != session_id:
+            raise ValueError('Invalid session_id: contains unsafe characters')
+        return self._dir / f'{safe_id}.json'
 
 
 def _utcnow() -> str:

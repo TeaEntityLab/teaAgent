@@ -278,6 +278,15 @@ def prepare_subagent_isolation(
 
 
 def new_isolation_session_key(*, parent_run_id: str, def_name: str) -> str:
+    # Sanitize def_name to prevent path traversal attacks (RSK-09)
+    # Allow only alphanumeric characters, dashes, and underscores
+    safe_def_name = ''.join(c for c in def_name if c.isalnum() or c in '-_')
+    if not safe_def_name:
+        safe_def_name = 'unnamed'
     suffix = uuid4().hex[:8]
     parent = parent_run_id.strip() or 'parent'
-    return f'{parent[:12]}-{def_name}-{suffix}'
+    # Also sanitize parent_run_id to be safe
+    safe_parent = ''.join(c for c in parent if c.isalnum() or c in '-_')
+    if not safe_parent:
+        safe_parent = 'parent'
+    return f'{safe_parent[:12]}-{safe_def_name}-{suffix}'
