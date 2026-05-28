@@ -993,6 +993,15 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 print("[TeaAgent] Conversation history cleared. Starting fresh.")
                 continue
             
+            # Handle checkpoint command
+            if user_input == '/checkpoint':
+                print("[TeaAgent] Creating manual checkpoint...")
+                if create_checkpoint():
+                    print("[TeaAgent] Checkpoint created successfully")
+                else:
+                    print("[TeaAgent] Checkpoint creation failed")
+                continue
+            
             # Handle background command
             if user_input in ('/background', '/handoff'):
                 run_id = suspend_to_background(config, session_context, targeted_files)

@@ -391,6 +391,7 @@ class TSBVerifier:
         self,
         verify_signature: bool = True,
         skip_audit_verification: bool = False,
+        allow_unsigned: bool = False,
         identity: str | None = None,
         issuer: str | None = None,
     ) -> tuple[bool, str]:
@@ -399,6 +400,7 @@ class TSBVerifier:
         Args:
             verify_signature: Whether to verify cryptographic signature.
             skip_audit_verification: Skip audit chain verification (for testing).
+            allow_unsigned: Allow unsigned bundles (unsafe for production).
             identity: Optional OIDC identity to enforce (e.g., email).
             issuer: Optional OIDC issuer to enforce (e.g., "https://accounts.google.com").
             
@@ -470,9 +472,13 @@ class TSBVerifier:
             
             # Verify signature if requested
             if verify_signature:
-                # Require signature when verification is enabled
+                # Require signature when verification is enabled, unless allow_unsigned is set
                 if not manifest_data["attestation"]["author_signature"]:
-                    return False, "Signature verification requested but bundle is unsigned. Use --allow-unsigned to bypass (unsafe for production)."
+                    if allow_unsigned:
+                        # Allow unsigned bundles in development mode
+                        return True, "TSB verification successful (unsigned bundle allowed in development mode)"
+                    else:
+                        return False, "Signature verification requested but bundle is unsigned. Use allow_unsigned=True for development (unsafe for production)."
                 
                 # Use TSBProvenanceVerifier for verification if available
                 if SIGSTORE_AVAILABLE:

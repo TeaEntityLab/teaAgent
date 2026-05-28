@@ -17,6 +17,7 @@ from teaagent.tsb_format import (
     TSBMetadata,
     TSBVerifier,
 )
+from teaagent.sigstore_signer import TSBProvenanceVerifier
 
 
 class RedactionRuleTests(unittest.TestCase):
@@ -192,6 +193,95 @@ class TSBVerifierTests(unittest.TestCase):
             is_valid, message = verifier.verify(verify_signature=False, skip_audit_verification=True)
             
             self.assertTrue(is_valid, f"Verification failed: {message}")
+
+    def test_verify_unsigned_tsb_rejected(self) -> None:
+        """Test that unsigned TSBs are rejected when signature verification is enabled."""
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_path = Path(tmp) / "skill"
+            skill_path.mkdir()
+            (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
+            
+            audit_path = Path(tmp) / "audit.jsonl"
+            audit_path.write_text(
+                '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
+                encoding="utf-8",
+            )
+            
+            tsb_path = Path(tmp) / "skill.tsb"
+            
+            metadata = TSBMetadata(
+                skill_name="test-skill",
+                skill_version="1.0.0",
+                skill_author="test-author",
+                created_at="2024-01-01T00:00:00Z",
+            )
+            
+            builder = TSBBuilder(skill_path, audit_path)
+            builder.build_tsb(tsb_path, metadata, skip_audit_verification=True)
+            
+            verifier = TSBVerifier(tsb_path)
+            # Unsigned bundle should be rejected when verify_signature=True
+            is_valid, message = verifier.verify(verify_signature=True, skip_audit_verification=True)
+            
+            self.assertFalse(is_valid, "Unsigned TSB should be rejected")
+            self.assertIn("unsigned", message.lower(), f"Error message should mention unsigned: {message}")
+
+    def test_verify_unsigned_tsb_allowed_with_flag(self) -> None:
+        """Test that unsigned TSBs are allowed when allow_unsigned=True."""
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_path = Path(tmp) / "skill"
+            skill_path.mkdir()
+            (skill_path / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
+            
+            audit_path = Path(tmp) / "audit.jsonl"
+            audit_path.write_text(
+                '{"event_id": "e1", "event_type": "test", "run_id": "r1", "created_at": "2024-01-01T00:00:00+00:00", "payload": {}, "prev_hash": "genesis", "hash": "abc123"}',
+                encoding="utf-8",
+            )
+            
+            tsb_path = Path(tmp) / "skill.tsb"
+            
+            metadata = TSBMetadata(
+                skill_name="test-skill",
+                skill_version="1.0.0",
+                skill_author="test-author",
+                created_at="2024-01-01T00:00:00Z",
+            )
+            
+            builder = TSBBuilder(skill_path, audit_path)
+            builder.build_tsb(tsb_path, metadata, skip_audit_verification=True)
+            
+            verifier = TSBVerifier(tsb_path)
+            # Unsigned bundle should be allowed when allow_unsigned=True
+            is_valid, message = verifier.verify(verify_signature=True, allow_unsigned=True, skip_audit_verification=True)
+            
+            self.assertTrue(is_valid, f"Unsigned TSB should be allowed with allow_unsigned=True: {message}")
+            self.assertIn("development mode", message.lower(), f"Message should mention development mode: {message}")
+
+    def test_verify_ssh_signature_rejected(self) -> None:
+        """Test that SSH signatures are rejected with clear error message."""
+        # Create a mock manifest with SSH signer type
+        manifest = {
+            "metadata": {
+                "skill_name": "test-skill",
+                "skill_version": "1.0.0",
+                "skill_author": "test-author",
+                "created_at": "2024-01-01T00:00:00Z",
+            },
+            "attestation": {
+                "author_signature": "fake_ssh_signature",
+                "audit_chain_hash": "hash123",
+                "bundle_hash": "bundle123",
+                "signer": "ssh",
+            },
+        }
+        
+        verifier = TSBProvenanceVerifier(require_signature=True)
+        is_valid, message = verifier.verify_provenance(Path("fake.tsb"), manifest)
+        
+        self.assertFalse(is_valid, "SSH signatures should be rejected")
+        self.assertIn("ssh", message.lower(), f"Error message should mention SSH: {message}")
+        self.assertIn("not implemented", message.lower(), f"Error message should mention not implemented: {message}")
 
     def test_verify_tampered_tsb(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

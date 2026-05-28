@@ -391,6 +391,21 @@ def test_git_sandbox_consent_updates_existing_config():
     """Test that git_sandbox_consent updates existing config.json."""
 
 
+def test_shell_escape_blocked_in_chat_repl(monkeypatch, capsys):
+    """Test that shell escape (!) is properly blocked in chat REPL for security."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        
+        inputs = ["!echo test", "/exit"]
+        monkeypatch.setattr("builtins.input", lambda _: inputs.pop(0))
+        result = run_chat_repl(config)
+        
+        captured = capsys.readouterr()
+        assert "disabled for security" in captured.out.lower()
+        assert "full terminal" in captured.out.lower()
+        assert result == 0
+
+
 def test_execute_shell_command_simple(capsys):
     """Test simple shell command execution."""
     with tempfile.TemporaryDirectory() as tmpdir:

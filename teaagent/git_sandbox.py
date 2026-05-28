@@ -468,9 +468,18 @@ class GitBranchSandbox:
                         text=True,
                         check=True,
                     )
-                except subprocess.CalledProcessError:
+                except subprocess.CalledProcessError as e:
                     # Merge failed, check for conflicts
-                    pass
+                    # Check if the failure was due to conflicts or other issues
+                    if has_merge_conflicts(self._root):
+                        # This is a conflict - proceed to conflict resolution
+                        pass
+                    else:
+                        # This is a different merge error (e.g., unrelated histories, local changes)
+                        return GitSandboxResult(
+                            success=False,
+                            error=f"Merge failed (not a conflict): {e.stderr or e.stdout or 'Unknown error'}",
+                        )
 
             # Check for merge conflicts
             if has_merge_conflicts(self._root):
