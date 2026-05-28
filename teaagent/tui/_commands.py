@@ -600,7 +600,9 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         run_id = f'exp-{int(__import__("time").time())}'
         tui._parallel_options = args
         tui._parallel_stack = ParallelExperimentStack(tui.root, run_id, args)
-        sandbox_results: dict[str, GitSandboxResult] = tui._parallel_stack.start_all(auto_stash=True)
+        sandbox_results: dict[str, GitSandboxResult] = tui._parallel_stack.start_all(
+            auto_stash=True
+        )
 
         success_count = sum(1 for r in sandbox_results.values() if r.success)
         tui.output_fn(

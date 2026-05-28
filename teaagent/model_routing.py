@@ -282,7 +282,9 @@ def route_model(task: str, *, provider: str, model: Optional[str] = None) -> Mod
 
     # Fall back to category-based routing
     provider_models = PROVIDER_CATEGORY_MODELS.get(provider, {})
-    category_model: str | None = provider_models.get(category) or provider_models.get('general')
+    category_model: str | None = provider_models.get(category) or provider_models.get(
+        'general'
+    )
     return ModelRoute(
         category=category,
         provider=provider,

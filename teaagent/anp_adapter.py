@@ -222,7 +222,10 @@ class ANPGovernedInboundResult:
 
 
 class ANPGovernedService:
-    """Execute ANP federation through ToolRegistry, ApprovalPolicy, Audit, and budgets."""
+    """Execute ANP federation through ToolRegistry, ApprovalPolicy, Audit, and budgets.
+
+    Coordinates federated agent operations with full governance oversight.
+    """
 
     def __init__(
         self,

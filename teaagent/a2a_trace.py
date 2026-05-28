@@ -75,7 +75,8 @@ def parse_traceparent(header: str) -> TraceparentFields:
     parts = header.strip().split('-')
     if len(parts) != 4:
         raise TraceparentError(
-            f'traceparent must have 4 dash-separated fields, got {len(parts)}: {header!r}'
+            f'traceparent must have 4 dash-separated fields, '
+            f'got {len(parts)}: {header!r}'
         )
     version, trace_id, parent_id, flags = parts
 

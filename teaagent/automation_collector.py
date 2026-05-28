@@ -106,7 +106,8 @@ def validate_collector_command(command: str) -> list[str]:
     executable = Path(argv[0]).name.lower()
     if executable in _BLOCKED_EXECUTABLES:
         return [
-            f'collector_command executable {executable!r} is blocked; use a local deterministic script'
+            f'collector_command executable {executable!r} is blocked; '
+            'use a local deterministic script'
         ]
     if (
         executable.startswith('python')
@@ -124,7 +125,8 @@ def validate_collector_command(command: str) -> list[str]:
         ]
     if any('://' in item for item in argv):
         return [
-            'collector_command must not embed remote URLs; fetch data in a reviewed local script'
+            'collector_command must not embed remote URLs; '
+            'fetch data in a reviewed local script'
         ]
     return []
 

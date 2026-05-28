@@ -54,7 +54,8 @@ class SQLiteCheckpointStore:
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO checkpoints (run_id, context_json, updated_at, schema_version)
+                INSERT INTO checkpoints
+                (run_id, context_json, updated_at, schema_version)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT(run_id) DO UPDATE SET
                     context_json = excluded.context_json,

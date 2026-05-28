@@ -166,7 +166,8 @@ def compose_chained_task(task: str, handoff: AutomationHandoff) -> str:
         )
     if handoff.collector_summary and handoff.collector_summary != handoff.summary:
         lines.append(
-            f'- Collector: {sanitize_untrusted_automation_text(handoff.collector_summary)}'
+            '- Collector: '
+            f'{sanitize_untrusted_automation_text(handoff.collector_summary)}'
         )
     if handoff.log_tail:
         lines.append('- Recent log tail:')

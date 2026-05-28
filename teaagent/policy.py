@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 import sys
 import time
 from dataclasses import dataclass, field
@@ -270,7 +271,11 @@ class ApprovalPolicy:
     def _is_high_risk_operation(
         self, tool_name: str, arguments: dict[str, Any] | None
     ) -> bool:
-        """Check if operation matches high-risk patterns triggering multi-sig quorum."""
+        """Check if operation matches high-risk patterns triggering multi-sig quorum.
+
+        Uses shell command parsing to normalize arguments and prevent bypass attempts
+        via token splitting, escape sequences, or encoding tricks.
+        """
         if not arguments:
             return False
 
@@ -283,15 +288,34 @@ class ApprovalPolicy:
             if pattern in args_str:
                 return True
 
-        # Default high-risk patterns
+        # Default high-risk patterns with shell normalization
         default_high_risk = ['/prod', '/production', 'database', 'delete', 'rm -rf']
+
         for pattern in default_high_risk:
             if pattern in tool_name.lower():
                 return True
             if arguments:
+                # Try to normalize shell commands to catch bypass attempts
                 args_str = json.dumps(arguments, sort_keys=True).lower()
+
+                # Check raw string first
                 if pattern in args_str:
                     return True
+
+                # For command-like arguments, try shell normalization
+                if 'command' in arguments or 'cmd' in arguments:
+                    command_arg = arguments.get('command') or arguments.get('cmd', '')
+                    if isinstance(command_arg, str):
+                        try:
+                            # Normalize the command to catch escape sequences
+                            normalized = shlex.split(command_arg)
+                            normalized_cmd = ' '.join(normalized).lower()
+                            if pattern in normalized_cmd:
+                                return True
+                        except ValueError:
+                            # If parsing fails, fall back to string matching
+                            if pattern in command_arg.lower():
+                                return True
 
         return False
 

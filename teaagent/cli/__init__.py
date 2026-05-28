@@ -506,7 +506,8 @@ def apply_config_defaults(args: argparse.Namespace) -> None:
     for key, value in data.items():
         if not hasattr(args, key):
             continue
-        # Keep `doctor all` semantics stable: without explicit --provider, check all providers.
+        # Keep `doctor all` semantics stable: without explicit --provider,
+        # check all providers.
         if command == 'doctor' and doctor_command == 'all' and key == 'provider':
             continue
         if getattr(args, key) == defaults.get(key):

@@ -64,7 +64,11 @@ class FileChangeHandler(FileSystemEventHandler):
 
         # Get relative path
         try:
-            src_path_str = event.src_path if isinstance(event.src_path, str) else event.src_path.decode('utf-8')
+            src_path_str = (
+                event.src_path
+                if isinstance(event.src_path, str)
+                else event.src_path.decode('utf-8')
+            )
             src_path = Path(src_path_str)
             # This will be resolved in the watcher setup
             file_path = str(src_path)
@@ -98,7 +102,11 @@ class FileChangeHandler(FileSystemEventHandler):
 
         # Get relative path
         try:
-            src_path_str = event.src_path if isinstance(event.src_path, str) else event.src_path.decode('utf-8')
+            src_path_str = (
+                event.src_path
+                if isinstance(event.src_path, str)
+                else event.src_path.decode('utf-8')
+            )
             src_path = Path(src_path_str)
             file_path = str(src_path)
         except Exception:

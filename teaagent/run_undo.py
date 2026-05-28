@@ -34,13 +34,16 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 from collections.abc import Generator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from teaagent.audit import secure_audit_dir, secure_audit_file
 from teaagent.storage import atomic_write_text
+
+logger = logging.getLogger(__name__)
 
 # We only snapshot path-based tools, not shell commands (no stable path arg).
 _PATH_WRITE_TOOLS = frozenset(
@@ -110,6 +113,7 @@ class UndoJournal:
             secure_audit_dir(self._path.parent)
             if self._path.is_file():
                 self._entries = list(self._load_from_disk())
+                self._validate_journal_health()
 
     # ------------------------------------------------------------------
     # AuditLogger sink protocol
@@ -196,6 +200,39 @@ class UndoJournal:
             except (json.JSONDecodeError, KeyError):
                 continue
 
+    def _validate_journal_health(self) -> None:
+        """Check journal health and log warnings if issues are detected."""
+        if not self._entries:
+            return
+
+        # Check for potential corruption or incomplete entries
+        corrupted_count = 0
+        for entry in self._entries:
+            if entry.existed_before and entry.content_b64 is None:
+                corrupted_count += 1
+                logger.warning(
+                    f"Journal entry for '{entry.path}' marked as existed but has no content"
+                )
+            elif not entry.existed_before and entry.content_b64 is not None:
+                corrupted_count += 1
+                logger.warning(
+                    f"Journal entry for '{entry.path}' marked as not existed but has content"
+                )
+
+        if corrupted_count > 0:
+            logger.warning(
+                f'Journal health check found {corrupted_count} potentially corrupted entries '
+                f'out of {len(self._entries)} total entries'
+            )
+
+        # Check for orphaned pending entries (from crashed runs)
+        if self._pending:
+            logger.warning(
+                f'Found {len(self._pending)} orphaned pending journal entries from previous run. '
+                'These will be discarded.'
+            )
+            self._pending.clear()
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -203,6 +240,35 @@ class UndoJournal:
     @property
     def has_entries(self) -> bool:
         return bool(self._entries)
+
+    def check_health(self) -> dict[str, Any]:
+        """Perform health check on the journal and return diagnostic information.
+
+        Returns a dict with keys:
+        - 'total_entries': total number of journal entries
+        - 'corrupted_entries': number of potentially corrupted entries
+        - 'orphaned_pending': number of orphaned pending entries
+        - 'healthy': boolean indicating overall health
+        """
+        corrupted_count = 0
+        for entry in self._entries:
+            if (
+                entry.existed_before
+                and entry.content_b64 is None
+                or not entry.existed_before
+                and entry.content_b64 is not None
+            ):
+                corrupted_count += 1
+
+        orphaned_pending = len(self._pending)
+        healthy = corrupted_count == 0 and orphaned_pending == 0
+
+        return {
+            'total_entries': len(self._entries),
+            'corrupted_entries': corrupted_count,
+            'orphaned_pending': orphaned_pending,
+            'healthy': healthy,
+        }
 
     def save_to(self, path: str | Path) -> None:
         """Persist in-memory journal entries to a JSONL file."""

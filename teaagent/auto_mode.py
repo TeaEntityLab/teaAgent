@@ -73,12 +73,14 @@ class AutoModeGuard:
             )
         if self._cost_cents >= self.config.max_cost_cents:
             raise AutoModeLimitError(
-                f'Auto mode: cost limit reached (${self._cost_cents:.2f} / ${self.config.max_cost_cents / 100:.2f})'
+                f'Auto mode: cost limit reached '
+                f'(${self._cost_cents:.2f} / ${self.config.max_cost_cents / 100:.2f})'
             )
         elapsed = time.monotonic() - self._started_at
         if elapsed >= self.config.max_wall_clock_seconds:
             raise AutoModeLimitError(
-                f'Auto mode: wall-clock limit reached ({elapsed:.0f}s / {self.config.max_wall_clock_seconds:.0f}s)'
+                f'Auto mode: wall-clock limit reached '
+                f'({elapsed:.0f}s / {self.config.max_wall_clock_seconds:.0f}s)'
             )
 
     def summary(self) -> dict[str, Any]:

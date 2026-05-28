@@ -2170,7 +2170,7 @@ def _execute_parallel_experiment(
             branches[opt] = sandbox._branch_name  # type: ignore[assignment]
         else:
             branches[opt] = None
-    
+
     print_json(
         {
             'status': 'parallel_experiments_started',

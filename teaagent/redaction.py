@@ -42,6 +42,14 @@ class RedactionConfig:
         Redact ``ghp_`` and ``github_pat_`` tokens.
     query_params:
         Redact ``?api_key=…``, ``?token=…``, etc. in URLs.
+    google_keys:
+        Redact Google API keys (``AIzaSy...``) and service account keys.
+    openai_keys:
+        Redact OpenAI API keys (``sk-...``) and new format keys.
+    anthropic_keys:
+        Redact Anthropic API keys (``sk-ant-...``).
+    database_urls:
+        Redact database connection strings with credentials.
     extra_patterns:
         Additional ``(compiled_pattern, replacement)`` tuples applied after
         the built-in groups.
@@ -53,6 +61,10 @@ class RedactionConfig:
     aws_keys: bool = True
     github_tokens: bool = True
     query_params: bool = True
+    google_keys: bool = True
+    openai_keys: bool = True
+    anthropic_keys: bool = True
+    database_urls: bool = True
     extra_patterns: list[_Pattern] = field(default_factory=list)
 
     def build_patterns(self) -> list[_Pattern]:
@@ -94,6 +106,51 @@ class RedactionConfig:
                 (
                     re.compile(r'\b(ghp_|github_pat_)[A-Za-z0-9_]{20,}\b'),
                     '[redacted]',
+                )
+            )
+        if self.google_keys:
+            # Google API keys (AIzaSy...) and service account keys
+            patterns.append(
+                (re.compile(r'\bAIza[A-Za-z0-9_-]{35}\b'), '[redacted-google-key]')
+            )
+            patterns.append(
+                (
+                    re.compile(
+                        r'"type":\s*"service_account"[^}]*"private_key":\s*"[^"]+"'
+                    ),
+                    '"type": "service_account", "private_key": "[redacted]"',
+                )
+            )
+        if self.openai_keys:
+            # OpenAI keys (both old sk- and new format)
+            patterns.append(
+                (re.compile(r'\bsk-[A-Za-z0-9]{48}\b'), '[redacted-openai-key]')
+            )
+            patterns.append(
+                (re.compile(r'\bsk-proj-[A-Za-z0-9_-]{20,}\b'), '[redacted-openai-key]')
+            )
+        if self.anthropic_keys:
+            # Anthropic API keys
+            patterns.append(
+                (
+                    re.compile(r'\bsk-ant-[A-Za-z0-9_-]{30,}\b'),
+                    '[redacted-anthropic-key]',
+                )
+            )
+        if self.database_urls:
+            # Database connection strings with credentials
+            patterns.append(
+                (
+                    re.compile(
+                        r'(?i)(postgresql|mysql|mongodb|redis|sqlite)://[^@]+:[^@]+@'
+                    ),
+                    r'\1://[redacted]:[redacted]@',
+                )
+            )
+            patterns.append(
+                (
+                    re.compile(r'(?i)(postgres|mysql|mongo|redis)://[^:]+:[^@]+@'),
+                    r'\1://[redacted]:[redacted]@',
                 )
             )
         patterns.extend(self.extra_patterns)

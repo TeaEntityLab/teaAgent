@@ -34,14 +34,16 @@ _TEMPLATES: dict[str, AutomationTemplate] = {
             'name': 'repo-watch',
             'task': (
                 'When wake_agent is true, read the collector summary and write a '
-                'one-paragraph changelog to automation-output.txt in the workspace root.'
+                'one-paragraph changelog to automation-output.txt in the '
+                'workspace root.'
             ),
             'schedule': 'every 30m',
             'permission_mode': 'read-only',
             'context_profile': 'lean',
             'acceptance_criteria': (
-                'If wake_agent is false, no LLM run is started and no tokens are consumed. '
-                'If wake_agent is true, automation-output.txt contains a non-empty summary.'
+                'If wake_agent is false, no LLM run is started and no tokens '
+                'are consumed. If wake_agent is true, automation-output.txt '
+                'contains a non-empty summary.'
             ),
             'collector_command': ('python3 -m teaagent.collectors.repo_watch'),
             'allowed_toolsets': ['read-only'],

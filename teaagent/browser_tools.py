@@ -36,7 +36,8 @@ def _ensure_browser() -> Any:
     if _BROWSER_INSTANCE is None:
         if not HAS_PLAYWRIGHT:
             raise RuntimeError(
-                'Playwright is not installed. Install with: pip install teaagent[playwright]'
+                'Playwright is not installed. '
+                'Install with: pip install teaagent[playwright]'
             )
         from playwright.sync_api import sync_playwright
 
@@ -216,13 +217,18 @@ def register_browser_tools(
 
     registry.register(
         name='browser_navigate',
-        description='Navigate to a URL in a headless browser. Returns the page title and final URL.',
+        description=(
+            'Navigate to a URL in a headless browser. '
+            'Returns the page title and final URL.'
+        ),
         input_schema=object_schema(
             {
                 'url': {'type': 'string', 'description': 'The URL to navigate to.'},
                 'timeout_ms': {
                     'type': 'integer',
-                    'description': 'Navigation timeout in milliseconds (default 30000).',
+                    'description': (
+                        'Navigation timeout in milliseconds (default 30000).'
+                    ),
                 },
             },
             required=['url'],
@@ -280,7 +286,9 @@ def register_browser_tools(
 
     registry.register(
         name='browser_screenshot',
-        description='Take a screenshot of the current page. Returns base64-encoded PNG.',
+        description=(
+            'Take a screenshot of the current page. Returns base64-encoded PNG.'
+        ),
         input_schema=object_schema(
             {
                 'full_page': {

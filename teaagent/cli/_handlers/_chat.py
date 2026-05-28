@@ -56,7 +56,9 @@ def handle_memory_failures(root: Path) -> None:
         print(f'[TeaAgent] Error retrieving failure cards: {exc}')
 
 
-def handle_pin(root: Path, command: str, watcher_callback: Callable[[], None] | None = None) -> None:
+def handle_pin(
+    root: Path, command: str, watcher_callback: Callable[[], None] | None = None
+) -> None:
     """Handle /pin command to add a file to the watch list.
 
     Args:
@@ -91,7 +93,9 @@ def handle_pin(root: Path, command: str, watcher_callback: Callable[[], None] | 
         print(f'[TeaAgent] Error pinning file: {exc}')
 
 
-def handle_unpin(root: Path, command: str, watcher_callback: Callable[[], None] | None = None) -> None:
+def handle_unpin(
+    root: Path, command: str, watcher_callback: Callable[[], None] | None = None
+) -> None:
     """Handle /unpin command to remove a file from the watch list.
 
     Args:
@@ -451,9 +455,9 @@ def suspend_to_background(
         'session_context': {
             'observations_count': len(session_context.get('observations', [])),
             'compaction_count': session_context.get('compaction_count', 0),
-            'observations': session_context.get('observations', [])[
-                -10:
-            ],  # Keep last 10 for context
+            'observations': session_context.get('observations', [])[-10:]
+            if session_context.get('observations')
+            else [],  # Keep last 10 for context
         },
         'targeted_files': [
             str(f.resolve().relative_to(root.resolve()))
@@ -613,7 +617,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
 
     # Tab completion setup
     completer_matches: list[str] = []
-    
+
     def tab_completer(text: str, state: int) -> Optional[str]:
         """Tab completion handler for readline."""
         nonlocal completer_matches

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections.abc import Callable
@@ -9,6 +10,8 @@ from typing import Any, Optional
 from teaagent.errors import ToolExecutionError
 from teaagent.hooks import HookRegistry
 from teaagent.schema import validate_object_schema
+
+logger = logging.getLogger(__name__)
 
 ToolHandler = Callable[[dict[str, Any]], dict[str, Any]]
 
@@ -105,11 +108,21 @@ class ToolRegistry:
         annotations: ToolAnnotations,
         handler: ToolHandler,
         rate_limit: Optional[ToolRateLimit] = None,
+        allow_override: bool = False,
     ) -> None:
         if not name or ' ' in name:
             raise ValueError('tool name must be non-empty and contain no spaces')
         if name in self._tools:
-            raise ValueError(f"tool '{name}' is already registered")
+            if allow_override:
+                logger.warning(
+                    f"tool '{name}' is being overridden. Previous tool will be replaced."
+                )
+            else:
+                logger.warning(
+                    f"tool '{name}' is already registered. Use allow_override=True to replace it. "
+                    f'Existing tool: {self._tools[name].description}'
+                )
+                raise ValueError(f"tool '{name}' is already registered")
         if not description:
             raise ValueError('tool description is required')
         self._tools[name] = ToolDefinition(

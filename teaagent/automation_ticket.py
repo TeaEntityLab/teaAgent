@@ -162,7 +162,8 @@ def validate_automation_runtime_integrity(
             errors.append('collector_command_digest is missing')
         elif digest and spec.collector_command_digest != digest:
             errors.append(
-                'collector_command_digest mismatch; collector script changed since scheduling'
+                'collector_command_digest mismatch; collector script changed '
+                'since scheduling'
             )
     return errors
 
@@ -175,14 +176,15 @@ def validate_automation_task(task: str) -> list[str]:
         return errors
     if len(normalized) < 8:
         errors.append(
-            'automation task is too short; describe the goal, inputs, and expected output '
-            'without referring to prior chat history'
+            'automation task is too short; describe the goal, inputs, and '
+            'expected output without referring to prior chat history'
         )
     for pattern in _VAGUE_TASK_PATTERNS:
         if pattern.search(normalized):
             errors.append(
                 f'automation task is not self-contained ({pattern.pattern}); '
-                'include explicit files, commands, and acceptance criteria in the prompt'
+                'include explicit files, commands, and acceptance criteria '
+                'in the prompt'
             )
             break
     return errors
@@ -252,7 +254,8 @@ def validate_automation_spec(
         )
     elif not criteria:
         warnings.append(
-            'acceptance_criteria is empty; add --acceptance-criteria before enabling production schedules'
+            'acceptance_criteria is empty; add --acceptance-criteria before '
+            'enabling production schedules'
         )
     errors.extend(validate_collector_command(spec.collector_command))
     collector_digest, collector_digest_errors = compute_collector_command_digest(
@@ -384,7 +387,8 @@ def format_automation_ticket_human(
         f'Schedule: {spec.schedule}',
         f'Permission mode: {report.permission_mode}',
         f'Context profile: {report.context_profile}',
-        f'Selected skills: {", ".join(report.selected_skills) or "(none — no eager skill prompt bloat)"}',
+        'Selected skills: '
+        f'{", ".join(report.selected_skills) or "(none — no eager skill prompt bloat)"}',
         f'Skill index discovered: {report.skill_index_count}',
         f'Estimated skill prompt tokens: {report.estimated_skill_tokens}',
         f'Allowed toolsets: {", ".join(report.allowed_toolsets)}',

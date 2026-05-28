@@ -243,7 +243,8 @@ class ModelDecisionEngine:
                         content=(
                             'Your last output was invalid JSON decision.\n'
                             f'Parser error: {exc}\n'
-                            'Repair it and reply with exactly one valid JSON object only.'
+                            'Repair it and reply with exactly one valid JSON object '
+                            'only.'
                         ),
                     )
                 )

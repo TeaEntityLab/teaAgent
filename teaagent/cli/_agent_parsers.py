@@ -109,7 +109,10 @@ def add_agent_run_arguments(
     p.add_argument(
         '--route-model',
         action='store_true',
-        help='Choose a provider-specific model from the task category when --model is not set.',
+        help=(
+            'Choose a provider-specific model from the task category '
+            'when --model is not set.'
+        ),
     )
     p.add_argument(
         '--max-iterations', type=int, default=10, help='Maximum agent loop iterations.'
@@ -119,7 +122,10 @@ def add_agent_run_arguments(
         '--max-estimated-cost-cents',
         type=int,
         default=0,
-        help='Abort the run when estimated cost exceeds this cap (0 uses default budget).',
+        help=(
+            'Abort the run when estimated cost exceeds this cap '
+            '(0 uses default budget).'
+        ),
     )
     p.add_argument(
         '--clarify',
@@ -146,7 +152,10 @@ def add_agent_run_arguments(
         default=None,
         metavar='N',
         type=int,
-        help='Run tournament mode with N parallel approaches. Creates isolated sandbox branches for each approach.',
+        help=(
+            'Run tournament mode with N parallel approaches. '
+            'Creates isolated sandbox branches for each approach.'
+        ),
     )
     p.add_argument(
         '--approach',
@@ -168,7 +177,10 @@ def add_agent_run_arguments(
     p.add_argument(
         '--hitl-approval',
         action='store_true',
-        help='Prompt before executing unapproved destructive tool calls in prompt permission mode.',
+        help=(
+            'Prompt before executing unapproved destructive tool calls '
+            'in prompt permission mode.'
+        ),
     )
     p.add_argument(
         '--permission-mode',
@@ -191,12 +203,17 @@ def add_agent_run_arguments(
         '--heartbeat',
         type=float,
         default=0.0,
-        help='Emit a heartbeat audit event every N seconds while running. 0 disables.',
+        help=(
+            'Emit a heartbeat audit event every N seconds while running. 0 disables.'
+        ),
     )
     p.add_argument(
         '--code-analysis',
         action='store_true',
-        help='Enable LSP-backed code analysis tools (code_definition/code_references/code_diagnostics).',
+        help=(
+            'Enable LSP-backed code analysis tools '
+            '(code_definition/code_references/code_diagnostics).'
+        ),
     )
     p.add_argument(
         '--validate',
@@ -212,7 +229,10 @@ def add_agent_run_arguments(
         '--telemetry-otlp-endpoint',
         default=None,
         metavar='URL',
-        help='Export OpenTelemetry traces to this OTLP HTTP endpoint (e.g. http://localhost:4318/v1/traces).',
+        help=(
+            'Export OpenTelemetry traces to this OTLP HTTP endpoint '
+            '(e.g. http://localhost:4318/v1/traces).'
+        ),
     )
     p.add_argument(
         '--telemetry-service-name',
@@ -228,7 +248,10 @@ def add_agent_run_arguments(
         '--checkpoint-store',
         default=None,
         metavar='PATH',
-        help='SQLite path for run checkpoint storage. Saves context after each tool call.',
+        help=(
+            'SQLite path for run checkpoint storage. '
+            'Saves context after each tool call.'
+        ),
     )
     p.add_argument(
         '--dry-run',
@@ -238,18 +261,21 @@ def add_agent_run_arguments(
     p.add_argument(
         '--human',
         action='store_true',
-        help='With --dry-run, print a beginner-friendly summary instead of JSON.',
+        help=('With --dry-run, print a beginner-friendly summary instead of JSON.'),
     )
     p.add_argument(
         '--background',
         action='store_true',
-        help='Run detached; use agent attach <run_id> --follow to stream events.',
+        help=('Run detached; use agent attach <run_id> --follow to stream events.'),
     )
     p.add_argument(
         '--progress',
         action='store_true',
         default=None,
-        help='Stream brief progress lines to stderr during the run (default: on when stderr is a TTY).',
+        help=(
+            'Stream brief progress lines to stderr during the run '
+            '(default: on when stderr is a TTY).'
+        ),
     )
     p.add_argument(
         '--no-progress',
@@ -259,7 +285,9 @@ def add_agent_run_arguments(
     p.add_argument(
         '--stream',
         action='store_true',
-        help='Stream user-visible model text during the run (final-answer content only).',
+        help=(
+            'Stream user-visible model text during the run (final-answer content only).'
+        ),
     )
     p.add_argument(
         '--stream-raw',
@@ -664,7 +692,10 @@ def _resume(
     p.add_argument(
         '--code-analysis',
         action='store_true',
-        help='Enable LSP-backed code analysis tools (code_definition/code_references/code_diagnostics).',
+        help=(
+            'Enable LSP-backed code analysis tools '
+            '(code_definition/code_references/code_diagnostics).'
+        ),
     )
     p.add_argument(
         '--fresh-restart',

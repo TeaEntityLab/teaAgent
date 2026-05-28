@@ -1099,11 +1099,12 @@ Instructions:
 Corrected file content:"""
 
             try:
-                from teaagent.llm._types import LLMRequest, LLMMessage
+                from teaagent.llm._types import LLMMessage, LLMRequest
+
                 request = LLMRequest(
                     messages=[LLMMessage(role='user', content=prompt)],
                     max_tokens=8192,
-                    temperature=0.1
+                    temperature=0.1,
                 )
                 response = adapter.complete(request)
                 resolved_content = str(response).strip()
