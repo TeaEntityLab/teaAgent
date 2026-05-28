@@ -35,6 +35,41 @@ def test_chat_command_with_invalid_args():
     pytest.skip("Requires full config setup")
 
 
+def test_chat_command_smoke_test():
+    """Test chat command starts and exits cleanly via /exit command."""
+    import argparse
+    from teaagent.cli._handlers._chat import chat_command
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create minimal args namespace
+        args = argparse.Namespace(
+            root=tmpdir,
+            model=None,
+            permission_mode='prompt',
+            max_iterations=10,
+            max_tool_calls=10,
+            max_estimated_cost_cents=0,
+            allow_destructive=False,
+            memory_limit=None,
+            subagent=False,
+            max_subagent_depth=1,
+            heartbeat=0.0,
+            stream=False,
+            task=None,
+        )
+
+        # Mock input to return /exit immediately
+        import builtins
+        original_input = builtins.input
+        builtins.input = lambda _: "/exit"
+
+        try:
+            result = chat_command(args)
+            assert result == 0, f"Expected exit code 0, got {result}"
+        finally:
+            builtins.input = original_input
+
+
 def test_run_chat_repl_exit_command(monkeypatch):
     """Test REPL exits with /exit command."""
     with tempfile.TemporaryDirectory() as tmpdir:
