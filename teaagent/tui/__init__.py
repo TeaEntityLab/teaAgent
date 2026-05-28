@@ -222,7 +222,7 @@ class TeaAgentTUI:
             memories = memory.list(limit=3)
             print(f'\nMemory Entries: {len(memories)}')
             for mem in memories:
-                print(f'  - {mem.mem_id[:8]}: {mem.content[:30]}...')
+                print(f'  - {mem.memory_id[:8]}: {mem.content[:30]}...')
         except Exception:
             print('\nMemory Entries: (unavailable)')
 

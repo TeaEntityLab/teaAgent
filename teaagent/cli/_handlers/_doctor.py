@@ -714,9 +714,9 @@ def doctor_all(args: argparse.Namespace) -> int:
         # Run database migrations if needed
         if not gql_ok:
             try:
-                from teaagent.graphqlite_store import GraphQLiteGraphStore
+                from teaagent.graphqlite_store import GraphQLiteGraphStore, GraphQLiteConfig
 
-                GraphQLiteGraphStore(root)
+                GraphQLiteGraphStore(GraphQLiteConfig(database=str(root / '.teaagent' / 'graphqlite.db')))
                 # Attempt to initialize/migrate
                 repair_actions.append('Attempted GraphQLite database migration')
                 # Re-check after migration

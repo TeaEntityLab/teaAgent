@@ -287,7 +287,7 @@ class SwarmManager:
             scores[result.task_id] = avg_score * 0.8 + time_factor * 0.2
 
         # Return result with highest score
-        best_task_id = max(scores, key=scores.get) if scores else None
+        best_task_id = max(scores.keys(), key=lambda k: scores[k]) if scores else None
         if best_task_id:
             return next((r for r in report.results if r.task_id == best_task_id), None)
 

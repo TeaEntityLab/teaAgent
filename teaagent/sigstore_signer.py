@@ -230,6 +230,8 @@ class TSBProvenanceVerifier:
                 return False, 'sigstore-python not installed for verification'
 
             try:
+                if self._sigstore_signer is None:
+                    return False, 'Sigstore signer not initialized'
                 self._sigstore_signer.verify(
                     bundle_path,
                     signature,

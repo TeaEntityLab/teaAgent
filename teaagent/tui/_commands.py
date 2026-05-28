@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 from teaagent.daily import build_daily_brief
 from teaagent.git_sandbox import (
+    GitSandboxResult,
     ParallelExperimentStack,
     abort_merge,
     get_conflicted_files,
@@ -599,17 +600,17 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         run_id = f'exp-{int(__import__("time").time())}'
         tui._parallel_options = args
         tui._parallel_stack = ParallelExperimentStack(tui.root, run_id, args)
-        results = tui._parallel_stack.start_all(auto_stash=True)
+        sandbox_results: dict[str, GitSandboxResult] = tui._parallel_stack.start_all(auto_stash=True)
 
-        success_count = sum(1 for r in results.values() if r.success)
+        success_count = sum(1 for r in sandbox_results.values() if r.success)
         tui.output_fn(
             f'parallel: started {success_count}/{len(args)} experiment branches'
         )
-        for option, result in results.items():
-            if result.success:
-                tui.output_fn(f'  {option}: {result.branch_name}')
+        for option, result in sandbox_results.items():  # type: ignore[assignment]
+            if result.success:  # type: ignore[attr-defined]
+                tui.output_fn(f'  {option}: {result.branch_name}')  # type: ignore[attr-defined]
             else:
-                tui.output_fn(f'  {option}: failed - {result.error}')
+                tui.output_fn(f'  {option}: failed - {result.error}')  # type: ignore[attr-defined]
         return True
     if action == 'select':
         if not tui._parallel_stack or not tui._parallel_options:
@@ -629,14 +630,18 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
 
         # Merge selected branch
         sandbox = tui._parallel_stack.get_sandbox(selected)
-        if not sandbox:
+        if sandbox is None:
             tui.output_fn(f'error: sandbox for {selected} not found')
             return True
 
         try:
             # Switch to original branch
+            original_branch = sandbox._original_branch
+            if original_branch is None:
+                tui.output_fn('error: original branch not set')
+                return True
             subprocess.run(
-                ['git', 'checkout', sandbox._original_branch],
+                ['git', 'checkout', str(original_branch)],  # type: ignore[arg-type]
                 cwd=tui.root,
                 check=True,
                 capture_output=True,

@@ -121,7 +121,7 @@ class RedactionFilter:
         Returns:
             Redacted dictionary.
         """
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in data.items():
             # Check if key matches sensitive patterns
             key_is_sensitive = any(
@@ -273,11 +273,11 @@ class TSBBuilder:
             for file_path in skill_files_sorted:
                 if file_path.is_file():
                     # Include relative path in hash to prevent file renaming attacks
-                    rel_path = str(file_path.relative_to(tmp_path / 'skill'))
-                    bundle_hash.update(rel_path.encode('utf-8'))
+                    rel_path = file_path.relative_to(tmp_path / 'skill')
+                    bundle_hash.update(str(rel_path).encode('utf-8'))
                     bundle_hash.update(file_path.read_bytes())
             bundle_hash.update((tmp_path / 'audit.jsonl').read_bytes())
-            bundle_hash = bundle_hash.hexdigest()
+            bundle_hash_str = bundle_hash.hexdigest()
 
             # Create initial tarball with placeholder manifest (for signing)
             manifest_path = tmp_path / 'manifest.json'
@@ -317,7 +317,7 @@ class TSBBuilder:
                 attestation=TSBAttestation(
                     author_signature=signature,
                     audit_chain_hash=audit_hash,
-                    bundle_hash=bundle_hash,
+                    bundle_hash=bundle_hash_str,
                     signature_algorithm=manifest.attestation.signature_algorithm,
                     certificate=certificate,
                     signer=signer_type,
@@ -474,7 +474,7 @@ class TSBVerifier:
             # Verify bundle hash (hash of skill files and audit only, excluding manifest)
             # Use sorted iteration for deterministic hash across platforms
             # Include relative paths in hash to prevent structural tampering (TSB v1.1)
-            bundle_hash = hashlib.sha256()
+            bundle_hash_obj = hashlib.sha256()
             skill_path = tmp_path / 'skill'
             if skill_path.exists():
                 skill_files = sorted(skill_path.rglob('*'), key=lambda p: str(p))
@@ -482,12 +482,12 @@ class TSBVerifier:
                     if file_path.is_file():
                         # Include relative path in hash to prevent file renaming attacks
                         rel_path = str(file_path.relative_to(skill_path))
-                        bundle_hash.update(rel_path.encode('utf-8'))
-                        bundle_hash.update(file_path.read_bytes())
+                        bundle_hash_obj.update(rel_path.encode('utf-8'))
+                        bundle_hash_obj.update(file_path.read_bytes())
             audit_path = tmp_path / 'audit.jsonl'
             if audit_path.exists():
-                bundle_hash.update(audit_path.read_bytes())
-            bundle_hash = bundle_hash.hexdigest()
+                bundle_hash_obj.update(audit_path.read_bytes())
+            bundle_hash = bundle_hash_obj.hexdigest()
 
             if manifest_data['attestation']['bundle_hash'] != bundle_hash:
                 return (

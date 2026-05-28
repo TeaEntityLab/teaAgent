@@ -17,6 +17,8 @@ from typing import Callable, Optional, Set
 
 try:
     from watchdog.events import (
+        DirDeletedEvent,
+        DirModifiedEvent,
         FileDeletedEvent,
         FileModifiedEvent,
         FileSystemEventHandler,
@@ -51,7 +53,7 @@ class FileChangeHandler(FileSystemEventHandler):
         self.last_event_time: dict[str, float] = {}
         self.lock = threading.Lock()
 
-    def on_modified(self, event: FileModifiedEvent) -> None:
+    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:  # type: ignore[override]
         """Handle file modified event.
 
         Args:
@@ -62,7 +64,8 @@ class FileChangeHandler(FileSystemEventHandler):
 
         # Get relative path
         try:
-            src_path = Path(event.src_path)
+            src_path_str = event.src_path if isinstance(event.src_path, str) else event.src_path.decode('utf-8')
+            src_path = Path(src_path_str)
             # This will be resolved in the watcher setup
             file_path = str(src_path)
         except Exception:
@@ -84,7 +87,7 @@ class FileChangeHandler(FileSystemEventHandler):
         with suppress(Exception):
             self.callback(file_path, 'modified')
 
-    def on_deleted(self, event: FileDeletedEvent) -> None:
+    def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent) -> None:  # type: ignore[override]
         """Handle file deleted event.
 
         Args:
@@ -95,7 +98,8 @@ class FileChangeHandler(FileSystemEventHandler):
 
         # Get relative path
         try:
-            src_path = Path(event.src_path)
+            src_path_str = event.src_path if isinstance(event.src_path, str) else event.src_path.decode('utf-8')
+            src_path = Path(src_path_str)
             file_path = str(src_path)
         except Exception:
             return

@@ -69,6 +69,8 @@ class CodeOntologyGraph:
 
     def _sync_to_graph_store(self) -> None:
         """Sync nodes and edges to GraphQLite graph store."""
+        if self.graph_store is None:
+            return
         for node in self.builder.get_nodes():
             self.graph_store.graph.upsert_node(
                 node.node_id,
@@ -251,7 +253,7 @@ class CodeOntologyVisitor(ast.NodeVisitor):
         class_id = f'class:{self.file_path}:{node.name}:{node.lineno}'
 
         # Extract base classes
-        base_classes = []
+        base_classes: list[str] = []
         for base in node.bases:
             if isinstance(base, ast.Name):
                 base_classes.append(base.id)
@@ -282,7 +284,7 @@ class CodeOntologyVisitor(ast.NodeVisitor):
         )
 
         # Edges: Class inherits from base classes
-        for base in base_classes:
+        for base in base_classes:  # type: ignore[assignment]
             self.edges.append(
                 CodeEdge(
                     source=class_id,
@@ -298,7 +300,7 @@ class CodeOntologyVisitor(ast.NodeVisitor):
         self.generic_visit(node)
         self.current_class = old_class
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+    def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         function_id = f'function:{self.file_path}:{node.name}:{node.lineno}'
         node_type = 'Method' if self.current_class else 'Function'
 

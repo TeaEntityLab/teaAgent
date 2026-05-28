@@ -995,9 +995,9 @@ def _replay(
 
 def _env(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
-    provision_handler: Callable,
-    verify_handler: Callable,
-    lock_handler: Callable,
+    provision_handler: Callable | None,
+    verify_handler: Callable | None,
+    lock_handler: Callable | None,
 ) -> None:
     """Register environment subcommands."""
     env_parser = subparsers.add_parser(

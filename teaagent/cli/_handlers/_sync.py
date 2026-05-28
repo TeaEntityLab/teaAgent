@@ -30,7 +30,7 @@ def sync_export(args: argparse.Namespace) -> int:
 
     # Initialize graph store
     try:
-        config = GraphQLiteConfig(path=root / '.teaagent' / 'graphqlite.db')
+        config = GraphQLiteConfig(database=str(root / '.teaagent' / 'graphqlite.db'))
         graph_store = GraphQLiteGraphStore(config)
     except Exception as exc:
         print_json(
@@ -106,7 +106,7 @@ def sync_import(args: argparse.Namespace) -> int:
 
     # Initialize graph store
     try:
-        config = GraphQLiteConfig(path=root / '.teaagent' / 'graphqlite.db')
+        config = GraphQLiteConfig(database=str(root / '.teaagent' / 'graphqlite.db'))
         graph_store = GraphQLiteGraphStore(config)
     except Exception as exc:
         print_json(

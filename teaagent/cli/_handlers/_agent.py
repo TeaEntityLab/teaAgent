@@ -2163,12 +2163,20 @@ def _execute_parallel_experiment(
         )
         return 1
 
+    branches: dict[str, str | None] = {}
+    for opt in options:
+        sandbox = stack.get_sandbox(opt)
+        if sandbox is not None:
+            branches[opt] = sandbox._branch_name  # type: ignore[assignment]
+        else:
+            branches[opt] = None
+    
     print_json(
         {
             'status': 'parallel_experiments_started',
             'run_id': run_id,
             'options': options,
-            'branches': {opt: stack.get_sandbox(opt)._branch_name for opt in options},
+            'branches': branches,
             'message': 'Use "teaagent experiment compare" to compare results, then "teaagent experiment select" to merge the best option',
         }
     )

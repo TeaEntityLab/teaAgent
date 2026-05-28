@@ -15,7 +15,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.context import ContextCompactor
@@ -56,7 +56,7 @@ def handle_memory_failures(root: Path) -> None:
         print(f'[TeaAgent] Error retrieving failure cards: {exc}')
 
 
-def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
+def handle_pin(root: Path, command: str, watcher_callback: Callable[[], None] | None = None) -> None:
     """Handle /pin command to add a file to the watch list.
 
     Args:
@@ -91,7 +91,7 @@ def handle_pin(root: Path, command: str, watcher_callback=None) -> None:
         print(f'[TeaAgent] Error pinning file: {exc}')
 
 
-def handle_unpin(root: Path, command: str, watcher_callback=None) -> None:
+def handle_unpin(root: Path, command: str, watcher_callback: Callable[[], None] | None = None) -> None:
     """Handle /unpin command to remove a file from the watch list.
 
     Args:
@@ -389,7 +389,8 @@ def complete_symbol(text: str, root: Path) -> list[str]:
 
         # Build ontology for the workspace
         builder = CodeOntologyBuilder(root)
-        ontology = builder.build()
+        builder.build_from_directory()
+        ontology = builder
 
         # Get all nodes (symbols)
         completions = []
@@ -592,7 +593,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     )
 
     # Session context for compaction
-    session_context = {
+    session_context: dict[str, Any] = {
         'observations': [],
         'compaction_count': 0,
     }
@@ -611,8 +612,11 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
     current_model = config.model
 
     # Tab completion setup
+    completer_matches: list[str] = []
+    
     def tab_completer(text: str, state: int) -> Optional[str]:
         """Tab completion handler for readline."""
+        nonlocal completer_matches
         if state == 0:
             # First call - generate completions
             if text.startswith('@'):
@@ -620,13 +624,13 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 completions = complete_file_path(text, config.root)
                 if not completions:
                     completions = complete_symbol(text, config.root)
-                tab_completer.matches = completions
+                completer_matches = completions
             else:
                 # Default to no completion
-                tab_completer.matches = []
+                completer_matches = []
 
         try:
-            return tab_completer.matches[state]
+            return completer_matches[state]
         except (IndexError, AttributeError):
             return None
 
@@ -1000,8 +1004,8 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         result = run_chat_agent(
             task=task_with_warnings, adapter=adapter, config=updated_config
         )
-        if result != 0:
-            return result
+        if result.status != 'completed':
+            return 1
         # Placeholder cost tracking for initial task
         session_cost_cents += 10
         session_context['observations'].append(
@@ -1118,14 +1122,14 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 import subprocess
 
                 try:
-                    result = subprocess.run(
+                    proc_result = subprocess.run(
                         ['git', 'diff', '--color=always'],
                         cwd=config.root,
                         capture_output=True,
                         text=True,
                     )
-                    if result.stdout:
-                        print(result.stdout)
+                    if proc_result.stdout:
+                        print(proc_result.stdout)
                     else:
                         print('[TeaAgent] No changes detected in working directory')
                 except FileNotFoundError:
@@ -1229,16 +1233,16 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                     import subprocess
 
                     try:
-                        result = subprocess.run(
+                        proc_result = subprocess.run(
                             ['git', 'checkout', '--', '.'],
                             cwd=config.root,
                             capture_output=True,
                             text=True,
                         )
-                        if result.returncode == 0:
+                        if proc_result.returncode == 0:
                             print('[TeaAgent] Fallback undo completed')
                         else:
-                            print(f'[TeaAgent] Error: {result.stderr}')
+                            print(f'[TeaAgent] Error: {proc_result.stderr}')
                     except Exception as exc:
                         print(f'[TeaAgent] Error in fallback undo: {exc}')
                 continue

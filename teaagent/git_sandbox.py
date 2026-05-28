@@ -684,9 +684,9 @@ def find_orphaned_sandbox_branches(
 
     # Get active run IDs from background store
     active_run_ids: set[str] = set()
-    if background_store:
+    if background_store is not None:
         try:
-            for record_file in background_store.dir.glob('*.json'):
+            for record_file in background_store.dir.glob('*.json'):  # type: ignore[attr-defined]
                 try:
                     data = json.loads(record_file.read_text(encoding='utf-8'))
                     if data.get('status') not in {'stopped', 'failed', 'completed'}:
@@ -1099,8 +1099,14 @@ Instructions:
 Corrected file content:"""
 
             try:
-                response = adapter.complete(prompt, max_tokens=8192, temperature=0.1)
-                resolved_content = response.strip()
+                from teaagent.llm._types import LLMRequest, LLMMessage
+                request = LLMRequest(
+                    messages=[LLMMessage(role='user', content=prompt)],
+                    max_tokens=8192,
+                    temperature=0.1
+                )
+                response = adapter.complete(request)
+                resolved_content = str(response).strip()
 
                 # Apply resolution
                 if not apply_llm_resolution(root_path, file_path, resolved_content):
@@ -1511,9 +1517,9 @@ class OSSandbox:
             allowed_paths: Additional allowed paths (e.g., temp directories).
         """
         self._root = Path(root).resolve()
-        self._allowed_paths = [str(self._root)]
+        self._allowed_paths: list[str] = [str(self._root)]
         if allowed_paths:
-            self._allowed_paths.extend([Path(p).resolve() for p in allowed_paths])
+            self._allowed_paths.extend([str(Path(p).resolve()) for p in allowed_paths])
 
     def is_path_allowed(self, path: str) -> bool:
         """Check if a path is within allowed sandbox boundaries.

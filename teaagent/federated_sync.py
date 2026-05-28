@@ -300,6 +300,8 @@ class FederatedGraphSync:
         """Apply node addition."""
         if not change.node_id:
             return False
+        if self._graph_store is None:
+            return False
         try:
             self._graph_store.graph.upsert_node(
                 change.node_id,
@@ -313,6 +315,8 @@ class FederatedGraphSync:
     def _apply_node_update(self, change: GraphChange) -> bool:
         """Apply node update."""
         if not change.node_id:
+            return False
+        if self._graph_store is None:
             return False
         try:
             self._graph_store.graph.upsert_node(
@@ -328,6 +332,8 @@ class FederatedGraphSync:
         """Apply node deletion."""
         if not change.node_id:
             return False
+        if self._graph_store is None:
+            return False
         try:
             self._graph_store.graph.delete_node(change.node_id)
             return True
@@ -337,6 +343,8 @@ class FederatedGraphSync:
     def _apply_edge_add(self, change: GraphChange) -> bool:
         """Apply edge addition."""
         if not change.edge_id:
+            return False
+        if self._graph_store is None:
             return False
         try:
             from_id = change.data.get('from')
@@ -357,6 +365,8 @@ class FederatedGraphSync:
     def _apply_edge_delete(self, change: GraphChange) -> bool:
         """Apply edge deletion."""
         if not change.edge_id:
+            return False
+        if self._graph_store is None:
             return False
         try:
             from_id = change.data.get('from')
