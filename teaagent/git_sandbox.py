@@ -460,13 +460,17 @@ class GitBranchSandbox:
                 )
             else:
                 # Normal merge
-                subprocess.run(
-                    ['git', 'merge', self._branch_name],
-                    cwd=self._root,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
+                try:
+                    subprocess.run(
+                        ['git', 'merge', self._branch_name],
+                        cwd=self._root,
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                except subprocess.CalledProcessError:
+                    # Merge failed, check for conflicts
+                    pass
 
             # Check for merge conflicts
             if has_merge_conflicts(self._root):

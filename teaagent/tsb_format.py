@@ -115,8 +115,19 @@ class RedactionFilter:
         """
         result = {}
         for key, value in data.items():
+            # Check if key matches sensitive patterns
+            key_is_sensitive = any(
+                rule.pattern.lower() in key.lower() 
+                for rule in self.rules 
+                if not rule.is_regex
+            )
+            
             if isinstance(value, str):
-                result[key] = self.redact_string(value)
+                # Redact if key is sensitive or value contains sensitive patterns
+                if key_is_sensitive:
+                    result[key] = "[REDACTED]"
+                else:
+                    result[key] = self.redact_string(value)
             elif isinstance(value, dict):
                 result[key] = self.redact_dict(value)
             elif isinstance(value, list):
@@ -458,7 +469,11 @@ class TSBVerifier:
                     return False, f"Audit hash mismatch: expected {manifest_data['attestation']['audit_chain_hash']}, got {audit_hash}"
             
             # Verify signature if requested
-            if verify_signature and manifest_data["attestation"]["author_signature"]:
+            if verify_signature:
+                # Require signature when verification is enabled
+                if not manifest_data["attestation"]["author_signature"]:
+                    return False, "Signature verification requested but bundle is unsigned. Use --allow-unsigned to bypass (unsafe for production)."
+                
                 # Use TSBProvenanceVerifier for verification if available
                 if SIGSTORE_AVAILABLE:
                     try:
@@ -474,9 +489,9 @@ class TSBVerifier:
                     except Exception as exc:
                         return False, f"Provenance verifier error: {exc}"
                 else:
-                    # Fallback: just check that a signature exists
-                    if not manifest_data["attestation"]["author_signature"]:
-                        return False, "Missing author signature"
+                    # Fallback: signature exists but we can't verify it without sigstore
+                    # This is a security risk but better than nothing
+                    pass
             
             return True, "TSB verification successful"
     

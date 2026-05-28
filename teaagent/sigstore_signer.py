@@ -242,17 +242,13 @@ class TSBProvenanceVerifier:
                 return False, f"Sigstore verification failed: {exc}"
         
         elif signer_type == "ssh":
-            # SSH signature verification would go here
-            # For now, we just check that a signature exists
-            if signature:
-                return True, "SSH signature present (verification not implemented)"
-            return False, "Missing SSH signature"
+            # SSH signature verification is not yet implemented
+            # Reject SSH signatures until proper cryptographic verification is available
+            return False, "SSH signature verification not implemented. Use Sigstore keyless signing or implement SSH verification."
         
-        elif signature:
-            # Unknown signer type but signature exists
-            return True, f"Signature present from {signer_type}"
-        
-        return False, "No valid signature found"
+        else:
+            # Unknown signer type - reject for security
+            return False, f"Unsupported signer type: {signer_type}. Only 'sigstore-keyless' is currently supported for verification."
 
 
 # Backward compatibility alias

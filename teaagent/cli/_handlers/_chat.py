@@ -908,8 +908,9 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
         print(f"[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}")
         print(f"[TeaAgent] Remaining budget: ${(max_cost_budget_cents - session_cost_cents) / 100:.2f}")
     
-    # Create initial checkpoint for safe undo
-    create_checkpoint()
+    # Automatic checkpoint creation disabled for data safety
+    # Users should explicitly create checkpoints when needed to avoid hiding changes
+    # create_checkpoint()
     
     # Start file watcher if there are pinned files
     start_file_watcher()
@@ -956,13 +957,10 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             if not user_input:
                 continue
             
-            # Handle shell escape hatch
+            # Handle shell escape hatch - DISABLED for security
+            # Shell escape bypasses approval/audit governance. Use full terminal instead.
             if user_input.startswith('!'):
-                shell_command = user_input[1:].strip()
-                if shell_command:
-                    execute_shell_command(shell_command, config.root)
-                else:
-                    print("[TeaAgent] Usage: !<shell command>")
+                print("[TeaAgent] Error: Shell escape is disabled for security. Use the full terminal to execute shell commands.")
                 continue
             
             # Handle exit commands

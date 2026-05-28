@@ -550,7 +550,6 @@ def _chat(
     defaults: Optional[dict[str, object]] = None,
 ) -> None:
     p = subs.add_parser('chat', help=help)
-    p.add_argument('task', nargs='?', default=None, help='Initial task to execute (optional).')
     add_agent_run_arguments(p)
     base_defaults = {'func': handler, 'agent_command': 'chat'}
     if defaults:
