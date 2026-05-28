@@ -6,7 +6,9 @@ and other sandbox types, with alerting on resource violations.
 
 from __future__ import annotations
 
+import errno
 import logging
+import os
 import subprocess
 import time
 from dataclasses import dataclass
@@ -286,3 +288,32 @@ def monitor_container(
 
     monitor.stop()
     return usage_snapshots
+
+
+def is_process_alive(pid: int) -> bool:
+    """Check if a process with the given PID is alive.
+
+    Uses os.kill with signal 0 to check process existence without sending a signal.
+    This is the standard POSIX way to check if a process exists.
+
+    Args:
+        pid: Process ID to check
+
+    Returns:
+        True if process is alive, False otherwise
+    """
+    if pid <= 0:
+        return False
+
+    try:
+        os.kill(pid, 0)  # Signal 0 doesn't actually send a signal
+        return True
+    except OSError as err:
+        if err.errno == errno.ESRCH:  # No such process
+            return False
+        elif err.errno == errno.EPERM:  # Permission denied, but process exists
+            return True
+        else:
+            # Other error, conservatively assume process might exist
+            logger.warning(f'Unexpected error checking PID {pid}: {err}')
+            return False

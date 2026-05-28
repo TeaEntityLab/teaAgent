@@ -54,6 +54,21 @@ _GRAPHQLITE_SCHEMA_MIGRATIONS: tuple[SchemaMigration, ...] = (
         description='Index on EDGE(relation) for relationship-type traversal',
         sql='CREATE INDEX IF NOT EXISTS idx_edge_relation ON EDGE(relation)',
     ),
+    SchemaMigration(
+        version=6,
+        description='Create prefetch_cache table for time-based retrieval optimization',
+        sql=(
+            'CREATE TABLE IF NOT EXISTS prefetch_cache (\n'
+            '    doc_id TEXT PRIMARY KEY,\n'
+            '    text TEXT NOT NULL,\n'
+            '    source TEXT NOT NULL,\n'
+            '    created_at TEXT NOT NULL,\n'
+            '    metadata TEXT\n'
+            ');\n'
+            'CREATE INDEX IF NOT EXISTS idx_prefetch_created_at ON prefetch_cache(created_at);\n'
+            'CREATE INDEX IF NOT EXISTS idx_prefetch_source ON prefetch_cache(source);'
+        ),
+    ),
 )
 
 

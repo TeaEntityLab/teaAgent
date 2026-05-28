@@ -223,21 +223,48 @@ class ContextCompactor:
 
 @dataclass
 class CompactionManager:
-    """Manages auto-compaction based on context usage.
+    """Manages auto-compaction based on context usage with local compression support.
 
     Implements Claude Code-style traffic light zones:
     - Green (0-75%): Normal operation
     - Yellow (75-92%): Hints to user, prepare for compaction
     - Red (92%+): Automatic compaction triggered
+
+    Enhanced with automatic local compression of old observations.
     """
 
     compactor: ContextCompactor = field(default_factory=ContextCompactor)
     max_context_tokens: int = 200000
+    auto_compact_enabled: bool = True
+    check_interval: int = 10  # Check every N operations
+    operation_count: int = 0
 
     def check_and_compact(
-        self, context: dict[str, Any], current_tokens: int
+        self, context: dict[str, Any], current_tokens: Optional[int] = None
     ) -> Optional[CompactionResult]:
-        """Check usage and trigger compaction if needed."""
+        """Check usage and trigger compaction if needed.
+
+        Args:
+            context: Current context dictionary
+            current_tokens: Optional current token count (estimated if None)
+
+        Returns:
+            CompactionResult if compaction was triggered, None otherwise
+        """
+        if not self.auto_compact_enabled:
+            return None
+
+        # Estimate tokens if not provided
+        if current_tokens is None:
+            self.operation_count += 1
+            # Only check interval when estimating tokens automatically
+            if self.operation_count % self.check_interval != 0:
+                return None
+            current_tokens = self.compactor.estimate_tokens(str(context))
+        else:
+            # When tokens are explicitly provided, always check (bypass interval)
+            self.operation_count += 1
+
         if not self.compactor.should_compact(current_tokens, self.max_context_tokens):
             return None
 
