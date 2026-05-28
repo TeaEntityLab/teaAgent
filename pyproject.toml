@@ -22,10 +22,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = [
-    "tomli>=2.0.1; python_version < '3.11'",
-    "watchdog>=3.0.0",
-]
+dependencies = []
 
 [tool.setuptools.packages.find]
 include = ["teaagent*"]
@@ -34,6 +31,10 @@ include = ["teaagent*"]
 teaagent = ["py.typed"]
 
 [project.optional-dependencies]
+core = [
+    "tomli>=2.0.1; python_version < '3.11'",
+    "watchdog>=3.0.0",
+]
 tui = [
     "prompt-toolkit>=3.0.0",
 ]
