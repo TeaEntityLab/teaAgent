@@ -93,7 +93,9 @@ class TournamentBranchManager:
                 check=True,
             )
         except subprocess.CalledProcessError as exc:
-            raise RuntimeError(f'Failed to create branch {branch_name}: {exc.stderr}') from exc
+            raise RuntimeError(
+                f'Failed to create branch {branch_name}: {exc.stderr}'
+            ) from exc
 
     def cleanup_branches(self) -> None:
         """Delete all tournament branches and return to original branch."""

@@ -119,16 +119,18 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True), \
-             patch('builtins.input', return_value='d'):
-                with self.assertRaises(ToolPermissionError) as cm:
-                    policy.assert_allowed(
-                        tool_name='workspace_write_file',
-                        call_id='call-123',
-                        destructive=True,
-                        jit_state=jit_state,
-                    )
-                self.assertIn('was denied by user', str(cm.exception))
+        with (
+            patch('sys.stdin.isatty', return_value=True),
+            patch('builtins.input', return_value='d'),
+        ):
+            with self.assertRaises(ToolPermissionError) as cm:
+                policy.assert_allowed(
+                    tool_name='workspace_write_file',
+                    call_id='call-123',
+                    destructive=True,
+                    jit_state=jit_state,
+                )
+            self.assertIn('was denied by user', str(cm.exception))
 
     def test_jit_prompt_explain_choice(self) -> None:
         """Test JIT prompt with explain choice."""
@@ -136,87 +138,95 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         jit_state = JITApprovalState()
         arguments = {'path': '/tmp/test.txt'}
 
-        with patch('sys.stdin.isatty', return_value=True), \
-             patch('builtins.input', return_value='e'):
-                with self.assertRaises(ToolPermissionError) as cm:
-                    policy.assert_allowed(
-                        tool_name='workspace_write_file',
-                        call_id='call-123',
-                        destructive=True,
-                        arguments=arguments,
-                        jit_state=jit_state,
-                    )
-                self.assertIn('requires approval', str(cm.exception))
-                self.assertIn('workspace_write_file', str(cm.exception))
-                self.assertIn('call-123', str(cm.exception))
+        with (
+            patch('sys.stdin.isatty', return_value=True),
+            patch('builtins.input', return_value='e'),
+        ):
+            with self.assertRaises(ToolPermissionError) as cm:
+                policy.assert_allowed(
+                    tool_name='workspace_write_file',
+                    call_id='call-123',
+                    destructive=True,
+                    arguments=arguments,
+                    jit_state=jit_state,
+                )
+            self.assertIn('requires approval', str(cm.exception))
+            self.assertIn('workspace_write_file', str(cm.exception))
+            self.assertIn('call-123', str(cm.exception))
 
     def test_jit_prompt_once_choice(self) -> None:
         """Test JIT prompt with once choice."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True), \
-             patch('builtins.input', return_value='o'):
-                # Should not raise error
-                policy.assert_allowed(
-                    tool_name='workspace_write_file',
-                    call_id='call-123',
-                    destructive=True,
-                    jit_state=jit_state,
-                )
-                # Call ID should be approved
-                self.assertTrue(jit_state.is_call_approved('call-123'))
+        with (
+            patch('sys.stdin.isatty', return_value=True),
+            patch('builtins.input', return_value='o'),
+        ):
+            # Should not raise error
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='call-123',
+                destructive=True,
+                jit_state=jit_state,
+            )
+            # Call ID should be approved
+            self.assertTrue(jit_state.is_call_approved('call-123'))
 
     def test_jit_prompt_session_choice(self) -> None:
         """Test JIT prompt with session choice."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True), \
-             patch('builtins.input', return_value='s'):
-                # Should not raise error
-                policy.assert_allowed(
-                    tool_name='workspace_write_file',
-                    call_id='call-123',
-                    destructive=True,
-                    jit_state=jit_state,
-                )
-                # Tool should be session-approved
-                self.assertTrue(
-                    jit_state.is_tool_session_approved('workspace_write_file')
-                )
+        with (
+            patch('sys.stdin.isatty', return_value=True),
+            patch('builtins.input', return_value='s'),
+        ):
+            # Should not raise error
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='call-123',
+                destructive=True,
+                jit_state=jit_state,
+            )
+            # Tool should be session-approved
+            self.assertTrue(jit_state.is_tool_session_approved('workspace_write_file'))
 
     def test_jit_prompt_interrupted(self) -> None:
         """Test JIT prompt with keyboard interrupt."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
 
-        with patch('sys.stdin.isatty', return_value=True), \
-             patch('builtins.input', side_effect=KeyboardInterrupt):
-                with self.assertRaises(ToolPermissionError) as cm:
-                    policy.assert_allowed(
-                        tool_name='workspace_write_file',
-                        call_id='call-123',
-                        destructive=True,
-                        jit_state=jit_state,
-                    )
-                self.assertIn('was denied by user', str(cm.exception))
-
-    def test_jit_prompt_invalid_then_valid(self) -> None:
-        """Test JIT prompt with invalid input followed by valid input."""
-        policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
-        jit_state = JITApprovalState()
-
-        with patch('sys.stdin.isatty', return_value=True), \
-             patch('builtins.input', side_effect=['x', 'y', 'o']):
-                # Should not raise error after valid input
+        with (
+            patch('sys.stdin.isatty', return_value=True),
+            patch('builtins.input', side_effect=KeyboardInterrupt),
+        ):
+            with self.assertRaises(ToolPermissionError) as cm:
                 policy.assert_allowed(
                     tool_name='workspace_write_file',
                     call_id='call-123',
                     destructive=True,
                     jit_state=jit_state,
                 )
-                self.assertTrue(jit_state.is_call_approved('call-123'))
+            self.assertIn('was denied by user', str(cm.exception))
+
+    def test_jit_prompt_invalid_then_valid(self) -> None:
+        """Test JIT prompt with invalid input followed by valid input."""
+        policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
+        jit_state = JITApprovalState()
+
+        with (
+            patch('sys.stdin.isatty', return_value=True),
+            patch('builtins.input', side_effect=['x', 'y', 'o']),
+        ):
+            # Should not raise error after valid input
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='call-123',
+                destructive=True,
+                jit_state=jit_state,
+            )
+            self.assertTrue(jit_state.is_call_approved('call-123'))
 
     def test_non_destructive_always_allowed(self) -> None:
         """Test that non-destructive tools are always allowed."""

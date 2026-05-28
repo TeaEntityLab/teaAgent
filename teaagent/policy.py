@@ -83,11 +83,7 @@ def _verify_ssh_signature(
     # Check if we have a public key for this peer
     # In production, you'd load SSH public keys from ~/.ssh/authorized_keys
     # or a configured peer registry
-    if not peer_public_keys:
-        # No public keys configured - cannot verify
-        return False
-
-    return True
+    return bool(peer_public_keys)
 
 
 @dataclass(frozen=True)
@@ -97,7 +93,9 @@ class MultiSigQuorumConfig:
     enabled: bool = False
     required_approvals: int = 2  # Number of peer signatures required
     peer_agent_ids: list[str] = field(default_factory=list)  # Known peer agent IDs
-    peer_public_keys: dict[str, str] = field(default_factory=dict)  # Mapping of peer_id to SSH public key
+    peer_public_keys: dict[str, str] = field(
+        default_factory=dict
+    )  # Mapping of peer_id to SSH public key
     high_risk_patterns: list[str] = field(
         default_factory=list
     )  # Patterns triggering multi-sig
@@ -206,8 +204,11 @@ class ApprovalPolicy:
                 self.approval_store.consume_scoped_approval(matching_record.record_id)
                 return
         # Check multi-sig quorum if enabled and this is a high-risk operation
-        if (self.multi_sig_config.enabled and self._is_high_risk_operation(tool_name, arguments)
-                and self._check_multi_sig_quorum(tool_name, call_id, arguments)):
+        if (
+            self.multi_sig_config.enabled
+            and self._is_high_risk_operation(tool_name, arguments)
+            and self._check_multi_sig_quorum(tool_name, call_id, arguments)
+        ):
             return
             # If multi-sig fails, proceed to normal approval flow
         # Legacy Fallback: bare call_id check for explicit CLI --approve-call-id backward compatibility.

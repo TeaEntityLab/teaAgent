@@ -491,7 +491,7 @@ class FederatedGraphSync:
         Returns:
             List of signature messages received from peers.
         """
-        signatures = []
+        signatures: list[ApprovalSignatureMessage] = []
         approvals_dir = self._root / '.teaagent' / 'pending_approvals'
 
         if not approvals_dir.exists():

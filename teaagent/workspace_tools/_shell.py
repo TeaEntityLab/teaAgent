@@ -89,7 +89,9 @@ def run_shell_inspect(
     return run_shell_argv(config, shlex.split(command), timeout_seconds=timeout)
 
 
-def classify_shell_command_policy(command: str, workspace_root: Path | None = None) -> str:
+def classify_shell_command_policy(
+    command: str, workspace_root: Path | None = None
+) -> str:
     try:
         parts = shlex.split(command.strip())
     except ValueError:
@@ -114,12 +116,8 @@ _INSPECT_GIT_SUBCOMMANDS = frozenset(
 _DANGEROUS_FIND_FLAGS = frozenset(
     {'-delete', '-exec', '-execdir', '-ok', '-okdir', '-fprint', '-fprint0', '-fprintf'}
 )
-_DANGEROUS_RG_FLAGS = frozenset(
-    {'--pre', '--pre-open', '--open-files-in-viewer', '-O'}
-)
-_DANGEROUS_GIT_FLAGS = frozenset(
-    {'--output', '-o'}
-)
+_DANGEROUS_RG_FLAGS = frozenset({'--pre', '--pre-open', '--open-files-in-viewer', '-O'})
+_DANGEROUS_GIT_FLAGS = frozenset({'--output', '-o'})
 
 
 def _is_allowed_inspect_argv(parts: list[str]) -> bool:
@@ -127,7 +125,11 @@ def _is_allowed_inspect_argv(parts: list[str]) -> bool:
     if executable in _INSPECT_EXECUTABLES:
         # Check for dangerous flags in allowed executables
         if executable == 'rg':
-            return not any(arg in _DANGEROUS_RG_FLAGS or any(arg.startswith(dangerous) for dangerous in _DANGEROUS_RG_FLAGS) for arg in parts[1:])
+            return not any(
+                arg in _DANGEROUS_RG_FLAGS
+                or any(arg.startswith(dangerous) for dangerous in _DANGEROUS_RG_FLAGS)
+                for arg in parts[1:]
+            )
         return True
     if executable == 'find':
         return not any(arg in _DANGEROUS_FIND_FLAGS for arg in parts[1:])
@@ -135,7 +137,11 @@ def _is_allowed_inspect_argv(parts: list[str]) -> bool:
         if any(arg.startswith('-c') or arg.startswith('--config') for arg in parts[1:]):
             return False
         # Check for dangerous git flags (both exact match and prefix match)
-        if any(arg in _DANGEROUS_GIT_FLAGS or any(arg.startswith(dangerous) for dangerous in _DANGEROUS_GIT_FLAGS) for arg in parts[1:]):
+        if any(
+            arg in _DANGEROUS_GIT_FLAGS
+            or any(arg.startswith(dangerous) for dangerous in _DANGEROUS_GIT_FLAGS)
+            for arg in parts[1:]
+        ):
             return False
         return parts[1] in _INSPECT_GIT_SUBCOMMANDS
     return False

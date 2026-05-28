@@ -183,9 +183,7 @@ class TSBBuilderTests(unittest.TestCase):
             )
 
             builder = TSBBuilder(skill_path, audit_path)
-            builder.build_tsb(
-                output_path, metadata, skip_audit_verification=True
-            )
+            builder.build_tsb(output_path, metadata, skip_audit_verification=True)
 
             # Verify the TSB contains redacted audit log
             with tarfile.open(output_path, 'r:gz') as tar:

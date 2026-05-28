@@ -1231,7 +1231,9 @@ class ParallelExperimentStack:
         # Create sandbox for each option
         for option in self._options:
             GitBranchSandbox(self._root, run_id=f'{self._run_id}-{option}')
-            self._sandboxes[option] = GitBranchSandbox(self._root, run_id=f'{self._run_id}-{option}')
+            self._sandboxes[option] = GitBranchSandbox(
+                self._root, run_id=f'{self._run_id}-{option}'
+            )
             results[option] = self._sandboxes[option].start(auto_stash=auto_stash)
 
         return results

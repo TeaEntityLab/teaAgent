@@ -100,26 +100,28 @@ class SigstoreSignerTests(unittest.TestCase):
             bundle_path = Path(tmp) / 'bundle.tsb'
             bundle_path.write_bytes(b'test bundle content')
 
-            with patch('teaagent.sigstore_signer.Verifier') as mock_verifier_cls, \
-                 patch('teaagent.sigstore_signer.Identity') as mock_identity_cls:
-                    mock_verifier = Mock()
-                    mock_verifier.verify.return_value = Mock()
-                    mock_verifier_cls.production.return_value = mock_verifier
+            with (
+                patch('teaagent.sigstore_signer.Verifier') as mock_verifier_cls,
+                patch('teaagent.sigstore_signer.Identity') as mock_identity_cls,
+            ):
+                mock_verifier = Mock()
+                mock_verifier.verify.return_value = Mock()
+                mock_verifier_cls.production.return_value = mock_verifier
 
-                    signer = SigstoreSigner()
-                    result = signer.verify(
-                        bundle_path,
-                        signature='dGVzdF9zaWduYXR1cmU=',
-                        certificate='test_certificate',
-                        identity='test@example.com',
-                        issuer='https://accounts.google.com',
-                    )
+                signer = SigstoreSigner()
+                result = signer.verify(
+                    bundle_path,
+                    signature='dGVzdF9zaWduYXR1cmU=',
+                    certificate='test_certificate',
+                    identity='test@example.com',
+                    issuer='https://accounts.google.com',
+                )
 
-                    self.assertTrue(result)
-                    mock_identity_cls.assert_called_once_with(
-                        identity='test@example.com',
-                        issuer='https://accounts.google.com',
-                    )
+                self.assertTrue(result)
+                mock_identity_cls.assert_called_once_with(
+                    identity='test@example.com',
+                    issuer='https://accounts.google.com',
+                )
 
 
 @unittest.skipIf(not SIGSTORE_AVAILABLE, 'sigstore-python not installed')

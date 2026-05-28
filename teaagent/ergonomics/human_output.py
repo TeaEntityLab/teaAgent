@@ -232,7 +232,10 @@ def format_ascii_table(
     sep = '+' + '+'.join('-' * (widths[key] + 2) for key in keys) + '+'
     header_line = (
         '|'
-        + '|'.join(f' {header:<{widths[key]}} ' for key, header in zip(keys, headers, strict=True))
+        + '|'.join(
+            f' {header:<{widths[key]}} '
+            for key, header in zip(keys, headers, strict=True)
+        )
         + '|'
     )
 

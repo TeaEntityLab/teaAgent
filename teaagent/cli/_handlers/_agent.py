@@ -128,6 +128,7 @@ def _save_git_sandbox_consent(root: str | Path, value: str) -> None:
     config = {}
     if json_path.is_file():
         from contextlib import suppress
+
         with suppress(Exception):
             config = json.loads(json_path.read_text(encoding='utf-8'))
     config['git_sandbox_consent'] = value

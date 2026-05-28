@@ -738,9 +738,7 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
             result = store.check_security_health(fix_permissions=True)
             mode_after = teaagent_dir.stat().st_mode & 0o777
             self.assertEqual(mode_after, 0o700)
-            next(
-                c for c in result['checks'] if c['name'] == 'teaagent_dir_mode'
-            )
+            next(c for c in result['checks'] if c['name'] == 'teaagent_dir_mode')
 
 
 class MultiSigQuorumTests(unittest.TestCase):

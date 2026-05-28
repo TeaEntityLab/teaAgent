@@ -18,6 +18,7 @@ if sys.version_info >= (3, 11):
     import tomllib
 else:
     from contextlib import suppress
+
     with suppress(ImportError):
         import tomli as tomllib  # type: ignore
 
