@@ -671,7 +671,7 @@ Local dashboard for workflow state, focus stack, and JIT approvals:
 teaagent control-plane serve --host 127.0.0.1 --port 8765
 ```
 
-Opens `teaagent/html_dashboard/` with SSE streams (`/api/workflow/stream`, `/api/focus/stream`, `/api/jit/diff`) and JIT approve/reject endpoints.
+Opens `teaagent/html_dashboard/` with SSE streams (`/api/workflow/stream`, `/api/focus/stream`, `/api/jit/diff`) and JIT approve/reject endpoints. The serve command wires `ToolPermissionManager(approval_callback=...)` so dashboard approvals grant tool access for the session.
 
 ## Preflight and Daily Brief
 

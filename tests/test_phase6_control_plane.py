@@ -16,7 +16,12 @@ from teaagent.jit_approval_server import (
     ApprovalStatus,
     JITApprovalServer,
 )
-from teaagent.tool_permissions import PermissionRequest, ToolPermissionManager
+from teaagent.tool_permissions import (
+    PermissionRequest,
+    ToolPermission,
+    ToolPermissionManager,
+    ToolSafetyLevel,
+)
 
 
 def _pending_record(
@@ -109,3 +114,65 @@ def test_control_plane_serves_dashboard_and_sse() -> None:
         assert updated.status == ApprovalStatus.APPROVED
     finally:
         server.stop()
+
+
+def test_jit_approve_invalid_json_returns_400() -> None:
+    state = ControlPlaneState()
+    manager = ToolPermissionManager(approval_callback=lambda req: True)
+    jit = JITApprovalServer(manager, timeout_seconds=60)
+    server = ControlPlaneServer(state=state, jit_server=jit)
+    server.start()
+    try:
+        conn = http.client.HTTPConnection(server.host, server.port, timeout=5)
+        conn.request(
+            'POST',
+            '/api/jit/approve',
+            body=b'{not-json',
+            headers={'Content-Type': 'application/json'},
+        )
+        resp = conn.getresponse()
+        assert resp.status == 400
+        payload = json.loads(resp.read().decode('utf-8'))
+        assert 'invalid JSON' in payload['error']
+        conn.close()
+    finally:
+        server.stop()
+
+
+def test_jit_approve_with_approval_callback_grants_tool_access() -> None:
+    """Mirror CLI wiring: dashboard approve must grant JIT tool access."""
+    manager = ToolPermissionManager(approval_callback=lambda req: True)
+    manager.register_tool_permission(
+        ToolPermission(
+            name='workspace_write_file',
+            safety_level=ToolSafetyLevel.DESTRUCTIVE,
+            requires_approval=True,
+        )
+    )
+    manager.grant_agent_tool_access(
+        'agent-a', ('workspace_write_file',), allow_destructive=True
+    )
+    jit = JITApprovalServer(manager, timeout_seconds=60)
+    record = _pending_record(jit)
+
+    denied_before, _ = manager.check_tool_access('agent-a', 'workspace_write_file')
+    assert denied_before is False
+
+    state = ControlPlaneState()
+    server = ControlPlaneServer(state=state, jit_server=jit)
+    server.start()
+    try:
+        approve_body = json.dumps({'request_id': record.request_id}).encode('utf-8')
+        approve_req = urllib.request.Request(
+            f'{server.base_url}/api/jit/approve',
+            data=approve_body,
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        with urllib.request.urlopen(approve_req) as resp:
+            assert json.loads(resp.read().decode('utf-8'))['status'] == 'approved'
+    finally:
+        server.stop()
+
+    allowed_after, _ = manager.check_tool_access('agent-a', 'workspace_write_file')
+    assert allowed_after is True
