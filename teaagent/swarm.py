@@ -29,7 +29,6 @@ from teaagent.consensus import (
     VotingThreshold,
     task_matches_pre_approval,
 )
-from teaagent.resource_monitor import is_process_alive
 from teaagent.sandbox import GitBranchSandbox
 from teaagent.subagents._approval_queue import get_approval_queue
 
@@ -199,10 +198,21 @@ class Subagent:
         self._subagent_manager = subagent_manager
         self._batch_index = batch_index
         self._approval_lineage: list[dict[str, Any]] = []
+        # Thread-liveness tracking for heartbeat monitoring
+        self.is_running: bool = False
+        self.last_heartbeat: float = time.time()
 
     def execute(self) -> SubagentResult:
         """Execute the subagent task in isolated sandbox with centralized approval lineage."""
         import time
+
+        self.is_running = True
+        self.last_heartbeat = time.time()
+
+        if self._subagent_manager and hasattr(self._subagent_manager, '_swarm_manager'):
+            self._subagent_manager._swarm_manager.register_subagent_heartbeat(
+                self._task.task_id, self
+            )
 
         start_time = time.perf_counter()
 
@@ -223,9 +233,11 @@ class Subagent:
             )
 
         try:
+            self.last_heartbeat = time.time()
             output = self._execute_task_with_centralized_approval()
 
             execution_time = (time.perf_counter() - start_time) * 1000
+            self.is_running = False
 
             success = output.get('status') == 'completed'
             return SubagentResult(
@@ -239,6 +251,7 @@ class Subagent:
             )
         except Exception as exc:
             execution_time = (time.perf_counter() - start_time) * 1000
+            self.is_running = False
             return SubagentResult(
                 task_id=self._task.task_id,
                 success=False,
@@ -353,10 +366,11 @@ class SwarmManager:
         self._control_plane_state = control_plane_state
         self._control_plane_tenant_id = control_plane_tenant_id
         self._lock_timeout_seconds = lock_timeout_seconds
-        self._subagent_pids: dict[str, int] = {}
+        self._subagent_pids: dict[str, Any] = {}
         self._subagent_heartbeats: dict[str, float] = {}
         self._heartbeat_thread: Optional[threading.Thread] = None
         self._heartbeat_stop_event = threading.Event()
+        self._heartbeat_lock = threading.Lock()
         self._parent_run_id: Optional[str] = None
 
         if self._enable_consensus:
@@ -446,26 +460,41 @@ class SwarmManager:
             self._heartbeat_thread.join(timeout=5)
             self._heartbeat_thread = None
 
+    def register_subagent_heartbeat(self, task_id: str, subagent_ref: Any) -> None:
+        """Register subagent reference for thread-liveness monitoring."""
+        with self._heartbeat_lock:
+            self._subagent_heartbeats[task_id] = time.time()
+            self._subagent_pids[task_id] = subagent_ref
+
     def _heartbeat_monitor_loop(self) -> None:
-        """Background loop to monitor subagent heartbeats and detect timeouts."""
+        """Background loop to monitor subagent thread execution and detect hangs."""
         while not self._heartbeat_stop_event.wait(5):  # Check every 5 seconds
             current_time = time.time()
-            for task_id, last_heartbeat in list(self._subagent_heartbeats.items()):
-                if current_time - last_heartbeat > self._lock_timeout_seconds:
-                    pid = self._subagent_pids.get(task_id)
-                    if pid and not is_process_alive(pid):
+            with self._heartbeat_lock:
+                for task_id, last_heartbeat in list(self._subagent_heartbeats.items()):
+                    subagent_ref = self._subagent_pids.get(task_id)
+                    # If subagent stopped running, remove from tracking
+                    if subagent_ref is not None and not getattr(
+                        subagent_ref, 'is_running', False
+                    ):
+                        self._subagent_heartbeats.pop(task_id, None)
+                        self._subagent_pids.pop(task_id, None)
+                        continue
+
+                    if current_time - last_heartbeat > self._lock_timeout_seconds:
                         logger.warning(
-                            f'Subagent {task_id} (PID {pid}) appears dead, '
+                            f'Subagent thread hang detected: {task_id} has not checked in for '
+                            f'{current_time - last_heartbeat:.1f} seconds, '
                             f'timeout after {self._lock_timeout_seconds}s'
                         )
-                        # Mark as failed and remove from tracking
                         self._subagent_heartbeats.pop(task_id, None)
                         self._subagent_pids.pop(task_id, None)
 
     def _update_subagent_heartbeat(self, task_id: str, pid: int) -> None:
-        """Update heartbeat timestamp for a subagent."""
-        self._subagent_pids[task_id] = pid
-        self._subagent_heartbeats[task_id] = time.time()
+        """Update heartbeat timestamp for a subagent (legacy, kept for compat)."""
+        with self._heartbeat_lock:
+            self._subagent_pids[task_id] = pid
+            self._subagent_heartbeats[task_id] = time.time()
 
     def execute_swarm(self) -> SwarmReport:
         """Execute all subagents in parallel and collect results."""

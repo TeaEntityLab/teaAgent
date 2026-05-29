@@ -120,16 +120,29 @@ class ContextBus:
         *,
         max_retries: int = 5,
         base_delay: float = 0.1,
-    ) -> None:
-        """Execute a SQL statement with exponential backoff on lock contention."""
+    ) -> sqlite3.Cursor:
+        """Execute a SQL statement with exponential backoff on lock contention.
+
+        Returns:
+            Cursor (potentially a new cursor after a reconnect).
+        """
         for attempt in range(max_retries):
             try:
                 cursor.execute(sql, params)
-                return
+                return cursor
             except sqlite3.DatabaseError as exc:
-                logger.error(f'SQLite database error, attempting reconnect: {exc}')
+                if attempt == max_retries - 1:
+                    logger.error(
+                        f'SQLite database error failed after reconnect attempts: {exc}'
+                    )
+                    raise
+                logger.warning(
+                    f'SQLite database error (attempt {attempt + 1}/{max_retries}), reconnecting: {exc}'
+                )
                 self._reconnect()
-                raise
+                assert self._connection is not None
+                cursor = self._connection.cursor()
+                time.sleep(base_delay * (2**attempt) + random.uniform(0, 0.05))
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
                     raise
@@ -145,6 +158,10 @@ class ContextBus:
                 )
                 time.sleep(delay)
 
+        raise RuntimeError(
+            'Unexpected: _execute_with_retry loop exited without returning or raising'
+        )
+
     def _commit_with_retry(
         self,
         conn: sqlite3.Connection,
@@ -158,9 +175,16 @@ class ContextBus:
                 conn.commit()
                 return
             except sqlite3.DatabaseError as exc:
-                logger.error(f'SQLite database error, attempting reconnect: {exc}')
+                if attempt == max_retries - 1:
+                    logger.error(f'SQLite commit database error failed: {exc}')
+                    raise
+                logger.warning(
+                    f'SQLite commit database error (attempt {attempt + 1}/{max_retries}), reconnecting: {exc}'
+                )
                 self._reconnect()
-                raise
+                assert self._connection is not None
+                conn = self._connection
+                time.sleep(base_delay * (2**attempt) + random.uniform(0, 0.05))
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
                     raise
@@ -192,7 +216,7 @@ class ContextBus:
         logger.warning('Reconnected to context bus database')
 
     def publish_delta(self, delta: DeltaCard) -> None:
-        """Publish a Delta card to the bus.
+        """Publish a Delta card to the bus ensuring no transactions are leaked.
 
         Args:
             delta: DeltaCard to publish.
@@ -203,25 +227,31 @@ class ContextBus:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
 
-            self._execute_with_retry(
-                cursor,
-                """
-                INSERT OR REPLACE INTO delta_cards
-                (delta_id, workflow_id, delta_type, source_agent, content, timestamp, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    delta.delta_id,
-                    self._workflow_id,
-                    delta.delta_type.value,
-                    delta.source_agent,
-                    delta.content,
-                    delta.timestamp,
-                    json.dumps(delta.metadata),
-                ),
-            )
-            self._commit_with_retry(conn)
-            logger.info(f'Published Delta {delta.delta_id} from {delta.source_agent}')
+            try:
+                self._execute_with_retry(
+                    cursor,
+                    """
+                    INSERT OR REPLACE INTO delta_cards
+                    (delta_id, workflow_id, delta_type, source_agent, content, timestamp, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        delta.delta_id,
+                        self._workflow_id,
+                        delta.delta_type.value,
+                        delta.source_agent,
+                        delta.content,
+                        delta.timestamp,
+                        json.dumps(delta.metadata),
+                    ),
+                )
+                self._commit_with_retry(conn)
+                logger.info(
+                    f'Published Delta {delta.delta_id} from {delta.source_agent}'
+                )
+            except sqlite3.Error:
+                conn.rollback()
+                raise
 
     def subscribe_deltas(
         self,
@@ -262,7 +292,7 @@ class ContextBus:
 
             query += ' ORDER BY timestamp DESC'
 
-            cursor.execute(query, params)
+            cursor = self._execute_with_retry(cursor, query, tuple(params))
             rows = cursor.fetchall()
 
             deltas = []
@@ -353,7 +383,7 @@ class ContextBus:
             if conn is None:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
-            self._execute_with_retry(
+            cursor = self._execute_with_retry(
                 cursor,
                 'DELETE FROM delta_cards WHERE timestamp < ?',
                 (cutoff_time,),
@@ -375,7 +405,8 @@ class ContextBus:
             if conn is None:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
-            cursor.execute(
+            cursor = self._execute_with_retry(
+                cursor,
                 'SELECT COUNT(*) FROM delta_cards WHERE workflow_id = ?',
                 (self._workflow_id,),
             )

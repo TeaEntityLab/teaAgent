@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+import logging
 import re
 import shlex
 import sys
@@ -17,8 +19,7 @@ from teaagent.read_only_gate import read_only_runtime_block_reason
 if TYPE_CHECKING:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-# Sentinel: False until a real cryptography library is integrated.
-_SSH_VERIFICATION_IMPLEMENTED = True
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -53,6 +54,10 @@ class PeerSignature:
     signature: str
     timestamp: float
     ssh_key_id: Optional[str] = None
+
+
+# Sentinel: False until a real cryptography library is integrated.
+_SSH_VERIFICATION_IMPLEMENTED = True
 
 
 def _verify_ssh_signature(
@@ -521,10 +526,9 @@ class ApprovalPolicy:
             self.multi_sig_config.peer_agent_ids,
         )
 
-        # Collect signatures from peers
-        signature_messages = sync.collect_approval_signatures(
-            request.request_id,
-            timeout_seconds=self.multi_sig_config.timeout_seconds,
+        # Collect signatures from peers — offload async to avoid event loop starvation
+        signature_messages = self._run_async_signature_collection(
+            sync, request.request_id
         )
 
         # Convert signature messages to PeerSignature objects with verification
@@ -554,6 +558,37 @@ class ApprovalPolicy:
             peer_signatures.append(peer_sig)
 
         return peer_signatures
+
+    def _run_async_signature_collection(
+        self,
+        sync: Any,
+        request_id: str,
+    ) -> Any:
+        """Run async signature collection without starving the event loop.
+
+        Detects whether an event loop is active and dispatches accordingly:
+        - If called from the event loop thread, uses a new event loop to avoid deadlock.
+        - If another thread has a running loop, offloads via run_coroutine_threadsafe.
+        - Otherwise, runs the coroutine in a fresh event loop.
+        """
+        coro = sync.collect_approval_signatures(
+            request_id,
+            timeout_seconds=self.multi_sig_config.timeout_seconds,
+        )
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            # We are on the event loop thread — run_coroutine_threadsafe + result()
+            # would block the event loop. Create a fresh loop.
+            new_loop = asyncio.new_event_loop()
+            try:
+                return new_loop.run_until_complete(coro)
+            finally:
+                new_loop.close()
+        return asyncio.run(coro)
 
 
 def parse_permission_mode(value: str) -> PermissionMode:

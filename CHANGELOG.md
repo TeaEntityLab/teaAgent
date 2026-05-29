@@ -4,6 +4,19 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Oracle Review Fixes (7 concurrency/architecture fixes)**:
+  - **Context Bus**: `_execute_with_retry` now returns `sqlite3.Cursor` — callers (`subscribe_deltas`, `get_delta_count`, `cleanup_old_deltas`) use the reconnected cursor for `fetchall()`/`fetchone()`/`rowcount` instead of the stale pre-reconnect cursor; `except Exception` narrowed to `except sqlite3.Error` in `publish_delta`
+  - **Swarm**: `register_subagent_heartbeat` stores subagent reference directly instead of `id(subagent_ref)` (fixes `getattr(int, 'is_running', False)` always returning False); added `_heartbeat_lock` for thread-safe access to heartbeat dicts
+  - **Policy**: `_run_async_signature_collection` creates a new event loop when called from the event loop thread — prevents `run_coroutine_threadsafe` + `future.result()` deadlock
+  - **Workflow Engine**: `resume_workflow` now acquires `self._workflow_lock` and sets up `UndoJournal` + rollback check (matching `execute_workflow` behavior)
+
+- **Deeper Concurrency Audit (11 fixes)**:
+  - **Context Bus**: `_execute_with_retry` / `_commit_with_retry` now retry `DatabaseError` with reconnect + exponential backoff instead of immediate re-raise; `publish_delta` added rollback on commit failure to prevent transaction leaks; `subscribe_deltas` / `get_delta_count` SELECTs now use `_execute_with_retry` for lock-contention safety
+  - **Federated Sync**: `collect_approval_signatures` converted from synchronous `time.sleep()` polling to `async def` with `asyncio.sleep()`, preventing 5-minute asyncio event loop starvation during peer signature collection
+  - **Policy**: `_collect_peer_signatures` dispatches async signature collection via `run_coroutine_threadsafe` (if event loop active) or `asyncio.run()` — prevents blocking the main thread during multi-sig quorum
+  - **Swarm**: `Subagent` now tracks `is_running`/`last_heartbeat` for thread-liveness; `_heartbeat_monitor_loop` replaced defunct PID-based `is_process_alive(pid)` with subagent-ref-based `getattr(subagent_ref, 'is_running', False)` — actually detects thread hangs instead of checking parent process PID
+  - **Workflow Engine**: `_execute_step` added `current_attempt` parameter, preserving self-healing attempt count across recursive re-execution (fixes infinite loop where counter reset on every new `StepExecution`); `execute_workflow` integrates `UndoJournal` + `AuditLogger` and calls `journal.restore()` on strict validation failure
+
 - **Security & Concurrency Audit (19 fixes)**:
   - **JIT Server**: Fixed `_clients` set mutation during broadcast iteration (`list(self._clients)`); `_schedule_broadcast` now thread-safe via `call_soon_threadsafe`
   - **Approval Queue**: Replaced `asyncio.Lock` with `threading.Lock` for global queue registry; `get_pending_requests` now holds `_sync_lock` during iteration

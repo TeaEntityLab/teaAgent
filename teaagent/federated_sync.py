@@ -497,12 +497,12 @@ class FederatedGraphSync:
 
         return results
 
-    def collect_approval_signatures(
+    async def collect_approval_signatures(
         self,
         request_id: str,
         timeout_seconds: int,
     ) -> list[ApprovalSignatureMessage]:
-        """Collect approval signatures from peers for a request.
+        """Collect approval signatures from peers for a request asynchronously.
 
         Args:
             request_id: The approval request ID to collect signatures for.
@@ -511,15 +511,16 @@ class FederatedGraphSync:
         Returns:
             List of signature messages received from peers.
         """
+        import asyncio
+
         signatures: list[ApprovalSignatureMessage] = []
         approvals_dir = self._root / '.teaagent' / 'pending_approvals'
 
         if not approvals_dir.exists():
             return signatures
 
-        # In production, this would poll for incoming signature messages
-        # For now, we check for signature files in the approvals directory
-        poll_interval = 0.1  # Shorter poll interval for better responsiveness
+        # Poll for incoming signature files using async sleep
+        poll_interval = 0.1
         max_polls = int(timeout_seconds / poll_interval)
         polls = 0
 
@@ -543,7 +544,7 @@ class FederatedGraphSync:
             if signatures:
                 break
 
-            time.sleep(poll_interval)
+            await asyncio.sleep(poll_interval)
             polls += 1
 
         return signatures

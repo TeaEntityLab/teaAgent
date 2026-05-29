@@ -1,6 +1,6 @@
 # TeaAgent Threat Model
 
-Last updated: 2026-05-29
+Last updated: 2026-05-29 (2nd edition)
 
 This document maps threats to mitigations and verification. It complements [tool-authoring.md](tool-authoring.md) and [architecture.md](architecture.md).
 
@@ -22,11 +22,14 @@ This document maps threats to mitigations and verification. It complements [tool
 | Provider response schema drift | Low | JSON schema for model decisions | `test_live_provider_conformance_flow.py` | Provider-specific quirks remain |
 | Unbounded run cost | Medium | `RunBudget`; iteration/tool/cost caps | `test_p0_harness.py`, `test_p0_slo_flow.py` | User must configure caps |
 | JIT approval server unresponsive during wait | High | Async `_wait_for_approval` using `asyncio.Event` + `asyncio.wait_for`; SSE server remains responsive | `tests/test_phase6_jit_server.py` | Fixed synchronous `time.sleep` spin-lock blocking event loop |
-| Context Bus SQLite lock contention | Medium | `timeout=30.0` on `sqlite3.connect`; `_execute_with_retry` with exponential backoff (5 retries) | `tests/test_phase5_context_bus.py` | Cross-process WAL contention under parallel swarm workloads |
+| Context Bus SQLite lock contention / transaction leaks | Medium | `timeout=30.0` on `sqlite3.connect`; `_execute_with_retry` with exponential backoff (5 retries) with `DatabaseError` retry + reconnect; explicit `conn.rollback()` on commit failure; all SELECTs wrapped in retry | `tests/test_phase5_context_bus.py` | `DatabaseError` previously re-raised immediately defeating retry; `publish_delta` now rolls back on failure preventing WAL lock leaks |
+| Asyncio event loop starvation from synchronous P2P approval polling | High | `collect_approval_signatures` converted to `async def` with `asyncio.sleep`; `_collect_peer_signatures` dispatches via `run_coroutine_threadsafe` or `asyncio.run()` | — | Previously 5-minute synchronous `time.sleep` polling blocked event loop — now fully non-blocking |
 | Shell normalization bypass via brace expansion / process substitution | High | Multi-pass `_normalize_shell_arg` now handles `{a,b}` expansion, `<()` process substitution, and non-string/non-list fallback | `tests/test_policy.py` | Catches `/pr{od,oduction}`, `<(echo /prod)`, dict-type command args |
 | Protected directory bypass via alternate write tools | High | `workspace_write_*` tool pattern + `.git*` argument pattern covers all write tools and subdirectory contents | `tests/test_policy.py`, `tests/test_file_policy.py` | Previously only `workspace_write_file` was covered |
-| Swarm hang on deadlocked subagent | High | `ThreadPoolExecutor.as_completed(timeout=...)` with partial result collection | `tests/test_swarm.py` | Previously no timeout — hung subagent blocked all results |
+| Swarm hang / undetected thread deadlock | High | `ThreadPoolExecutor.as_completed(timeout=...)` with partial result collection; `Subagent` tracks `is_running`/`last_heartbeat`; `_heartbeat_monitor_loop` uses thread-ref liveness instead of defunct PID-based `is_process_alive` | `tests/test_swarm.py` | Previously heartbeat monitor checked parent PID (always alive) — now detects actual thread hangs |
 | Git stash stack corruption in parallel sandboxes | Critical | `stash_save` returns actual stash reflog selector; `stash_pop` accepts specific ref | `tests/test_sandbox.py` | Previously hardcoded `stash@{0}` caused cross-agent stash confusion |
+| Workflow self-healing infinite recursion | High | `_execute_step` accepts `current_attempt` parameter preserved across recursive re-execution; abort guard checks attempts against max before proceeding | `tests/test_phase5_workflow_engine.py` | Previously `self_healing_attempts` reset to 0 on new `StepExecution` — now passed through recursion chain |
+| Workflow strict validation rollback never executed | High | `execute_workflow` integrates `UndoJournal` + `AuditLogger`; checks `result.requires_rollback` and calls `journal.restore()` on strict validation failure | — | Previously `requires_rollback` flag set but never consumed — now triggers full workspace undo |
 
 ## Trust Boundaries
 

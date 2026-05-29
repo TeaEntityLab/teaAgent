@@ -20,8 +20,10 @@ from enum import Enum
 from typing import Optional, cast
 
 from teaagent.agent_factory import AgentFactory
+from teaagent.audit import AuditLogger
 from teaagent.coordinator import WorkflowPlan, WorkflowStep
 from teaagent.plugin_system import PluginRegistry
+from teaagent.run_undo import UndoJournal
 
 logger = logging.getLogger(__name__)
 
@@ -104,10 +106,30 @@ class WorkflowEngine:
             execution = WorkflowExecution(plan=plan, state=WorkflowState.IN_PROGRESS)
             self._active_workflow = execution
 
+            # Set up UndoJournal for rollback support on strict validation failures
+            journal = UndoJournal(root=self._root)
+            audit = AuditLogger()
+            audit.add_sink(journal)
+
             for step in plan.steps:
                 execution.current_step = step.step_id
                 result = self._execute_step(step)
                 execution.step_results[step.step_id] = result
+
+                # Check if strict validation requested rollback
+                if result.requires_rollback:
+                    logger.critical(
+                        f'Automatic Rollback Triggered: Step {step.step_id} failed strict validation. '
+                        f'Reverting workspace modifications.'
+                    )
+                    undo_result = journal.restore()
+                    logger.info(
+                        f'Rollback complete. Restored: {len(undo_result.restored)} files, '
+                        f'Deleted: {len(undo_result.deleted)} files, '
+                        f'Errors: {len(undo_result.errors)}'
+                    )
+                    execution.state = WorkflowState.FAILED
+                    break
 
                 if not result.success:
                     execution.state = WorkflowState.FAILED
@@ -122,11 +144,14 @@ class WorkflowEngine:
             self._active_workflow = None
             return execution
 
-    def _execute_step(self, step: WorkflowStep) -> StepExecution:
-        """Execute a single workflow step.
+    def _execute_step(
+        self, step: WorkflowStep, current_attempt: int = 0
+    ) -> StepExecution:
+        """Execute a single workflow step, preserving self-healing attempt count.
 
         Args:
             step: WorkflowStep to execute.
+            current_attempt: Current self-healing attempt number (for recursion safety).
 
         Returns:
             StepExecution result.
@@ -146,7 +171,9 @@ class WorkflowEngine:
 
             # In a real implementation, this would invoke the agent
             # For now, we simulate execution
-            logger.info(f'Executing step {step.step_id} with agent {step.agent_name}')
+            logger.info(
+                f'Executing step {step.step_id} with agent {step.agent_name} (attempt {current_attempt})'
+            )
             output = f'Step {step.step_id} executed by {step.agent_name}'
 
             execution_time = time.time() - start_time
@@ -155,6 +182,7 @@ class WorkflowEngine:
                 success=True,
                 output=output,
                 execution_time_seconds=execution_time,
+                self_healing_attempts=current_attempt,
             )
 
             # Run post-execution validation if enabled
@@ -170,6 +198,7 @@ class WorkflowEngine:
                 success=False,
                 error=str(exc),
                 execution_time_seconds=execution_time,
+                self_healing_attempts=current_attempt,
             )
 
     def _validate_and_heal_step(
@@ -212,8 +241,9 @@ class WorkflowEngine:
             return result
 
         result.self_healing_attempts += 1
+        current_attempt = result.self_healing_attempts
         logger.info(
-            f'Attempting self-healing (attempt {result.self_healing_attempts}) '
+            f'Attempting self-healing (attempt {current_attempt}) '
             f'for step {step.step_id}'
         )
 
@@ -227,8 +257,8 @@ class WorkflowEngine:
             self._agent_factory.hot_reload_agent(step.agent_name, correction_prompt)
             logger.info(f'Hot-reloaded agent {step.agent_name} with self-correction')
 
-            # Re-execute the step
-            return self._execute_step(step)
+            # Re-execute the step, preserving incremented attempt count
+            return self._execute_step(step, current_attempt=current_attempt)
         except (ImportError, ValueError, TypeError, OSError) as exc:
             logger.error('Self-healing failed: %s', exc)
             return result
@@ -385,30 +415,53 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
         Returns:
             Updated WorkflowExecution.
         """
-        execution.state = WorkflowState.IN_PROGRESS
+        with self._workflow_lock:
+            execution.state = WorkflowState.IN_PROGRESS
 
-        start_step = from_step or execution.current_step
+            # Set up UndoJournal for rollback support on strict validation failures
+            journal = UndoJournal(root=self._root)
+            audit = AuditLogger()
+            audit.add_sink(journal)
 
-        # Find the step to start from
-        steps_to_execute = [
-            step for step in execution.plan.steps if step.step_id >= start_step
-        ]
+            start_step = from_step or execution.current_step
 
-        for step in steps_to_execute:
-            execution.current_step = step.step_id
-            result = self._execute_step(step)
-            execution.step_results[step.step_id] = result
+            # Find the step to start from
+            steps_to_execute = [
+                step for step in execution.plan.steps if step.step_id >= start_step
+            ]
 
-            if not result.success:
-                execution.state = WorkflowState.FAILED
-                logger.error(f'Workflow failed at step {step.step_id}: {result.error}')
-                break
+            for step in steps_to_execute:
+                execution.current_step = step.step_id
+                result = self._execute_step(step)
+                execution.step_results[step.step_id] = result
 
-        if execution.state == WorkflowState.IN_PROGRESS:
-            execution.state = WorkflowState.COMPLETED
+                # Check if strict validation requested rollback
+                if result.requires_rollback:
+                    logger.critical(
+                        f'Automatic Rollback Triggered: Step {step.step_id} failed strict validation. '
+                        f'Reverting workspace modifications.'
+                    )
+                    undo_result = journal.restore()
+                    logger.info(
+                        f'Rollback complete. Restored: {len(undo_result.restored)} files, '
+                        f'Deleted: {len(undo_result.deleted)} files, '
+                        f'Errors: {len(undo_result.errors)}'
+                    )
+                    execution.state = WorkflowState.FAILED
+                    break
 
-        self._active_workflow = None
-        return execution
+                if not result.success:
+                    execution.state = WorkflowState.FAILED
+                    logger.error(
+                        f'Workflow failed at step {step.step_id}: {result.error}'
+                    )
+                    break
+
+            if execution.state == WorkflowState.IN_PROGRESS:
+                execution.state = WorkflowState.COMPLETED
+
+            self._active_workflow = None
+            return execution
 
     def get_workflow_summary(self, execution: WorkflowExecution) -> str:
         """Get a human-readable summary of workflow execution.
