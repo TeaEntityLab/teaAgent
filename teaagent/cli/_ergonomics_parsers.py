@@ -382,6 +382,21 @@ def _approval(
         func=handlers['approval_subagents_deny_all'], command='approval'
     )
 
+    sub_prune = subagent_subs.add_parser(
+        'prune',
+        help='Remove stale approval queue files with no pending requests.',
+    )
+    sub_prune.add_argument('--root', default='.')
+    sub_prune.add_argument(
+        '--max-age-hours',
+        type=float,
+        default=168.0,
+        help='Delete resolved queue files older than this many hours (default 168).',
+    )
+    sub_prune.set_defaults(
+        func=handlers['approval_subagents_prune'], command='approval'
+    )
+
 
 def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subparsers.add_parser(

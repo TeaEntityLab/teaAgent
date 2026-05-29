@@ -85,6 +85,16 @@ class AgentRunner:
                     f'Failed to load {len(plugin_result.failed)} plugin(s): {plugin_result.failed}'
                 )
 
+        self._read_only_registry_lint_errors: list[Any] = []
+        if self.approval_policy.permission_mode == PermissionMode.READ_ONLY:
+            from teaagent.governance.tool_lint import lint_registry
+
+            self._read_only_registry_lint_errors = [
+                issue
+                for issue in lint_registry(registry)
+                if issue.level == 'error'
+            ]
+
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
             raise BudgetExceededError('cost budget exceeded')
@@ -198,7 +208,16 @@ class AgentRunner:
                     plan_contract = None
                     if hasattr(self, '_plan_contract'):
                         plan_contract = self._plan_contract
-                    
+
+                    if (
+                        self.approval_policy.permission_mode
+                        == PermissionMode.READ_ONLY
+                        and getattr(self, '_read_only_registry_lint_errors', None)
+                    ):
+                        raise ToolPermissionError(
+                            'Tool registry has lint errors; read-only runs cannot '
+                            f'invoke tools ({len(self._read_only_registry_lint_errors)} error(s))'
+                        )
                     self.approval_policy.assert_allowed(
                         tool_name=decision.tool_name,
                         call_id=decision.call_id,
@@ -206,6 +225,8 @@ class AgentRunner:
                         arguments=decision.arguments,
                         jit_state=self.jit_state,
                         plan_contract=plan_contract,
+                        read_only=tool.annotations.read_only,
+                        description=tool.description,
                     )
                 except ToolPermissionError as exc:
                     secret = None

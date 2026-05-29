@@ -79,10 +79,18 @@ def test_danger_full_access_accepts_all_destructive() -> None:
 def test_non_destructive_tool_never_raises() -> None:
     policy = ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY)
     policy.assert_allowed(
-        tool_name='workspace_read_file', call_id='x', destructive=False
+        tool_name='workspace_read_file',
+        call_id='x',
+        destructive=False,
+        read_only=True,
+        description='read a workspace file',
     )
     policy.assert_allowed(
-        tool_name='workspace_search_text', call_id='x', destructive=False
+        tool_name='workspace_search_text',
+        call_id='x',
+        destructive=False,
+        read_only=True,
+        description='search workspace text',
     )
 
 

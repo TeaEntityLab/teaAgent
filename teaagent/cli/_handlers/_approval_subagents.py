@@ -14,6 +14,7 @@ from teaagent.subagents._approval_queue import (
     snapshot_pending_subagent_requests,
     try_get_approval_queue,
 )
+from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
 
 def _workspace_root(args: argparse.Namespace) -> Path:
@@ -138,6 +139,24 @@ def approval_subagents_deny_all_command(args: argparse.Namespace) -> int:
             'parent_run_id': args.parent_run_id,
             'denied_count': count,
             'reason': reason,
+        }
+    )
+    return 0
+
+
+def approval_subagents_prune_command(args: argparse.Namespace) -> int:
+    root = _workspace_root(args)
+    hours = float(getattr(args, 'max_age_hours', 168) or 168)
+    store = ApprovalQueueStore(root)
+    report = store.prune_stale(max_age_seconds=hours * 3600.0)
+    print_json(
+        {
+            'status': 'pruned',
+            'removed_count': report.removed_count,
+            'removed_parent_run_ids': report.removed_parent_run_ids,
+            'skipped_pending': report.skipped_pending,
+            'skipped_recent': report.skipped_recent,
+            'max_age_hours': hours,
         }
     )
     return 0

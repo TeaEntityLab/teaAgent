@@ -55,7 +55,7 @@ class ToolLintIssue:
     message: str
 
 
-def _check_write_keywords_in_text(text: str) -> list[str]:
+def check_write_keywords_in_text(text: str) -> list[str]:
     """Extract write-like keywords found in text."""
     found = []
     text_lower = text.lower()
@@ -63,6 +63,10 @@ def _check_write_keywords_in_text(text: str) -> list[str]:
         if keyword in text_lower:
             found.append(keyword)
     return found
+
+
+def _check_write_keywords_in_text(text: str) -> list[str]:
+    return check_write_keywords_in_text(text)
 
 
 def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:

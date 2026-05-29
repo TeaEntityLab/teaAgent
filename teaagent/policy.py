@@ -10,6 +10,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
 
 from teaagent.errors import ToolPermissionError
+from teaagent.read_only_gate import read_only_runtime_block_reason
 
 if TYPE_CHECKING:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
@@ -152,13 +153,21 @@ class ApprovalPolicy:
         arguments: dict[str, Any] | None = None,
         jit_state: JITApprovalState | None = None,
         plan_contract: Any = None,  # PlanContract if available
+        read_only: bool | None = None,
+        description: str = '',
     ) -> None:
+        if self.permission_mode == PermissionMode.READ_ONLY:
+            block_reason = read_only_runtime_block_reason(
+                tool_name=tool_name,
+                description=description,
+                read_only=read_only,
+                destructive=destructive,
+            )
+            if block_reason is not None:
+                raise ToolPermissionError(block_reason)
+            return
         if not destructive:
             return
-        if self.permission_mode == PermissionMode.READ_ONLY:
-            raise ToolPermissionError(
-                f"Tool '{tool_name}' is blocked by read-only permission mode."
-            )
         if self.permission_mode == PermissionMode.WORKSPACE_WRITE:
             if tool_name in {
                 'workspace_write_file',

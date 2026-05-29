@@ -18,13 +18,15 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 | Tournament | `ParallelExecutor` + `parallel_executor_with_manager` | Shipped |
 | Persistence | `.teaagent/approval_queues/<parent_run_id>.json` | Shipped |
 | Swarm LLM | `SwarmManager.with_agent_execution` + `SubagentManager` | Shipped |
-| Next | adversarial plugin runtime tests, queue cleanup TTL | Open |
+| Hardening+ | adversarial plugin runtime tests, queue cleanup TTL | Shipped |
 
 ## Verification commands
 
 ```bash
-pytest tests/test_governance_fuzz.py tests/test_tranche_bc_governance.py \
+pytest tests/test_governance_fuzz.py tests/test_governance_adversarial_runtime.py \
+  tests/test_tranche_bc_governance.py tests/test_approval_queue_persistence.py \
   tests/test_subagent_approval_queue_integration.py tests/policy/
+teaagent approval subagents prune --root . --max-age-hours 168
 teaagent selftest --root .
 teaagent tool lint --root .
 ```

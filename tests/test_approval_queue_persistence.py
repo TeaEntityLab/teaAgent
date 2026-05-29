@@ -13,6 +13,7 @@ from teaagent.subagents._approval_queue import (
     list_active_parent_run_ids,
     try_get_approval_queue,
 )
+from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
 
 def test_queue_persisted_and_visible_from_new_process(tmp_path: Path) -> None:
@@ -79,3 +80,45 @@ def test_cross_process_approve_unblocks_waiter(tmp_path: Path) -> None:
     )
     thread.join(timeout=3)
     assert results == [True]
+
+
+def test_prune_removes_old_resolved_queue(tmp_path: Path) -> None:
+    store = ApprovalQueueStore(tmp_path)
+    parent_id = 'parent-old'
+    path = store.queue_path(parent_id)
+    path.write_text(
+        '{"parent_run_id":"parent-old","requests":{"r1":{"request_id":"r1",'
+        '"subagent_id":"s","parent_run_id":"parent-old","subagent_name":"w",'
+        '"tool_name":"workspace_write_file","tool_arguments":{},'
+        '"permission_mode":"prompt","isolation":"worktree","status":"approved"}},'
+        '"batches":{}}\n',
+        encoding='utf-8',
+    )
+    old = path.stat().st_mtime
+    import os
+
+    os.utime(path, (old - 200000, old - 200000))
+    report = store.prune_stale(max_age_seconds=3600)
+    assert parent_id in report.removed_parent_run_ids
+    assert not path.is_file()
+
+
+def test_prune_skips_pending_queue(tmp_path: Path) -> None:
+    store = ApprovalQueueStore(tmp_path)
+    parent_id = 'parent-pending'
+    path = store.queue_path(parent_id)
+    path.write_text(
+        '{"parent_run_id":"parent-pending","requests":{"r1":{"request_id":"r1",'
+        '"subagent_id":"s","parent_run_id":"parent-pending","subagent_name":"w",'
+        '"tool_name":"workspace_write_file","tool_arguments":{},'
+        '"permission_mode":"prompt","isolation":"worktree","status":"pending"}},'
+        '"batches":{}}\n',
+        encoding='utf-8',
+    )
+    old = path.stat().st_mtime
+    import os
+
+    os.utime(path, (old - 200000, old - 200000))
+    report = store.prune_stale(max_age_seconds=3600)
+    assert parent_id in report.skipped_pending
+    assert path.is_file()

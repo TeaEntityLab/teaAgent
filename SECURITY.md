@@ -203,6 +203,20 @@ Remaining concurrency limitations:
 - For multi-worker production, use separate workspace roots per worker or replace the
   JSONL backend with a transactional store (SQLite, PostgreSQL).
 
+## Dependency auditing
+
+CI runs `pip-audit` on the editable install and on `uv export` output (see
+`.github/workflows/security.yml`). Local check:
+
+```bash
+uv export --format requirements-txt -o /tmp/req.txt
+uv run pip-audit -r /tmp/req.txt
+```
+
+If GitHub Dependabot still reports an open alert while `pip-audit` is clean, reconcile
+in the repository **Security → Dependabot** UI (dismiss as fixed/upstream, or refresh
+the lockfile after the advisory maps to a patched release).
+
 ## Reporting a Vulnerability
 
 Report security vulnerabilities to the project maintainers. Do not file public

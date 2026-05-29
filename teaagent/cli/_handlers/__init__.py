@@ -82,6 +82,7 @@ from ._approval_subagents import (
     approval_subagents_deny_all_command,
     approval_subagents_deny_command,
     approval_subagents_list_command,
+    approval_subagents_prune_command,
 )
 from ._ergonomics import (
     approval_approve_command,
@@ -226,6 +227,7 @@ __all__ = [
     'approval_subagents_deny_all_command',
     'approval_subagents_deny_command',
     'approval_subagents_list_command',
+    'approval_subagents_prune_command',
     'approval_pending_command',
     'approval_preset_command',
     'approval_revoke_command',

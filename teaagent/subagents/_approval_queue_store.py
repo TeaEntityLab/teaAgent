@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator, Optional
 
@@ -21,6 +22,17 @@ class QueueDiskSnapshot:
     parent_run_id: str
     requests: dict[str, dict[str, Any]]
     batches: dict[str, dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class ApprovalQueuePruneReport:
+    removed_parent_run_ids: list[str] = field(default_factory=list)
+    skipped_pending: list[str] = field(default_factory=list)
+    skipped_recent: list[str] = field(default_factory=list)
+
+    @property
+    def removed_count(self) -> int:
+        return len(self.removed_parent_run_ids)
 
 
 class ApprovalQueueStore:
@@ -157,6 +169,42 @@ class ApprovalQueueStore:
             encoding='utf-8',
         )
         os.replace(temp, path)
+
+    def prune_stale(
+        self,
+        *,
+        max_age_seconds: float,
+        now: Optional[float] = None,
+    ) -> ApprovalQueuePruneReport:
+        """Remove queue files with no pending requests older than *max_age_seconds*."""
+        cutoff = (now if now is not None else time.time()) - max_age_seconds
+        removed: list[str] = []
+        skipped_pending: list[str] = []
+        skipped_recent: list[str] = []
+        for path in sorted(self.queue_dir.glob('*.json')):
+            parent_run_id = path.stem
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                continue
+            if mtime > cutoff:
+                skipped_recent.append(parent_run_id)
+                continue
+            snapshot = self._load_unlocked(parent_run_id)
+            has_pending = any(
+                raw.get('status') == ApprovalRequestStatus.PENDING.value
+                for raw in snapshot.requests.values()
+            )
+            if has_pending:
+                skipped_pending.append(parent_run_id)
+                continue
+            path.unlink(missing_ok=True)
+            removed.append(parent_run_id)
+        return ApprovalQueuePruneReport(
+            removed_parent_run_ids=removed,
+            skipped_pending=skipped_pending,
+            skipped_recent=skipped_recent,
+        )
 
 
 def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
