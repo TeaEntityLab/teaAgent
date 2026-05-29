@@ -30,7 +30,7 @@ jobs:
       - name: Run pip-audit (editable install)
         run: pip-audit --skip-editable
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
       - name: Run pip-audit (uv.lock)
         run: |
           uv export --format requirements-txt -o /tmp/teaagent-uv-requirements.txt
