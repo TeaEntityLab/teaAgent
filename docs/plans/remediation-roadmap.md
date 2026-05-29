@@ -60,12 +60,16 @@ Principle: **smallest verifiable step** per phase; no big-bang refactors.
 
 ## Phase P4 — Strategic (quarters)
 
-| Item | Reference |
-|------|-----------|
-| Distributed JSONL locks / DB migration | threat-model, NFS note |
-| Native MCP TLS | reverse-proxy termination |
-| Authenticated P2P multi-sig transport | federated_sync HTTP channel |
-| Dependabot #10 dependency bump | Security UI |
+| # | Item | Status | Reference |
+|---|------|--------|-----------|
+| P4.1 | JSONL / NFS posture + migration ADR | ✅ tranche | [ADR 0008](../adr/0008-p4-strategic-posture.md), threat-model NFS row |
+| P4.2 | MCP TLS via reverse proxy (no native TLS) | ✅ documented | [http-surface-auth.md](../http-surface-auth.md), ADR 0008 |
+| P4.3 | File P2P signature `auth_token` when `TEAAGENT_FEDERATED_SIGNATURE_TOKEN` set | ✅ shipped | `federated_sync.py`, `security_env.py` |
+| P4.3b | HTTP P2P multi-sig channel | 🔲 future | ADR 0008 — reuse relay bearer shape |
+| P4.4 | `jaraco.context` CVE-2026-23949 (Dependabot #10) | ✅ constrained | `pyproject.toml` `jaraco-context>=6.1.0`, `selftest` version check |
+| P4.5 | Async `collect_approval_signatures` unit tests | ✅ shipped | `tests/test_federated_sync.py` |
+
+Full SQLite audit/run migration remains **P4+ / backlog** — not started.
 
 ---
 

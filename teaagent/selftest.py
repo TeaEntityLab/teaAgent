@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,37 @@ from teaagent.governance.audit_completeness import check_audit_completeness
 from teaagent.governance.tool_lint import lint_registry
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.workspace_tools import build_workspace_tool_registry
+
+
+def _jaraco_context_version_ok() -> dict[str, Any]:
+    """CVE-2026-23949: jaraco.context < 6.1.0 has Zip Slip in tarball()."""
+    try:
+        installed = version('jaraco.context')
+    except PackageNotFoundError:
+        return {
+            'ok': True,
+            'skipped': True,
+            'detail': 'jaraco.context not installed',
+        }
+
+    parts = []
+    for segment in installed.split('.')[:3]:
+        segment = segment.split('+', 1)[0]
+        if not segment.isdigit():
+            return {
+                'ok': False,
+                'skipped': False,
+                'detail': f'unparseable jaraco.context version {installed!r}',
+            }
+        parts.append(int(segment))
+    while len(parts) < 3:
+        parts.append(0)
+    ok = tuple(parts) >= (6, 1, 0)
+    return {
+        'ok': ok,
+        'skipped': False,
+        'detail': f'jaraco.context=={installed}',
+    }
 
 
 def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
@@ -54,8 +86,9 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
         },
     ]
     audit_report = check_audit_completeness(sample_events)
+    jaraco_report = _jaraco_context_version_ok()
 
-    ok = not lint_errors and permission_ok and audit_report.ok
+    ok = not lint_errors and permission_ok and audit_report.ok and jaraco_report['ok']
     return {
         'ok': ok,
         'tool_lint': {
@@ -76,4 +109,5 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
             'ok': audit_report.ok,
             'issues': audit_report.issues,
         },
+        'jaraco_context': jaraco_report,
     }

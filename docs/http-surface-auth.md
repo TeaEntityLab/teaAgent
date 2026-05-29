@@ -39,6 +39,7 @@ When `--api-token-file` is omitted, relay serve loads the first existing file:
 | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` | Allow dev-hash signatures (multi-sig / relay dev mode only) |
 | `TEAAGENT_PLUGINS_STRICT=1` | Block unverified plugin entry points (site-packages / unknown source) |
 | `TEAAGENT_PRECOMMIT_FULL=1` | Run full pytest in pre-commit (default: smoke subset) |
+| `TEAAGENT_FEDERATED_SIGNATURE_TOKEN` | Require matching `auth_token` on file-based P2P approval signatures |
 
 ## Headers
 
@@ -79,6 +80,26 @@ teaagent consensus relay serve \
 ```
 
 Requires client certificates signed by `client-ca.pem`.
+
+## MCP HTTP TLS (native TLS not supported)
+
+`teaagent mcp serve --http` does **not** terminate TLS in-process (see
+[ADR 0005](adr/0005-mcp-streamable-http.md) and [ADR 0008](adr/0008-p4-strategic-posture.md)).
+For remote clients:
+
+1. Bind MCP to loopback (`127.0.0.1`) or a private interface.
+2. Terminate TLS at Caddy/nginx using [`templates/reverse-proxy/`](../templates/reverse-proxy/).
+3. Set `TEAAGENT_STRICT_LOCAL=1` when the proxy forwards to loopback so bearer/OAuth
+   is still required on the upstream hop.
+
+## Federated multi-sig file transport
+
+| Variable | Effect |
+|----------|--------|
+| `TEAAGENT_FEDERATED_SIGNATURE_TOKEN` | When set, P2P signature files under `.teaagent/pending_approvals/` must include matching `auth_token` |
+
+File-based multi-sig remains experimental; WAN deployments should use relay/control-plane
+Bearer tokens until HTTP P2P transport ships (ADR 0008).
 
 ## Reverse proxy templates
 

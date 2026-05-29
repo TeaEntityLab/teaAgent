@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+import os
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from teaagent.federated_sync import (
     FederatedGraphSync,
@@ -265,3 +269,130 @@ def test_graph_version_update():
 
         sync._update_graph_version()
         assert sync.get_sync_state().graph_version == '2'
+
+
+async def _collect_signatures_case(
+    tmpdir: str,
+    *,
+    request_id: str = 'req-async-1',
+    required_approvals: int = 1,
+    submit_delay: float = 0.12,
+) -> tuple[list, int]:
+    """Collect signatures while a background task ticks the event loop."""
+    sync = FederatedGraphSync(tmpdir, 'agent-1')
+    ticks = 0
+
+    async def ticker() -> None:
+        nonlocal ticks
+        for _ in range(8):
+            await asyncio.sleep(0.05)
+            ticks += 1
+
+    async def delayed_submit() -> None:
+        await asyncio.sleep(submit_delay)
+        sync.submit_approval_signature(request_id, 'peer-1', 'sig-abc')
+
+    ticker_task = asyncio.create_task(ticker())
+    submit_task = asyncio.create_task(delayed_submit())
+    signatures = await sync.collect_approval_signatures(
+        request_id,
+        timeout_seconds=2,
+        required_approvals=required_approvals,
+    )
+    await ticker_task
+    await submit_task
+    return signatures, ticks
+
+
+def test_collect_approval_signatures_async_non_blocking():
+    """Event loop must stay responsive while polling (asyncio.sleep, not time.sleep)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        signatures, ticks = asyncio.run(_collect_signatures_case(tmpdir))
+        assert ticks >= 2
+        assert len(signatures) == 1
+        assert signatures[0].peer_id == 'peer-1'
+        assert signatures[0].signature == 'sig-abc'
+
+
+def test_collect_approval_signatures_quorum_and_dedup():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sync = FederatedGraphSync(tmpdir, 'agent-1')
+        request_id = 'req-quorum'
+        sync.submit_approval_signature(request_id, 'peer-a', 'sig-a')
+        sync.submit_approval_signature(request_id, 'peer-b', 'sig-b')
+        signatures = asyncio.run(
+            sync.collect_approval_signatures(
+                request_id,
+                timeout_seconds=1,
+                required_approvals=2,
+            )
+        )
+        peer_ids = {sig.peer_id for sig in signatures}
+        assert peer_ids == {'peer-a', 'peer-b'}
+
+
+def test_collect_approval_signatures_uses_async_sleep():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sync = FederatedGraphSync(tmpdir, 'agent-1')
+        sleep_calls: list[float] = []
+        real_sleep = asyncio.sleep
+
+        async def tracked_sleep(delay: float) -> None:
+            sleep_calls.append(delay)
+            await real_sleep(0)
+
+        async def run() -> None:
+            with patch('asyncio.sleep', tracked_sleep):
+                await sync.collect_approval_signatures(
+                    'req-none',
+                    timeout_seconds=0.25,
+                    required_approvals=1,
+                )
+
+        asyncio.run(run())
+        assert sleep_calls
+
+
+def test_collect_approval_signatures_rejects_missing_auth_token():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sync = FederatedGraphSync(tmpdir, 'agent-1')
+        request_id = 'req-auth'
+        approvals_dir = Path(tmpdir) / '.teaagent' / 'pending_approvals'
+        approvals_dir.mkdir(parents=True, exist_ok=True)
+        sig_path = approvals_dir / f'{request_id}_signature_peer-x.json'
+        sig_path.write_text(
+            json.dumps(
+                {
+                    'request_id': request_id,
+                    'peer_id': 'peer-x',
+                    'signature': 'sig-x',
+                    'timestamp': 1.0,
+                }
+            ),
+            encoding='utf-8',
+        )
+        with patch.dict(os.environ, {'TEAAGENT_FEDERATED_SIGNATURE_TOKEN': 'secret'}):
+            signatures = asyncio.run(
+                sync.collect_approval_signatures(
+                    request_id,
+                    timeout_seconds=0.3,
+                    required_approvals=1,
+                )
+            )
+        assert signatures == []
+
+
+def test_submit_approval_signature_includes_auth_token_when_configured():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sync = FederatedGraphSync(tmpdir, 'agent-1')
+        request_id = 'req-submit-auth'
+        with patch.dict(os.environ, {'TEAAGENT_FEDERATED_SIGNATURE_TOKEN': 'secret'}):
+            assert sync.submit_approval_signature(request_id, 'peer-1', 'sig-1')
+            sig_path = (
+                Path(tmpdir)
+                / '.teaagent'
+                / 'pending_approvals'
+                / f'{request_id}_signature_peer-1.json'
+            )
+            data = json.loads(sig_path.read_text(encoding='utf-8'))
+            assert data['auth_token'] == 'secret'

@@ -22,3 +22,13 @@ def strict_local_services() -> bool:
 def plugins_strict_audit() -> bool:
     """Fail closed on unverified plugin entry points when set."""
     return _env_truthy('TEAAGENT_PLUGINS_STRICT')
+
+
+def federated_signature_token() -> str | None:
+    """Optional shared secret for file-based P2P approval signature files.
+
+    When set, ``submit_approval_signature`` embeds the token and
+    ``collect_approval_signatures`` ignores files with a missing or wrong token.
+    """
+    value = os.environ.get('TEAAGENT_FEDERATED_SIGNATURE_TOKEN', '').strip()
+    return value or None

@@ -306,10 +306,13 @@ User / CLI
 | `AuditLogger`    | JSONL   | `fcntl.LOCK_EX` + `fsync`            | Per-run event log            |
 | `MemoryCatalog`  | JSONL   | `fcntl.LOCK_EX` + `fsync`            | Workspace observations       |
 | `RunStore`       | JSONL   | `atomic_write_text` (lock + replace) | Run history and replay       |
-| `UltraworkStore` | JSONL   | `atomic_write_text`                  | Worker lifecycle records     |
+| `UltraworkStore`  | JSONL   | `atomic_write_text`                  | Worker lifecycle records     |
 | `SQLiteOAuthStore`| SQLite | WAL + `BEGIN IMMEDIATE`              | OAuth clients/codes/nonces   |
 | `ContextBus`      | SQLite | WAL; per-thread connections        | Cross-agent Delta cards      |
 | `FederatedGraphSync` | JSON | none (single-writer file)         | Graph sync state + exports   |
+
+JSONL rows assume a **single writer per workspace** on a local or advisory-lock-safe
+filesystem. NFS multi-writer shared roots are unsupported — see [ADR 0008](adr/0008-p4-strategic-posture.md).
 
 All state is externalized to the filesystem. In-memory runner state is
 temporary only — every meaningful event persists to disk before the caller

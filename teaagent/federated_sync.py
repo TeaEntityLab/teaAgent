@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.graphqlite_store import GraphQLiteGraphStore
+from teaagent.security_env import federated_signature_token
 from teaagent.storage import atomic_write_text
 
 logger = logging.getLogger(__name__)
@@ -534,21 +535,20 @@ class FederatedGraphSync:
         seen_peers: set[str] = set()
         approvals_dir = self._root / '.teaagent' / 'pending_approvals'
 
-        if not approvals_dir.exists():
-            return signatures
-
         # Poll for incoming signature files using async sleep
         poll_interval = 0.1
-        max_polls = int(timeout_seconds / poll_interval)
+        max_polls = max(1, int(timeout_seconds / poll_interval))
         polls = 0
 
         loop = asyncio.get_running_loop()
 
         while polls < max_polls:
-            sig_files = await loop.run_in_executor(
-                None,
-                lambda: list(approvals_dir.glob(f'{request_id}_signature_*.json')),
-            )
+            sig_files: list[Path] = []
+            if approvals_dir.exists():
+                sig_files = await loop.run_in_executor(
+                    None,
+                    lambda: list(approvals_dir.glob(f'{request_id}_signature_*.json')),
+                )
 
             for sig_file in sig_files:
                 try:
@@ -557,6 +557,12 @@ class FederatedGraphSync:
                         functools.partial(sig_file.read_text, encoding='utf-8'),
                     )
                     data = json.loads(content)
+                    expected_token = federated_signature_token()
+                    if (
+                        expected_token is not None
+                        and data.get('auth_token') != expected_token
+                    ):
+                        continue
                     peer_id = data['peer_id']
                     if peer_id in seen_peers:
                         continue
@@ -609,13 +615,16 @@ class FederatedGraphSync:
             )
             sig_path.parent.mkdir(parents=True, exist_ok=True)
 
-            data = {
+            data: dict[str, Any] = {
                 'request_id': request_id,
                 'peer_id': peer_id,
                 'signature': signature,
                 'ssh_key_id': ssh_key_id,
                 'timestamp': time.time(),
             }
+            token = federated_signature_token()
+            if token is not None:
+                data['auth_token'] = token
 
             sig_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
             return True

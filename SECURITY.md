@@ -205,6 +205,11 @@ Remaining concurrency limitations:
 
 ## Dependency auditing
 
+**CVE-2026-23949 (`jaraco.context` Zip Slip):** TeaAgent constrains transitive
+installs to `jaraco-context>=6.1.0` via `[tool.uv] constraint-dependencies` in
+`pyproject.toml`. `teaagent selftest` fails if an older `jaraco.context` is present
+in the environment (Dependabot alert #10 should clear after lockfile rescan).
+
 CI runs `pip-audit` on the editable install and on `uv export` output (see
 `.github/workflows/security.yml`). Local check:
 
