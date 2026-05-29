@@ -46,7 +46,7 @@ All notable changes to TeaAgent are tracked here.
 
 - **Security & Concurrency Hardening (5 fixes)**:
   - **JIT Approval Server async refactor** (`teaagent/jit_approval_server.py`): Converted `_wait_for_approval` from synchronous `time.sleep(1)` spin-lock to `async def` using `asyncio.Event` + `asyncio.wait_for`, preventing asyncio event loop starvation during approval waits. `request_approval` is now `async def`.
-  - **Context Bus SQLite concurrency** (`teaagent/context_bus.py`): Added `timeout=30.0` to `sqlite3.connect` and `_execute_with_retry` helper with exponential backoff (5 retries, 0.1s base delay + jitter) catching `sqlite3.OperationalError` on lock contention. Applied to `publish_delta`, `_clear_deltas`, `cleanup_old_deltas`.
+  - **Context Bus SQLite concurrency** (`teaagent/context_bus.py`): Per-thread connections with `timeout=5.0`, WAL pragmas on connect, `_execute_with_retry` with exponential backoff (5 retries) on lock contention. Applied to `publish_delta`, `_clear_deltas`, `cleanup_old_deltas`.
   - **Shell command normalization** (`teaagent/policy.py`): Added `_normalize_shell_arg` static method with 5-pass normalization (quote stripping, backslash removal, backtick extraction, `$()` subshell extraction, shlex split). Added list-type command argument handling to prevent bypass via `["rm", "-rf", "/prod"]`.
   - **Per-agent JIT approval** (`teaagent/tool_permissions.py`): Replaced global `requires_approval=False` mutation in `request_tool_approval` with per-agent `_agent_approved_tools` tracking, preventing privilege escalation where approving one agent granted all agents access.
   - Added regression test `test_approval_is_per_agent_not_global` verifying cross-agent isolation.

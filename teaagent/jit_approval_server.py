@@ -13,6 +13,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -64,6 +65,7 @@ class JITApprovalServer:
         self._clients: set[asyncio.Queue[dict[str, Any]]] = set()
         self._pending_events: dict[str, asyncio.Event] = {}
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._state_lock = threading.Lock()
 
     async def start(self) -> None:
         """Start the SSE server."""
@@ -146,11 +148,10 @@ class JITApprovalServer:
             timeout_seconds=self._timeout_seconds,
         )
 
-        self._requests[request_id] = record
-
-        # Create event for this request
-        event = asyncio.Event()
-        self._pending_events[request_id] = event
+        with self._state_lock:
+            self._requests[request_id] = record
+            event = asyncio.Event()
+            self._pending_events[request_id] = event
 
         # Broadcast to all connected clients (if async server is running)
         if self._clients:
@@ -159,8 +160,8 @@ class JITApprovalServer:
         # Wait for approval or timeout
         result = await self._wait_for_approval(record, event)
 
-        # Clean up pending event
-        self._pending_events.pop(request_id, None)
+        with self._state_lock:
+            self._pending_events.pop(request_id, None)
 
         return result
 
@@ -224,27 +225,26 @@ class JITApprovalServer:
         Args:
             request_id: ID of the request to approve.
         """
-        record = self._requests.get(request_id)
-        if not record:
-            logger.warning(f'Approval request not found: {request_id}')
-            return
+        with self._state_lock:
+            record = self._requests.get(request_id)
+            if not record:
+                logger.warning(f'Approval request not found: {request_id}')
+                return
 
-        if record.status != ApprovalStatus.PENDING:
-            logger.warning(
-                f'Request {request_id} already processed: {record.status.value}'
-            )
-            return
+            if record.status != ApprovalStatus.PENDING:
+                logger.warning(
+                    f'Request {request_id} already processed: {record.status.value}'
+                )
+                return
 
-        record.status = ApprovalStatus.APPROVED
-        record.approved_at = time.time()
-        record.request.approved = True
+            record.status = ApprovalStatus.APPROVED
+            record.approved_at = time.time()
+            record.request.approved = True
 
-        # Signal the waiting coroutine
-        event = self._pending_events.get(request_id)
-        if event:
-            event.set()
+            event = self._pending_events.get(request_id)
+            if event:
+                event.set()
 
-        # Directly whitelist the approved tool in the permission manager
         try:
             agent_approved = self._permission_manager._agent_approved_tools.setdefault(
                 record.request.agent_name, set()
@@ -265,25 +265,25 @@ class JITApprovalServer:
         Args:
             request_id: ID of the request to reject.
         """
-        record = self._requests.get(request_id)
-        if not record:
-            logger.warning(f'Approval request not found: {request_id}')
-            return
+        with self._state_lock:
+            record = self._requests.get(request_id)
+            if not record:
+                logger.warning(f'Approval request not found: {request_id}')
+                return
 
-        if record.status != ApprovalStatus.PENDING:
-            logger.warning(
-                f'Request {request_id} already processed: {record.status.value}'
-            )
-            return
+            if record.status != ApprovalStatus.PENDING:
+                logger.warning(
+                    f'Request {request_id} already processed: {record.status.value}'
+                )
+                return
 
-        record.status = ApprovalStatus.REJECTED
-        record.rejected_at = time.time()
-        record.request.approved = False
+            record.status = ApprovalStatus.REJECTED
+            record.rejected_at = time.time()
+            record.request.approved = False
 
-        # Signal the waiting coroutine
-        event = self._pending_events.get(request_id)
-        if event:
-            event.set()
+            event = self._pending_events.get(request_id)
+            if event:
+                event.set()
 
         self._schedule_broadcast(self._broadcast_rejection(record))
 
@@ -329,11 +329,12 @@ class JITApprovalServer:
         Returns:
             List of pending ApprovalRequestRecord instances.
         """
-        return [
-            record
-            for record in self._requests.values()
-            if record.status == ApprovalStatus.PENDING
-        ]
+        with self._state_lock:
+            return [
+                record
+                for record in self._requests.values()
+                if record.status == ApprovalStatus.PENDING
+            ]
 
     def get_request_status(self, request_id: str) -> Optional[ApprovalRequestRecord]:
         """Get the status of an approval request.
@@ -344,7 +345,8 @@ class JITApprovalServer:
         Returns:
             ApprovalRequestRecord if found, None otherwise.
         """
-        return self._requests.get(request_id)
+        with self._state_lock:
+            return self._requests.get(request_id)
 
     def cleanup_old_requests(self) -> None:
         """Clean up old approval requests."""

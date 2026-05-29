@@ -1,6 +1,8 @@
 # TeaAgent Maturity Matrix
 
-Last updated: 2026-05-28 (Phase 4–6 doc sync)
+Last updated: 2026-05-29 (comprehensive audit P0)
+
+**Audit artifacts:** `docs/analysis/comprehensive-audit-2026-05-29.md`, `docs/plans/remediation-roadmap.md`
 
 ## Status Key
 

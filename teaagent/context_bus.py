@@ -396,8 +396,8 @@ class ContextBus:
 
             try:
                 cursor.execute(
-                    'DELETE FROM delta_cards WHERE timestamp < ?',
-                    (cutoff_time,),
+                    'DELETE FROM delta_cards WHERE workflow_id = ? AND timestamp < ?',
+                    (self._workflow_id, cutoff_time),
                 )
                 deleted = cursor.rowcount
                 conn.commit()

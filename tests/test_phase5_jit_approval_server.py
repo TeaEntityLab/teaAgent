@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import threading
 import time
 
 from teaagent.jit_approval_server import (
@@ -79,6 +80,42 @@ class TestJITApprovalServer:
         assert record.status == ApprovalStatus.PENDING
         assert record.request.agent_name == 'test-agent'
         assert record.request.tool_name == 'write_file'
+
+    def test_concurrent_approve_is_idempotent(self):
+        """Parallel approve calls must not corrupt request state."""
+        permission_manager = ToolPermissionManager()
+        server = JITApprovalServer(
+            permission_manager=permission_manager, timeout_seconds=1
+        )
+        from teaagent.tool_permissions import PermissionRequest
+
+        request = PermissionRequest(
+            tool_name='write_file',
+            agent_name='test-agent',
+            reason='Need to write file',
+        )
+        record = ApprovalRequestRecord(
+            request_id='req-1',
+            request=request,
+            status=ApprovalStatus.PENDING,
+            created_at=time.time(),
+        )
+        server._requests['req-1'] = record
+        server._pending_events['req-1'] = __import__('asyncio').Event()
+
+        def approve() -> None:
+            with contextlib.suppress(Exception):
+                server.approve_request('req-1')
+
+        threads = [threading.Thread(target=approve) for _ in range(4)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        updated = server.get_request_status('req-1')
+        assert updated is not None
+        assert updated.status == ApprovalStatus.APPROVED
 
     def test_approve_request(self):
         """Test approving a pending request."""

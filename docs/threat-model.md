@@ -1,6 +1,6 @@
 # TeaAgent Threat Model
 
-Last updated: 2026-05-29 (2nd edition)
+Last updated: 2026-05-29 (3rd edition — post comprehensive audit)
 
 This document maps threats to mitigations and verification. It complements [tool-authoring.md](tool-authoring.md) and [architecture.md](architecture.md).
 
@@ -22,7 +22,9 @@ This document maps threats to mitigations and verification. It complements [tool
 | Provider response schema drift | Low | JSON schema for model decisions | `test_live_provider_conformance_flow.py` | Provider-specific quirks remain |
 | Unbounded run cost | Medium | `RunBudget`; iteration/tool/cost caps | `test_p0_harness.py`, `test_p0_slo_flow.py` | User must configure caps |
 | JIT approval server unresponsive during wait | High | Async `_wait_for_approval` using `asyncio.Event` + `asyncio.wait_for`; SSE server remains responsive | `tests/test_phase6_jit_server.py` | Fixed synchronous `time.sleep` spin-lock blocking event loop |
-| Context Bus SQLite lock contention / transaction leaks | Medium | Per-thread SQLite connections (`threading.local`); `timeout=5.0` on connect; WAL pragmas on each new connection; `_execute_with_retry` with exponential backoff (5 retries) + generation-based reconnect; explicit `conn.rollback()` on write failure | `tests/test_phase5_context_bus.py` | Multi-thread stress not in default suite; NFS still advisory for JSONL stores |
+| Context Bus SQLite lock contention / transaction leaks | Medium | Per-thread SQLite connections (`threading.local`); `timeout=5.0` on connect; WAL pragmas on each new connection; `_execute_with_retry` with exponential backoff (5 retries) + generation-based reconnect; explicit `conn.rollback()` on write failure; `cleanup_old_deltas` scoped to `workflow_id` | `tests/test_phase5_context_bus.py` (incl. parallel publish + workflow-scoped cleanup) | Global `_reconnect()` still closes all thread handles; see `docs/plans/remediation-roadmap.md` P2.1 |
+| Federated sync state corruption on crash | Medium | `atomic_write_text` + file lock on `federated_sync_state.json`; lock on pending changes | `tests/test_federated_sync.py` | File-based multi-sig quorum still experimental |
+| JIT approval server race on approve/reject | Medium | `threading.Lock` on `_requests` / `_pending_events` | `tests/test_phase5_jit_approval_server.py` | Approve from thread without running event loop still drops SSE broadcast |
 | Asyncio event loop starvation from synchronous P2P approval polling | High | `collect_approval_signatures` converted to `async def` with `asyncio.sleep`; `_collect_peer_signatures` dispatches via `run_coroutine_threadsafe` or `asyncio.run()` | — | Previously 5-minute synchronous `time.sleep` polling blocked event loop — now fully non-blocking |
 | Shell normalization bypass via brace expansion / process substitution | High | Multi-pass `_normalize_shell_arg` now handles `{a,b}` expansion, `<()` process substitution, and non-string/non-list fallback | `tests/test_policy.py` | Catches `/pr{od,oduction}`, `<(echo /prod)`, dict-type command args |
 | Protected directory bypass via alternate write tools | High | `workspace_write_*` tool pattern + `.git*` argument pattern covers all write tools and subdirectory contents | `tests/test_policy.py`, `tests/test_file_policy.py` | Previously only `workspace_write_file` was covered |

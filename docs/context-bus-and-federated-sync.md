@@ -23,6 +23,8 @@ P2P-style export/import of graph change batches for multi-agent knowledge graphs
 | Topic | Behavior |
 |-------|----------|
 | State file | `.teaagent/federated_sync_state.json` in the workspace |
+| Persistence | `atomic_write_text` + `fcntl` file lock on save |
+| Concurrency | `threading.Lock` guards `_pending_changes` and message creation |
 | Transport | JSON files via `export_sync_message` / `import_sync_message` |
 | Errors | Invalid JSON, missing keys, or I/O failures return `None` and log a warning |
 

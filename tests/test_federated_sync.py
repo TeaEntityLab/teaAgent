@@ -190,6 +190,25 @@ def test_export_import_sync_message():
         assert len(imported.changes) == len(message.changes)
 
 
+def test_concurrent_record_node_changes():
+    import threading
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sync = FederatedGraphSync(tmpdir, 'agent-1')
+
+        def record(i: int) -> None:
+            sync.record_node_change(f'node-{i}', 'node_add', {'i': i})
+
+        threads = [threading.Thread(target=record, args=(i,)) for i in range(10)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        message = sync.create_sync_message()
+        assert len(message.changes) == 10
+
+
 def test_import_sync_message_oserror_returns_none(tmp_path: Path):
     sync = FederatedGraphSync(str(tmp_path), 'agent-1')
     missing = tmp_path / 'does-not-exist.json'

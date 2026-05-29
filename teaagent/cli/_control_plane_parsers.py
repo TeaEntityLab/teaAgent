@@ -33,8 +33,8 @@ def register(
     serve_cmd.add_argument(
         '--jit-timeout-seconds',
         type=int,
-        default=300,
-        help='JIT approval request timeout. Default 300.',
+        default=180,
+        help='JIT approval request timeout. Default 180 (3 minutes).',
     )
     serve_cmd.add_argument(
         '--sse-interval-seconds',

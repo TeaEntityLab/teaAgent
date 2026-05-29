@@ -170,6 +170,42 @@ class TestContextBus:
 
             bus.close()
 
+    def test_cleanup_old_deltas_scoped_to_workflow(self):
+        """cleanup_old_deltas must not delete other workflows' cards."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / 'context_bus.db'
+            bus_a = ContextBus(
+                ContextBusConfig(db_path=db_path, workflow_id='workflow-a')
+            )
+            bus_b = ContextBus(
+                ContextBusConfig(db_path=db_path, workflow_id='workflow-b')
+            )
+            old_ts = 1.0
+            bus_a.publish_delta(
+                DeltaCard(
+                    delta_id='old-a',
+                    delta_type=DeltaType.DISCOVERY,
+                    source_agent='agent-1',
+                    content='stale',
+                    timestamp=old_ts,
+                )
+            )
+            bus_b.publish_delta(
+                DeltaCard(
+                    delta_id='keep-b',
+                    delta_type=DeltaType.DISCOVERY,
+                    source_agent='agent-1',
+                    content='keep',
+                    timestamp=old_ts,
+                )
+            )
+            bus_a._config.max_delta_age_seconds = 0
+            bus_a.cleanup_old_deltas()
+            assert bus_a.get_delta_count() == 0
+            assert bus_b.get_delta_count() == 1
+            bus_a.close()
+            bus_b.close()
+
     def test_parallel_publish_from_threads(self):
         """Concurrent publishes use per-thread SQLite connections."""
         with tempfile.TemporaryDirectory() as tmpdir:

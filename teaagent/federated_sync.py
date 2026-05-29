@@ -12,12 +12,14 @@ import functools
 import hashlib
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.graphqlite_store import GraphQLiteGraphStore
+from teaagent.storage import atomic_write_text
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +115,7 @@ class FederatedGraphSync:
         self._sync_state_path = self._root / '.teaagent' / 'federated_sync_state.json'
         self._sync_state = self._load_sync_state()
         self._pending_changes: list[GraphChange] = []
+        self._state_lock = threading.RLock()
 
     def _load_sync_state(self) -> SyncState:
         """Load sync state from disk."""
@@ -142,8 +145,7 @@ class FederatedGraphSync:
             )
 
     def _save_sync_state(self) -> None:
-        """Save sync state to disk."""
-        self._sync_state_path.parent.mkdir(parents=True, exist_ok=True)
+        """Save sync state to disk (atomic write under file lock)."""
         data = {
             'agent_id': self._sync_state.agent_id,
             'graph_version': self._sync_state.graph_version,
@@ -151,7 +153,9 @@ class FederatedGraphSync:
             'sequence_number': self._sync_state.sequence_number,
             'peer_states': self._sync_state.peer_states,
         }
-        self._sync_state_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+        payload = json.dumps(data, indent=2)
+        with self._state_lock:
+            atomic_write_text(self._sync_state_path, payload)
 
     def _generate_change_id(self, change_type: str, data: dict[str, Any]) -> str:
         """Generate unique ID for a change based on content hash."""
@@ -193,7 +197,8 @@ class FederatedGraphSync:
             data=data,
             source_agent_id=self._agent_id,
         )
-        self._pending_changes.append(change)
+        with self._state_lock:
+            self._pending_changes.append(change)
         return change
 
     def record_edge_change(
@@ -212,11 +217,16 @@ class FederatedGraphSync:
             data=data,
             source_agent_id=self._agent_id,
         )
-        self._pending_changes.append(change)
+        with self._state_lock:
+            self._pending_changes.append(change)
         return change
 
     def create_sync_message(self) -> SyncMessage:
         """Create a sync message with pending changes."""
+        with self._state_lock:
+            return self._create_sync_message_locked()
+
+    def _create_sync_message_locked(self) -> SyncMessage:
         self._sync_state = SyncState(
             agent_id=self._sync_state.agent_id,
             graph_version=self._sync_state.graph_version,
