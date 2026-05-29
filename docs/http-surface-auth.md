@@ -41,6 +41,17 @@ Relay mode ignores `tenants` (any valid relay token may submit votes).
 
 Bind to `127.0.0.1` for local dev without tokens.
 
+## Vote relay rate limits
+
+`teaagent consensus relay serve` applies a per-token sliding window (default **120** POSTs per **60** seconds):
+
+```bash
+teaagent consensus relay serve --api-token-file relay-tokens.json \
+  --rate-limit-calls 60 --rate-limit-window 60
+```
+
+Set `--rate-limit-calls 0` to disable. Exceeded quotas return HTTP **429**.
+
 ## mTLS (vote relay)
 
 ```bash

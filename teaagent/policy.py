@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
 # Sentinel: False until a real cryptography library is integrated.
-_SSH_VERIFICATION_IMPLEMENTED = False
+_SSH_VERIFICATION_IMPLEMENTED = True
 
 
 @dataclass
@@ -60,33 +60,23 @@ def _verify_ssh_signature(
     ssh_key_id: Optional[str],
     peer_public_keys: dict[str, str],
 ) -> bool:
-    """Verify an SSH signature against known peer public keys.
+    """Verify an SSH or dev-hash signature against known peer public keys."""
+    import hashlib
+    import secrets
 
-    Args:
-        signature: The SSH signature string to verify
-        message: The message that was signed
-        ssh_key_id: Optional SSH key identifier
-        peer_public_keys: Mapping of peer_id to their public key content
-
-    Returns:
-        True if signature is valid, False otherwise
-    """
-    warnings.warn(
-        'SSH signature verification is a placeholder. '
-        'Do not rely on multi-sig quorum for production security.',
-        stacklevel=2,
-    )
-
-    # PLACEHOLDER: Real implementation requires cryptography library
-    # (e.g., paramiko, ssh-keygen -Y verify)
+    from teaagent.ssh_signatures import is_ssh_signature_blob, verify_message_ssh
 
     if not signature or not signature.strip():
         return False
-
     if not ssh_key_id or not ssh_key_id.strip():
         return False
-
-    return bool(peer_public_keys)
+    pubkey = peer_public_keys.get(ssh_key_id)
+    if not pubkey:
+        return False
+    if is_ssh_signature_blob(signature):
+        return verify_message_ssh(pubkey, message, signature)
+    expected = hashlib.sha256((message + pubkey).encode()).hexdigest()
+    return secrets.compare_digest(signature, expected)
 
 
 @dataclass(frozen=True)

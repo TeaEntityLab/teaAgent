@@ -1,0 +1,7 @@
+{
+  "subject_tenants": {
+    "alice@example.com": "team-a",
+    "bob@example.com": "team-b",
+    "oauth2|svc-account-1": "team-a"
+  }
+}

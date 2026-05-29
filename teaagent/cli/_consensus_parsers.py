@@ -276,6 +276,18 @@ def _consensus(
         '--tls-client-ca',
         help='Client CA PEM for mTLS (requires --tls-cert and --tls-key)',
     )
+    relay_serve.add_argument(
+        '--rate-limit-calls',
+        type=int,
+        default=120,
+        help='Max POST /api/v1/votes per token per window (0 disables). Default 120.',
+    )
+    relay_serve.add_argument(
+        '--rate-limit-window',
+        type=float,
+        default=60.0,
+        help='Rate limit window in seconds. Default 60.',
+    )
     relay_serve.add_argument('--peer-storage', help='Path to peer registry storage')
     relay_serve.add_argument(
         '--consensus-storage', help='Path to consensus state storage'

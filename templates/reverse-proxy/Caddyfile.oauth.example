@@ -1,0 +1,28 @@
+# Caddy + OAuth gateway → TeaAgent control plane
+#
+# Replace oauth provider blocks with your IdP (Authelia, Authentik, etc.).
+# Map authenticated user email → tenant via snippet file.
+
+{
+	# local_certs
+}
+
+oauth.example.com {
+	# External auth plugin / forward_auth sets {http.auth.user.email}
+	@team_a expression `{http.auth.user.email} == "alice@example.com"`
+	@team_b expression `{http.auth.user.email} == "bob@example.com"`
+
+	handle @team_a {
+		header X-TeaAgent-Tenant team-a
+		header Authorization "Bearer {env.TEAAgent_TEAM_A_TOKEN}"
+		reverse_proxy 127.0.0.1:8765
+	}
+
+	handle @team_b {
+		header X-TeaAgent-Tenant team-b
+		header Authorization "Bearer {env.TEAAgent_TEAM_B_TOKEN}"
+		reverse_proxy 127.0.0.1:8765
+	}
+
+	respond 403
+}

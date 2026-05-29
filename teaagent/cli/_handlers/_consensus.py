@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import ssl
 from pathlib import Path
 
 from teaagent.consensus import (
@@ -269,7 +270,10 @@ def consensus_votes_import_command(args: argparse.Namespace) -> int:
     engine = _consensus_engine_from_args(args)
     summary = import_votes_batch(engine, records, auto_sign=not args.no_auto_sign)
     print(json.dumps(summary, indent=2))
-    return 0 if summary.get('accepted', 0) > 0 and not summary.get('errors') else 1
+    accepted = summary.get('accepted', 0)
+    errors = summary.get('errors')
+    ok = isinstance(accepted, int) and accepted > 0 and not errors
+    return 0 if ok else 1
 
 
 def consensus_vote_command(args: argparse.Namespace) -> int:
@@ -312,7 +316,7 @@ def consensus_vote_command(args: argparse.Namespace) -> int:
         return 1
 
 
-def _relay_ssl_context(args: argparse.Namespace):
+def _relay_ssl_context(args: argparse.Namespace) -> ssl.SSLContext | None:
     if not getattr(args, 'tls_cert', None):
         return None
     from pathlib import Path
@@ -348,6 +352,15 @@ def consensus_relay_serve_command(args: argparse.Namespace) -> int:
         api_token_file=token_file,
         relay_mode=True,
     )
+    from teaagent.http_rate_limit import TokenRateLimiter
+
+    rate_limiter = None
+    rate_limit_calls = int(getattr(args, 'rate_limit_calls', 0))
+    if rate_limit_calls > 0:
+        rate_limiter = TokenRateLimiter(
+            max_calls=rate_limit_calls,
+            window_seconds=float(getattr(args, 'rate_limit_window', 60.0)),
+        )
     try:
         relay = VoteRelayServer(
             engine,
@@ -356,6 +369,7 @@ def consensus_relay_serve_command(args: argparse.Namespace) -> int:
             require_ssh=not args.allow_dev_signatures,
             auth_policy=policy,
             ssl_context=_relay_ssl_context(args),
+            rate_limiter=rate_limiter,
         )
     except ValueError as exc:
         print(f'Error: {exc}')

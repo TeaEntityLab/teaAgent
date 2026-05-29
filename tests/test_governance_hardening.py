@@ -6,7 +6,6 @@ import json
 import os
 import tempfile
 import unittest
-import warnings
 from pathlib import Path
 
 from teaagent.governance.tool_lint import fuzz_check_handler_code
@@ -310,25 +309,33 @@ class PermissionModeCollisionTests(unittest.TestCase):
 class MultiSigPlaceholderTests(unittest.TestCase):
     """Multi-sig SSH placeholder flag and warning."""
 
-    def test_ssh_verification_not_implemented_flag(self) -> None:
+    def test_ssh_verification_implemented_flag(self) -> None:
         from teaagent import policy as _policy
 
-        flag = getattr(_policy, '_SSH_VERIFICATION_IMPLEMENTED', False)
-        self.assertFalse(flag)
+        self.assertTrue(_policy._SSH_VERIFICATION_IMPLEMENTED)
 
-    def test_ssh_verification_warns(self) -> None:
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
+    def test_ssh_verification_dev_hash(self) -> None:
+        import hashlib
+
+        pubkey = 'ssh-ed25519 AAAA'
+        message = 'request-hash'
+        expected = hashlib.sha256((message + pubkey).encode()).hexdigest()
+        self.assertTrue(
             _verify_ssh_signature(
-                signature='sig',
-                message='msg',
-                ssh_key_id='key1',
-                peer_public_keys={},
+                signature=expected,
+                message=message,
+                ssh_key_id='peer1',
+                peer_public_keys={'peer1': pubkey},
             )
-            self.assertGreaterEqual(len(w), 1)
-            self.assertTrue(
-                any('SSH signature verification' in str(msg.message) for msg in w)
+        )
+        self.assertFalse(
+            _verify_ssh_signature(
+                signature='bad',
+                message=message,
+                ssh_key_id='peer1',
+                peer_public_keys={'peer1': pubkey},
             )
+        )
 
 
 if __name__ == '__main__':

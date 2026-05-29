@@ -41,9 +41,9 @@ Scale reference (internal engineering, not market validation):
 | Read-only numeric `--parallel` | Beta | CLI guard in `agent run` | Swarm read-only analysis |
 | Governance fuzz tests | Stable | `tests/test_governance_fuzz.py`, `tests/test_governance_hardening.py` | — |
 | CI governance gate | Stable | `.github/workflows/ci.yml` governance-gate job | — |
-| Phase 4 consensus | Beta | `surface_auth`, relay mTLS, bearer tokens | Relay rate limits + WAN deployment guides |
+| Phase 4 consensus | Beta | `vote_relay` rate limits, SSH verify unified | WAN deployment runbooks |
 | Phase 5 sandbox routing + execution | Beta | `wasm-skill-build.yml`, `sandbox wasm-contract` | Org-wide WASM signing in CI |
-| Phase 6 skill writer / control plane | Beta | `surface_auth`, tenant token file, reverse-proxy templates | OAuth gateway integration |
+| Phase 6 skill writer / control plane | Beta | `gateway_oauth`, path tenant routes, OAuth templates | External IdP automation |
 
 ## Surfaces (summary)
 

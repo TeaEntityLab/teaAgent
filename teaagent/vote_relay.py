@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from teaagent.consensus import ConsensusEngine, VoteDecision
+from teaagent.http_rate_limit import TokenRateLimiter
 from teaagent.ssh_signatures import (
     build_vote_signing_message,
     is_ssh_signature_blob,
@@ -23,7 +24,10 @@ from teaagent.ssh_signatures import (
 from teaagent.surface_auth import (
     SurfaceAuthPolicy,
     authorize_request,
+    extract_bearer_token,
+    hash_token,
     is_loopback_host,
+    normalize_http_headers,
 )
 from teaagent.tls_server import wrap_server_socket
 
@@ -190,6 +194,7 @@ class VoteRelayServer:
         require_ssh: bool = True,
         auth_policy: SurfaceAuthPolicy | None = None,
         ssl_context: ssl.SSLContext | None = None,
+        rate_limiter: TokenRateLimiter | None = None,
     ) -> None:
         self.engine = engine
         self.host = host
@@ -197,6 +202,7 @@ class VoteRelayServer:
         self.require_ssh = require_ssh
         self.auth_policy = auth_policy
         self.ssl_context = ssl_context
+        self.rate_limiter = rate_limiter
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
         require_relay_bind_auth(host, auth_policy)
@@ -284,11 +290,26 @@ def _make_relay_handler(relay: VoteRelayServer) -> type[BaseHTTPRequestHandler]:
         def _authorized(self) -> bool:
             ok, reason = authorize_request(
                 self.server.relay.auth_policy,
-                self.headers,
+                normalize_http_headers(self.headers),
             )
             if ok:
                 return True
             self._json(HTTPStatus.UNAUTHORIZED, {'ok': False, 'error': reason})
+            return False
+
+        def _rate_limit_ok(self) -> bool:
+            limiter = self.server.relay.rate_limiter
+            if limiter is None:
+                return True
+            raw = (
+                extract_bearer_token(normalize_http_headers(self.headers))
+                or 'anonymous'
+            )
+            key = hash_token(raw) if raw != 'anonymous' else 'anonymous'
+            ok, reason = limiter.allow(key)
+            if ok:
+                return True
+            self._json(HTTPStatus.TOO_MANY_REQUESTS, {'ok': False, 'error': reason})
             return False
 
         def do_GET(self) -> None:
@@ -305,6 +326,8 @@ def _make_relay_handler(relay: VoteRelayServer) -> type[BaseHTTPRequestHandler]:
                 self._json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
                 return
             if not self._authorized():
+                return
+            if not self._rate_limit_ok():
                 return
             try:
                 body = self._read_json()

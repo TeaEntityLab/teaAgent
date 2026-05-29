@@ -1,0 +1,57 @@
+# nginx + oauth2-proxy → TeaAgent control plane
+#
+# Prerequisites:
+#   - oauth2-proxy sets X-Auth-Request-Email after successful login
+#   - teaagent control-plane serve --api-token-file /etc/teaagent/tokens.json
+#   - oauth-tenant-map.json maps email → tenant id
+#   - Environment provides per-tenant bearer secrets
+
+# Include generated map from: python3 -c "from teaagent.gateway_oauth import OAuthTenantMap; ..."
+
+map $http_x_auth_request_email $teaagent_tenant {
+    default "";
+    "alice@example.com" "team-a";
+    "bob@example.com" "team-b";
+}
+
+map $teaagent_tenant $teaagent_bearer {
+    default "";
+    "team-a" "REPLACE_WITH_TEAM_A_TOKEN";
+    "team-b" "REPLACE_WITH_TEAM_B_TOKEN";
+}
+
+server {
+    listen 443 ssl;
+    server_name teaagent.example.com;
+
+    ssl_certificate     /etc/ssl/certs/teaagent.crt;
+    ssl_certificate_key /etc/ssl/private/teaagent.key;
+
+    location /oauth2/ {
+        proxy_pass http://127.0.0.1:4180;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location / {
+        auth_request /oauth2/auth;
+        auth_request_set $email $upstream_http_x_auth_request_email;
+
+        if ($teaagent_tenant = "") {
+            return 403;
+        }
+
+        proxy_set_header X-Auth-Request-Email $email;
+        proxy_set_header X-TeaAgent-Tenant $teaagent_tenant;
+        proxy_set_header Authorization "Bearer $teaagent_bearer";
+        proxy_pass http://127.0.0.1:8765;
+    }
+
+    # Path-based tenant SSE (optional CDN rule)
+    location ~ ^/api/tenants/([^/]+)/workflow/stream$ {
+        auth_request /oauth2/auth;
+        proxy_set_header X-TeaAgent-Tenant $1;
+        proxy_set_header Authorization "Bearer $teaagent_bearer";
+        proxy_pass http://127.0.0.1:8765;
+    }
+}

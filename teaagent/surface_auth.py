@@ -8,7 +8,15 @@ import logging
 import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping, Union
+
+HeaderMap = Mapping[str, Union[str, None]]
+
+
+def normalize_http_headers(headers: Any) -> dict[str, str]:
+    """Coerce stdlib HTTP headers to a plain string map for auth checks."""
+    return {str(key): str(value) for key, value in headers.items() if value is not None}
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +33,15 @@ def hash_token(raw: str) -> str:
     return hashlib.sha256(raw.encode('utf-8')).hexdigest()
 
 
-def extract_bearer_token(headers: Mapping[str, str]) -> str | None:
+def extract_bearer_token(headers: HeaderMap) -> str | None:
     """Parse ``Authorization: Bearer`` or ``X-TeaAgent-Token``."""
-    auth = headers.get('Authorization', '').strip()
+    auth = (headers.get('Authorization') or '').strip()
     if auth.lower().startswith('bearer '):
         return auth[7:].strip()
-    relay = headers.get('X-TeaAgent-Relay-Token', '').strip()
+    relay = (headers.get('X-TeaAgent-Relay-Token') or '').strip()
     if relay:
         return relay
-    plane = headers.get('X-TeaAgent-Token', '').strip()
+    plane = (headers.get('X-TeaAgent-Token') or '').strip()
     return plane or None
 
 
@@ -136,7 +144,7 @@ def load_surface_auth_policy(
 
 def authorize_request(
     policy: SurfaceAuthPolicy | None,
-    headers: Mapping[str, str],
+    headers: HeaderMap,
     *,
     tenant_id: str | None = None,
     require_admin: bool = False,

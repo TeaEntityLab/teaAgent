@@ -60,8 +60,9 @@ TeaAgent’s harness remains **registry-first**: tools, approvals, audit, and sw
 
 ### Residual risks
 
-- No built-in relay authentication (API key/mTLS) — add before WAN exposure.
-- `policy._verify_ssh_signature` remains a separate placeholder for multi-sig quorum; consensus path is independent.
+- ~~No built-in relay authentication~~ — **Addressed** (`surface_auth`, mTLS).
+- ~~`policy._verify_ssh_signature` placeholder~~ — **Addressed** (unified with `ssh_signatures`).
+- Per-token rate limits default to 120 POSTs / 60s (configurable).
 
 ---
 
@@ -127,8 +128,9 @@ flowchart TB
 
 ### Residual risks
 
-- No per-tenant authZ — tenant header is advisory until paired with gateway auth.
-- SSE streams do not yet use path-prefix `/api/tenants/{id}/…` (header-only); path routing can be added later.
+- ~~No per-tenant authZ~~ — **Addressed** (bearer token file + `authorize_request`).
+- ~~Path-prefix tenant routes~~ — **Addressed** (`/api/tenants/{id}/workflow/stream`, etc.).
+- OAuth mapping documented at `docs/gateway-oauth-tenants.md` with nginx/Caddy examples.
 
 ---
 
@@ -145,10 +147,10 @@ flowchart TB
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Duplicate permission enums (`hooks` vs `policy`) | Medium | Type confusion across surfaces |
+| Hook vs policy permission enums | Low | `HookPermissionMode` vs `policy.PermissionMode` are distinct by design |
 | Advisory `fcntl` locks | Medium | NFS multi-writer risk |
 | MCP HTTP without native TLS | Medium | Requires reverse proxy |
-| Test suite regressions on strict read-only preflight | Low–medium | Legacy tests missing `read_only=True` |
+| Test suite regressions on strict read-only preflight | Low | `test_policy` passes `read_only=True` under READ_ONLY mode |
 
 ### Test posture (inference from prior run)
 
@@ -171,11 +173,15 @@ flowchart TB
 
 ## 6. Recommended next actions
 
-1. **Relay rate limits** — throttle `POST /api/v1/votes` per token.
-2. **Unify SSH verification** — wire `policy._verify_ssh_signature` to `ssh_signatures.verify_message_ssh`.
-3. **OAuth gateway** — map external IdP claims → tenant + bearer at reverse proxy (templates in `templates/reverse-proxy/`).
-4. **Path-based tenant routes** — `/api/tenants/{id}/workflow/stream` for CDN caching rules.
-5. **Dependabot #10** — resolve moderate advisory on default branch.
+| Item | Status |
+|------|--------|
+| Relay rate limits per token | **Shipped** — `http_rate_limit.py`, `--rate-limit-calls` |
+| Unify `policy._verify_ssh_signature` | **Shipped** — uses `ssh_signatures.verify_message_ssh` |
+| OAuth → tenant gateway mapping | **Shipped** — `gateway_oauth.py`, `docs/gateway-oauth-tenants.md` |
+| Path-based tenant SSE routes | **Shipped** — `/api/tenants/{id}/…` |
+| Dependabot #10 | **Ongoing** — track via `security.yml` pip-audit + GitHub Security UI |
+| Distributed JSONL locks (NFS) | **Documented** — migrate to DB for multi-node |
+| Native MCP TLS | **Documented** — terminate at reverse proxy |
 
 ---
 
@@ -190,3 +196,6 @@ flowchart TB
 | `.github/workflows/wasm-skill-build.yml` | WASM CI template |
 | `docs/wasm-skill-ci.md` | CI documentation |
 | `docs/analysis/strategic-features-report.md` | This report |
+| `teaagent/http_rate_limit.py` | Per-token relay rate limiting |
+| `teaagent/gateway_oauth.py` | OAuth subject → tenant map |
+| `docs/gateway-oauth-tenants.md` | Gateway OAuth documentation |

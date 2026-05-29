@@ -19,7 +19,12 @@ from teaagent.control_plane_tenant import (
     sanitize_tenant_id,
 )
 from teaagent.jit_approval_server import JITApprovalServer
-from teaagent.surface_auth import SurfaceAuthPolicy, authorize_request, is_loopback_host
+from teaagent.surface_auth import (
+    SurfaceAuthPolicy,
+    authorize_request,
+    is_loopback_host,
+    normalize_http_headers,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -152,14 +157,17 @@ def _make_handler(
         def log_message(self, format: str, *args: Any) -> None:
             logger.debug(format, *args)
 
+        def _tenant_path_parts(self) -> tuple[str | None, str | None]:
+            """Return ``(tenant_id, suffix)`` for ``/api/tenants/{id}/...`` paths."""
+            parts = [part for part in urlparse(self.path).path.split('/') if part]
+            if len(parts) >= 4 and parts[0] == 'api' and parts[1] == 'tenants':
+                return parts[2], '/'.join(parts[3:])
+            return None, None
+
         def _resolve_tenant_id(self) -> str:
+            path_tenant, _suffix = self._tenant_path_parts()
             header = self.headers.get('X-TeaAgent-Tenant', '').strip()
-            parsed = urlparse(self.path)
-            tenant = header
-            if not tenant and parsed.path.startswith('/api/tenants/'):
-                parts = [part for part in parsed.path.split('/') if part]
-                if len(parts) >= 3 and parts[0] == 'api' and parts[1] == 'tenants':
-                    tenant = parts[2]
+            tenant = path_tenant or header
             return sanitize_tenant_id(
                 tenant or self.server.plane.registry.default_tenant
             )
@@ -180,7 +188,7 @@ def _make_handler(
                 return True
             ok, reason = authorize_request(
                 self.server.plane.auth_policy,
-                self.headers,
+                normalize_http_headers(self.headers),
                 tenant_id=tenant_id,
                 require_admin=require_admin,
             )
@@ -204,11 +212,19 @@ def _make_handler(
                     {'tenants': self.server.plane.registry.list_tenants()},
                 )
                 return
+            path_tenant, path_suffix = self._tenant_path_parts()
+            stream_suffix = path_suffix if path_tenant else None
             if path in (
                 '/api/workflow/stream',
                 '/api/focus/stream',
                 '/api/jit/diff',
             ):
+                stream_suffix = {
+                    '/api/workflow/stream': 'workflow/stream',
+                    '/api/focus/stream': 'focus/stream',
+                    '/api/jit/diff': 'jit/diff',
+                }[path]
+            if stream_suffix in ('workflow/stream', 'focus/stream', 'jit/diff'):
                 try:
                     tenant_id = self._resolve_tenant_id()
                 except ValueError as exc:
@@ -216,15 +232,15 @@ def _make_handler(
                     return
                 if not self._require_auth(tenant_id=tenant_id):
                     return
-            if path == '/api/workflow/stream':
-                self._sse_stream('workflow_update', self._workflow_payload)
-                return
-            if path == '/api/focus/stream':
-                self._sse_stream('focus_update', self._focus_payload)
-                return
-            if path == '/api/jit/diff':
-                self._sse_stream('jit_diff', self._jit_payload)
-                return
+                if stream_suffix == 'workflow/stream':
+                    self._sse_stream('workflow_update', self._workflow_payload)
+                    return
+                if stream_suffix == 'focus/stream':
+                    self._sse_stream('focus_update', self._focus_payload)
+                    return
+                if stream_suffix == 'jit/diff':
+                    self._sse_stream('jit_diff', self._jit_payload)
+                    return
             if path in ('/', '/index.html', '/styles.css', '/app.js'):
                 if (
                     self.server.plane.auth_policy is not None
