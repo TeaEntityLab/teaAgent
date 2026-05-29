@@ -894,15 +894,15 @@ class CLITests(unittest.TestCase):
 
         with (
             patch(
-                'teaagent.graphqlite_store.check_graphqlite_runtime',
-                return_value=(True, 'ok'),
-            ),
-            redirect_stdout(output),
-        ):
-            exit_code = main(
-                ['doctor', 'all', '--provider', 'gpt'],
-                _check_llm=lambda p: (True, 'ok'),
-            )
+                    'teaagent.cli.check_graphqlite_runtime',
+                    return_value=(True, 'ok'),
+                ),
+                redirect_stdout(output),
+            ):
+                exit_code = main(
+                    ['doctor', 'all', '--provider', 'gpt'],
+                    _check_llm=lambda p: (True, 'ok'),
+                )
 
         payload = json.loads(output.getvalue())
         self.assertEqual(exit_code, 0)
@@ -918,7 +918,7 @@ class CLITests(unittest.TestCase):
 
             with (
                 patch(
-                    'teaagent.graphqlite_store.check_graphqlite_runtime',
+                    'teaagent.cli.check_graphqlite_runtime',
                     return_value=(True, 'ok'),
                 ),
                 redirect_stdout(output),
