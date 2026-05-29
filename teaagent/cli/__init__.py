@@ -110,6 +110,7 @@ from teaagent.cli._handlers import (
     mcp_trust_inspect_command,
     mcp_trust_list_command,
     memory_add_command,
+    memory_failures_auto_invalidate_command,
     memory_failures_invalidate_command,
     memory_failures_list_command,
     memory_failures_prune_command,
@@ -329,6 +330,7 @@ def build_parser() -> argparse.ArgumentParser:
             'failures_show': memory_failures_show_command,
             'failures_invalidate': memory_failures_invalidate_command,
             'failures_prune': memory_failures_prune_command,
+            'failures_auto_invalidate': memory_failures_auto_invalidate_command,
         },
     )
     register_skill(

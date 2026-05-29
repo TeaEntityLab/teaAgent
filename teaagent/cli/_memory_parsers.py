@@ -82,3 +82,9 @@ def register(
     fail_prune = fail_subs.add_parser('prune', help='Remove expired/invalidated cards.')
     fail_prune.add_argument('--root', default='.', help='Workspace root.')
     fail_prune.set_defaults(func=handlers['failures_prune'])
+
+    fail_auto = fail_subs.add_parser(
+        'auto-invalidate', help='Apply automated invalidation rules.'
+    )
+    fail_auto.add_argument('--root', default='.', help='Workspace root.')
+    fail_auto.set_defaults(func=handlers['failures_auto_invalidate'])

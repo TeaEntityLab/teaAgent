@@ -237,6 +237,14 @@ def add_agent_run_arguments(
         help='Block workspace writes unless --from-plan bound a plan artifact.',
     )
     p.add_argument(
+        '--skip-plan-check',
+        action='store_true',
+        help=(
+            'Skip plan-before-write enforcement (not recommended). '
+            'Use only when you understand the security implications.'
+        ),
+    )
+    p.add_argument(
         '--telemetry-otlp-endpoint',
         default=None,
         metavar='URL',

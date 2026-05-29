@@ -54,6 +54,7 @@ class AgentRunner:
         jit_state: Optional[JITApprovalState] = None,
         workspace_root: Optional[Path] = None,
         require_plan: bool = False,
+        skip_plan_check: bool = False,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -68,6 +69,7 @@ class AgentRunner:
         self.file_policy = file_policy
         self.jit_state = jit_state or JITApprovalState()
         self.require_plan = require_plan
+        self.skip_plan_check = skip_plan_check
         self.auto_mode_guard: Optional[AutoModeGuard] = None
         if auto_mode_config is not None and auto_mode_config.enabled:
             self.auto_mode_guard = AutoModeGuard(config=auto_mode_config)
@@ -179,6 +181,7 @@ class AgentRunner:
                     permission_mode=self.approval_policy.permission_mode,
                     context=context,
                     require_plan=self.require_plan,
+                    skip_plan_check=getattr(self, 'skip_plan_check', False),
                 )
                 # Auto mode: block disallowed tools, auto-approve allowed ones
                 if self.auto_mode_guard is not None:

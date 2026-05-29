@@ -58,6 +58,28 @@ def test_plan_gate_allows_write_with_plan_contract() -> None:
     )
 
 
+def test_plan_before_write_enforcement() -> None:
+    """Test strict plan-before-write enforcement for workspace-write mode (Decision 2)."""
+    # workspace-write mode should block without plan even when require_plan=False
+    with pytest.raises(ToolPermissionError, match='workspace-write mode requires'):
+        assert_write_allowed(
+            tool_name='workspace_write_file',
+            permission_mode=PermissionMode.WORKSPACE_WRITE,
+            context={},
+            require_plan=False,  # Not explicitly required, but workspace-write defaults to strict
+            skip_plan_check=False,
+        )
+    
+    # Should allow with skip_plan_check override
+    assert_write_allowed(
+        tool_name='workspace_write_file',
+        permission_mode=PermissionMode.WORKSPACE_WRITE,
+        context={},
+        require_plan=False,
+        skip_plan_check=True,  # Explicit override
+    )
+
+
 def test_audit_completeness_detects_missing_terminal_event(tmp_path) -> None:
     log_path = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log_path)

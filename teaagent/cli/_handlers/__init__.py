@@ -128,6 +128,7 @@ from ._mcp_trust import (
 )
 from ._memory import (
     memory_add_command,
+    memory_failures_auto_invalidate_command,
     memory_failures_invalidate_command,
     memory_failures_list_command,
     memory_failures_prune_command,
@@ -303,6 +304,7 @@ __all__ = [
     'memory_failures_show_command',
     'memory_failures_invalidate_command',
     'memory_failures_prune_command',
+    'memory_failures_auto_invalidate_command',
     'model_conformance',
     'model_providers',
     'model_capabilities',

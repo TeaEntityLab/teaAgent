@@ -497,6 +497,7 @@ def _execute_agent_task(
                 'index_only' if getattr(args, 'skill_index_only', False) else 'eager'
             ),
             require_plan=getattr(args, 'require_plan', False),
+            skip_plan_check=getattr(args, 'skip_plan_check', False),
             validation_profile=_resolve_validation_profile(args),
         ),
         audit=audit,

@@ -4,10 +4,12 @@ This module provides:
 - FailureCard dataclass for structuring failure information
 - Storage operations for failure cards in .teaagent/memory/failures.json
 - Error handling for corrupted or missing storage files
+- Automated invalidation rules for memory hygiene (Decision 3)
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from dataclasses import asdict, dataclass, fields
@@ -18,6 +20,82 @@ from typing import ClassVar, Optional
 DEFAULT_TTL_SECONDS = 30 * 86400
 VALID_CONFIDENCE = frozenset({'low', 'medium', 'high'})
 VALID_WARNING_BEHAVIOR = frozenset({'info', 'warning', 'block'})
+
+
+@dataclass
+class AutoInvalidationRule:
+    """Configuration for automated failure card invalidation."""
+    trigger: str  # 'file_signature_change', 'test_refactor', 'dependency_version_change'
+    confidence: str  # 'high', 'medium', 'low'
+    action: str  # 'invalidate', 'warn', 'block'
+    paths: Optional[list[str]] = None  # Optional path filters
+    enabled: bool = True
+
+
+@dataclass
+class MemoryAutoInvalidationConfig:
+    """Configuration for automated memory invalidation."""
+    rules: list[AutoInvalidationRule]
+    enabled: bool = True
+
+    @classmethod
+    def default(cls) -> 'MemoryAutoInvalidationConfig':
+        """Create default conservative invalidation rules."""
+        return cls(
+            rules=[
+                AutoInvalidationRule(
+                    trigger='file_signature_change',
+                    confidence='high',
+                    action='invalidate',
+                    enabled=True,
+                ),
+                AutoInvalidationRule(
+                    trigger='test_refactor',
+                    confidence='medium',
+                    action='warn',
+                    enabled=True,
+                ),
+                AutoInvalidationRule(
+                    trigger='dependency_version_change',
+                    confidence='medium',
+                    action='warn',
+                    enabled=True,
+                ),
+            ],
+            enabled=True,
+        )
+
+    @classmethod
+    def from_workspace_config(cls, root: Path) -> 'MemoryAutoInvalidationConfig':
+        """Load configuration from workspace .teaagent/config.json if present."""
+        config_path = root / '.teaagent' / 'config.json'
+        if not config_path.exists():
+            return cls.default()
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                memory_config = data.get('memory', {})
+                auto_invalidation = memory_config.get('auto_invalidation', {})
+
+                if not auto_invalidation.get('enabled', True):
+                    return cls(enabled=False, rules=[])
+
+                rules_data = auto_invalidation.get('custom_rules', [])
+                rules = []
+                for rule_data in rules_data:
+                    rule = AutoInvalidationRule(
+                        trigger=rule_data.get('trigger', ''),
+                        confidence=rule_data.get('confidence', 'medium'),
+                        action=rule_data.get('action', 'warn'),
+                        paths=rule_data.get('paths'),
+                        enabled=rule_data.get('enabled', True),
+                    )
+                    rules.append(rule)
+
+                return cls(rules=rules, enabled=True)
+        except (OSError, json.JSONDecodeError):
+            return cls.default()
 
 
 @dataclass
@@ -263,16 +341,118 @@ class FailureCardStorage:
             card_id: The ID of the failure card to clear
 
         Returns:
-            True if card was found and removed, False otherwise
+            True if the card was found and cleared, False otherwise
         """
         cards = self._read_cards()
         original_count = len(cards)
-        cards = [card for card in cards if card.get('id') != card_id]
-
+        cards = [item for item in cards if item.get('id') != card_id]
         if len(cards) < original_count:
             self._write_cards(cards)
             return True
         return False
+
+    def _compute_file_signature(self, file_path: str) -> Optional[str]:
+        """Compute SHA256 signature of a file for change detection."""
+        try:
+            full_path = self.root / file_path
+            if not full_path.exists():
+                return None
+            with open(full_path, 'rb') as f:
+                return hashlib.sha256(f.read()).hexdigest()
+        except (OSError, IOError):
+            return None
+
+    def apply_auto_invalidation(
+        self, config: Optional[MemoryAutoInvalidationConfig] = None
+    ) -> dict[str, int]:
+        """Apply automated invalidation rules based on file system state.
+
+        Args:
+            config: Auto-invalidation configuration. Uses workspace defaults if None.
+
+        Returns:
+            Dictionary with counts of invalidations by trigger type.
+        """
+        if config is None:
+            config = MemoryAutoInvalidationConfig.from_workspace_config(self.root)
+
+        if not config.enabled:
+            return {}
+
+        cards = self._read_cards()
+        invalidation_counts: dict[str, int] = {}
+        updated = False
+
+        for item in cards:
+            card = FailureCard.from_dict(item)
+            if not card.is_active():
+                continue
+
+            for rule in config.rules:
+                if not rule.enabled:
+                    continue
+
+                # Check path filters if specified
+                if rule.paths and card.file_path and not any(
+                    card.file_path.startswith(path) for path in rule.paths
+                ):
+                    continue
+
+                # Apply rule based on trigger
+                if rule.trigger == 'file_signature_change' and card.file_path:
+                    current_sig = self._compute_file_signature(card.file_path)
+                    if current_sig is None:
+                        continue  # File deleted or inaccessible
+
+                    # If signature changed, invalidate
+                    stored_sig = item.get('file_signature')
+                    if stored_sig and stored_sig != current_sig:
+                        item['invalidated'] = True
+                        item['invalidation_reason'] = (
+                            f'File signature changed (rule: {rule.trigger})'
+                        )
+                        invalidation_counts[rule.trigger] = (
+                            invalidation_counts.get(rule.trigger, 0) + 1
+                        )
+                        updated = True
+                    elif not stored_sig:
+                        # Store current signature for future comparison
+                        item['file_signature'] = current_sig
+                        updated = True
+
+                elif rule.trigger == 'test_refactor':
+                    # Check if any test files in context have changed
+                    for test_file in card.context_files:
+                        if 'test' in test_file.lower():
+                            current_sig = self._compute_file_signature(test_file)
+                            if current_sig is None:
+                                continue
+
+                            test_sig_key = f'test_signature_{test_file}'
+                            stored_sig = item.get(test_sig_key)
+                            if stored_sig and stored_sig != current_sig:
+                                if rule.action == 'invalidate':
+                                    item['invalidated'] = True
+                                    item['invalidation_reason'] = (
+                                        f'Test file {test_file} changed (rule: {rule.trigger})'
+                                    )
+                                elif rule.action == 'warn':
+                                    item['warning_behavior'] = 'warning'
+                                    item['invalidation_reason'] = (
+                                        f'Test file {test_file} changed - review recommended'
+                                    )
+                                invalidation_counts[rule.trigger] = (
+                                    invalidation_counts.get(rule.trigger, 0) + 1
+                                )
+                                updated = True
+                            elif not stored_sig:
+                                item[test_sig_key] = current_sig
+                                updated = True
+
+        if updated:
+            self._write_cards(cards)
+
+        return invalidation_counts
 
     def get_by_id(self, card_id: str) -> Optional[FailureCard]:
         """Get a specific failure card by ID.

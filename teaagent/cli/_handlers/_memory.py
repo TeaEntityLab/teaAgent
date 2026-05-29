@@ -121,5 +121,36 @@ def memory_failures_prune_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def memory_failures_auto_invalidate_command(args: argparse.Namespace) -> int:
+    from teaagent.memory.failure_card import (
+        FailureCardStorage,
+        MemoryAutoInvalidationConfig,
+    )
+
+    storage = FailureCardStorage(args.root)
+    config = MemoryAutoInvalidationConfig.from_workspace_config(args.root)
+
+    if not config.enabled:
+        print_json(
+            {
+                'status': 'skipped',
+                'message': 'Auto-invalidation is disabled in workspace configuration',
+            }
+        )
+        return 0
+
+    invalidation_counts = storage.apply_auto_invalidation(config)
+
+    total_invalidated = sum(invalidation_counts.values())
+    print_json(
+        {
+            'status': 'ok',
+            'total_invalidated': total_invalidated,
+            'by_trigger': invalidation_counts,
+        }
+    )
+    return 0
+
+
 def print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))

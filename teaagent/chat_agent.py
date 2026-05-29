@@ -92,6 +92,7 @@ class ChatAgentConfig:
     auto_mode_config: Optional[AutoModeConfig] = None
     use_approval_store: bool = True
     require_plan: bool = False
+    skip_plan_check: bool = False
     validation_profile: Optional[str] = None
 
     @classmethod
@@ -484,6 +485,7 @@ def run_chat_agent(
         cancel_token=config.cancel_token,
         auto_mode_config=config.auto_mode_config,
         require_plan=config.require_plan,
+        skip_plan_check=config.skip_plan_check,
     )
     heartbeat: Optional[Heartbeat] = None
     if config.heartbeat_seconds > 0:
