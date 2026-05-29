@@ -141,6 +141,19 @@ class ApprovalPolicy:
     multi_sig_config: MultiSigQuorumConfig = field(default_factory=MultiSigQuorumConfig)
     agent_id: str = ''  # Agent ID for multi-sig quorum identification
     workspace_root: str = '.'  # Workspace root for sync operations
+    _signature_executor: concurrent.futures.ThreadPoolExecutor = field(
+        init=False, repr=False
+    )
+
+    def __post_init__(self) -> None:
+        # Frozen dataclass: bypass setattr guard for non-field attribute.
+        object.__setattr__(
+            self,
+            '_signature_executor',
+            concurrent.futures.ThreadPoolExecutor(
+                max_workers=2, thread_name_prefix='sig-collect'
+            ),
+        )
 
     def assert_allowed(
         self,
@@ -600,9 +613,8 @@ class ApprovalPolicy:
                     new_loop.close()
 
             timeout = self.multi_sig_config.timeout_seconds + 5
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(_run_in_thread)
-                return future.result(timeout=timeout)
+            future = self._signature_executor.submit(_run_in_thread)
+            return future.result(timeout=timeout)
         return asyncio.run(coro)
 
 

@@ -8,6 +8,7 @@ intelligence with conflict resolution and incremental updates.
 from __future__ import annotations
 
 import contextlib
+import functools
 import hashlib
 import json
 import logging
@@ -530,10 +531,21 @@ class FederatedGraphSync:
         max_polls = int(timeout_seconds / poll_interval)
         polls = 0
 
+        loop = asyncio.get_running_loop()
+
         while polls < max_polls:
-            for sig_file in approvals_dir.glob(f'{request_id}_signature_*.json'):
+            sig_files = await loop.run_in_executor(
+                None,
+                lambda: list(approvals_dir.glob(f'{request_id}_signature_*.json')),
+            )
+
+            for sig_file in sig_files:
                 try:
-                    data = json.loads(sig_file.read_text(encoding='utf-8'))
+                    content = await loop.run_in_executor(
+                        None,
+                        functools.partial(sig_file.read_text, encoding='utf-8'),
+                    )
+                    data = json.loads(content)
                     peer_id = data['peer_id']
                     if peer_id in seen_peers:
                         continue
@@ -545,7 +557,7 @@ class FederatedGraphSync:
                         timestamp=data.get('timestamp', time.time()),
                     )
                     with contextlib.suppress(OSError):
-                        sig_file.unlink()
+                        await loop.run_in_executor(None, sig_file.unlink)
                     seen_peers.add(peer_id)
                     signatures.append(sig_msg)
                 except (json.JSONDecodeError, KeyError):

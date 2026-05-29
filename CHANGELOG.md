@@ -4,6 +4,11 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Residual Risk Fixes (3 fixes)**:
+  - **Policy**: `_run_async_signature_collection` now uses a shared instance-level `ThreadPoolExecutor` instead of creating a new executor per call; executor field properly declared in frozen dataclass via `field(init=False)`
+  - **Context Bus**: `subscribe_deltas` and `get_delta_count` restructured to release `self._lock` before calling `_execute_with_retry` — prevents lock-held-during-sleep thread starvation for writers
+  - **Federated Sync**: `collect_approval_signatures` wraps blocking I/O operations (`glob`, `read_text`, `unlink`) with `loop.run_in_executor` to prevent event loop blocking during async polling
+
 - **Concurrency & Transaction Audit Round 3 (6 fixes)**:
   - **Federated Sync**: `collect_approval_signatures` now accepts `required_approvals` parameter and waits for quorum instead of breaking on first signature; deduplicates peer signatures
   - **Policy**: `_run_async_signature_collection` offloads to `ThreadPoolExecutor` worker thread with fresh event loop — prevents `RuntimeError: cannot run event loop from within running loop`

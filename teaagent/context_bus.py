@@ -291,6 +291,7 @@ class ContextBus:
         Returns:
             List of matching Delta cards.
         """
+        # 1. Acquire lock briefly to get connection and prepare query
         with self._lock:
             conn = self._connection
             if conn is None:
@@ -314,23 +315,25 @@ class ContextBus:
 
             query += ' ORDER BY timestamp DESC'
 
-            cursor = self._execute_with_retry(cursor, query, tuple(params))
-            rows = cursor.fetchall()
+        # 2. Execute outside the lock (retry may sleep during backoff)
+        cursor = self._execute_with_retry(cursor, query, tuple(params))
+        rows = cursor.fetchall()
 
-            deltas = []
-            for row in rows:
-                deltas.append(
-                    DeltaCard(
-                        delta_id=row[0],
-                        delta_type=DeltaType(row[2]),
-                        source_agent=row[3],
-                        content=row[4],
-                        timestamp=row[5],
-                        metadata=json.loads(row[6]) if row[6] else {},
-                    )
+        # 3. Process results outside the lock
+        deltas = []
+        for row in rows:
+            deltas.append(
+                DeltaCard(
+                    delta_id=row[0],
+                    delta_type=DeltaType(row[2]),
+                    source_agent=row[3],
+                    content=row[4],
+                    timestamp=row[5],
+                    metadata=json.loads(row[6]) if row[6] else {},
                 )
+            )
 
-            return deltas
+        return deltas
 
     def archive_to_rag(self, rag_store: Any) -> None:
         """Archive Delta cards to RAG long-term memory.
@@ -464,12 +467,13 @@ class ContextBus:
             if conn is None:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
-            cursor = self._execute_with_retry(
-                cursor,
-                'SELECT COUNT(*) FROM delta_cards WHERE workflow_id = ?',
-                (self._workflow_id,),
-            )
-            return cursor.fetchone()[0]
+
+        cursor = self._execute_with_retry(
+            cursor,
+            'SELECT COUNT(*) FROM delta_cards WHERE workflow_id = ?',
+            (self._workflow_id,),
+        )
+        return cursor.fetchone()[0]
 
     def close(self) -> None:
         """Close the context bus connection."""
