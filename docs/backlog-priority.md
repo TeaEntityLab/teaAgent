@@ -101,6 +101,10 @@ docker-smoke CI) is shipped. See [architecture.md](architecture.md#phase-4-5-roa
 | Control plane HTTP + dashboard | P2 | Shipped | `teaagent/control_plane_api.py`, `tests/test_phase6_control_plane.py` |
 | Control plane CLI | P2 | Shipped | `teaagent control-plane serve` |
 | JIT approval server | P2 | Shipped | `teaagent/jit_approval_server.py`, `tests/test_phase6_jit_server.py` |
+| External peer voting UX | P2 | Shipped | `teaagent consensus wait`, `votes-import`, `import_votes_batch` |
+| Comparator tournament from subagent results | P2 | Shipped | `teaagent/tournament/benchmark.py`, `tests/test_phase6_remaining_features.py` |
+| Control plane swarm dogfood | P2 | Shipped | `teaagent/control_plane_bridge.py`, `SwarmManager(control_plane_state=…)` |
+| WASM skill contract CLI | P2 | Shipped | `teaagent/wasm_skill.py`, `teaagent sandbox wasm-contract` |
 
 ---
 

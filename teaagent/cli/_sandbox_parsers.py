@@ -148,6 +148,7 @@ def register(
         handlers.get('check_wasm'),
         handlers.get('check_compatibility'),
         handlers.get('execute'),
+        handlers.get('wasm_contract'),
     )
 
 
@@ -158,6 +159,7 @@ def _sandbox(
     check_wasm_handler: Optional[Callable] = None,
     check_compatibility_handler: Optional[Callable] = None,
     execute_handler: Optional[Callable] = None,
+    wasm_contract_handler: Optional[Callable] = None,
 ) -> None:
     """Register sandbox subcommands."""
     sandbox_parser = subparsers.add_parser('sandbox', help='Sandbox management')
@@ -170,3 +172,21 @@ def _sandbox(
     _sandbox_execute(sandbox_subs, execute_handler)
     _sandbox_monitor(sandbox_subs, monitor_handler)
     _sandbox_check(sandbox_subs, check_wasm_handler, check_compatibility_handler)
+    contract_cmd = sandbox_subs.add_parser(
+        'wasm-contract', help='Show or write WASM invoke contract for a skill'
+    )
+    contract_cmd.add_argument('skill_path', help='Path to the skill directory')
+    contract_cmd.add_argument(
+        '--write-manifest',
+        action='store_true',
+        help='Write wasm_manifest.json beside the skill',
+    )
+    contract_cmd.add_argument(
+        '--validate',
+        action='store_true',
+        help='Include WASM module validation in output',
+    )
+    contract_cmd.add_argument(
+        '--memory-limit-mb', type=int, default=256, help='WASM memory limit in MB'
+    )
+    contract_cmd.set_defaults(func=wasm_contract_handler)

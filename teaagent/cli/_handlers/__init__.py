@@ -65,6 +65,8 @@ from ._consensus import (
     consensus_request_command,
     consensus_status_command,
     consensus_vote_command,
+    consensus_votes_import_command,
+    consensus_wait_command,
 )
 from ._control_plane import control_plane_serve_command
 from ._doctor import (
@@ -191,6 +193,7 @@ from ._sandbox import (
     sandbox_execute_command,
     sandbox_monitor_command,
     sandbox_route_command,
+    sandbox_wasm_contract_command,
 )
 from ._skill import (
     skill_candidate_eval_command,
@@ -381,10 +384,13 @@ __all__ = [
     'consensus_history_command',
     'consensus_request_command',
     'consensus_vote_command',
+    'consensus_wait_command',
+    'consensus_votes_import_command',
     'control_plane_serve_command',
     'sandbox_route_command',
     'sandbox_execute_command',
     'sandbox_monitor_command',
     'sandbox_check_wasm_command',
+    'sandbox_wasm_contract_command',
     'sandbox_check_compatibility_command',
 ]

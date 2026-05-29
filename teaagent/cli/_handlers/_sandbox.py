@@ -146,6 +146,30 @@ def sandbox_execute_command(args: argparse.Namespace) -> int:
     return 1
 
 
+def sandbox_wasm_contract_command(args: argparse.Namespace) -> int:
+    """Emit or write WASM invoke contract for a skill directory."""
+    from teaagent.wasm_skill import (
+        build_wasm_invoke_contract,
+        validate_wasm_skill,
+        write_wasm_manifest,
+    )
+
+    skill_path = Path(args.skill_path)
+    if not skill_path.exists():
+        print(f'Error: Skill path does not exist: {skill_path}')
+        return 1
+    if args.write_manifest:
+        manifest = write_wasm_manifest(skill_path, memory_limit_mb=args.memory_limit_mb)
+        print(f'Wrote {manifest}')
+    contract = build_wasm_invoke_contract(skill_path)
+    if args.validate:
+        contract['validation'] = validate_wasm_skill(
+            skill_path, memory_limit_mb=args.memory_limit_mb
+        )
+    print(json.dumps(contract, indent=2))
+    return 0
+
+
 def sandbox_check_wasm_command(args: argparse.Namespace) -> int:
     """Check if WASM runtime is available."""
     available = is_wasm_available()

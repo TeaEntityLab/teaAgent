@@ -36,14 +36,14 @@ Scale reference (internal engineering, not market validation):
 | Failure cards (TTL/invalidate) | Stable | `tests/test_governance_fuzz.py`, automated invalidation rules | — |
 | Failure cards (auto-invalidation CLI) | Beta | `teaagent memory failures auto-invalidate` | Per-project customization |
 | Centralized approval queue | Beta | Disk persistence + cross-process approve, CLI/TUI, `approval subagents prune` | — |
-| Multi-agent / tournament | Beta | `SwarmManager.with_agent_execution`, `ParallelExecutor` | Deeper tournament benchmarks |
+| Multi-agent / tournament | Beta | `SwarmManager`, `select_winner_from_subagent_results`, prompt gene pool | Hosted tournament dashboards |
 | MCP trust policy CLI | Beta | `tests/test_tranche_bc_governance.py`, `mcp trust` | Per-server defaults |
 | Read-only numeric `--parallel` | Beta | CLI guard in `agent run` | Swarm read-only analysis |
 | Governance fuzz tests | Stable | `tests/test_governance_fuzz.py`, `tests/test_governance_hardening.py` | — |
 | CI governance gate | Stable | `.github/workflows/ci.yml` governance-gate job | — |
-| Phase 4 consensus | Beta | `tests/acceptance/test_consensus_flow.py`, `async_vote_collection` | External peer voting UX |
-| Phase 5 sandbox routing + execution | Beta | `tests/test_skill_executor.py`, `teaagent sandbox execute` | Native `.wasm` skill modules |
-| Phase 6 skill writer / control plane | Beta | `tests/test_phase6_*.py`, `teaagent control-plane serve` | Dashboard production dogfood |
+| Phase 4 consensus | Beta | `teaagent consensus wait`, `votes-import`, async swarm polling | Remote SSH-signed vote relay |
+| Phase 5 sandbox routing + execution | Beta | `teaagent sandbox wasm-contract`, `skill_executor` WASM path | External WASM build CI templates |
+| Phase 6 skill writer / control plane | Beta | `control_plane_bridge`, swarm workflow publish | Multi-tenant hosted control plane |
 
 ## Surfaces (summary)
 

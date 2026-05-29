@@ -98,6 +98,8 @@ def register(
         handlers.get('history'),
         handlers.get('request'),
         handlers.get('vote'),
+        handlers.get('wait'),
+        handlers.get('votes_import'),
     )
 
 
@@ -113,6 +115,8 @@ def _consensus(
     history_handler: Optional[Callable] = None,
     request_handler: Optional[Callable] = None,
     vote_handler: Optional[Callable] = None,
+    wait_handler: Optional[Callable] = None,
+    votes_import_handler: Optional[Callable] = None,
 ) -> None:
     """Register consensus subcommands."""
     consensus_parser = subparsers.add_parser('consensus', help='Consensus management')
@@ -178,7 +182,54 @@ def _consensus(
     request_cmd.add_argument(
         '--consensus-storage', help='Path to consensus state storage'
     )
+    request_cmd.add_argument(
+        '--wait',
+        action='store_true',
+        help='Poll until proposal reaches a terminal status',
+    )
+    request_cmd.add_argument(
+        '--timeout',
+        type=float,
+        default=60.0,
+        help='Seconds to wait when --wait is set',
+    )
+    request_cmd.add_argument(
+        '--auto-approve',
+        action='store_true',
+        help='Cast approve votes from all active required peers (local dev)',
+    )
     request_cmd.set_defaults(func=request_handler)
+
+    wait_cmd = consensus_subs.add_parser(
+        'wait', help='Poll until a proposal is approved, rejected, or timed out'
+    )
+    wait_cmd.add_argument('proposal_id', help='Proposal ID')
+    wait_cmd.add_argument(
+        '--timeout',
+        type=float,
+        default=60.0,
+        help='Maximum seconds to poll',
+    )
+    wait_cmd.add_argument('--storage', help='Path to consensus storage')
+    wait_cmd.add_argument('--peer-storage', help='Path to peer registry storage')
+    wait_cmd.add_argument('--consensus-storage', help='Path to consensus state storage')
+    wait_cmd.set_defaults(func=wait_handler)
+
+    import_cmd = consensus_subs.add_parser(
+        'votes-import', help='Import batched peer votes from JSON'
+    )
+    import_cmd.add_argument('votes_file', help='Path to votes JSON file')
+    import_cmd.add_argument(
+        '--no-auto-sign',
+        action='store_true',
+        help='Require explicit signature on each vote record',
+    )
+    import_cmd.add_argument('--storage', help='Path to consensus storage')
+    import_cmd.add_argument('--peer-storage', help='Path to peer registry storage')
+    import_cmd.add_argument(
+        '--consensus-storage', help='Path to consensus state storage'
+    )
+    import_cmd.set_defaults(func=votes_import_handler)
 
     # Vote command
     vote_cmd = consensus_subs.add_parser('vote', help='Submit a vote on a proposal')

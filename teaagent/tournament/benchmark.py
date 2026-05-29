@@ -13,7 +13,11 @@ import logging
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from teaagent.swarm import SubagentResult
+    from teaagent.tournament.comparator import TournamentComparator
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +35,60 @@ class BenchmarkMetrics:
     lint_warnings: int
     lines_changed: int
     metadata: Dict[str, Optional[str]]
+
+
+def metrics_from_subagent_result(result: SubagentResult) -> BenchmarkMetrics:
+    """Build tournament metrics from a swarm subagent result."""
+    test_results = result.test_results or {}
+    passed = int(test_results.get('passed', 0))
+    failed = int(test_results.get('failed', 0))
+    total = passed + failed
+    if total > 0:
+        test_pass_rate = passed / total
+    else:
+        test_pass_rate = 1.0 if result.success else 0.0
+    execution_time = max(result.execution_time_ms / 1000.0, 0.001)
+    lint_warnings = int(test_results.get('lint_warnings', 0))
+    lines_changed = int(test_results.get('lines_changed', 0))
+    correctness = test_pass_rate * 100.0
+    performance = min(100.0, max(0.0, (1.0 / execution_time) * 50.0))
+    code_quality = max(0.0, 100.0 - lint_warnings * 2 - lines_changed * 0.1)
+    return BenchmarkMetrics(
+        approach_id=result.task_id,
+        correctness=correctness,
+        performance=performance,
+        code_quality=code_quality,
+        test_pass_rate=test_pass_rate,
+        execution_time=execution_time,
+        lint_warnings=lint_warnings,
+        lines_changed=lines_changed,
+        metadata={'branch_name': result.branch_name or ''},
+    )
+
+
+def select_winner_from_subagent_results(
+    results: List[SubagentResult],
+    *,
+    comparator: TournamentComparator | None = None,
+) -> tuple[Optional[str], float, Optional[SubagentResult]]:
+    """Rank subagent branches with the security-aware tournament comparator."""
+    if not results:
+        return None, 0.0, None
+    if len(results) == 1:
+        only = results[0]
+        score = 1.0 if only.success else 0.0
+        return only.task_id, score, only
+    from teaagent.tournament.comparator import TournamentComparator
+
+    metrics = [metrics_from_subagent_result(item) for item in results]
+    comp = comparator or TournamentComparator()
+    compared = comp.compare(metrics)
+    winner = comp.recommend_winner(compared)
+    if winner is None:
+        fallback = next((item for item in results if item.success), results[0])
+        return fallback.task_id, 0.0, fallback
+    best = next((item for item in results if item.task_id == winner.approach_id), None)
+    return winner.approach_id, winner.weighted_score, best
 
 
 class BenchmarkRunner:
@@ -140,14 +198,24 @@ class BenchmarkRunner:
             return 0.0
 
     def _measure_performance(self) -> float:
-        """Measure execution time.
+        """Measure execution time via a lightweight pytest collection pass."""
+        import time
 
-        Returns:
-            Execution time in seconds
-        """
-        # In a full implementation, this would run a specific benchmark
-        # For now, return a placeholder
-        return 1.0
+        started = time.perf_counter()
+        try:
+            subprocess.run(
+                ['pytest', '--collect-only', '-q'],
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return 30.0
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return 30.0
+        return max(time.perf_counter() - started, 0.001)
 
     def _measure_code_quality(self, branch: str) -> tuple[int, int]:
         """Measure code quality metrics.

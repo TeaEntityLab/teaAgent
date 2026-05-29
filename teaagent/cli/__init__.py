@@ -83,6 +83,8 @@ from teaagent.cli._handlers import (
     consensus_request_command,
     consensus_status_command,
     consensus_vote_command,
+    consensus_votes_import_command,
+    consensus_wait_command,
     control_plane_serve_command,
     daily_journal_command,
     doctor_aigateway,
@@ -146,6 +148,7 @@ from teaagent.cli._handlers import (
     sandbox_execute_command,
     sandbox_monitor_command,
     sandbox_route_command,
+    sandbox_wasm_contract_command,
     session_list_command,
     session_resume_command,
     session_show_command,
@@ -391,6 +394,8 @@ def build_parser() -> argparse.ArgumentParser:
             'history': consensus_history_command,
             'request': consensus_request_command,
             'vote': consensus_vote_command,
+            'wait': consensus_wait_command,
+            'votes_import': consensus_votes_import_command,
         },
     )
     register_sandbox(
@@ -401,6 +406,7 @@ def build_parser() -> argparse.ArgumentParser:
             'monitor': sandbox_monitor_command,
             'check_wasm': sandbox_check_wasm_command,
             'check_compatibility': sandbox_check_compatibility_command,
+            'wasm_contract': sandbox_wasm_contract_command,
         },
     )
     register_control_plane(

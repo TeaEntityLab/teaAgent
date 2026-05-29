@@ -334,6 +334,7 @@ class SwarmManager:
         lock_timeout_seconds: int = 60,
         prompt_by_task_id: dict[str, str] | None = None,
         subagent_manager: Any = None,
+        control_plane_state: Any = None,
     ) -> None:
         self._root = Path(root).resolve()
         self._max_parallel = max_parallel
@@ -345,6 +346,7 @@ class SwarmManager:
         self._peer_registry = peer_registry or PeerRegistry()
         self._consensus_config = consensus_config or ConsensusConfig()
         self._consensus_engine: Optional[ConsensusEngine] = None
+        self._control_plane_state = control_plane_state
         self._lock_timeout_seconds = lock_timeout_seconds
         self._subagent_pids: dict[str, int] = {}
         self._subagent_heartbeats: dict[str, float] = {}
@@ -369,6 +371,33 @@ class SwarmManager:
             batch_index=batch_index,
         )
         self._subagents.append(subagent)
+
+    def _publish_control_plane(
+        self,
+        phase: str,
+        *,
+        subagents: list[Any],
+        totals: dict[str, Any] | None = None,
+    ) -> None:
+        if self._control_plane_state is None or self._parent_run_id is None:
+            return
+        from teaagent.control_plane_bridge import publish_swarm_workflow
+
+        snapshot = [
+            {
+                'task_id': subagent._task.task_id,
+                'description': subagent._task.description[:120],
+                'status': phase,
+            }
+            for subagent in subagents
+        ]
+        publish_swarm_workflow(
+            self._control_plane_state,
+            parent_run_id=self._parent_run_id,
+            phase=phase,
+            subagents=snapshot,
+            totals=totals,
+        )
 
     @classmethod
     def with_agent_execution(
@@ -448,6 +477,7 @@ class SwarmManager:
             )
 
         self._parent_run_id = uuid4().hex
+        self._publish_control_plane('starting', subagents=self._subagents)
         for index, subagent in enumerate(self._subagents):
             subagent._parent_run_id = self._parent_run_id
             subagent._batch_index = index
@@ -508,6 +538,16 @@ class SwarmManager:
             winner_id, winner_score, best_result = self._select_tournament_winner(
                 results
             )
+            self._publish_control_plane(
+                'completed',
+                subagents=self._subagents,
+                totals={
+                    'successful': successful,
+                    'failed': failed,
+                    'tournament_winner_id': winner_id,
+                    'tournament_winner_score': winner_score,
+                },
+            )
 
             return SwarmReport(
                 total_subagents=len(self._subagents),
@@ -529,6 +569,15 @@ class SwarmManager:
     ) -> tuple[Optional[str], float, Optional[SubagentResult]]:
         """Select best branch via prompt fitness tournament when prompts are set."""
         if not self._prompt_by_task_id:
+            if len(results) > 1:
+                from teaagent.tournament.benchmark import (
+                    select_winner_from_subagent_results,
+                )
+
+                winner_id, winner_score, best_result = (
+                    select_winner_from_subagent_results(results)
+                )
+                return winner_id, winner_score, best_result
             best_result = next((r for r in results if r.success), None)
             return None, 0.0, best_result
 

@@ -766,6 +766,72 @@ def peer_vote_signature(peer: PeerIdentity, task_description: str) -> str:
     return hashlib.sha256((task_description + peer.ssh_public_key).encode()).hexdigest()
 
 
+def parse_vote_import_payload(raw: object) -> list[dict[str, object]]:
+    """Normalize vote-import JSON (bare list or ``{\"votes\": [...]}`` wrapper)."""
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    if isinstance(raw, dict) and isinstance(raw.get('votes'), list):
+        return [item for item in raw['votes'] if isinstance(item, dict)]
+    raise ValueError('Expected a JSON array or object with a "votes" array')
+
+
+def import_votes_batch(
+    engine: ConsensusEngine,
+    records: list[dict[str, object]],
+    *,
+    auto_sign: bool = True,
+) -> dict[str, object]:
+    """Import external peer votes from JSON records."""
+    accepted = 0
+    rejected = 0
+    errors: list[str] = []
+    for index, record in enumerate(records):
+        proposal_id = record.get('proposal_id')
+        peer_name = record.get('peer_name')
+        decision_raw = record.get('decision')
+        if not proposal_id or not peer_name or not decision_raw:
+            errors.append(f'record[{index}]: proposal_id, peer_name, decision required')
+            rejected += 1
+            continue
+        try:
+            decision = VoteDecision(str(decision_raw))
+        except ValueError:
+            errors.append(f'record[{index}]: invalid decision {decision_raw!r}')
+            rejected += 1
+            continue
+        state = engine.get_consensus_status(str(proposal_id))
+        if state is None:
+            errors.append(f'record[{index}]: proposal {proposal_id!r} not found')
+            rejected += 1
+            continue
+        peer = engine.peer_registry.get(str(peer_name))
+        if peer is None:
+            errors.append(f'record[{index}]: peer {peer_name!r} not found')
+            rejected += 1
+            continue
+        signature = record.get('signature')
+        if not signature and auto_sign:
+            signature = peer_vote_signature(peer, state.proposal.task_description)
+        if not signature:
+            errors.append(f'record[{index}]: missing signature')
+            rejected += 1
+            continue
+        comment = record.get('comment')
+        comment_str = str(comment) if comment is not None else None
+        if engine.submit_vote(
+            str(proposal_id),
+            str(peer_name),
+            decision,
+            str(signature),
+            comment=comment_str,
+        ):
+            accepted += 1
+        else:
+            errors.append(f'record[{index}]: submit_vote failed')
+            rejected += 1
+    return {'accepted': accepted, 'rejected': rejected, 'errors': errors}
+
+
 def task_matches_pre_approval(task_description: str, config: ConsensusConfig) -> bool:
     """Return True when *task_description* matches configured pre-approval patterns."""
     if not config.enable_pre_approval:

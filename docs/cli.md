@@ -643,7 +643,9 @@ Peer registry, voting, and swarm pre-approval for high-risk tasks:
 
 ```bash
 teaagent consensus peers list --root .
-teaagent consensus request "Deploy billing service" --risk-level high --root .
+teaagent consensus request "Deploy billing service" --risk-level high --wait --auto-approve
+teaagent consensus wait <proposal-id> --timeout 120
+teaagent consensus votes-import votes.json
 ```
 
 Swarm runs can enable consensus with pre-approval patterns or async vote polling

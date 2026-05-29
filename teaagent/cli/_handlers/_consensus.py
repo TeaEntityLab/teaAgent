@@ -9,11 +9,15 @@ from pathlib import Path
 from teaagent.consensus import (
     ConsensusConfig,
     ConsensusEngine,
+    ConsensusStatus,
     PeerIdentity,
     PeerRegistry,
     RiskLevel,
     VoteDecision,
     VotingThreshold,
+    import_votes_batch,
+    parse_vote_import_payload,
+    peer_vote_signature,
 )
 
 
@@ -198,9 +202,25 @@ def consensus_request_command(args: argparse.Namespace) -> int:
         print(f'Risk: {state.proposal.risk_level.value}')
         print(f'Required peers: {len(state.required_peers)}')
         print(f'Voting threshold: {state.voting_threshold.value}')
-        print()
-        print('Waiting for votes...')
-        print('(In production, this would wait for peer votes)')
+        if getattr(args, 'auto_approve', False):
+            cast = engine.cast_approving_votes_for_active_peers(state.proposal.id)
+            print(f'Auto-approved {cast} peer vote(s)')
+
+        if getattr(args, 'wait', False):
+            timeout = float(getattr(args, 'timeout', 60))
+            final = engine.poll_until_resolved(
+                state.proposal.id, timeout_seconds=timeout
+            )
+            if final is None:
+                print('Proposal not found after wait.')
+                return 1
+            print(f'Final status: {final.status.value}')
+            print(json.dumps(final.to_dict(), indent=2, default=str))
+            if final.status not in {ConsensusStatus.APPROVED, ConsensusStatus.REJECTED}:
+                return 1
+        else:
+            print()
+            print('Waiting for votes (use --wait or `teaagent consensus wait`).')
 
         return 0
     except Exception as exc:
@@ -208,18 +228,54 @@ def consensus_request_command(args: argparse.Namespace) -> int:
         return 1
 
 
-def consensus_vote_command(args: argparse.Namespace) -> int:
-    """Submit a vote on a proposal."""
-    import hashlib
-
+def _consensus_engine_from_args(args: argparse.Namespace) -> ConsensusEngine:
     peer_storage = Path(args.peer_storage) if args.peer_storage else None
     consensus_storage = Path(args.consensus_storage) if args.consensus_storage else None
-
     registry = PeerRegistry(storage_path=peer_storage)
     config = ConsensusConfig()
-    engine = ConsensusEngine(
+    return ConsensusEngine(
         peer_registry=registry, config=config, storage_path=consensus_storage
     )
+
+
+def consensus_wait_command(args: argparse.Namespace) -> int:
+    """Poll until a proposal reaches a terminal consensus status."""
+    engine = _consensus_engine_from_args(args)
+    final = engine.poll_until_resolved(
+        args.proposal_id, timeout_seconds=float(args.timeout)
+    )
+    if final is None:
+        print(f'Proposal "{args.proposal_id}" not found.')
+        return 1
+    print(f'Status: {final.status.value}')
+    print(json.dumps(final.to_dict(), indent=2, default=str))
+    if final.status in {ConsensusStatus.APPROVED, ConsensusStatus.REJECTED}:
+        return 0
+    return 1
+
+
+def consensus_votes_import_command(args: argparse.Namespace) -> int:
+    """Import batched peer votes from a JSON file (external orchestrators)."""
+    votes_path = Path(args.votes_file)
+    if not votes_path.is_file():
+        print(f'Error: votes file not found: {votes_path}')
+        return 1
+    try:
+        raw = json.loads(votes_path.read_text(encoding='utf-8'))
+        records = parse_vote_import_payload(raw)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        print(f'Error: {exc}')
+        return 1
+    engine = _consensus_engine_from_args(args)
+    summary = import_votes_batch(engine, records, auto_sign=not args.no_auto_sign)
+    print(json.dumps(summary, indent=2))
+    return 0 if summary.get('accepted', 0) > 0 and not summary.get('errors') else 1
+
+
+def consensus_vote_command(args: argparse.Namespace) -> int:
+    """Submit a vote on a proposal."""
+    engine = _consensus_engine_from_args(args)
+    registry = engine.peer_registry
 
     # Get the proposal to sign
     state = engine.get_consensus_status(args.proposal_id)
@@ -233,9 +289,7 @@ def consensus_vote_command(args: argparse.Namespace) -> int:
         print(f'Peer "{args.peer_name}" not found.')
         return 1
 
-    signature = hashlib.sha256(
-        (state.proposal.task_description + peer.ssh_public_key).encode()
-    ).hexdigest()
+    signature = peer_vote_signature(peer, state.proposal.task_description)
 
     success = engine.submit_vote(
         proposal_id=args.proposal_id,
