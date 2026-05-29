@@ -39,7 +39,6 @@ from ._audit import (
     audit_verify_command,
 )
 from ._chat import chat_command
-from ._tool import tool_inspect_command, tool_lint_command, tool_list_command
 from ._cloud import (
     cloud_cancel_command,
     cloud_capabilities_command,
@@ -70,6 +69,7 @@ from ._doctor import (
     doctor_model,
     doctor_project,
     doctor_providers,
+    doctor_selftest_command,
 )
 from ._env import (
     env_lock_command,
@@ -120,8 +120,18 @@ from ._marketplace import (
     skill_search_command,
 )
 from ._mcp import mcp_serve_command
+from ._mcp_trust import (
+    mcp_trust_allow_command,
+    mcp_trust_deny_command,
+    mcp_trust_inspect_command,
+    mcp_trust_list_command,
+)
 from ._memory import (
     memory_add_command,
+    memory_failures_invalidate_command,
+    memory_failures_list_command,
+    memory_failures_prune_command,
+    memory_failures_show_command,
     memory_list_command,
     memory_search_command,
     memory_show_command,
@@ -188,6 +198,7 @@ from ._sync import (
     sync_import,
     sync_status,
 )
+from ._tool import tool_inspect_command, tool_lint_command, tool_list_command
 
 __all__ = [
     'agent_attach_command',
@@ -224,6 +235,7 @@ __all__ = [
     'audit_serve_command',
     'doctor_migration_command',
     'doctor_git_sandbox',
+    'doctor_selftest_command',
     'doctor_aigateway',
     'doctor_providers',
     'doctor_project',
@@ -279,10 +291,18 @@ __all__ = [
     'graphqlite_query',
     'graphqlite_smoke',
     'mcp_serve_command',
+    'mcp_trust_allow_command',
+    'mcp_trust_deny_command',
+    'mcp_trust_inspect_command',
+    'mcp_trust_list_command',
     'memory_add_command',
     'memory_list_command',
     'memory_search_command',
     'memory_show_command',
+    'memory_failures_list_command',
+    'memory_failures_show_command',
+    'memory_failures_invalidate_command',
+    'memory_failures_prune_command',
     'model_conformance',
     'model_providers',
     'model_capabilities',

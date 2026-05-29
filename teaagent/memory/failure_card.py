@@ -10,10 +10,14 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import ClassVar, Optional
+
+DEFAULT_TTL_SECONDS = 30 * 86400
+VALID_CONFIDENCE = frozenset({'low', 'medium', 'high'})
+VALID_WARNING_BEHAVIOR = frozenset({'info', 'warning', 'block'})
 
 
 @dataclass
@@ -41,6 +45,16 @@ class FailureCard:
     error_message: str
     task_description: str
     context_files: list[str]
+    confidence: str = 'low'
+    expires_at: Optional[float] = None
+    invalidated: bool = False
+    invalidation_reason: Optional[str] = None
+    warning_behavior: str = 'warning'
+    reviewer_type: str = 'auto'
+    evidence_command: Optional[str] = None
+    evidence_exit_code: Optional[int] = None
+
+    DEFAULT_TTL_SECONDS: ClassVar[int] = DEFAULT_TTL_SECONDS
 
     @classmethod
     def create(
@@ -52,6 +66,13 @@ class FailureCard:
         task_description: str,
         context_files: list[str],
         line_number: Optional[int] = None,
+        *,
+        confidence: str = 'low',
+        ttl_seconds: Optional[int] = DEFAULT_TTL_SECONDS,
+        warning_behavior: str = 'warning',
+        reviewer_type: str = 'auto',
+        evidence_command: Optional[str] = None,
+        evidence_exit_code: Optional[int] = None,
     ) -> 'FailureCard':
         """Create a new failure card with generated ID and timestamp.
 
@@ -77,7 +98,38 @@ class FailureCard:
             error_message=error_message,
             task_description=task_description,
             context_files=context_files,
+            confidence=confidence if confidence in VALID_CONFIDENCE else 'low',
+            expires_at=(
+                datetime.now().timestamp() + ttl_seconds
+                if ttl_seconds is not None and ttl_seconds > 0
+                else None
+            ),
+            warning_behavior=(
+                warning_behavior
+                if warning_behavior in VALID_WARNING_BEHAVIOR
+                else 'warning'
+            ),
+            reviewer_type=reviewer_type,
+            evidence_command=evidence_command,
+            evidence_exit_code=evidence_exit_code,
         )
+
+    def is_active(self, *, now: Optional[float] = None) -> bool:
+        if self.invalidated:
+            return False
+        current = now if now is not None else datetime.now().timestamp()
+        return not (self.expires_at is not None and current >= self.expires_at)
+
+    def effective_behavior(self) -> str:
+        if not self.is_active():
+            return 'ignore'
+        if self.reviewer_type != 'human':
+            return 'warning'
+        if self.confidence == 'high' and self.warning_behavior == 'block':
+            return 'block'
+        if self.warning_behavior in VALID_WARNING_BEHAVIOR:
+            return self.warning_behavior
+        return 'warning'
 
     def to_dict(self) -> dict:
         """Convert failure card to dictionary for JSON serialization."""
@@ -85,15 +137,9 @@ class FailureCard:
 
     @classmethod
     def from_dict(cls, data: dict) -> 'FailureCard':
-        """Create failure card from dictionary.
-
-        Args:
-            data: Dictionary containing failure card data
-
-        Returns:
-            A FailureCard instance
-        """
-        return cls(**data)
+        known = {item.name for item in fields(cls)}
+        filtered = {key: value for key, value in data.items() if key in known}
+        return cls(**filtered)
 
 
 class FailureCardStorage:
@@ -175,6 +221,37 @@ class FailureCardStorage:
         cards_data = self._read_cards()
         return [FailureCard.from_dict(data) for data in cards_data]
 
+    def list_active(self) -> list[FailureCard]:
+        return [card for card in self.list_all() if card.is_active()]
+
+    def invalidate(self, card_id: str, *, reason: str) -> bool:
+        cards = self._read_cards()
+        updated = False
+        for item in cards:
+            if item.get('id') != card_id:
+                continue
+            item['invalidated'] = True
+            item['invalidation_reason'] = reason
+            updated = True
+            break
+        if updated:
+            self._write_cards(cards)
+        return updated
+
+    def prune_expired(self) -> int:
+        cards = self._read_cards()
+        kept: list[dict] = []
+        removed = 0
+        for item in cards:
+            card = FailureCard.from_dict(item)
+            if card.is_active():
+                kept.append(item)
+            else:
+                removed += 1
+        if removed:
+            self._write_cards(kept)
+        return removed
+
     def clear_all(self) -> None:
         """Clear all failure cards from storage."""
         self._write_cards([])
@@ -235,7 +312,7 @@ class FailureCardStorage:
         Returns:
             List of matching FailureCard instances, sorted by timestamp (most recent first)
         """
-        all_cards = self.list_all()
+        all_cards = self.list_active()
         scored_cards = []
 
         for card in all_cards:

@@ -230,7 +230,9 @@ def _resolve_validation_profile(args: argparse.Namespace) -> Optional[str]:
     return None
 
 
-def _require_plan_gate(args: argparse.Namespace, plan_contract: Optional[PlanContract]) -> Optional[int]:
+def _require_plan_gate(
+    args: argparse.Namespace, plan_contract: Optional[PlanContract]
+) -> Optional[int]:
     if not getattr(args, 'require_plan', False):
         return None
     mode = parse_permission_mode(args.permission_mode)
@@ -287,8 +289,26 @@ def _execute_agent_task(
     plan_contract: Optional[Any] = None,
 ) -> int:
     # Handle parallel experiments
-    parallel_options = getattr(args, 'parallel', None)
-    if parallel_options:
+    parallel_value = getattr(args, 'parallel', None)
+    if parallel_value:
+        if isinstance(parallel_value, int):
+            mode = parse_permission_mode(args.permission_mode)
+            if mode != PermissionMode.READ_ONLY:
+                print_json(
+                    {
+                        'status': 'error',
+                        'message': (
+                            'Numeric --parallel requires read-only permission mode '
+                            'for safe parallel analysis branches.'
+                        ),
+                    }
+                )
+                return 2
+            parallel_options = ','.join(
+                f'approach-{index + 1}' for index in range(parallel_value)
+            )
+        else:
+            parallel_options = str(parallel_value)
         return _execute_parallel_experiment(args, task, parallel_options)
 
     task_spec = None

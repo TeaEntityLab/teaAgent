@@ -48,7 +48,9 @@ class ProfileValidationReport:
         }
 
 
-def _commands_for_profile(profile: ValidationProfileName) -> list[tuple[str, list[str]]]:
+def _commands_for_profile(
+    profile: ValidationProfileName,
+) -> list[tuple[str, list[str]]]:
     if profile == 'fast':
         return [('ruff', ['ruff', 'check', '--quiet'])]
     if profile == 'standard':

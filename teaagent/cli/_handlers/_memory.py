@@ -73,5 +73,53 @@ def memory_show_command(args: argparse.Namespace) -> int:
         return 1
 
 
+def memory_failures_list_command(args: argparse.Namespace) -> int:
+    from teaagent.memory.failure_card import FailureCardStorage
+
+    storage = FailureCardStorage(args.root)
+    cards = storage.list_active() if args.active_only else storage.list_all()
+    print_json([card.to_dict() for card in cards])
+    return 0
+
+
+def memory_failures_show_command(args: argparse.Namespace) -> int:
+    from teaagent.memory.failure_card import FailureCardStorage
+
+    storage = FailureCardStorage(args.root)
+    card = storage.get_by_id(args.card_id)
+    if card is None:
+        print_json(
+            {'status': 'error', 'message': f"failure card '{args.card_id}' not found"}
+        )
+        return 1
+    payload = card.to_dict()
+    payload['effective_behavior'] = card.effective_behavior()
+    payload['active'] = card.is_active()
+    print_json(payload)
+    return 0
+
+
+def memory_failures_invalidate_command(args: argparse.Namespace) -> int:
+    from teaagent.memory.failure_card import FailureCardStorage
+
+    storage = FailureCardStorage(args.root)
+    if not storage.invalidate(args.card_id, reason=args.reason):
+        print_json(
+            {'status': 'error', 'message': f"failure card '{args.card_id}' not found"}
+        )
+        return 1
+    print_json({'status': 'ok', 'card_id': args.card_id, 'invalidated': True})
+    return 0
+
+
+def memory_failures_prune_command(args: argparse.Namespace) -> int:
+    from teaagent.memory.failure_card import FailureCardStorage
+
+    storage = FailureCardStorage(args.root)
+    removed = storage.prune_expired()
+    print_json({'status': 'ok', 'removed': removed})
+    return 0
+
+
 def print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, sort_keys=True))

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import argparse
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 from teaagent.policy import PermissionMode
 
 
 def register(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
-    handlers: dict[str, Callable],
+    handlers: dict[str, Callable[..., Any]],
 ) -> None:
     agent = subparsers.add_parser('agent', help='Run model-driven agent tasks.')
     subs = agent.add_subparsers(dest='agent_command', required=True)
@@ -19,7 +19,7 @@ def register(
     _resume(subs, handlers['resume'])
     _undo(subs, handlers['undo'])
     _status(subs, handlers['status'])
-    _runs(subs, handlers['runs'])
+    _runs(subs, cast(dict[str, Callable[..., Any]], handlers['runs']))
     _show(subs, handlers['show'])
     _card(subs, handlers['card'])
     if 'attach' in handlers:
@@ -343,7 +343,7 @@ def add_agent_run_arguments(
 
 def register_top_level_agent_aliases(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
-    handlers: dict[str, Callable],
+    handlers: dict[str, Callable[..., Any]],
 ) -> None:
     """Register daily-workflow aliases visible in ``teaagent --help``."""
     _run(
@@ -364,7 +364,7 @@ def register_top_level_agent_aliases(
     _preflight(subparsers, handlers['preflight'], top_level=True)
     _plan(subparsers, handlers['plan'], top_level=True)
     _resume(subparsers, handlers['resume'], top_level=True)
-    _runs(subparsers, handlers['runs'], top_level=True)
+    _runs(subparsers, cast(dict[str, Callable[..., Any]], handlers['runs']), top_level=True)
     if 'chat' in handlers:
         _chat(
             subparsers,

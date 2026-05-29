@@ -740,6 +740,23 @@ def doctor_all(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def doctor_selftest_command(args: argparse.Namespace) -> int:
+    from teaagent.selftest import run_security_selftest
+
+    root = Path(getattr(args, 'root', '.')).resolve()
+    if getattr(args, 'maturity', False):
+        print_json(
+            {
+                'ok': True,
+                'message': 'Maturity selftest is documentation-only; see docs/maturity-matrix.md',
+            }
+        )
+        return 0
+    payload = run_security_selftest(root)
+    print_json(payload)
+    return 0 if payload['ok'] else 1
+
+
 def doctor_migration_command(args: argparse.Namespace) -> int:
     from teaagent.schema_migration import SQLiteMigrationStore
 

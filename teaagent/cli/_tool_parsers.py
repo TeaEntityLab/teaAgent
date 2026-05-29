@@ -24,7 +24,9 @@ def _tool(
     inspect_handler: Optional[Callable] = None,
     lint_handler: Optional[Callable] = None,
 ) -> None:
-    tool = subparsers.add_parser('tool', help='Inspect and lint ToolRegistry contracts.')
+    tool = subparsers.add_parser(
+        'tool', help='Inspect and lint ToolRegistry contracts.'
+    )
     subs = tool.add_subparsers(dest='tool_command', required=True)
 
     if list_handler is not None:

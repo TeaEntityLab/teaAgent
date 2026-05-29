@@ -81,7 +81,11 @@ def check_audit_completeness(events: list[dict[str, Any]]) -> AuditCompletenessR
                     'tool_call_denied',
                 }:
                     pending.pop(call_id, None)
-                if etype in {'tool_call_blocked', 'tool_call_denied', 'tool_call_approved'}:
+                if etype in {
+                    'tool_call_blocked',
+                    'tool_call_denied',
+                    'tool_call_approved',
+                }:
                     destructive_with_policy += 1
 
     for call_id in pending:

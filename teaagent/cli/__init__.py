@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional, cast
 
 from teaagent import __version__
 from teaagent.cli._handlers import (
@@ -88,6 +88,7 @@ from teaagent.cli._handlers import (
     doctor_model,
     doctor_project,
     doctor_providers,
+    doctor_selftest_command,
     env_lock_command,
     env_provision_command,
     env_verify_command,
@@ -104,7 +105,15 @@ from teaagent.cli._handlers import (
     init_command,
     interactive_review_command,
     mcp_serve_command,
+    mcp_trust_allow_command,
+    mcp_trust_deny_command,
+    mcp_trust_inspect_command,
+    mcp_trust_list_command,
     memory_add_command,
+    memory_failures_invalidate_command,
+    memory_failures_list_command,
+    memory_failures_prune_command,
+    memory_failures_show_command,
     memory_list_command,
     memory_search_command,
     memory_show_command,
@@ -145,12 +154,12 @@ from teaagent.cli._handlers import (
     skill_verify_tsb_command,
     start_tui,
     status_short_command,
-    tool_inspect_command,
-    tool_lint_command,
-    tool_list_command,
     sync_export,
     sync_import,
     sync_status,
+    tool_inspect_command,
+    tool_lint_command,
+    tool_list_command,
     ultrawork_list_command,
     ultrawork_logs_command,
     ultrawork_show_command,
@@ -303,6 +312,7 @@ def build_parser() -> argparse.ArgumentParser:
             'audit_verify': audit_verify_command,
             'doctor_migration': doctor_migration_command,
             'doctor_git_sandbox': doctor_git_sandbox,
+            'doctor_selftest': doctor_selftest_command,
             'env_provision': env_provision_command,
             'env_verify': env_verify_command,
             'env_lock': env_lock_command,
@@ -315,6 +325,10 @@ def build_parser() -> argparse.ArgumentParser:
             'list': memory_list_command,
             'search': memory_search_command,
             'show': memory_show_command,
+            'failures_list': memory_failures_list_command,
+            'failures_show': memory_failures_show_command,
+            'failures_invalidate': memory_failures_invalidate_command,
+            'failures_prune': memory_failures_prune_command,
         },
     )
     register_skill(
@@ -379,52 +393,57 @@ def build_parser() -> argparse.ArgumentParser:
 
     register_top_level_agent_aliases(
         subparsers,
-        {
-            'run': agent_run_task,
-            'daily': agent_daily_command,
-            'preflight': agent_preflight_command,
-            'plan': agent_plan_command,
-            'resume': agent_resume_command,
-            'runs': {
-                'list': agent_runs_list,
-                'show': agent_run_show,
-                'trace': agent_runs_trace,
-                'export': agent_runs_export,
-                'replay': agent_runs_replay,
+        cast(
+            dict[str, Callable[..., Any]],
+            {
+                'run': agent_run_task,
+                'daily': agent_daily_command,
+                'preflight': agent_preflight_command,
+                'plan': agent_plan_command,
+                'resume': agent_resume_command,
+                'runs': {
+                    'list': agent_runs_list,
+                    'show': agent_run_show,
+                    'trace': agent_runs_trace,
+                    'export': agent_runs_export,
+                    'replay': agent_runs_replay,
+                },
+                'chat': chat_command,
             },
-            'chat': chat_command,
-        },
+        ),
     )
     register_agent(
         subparsers,
-        {
-            'run': agent_run_task,
-            'preflight': agent_preflight_command,
-            'plan': agent_plan_command,
-            'daily': agent_daily_command,
-            'resume': agent_resume_command,
-            'undo': agent_undo_command,
-            'status': agent_status_command,
-            'runs': {
-                'list': agent_runs_list,
+        cast(
+            dict[str, Callable[..., Any]],
+            {
+                'run': agent_run_task,
+                'preflight': agent_preflight_command,
+                'plan': agent_plan_command,
+                'daily': agent_daily_command,
+                'resume': agent_resume_command,
+                'undo': agent_undo_command,
+                'status': agent_status_command,
+                'runs': {
+                    'list': agent_runs_list,
+                    'show': agent_run_show,
+                    'trace': agent_runs_trace,
+                    'export': agent_runs_export,
+                    'replay': agent_runs_replay,
+                },
                 'show': agent_run_show,
-                'trace': agent_runs_trace,
-                'export': agent_runs_export,
-                'replay': agent_runs_replay,
-            },
-            'show': agent_run_show,
-            'card': agent_card_command,
-            'attach': agent_attach_command,
-            'chat': chat_command,
-            'interactive_review': interactive_review_command,
-            'subagent_review_list': agent_subagent_review_list_command,
-            'subagent_review_show': agent_subagent_review_show_command,
-            'subagent_review_check': agent_subagent_review_check_command,
-            'subagent_review_apply': agent_subagent_review_apply_command,
-            'automation_add': automation_add_command,
-            'automation_list': automation_list_command,
-            'automation_show': automation_show_command,
-            'automation_pause': automation_pause_command,
+                'card': agent_card_command,
+                'attach': agent_attach_command,
+                'chat': chat_command,
+                'interactive_review': interactive_review_command,
+                'subagent_review_list': agent_subagent_review_list_command,
+                'subagent_review_show': agent_subagent_review_show_command,
+                'subagent_review_check': agent_subagent_review_check_command,
+                'subagent_review_apply': agent_subagent_review_apply_command,
+                'automation_add': automation_add_command,
+                'automation_list': automation_list_command,
+                'automation_show': automation_show_command,
+                'automation_pause': automation_pause_command,
             'automation_resume': automation_resume_command,
             'automation_delete': automation_delete_command,
             'automation_promote': automation_promote_command,
@@ -433,7 +452,8 @@ def build_parser() -> argparse.ArgumentParser:
             'automation_serve': automation_serve_command,
             'automation_status': automation_status_command,
             'automation_template': automation_template_command,
-        },
+            },
+        ),
     )
     register_ergonomics(
         subparsers,
@@ -480,6 +500,10 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers,
         {
             'serve': mcp_serve_command,
+            'trust_list': mcp_trust_list_command,
+            'trust_inspect': mcp_trust_inspect_command,
+            'trust_allow': mcp_trust_allow_command,
+            'trust_deny': mcp_trust_deny_command,
         },
     )
     register_cloud(

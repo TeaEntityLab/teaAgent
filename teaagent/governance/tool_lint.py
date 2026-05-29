@@ -59,7 +59,9 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
         )
     if not tool.description.strip():
         issues.append(
-            ToolLintIssue(name, 'error', 'missing_description', 'description is required')
+            ToolLintIssue(
+                name, 'error', 'missing_description', 'description is required'
+            )
         )
     if ann.read_only and ann.destructive:
         issues.append(

@@ -34,7 +34,9 @@ def register(
         handlers['doctor_all'],
         migration_handler=handlers.get('doctor_migration'),
         git_sandbox_handler=handlers.get('doctor_git_sandbox'),
+        selftest_handler=handlers.get('doctor_selftest'),
     )
+    _selftest_top_level(subparsers, handlers.get('doctor_selftest'))
     _completion(subparsers, handlers['completion'])
     _audit(
         subparsers,
@@ -260,6 +262,7 @@ def _doctor(
     all_handler: Optional[Callable] = None,
     migration_handler: Optional[Callable] = None,
     git_sandbox_handler: Optional[Callable] = None,
+    selftest_handler: Optional[Callable] = None,
 ) -> None:
     doctor = subparsers.add_parser('doctor', help='Run environment checks.')
     subs = doctor.add_subparsers(dest='doctor_command', required=True)
@@ -442,6 +445,35 @@ def _doctor(
         help='Workspace root to inspect for orphaned branches. Defaults to current directory.',
     )
     git_sandbox.set_defaults(func=git_sandbox_handler or model_handler)
+
+    selftest = subs.add_parser('selftest', help='Run harness self-tests.')
+    selftest.add_argument(
+        '--security',
+        action='store_true',
+        help='Run governance/security self-test (default).',
+    )
+    selftest.add_argument(
+        '--maturity',
+        action='store_true',
+        help='Show maturity-matrix guidance only.',
+    )
+    selftest.add_argument(
+        '--root',
+        default='.',
+        help='Workspace root. Defaults to current directory.',
+    )
+    selftest.set_defaults(func=selftest_handler or model_handler)
+
+
+def _selftest_top_level(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    handler: Optional[Callable],
+) -> None:
+    p = subparsers.add_parser('selftest', help='Run harness self-tests (alias).')
+    p.add_argument('--security', action='store_true', help='Run security self-test.')
+    p.add_argument('--maturity', action='store_true')
+    p.add_argument('--root', default='.')
+    p.set_defaults(func=handler)
 
 
 def _configure(

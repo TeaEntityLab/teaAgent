@@ -102,3 +102,31 @@ def register(
         'active kid are accepted for this duration after rotation. Default 0 (no window).',
     )
     serve.set_defaults(func=handlers['serve'])
+
+    trust = subs.add_parser('trust', help='Manage MCP tool trust policy.')
+    trust_subs = trust.add_subparsers(dest='mcp_trust_command', required=True)
+
+    trust_list = trust_subs.add_parser('list', help='Show MCP trust policy.')
+    trust_list.add_argument('--root', default='.', help='Workspace root.')
+    trust_list.set_defaults(func=handlers['trust_list'])
+
+    trust_inspect = trust_subs.add_parser('inspect', help='Inspect trust policy.')
+    trust_inspect.add_argument('--root', default='.', help='Workspace root.')
+    trust_inspect.add_argument('--server', default=None, help='Optional server name.')
+    trust_inspect.set_defaults(func=handlers['trust_inspect'])
+
+    trust_allow = trust_subs.add_parser('allow', help='Allow MCP tools.')
+    trust_allow.add_argument('--root', default='.', help='Workspace root.')
+    trust_allow.add_argument('--server', default=None, help='Optional server scope.')
+    trust_allow.add_argument(
+        '--tools', nargs='+', required=True, help='Tool names to allow.'
+    )
+    trust_allow.set_defaults(func=handlers['trust_allow'])
+
+    trust_deny = trust_subs.add_parser('deny', help='Deny MCP tools.')
+    trust_deny.add_argument('--root', default='.', help='Workspace root.')
+    trust_deny.add_argument('--server', default=None, help='Optional server scope.')
+    trust_deny.add_argument(
+        '--tools', nargs='+', required=True, help='Tool names to deny.'
+    )
+    trust_deny.set_defaults(func=handlers['trust_deny'])

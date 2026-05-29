@@ -55,3 +55,30 @@ def register(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
     show.set_defaults(func=handlers['show'])
+
+    failures = subs.add_parser('failures', help='Failure experience cards.')
+    fail_subs = failures.add_subparsers(dest='failures_command', required=True)
+
+    fail_list = fail_subs.add_parser('list', help='List failure cards.')
+    fail_list.add_argument('--root', default='.', help='Workspace root.')
+    fail_list.add_argument(
+        '--active-only', action='store_true', help='Hide expired/invalidated cards.'
+    )
+    fail_list.set_defaults(func=handlers['failures_list'])
+
+    fail_show = fail_subs.add_parser('show', help='Show one failure card.')
+    fail_show.add_argument('card_id')
+    fail_show.add_argument('--root', default='.', help='Workspace root.')
+    fail_show.set_defaults(func=handlers['failures_show'])
+
+    fail_invalidate = fail_subs.add_parser(
+        'invalidate', help='Invalidate a failure card.'
+    )
+    fail_invalidate.add_argument('card_id')
+    fail_invalidate.add_argument('--root', default='.', help='Workspace root.')
+    fail_invalidate.add_argument('--reason', required=True, help='Invalidation reason.')
+    fail_invalidate.set_defaults(func=handlers['failures_invalidate'])
+
+    fail_prune = fail_subs.add_parser('prune', help='Remove expired/invalidated cards.')
+    fail_prune.add_argument('--root', default='.', help='Workspace root.')
+    fail_prune.set_defaults(func=handlers['failures_prune'])

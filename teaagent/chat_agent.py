@@ -375,6 +375,10 @@ def run_chat_agent(
         register_git_tools(tool_registry, GitToolConfig(root=config.root))
     if _registry_fresh and 'browser_navigate' not in tool_registry.list_tools():
         register_browser_tools(tool_registry)
+    if _registry_fresh:
+        from teaagent.mcp_trust import apply_mcp_trust_hooks
+
+        apply_mcp_trust_hooks(tool_registry, config.root)
     run_id = uuid4().hex
     project_instructions = load_project_instructions(config.root)
     memories = memory_entries_to_prompt(

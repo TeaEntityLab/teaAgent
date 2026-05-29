@@ -27,13 +27,15 @@ Scale reference (internal engineering, not market validation):
 | Permission matrix | Stable | `tests/policy/test_permission_matrix.py` | Fuzz mislabelled plugins |
 | Plan-before-write (`--require-plan`) | Beta | `tests/test_tranche_b_governance.py` | Default for `workspace-write` TBD |
 | Validation profiles | Beta | `tests/test_tranche_b_governance.py`, `--validation-profile` | Self-healing loop integration |
-| Audit completeness gate | Beta | `tests/test_tranche_b_governance.py` | Wire into `doctor` |
+| Audit completeness gate | Beta | `tests/test_tranche_b_governance.py` | Wire into release checklist |
 | `runs trace/export/replay` | Beta | `tests/test_tranche_b_governance.py` | TUI surface |
+| `doctor selftest` / `teaagent selftest` | Beta | `tests/test_tranche_bc_governance.py` | CI release gate |
 | Audit chain + redaction | Stable | `test_audit_chain_integrity_flow.py` | Audit level tiers |
 | Run undo | Stable | `test_run_undo_acceptance_flow.py` | — |
-| Failure cards | Foundation | `tests/test_memory_failure.py` | TTL/confidence schema |
+| Failure cards (TTL/invalidate) | Beta | `tests/test_tranche_bc_governance.py`, `memory failures` | Human-reviewed block gate |
 | Multi-agent / tournament | Foundation | Phase 6 modules, README spec | Approval lineage 100% |
-| MCP trust policy CLI | Spec only | Hook exists | `teaagent mcp trust` |
+| MCP trust policy CLI | Beta | `tests/test_tranche_bc_governance.py`, `mcp trust` | Per-server defaults |
+| Read-only numeric `--parallel` | Beta | CLI guard in `agent run` | Swarm read-only analysis |
 
 ## Surfaces (summary)
 

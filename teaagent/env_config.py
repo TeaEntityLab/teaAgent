@@ -24,7 +24,7 @@ else:
 
         TOMLLIB_AVAILABLE = True
     except ImportError:
-        tomllib = None
+        tomllib = None  # type: ignore[assignment]
         TOMLLIB_AVAILABLE = False
 
 

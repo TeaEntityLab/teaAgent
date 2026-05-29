@@ -33,7 +33,10 @@ def build_run_trace(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         event_type = event.get('event_type')
         if event_type not in _TRACE_TYPES:
             continue
-        payload = event.get('payload') if isinstance(event.get('payload'), dict) else {}
+        raw_payload = event.get('payload')
+        payload: dict[str, Any] = (
+            raw_payload if isinstance(raw_payload, dict) else {}
+        )
         entry: dict[str, Any] = {
             'index': index,
             'event_type': event_type,
@@ -77,7 +80,10 @@ def replay_dry_run(events: list[dict[str, Any]], *, run_id: str) -> dict[str, An
 
     for event in events:
         etype = event.get('event_type')
-        payload = event.get('payload') if isinstance(event.get('payload'), dict) else {}
+        raw_payload = event.get('payload')
+        payload: dict[str, Any] = (
+            raw_payload if isinstance(raw_payload, dict) else {}
+        )
         tool_name = payload.get('tool_name')
         if etype == 'tool_call_completed' and isinstance(tool_name, str):
             tools_used.append(tool_name)
@@ -86,9 +92,9 @@ def replay_dry_run(events: list[dict[str, Any]], *, run_id: str) -> dict[str, An
                 'workspace_apply_patch',
                 'workspace_edit_at_hash',
             }:
-                path = payload.get('result', {}).get('path') or payload.get('arguments', {}).get(
-                    'path'
-                )
+                path = payload.get('result', {}).get('path') or payload.get(
+                    'arguments', {}
+                ).get('path')
                 if isinstance(path, str):
                     writes.append(path)
         if etype == 'tool_call_pending_approval':
@@ -115,7 +121,7 @@ def format_trace_text(trace: list[dict[str, Any]]) -> str:
         etype = entry.get('event_type', '?')
         tool = entry.get('tool_name')
         suffix = f' ({tool})' if tool else ''
-        lines.append(f"{entry.get('index', '?'):>3}  {etype}{suffix}")
+        lines.append(f'{entry.get("index", "?"):>3}  {etype}{suffix}')
     return '\n'.join(lines)
 
 
