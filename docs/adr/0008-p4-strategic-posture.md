@@ -34,8 +34,10 @@ CVE-2026-23949 on `jaraco.context`).
 - File-based multi-sig remains **experimental** (not production WAN transport).
 - **P4 tranche:** optional `TEAAGENT_FEDERATED_SIGNATURE_TOKEN` — signature JSON
   files must carry matching `auth_token` when the env var is set.
-- **Future:** HTTP webhook channel with Bearer token (same shape as vote relay);
-  reuse `surface_auth` token files.
+- **P4.3b (shipped):** HTTP signature relay (`teaagent sync signature-relay serve`,
+  `SignatureRelayClient`, `MultiSigQuorumConfig.peer_relay_urls` /
+  `local_relay_base_url`). Bearer tokens reuse relay token files / env
+  (`TEAAGENT_SIGNATURE_RELAY_TOKEN`, `TEAAGENT_RELAY_TOKEN`).
 
 ### 4. `jaraco.context` (CVE-2026-23949)
 
@@ -46,7 +48,7 @@ CVE-2026-23949 on `jaraco.context`).
 ## Consequences
 
 - Operators on NFS must not run concurrent TeaAgent writers on the same JSONL paths.
-- WAN MCP and federated multi-sig require reverse proxy + env tokens until HTTP P2P ships.
+- WAN MCP requires reverse proxy TLS; multi-sig uses signature relay + bearer tokens.
 - Dependabot alert #10 should clear once GitHub rescans `uv.lock` at 6.1.2+.
 
 ## Alternatives considered

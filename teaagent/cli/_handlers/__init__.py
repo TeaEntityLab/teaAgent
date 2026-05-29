@@ -213,6 +213,8 @@ from ._skill_publish import (
 from ._sync import (
     sync_export,
     sync_import,
+    sync_signature_relay_serve_command,
+    sync_signature_submit_command,
     sync_status,
 )
 from ._tool import tool_inspect_command, tool_lint_command, tool_list_command
@@ -365,6 +367,8 @@ __all__ = [
     'experiment_select',
     'sync_export',
     'sync_import',
+    'sync_signature_relay_serve_command',
+    'sync_signature_submit_command',
     'sync_status',
     'replay_list',
     'replay_steps',

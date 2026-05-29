@@ -98,8 +98,32 @@ For remote clients:
 |----------|--------|
 | `TEAAGENT_FEDERATED_SIGNATURE_TOKEN` | When set, P2P signature files under `.teaagent/pending_approvals/` must include matching `auth_token` |
 
-File-based multi-sig remains experimental; WAN deployments should use relay/control-plane
-Bearer tokens until HTTP P2P transport ships (ADR 0008).
+### Signature relay (WAN multi-sig)
+
+```bash
+# Collector (requester workspace)
+teaagent sync signature-relay serve --api-token-file .teaagent/relay-tokens.json --port 8791
+
+# Peer submits signature (after receiving approval request)
+export TEAAGENT_SIGNATURE_RELAY_TOKEN=...
+teaagent sync signature-relay submit \
+  --relay-url https://requester.example:8791 \
+  --request-id <id> --peer-id peer-1 --signature "<ssh-blob>"
+```
+
+Configure `MultiSigQuorumConfig.local_relay_base_url` and `peer_relay_urls` in policy,
+or set `TEAAGENT_SIGNATURE_RELAY_TOKEN` / `TEAAGENT_RELAY_TOKEN` for HTTP client auth.
+
+API:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/v1/approval-requests` | Peer receives approval request |
+| POST | `/api/v1/approval-signatures` | Peer submits signature to collector |
+| GET | `/api/v1/approval-signatures?request_id=` | Collector polls signatures |
+
+File-based multi-sig remains available for local dev; production WAN should use the
+HTTP relay behind TLS termination (ADR 0008).
 
 ## Reverse proxy templates
 

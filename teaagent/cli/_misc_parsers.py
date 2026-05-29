@@ -84,6 +84,8 @@ def register(
         handlers.get('sync_export'),
         handlers.get('sync_import'),
         handlers.get('sync_status'),
+        handlers.get('sync_signature_relay_serve'),
+        handlers.get('sync_signature_submit'),
     )
     _replay(
         subparsers,
@@ -888,6 +890,8 @@ def _sync(
     export_handler: Optional[Callable],
     import_handler: Optional[Callable],
     status_handler: Optional[Callable],
+    signature_relay_serve_handler: Optional[Callable] = None,
+    signature_submit_handler: Optional[Callable] = None,
 ) -> None:
     """Register sync subcommands."""
     sync_parser = subparsers.add_parser(
@@ -943,6 +947,53 @@ def _sync(
         help='Agent ID to check status for.',
     )
     status_cmd.set_defaults(func=status_handler or _deprecation_warning)
+
+    sig_relay = subs.add_parser(
+        'signature-relay',
+        help='HTTP relay for WAN multi-sig approval requests and signatures',
+    )
+    sig_subs = sig_relay.add_subparsers(
+        dest='signature_relay_command', required=True, help='Signature relay commands'
+    )
+    sig_serve = sig_subs.add_parser('serve', help='Start signature relay HTTP server')
+    sig_serve.add_argument('--host', default='127.0.0.1')
+    sig_serve.add_argument('--port', type=int, default=8791)
+    sig_serve.add_argument('--api-token', help='Bearer token for relay requests')
+    sig_serve.add_argument('--api-token-file', help='JSON relay token file')
+    sig_serve.add_argument('--tls-cert', help='TLS certificate PEM')
+    sig_serve.add_argument('--tls-key', help='TLS private key PEM')
+    sig_serve.add_argument('--tls-client-ca', help='Client CA PEM for mTLS')
+    sig_serve.add_argument(
+        '--rate-limit-calls',
+        type=int,
+        default=120,
+        help='Max POSTs per token per window (0 disables)',
+    )
+    sig_serve.add_argument(
+        '--rate-limit-window',
+        type=float,
+        default=60.0,
+        help='Rate limit window seconds',
+    )
+    sig_serve.set_defaults(func=signature_relay_serve_handler or _deprecation_warning)
+
+    sig_submit = sig_subs.add_parser(
+        'submit', help='Submit a peer signature to a signature relay'
+    )
+    sig_submit.add_argument(
+        '--relay-url', help='Relay base URL if --submit-url omitted'
+    )
+    sig_submit.add_argument(
+        '--submit-url',
+        default='',
+        help='Full POST URL (defaults to {relay-url}/api/v1/approval-signatures)',
+    )
+    sig_submit.add_argument('--request-id', required=True)
+    sig_submit.add_argument('--peer-id', required=True)
+    sig_submit.add_argument('--signature', required=True)
+    sig_submit.add_argument('--ssh-key-id', help='SSH key id metadata')
+    sig_submit.add_argument('--api-token', help='Bearer token')
+    sig_submit.set_defaults(func=signature_submit_handler or _deprecation_warning)
 
 
 def _replay(

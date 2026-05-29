@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.graphqlite_store import GraphQLiteGraphStore
-from teaagent.security_env import federated_signature_token
+from teaagent.security_env import federated_signature_token, signature_relay_api_token
 from teaagent.storage import atomic_write_text
 
 logger = logging.getLogger(__name__)
@@ -88,6 +88,7 @@ class ApprovalRequestMessage:
     requester_agent_id: str
     required_approvals: int
     timeout_seconds: int
+    signature_submit_url: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -466,22 +467,44 @@ class FederatedGraphSync:
         self,
         request: ApprovalRequestMessage,
         peer_agent_ids: list[str],
+        *,
+        peer_relay_urls: dict[str, str] | None = None,
+        relay_api_token: str | None = None,
     ) -> dict[str, bool]:
-        """Broadcast approval request (EXPERIMENTAL file-based multi-sig, not authenticated P2P).
+        """Broadcast approval request via HTTP relay and/or local file drop.
 
-        Args:
-            request: Approval request message to broadcast.
-            peer_agent_ids: List of peer agent IDs to broadcast to.
-
-        Returns:
-            Dictionary mapping peer IDs to broadcast success status.
+        When ``peer_relay_urls`` maps peer IDs to relay base URLs, POSTs the
+        request to each peer's ``/api/v1/approval-requests``. Local file broadcast
+        is always attempted for dev/offline peers.
         """
-        results = {}
+        from dataclasses import asdict
+
+        from teaagent.signature_relay import SignatureRelayClient
+
+        results: dict[str, bool] = {}
+        relay_urls = peer_relay_urls or {}
+        token = (
+            relay_api_token
+            if relay_api_token is not None
+            else signature_relay_api_token()
+        )
+        http_client = SignatureRelayClient(api_token=token) if relay_urls else None
 
         for peer_id in peer_agent_ids:
+            http_ok = False
+            if http_client is not None and peer_id in relay_urls:
+                payload = asdict(request)
+                payload['target_peer_id'] = peer_id
+                result = http_client.post_approval_request(relay_urls[peer_id], payload)
+                http_ok = bool(result.get('ok'))
+                if not http_ok:
+                    logger.warning(
+                        'HTTP approval broadcast to %s failed: %s',
+                        peer_id,
+                        result.get('error'),
+                    )
+            file_ok = False
             try:
-                # In production, this would send via HTTP/webhook to peer agents
-                # For now, we write to a local file simulating the broadcast
                 broadcast_path = (
                     self._root
                     / '.teaagent'
@@ -489,7 +512,6 @@ class FederatedGraphSync:
                     / f'{request.request_id}_{peer_id}.json'
                 )
                 broadcast_path.parent.mkdir(parents=True, exist_ok=True)
-
                 data = {
                     'request_id': request.request_id,
                     'tool_name': request.tool_name,
@@ -501,13 +523,13 @@ class FederatedGraphSync:
                     'required_approvals': request.required_approvals,
                     'timeout_seconds': request.timeout_seconds,
                     'target_peer_id': peer_id,
+                    'signature_submit_url': request.signature_submit_url,
                 }
-
                 broadcast_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
-                results[peer_id] = True
+                file_ok = True
             except OSError as exc:
                 logger.warning('Failed to broadcast approval to %s: %s', peer_id, exc)
-                results[peer_id] = False
+            results[peer_id] = http_ok or file_ok
 
         return results
 
@@ -517,6 +539,8 @@ class FederatedGraphSync:
         timeout_seconds: int,
         *,
         required_approvals: int = 1,
+        relay_base_url: str | None = None,
+        relay_api_token: str | None = None,
     ) -> list[ApprovalSignatureMessage]:
         """Collect approval signatures from peers for a request asynchronously.
 
@@ -541,8 +565,49 @@ class FederatedGraphSync:
         polls = 0
 
         loop = asyncio.get_running_loop()
+        http_client = None
+        relay_url = relay_base_url
+        if relay_url:
+            from teaagent.signature_relay import SignatureRelayClient
+
+            token = (
+                relay_api_token
+                if relay_api_token is not None
+                else signature_relay_api_token()
+            )
+            http_client = SignatureRelayClient(api_token=token)
 
         while polls < max_polls:
+            if http_client is not None and relay_url is not None:
+                remote_items = await loop.run_in_executor(
+                    None,
+                    functools.partial(
+                        http_client.fetch_signatures, relay_url, request_id
+                    ),
+                )
+                for data in remote_items:
+                    try:
+                        expected_token = federated_signature_token()
+                        if (
+                            expected_token is not None
+                            and data.get('auth_token') != expected_token
+                        ):
+                            continue
+                        peer_id = str(data['peer_id'])
+                        if peer_id in seen_peers:
+                            continue
+                        sig_msg = ApprovalSignatureMessage(
+                            request_id=str(data['request_id']),
+                            peer_id=peer_id,
+                            signature=str(data['signature']),
+                            ssh_key_id=data.get('ssh_key_id'),
+                            timestamp=float(data.get('timestamp', time.time())),
+                        )
+                        seen_peers.add(peer_id)
+                        signatures.append(sig_msg)
+                    except (KeyError, TypeError, ValueError):
+                        continue
+
             sig_files: list[Path] = []
             if approvals_dir.exists():
                 sig_files = await loop.run_in_executor(

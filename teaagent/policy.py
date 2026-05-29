@@ -100,6 +100,10 @@ class MultiSigQuorumConfig:
     peer_public_keys: dict[str, str] = field(
         default_factory=dict
     )  # Mapping of peer_id to SSH public key
+    peer_relay_urls: dict[str, str] = field(
+        default_factory=dict
+    )  # peer_id -> signature relay base URL (WAN)
+    local_relay_base_url: str | None = None  # Collect signatures via HTTP GET
     allow_dev_signatures: bool = False  # Dev-hash quorum signatures (non-production)
     high_risk_patterns: list[str] = field(
         default_factory=list
@@ -547,6 +551,11 @@ class ApprovalPolicy:
         )
 
         # Create approval request message for broadcast
+        submit_url = None
+        local_relay = self.multi_sig_config.local_relay_base_url
+        if local_relay:
+            submit_url = f'{local_relay.rstrip("/")}/api/v1/approval-signatures'
+
         approval_request = ApprovalRequestMessage(
             request_id=request.request_id,
             tool_name=request.tool_name,
@@ -557,12 +566,14 @@ class ApprovalPolicy:
             requester_agent_id=request.requester_agent_id,
             required_approvals=self.multi_sig_config.required_approvals,
             timeout_seconds=self.multi_sig_config.timeout_seconds,
+            signature_submit_url=submit_url,
         )
 
         # Broadcast to configured peer agents
         sync.broadcast_approval_request(
             approval_request,
             self.multi_sig_config.peer_agent_ids,
+            peer_relay_urls=self.multi_sig_config.peer_relay_urls,
         )
 
         # Collect signatures from peers — offload async to avoid event loop starvation
@@ -570,6 +581,7 @@ class ApprovalPolicy:
             sync,
             request.request_id,
             required_approvals=self.multi_sig_config.required_approvals,
+            relay_base_url=local_relay,
         )
 
         # Convert signature messages to PeerSignature objects with verification
@@ -611,6 +623,7 @@ class ApprovalPolicy:
         request_id: str,
         *,
         required_approvals: int = 1,
+        relay_base_url: str | None = None,
     ) -> Any:
         """Run async signature collection without starving the event loop.
 
@@ -625,6 +638,7 @@ class ApprovalPolicy:
             request_id,
             timeout_seconds=self.multi_sig_config.timeout_seconds,
             required_approvals=required_approvals,
+            relay_base_url=relay_base_url,
         )
         try:
             loop = asyncio.get_running_loop()

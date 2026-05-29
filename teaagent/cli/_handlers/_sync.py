@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import sqlite3
+import ssl
 from pathlib import Path
 
 from teaagent.federated_sync import FederatedGraphSync, SyncAck
@@ -209,3 +210,83 @@ def sync_status(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def _signature_relay_ssl_context(
+    args: argparse.Namespace,
+) -> ssl.SSLContext | None:
+    from teaagent.tls_server import build_server_ssl_context
+
+    if not getattr(args, 'tls_cert', None):
+        return None
+    client_ca = (
+        Path(args.tls_client_ca) if getattr(args, 'tls_client_ca', None) else None
+    )
+    return build_server_ssl_context(
+        cert_file=Path(args.tls_cert),
+        key_file=Path(args.tls_key),
+        client_ca_file=client_ca,
+    )
+
+
+def sync_signature_relay_serve_command(args: argparse.Namespace) -> int:
+    """Serve HTTP relay for WAN multi-sig approval signatures."""
+    from pathlib import Path
+
+    from teaagent.http_rate_limit import TokenRateLimiter
+    from teaagent.signature_relay import SignatureRelayServer
+    from teaagent.surface_auth import load_surface_auth_policy
+
+    token_file = (
+        Path(args.api_token_file) if getattr(args, 'api_token_file', None) else None
+    )
+    policy = load_surface_auth_policy(
+        api_token=getattr(args, 'api_token', None),
+        api_token_file=token_file,
+        relay_mode=True,
+    )
+    rate_limiter = None
+    rate_limit_calls = int(getattr(args, 'rate_limit_calls', 0))
+    if rate_limit_calls > 0:
+        rate_limiter = TokenRateLimiter(
+            max_calls=rate_limit_calls,
+            window_seconds=float(getattr(args, 'rate_limit_window', 60.0)),
+        )
+    try:
+        relay = SignatureRelayServer(
+            host=args.host,
+            port=args.port,
+            auth_policy=policy,
+            ssl_context=_signature_relay_ssl_context(args),
+            rate_limiter=rate_limiter,
+        )
+    except ValueError as exc:
+        print_json({'ok': False, 'error': str(exc)})
+        return 1
+    relay.serve_blocking()
+    return 0
+
+
+def sync_signature_submit_command(args: argparse.Namespace) -> int:
+    """POST an approval signature to a remote signature relay."""
+    from teaagent.signature_relay import SignatureRelayClient
+
+    client = SignatureRelayClient(api_token=getattr(args, 'api_token', None))
+    submit_url = (getattr(args, 'submit_url', None) or '').strip()
+    if not submit_url:
+        relay_url = (getattr(args, 'relay_url', None) or '').strip()
+        if not relay_url:
+            print_json({'ok': False, 'error': 'provide --submit-url or --relay-url'})
+            return 1
+        submit_url = f'{relay_url.rstrip("/")}/api/v1/approval-signatures'
+    result = client.post_signature(
+        submit_url,
+        {
+            'request_id': args.request_id,
+            'peer_id': args.peer_id,
+            'signature': args.signature,
+            'ssh_key_id': getattr(args, 'ssh_key_id', None),
+        },
+    )
+    print_json(result)
+    return 0 if result.get('ok') else 1

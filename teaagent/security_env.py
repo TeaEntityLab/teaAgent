@@ -24,6 +24,15 @@ def plugins_strict_audit() -> bool:
     return _env_truthy('TEAAGENT_PLUGINS_STRICT')
 
 
+def signature_relay_api_token() -> str | None:
+    """Bearer token for signature relay HTTP client (WAN multi-sig)."""
+    for name in ('TEAAGENT_SIGNATURE_RELAY_TOKEN', 'TEAAGENT_RELAY_TOKEN'):
+        value = os.environ.get(name, '').strip()
+        if value:
+            return value
+    return None
+
+
 def federated_signature_token() -> str | None:
     """Optional shared secret for file-based P2P approval signature files.
 
