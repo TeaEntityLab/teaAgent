@@ -73,6 +73,8 @@ Same as the [golden path](#golden-path-first-hour) above. Prefer `--human` on `d
 
 - Planning/exploration: use `--permission-mode read-only`
 - Editing/implementation: use `--permission-mode workspace-write` or `prompt`
+- **Plan-before-write enforcement**: workspace-write mode now requires a plan by default for safety
+- Use `--skip-plan-check` to override (not recommended for production workflows)
 
 ### 5. Extensibility
 
@@ -94,7 +96,8 @@ TeaAgent includes persistent memory features to learn from past mistakes and syn
 **Failure Experience Loop:**
 - Background tasks that fail automatically create "failure cards" capturing error context
 - Future similar tasks automatically receive warnings about past failures
-- Commands: `/memory failures` (list), `/memory clear` (clear all), `/memory clear <n>` (clear specific)
+- Automated invalidation rules prevent memory corruption (file signature changes, test refactors, dependency updates)
+- Commands: `teaagent memory failures` (list), `teaagent memory failures auto-invalidate` (apply rules), `teaagent memory failures prune` (cleanup)
 
 **Live Context Anchors:**
 - Pin files with `/pin <file>` to watch for changes in your IDE
@@ -164,12 +167,12 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 ```
 
 - **AgentRunner**: Iterates between model decisions and tool executions within budget limits.
-- **ToolRegistry**: Single point of tool dispatch with schema validation.
+- **ToolRegistry**: Single point of tool dispatch with schema validation and lint checks.
 - **ApprovalPolicy**: Enforces permission modes before any destructive tool runs.
 - **AuditLogger**: Universal event sink — every decision, execution, and error is recorded.
 - **ModelDecisionEngine**: Bridges LLM responses into structured decisions via prompt assembly and JSON parsing.
 - **Workspace Tools**: File read/write, shell inspect/mutate, glob search, git status, hash-anchored editing.
-- **Memory Catalog**: Three-tier memory system (Project/Personal/Auto-Memory) for persistent context.
+- **Memory Catalog**: Three-tier memory system (Project/Personal/Auto-Memory) for persistent context with automated invalidation.
 - **Intent Clarification**: Deterministic ambiguity scoring before model invocation.
 - **Run Store**: Persistent JSONL run history with resumable task replay.
 - **Code Mode**: Restricted Python execution with AST validation and pluggable child-process or container backends.
@@ -179,9 +182,9 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Hook System**: 8-event lifecycle (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop, SubagentStop, SessionEnd) for extensibility.
 - **Plugin System**: Four extension points (Commands, Agents, Hooks, MCP Servers) compatible with Claude Code.
 - **Context Compaction**: Automatic context compression at 75-92% token usage (Claude Code compatible).
-- **Plan Mode**: Read-only exploration mode for safe codebase analysis.
+- **Plan Mode**: Read-only exploration mode for safe codebase analysis with plan-before-write enforcement.
 - **ACP Adapter**: Agent Client Protocol integration for VS Code, Zed, and JetBrains IDEs.
-- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation with evolutionary prompt tuning, ToolPermissionManager for safety control, WorkflowEngine for multi-step execution with self-healing validation, ContextBus for cross-sandbox Delta sharing, and JITApprovalServer for remote approval with timeout.
+- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation with evolutionary prompt tuning, ToolPermissionManager for safety control, WorkflowEngine for multi-step execution with self-healing validation, ContextBus for cross-sandbox Delta sharing, JITApprovalServer for remote approval with timeout, and CentralizedApprovalQueue for aggregated subagent approvals.
 
 See [docs/architecture.md](docs/architecture.md) for component details, data flow, and extension points.
 

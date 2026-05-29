@@ -22,6 +22,10 @@ teaagent daily "summarize this repo" --dry-run --root . --human
 teaagent plan gpt "summarize the test suite" --root . --permission-mode read-only
 # Use the plan_artifact path printed by plan (under .teaagent/plans/):
 teaagent run gpt --from-plan .teaagent/plans/20260526-120000-summarize-the-test-suite.md --permission-mode read-only --root .
+# For workspace-write mode, plan is now enforced by default:
+teaagent run gpt "fix the failing auth tests" --permission-mode workspace-write --from-plan .teaagent/plans/fix-auth-tests.md --root .
+# Use --skip-plan-check only if you understand the security implications:
+teaagent run gpt "quick fix" --permission-mode workspace-write --skip-plan-check --root .
 # after a mutating run:
 teaagent agent undo --last --root .
 ```
@@ -29,12 +33,17 @@ teaagent agent undo --last --root .
 - Use `--human` on `daily` and `setup` for readable summaries; omit it for JSON (automation default).
 - After setup, `provider` is optional on `daily`, `run`, and top-level shortcuts when `.teaagent/config.json` exists.
 - `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log). Plans must live under `.teaagent/plans/` unless you pass `--allow-external-plan` (other paths must still be under `--root`).
+- **Plan-before-write enforcement**: `workspace-write` mode now requires a plan by default for safety. Use `--skip-plan-check` to override (not recommended for production workflows).
 - Scoped approvals (session grants expire after 8h by default; use separate grants per constraint):
   - `teaagent approval grant workspace_write_file --path-glob 'src/**' --root .`
   - `teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --root .`
   - `teaagent approval list --root .` shows grants and evaluation order (deny before allow); use `--grants-only` for the legacy grants array (`jq '.[0].grant_id'`)
   - `teaagent approval check workspace_write_file --path src/foo.py --root .` explains allow/deny/prompt
   - `teaagent approval revoke <grant_id> --root .` removes one rule
+- **Memory management**: 
+  - `teaagent memory failures` lists failure cards
+  - `teaagent memory failures auto-invalidate` applies automated invalidation rules
+  - `teaagent memory failures prune` removes expired/invalidated cards
 
 **Advanced paths** (not part of the golden path): `teaagent init`, `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
 

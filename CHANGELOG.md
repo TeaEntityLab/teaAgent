@@ -4,6 +4,12 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Governance Hardening (Tranche B Completion)**: Implemented three key governance decisions with CI release gates:
+  - **Centralized Approval Queue for Subagents**: Added `CentralizedApprovalQueue` in `teaagent/subagents/_approval_queue.py` for aggregating destructive tool requests from multiple subagents, supporting batch approval/deny with full lineage tracking, and preventing approval fatigue in tournament/swarm modes
+  - **Strict Plan-before-Write Enforcement**: Modified `teaagent/governance/plan_gate.py` to enforce plan-by-default in workspace-write mode, added `--skip-plan-check` CLI flag for explicit override, updated `ChatAgentConfig` and `AgentRunner` to support the new parameter
+  - **Automated Memory Invalidation**: Extended `FailureCardStorage` with `AutoInvalidationRule` and `MemoryAutoInvalidationConfig`, implemented conservative default rules (file_signature_change: invalidate, test_refactor: warn, dependency_version_change: warn), added `apply_auto_invalidation()` method with file signature tracking, added CLI command `teaagent memory failures auto-invalidate`, and supports per-project custom rules via `.teaagent/config.json`
+  - **Governance Fuzz Tests**: Added comprehensive adversarial fuzz tests in `tests/test_governance_fuzz.py` covering plan-before-write enforcement, memory invalidation, and approval queue security with 13 tests validating conservative defaults and path filtering
+  - **CI Release Gates**: Added `governance-gate` job to `.github/workflows/ci.yml` that runs governance fuzz tests, tool lint validation, and permission matrix tests before package build
 - Added Phase 5 Cognitive Swarm Evolution with self-healing validation, cross-sandbox Delta sharing, evolutionary prompt tuning, and remote JIT approval:
   - `teaagent/workflow_engine.py`: Self-healing validation loops with ruff/mypy/pytest checks, automatic hot-reload and re-execution (max 3 attempts)
   - `teaagent/context_bus.py`: Cross-sandbox Delta sharing via WAL-mode SQLite for concurrent access, with publish/subscribe and RAG archive

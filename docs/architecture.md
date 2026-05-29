@@ -31,6 +31,7 @@ safety boundaries around tool execution.
 │  WorkflowEngine (polish mode, multi-step execution)          │
 │  ContextBus (cross-sandbox Delta sharing)                     │
 │  JITApprovalServer (remote SSE with timeout)                │
+│  CentralizedApprovalQueue (aggregated subagent approvals)    │
 ├─────────────────────────────────────────────────────────────┤
 │                      State Layer                             │
 │  AuditLogger · RunStore · MemoryCatalog · UltraworkStore     │
@@ -127,7 +128,49 @@ Restricted Python execution with AST allow-list validation:
 Code Mode allows only a fixed set of AST nodes and builtin functions — no
 imports, no attributes, no arbitrary calls.
 
-### 6. OAuth 2.1 / DPoP
+### 5. Code Mode
+
+Restricted Python execution with AST allow-list validation:
+
+| Backend               | Isolation Level                                |
+|-----------------------|------------------------------------------------|
+| Child process (default)| `RLIMIT_CPU`, wall-clock timeout, advisory `RLIMIT_AS` |
+| Container              | Docker/Podman: `--network none`, `--read-only`, `--cap-drop=ALL`, non-root, tmpfs, CPU/memory/PID limits, streaming output cap, image digest pinning, image allowlist |
+
+Code Mode allows only a fixed set of AST nodes and builtin functions — no
+imports, no attributes, no arbitrary calls.
+
+### 6. Governance Hardening (Tranche B)
+
+**Plan-before-Write Enforcement:**
+- `workspace-write` mode now enforces plan-by-default for safety
+- `--require-plan` flag blocks destructive tools without a bound plan artifact
+- `--skip-plan-check` provides explicit override for power users
+- Implemented in `teaagent/governance/plan_gate.py` with strict defaults
+
+**Automated Memory Invalidation:**
+- Conservative default rules prevent memory corruption:
+  - `file_signature_change`: invalidate when files change
+  - `test_refactor`: warn when test files are modified
+  - `dependency_version_change`: warn on dependency updates
+- Per-project customization via `.teaagent/config.json`
+- CLI command: `teaagent memory failures auto-invalidate`
+- Implemented in `teaagent/memory/failure_card.py` with signature tracking
+
+**Centralized Approval Queue:**
+- Aggregates destructive tool requests from multiple subagents
+- Supports batch approval/deny with full lineage tracking
+- Prevents approval fatigue in tournament/swarm modes
+- Timeout handling and request lifecycle management
+- Implemented in `teaagent/subagents/_approval_queue.py`
+
+**Governance Fuzz Tests:**
+- Comprehensive adversarial test suite in `tests/test_governance_fuzz.py`
+- Validates plan-before-write enforcement, memory invalidation, and approval queue security
+- Tests conservative defaults and path filtering
+- Integrated into CI governance gate
+
+### 8. OAuth 2.1 / DPoP
 
 `OAuth21AuthorizationServer` and `OAuth21ResourceServer` implement the
 authorization code grant with PKCE (S256) and optional DPoP proof-of-possession:
@@ -139,7 +182,7 @@ authorization code grant with PKCE (S256) and optional DPoP proof-of-possession:
 - `SQLiteOAuthStore` provides durable client/authorization-code/nonce storage
   with PBKDF2-SHA256 client-secret hashing.
 
-### 7. MCP Transport
+### 9. MCP Transport
 
 Two transports share the same `handle_mcp_request()` dispatch:
 

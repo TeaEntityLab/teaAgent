@@ -1,22 +1,23 @@
 # TeaAgent Threat Model
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 This document maps threats to mitigations and verification. It complements [tool-authoring.md](tool-authoring.md) and [architecture.md](architecture.md).
 
 | Threat | Impact | Mitigation (current) | Verification | Gap / notes |
 |--------|--------|----------------------|--------------|-------------|
 | Prompt injection causing destructive tools | High | Permission modes; `ApprovalPolicy`; policy-as-code deny rules | `test_policy_as_code_flow.py`, `tests/policy/test_permission_matrix.py` | Model may still *request* bad tools; harness blocks execution |
-| Mislabelled tool annotations (`read_only` on write tool) | High | `teaagent tool lint`; runtime policy on destructive flag | `tests/test_tranche_b_governance.py` | Plugin handlers not sandboxed by default — trust boundary |
+| Mislabelled tool annotations (`read_only` on write tool) | High | `teaagent tool lint`; runtime policy on destructive flag | `tests/test_tranche_b_governance.py`, `tests/test_governance_fuzz.py` | Plugin handlers not sandboxed by default — trust boundary |
 | Path traversal / symlink escape | High | Workspace path resolution; protected paths | `test_contract_policy.py`, `test_protected_paths_flow.py` | Fuzz coverage ongoing |
 | Shell mutation in workspace-write mode | High | `ApprovalPolicy` blocks non-file destructive tools in workspace-write | `tests/policy/test_permission_matrix.py` | Dangerous flag lists in shell classifier — maintain with tests |
 | Secret leakage in audit logs | Medium | Audit redaction keys and truncation | `test_audit_chain_integrity_flow.py` | Over-redaction reduces debuggability — export tiers future work |
 | Audit log tampering | Medium | Hash chain (`audit verify`); fsync | `test_audit_chain_integrity_flow.py` | Local-only unless signed export |
 | Plugin supply-chain execution | High | Plugin verify/install gates; entry-point audit | `test_plugin_install_security_flow.py` | Capability manifest formalization in progress |
-| MCP server tool explosion / exfiltration | High | MCP tool filter hook; HTTP auth for remote MCP | `test_remote_mcp_consumption_flow.py` | MCP trust CLI planned (Phase 5) |
-| Memory poisoning / failure-card bias | Medium | Failure cards; warning injection | `test_memory_auto_curation_flow.py` | TTL/confidence schema not yet enforced |
-| Subagent privilege escalation | High | Subagent defs; lineage; isolation modes | `test_subagent_lineage_flow.py`, worktree/container isolation flows | Tournament approval lineage — Foundation |
+| MCP server tool explosion / exfiltration | High | MCP tool filter hook; HTTP auth for remote MCP | `test_remote_mcp_consumption_flow.py` | MCP trust CLI implemented — per-server defaults |
+| Memory poisoning / failure-card bias | Medium | Failure cards; warning injection; automated invalidation rules | `test_memory_auto_curation_flow.py`, `tests/test_governance_fuzz.py` | TTL/confidence schema enforced with conservative defaults |
+| Subagent privilege escalation | High | Subagent defs; lineage; isolation modes; centralized approval queue | `test_subagent_lineage_flow.py`, worktree/container isolation flows, `tests/test_governance_fuzz.py` | Tournament approval lineage — Foundation, queue implemented |
 | Parallel branch contamination | Medium | Git sandbox branches; worktree isolation | `test_subagent_worktree_isolation_flow.py` | Main-branch write blocked in tournament — verify per release |
+| Unplanned destructive writes | High | Strict plan-before-write enforcement in workspace-write mode | `tests/test_governance_fuzz.py`, `tests/test_tranche_b_governance.py` | `--skip-plan-check` override available for power users |
 | Provider response schema drift | Low | JSON schema for model decisions | `test_live_provider_conformance_flow.py` | Provider-specific quirks remain |
 | Unbounded run cost | Medium | `RunBudget`; iteration/tool/cost caps | `test_p0_harness.py`, `test_p0_slo_flow.py` | User must configure caps |
 
@@ -32,6 +33,9 @@ Untrusted: Model output, external MCP payloads, arbitrary plugin handlers
 
 1. Start with `--permission-mode read-only`.
 2. Run `teaagent tool lint` after adding plugins.
-3. Use `--require-plan` + `--from-plan` for writes.
-4. Never use `danger-full-access` outside an isolated sandbox.
-5. Review `teaagent runs export <run_id>` after each autonomous edit session.
+3. Use `--require-plan` + `--from-plan` for writes (now enforced by default in workspace-write mode).
+4. Use `--skip-plan-check` only when you understand the security implications.
+5. Run `teaagent memory failures auto-invalidate` periodically to clean stale failure cards.
+6. Never use `danger-full-access` outside an isolated sandbox.
+7. Review `teaagent runs export <run_id>` after each autonomous edit session.
+8. Check CI governance gate results before merging changes.
