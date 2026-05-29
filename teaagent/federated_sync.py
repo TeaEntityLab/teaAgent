@@ -560,7 +560,7 @@ class FederatedGraphSync:
                         await loop.run_in_executor(None, sig_file.unlink)
                     seen_peers.add(peer_id)
                     signatures.append(sig_msg)
-                except (json.JSONDecodeError, KeyError):
+                except (json.JSONDecodeError, KeyError, OSError):
                     continue
 
             if len(signatures) >= required_approvals:

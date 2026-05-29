@@ -143,7 +143,8 @@ class ContextBus:
                 with suppress(Exception):
                     cursor.connection.rollback()
                 time.sleep(delay)
-                self._reconnect()
+                with self._lock:
+                    self._reconnect()
                 assert self._connection is not None
                 cursor = self._connection.cursor()
             except sqlite3.OperationalError as exc:
