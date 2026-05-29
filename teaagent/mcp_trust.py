@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+
+from cryptography.fernet import Fernet, InvalidToken
 
 from teaagent.hooks import HookRegistry, mcp_tool_filter_hook
 from teaagent.tools import ToolRegistry
@@ -69,15 +72,34 @@ def trust_policy_path(root: str | Path) -> Path:
     return Path(root).resolve() / '.teaagent' / 'mcp-trust.json'
 
 
+def _get_trust_policy_fernet() -> Fernet:
+    key = os.environ['TEAAGENT_MCP_TRUST_KEY']
+    return Fernet(key.encode('utf-8'))
+
+
+def _serialize_policy(policy: MCPTrustPolicy) -> str:
+    fernet = _get_trust_policy_fernet()
+    plaintext = json.dumps(policy.to_dict(), indent=2).encode('utf-8')
+    return fernet.encrypt(plaintext).decode('utf-8')
+
+
+def _deserialize_policy(raw_text: str) -> dict[str, Any]:
+    fernet = _get_trust_policy_fernet()
+    plaintext = fernet.decrypt(raw_text.encode('utf-8'))
+    payload = json.loads(plaintext.decode('utf-8'))
+    if not isinstance(payload, dict):
+        raise ValueError('Invalid trust policy payload')
+    return payload
+
+
 def load_mcp_trust_policy(root: str | Path) -> MCPTrustPolicy:
     path = trust_policy_path(root)
     if not path.is_file():
         return MCPTrustPolicy()
     try:
-        payload = json.loads(path.read_text(encoding='utf-8'))
-    except (OSError, json.JSONDecodeError):
-        return MCPTrustPolicy()
-    if not isinstance(payload, dict):
+        raw_text = path.read_text(encoding='utf-8')
+        payload = _deserialize_policy(raw_text)
+    except (OSError, json.JSONDecodeError, InvalidToken, KeyError, ValueError):
         return MCPTrustPolicy()
     return MCPTrustPolicy.from_dict(payload)
 
@@ -85,7 +107,8 @@ def load_mcp_trust_policy(root: str | Path) -> MCPTrustPolicy:
 def save_mcp_trust_policy(root: str | Path, policy: MCPTrustPolicy) -> None:
     path = trust_policy_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(policy.to_dict(), indent=2), encoding='utf-8')
+    encrypted_payload = _serialize_policy(policy)
+    path.write_text(encrypted_payload, encoding='utf-8')
 
 
 def merged_tool_filters(
