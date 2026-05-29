@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import ssl
 import threading
+from contextlib import suppress
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -12,12 +14,18 @@ from typing import Any
 from urllib.parse import urlparse
 
 from teaagent.consensus import ConsensusEngine, VoteDecision
-from teaagent.ssh_signatures import build_vote_signing_message
 from teaagent.ssh_signatures import (
+    build_vote_signing_message,
     is_ssh_signature_blob,
     sign_message_ssh,
     verify_message_ssh,
 )
+from teaagent.surface_auth import (
+    SurfaceAuthPolicy,
+    authorize_request,
+    is_loopback_host,
+)
+from teaagent.tls_server import wrap_server_socket
 
 logger = logging.getLogger(__name__)
 
@@ -103,11 +111,20 @@ def submit_relay_vote(
     return {'ok': True, 'status': status}
 
 
+def require_relay_bind_auth(host: str, policy: SurfaceAuthPolicy | None) -> None:
+    """Fail closed when exposing relay on non-loopback without tokens."""
+    if not is_loopback_host(host) and policy is None:
+        raise ValueError(
+            'non-loopback relay bind requires --api-token or --api-token-file'
+        )
+
+
 class VoteRelayClient:
     """POST SSH-signed votes to a remote relay."""
 
-    def __init__(self, relay_base_url: str) -> None:
+    def __init__(self, relay_base_url: str, *, api_token: str | None = None) -> None:
         self.relay_base_url = relay_base_url.rstrip('/')
+        self.api_token = api_token
 
     def submit_vote(
         self,
@@ -141,10 +158,13 @@ class VoteRelayClient:
                 'comment': comment,
             }
         ).encode('utf-8')
+        headers = {'Content-Type': 'application/json'}
+        if self.api_token:
+            headers['Authorization'] = f'Bearer {self.api_token}'
         request = urllib.request.Request(
             f'{self.relay_base_url}/api/v1/votes',
             data=body,
-            headers={'Content-Type': 'application/json'},
+            headers=headers,
             method='POST',
         )
         try:
@@ -168,17 +188,28 @@ class VoteRelayServer:
         host: str = '127.0.0.1',
         port: int = 8790,
         require_ssh: bool = True,
+        auth_policy: SurfaceAuthPolicy | None = None,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self.engine = engine
         self.host = host
         self.port = port
         self.require_ssh = require_ssh
+        self.auth_policy = auth_policy
+        self.ssl_context = ssl_context
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
+        require_relay_bind_auth(host, auth_policy)
+
+    def _bind_httpd(self, handler: type[BaseHTTPRequestHandler]) -> VoteRelayHTTPServer:
+        httpd = VoteRelayHTTPServer((self.host, self.port), handler, self)
+        if self.ssl_context is not None:
+            wrap_server_socket(httpd, self.ssl_context)
+        return httpd
 
     def start(self, *, daemon: bool = True) -> None:
         handler = _make_relay_handler(self)
-        self._httpd = VoteRelayHTTPServer((self.host, self.port), handler, self)
+        self._httpd = self._bind_httpd(handler)
         self.port = int(self._httpd.server_address[1])
         self._thread = threading.Thread(
             target=self._httpd.serve_forever,
@@ -186,32 +217,48 @@ class VoteRelayServer:
             daemon=daemon,
         )
         self._thread.start()
-        logger.info('Vote relay listening on http://%s:%s', self.host, self.port)
+        scheme = 'https' if self.ssl_context else 'http'
+        logger.info('Vote relay listening on %s://%s:%s', scheme, self.host, self.port)
+
+    def _shutdown_httpd(self, httpd: ThreadingHTTPServer | None) -> None:
+        if httpd is None:
+            return
+        with suppress(Exception):
+            httpd.shutdown()
+        with suppress(Exception):
+            httpd.server_close()
 
     def stop(self) -> None:
-        if self._httpd is not None:
-            self._httpd.shutdown()
-            self._httpd.server_close()
-            self._httpd = None
+        httpd = self._httpd
+        self._httpd = None
+        self._shutdown_httpd(httpd)
         if self._thread is not None:
             self._thread.join(timeout=5.0)
             self._thread = None
 
     def serve_blocking(self) -> None:
         handler = _make_relay_handler(self)
-        httpd = VoteRelayHTTPServer((self.host, self.port), handler, self)
+        httpd = self._bind_httpd(handler)
         self._httpd = httpd
         self.port = int(httpd.server_address[1])
-        print(f'Vote relay running at http://{self.host}:{self.port}')
+        scheme = 'https' if self.ssl_context else 'http'
+        print(f'Vote relay running at {scheme}://{self.host}:{self.port}')
         print('POST /api/v1/votes with SSH-signed JSON payload')
+        if self.auth_policy is not None:
+            print('Bearer token required (Authorization or X-TeaAgent-Relay-Token)')
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
             pass
         finally:
-            httpd.shutdown()
-            httpd.server_close()
-            self._httpd = None
+            if self._httpd is httpd:
+                self._httpd = None
+            self._shutdown_httpd(httpd)
+
+    @property
+    def base_url(self) -> str:
+        scheme = 'https' if self.ssl_context else 'http'
+        return f'{scheme}://{self.host}:{self.port}'
 
 
 class VoteRelayHTTPServer(ThreadingHTTPServer):
@@ -234,8 +281,21 @@ def _make_relay_handler(relay: VoteRelayServer) -> type[BaseHTTPRequestHandler]:
         def log_message(self, format: str, *args: Any) -> None:
             logger.debug(format, *args)
 
+        def _authorized(self) -> bool:
+            ok, reason = authorize_request(
+                self.server.relay.auth_policy,
+                self.headers,
+            )
+            if ok:
+                return True
+            self._json(HTTPStatus.UNAUTHORIZED, {'ok': False, 'error': reason})
+            return False
+
         def do_GET(self) -> None:
-            if urlparse(self.path).path == '/api/health':
+            path = urlparse(self.path).path
+            if path == '/api/health':
+                if self.server.relay.auth_policy is not None and not self._authorized():
+                    return
                 self._json(HTTPStatus.OK, {'status': 'ok'})
                 return
             self._json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
@@ -243,6 +303,8 @@ def _make_relay_handler(relay: VoteRelayServer) -> type[BaseHTTPRequestHandler]:
         def do_POST(self) -> None:
             if urlparse(self.path).path != '/api/v1/votes':
                 self._json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
+                return
+            if not self._authorized():
                 return
             try:
                 body = self._read_json()

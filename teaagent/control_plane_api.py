@@ -16,10 +16,10 @@ from urllib.parse import urlparse
 from teaagent.control_plane_tenant import (
     ControlPlaneRegistry,
     ControlPlaneState,
-    JitDiffRecord,
     sanitize_tenant_id,
 )
 from teaagent.jit_approval_server import JITApprovalServer
+from teaagent.surface_auth import SurfaceAuthPolicy, authorize_request, is_loopback_host
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,15 @@ class ControlPlaneServer:
         dashboard_dir: Path | None = None,
         sse_interval_seconds: float = 1.0,
         max_sse_events: int | None = None,
+        auth_policy: SurfaceAuthPolicy | None = None,
     ) -> None:
         self.host = host
         self.port = port
+        self.auth_policy = auth_policy
+        if not is_loopback_host(host) and auth_policy is None:
+            raise ValueError(
+                'non-loopback control plane bind requires --api-token-file or --api-token'
+            )
         self.registry = tenant_registry or ControlPlaneRegistry()
         if state is not None:
             self.registry.seed(self.registry.default_tenant, state)
@@ -146,26 +152,70 @@ def _make_handler(
         def log_message(self, format: str, *args: Any) -> None:
             logger.debug(format, *args)
 
+        def _resolve_tenant_id(self) -> str:
+            header = self.headers.get('X-TeaAgent-Tenant', '').strip()
+            parsed = urlparse(self.path)
+            tenant = header
+            if not tenant and parsed.path.startswith('/api/tenants/'):
+                parts = [part for part in parsed.path.split('/') if part]
+                if len(parts) >= 3 and parts[0] == 'api' and parts[1] == 'tenants':
+                    tenant = parts[2]
+            return sanitize_tenant_id(
+                tenant or self.server.plane.registry.default_tenant
+            )
+
+        def _require_auth(
+            self,
+            *,
+            tenant_id: str | None = None,
+            require_admin: bool = False,
+            allow_public_health: bool = False,
+        ) -> bool:
+            path = urlparse(self.path).path
+            if (
+                allow_public_health
+                and path == '/api/health'
+                and self.server.plane.auth_policy is None
+            ):
+                return True
+            ok, reason = authorize_request(
+                self.server.plane.auth_policy,
+                self.headers,
+                tenant_id=tenant_id,
+                require_admin=require_admin,
+            )
+            if ok:
+                return True
+            self._json_response(HTTPStatus.UNAUTHORIZED, {'error': reason})
+            return False
+
         def do_GET(self) -> None:
             path = urlparse(self.path).path
-            if path in ('/', '/index.html'):
-                self._serve_static('index.html', 'text/html; charset=utf-8')
-                return
-            if path == '/styles.css':
-                self._serve_static('styles.css', 'text/css; charset=utf-8')
-                return
-            if path == '/app.js':
-                self._serve_static('app.js', 'application/javascript; charset=utf-8')
-                return
             if path == '/api/health':
+                if not self._require_auth(allow_public_health=True):
+                    return
                 self._json_response(HTTPStatus.OK, {'status': 'ok'})
                 return
             if path == '/api/tenants':
+                if not self._require_auth(require_admin=True):
+                    return
                 self._json_response(
                     HTTPStatus.OK,
                     {'tenants': self.server.plane.registry.list_tenants()},
                 )
                 return
+            if path in (
+                '/api/workflow/stream',
+                '/api/focus/stream',
+                '/api/jit/diff',
+            ):
+                try:
+                    tenant_id = self._resolve_tenant_id()
+                except ValueError as exc:
+                    self._json_response(HTTPStatus.BAD_REQUEST, {'error': str(exc)})
+                    return
+                if not self._require_auth(tenant_id=tenant_id):
+                    return
             if path == '/api/workflow/stream':
                 self._sse_stream('workflow_update', self._workflow_payload)
                 return
@@ -175,10 +225,36 @@ def _make_handler(
             if path == '/api/jit/diff':
                 self._sse_stream('jit_diff', self._jit_payload)
                 return
+            if path in ('/', '/index.html', '/styles.css', '/app.js'):
+                if (
+                    self.server.plane.auth_policy is not None
+                    and not self._require_auth()
+                ):
+                    return
+                if path in ('/', '/index.html'):
+                    self._serve_static('index.html', 'text/html; charset=utf-8')
+                    return
+                if path == '/styles.css':
+                    self._serve_static('styles.css', 'text/css; charset=utf-8')
+                    return
+                if path == '/app.js':
+                    self._serve_static(
+                        'app.js', 'application/javascript; charset=utf-8'
+                    )
+                    return
             self._json_response(HTTPStatus.NOT_FOUND, {'error': 'not found'})
 
         def do_POST(self) -> None:
             path = urlparse(self.path).path
+            tenant_id: str | None = None
+            if path.startswith('/api/'):
+                try:
+                    tenant_id = self._resolve_tenant_id()
+                except ValueError as exc:
+                    self._json_response(HTTPStatus.BAD_REQUEST, {'error': str(exc)})
+                    return
+                if not self._require_auth(tenant_id=tenant_id):
+                    return
             try:
                 body = self._read_json_body()
             except (ValueError, UnicodeDecodeError) as exc:
@@ -233,18 +309,7 @@ def _make_handler(
             self.wfile.write(body)
 
         def _tenant_state(self) -> ControlPlaneState:
-            header = self.headers.get('X-TeaAgent-Tenant', '').strip()
-            parsed = urlparse(self.path)
-            tenant = header
-            if not tenant and parsed.path.startswith('/api/tenants/'):
-                parts = [part for part in parsed.path.split('/') if part]
-                if len(parts) >= 3 and parts[0] == 'api' and parts[1] == 'tenants':
-                    tenant = parts[2]
-            try:
-                tenant_id = sanitize_tenant_id(tenant)
-            except ValueError as exc:
-                raise ValueError(str(exc)) from exc
-            return self.server.plane.registry.get_or_create(tenant_id)
+            return self.server.plane.registry.get_or_create(self._resolve_tenant_id())
 
         def _workflow_payload(self) -> dict[str, Any]:
             snap = self._tenant_state().snapshot()

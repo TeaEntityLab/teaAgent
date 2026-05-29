@@ -108,6 +108,8 @@ docker-smoke CI) is shipped. See [architecture.md](architecture.md#phase-4-5-roa
 | SSH vote relay (production peers) | P1 | Shipped | `teaagent/vote_relay.py`, `teaagent consensus relay` |
 | WASM skill CI template workflow | P2 | Shipped | `.github/workflows/wasm-skill-build.yml`, `docs/wasm-skill-ci.md` |
 | Multi-tenant control plane | P2 | Shipped | `teaagent/control_plane_tenant.py`, `X-TeaAgent-Tenant` |
+| Relay mTLS + API tokens | P1 | Shipped | `teaagent/surface_auth.py`, `teaagent/tls_server.py`, `docs/http-surface-auth.md` |
+| Per-tenant authZ + reverse proxy templates | P2 | Shipped | `templates/reverse-proxy/`, control plane bearer enforcement |
 
 ---
 

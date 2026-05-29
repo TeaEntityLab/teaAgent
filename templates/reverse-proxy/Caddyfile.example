@@ -1,0 +1,33 @@
+# TeaAgent control plane + vote relay — Caddy reverse proxy example
+#
+# Set environment variables before `caddy run`:
+#   TEAAgent_RELAY_TOKEN   — forwarded to vote relay
+#   TEAAgent_TEAM_A_TOKEN  — scoped to tenant team-a
+
+{
+	# auto_https off  # uncomment for local HTTP-only dev
+}
+
+:8443 {
+	# Control plane (per-tenant via header injection from auth gateway)
+	@control_plane path /api/* / /index.html /app.js /styles.css
+	handle @control_plane {
+		@team_a header X-TeaAgent-Tenant team-a
+		handle @team_a {
+			header Authorization "Bearer {env.TEAAgent_TEAM_A_TOKEN}"
+			reverse_proxy 127.0.0.1:8765
+		}
+		respond 403
+	}
+
+	# Vote relay (mTLS terminates at Caddy; upstream can stay HTTP on loopback)
+	handle /api/v1/votes {
+		header Authorization "Bearer {env.TEAAgent_RELAY_TOKEN}"
+		reverse_proxy 127.0.0.1:8790
+	}
+
+	handle /relay-health {
+		uri strip_prefix /relay-health
+		reverse_proxy 127.0.0.1:8790/api/health
+	}
+}

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
+
 import pytest
 
 from teaagent.consensus import (
@@ -15,10 +15,10 @@ from teaagent.consensus import (
     PeerRegistry,
     RiskLevel,
     VotingThreshold,
+    peer_vote_signature,
 )
 from teaagent.control_plane_api import ControlPlaneServer
 from teaagent.control_plane_tenant import ControlPlaneRegistry, sanitize_tenant_id
-from teaagent.consensus import peer_vote_signature
 from teaagent.ssh_signatures import (
     build_vote_signing_message,
     is_ssh_signature_blob,

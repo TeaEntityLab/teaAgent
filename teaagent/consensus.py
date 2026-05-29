@@ -77,7 +77,10 @@ class PeerIdentity:
     def verify_signature(self, message: str, signature: str) -> bool:
         """Verify a dev hash or production SSH signature from this peer."""
         try:
-            from teaagent.ssh_signatures import is_ssh_signature_blob, verify_message_ssh
+            from teaagent.ssh_signatures import (
+                is_ssh_signature_blob,
+                verify_message_ssh,
+            )
 
             if is_ssh_signature_blob(signature):
                 return verify_message_ssh(self.ssh_public_key, message, signature)

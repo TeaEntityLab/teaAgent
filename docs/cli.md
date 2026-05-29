@@ -646,11 +646,13 @@ teaagent consensus peers list --root .
 teaagent consensus request "Deploy billing service" --risk-level high --wait --auto-approve
 teaagent consensus wait <proposal-id> --timeout 120
 teaagent consensus votes-import votes.json
-teaagent consensus relay serve --port 8790
-teaagent consensus relay submit --relay-url http://127.0.0.1:8790 PROP peer-a approve \
-  --private-key ~/.ssh/id_ed25519 --task-description "Deploy billing"
-teaagent control-plane serve --default-tenant team-a
-# Dashboard clients send header: X-TeaAgent-Tenant: team-a
+teaagent consensus relay serve --port 8790 --api-token-file relay-tokens.json
+teaagent consensus relay serve --tls-cert srv.pem --tls-key srv.key --tls-client-ca ca.pem
+teaagent consensus relay submit --relay-url https://127.0.0.1:8790 PROP peer-a approve \
+  --private-key ~/.ssh/id_ed25519 --task-description "Deploy billing" --api-token "$RELAY_TOKEN"
+teaagent control-plane serve --api-token-file tokens.json --default-tenant team-a
+# Clients: Authorization: Bearer <token> and X-TeaAgent-Tenant: team-a
+# See docs/http-surface-auth.md and templates/reverse-proxy/
 ```
 
 Swarm runs can enable consensus with pre-approval patterns or async vote polling

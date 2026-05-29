@@ -62,11 +62,11 @@ from ._consensus import (
     consensus_peers_deactivate_command,
     consensus_peers_list_command,
     consensus_peers_remove_command,
+    consensus_relay_serve_command,
+    consensus_relay_submit_command,
     consensus_request_command,
     consensus_status_command,
     consensus_vote_command,
-    consensus_relay_serve_command,
-    consensus_relay_submit_command,
     consensus_votes_import_command,
     consensus_wait_command,
 )

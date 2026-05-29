@@ -262,6 +262,20 @@ def _consensus(
         action='store_true',
         help='Accept dev hash signatures (not for production)',
     )
+    relay_serve.add_argument(
+        '--api-token',
+        help='Bearer token required on relay requests (required for non-loopback)',
+    )
+    relay_serve.add_argument(
+        '--api-token-file',
+        help='JSON file with relay bearer tokens',
+    )
+    relay_serve.add_argument('--tls-cert', help='TLS certificate PEM for HTTPS/mTLS')
+    relay_serve.add_argument('--tls-key', help='TLS private key PEM')
+    relay_serve.add_argument(
+        '--tls-client-ca',
+        help='Client CA PEM for mTLS (requires --tls-cert and --tls-key)',
+    )
     relay_serve.add_argument('--peer-storage', help='Path to peer registry storage')
     relay_serve.add_argument(
         '--consensus-storage', help='Path to consensus state storage'
@@ -288,4 +302,8 @@ def _consensus(
         help='Task description from the proposal (for canonical signing)',
     )
     relay_submit.add_argument('--comment', help='Optional vote comment')
+    relay_submit.add_argument(
+        '--api-token',
+        help='Bearer token for authenticated relay',
+    )
     relay_submit.set_defaults(func=relay_submit_handler)

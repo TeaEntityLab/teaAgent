@@ -312,17 +312,54 @@ def consensus_vote_command(args: argparse.Namespace) -> int:
         return 1
 
 
+def _relay_ssl_context(args: argparse.Namespace):
+    if not getattr(args, 'tls_cert', None):
+        return None
+    from pathlib import Path
+
+    from teaagent.tls_server import build_server_ssl_context
+
+    if not args.tls_key:
+        print('Error: --tls-key is required when --tls-cert is set')
+        raise SystemExit(1)
+    client_ca = (
+        Path(args.tls_client_ca) if getattr(args, 'tls_client_ca', None) else None
+    )
+    return build_server_ssl_context(
+        cert_file=Path(args.tls_cert),
+        key_file=Path(args.tls_key),
+        client_ca_file=client_ca,
+    )
+
+
 def consensus_relay_serve_command(args: argparse.Namespace) -> int:
     """Serve HTTP relay for SSH-signed production peer votes."""
+    from pathlib import Path
+
+    from teaagent.surface_auth import load_surface_auth_policy
     from teaagent.vote_relay import VoteRelayServer
 
     engine = _consensus_engine_from_args(args)
-    relay = VoteRelayServer(
-        engine,
-        host=args.host,
-        port=args.port,
-        require_ssh=not args.allow_dev_signatures,
+    token_file = (
+        Path(args.api_token_file) if getattr(args, 'api_token_file', None) else None
     )
+    policy = load_surface_auth_policy(
+        api_token=getattr(args, 'api_token', None),
+        api_token_file=token_file,
+        relay_mode=True,
+    )
+    try:
+        relay = VoteRelayServer(
+            engine,
+            host=args.host,
+            port=args.port,
+            require_ssh=not args.allow_dev_signatures,
+            auth_policy=policy,
+            ssl_context=_relay_ssl_context(args),
+        )
+    except ValueError as exc:
+        print(f'Error: {exc}')
+        return 1
     relay.serve_blocking()
     return 0
 
@@ -332,7 +369,10 @@ def consensus_relay_submit_command(args: argparse.Namespace) -> int:
     from teaagent.consensus import VoteDecision
     from teaagent.vote_relay import VoteRelayClient
 
-    client = VoteRelayClient(args.relay_url)
+    client = VoteRelayClient(
+        args.relay_url,
+        api_token=getattr(args, 'api_token', None),
+    )
     result = client.submit_vote(
         proposal_id=args.proposal_id,
         peer_name=args.peer_name,

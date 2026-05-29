@@ -47,4 +47,12 @@ def register(
         default='default',
         help='Default tenant when X-TeaAgent-Tenant header is omitted.',
     )
+    serve_cmd.add_argument(
+        '--api-token',
+        help='Bearer token (admin scope) for dashboard/API access',
+    )
+    serve_cmd.add_argument(
+        '--api-token-file',
+        help='JSON token file mapping tokens to allowed tenants',
+    )
     serve_cmd.set_defaults(func=handlers.get('serve'))

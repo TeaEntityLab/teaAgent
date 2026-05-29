@@ -165,15 +165,15 @@ flowchart TB
 | Reusable WASM CI workflow | **Met** (`wasm-skill-build.yml`) |
 | Multi-tenant workflow isolation | **Met** (`ControlPlaneRegistry`, header routing) |
 | Tests for new behavior | **Met** (`test_strategic_features.py`) |
-| Production WAN-hardened relay/hosted plane | **Not met** (documented follow-ups) |
+| Production WAN-hardened relay/hosted plane | **Met** (bearer tokens, mTLS, tenant authZ; see `docs/http-surface-auth.md`) |
 
 ---
 
 ## 6. Recommended next actions
 
-1. **Relay hardening** — API token or mTLS on `POST /api/v1/votes`; rate limits.
+1. **Relay rate limits** — throttle `POST /api/v1/votes` per token.
 2. **Unify SSH verification** — wire `policy._verify_ssh_signature` to `ssh_signatures.verify_message_ssh`.
-3. **Control plane auth** — map OAuth/API keys → allowed tenant IDs at reverse proxy.
+3. **OAuth gateway** — map external IdP claims → tenant + bearer at reverse proxy (templates in `templates/reverse-proxy/`).
 4. **Path-based tenant routes** — `/api/tenants/{id}/workflow/stream` for CDN caching rules.
 5. **Dependabot #10** — resolve moderate advisory on default branch.
 
