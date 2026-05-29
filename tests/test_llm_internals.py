@@ -148,9 +148,7 @@ class TestExtractOpenaiToolCalls:
         assert _extract_openai_tool_calls({}) == []
 
     def test_empty_when_no_tool_calls(self) -> None:
-        response: dict[str, Any] = {
-            'choices': [{'message': {'content': 'text'}}]
-        }
+        response: dict[str, Any] = {'choices': [{'message': {'content': 'text'}}]}
         assert _extract_openai_tool_calls(response) == []
 
     def test_invalid_json_arguments_uses_empty_dict(self) -> None:
@@ -198,9 +196,7 @@ class TestExtractClaudeToolCalls:
         ]
 
     def test_empty_when_no_tool_use(self) -> None:
-        response: dict[str, Any] = {
-            'content': [{'type': 'text', 'text': 'hello'}]
-        }
+        response: dict[str, Any] = {'content': [{'type': 'text', 'text': 'hello'}]}
         assert _extract_claude_tool_calls(response) == []
 
     def test_empty_when_no_content(self) -> None:
@@ -226,18 +222,14 @@ class TestExtractGeminiToolCalls:
             ]
         }
         result = _extract_gemini_tool_calls(response)
-        assert result == [
-            LLMToolCall(tool_name='search', tool_input={'q': 'weather'})
-        ]
+        assert result == [LLMToolCall(tool_name='search', tool_input={'q': 'weather'})]
 
     def test_empty_when_no_candidates(self) -> None:
         assert _extract_gemini_tool_calls({}) == []
 
     def test_empty_when_no_function_calls(self) -> None:
         response: dict[str, Any] = {
-            'candidates': [
-                {'content': {'parts': [{'text': 'hello'}]}}
-            ]
+            'candidates': [{'content': {'parts': [{'text': 'hello'}]}}]
         }
         assert _extract_gemini_tool_calls(response) == []
 
@@ -305,9 +297,7 @@ class TestExtractGeminiSafety:
         assert result.category is None
 
     def test_returns_none_when_no_safety_block(self) -> None:
-        response: dict[str, Any] = {
-            'candidates': [{'finishReason': 'STOP'}]
-        }
+        response: dict[str, Any] = {'candidates': [{'finishReason': 'STOP'}]}
         assert _extract_gemini_safety(response) is None
 
     def test_returns_none_when_no_candidates(self) -> None:
@@ -360,9 +350,7 @@ class TestExtractGeminiSafety:
 class TestExtractGeminiStreamText:
     def test_extracts_text_from_part(self) -> None:
         parsed: dict[str, Any] = {
-            'candidates': [
-                {'content': {'parts': [{'text': 'Hello'}]}}
-            ]
+            'candidates': [{'content': {'parts': [{'text': 'Hello'}]}}]
         }
         assert _extract_gemini_stream_text(parsed) == 'Hello'
 
@@ -370,19 +358,13 @@ class TestExtractGeminiStreamText:
         assert _extract_gemini_stream_text({}) == ''
 
     def test_empty_when_no_parts(self) -> None:
-        parsed: dict[str, Any] = {
-            'candidates': [{'content': {'parts': []}}]
-        }
+        parsed: dict[str, Any] = {'candidates': [{'content': {'parts': []}}]}
         assert _extract_gemini_stream_text(parsed) == ''
 
     def test_concatenates_multiple_text_parts(self) -> None:
         parsed: dict[str, Any] = {
             'candidates': [
-                {
-                    'content': {
-                        'parts': [{'text': 'Hello'}, {'text': ' World'}]
-                    }
-                }
+                {'content': {'parts': [{'text': 'Hello'}, {'text': ' World'}]}}
             ]
         }
         assert _extract_gemini_stream_text(parsed) == 'Hello World'
@@ -473,7 +455,9 @@ class TestBuildSslContextFromEnv:
     def test_returns_none_without_env_vars(self) -> None:
         assert build_ssl_context_from_env() is None
 
-    def test_ssl_cert_file_returns_context(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_ssl_cert_file_returns_context(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv('SSL_CERT_FILE', '/nonexistent/cert.pem')
         with patch('ssl.create_default_context') as mock_ctx:
             mock_ctx.return_value = mock_ctx
@@ -483,7 +467,9 @@ class TestBuildSslContextFromEnv:
                 cafile='/nonexistent/cert.pem'
             )
 
-    def test_requests_ca_bundle_returns_context(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_requests_ca_bundle_returns_context(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv('REQUESTS_CA_BUNDLE', '/some/ca.pem')
         with patch('ssl.create_default_context') as mock_ctx:
             mock_ctx.return_value = mock_ctx
@@ -493,17 +479,19 @@ class TestBuildSslContextFromEnv:
                 cafile='/some/ca.pem'
             )
 
-    def test_client_cert_without_ca_returns_context(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_client_cert_without_ca_returns_context(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv('TEAAGENT_TLS_CLIENT_CERT', '/some/cert.pem')
         with patch('ssl.create_default_context') as mock_ctx:
             mock_ctx.return_value = mock_ctx
             ctx = build_ssl_context_from_env()
             assert ctx is not None
-            mock_ctx.load_cert_chain.assert_called_once_with(
-                certfile='/some/cert.pem'
-            )
+            mock_ctx.load_cert_chain.assert_called_once_with(certfile='/some/cert.pem')
 
-    def test_client_cert_and_key_returns_context(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_client_cert_and_key_returns_context(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv('TEAAGENT_TLS_CLIENT_CERT', '/some/cert.pem')
         monkeypatch.setenv('TEAAGENT_TLS_CLIENT_KEY', '/some/key.pem')
         with patch('ssl.create_default_context') as mock_ctx:
@@ -514,7 +502,9 @@ class TestBuildSslContextFromEnv:
                 certfile='/some/cert.pem', keyfile='/some/key.pem'
             )
 
-    def test_requests_ca_bundle_preferred_over_ssl_cert_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_requests_ca_bundle_preferred_over_ssl_cert_file(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv('REQUESTS_CA_BUNDLE', '/ca.pem')
         monkeypatch.setenv('SSL_CERT_FILE', '/ssl.pem')
         with patch('ssl.create_default_context') as mock_ctx:

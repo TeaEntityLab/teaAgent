@@ -22,7 +22,6 @@ class GitSandboxResult:
     conflicted_files: list[str] = field(default_factory=list)
 
 
-
 def is_git_repository(root: str | Path) -> bool:
     """Check if root is inside a git repository."""
     try:

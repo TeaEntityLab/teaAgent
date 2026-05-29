@@ -23,7 +23,9 @@ class TestTeamDef:
 
     def test_with_specialists(self) -> None:
         spec = SubagentDef(name='helper', description='helper agent')
-        team = TeamDef(name='team', description='my team', specialists=(spec,), max_concurrent=2)
+        team = TeamDef(
+            name='team', description='my team', specialists=(spec,), max_concurrent=2
+        )
         assert team.name == 'team'
         assert len(team.specialists) == 1
         assert team.specialists[0].name == 'helper'

@@ -129,10 +129,16 @@ class TestApprovalQueueStore:
         with TemporaryDirectory() as tmp:
             store = ApprovalQueueStore(Path(tmp), hmac_secret='test-secret')
             req = _make_req(
-                request_id='r1', subagent_id='s1', parent_run_id='parent-1', subagent_name='test', tool_name='read'
+                request_id='r1',
+                subagent_id='s1',
+                parent_run_id='parent-1',
+                subagent_name='test',
+                tool_name='read',
             )
             batch = ApprovalBatch(
-                batch_id='b1', parent_run_id='parent-1', created_at='2025-01-01T00:00:00',
+                batch_id='b1',
+                parent_run_id='parent-1',
+                created_at='2025-01-01T00:00:00',
             )
             store.save('parent-1', {'r1': req}, {'b1': batch})
 
@@ -148,15 +154,24 @@ class TestApprovalQueueStore:
         with TemporaryDirectory() as tmp:
             store = ApprovalQueueStore(Path(tmp))
             req = _make_req(
-                request_id='r1', subagent_id='s1', parent_run_id='parent-1', subagent_name='test', tool_name='bash',
+                request_id='r1',
+                subagent_id='s1',
+                parent_run_id='parent-1',
+                subagent_name='test',
+                tool_name='bash',
             )
             batch = ApprovalBatch(
-                batch_id='b1', parent_run_id='parent-1', created_at='2025-01-01T00:00:00',
+                batch_id='b1',
+                parent_run_id='parent-1',
+                created_at='2025-01-01T00:00:00',
             )
             store.save('parent-1', {'r1': req}, {'b1': batch})
 
             result = store.update_request_status(
-                'parent-1', 'r1', ApprovalRequestStatus.APPROVED, approved_by='test-user'
+                'parent-1',
+                'r1',
+                ApprovalRequestStatus.APPROVED,
+                approved_by='test-user',
             )
             assert result is True
 
@@ -169,7 +184,9 @@ class TestApprovalQueueStore:
             store = ApprovalQueueStore(Path(tmp))
             req = _make_req(request_id='existing')
             batch = ApprovalBatch(
-                batch_id='b1', parent_run_id='parent-1', created_at='2025-01-01T00:00:00',
+                batch_id='b1',
+                parent_run_id='parent-1',
+                created_at='2025-01-01T00:00:00',
             )
             store.save('parent-1', {'existing': req}, {'b1': batch})
             result = store.update_request_status(
@@ -187,7 +204,9 @@ class TestApprovalQueueStore:
                 tool_name='read',
             )
             batch = ApprovalBatch(
-                batch_id='b1', parent_run_id='old-run', created_at='2025-01-01T00:00:00',
+                batch_id='b1',
+                parent_run_id='old-run',
+                created_at='2025-01-01T00:00:00',
             )
             store.save('old-run', {'r1': req}, {'b1': batch})
             store.update_request_status(
@@ -206,10 +225,16 @@ class TestApprovalQueueStore:
         with TemporaryDirectory() as tmp:
             store = ApprovalQueueStore(Path(tmp))
             req = _make_req(
-                request_id='r1', subagent_id='s1', parent_run_id='recent', subagent_name='test', tool_name='read',
+                request_id='r1',
+                subagent_id='s1',
+                parent_run_id='recent',
+                subagent_name='test',
+                tool_name='read',
             )
             batch = ApprovalBatch(
-                batch_id='b1', parent_run_id='recent', created_at='2025-01-01T00:00:00',
+                batch_id='b1',
+                parent_run_id='recent',
+                created_at='2025-01-01T00:00:00',
             )
             store.save('recent', {'r1': req}, {'b1': batch})
 
@@ -220,10 +245,16 @@ class TestApprovalQueueStore:
         with TemporaryDirectory() as tmp:
             store = ApprovalQueueStore(Path(tmp))
             req = _make_req(
-                request_id='r1', subagent_id='s1', parent_run_id='pending-run', subagent_name='test', tool_name='read',
+                request_id='r1',
+                subagent_id='s1',
+                parent_run_id='pending-run',
+                subagent_name='test',
+                tool_name='read',
             )
             batch = ApprovalBatch(
-                batch_id='b1', parent_run_id='pending-run', created_at='2025-01-01T00:00:00',
+                batch_id='b1',
+                parent_run_id='pending-run',
+                created_at='2025-01-01T00:00:00',
             )
             store.save('pending-run', {'r1': req}, {'b1': batch})
 

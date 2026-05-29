@@ -31,16 +31,18 @@ logger = logging.getLogger(__name__)
 
 class ApprovalRequestStatus(Enum):
     """Status of a subagent approval request."""
-    PENDING = "pending"
-    APPROVED = "approved"
-    DENIED = "denied"
-    TIMEOUT = "timeout"
-    CANCELLED = "cancelled"
+
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    DENIED = 'denied'
+    TIMEOUT = 'timeout'
+    CANCELLED = 'cancelled'
 
 
 @dataclass
 class SubagentApprovalRequest:
     """A destructive tool request from a subagent requiring approval."""
+
     request_id: str
     subagent_id: str
     parent_run_id: str
@@ -51,7 +53,9 @@ class SubagentApprovalRequest:
     isolation: str
     batch_index: Optional[int] = None
     worktree_path: Optional[str] = None
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
     status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING
     approved_at: Optional[str] = None
     denied_at: Optional[str] = None
@@ -60,36 +64,39 @@ class SubagentApprovalRequest:
 
     def to_dict(self) -> dict[str, Any]:
         payload = {
-            "request_id": self.request_id,
-            "subagent_id": self.subagent_id,
-            "parent_run_id": self.parent_run_id,
-            "subagent_name": self.subagent_name,
-            "tool_name": self.tool_name,
-            "tool_arguments": self.tool_arguments,
-            "permission_mode": self.permission_mode,
-            "isolation": self.isolation,
-            "batch_index": self.batch_index,
-            "worktree_path": self.worktree_path,
-            "created_at": self.created_at,
-            "status": self.status.value,
-            "timeout_seconds": self.timeout_seconds,
+            'request_id': self.request_id,
+            'subagent_id': self.subagent_id,
+            'parent_run_id': self.parent_run_id,
+            'subagent_name': self.subagent_name,
+            'tool_name': self.tool_name,
+            'tool_arguments': self.tool_arguments,
+            'permission_mode': self.permission_mode,
+            'isolation': self.isolation,
+            'batch_index': self.batch_index,
+            'worktree_path': self.worktree_path,
+            'created_at': self.created_at,
+            'status': self.status.value,
+            'timeout_seconds': self.timeout_seconds,
         }
         if self.approved_at:
-            payload["approved_at"] = self.approved_at
+            payload['approved_at'] = self.approved_at
         if self.denied_at:
-            payload["denied_at"] = self.denied_at
+            payload['denied_at'] = self.denied_at
         if self.denial_reason:
-            payload["denial_reason"] = self.denial_reason
+            payload['denial_reason'] = self.denial_reason
         return payload
 
 
 @dataclass
 class ApprovalBatch:
     """A batch of approval requests grouped for parent TUI review."""
+
     batch_id: str
     parent_run_id: str
     requests: list[SubagentApprovalRequest] = field(default_factory=list)
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
     status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING
 
     def add_request(self, request: SubagentApprovalRequest) -> None:
@@ -97,12 +104,12 @@ class ApprovalBatch:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "batch_id": self.batch_id,
-            "parent_run_id": self.parent_run_id,
-            "requests": [r.to_dict() for r in self.requests],
-            "created_at": self.created_at,
-            "status": self.status.value,
-            "request_count": len(self.requests),
+            'batch_id': self.batch_id,
+            'parent_run_id': self.parent_run_id,
+            'requests': [r.to_dict() for r in self.requests],
+            'created_at': self.created_at,
+            'status': self.status.value,
+            'request_count': len(self.requests),
         }
 
 
@@ -120,7 +127,9 @@ class CentralizedApprovalQueue:
         workspace_root: Optional[Path] = None,
     ) -> None:
         self._parent_run_id = parent_run_id
-        self._workspace_root = Path(workspace_root).resolve() if workspace_root else None
+        self._workspace_root = (
+            Path(workspace_root).resolve() if workspace_root else None
+        )
         self._requests: dict[str, SubagentApprovalRequest] = {}
         self._batches: dict[str, ApprovalBatch] = {}
         self._pending_futures: dict[str, asyncio.Future[bool]] = {}
@@ -254,9 +263,7 @@ class CentralizedApprovalQueue:
             self._sync_waiters.pop(request_id, None)
         return result
 
-    def approve_request_sync(
-        self, request_id: str, approved_by: str = 'human'
-    ) -> bool:
+    def approve_request_sync(self, request_id: str, approved_by: str = 'human') -> bool:
         """Approve a pending sync request (parent TUI / CLI)."""
         with self._sync_lock:
             request = self._requests.get(request_id)
@@ -345,39 +352,37 @@ class CentralizedApprovalQueue:
             self._pending_futures[request_id] = future
 
         logger.info(
-            f"Submitted approval request {request_id} from subagent {subagent_name} "
-            f"for tool {tool_name}"
+            f'Submitted approval request {request_id} from subagent {subagent_name} '
+            f'for tool {tool_name}'
         )
 
         try:
             # Wait for approval/deny with timeout
-            result = await asyncio.wait_for(
-                future, timeout=request.timeout_seconds
-            )
+            result = await asyncio.wait_for(future, timeout=request.timeout_seconds)
             return result
         except asyncio.TimeoutError:
             async with self._lock:
                 if request_id in self._requests:
                     self._requests[request_id].status = ApprovalRequestStatus.TIMEOUT
-            logger.warning(f"Approval request {request_id} timed out")
+            logger.warning(f'Approval request {request_id} timed out')
             return False
         finally:
             async with self._lock:
                 self._pending_futures.pop(request_id, None)
 
     async def approve_request(
-        self, request_id: str, approved_by: str = "human"
+        self, request_id: str, approved_by: str = 'human'
     ) -> bool:
         """Approve a specific request."""
         async with self._lock:
             request = self._requests.get(request_id)
             if not request:
-                logger.warning(f"Request {request_id} not found")
+                logger.warning(f'Request {request_id} not found')
                 return False
 
             if request.status != ApprovalRequestStatus.PENDING:
                 logger.warning(
-                    f"Request {request_id} already has status {request.status.value}"
+                    f'Request {request_id} already has status {request.status.value}'
                 )
                 return False
 
@@ -388,22 +393,22 @@ class CentralizedApprovalQueue:
             if future and not future.done():
                 future.set_result(True)
 
-        logger.info(f"Approved request {request_id} by {approved_by}")
+        logger.info(f'Approved request {request_id} by {approved_by}')
         return True
 
     async def deny_request(
-        self, request_id: str, reason: str = "Denied by human"
+        self, request_id: str, reason: str = 'Denied by human'
     ) -> bool:
         """Deny a specific request."""
         async with self._lock:
             request = self._requests.get(request_id)
             if not request:
-                logger.warning(f"Request {request_id} not found")
+                logger.warning(f'Request {request_id} not found')
                 return False
 
             if request.status != ApprovalRequestStatus.PENDING:
                 logger.warning(
-                    f"Request {request_id} already has status {request.status.value}"
+                    f'Request {request_id} already has status {request.status.value}'
                 )
                 return False
 
@@ -415,15 +420,15 @@ class CentralizedApprovalQueue:
             if future and not future.done():
                 future.set_result(False)
 
-        logger.info(f"Denied request {request_id}: {reason}")
+        logger.info(f'Denied request {request_id}: {reason}')
         return True
 
-    async def approve_batch(self, batch_id: str, approved_by: str = "human") -> int:
+    async def approve_batch(self, batch_id: str, approved_by: str = 'human') -> int:
         """Approve all requests in a batch. Returns count of approved requests."""
         async with self._lock:
             batch = self._batches.get(batch_id)
             if not batch:
-                logger.warning(f"Batch {batch_id} not found")
+                logger.warning(f'Batch {batch_id} not found')
                 return 0
 
             approved_count = 0
@@ -439,17 +444,17 @@ class CentralizedApprovalQueue:
 
             batch.status = ApprovalRequestStatus.APPROVED
 
-        logger.info(f"Approved {approved_count} requests in batch {batch_id}")
+        logger.info(f'Approved {approved_count} requests in batch {batch_id}')
         return approved_count
 
     async def deny_batch(
-        self, batch_id: str, reason: str = "Batch denied by human"
+        self, batch_id: str, reason: str = 'Batch denied by human'
     ) -> int:
         """Deny all requests in a batch. Returns count of denied requests."""
         async with self._lock:
             batch = self._batches.get(batch_id)
             if not batch:
-                logger.warning(f"Batch {batch_id} not found")
+                logger.warning(f'Batch {batch_id} not found')
                 return 0
 
             denied_count = 0
@@ -466,7 +471,7 @@ class CentralizedApprovalQueue:
 
             batch.status = ApprovalRequestStatus.DENIED
 
-        logger.info(f"Denied {denied_count} requests in batch {batch_id}: {reason}")
+        logger.info(f'Denied {denied_count} requests in batch {batch_id}: {reason}')
         return denied_count
 
     def create_batch(self, request_ids: list[str]) -> str:
@@ -480,13 +485,15 @@ class CentralizedApprovalQueue:
                 batch.add_request(request)
 
         self._batches[batch_id] = batch
-        logger.info(f"Created batch {batch_id} with {len(batch.requests)} requests")
+        logger.info(f'Created batch {batch_id} with {len(batch.requests)} requests')
         return batch_id
 
     def get_pending_requests(self) -> list[SubagentApprovalRequest]:
         """Get all pending requests."""
         return [
-            r for r in self._requests.values() if r.status == ApprovalRequestStatus.PENDING
+            r
+            for r in self._requests.values()
+            if r.status == ApprovalRequestStatus.PENDING
         ]
 
     def get_request(self, request_id: str) -> Optional[SubagentApprovalRequest]:
@@ -517,7 +524,7 @@ class CentralizedApprovalQueue:
             if future and not future.done():
                 future.cancel()
 
-        logger.info(f"Cancelled request {request_id}")
+        logger.info(f'Cancelled request {request_id}')
         return True
 
     async def cleanup(self) -> None:
@@ -546,7 +553,9 @@ class CentralizedApprovalQueue:
                 self._batches.pop(bid, None)
 
         if to_remove or empty_batches:
-            logger.info(f"Cleaned up {len(to_remove)} requests, {len(empty_batches)} batches")
+            logger.info(
+                f'Cleaned up {len(to_remove)} requests, {len(empty_batches)} batches'
+            )
 
 
 # Global registry for (workspace, parent_run_id) -> queue instances
@@ -554,9 +563,7 @@ _approval_queues: dict[tuple[str, str], CentralizedApprovalQueue] = {}
 _queue_lock = asyncio.Lock()
 
 
-def _queue_key(
-    workspace_root: Optional[Path], parent_run_id: str
-) -> tuple[str, str]:
+def _queue_key(workspace_root: Optional[Path], parent_run_id: str) -> tuple[str, str]:
     if workspace_root is None:
         return ('', parent_run_id)
     return (str(Path(workspace_root).resolve()), parent_run_id)
@@ -588,9 +595,7 @@ def snapshot_pending_subagent_requests(
     """Serialize pending subagent approval requests for CLI/TUI."""
     items: list[dict[str, Any]] = []
     parent_ids = (
-        [parent_run_id]
-        if parent_run_id
-        else list_active_parent_run_ids(workspace_root)
+        [parent_run_id] if parent_run_id else list_active_parent_run_ids(workspace_root)
     )
     for pid in parent_ids:
         queue = get_approval_queue(pid, workspace_root=workspace_root)

@@ -67,7 +67,7 @@ def register(
     fail_list.add_argument(
         '--confidence-filter',
         choices=['low', 'medium', 'high'],
-        help='Filter by confidence level.'
+        help='Filter by confidence level.',
     )
     fail_list.set_defaults(func=handlers['failures_list'])
 

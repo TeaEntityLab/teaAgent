@@ -134,17 +134,17 @@ class ExpandedASTFuzzTests(unittest.TestCase):
         self.assertEqual(ops, [])
 
     def test_detects_subprocess_string_command(self) -> None:
-        code = "def handler():\n    import subprocess\n    subprocess.run(\"rm -rf /\", shell=True)\n    return"
+        code = 'def handler():\n    import subprocess\n    subprocess.run("rm -rf /", shell=True)\n    return'
         ops = fuzz_check_handler_code(code, is_read_only=True)
         self.assertIn('subprocess.run(string_cmd)', ops)
 
     def test_detects_eval_dynamic(self) -> None:
-        code = "def handler():\n    eval(user_input)\n    return"
+        code = 'def handler():\n    eval(user_input)\n    return'
         ops = fuzz_check_handler_code(code, is_read_only=True)
         self.assertIn('eval(dynamic)', ops)
 
     def test_detects_exec_dynamic(self) -> None:
-        code = "def handler():\n    exec(code_string)\n    return"
+        code = 'def handler():\n    exec(code_string)\n    return'
         ops = fuzz_check_handler_code(code, is_read_only=True)
         self.assertIn('exec(dynamic)', ops)
 

@@ -465,7 +465,14 @@ class ANPGovernedService:
                 context=payload,
                 remote_endpoint=remote_endpoint,
             )
-        except (OSError, ValueError, TypeError, ConnectionError, RuntimeError, FuturesTimeoutError) as exc:
+        except (
+            OSError,
+            ValueError,
+            TypeError,
+            ConnectionError,
+            RuntimeError,
+            FuturesTimeoutError,
+        ) as exc:
             self.audit.record(
                 'anp_outbound_failed',
                 cid,

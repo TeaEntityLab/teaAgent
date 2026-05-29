@@ -22,7 +22,9 @@ class PlanContract:
     rel_path: str
     content_hash: str
     task: str
-    file_targets: frozenset[str] = frozenset()  # Approved file targets for write operations
+    file_targets: frozenset[str] = (
+        frozenset()
+    )  # Approved file targets for write operations
 
     def to_dict(self) -> dict[str, str | list[str]]:
         return {
@@ -44,7 +46,9 @@ class PlanContract:
         for target in self.file_targets:
             if file_path == target:
                 return True
-            if file_path.startswith(target + '/') or file_path.startswith(target + '\\'):
+            if file_path.startswith(target + '/') or file_path.startswith(
+                target + '\\'
+            ):
                 return True
 
         return False
@@ -106,7 +110,11 @@ def load_plan_contract(
                     cleaned = line.strip().lstrip('-*').strip()
                     # Remove backticks and extra text
                     if '`' in cleaned:
-                        cleaned = cleaned.split('`')[1] if '`' in cleaned else cleaned.split('`')[0]
+                        cleaned = (
+                            cleaned.split('`')[1]
+                            if '`' in cleaned
+                            else cleaned.split('`')[0]
+                        )
                     if cleaned and not cleaned.endswith('(discover relevant tests)'):
                         file_targets = file_targets | {cleaned}
 

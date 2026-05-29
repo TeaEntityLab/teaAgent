@@ -1,6 +1,6 @@
 # Governance Hardening Plan (in-repo)
 
-Last updated: 2026-05-28
+Last updated: 2026-05-28 (Phase 4–6 verification)
 
 ## Goal
 
@@ -21,7 +21,8 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 | Hardening+ | adversarial plugin runtime tests, queue cleanup TTL, handler AST gate | Shipped |
 | Refactor | `teaagent.sandbox` package, approval store module split | Shipped |
 | Phase 4 | Federated consensus + swarm pre-approval gate | Beta |
-| Phase 5 | Skill sandbox routing (`isolation=auto`) + docker limits | Beta |
+| Phase 5 | Skill sandbox routing + execution (`isolation=auto`, `skill_executor`) | Beta |
+| Phase 6 | Skill writer, docker monitor, control plane, prompt tournament | Beta |
 
 ## Verification commands
 
@@ -29,6 +30,7 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 pytest tests/test_governance_fuzz.py tests/test_governance_adversarial_runtime.py \
   tests/test_tranche_bc_governance.py tests/test_approval_queue_persistence.py \
   tests/test_subagent_approval_queue_integration.py tests/policy/
+pytest tests/test_skill_executor.py tests/test_phase6_*.py
 pytest tests/acceptance/test_consensus_flow.py tests/acceptance/test_sandbox_enhancement_flow.py
 teaagent approval subagents prune --root . --max-age-hours 168
 teaagent selftest --root .

@@ -24,12 +24,14 @@ def _playwright_runtime_available() -> bool:
     except RuntimeError:
         pass
     try:
-        from teaagent.browser_tools import browser_navigate
+        from playwright.sync_api import sync_playwright
 
-        result = browser_navigate('data:text/html,<title>ok</title>')
-        return result.get('status') == 'ok'
-    finally:
-        _cleanup_browser()
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            browser.close()
+        return True
+    except Exception:
+        return False
 
 
 class BrowserToolsRegistrationTest(unittest.TestCase):
@@ -60,6 +62,8 @@ class BrowserToolsRegistrationTest(unittest.TestCase):
 
     def test_disabled_tool_returns_install_error(self) -> None:
         """Stub tool handlers return an error message when Playwright is unavailable."""
+        if HAS_PLAYWRIGHT:
+            self.skipTest('playwright package installed; use functional tests instead')
         registry = ToolRegistry()
         register_browser_tools(registry)
         tool = registry.get('browser_navigate')
@@ -73,12 +77,14 @@ class BrowserToolsRegistrationTest(unittest.TestCase):
         self.assertIn('pip install', _DISABLED_MESSAGE)
 
 
-@unittest.skipUnless(
-    _playwright_runtime_available(),
-    'playwright runtime unavailable (missing browser binaries or running asyncio loop)',
-)
 class BrowserToolsFunctionalTest(unittest.TestCase):
     """Functional tests that require Playwright and a browser binary."""
+
+    def setUp(self) -> None:
+        if not _playwright_runtime_available():
+            self.skipTest(
+                'playwright runtime unavailable (missing browser binaries or running asyncio loop)'
+            )
 
     def tearDown(self) -> None:
         _cleanup_browser()

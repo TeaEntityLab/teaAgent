@@ -96,11 +96,8 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
                     ):
                         write_operations.append(f'subprocess.{node.func.attr}()')
                         # Check for subprocess with string commands (bypass surface)
-                        if (
-                            node.args
-                            and isinstance(
-                                node.args[0], (ast.Constant, ast.JoinedStr)
-                            )
+                        if node.args and isinstance(
+                            node.args[0], (ast.Constant, ast.JoinedStr)
                         ):
                             write_operations.append(
                                 f'subprocess.{node.func.attr}(string_cmd)'
@@ -127,9 +124,7 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
                         if (
                             node.func.attr == 'system'
                             and node.args
-                            and isinstance(
-                                node.args[0], (ast.Constant, ast.JoinedStr)
-                            )
+                            and isinstance(node.args[0], (ast.Constant, ast.JoinedStr))
                         ):
                             write_operations.append('os.system(string_cmd)')
                     # Check for shutil module calls

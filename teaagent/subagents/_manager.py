@@ -214,9 +214,7 @@ class SubagentManager:
                 parent_run_id=parent_run_id,
                 subagent_id=f'{parent_run_id}:{def_used}:{batch_index or 0}',
                 subagent_name=def_used,
-                permission_mode=str(
-                    getattr(permission_mode, 'value', permission_mode)
-                ),
+                permission_mode=str(getattr(permission_mode, 'value', permission_mode)),
                 isolation=isolation,
                 batch_index=batch_index,
                 worktree_path=worktree_rel,

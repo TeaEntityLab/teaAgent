@@ -256,7 +256,11 @@ class AuditLogger:
             Dict with 'valid' (bool), 'total_events' (int), and 'errors' (list[str])
         """
         if not self.path or not self.path.is_file():
-            return {'valid': False, 'total_events': 0, 'errors': ['No audit file found']}
+            return {
+                'valid': False,
+                'total_events': 0,
+                'errors': ['No audit file found'],
+            }
 
         try:
             lines = self.path.read_text(encoding='utf-8').splitlines()
@@ -275,21 +279,29 @@ class AuditLogger:
                 event_prev_hash = event.get('prev_hash')
 
                 if event_prev_hash != prev_hash:
-                    errors.append(f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})')
+                    errors.append(
+                        f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})'
+                    )
 
                 # Verify the hash matches the content
-                canonical = json.dumps({
-                    'event_id': event.get('event_id'),
-                    'event_type': event.get('event_type'),
-                    'run_id': event.get('run_id'),
-                    'created_at': event.get('created_at'),
-                    'payload': event.get('payload'),
-                    'prev_hash': event_prev_hash,
-                }, sort_keys=True, separators=(',', ':'))
+                canonical = json.dumps(
+                    {
+                        'event_id': event.get('event_id'),
+                        'event_type': event.get('event_type'),
+                        'run_id': event.get('run_id'),
+                        'created_at': event.get('created_at'),
+                        'payload': event.get('payload'),
+                        'prev_hash': event_prev_hash,
+                    },
+                    sort_keys=True,
+                    separators=(',', ':'),
+                )
                 computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 
                 if event_hash != computed_hash:
-                    errors.append(f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})')
+                    errors.append(
+                        f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})'
+                    )
 
                 prev_hash = event_hash or computed_hash
 
@@ -299,7 +311,11 @@ class AuditLogger:
                 'errors': errors,
             }
         except Exception as exc:
-            return {'valid': False, 'total_events': 0, 'errors': [f'Verification failed: {exc}']}
+            return {
+                'valid': False,
+                'total_events': 0,
+                'errors': [f'Verification failed: {exc}'],
+            }
 
 
 def redact_audit_payload(

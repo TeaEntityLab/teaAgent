@@ -80,7 +80,11 @@ def test_centralized_handler_denied() -> None:
                     tool_name='workspace_write_file',
                     arguments={'path': 'b.py'},
                     reason='needs approval',
-                    annotations={'destructive': True, 'read_only': False, 'idempotent': False},
+                    annotations={
+                        'destructive': True,
+                        'read_only': False,
+                        'idempotent': False,
+                    },
                 )
             )
         )

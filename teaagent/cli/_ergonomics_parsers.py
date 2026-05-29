@@ -338,9 +338,7 @@ def _approval(
         default=None,
         help='Filter to one parent run (omit to list all active queues).',
     )
-    sub_list.set_defaults(
-        func=handlers['approval_subagents_list'], command='approval'
-    )
+    sub_list.set_defaults(func=handlers['approval_subagents_list'], command='approval')
 
     sub_approve = subagent_subs.add_parser(
         'approve', help='Approve one queued subagent tool request.'
@@ -359,9 +357,7 @@ def _approval(
     sub_deny.add_argument('--root', default='.')
     sub_deny.add_argument('--parent-run-id', required=True)
     sub_deny.add_argument('--reason', default=None)
-    sub_deny.set_defaults(
-        func=handlers['approval_subagents_deny'], command='approval'
-    )
+    sub_deny.set_defaults(func=handlers['approval_subagents_deny'], command='approval')
 
     sub_approve_all = subagent_subs.add_parser(
         'approve-all', help='Approve all pending requests for a parent run.'

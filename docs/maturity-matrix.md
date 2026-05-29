@@ -1,6 +1,6 @@
 # TeaAgent Maturity Matrix
 
-Last updated: 2026-05-28
+Last updated: 2026-05-28 (Phase 4–6 doc sync)
 
 ## Status Key
 
@@ -41,9 +41,9 @@ Scale reference (internal engineering, not market validation):
 | Read-only numeric `--parallel` | Beta | CLI guard in `agent run` | Swarm read-only analysis |
 | Governance fuzz tests | Stable | `tests/test_governance_fuzz.py`, `tests/test_governance_hardening.py` | — |
 | CI governance gate | Stable | `.github/workflows/ci.yml` governance-gate job | — |
-| Phase 4 consensus | Beta | `tests/acceptance/test_consensus_flow.py`, async vote polling | Production async UX |
-| Phase 5 sandbox routing + execution | Beta | `tests/test_skill_executor.py`, `test_sandbox_enhancement_flow.py` | WASM native modules |
-| Phase 6 skill writer / docker monitor | Beta | `tests/test_phase6_*.py`, optional `docker-smoke` CI job | — |
+| Phase 4 consensus | Beta | `tests/acceptance/test_consensus_flow.py`, `async_vote_collection` | External peer voting UX |
+| Phase 5 sandbox routing + execution | Beta | `tests/test_skill_executor.py`, `teaagent sandbox execute` | Native `.wasm` skill modules |
+| Phase 6 skill writer / docker monitor | Beta | `tests/test_phase6_*.py`, optional `docker-smoke` CI | Control plane dashboard dogfood |
 
 ## Surfaces (summary)
 

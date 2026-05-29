@@ -29,7 +29,6 @@ class TestExecutionResult:
     error: str = ''
 
 
-
 class ParallelExperimentStack:
     """Manage multiple parallel sandbox branches for experimentation."""
 

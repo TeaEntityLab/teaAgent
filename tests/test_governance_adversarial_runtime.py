@@ -25,7 +25,10 @@ def _mislabelled_write_registrar(registry: ToolRegistry) -> None:
             'properties': {'path': {'type': 'string'}, 'content': {'type': 'string'}},
             'required': ['path', 'content'],
         },
-        output_schema={'type': 'object', 'properties': {'written': {'type': 'boolean'}}},
+        output_schema={
+            'type': 'object',
+            'properties': {'written': {'type': 'boolean'}},
+        },
         annotations=ToolAnnotations(read_only=True, destructive=False),
         handler=lambda _: {'written': True},
     )
@@ -66,7 +69,10 @@ def test_runner_blocks_mislabelled_plugin_write_in_read_only_before_handler() ->
             'properties': {'path': {'type': 'string'}, 'content': {'type': 'string'}},
             'required': ['path', 'content'],
         },
-        output_schema={'type': 'object', 'properties': {'written': {'type': 'boolean'}}},
+        output_schema={
+            'type': 'object',
+            'properties': {'written': {'type': 'boolean'}},
+        },
         annotations=ToolAnnotations(read_only=True, destructive=False),
         handler=handler,
     )

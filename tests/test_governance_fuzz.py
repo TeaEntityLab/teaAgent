@@ -105,8 +105,8 @@ class TestMemoryInvalidationFuzz:
     def test_file_signature_change_invalidates_cards(self, tmp_path: Path):
         """Test that file signature changes trigger invalidation."""
         # Create a test file
-        test_file = tmp_path / "test.py"
-        test_file.write_text("original content")
+        test_file = tmp_path / 'test.py'
+        test_file.write_text('original content')
 
         # Create a failure card for this file
         storage = FailureCardStorage(tmp_path)
@@ -138,7 +138,7 @@ class TestMemoryInvalidationFuzz:
         storage.apply_auto_invalidation(config)
 
         # Modify the file
-        test_file.write_text("modified content")
+        test_file.write_text('modified content')
 
         # Apply auto-invalidation again to detect change
         counts = storage.apply_auto_invalidation(config)
@@ -182,12 +182,12 @@ class TestMemoryInvalidationFuzz:
     def test_path_filtering_in_auto_invalidation(self, tmp_path: Path):
         """Test that path filters work correctly in auto-invalidation rules."""
         # Create test files in different directories
-        src_file = tmp_path / "src" / "auth.py"
+        src_file = tmp_path / 'src' / 'auth.py'
         src_file.parent.mkdir(parents=True, exist_ok=True)
-        src_file.write_text("auth code")
+        src_file.write_text('auth code')
 
-        other_file = tmp_path / "other.py"
-        other_file.write_text("other code")
+        other_file = tmp_path / 'other.py'
+        other_file.write_text('other code')
 
         storage = FailureCardStorage(tmp_path)
 
@@ -231,8 +231,8 @@ class TestMemoryInvalidationFuzz:
         storage.apply_auto_invalidation(config)
 
         # Modify both files
-        src_file.write_text("modified auth code")
-        other_file.write_text("modified other code")
+        src_file.write_text('modified auth code')
+        other_file.write_text('modified other code')
 
         # Apply auto-invalidation again to detect changes
         counts = storage.apply_auto_invalidation(config)
@@ -369,7 +369,9 @@ class TestGovernanceIntegration:
         assert len(config.rules) == 3
 
         # File signature change should invalidate (high confidence)
-        file_rule = next(r for r in config.rules if r.trigger == 'file_signature_change')
+        file_rule = next(
+            r for r in config.rules if r.trigger == 'file_signature_change'
+        )
         assert file_rule.confidence == 'high'
         assert file_rule.action == 'invalidate'
 
@@ -379,6 +381,8 @@ class TestGovernanceIntegration:
         assert test_rule.action == 'warn'
 
         # Dependency change should warn (medium confidence)
-        dep_rule = next(r for r in config.rules if r.trigger == 'dependency_version_change')
+        dep_rule = next(
+            r for r in config.rules if r.trigger == 'dependency_version_change'
+        )
         assert dep_rule.confidence == 'medium'
         assert dep_rule.action == 'warn'

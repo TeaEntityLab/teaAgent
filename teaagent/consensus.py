@@ -329,9 +329,7 @@ class ConsensusConfig:
             enable_pre_approval=data.get('enable_pre_approval', False),
             pre_approved_patterns=data.get('pre_approved_patterns', []),
             async_vote_collection=data.get('async_vote_collection', False),
-            vote_poll_timeout_seconds=float(
-                data.get('vote_poll_timeout_seconds', 2.0)
-            ),
+            vote_poll_timeout_seconds=float(data.get('vote_poll_timeout_seconds', 2.0)),
         )
 
 

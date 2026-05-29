@@ -23,7 +23,7 @@ class ToolAnnotations:
     read_only: bool = False
     destructive: bool = False
     idempotent: bool = False
-    security_tier: str = "Medium"  # Low, Medium, High, Critical
+    security_tier: str = 'Medium'  # Low, Medium, High, Critical
 
 
 @dataclass(frozen=True)
@@ -55,7 +55,9 @@ class ToolDefinition:
     annotations: ToolAnnotations
     handler: ToolHandler
     rate_limit: Optional[ToolRateLimit] = None
-    capability_manifest: Optional[dict[str, Any]] = None  # Declared capabilities for security tier mapping
+    capability_manifest: Optional[dict[str, Any]] = (
+        None  # Declared capabilities for security tier mapping
+    )
 
     def get_security_tier(self) -> str:
         """Calculate security tier based on capability manifest and annotations."""

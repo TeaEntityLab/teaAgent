@@ -387,17 +387,13 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 )
                 return True
             if action == 'approve-all':
-                queue = get_approval_queue(
-                    parent_run_id, workspace_root=tui.root
-                )
+                queue = get_approval_queue(parent_run_id, workspace_root=tui.root)
                 queue.reload_from_store()
                 count = queue.approve_all_pending_sync()
                 tui.output_fn(f'approved {count} subagent request(s)')
                 return True
             if action == 'deny-all':
-                queue = get_approval_queue(
-                    parent_run_id, workspace_root=tui.root
-                )
+                queue = get_approval_queue(parent_run_id, workspace_root=tui.root)
                 queue.reload_from_store()
                 reason = _parse_flag_value(args, '--reason') or 'Denied by operator'
                 count = queue.deny_all_pending_sync(reason=reason)
@@ -405,7 +401,9 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 return True
             if action in {'approve', 'deny'}:
                 if len(args) < 3:
-                    tui.output_fn(f'error: approvals subagents {action} requires request_id')
+                    tui.output_fn(
+                        f'error: approvals subagents {action} requires request_id'
+                    )
                     return True
                 request_id = args[2]
                 if action == 'approve':

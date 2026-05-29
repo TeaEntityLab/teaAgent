@@ -51,9 +51,7 @@ def test_permission_matrix(
 ) -> None:
     policy = ApprovalPolicy(permission_mode=mode)
     description = (
-        'read workspace file'
-        if tool_name == 'workspace_read_file'
-        else 'plugin helper'
+        'read workspace file' if tool_name == 'workspace_read_file' else 'plugin helper'
     )
     kwargs = {
         'tool_name': tool_name,

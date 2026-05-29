@@ -34,9 +34,7 @@ def build_run_trace(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if event_type not in _TRACE_TYPES:
             continue
         raw_payload = event.get('payload')
-        payload: dict[str, Any] = (
-            raw_payload if isinstance(raw_payload, dict) else {}
-        )
+        payload: dict[str, Any] = raw_payload if isinstance(raw_payload, dict) else {}
         entry: dict[str, Any] = {
             'index': index,
             'event_type': event_type,
@@ -81,9 +79,7 @@ def replay_dry_run(events: list[dict[str, Any]], *, run_id: str) -> dict[str, An
     for event in events:
         etype = event.get('event_type')
         raw_payload = event.get('payload')
-        payload: dict[str, Any] = (
-            raw_payload if isinstance(raw_payload, dict) else {}
-        )
+        payload: dict[str, Any] = raw_payload if isinstance(raw_payload, dict) else {}
         tool_name = payload.get('tool_name')
         if etype == 'tool_call_completed' and isinstance(tool_name, str):
             tools_used.append(tool_name)

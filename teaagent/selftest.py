@@ -21,7 +21,8 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
 
     # Check for read_only tools with write-like keywords in descriptions
     read_only_write_keyword_warnings = [
-        issue for issue in lint_issues
+        issue
+        for issue in lint_issues
         if issue.level == 'warning' and issue.code == 'read_only_with_write_keywords'
     ]
 
@@ -65,7 +66,10 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
         'read_only_write_keyword_check': {
             'ok': len(read_only_write_keyword_warnings) == 0,
             'warnings': len(read_only_write_keyword_warnings),
-            'details': [f"{issue.tool_name}: {issue.message}" for issue in read_only_write_keyword_warnings],
+            'details': [
+                f'{issue.tool_name}: {issue.message}'
+                for issue in read_only_write_keyword_warnings
+            ],
         },
         'permission_smoke': {'ok': permission_ok, 'detail': permission_detail},
         'audit_completeness_smoke': {

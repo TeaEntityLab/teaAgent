@@ -62,8 +62,12 @@ class TournamentComparator:
 
         # Validate weights sum to 1
         total = (
-            tests_passed_weight + performance_weight + lint_passed_weight +
-            diff_size_weight + architectural_fit_weight + security_risk_weight
+            tests_passed_weight
+            + performance_weight
+            + lint_passed_weight
+            + diff_size_weight
+            + architectural_fit_weight
+            + security_risk_weight
         )
         if abs(total - 1.0) > 0.01:
             raise ValueError(f'Weights must sum to 1.0, got {total}')
@@ -83,17 +87,25 @@ class TournamentComparator:
             # Calculate weighted score using available metrics
             # Tests passed (40%), Performance (15%), Lint quality (10%)
             # Code quality (15%), Diff size (10%), Security (10%)
-            lint_score = 1.0 if metric.lint_warnings == 0 else max(0.5, 1.0 - metric.lint_warnings / 20)
-            diff_score = max(0, 1.0 - min(metric.lines_changed / 1000, 1.0))  # Smaller is better
-            security_score = metric.correctness  # Higher correctness = lower security risk
+            lint_score = (
+                1.0
+                if metric.lint_warnings == 0
+                else max(0.5, 1.0 - metric.lint_warnings / 20)
+            )
+            diff_score = max(
+                0, 1.0 - min(metric.lines_changed / 1000, 1.0)
+            )  # Smaller is better
+            security_score = (
+                metric.correctness
+            )  # Higher correctness = lower security risk
 
             weighted_score = (
-                metric.test_pass_rate * self.tests_passed_weight +
-                metric.performance * self.performance_weight +
-                lint_score * self.lint_passed_weight +
-                diff_score * self.diff_size_weight +
-                metric.code_quality * self.architectural_fit_weight +
-                security_score * self.security_risk_weight
+                metric.test_pass_rate * self.tests_passed_weight
+                + metric.performance * self.performance_weight
+                + lint_score * self.lint_passed_weight
+                + diff_score * self.diff_size_weight
+                + metric.code_quality * self.architectural_fit_weight
+                + security_score * self.security_risk_weight
             )
 
             result = ComparisonResult(

@@ -91,9 +91,7 @@ class AgentRunner:
             from teaagent.governance.tool_lint import lint_registry
 
             self._read_only_registry_lint_errors = [
-                issue
-                for issue in lint_registry(registry)
-                if issue.level == 'error'
+                issue for issue in lint_registry(registry) if issue.level == 'error'
             ]
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
@@ -211,8 +209,7 @@ class AgentRunner:
                         plan_contract = self._plan_contract
 
                     if (
-                        self.approval_policy.permission_mode
-                        == PermissionMode.READ_ONLY
+                        self.approval_policy.permission_mode == PermissionMode.READ_ONLY
                         and getattr(self, '_read_only_registry_lint_errors', None)
                     ):
                         raise ToolPermissionError(

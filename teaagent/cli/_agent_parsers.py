@@ -372,7 +372,11 @@ def register_top_level_agent_aliases(
     _preflight(subparsers, handlers['preflight'], top_level=True)
     _plan(subparsers, handlers['plan'], top_level=True)
     _resume(subparsers, handlers['resume'], top_level=True)
-    _runs(subparsers, cast(dict[str, Callable[..., Any]], handlers['runs']), top_level=True)
+    _runs(
+        subparsers,
+        cast(dict[str, Callable[..., Any]], handlers['runs']),
+        top_level=True,
+    )
     if 'chat' in handlers:
         _chat(
             subparsers,

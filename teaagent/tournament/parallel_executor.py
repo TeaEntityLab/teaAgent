@@ -214,7 +214,9 @@ class ParallelExecutor:
             output = exc.stdout or ''
             error = exc.stderr or str(exc)
         except (OSError, ValueError) as exc:
-            logger.warning('Subprocess execution failed for approach %d: %s', index, exc)
+            logger.warning(
+                'Subprocess execution failed for approach %d: %s', index, exc
+            )
             success = False
             output = ''
             error = str(exc)

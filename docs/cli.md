@@ -637,6 +637,32 @@ subagent on
 ask Plan and execute the cleanup
 ```
 
+## Consensus (Phase 4 Beta)
+
+Peer registry, voting, and swarm pre-approval for high-risk tasks:
+
+```bash
+teaagent consensus peers list --root .
+teaagent consensus request "Deploy billing service" --risk-level high --root .
+```
+
+Swarm runs can enable consensus with pre-approval patterns or async vote polling
+(`ConsensusConfig.async_vote_collection`). See `tests/acceptance/test_consensus_flow.py`.
+
+## Sandbox (Phase 5 Beta)
+
+Route skills to directory-snapshot, Docker, or WASM sandboxes; execute skill `tool.py`:
+
+```bash
+teaagent sandbox route ./my-skill --risk-level medium --root .
+teaagent sandbox execute ./my-skill --payload '{"n": 1}' --risk-level low --root .
+teaagent sandbox check wasm
+teaagent sandbox check compatibility ./my-skill --root .
+teaagent sandbox monitor <container_id> --duration 30
+```
+
+Skill execution uses `teaagent/skill_executor.py` (subprocess, Docker, or WASM module when present).
+
 ## Preflight and Daily Brief
 
 **Daily start ritual (recommended):** run `agent daily` read-only before every session to see

@@ -28,7 +28,10 @@ VALID_WARNING_BEHAVIOR = frozenset({'info', 'warning', 'block'})
 @dataclass
 class AutoInvalidationRule:
     """Configuration for automated failure card invalidation."""
-    trigger: str  # 'file_signature_change', 'test_refactor', 'dependency_version_change'
+
+    trigger: (
+        str  # 'file_signature_change', 'test_refactor', 'dependency_version_change'
+    )
     confidence: str  # 'high', 'medium', 'low'
     action: str  # 'invalidate', 'warn', 'block'
     paths: Optional[list[str]] = None  # Optional path filters
@@ -38,6 +41,7 @@ class AutoInvalidationRule:
 @dataclass
 class MemoryAutoInvalidationConfig:
     """Configuration for automated memory invalidation."""
+
     rules: list[AutoInvalidationRule]
     enabled: bool = True
 
@@ -385,8 +389,10 @@ class FailureCardStorage:
                     continue
 
                 # Check path filters if specified
-                if rule.paths and card.file_path and not any(
-                    card.file_path.startswith(path) for path in rule.paths
+                if (
+                    rule.paths
+                    and card.file_path
+                    and not any(card.file_path.startswith(path) for path in rule.paths)
                 ):
                     continue
 

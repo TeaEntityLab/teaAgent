@@ -106,9 +106,7 @@ def test_swarm_filters_task_when_consensus_not_reached() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         registry = PeerRegistry(storage_path=root / 'peers')
-        registry.register(
-            PeerIdentity(name='peer1', ssh_public_key='ssh-rsa key1')
-        )
+        registry.register(PeerIdentity(name='peer1', ssh_public_key='ssh-rsa key1'))
 
         manager = SwarmManager(
             root,

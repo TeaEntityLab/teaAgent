@@ -55,7 +55,9 @@ class StepExecution:
     validation_passed: bool = True
     validation_errors: list[str] = field(default_factory=list)
     self_healing_attempts: int = 0
-    requires_rollback: bool = False  # Flag for automatic rollback on strict validation failure
+    requires_rollback: bool = (
+        False  # Flag for automatic rollback on strict validation failure
+    )
 
 
 @dataclass
@@ -193,8 +195,13 @@ class WorkflowEngine:
                 f'reached for step {step.step_id}'
             )
             # Trigger automatic rollback for strict validation profile
-            if hasattr(step, 'validation_profile') and step.validation_profile == 'strict':
-                logger.warning(f'Strict validation failed for step {step.step_id}, automatic rollback recommended')
+            if (
+                hasattr(step, 'validation_profile')
+                and step.validation_profile == 'strict'
+            ):
+                logger.warning(
+                    f'Strict validation failed for step {step.step_id}, automatic rollback recommended'
+                )
                 # Set flag for caller to trigger UndoJournal rollback
                 result.requires_rollback = True
             return result
@@ -251,7 +258,9 @@ class WorkflowEngine:
             errors = []
             for result in report.results:
                 if not result.skipped and result.exit_code != 0:
-                    errors.append(f'{result.name} failed:\n{result.stdout or result.stderr}')
+                    errors.append(
+                        f'{result.name} failed:\n{result.stdout or result.stderr}'
+                    )
 
             return ValidationResult(passed=report.passed, errors=errors)
         except (OSError, ImportError, ValueError, subprocess.SubprocessError) as exc:

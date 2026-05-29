@@ -137,7 +137,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`259 passed` (includes Phase 4 consensus and Phase 5 sandbox E2E acceptance flows).
+`261 passed` (includes Phase 4 consensus, Phase 5 sandbox execution, and async consensus flows).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

@@ -295,9 +295,7 @@ class Subagent:
     def _execute_task_with_centralized_approval(self) -> dict[str, Any]:
         """Execute task and record centralized approval queue lineage for the parent run."""
         if self._parent_run_id:
-            queue = get_approval_queue(
-                self._parent_run_id, workspace_root=self._root
-            )
+            queue = get_approval_queue(self._parent_run_id, workspace_root=self._root)
             self._approval_lineage.append(
                 {
                     'parent_run_id': self._parent_run_id,
@@ -492,9 +490,7 @@ class SwarmManager:
                             for subagent in deferred
                             if subagent._task.task_id in approved_ids
                         ]
-                        results.extend(
-                            self._execute_subagent_batch(approved_deferred)
-                        )
+                        results.extend(self._execute_subagent_batch(approved_deferred))
                 else:
                     results = self._execute_subagent_batch(self._subagents)
             else:
@@ -562,9 +558,7 @@ class SwarmManager:
         )
         return winner_id, winner_score, best_result
 
-    def _execute_subagent_batch(
-        self, subagents: list[Any]
-    ) -> list[SubagentResult]:
+    def _execute_subagent_batch(self, subagents: list[Any]) -> list[SubagentResult]:
         """Execute a batch of subagents in parallel."""
         if not subagents:
             return []
@@ -587,9 +581,7 @@ class SwarmManager:
                     )
         return results
 
-    def _resolve_pending_consensus(
-        self, pending: dict[str, str]
-    ) -> dict[str, Any]:
+    def _resolve_pending_consensus(self, pending: dict[str, str]) -> dict[str, Any]:
         """Poll pending proposals and return task IDs approved during the wait."""
         if not self._consensus_engine:
             return {'approved_task_ids': []}

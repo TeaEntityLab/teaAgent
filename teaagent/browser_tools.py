@@ -94,7 +94,7 @@ def browser_navigate(url: str, *, timeout_ms: int = 30000) -> dict[str, Any]:
             'url': page.url,
             'title': page.title(),
         }
-    except (OSError, ValueError, TypeError, TimeoutError, ConnectionError) as exc:
+    except Exception as exc:
         return _browser_error_result(exc)
 
 
@@ -113,7 +113,7 @@ def browser_snapshot(*, timeout_ms: int = 5000) -> dict[str, Any]:
             'text': page.inner_text('body')[:10000],
             'links': links[:50],
         }
-    except (OSError, ValueError, TypeError, TimeoutError, ConnectionError) as exc:
+    except Exception as exc:
         return _browser_error_result(exc)
 
 
@@ -130,7 +130,7 @@ def browser_screenshot(
             page.screenshot(full_page=full_page, timeout=timeout_ms)
         ).decode('ascii')
         return {'status': 'ok', 'data': b64, 'mime_type': 'image/png'}
-    except (OSError, ValueError, TypeError, TimeoutError, ConnectionError) as exc:
+    except Exception as exc:
         return _browser_error_result(exc)
 
 
@@ -151,7 +151,7 @@ def browser_get_content(
             'content': content[:50000],
             'truncated': len(content) > 50000,
         }
-    except (OSError, ValueError, TypeError, TimeoutError, ConnectionError) as exc:
+    except Exception as exc:
         return _browser_error_result(exc)
 
 
@@ -165,7 +165,7 @@ def browser_click(selector: str, *, timeout_ms: int = 10000) -> dict[str, Any]:
             'url': page.url,
             'title': page.title(),
         }
-    except (OSError, ValueError, TypeError, TimeoutError, ConnectionError) as exc:
+    except Exception as exc:
         return _browser_error_result(exc)
 
 
@@ -177,7 +177,7 @@ def browser_fill(
         page = _get_page()
         page.fill(selector, value, timeout=timeout_ms)
         return {'status': 'ok'}
-    except (OSError, ValueError, TypeError, TimeoutError, ConnectionError) as exc:
+    except Exception as exc:
         return _browser_error_result(exc)
 
 
@@ -187,7 +187,7 @@ def browser_evaluate(expression: str) -> dict[str, Any]:
         page = _get_page()
         result = page.evaluate(expression)
         return {'status': 'ok', 'result': str(result)[:10000]}
-    except (OSError, ValueError, TypeError, TimeoutError, ConnectionError) as exc:
+    except Exception as exc:
         return _browser_error_result(exc)
 
 

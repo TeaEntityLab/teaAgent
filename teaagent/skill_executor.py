@@ -125,7 +125,9 @@ def _execute_python_subprocess(
             execution_backend=backend,
         )
     if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout or 'skill execution failed').strip()
+        detail = (
+            completed.stderr or completed.stdout or 'skill execution failed'
+        ).strip()
         return SkillExecutionResult(
             success=False,
             sandbox_type=sandbox_type,
@@ -241,7 +243,9 @@ def _execute_docker(
                 execution_backend='docker',
             )
         if result.exit_code != 0:
-            detail = (result.stderr or result.stdout or 'docker execution failed').strip()
+            detail = (
+                result.stderr or result.stdout or 'docker execution failed'
+            ).strip()
             return SkillExecutionResult(
                 success=False,
                 sandbox_type=SandboxType.DOCKER,

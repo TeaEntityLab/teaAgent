@@ -94,7 +94,18 @@ class TestListSubagentReviews:
 
             for d in (d1, d2):
                 (d / 'rev.json').write_text(
-                    json.dumps({'review_id': 'rev', 'parent_run_id': d.name, 'child_run_id': 'c', 'created_at': '2025-01-01T00:00:00', 'isolation': 'shared', 'patch_path': 'p.patch', 'status_path': 's.status', 'changed_files': []}),
+                    json.dumps(
+                        {
+                            'review_id': 'rev',
+                            'parent_run_id': d.name,
+                            'child_run_id': 'c',
+                            'created_at': '2025-01-01T00:00:00',
+                            'isolation': 'shared',
+                            'patch_path': 'p.patch',
+                            'status_path': 's.status',
+                            'changed_files': [],
+                        }
+                    ),
                     encoding='utf-8',
                 )
 
@@ -125,16 +136,18 @@ class TestLoadSubagentReview:
             d = root / '.teaagent' / 'subagent-reviews' / 'parent-1'
             d.mkdir(parents=True)
             (d / 'rev-1.json').write_text(
-                json.dumps({
-                    'review_id': 'rev-1',
-                    'parent_run_id': 'parent-1',
-                    'child_run_id': 'c',
-                    'created_at': '2025-01-01T00:00:00',
-                    'isolation': 'worktree',
-                    'patch_path': 'p.patch',
-                    'status_path': 's.status',
-                    'changed_files': ['f1.txt'],
-                }),
+                json.dumps(
+                    {
+                        'review_id': 'rev-1',
+                        'parent_run_id': 'parent-1',
+                        'child_run_id': 'c',
+                        'created_at': '2025-01-01T00:00:00',
+                        'isolation': 'worktree',
+                        'patch_path': 'p.patch',
+                        'status_path': 's.status',
+                        'changed_files': ['f1.txt'],
+                    }
+                ),
                 encoding='utf-8',
             )
 

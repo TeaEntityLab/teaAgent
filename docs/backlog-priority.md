@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-29 (5-Loop Governance Hardening completed)
+Last updated: 2026-05-28 (Phase 4–6 Beta hardening shipped)
 
 ---
 
@@ -56,9 +56,9 @@ _No open P0 items._
 
 ## Future Roadmap — Phase 4-5 (Beta — core shipped, E2E hardening ongoing)
 
-Phase 4 (consensus) and Phase 5 (sandbox routing) core modules are shipped with CLI
-and unit tests. Remaining work is production async voting UX and docker/WASM
-dogfood benchmarks. See [architecture.md](architecture.md#future-roadmap-phase-4-5).
+Phase 4 (consensus) and Phase 5 (sandbox routing + execution) are **Beta** with CLI,
+unit tests, and acceptance flows. Optional hardening (async votes, skill execution,
+docker-smoke CI) is shipped. See [architecture.md](architecture.md#phase-4-5-roadmap-beta).
 
 ### Phase 4: Federated Swarm Consensus & Peer Attestations — **Beta**
 

@@ -78,20 +78,22 @@ The TeaAgent governance system has been hardened through a comprehensive 5-loop 
 
 ## Phase 4-5 Roadmap (Beta)
 
-Core Phase 4 (consensus) and Phase 5 (sandbox routing) modules are shipped with CLI,
-unit tests, and E2E acceptance. Remaining work is production async voting UX and
-docker/WASM dogfood benchmarks. See [backlog-priority.md](backlog-priority.md) for
-task-level status.
+Core Phase 4 (consensus) and Phase 5 (sandbox routing/execution) modules are shipped
+with CLI, unit tests, and E2E acceptance. Optional hardening (async vote polling,
+WASM skill execution, docker-smoke CI) is shipped; remaining Beta work is native
+WASM modules and deeper tournament benchmarks. See [backlog-priority.md](backlog-priority.md).
 
 ### Phase 4: Federated Swarm Consensus & Peer Attestations — **Beta**
 - `ConsensusEngine`, peer registry, voting mechanisms, and attestation trail
 - Swarm pre-approval gate when `ConsensusConfig.enable_pre_approval` matches task patterns
+- Async vote collection via `ConsensusConfig.async_vote_collection` + `poll_until_resolved`
 - CLI: `teaagent consensus` (`teaagent/cli/_handlers/_consensus.py`)
 - E2E: `tests/acceptance/test_consensus_flow.py`
 
 ### Phase 5: Hardened Sandbox Virtualization — **Beta**
 - Docker resource limits via `prepare_subagent_isolation` (`--cpus` / `--memory`)
 - WASM runtime wrapper (`teaagent/wasm_runtime.py`) and skill routing (`teaagent/skill_router.py`)
+- Skill execution: `teaagent/skill_executor.py`, `teaagent sandbox execute`
 - `isolation=auto` on subagents with `skill_path` / `skill_risk_level`
 - Resource monitoring CLI (`teaagent sandbox monitor`)
 - E2E: `tests/acceptance/test_sandbox_enhancement_flow.py`

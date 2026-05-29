@@ -163,26 +163,30 @@ def memory_failures_review_command(args: argparse.Namespace) -> int:
     from teaagent.memory.failure_card import FailureCardStorage
 
     storage = FailureCardStorage(args.root)
-    cards = storage.list_active()[:args.limit]
+    cards = storage.list_active()[: args.limit]
 
     review_results = []
     for card in cards:
-        review_results.append({
-            'card_id': card.id,
-            'error_type': card.error_type,
-            'file_path': card.file_path,
-            'confidence': card.confidence,
-            'effective_behavior': card.effective_behavior(),
-            'is_active': card.is_active(),
-            'expires_at': card.expires_at,
-            'recommendation': _get_review_recommendation(card),
-        })
+        review_results.append(
+            {
+                'card_id': card.id,
+                'error_type': card.error_type,
+                'file_path': card.file_path,
+                'confidence': card.confidence,
+                'effective_behavior': card.effective_behavior(),
+                'is_active': card.is_active(),
+                'expires_at': card.expires_at,
+                'recommendation': _get_review_recommendation(card),
+            }
+        )
 
-    print_json({
-        'status': 'ok',
-        'total_reviewed': len(review_results),
-        'cards': review_results,
-    })
+    print_json(
+        {
+            'status': 'ok',
+            'total_reviewed': len(review_results),
+            'cards': review_results,
+        }
+    )
     return 0
 
 
@@ -198,7 +202,9 @@ def _get_review_recommendation(card: FailureCard) -> str:
 
     if card.confidence == 'medium':
         if card.effective_behavior() == 'block':
-            return 'consider_downgrade'  # Medium confidence blocking may be too aggressive
+            return (
+                'consider_downgrade'  # Medium confidence blocking may be too aggressive
+            )
         return 'keep_monitoring'
 
     if card.confidence == 'high':

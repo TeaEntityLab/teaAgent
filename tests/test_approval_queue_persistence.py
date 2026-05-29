@@ -75,9 +75,7 @@ def test_cross_process_approve_unblocks_waiter(tmp_path: Path) -> None:
         thread.join(timeout=0.05)
 
     assert request_id is not None
-    assert approve_request_cross_process(
-        tmp_path, parent_id, request_id
-    )
+    assert approve_request_cross_process(tmp_path, parent_id, request_id)
     thread.join(timeout=3)
     assert results == [True]
 

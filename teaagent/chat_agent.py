@@ -504,6 +504,7 @@ def run_chat_agent(
         # Pass plan_contract to runner for policy validation
         if plan_contract and isinstance(plan_contract, dict):
             from teaagent.plan import PlanContract
+
             # Reconstruct PlanContract from dict for runner use
             runner._plan_contract = PlanContract(
                 path=Path(plan_contract.get('path', '')),
