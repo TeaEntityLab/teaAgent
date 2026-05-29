@@ -183,11 +183,7 @@ jobs:
         run: teaagent selftest --root .
 
       - name: Run tool lint validation
-        run: |
-          # Create a temporary workspace to test tool lint
-          mkdir -p /tmp/test-governance
-          cd /tmp/test-governance
-          python -c "from teaagent.governance.tool_lint import lint_all_tools; import sys; sys.exit(0 if lint_all_tools() else 1)"
+        run: teaagent tool lint --root .
 
       - name: Validate permission matrix tests
         run: pytest tests/policy/test_permission_matrix.py -v

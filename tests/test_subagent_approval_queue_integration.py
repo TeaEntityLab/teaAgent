@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import io
+import json
 import threading
+from contextlib import redirect_stdout
 
+from teaagent.cli import main
 from teaagent.runner._types import ApprovalRequest
 from teaagent.subagents._approval_queue import (
     CentralizedApprovalQueue,
@@ -93,3 +97,56 @@ def test_centralized_handler_denied() -> None:
 
     thread.join(timeout=2)
     assert results == [False]
+
+
+def test_approval_subagents_cli_list_approve() -> None:
+    queue = get_approval_queue('parent-cli')
+    results: list[bool] = []
+
+    def waiter() -> None:
+        results.append(
+            queue.submit_request_sync(
+                subagent_id='sub-cli',
+                subagent_name='worker',
+                tool_name='workspace_write_file',
+                tool_arguments={'path': 'x.py'},
+                permission_mode='workspace-write',
+                isolation='worktree',
+                batch_index=0,
+            )
+        )
+
+    thread = threading.Thread(target=waiter)
+    thread.start()
+
+    request_id: str | None = None
+    for _ in range(50):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            assert main(['approval', 'subagents', 'list']) == 0
+        payload = json.loads(out.getvalue())
+        if payload['count'] == 1:
+            request_id = payload['pending'][0]['request_id']
+            break
+        thread.join(timeout=0.05)
+
+    assert request_id is not None
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'approval',
+                    'subagents',
+                    'approve',
+                    request_id,
+                    '--parent-run-id',
+                    'parent-cli',
+                ]
+            )
+            == 0
+        )
+    assert json.loads(out.getvalue())['status'] == 'approved'
+    thread.join(timeout=2)
+    assert results == [True]

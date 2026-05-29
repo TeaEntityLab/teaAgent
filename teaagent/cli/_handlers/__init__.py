@@ -76,6 +76,13 @@ from ._env import (
     env_provision_command,
     env_verify_command,
 )
+from ._approval_subagents import (
+    approval_subagents_approve_all_command,
+    approval_subagents_approve_command,
+    approval_subagents_deny_all_command,
+    approval_subagents_deny_command,
+    approval_subagents_list_command,
+)
 from ._ergonomics import (
     approval_approve_command,
     approval_audit_command,
@@ -214,6 +221,11 @@ __all__ = [
     'approval_grant_command',
     'approval_list_command',
     'approval_next_command',
+    'approval_subagents_approve_all_command',
+    'approval_subagents_approve_command',
+    'approval_subagents_deny_all_command',
+    'approval_subagents_deny_command',
+    'approval_subagents_list_command',
     'approval_pending_command',
     'approval_preset_command',
     'approval_revoke_command',

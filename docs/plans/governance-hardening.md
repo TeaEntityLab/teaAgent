@@ -12,8 +12,9 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 |---------|--------|--------|
 | B | tool lint, plan gate, audit completeness, runs trace, selftest | Shipped |
 | C | failure cards, MCP trust, read-only `--parallel` | Shipped |
-| Hardening | centralized approval queue ↔ `SubagentManager`, CI selftest gate | Shipped (this tranche) |
-| Next | parent TUI batch approve, full swarm LLM path, adversarial plugin runtime tests | Open |
+| Hardening | centralized approval queue ↔ `SubagentManager`, CI selftest gate | Shipped |
+| CLI | `teaagent approval subagents list|approve|deny|approve-all|deny-all` | Shipped |
+| Next | parent TUI surface, full swarm LLM path, tournament executor wiring | Open |
 
 ## Verification commands
 

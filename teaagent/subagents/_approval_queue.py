@@ -195,6 +195,24 @@ class CentralizedApprovalQueue:
         logger.info('Approved sync request %s by %s', request_id, approved_by)
         return True
 
+    def approve_all_pending_sync(self, approved_by: str = 'human') -> int:
+        """Approve every pending sync request. Returns count approved."""
+        approved = 0
+        for request in list(self.get_pending_requests()):
+            if self.approve_request_sync(request.request_id, approved_by=approved_by):
+                approved += 1
+        return approved
+
+    def deny_all_pending_sync(
+        self, reason: str = 'Denied by human', denied_by: str = 'human'
+    ) -> int:
+        """Deny every pending sync request. Returns count denied."""
+        denied = 0
+        for request in list(self.get_pending_requests()):
+            if self.deny_request_sync(request.request_id, reason=reason):
+                denied += 1
+        return denied
+
     def deny_request_sync(
         self, request_id: str, reason: str = 'Denied by human'
     ) -> bool:
@@ -456,6 +474,37 @@ class CentralizedApprovalQueue:
 # Global registry for parent run_id to queue instances
 _approval_queues: dict[str, CentralizedApprovalQueue] = {}
 _queue_lock = asyncio.Lock()
+
+
+def list_active_parent_run_ids() -> list[str]:
+    """Return parent run IDs with in-memory approval queues."""
+    return sorted(_approval_queues.keys())
+
+
+def snapshot_pending_subagent_requests(
+    parent_run_id: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    """Serialize pending subagent approval requests for CLI/TUI."""
+    items: list[dict[str, Any]] = []
+    if parent_run_id:
+        parent_ids = [parent_run_id] if parent_run_id in _approval_queues else []
+    else:
+        parent_ids = list_active_parent_run_ids()
+
+    for pid in parent_ids:
+        queue = _approval_queues[pid]
+        for request in queue.get_pending_requests():
+            payload = request.to_dict()
+            payload['parent_run_id'] = pid
+            items.append(payload)
+    return items
+
+
+def try_get_approval_queue(
+    parent_run_id: str,
+) -> Optional[CentralizedApprovalQueue]:
+    """Return an existing queue without creating one."""
+    return _approval_queues.get(parent_run_id)
 
 
 def get_approval_queue(parent_run_id: str) -> CentralizedApprovalQueue:

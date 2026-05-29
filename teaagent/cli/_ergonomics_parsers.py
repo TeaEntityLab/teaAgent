@@ -322,6 +322,61 @@ def _approval(
     next_cmd.add_argument('--root', default='.')
     next_cmd.set_defaults(func=handlers['approval_next'], command='approval')
 
+    subagents = subs.add_parser(
+        'subagents',
+        help='Centralized destructive-tool approvals from parallel subagents.',
+    )
+    subagent_subs = subagents.add_subparsers(
+        dest='approval_subagents_command', required=True
+    )
+    sub_list = subagent_subs.add_parser(
+        'list', help='List pending subagent approval requests.'
+    )
+    sub_list.add_argument(
+        '--parent-run-id',
+        default=None,
+        help='Filter to one parent run (omit to list all active queues).',
+    )
+    sub_list.set_defaults(
+        func=handlers['approval_subagents_list'], command='approval'
+    )
+
+    sub_approve = subagent_subs.add_parser(
+        'approve', help='Approve one queued subagent tool request.'
+    )
+    sub_approve.add_argument('request_id')
+    sub_approve.add_argument('--parent-run-id', required=True)
+    sub_approve.set_defaults(
+        func=handlers['approval_subagents_approve'], command='approval'
+    )
+
+    sub_deny = subagent_subs.add_parser(
+        'deny', help='Deny one queued subagent tool request.'
+    )
+    sub_deny.add_argument('request_id')
+    sub_deny.add_argument('--parent-run-id', required=True)
+    sub_deny.add_argument('--reason', default=None)
+    sub_deny.set_defaults(
+        func=handlers['approval_subagents_deny'], command='approval'
+    )
+
+    sub_approve_all = subagent_subs.add_parser(
+        'approve-all', help='Approve all pending requests for a parent run.'
+    )
+    sub_approve_all.add_argument('--parent-run-id', required=True)
+    sub_approve_all.set_defaults(
+        func=handlers['approval_subagents_approve_all'], command='approval'
+    )
+
+    sub_deny_all = subagent_subs.add_parser(
+        'deny-all', help='Deny all pending requests for a parent run.'
+    )
+    sub_deny_all.add_argument('--parent-run-id', required=True)
+    sub_deny_all.add_argument('--reason', default=None)
+    sub_deny_all.set_defaults(
+        func=handlers['approval_subagents_deny_all'], command='approval'
+    )
+
 
 def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subparsers.add_parser(
