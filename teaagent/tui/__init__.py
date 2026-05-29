@@ -63,6 +63,8 @@ HELP_TEXT = """Commands:
   approve <call_id>         Approve one exact destructive tool call id.
   unapprove <call_id>       Remove one approved call id.
   approvals                 List approved call ids for this session.
+  approvals subagents       Batch view of parallel subagent destructive-tool queue.
+  approvals subagents approve|deny|approve-all|deny-all
   clarify <task>            Score task ambiguity without calling a model.
   preflight <task>          Show clarify, routing, memory, and tool plan without calling a model.
   plan <task>               Write a read-only plan artifact under .teaagent/plans.
@@ -128,6 +130,7 @@ class TeaAgentTUI:
         self._chat_explicit = False
         self.session_id: Optional[str] = None
         self.approved_call_ids: set[str] = set()
+        self.last_run_id: Optional[str] = None
         self.input_fn = input_fn
         self.output_fn = output_fn
         self.adapter_factory = adapter_factory
@@ -420,6 +423,7 @@ class TeaAgentTUI:
             else None,
         )
         store.logger_for_result(result, audit)
+        self.last_run_id = result.run_id
         audit_summary = summarize_audit_events(store.show_run(result.run_id))
 
         if self.chat:

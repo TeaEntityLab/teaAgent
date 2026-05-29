@@ -40,6 +40,7 @@ teaagent agent undo --last --root .
   - `teaagent approval list --root .` shows grants and evaluation order (deny before allow); use `--grants-only` for the legacy grants array (`jq '.[0].grant_id'`)
   - `teaagent approval check workspace_write_file --path src/foo.py --root .` explains allow/deny/prompt
   - `teaagent approval revoke <grant_id> --root .` removes one rule
+  - `teaagent approval subagents list` shows pending parallel subagent destructive-tool requests (use `approve` / `deny` / `approve-all` with `--parent-run-id`)
 - **Memory management**: 
   - `teaagent memory failures` lists failure cards
   - `teaagent memory failures auto-invalidate` applies automated invalidation rules

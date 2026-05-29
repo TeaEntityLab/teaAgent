@@ -13,12 +13,16 @@ from teaagent.tournament.benchmark import BenchmarkRunner
 from teaagent.tournament.branch_manager import TournamentBranchManager
 from teaagent.tournament.comparator import TournamentComparator
 from teaagent.tournament.hint_generator import ApproachHintGenerator
-from teaagent.tournament.parallel_executor import ParallelExecutor
+from teaagent.tournament.parallel_executor import (
+    ParallelExecutor,
+    parallel_executor_with_manager,
+)
 
 __all__ = [
     'TournamentBranchManager',
     'ApproachHintGenerator',
     'ParallelExecutor',
+    'parallel_executor_with_manager',
     'BenchmarkRunner',
     'TournamentComparator',
 ]

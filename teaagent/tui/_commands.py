@@ -349,6 +349,71 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                     )
             tui._print_json(pending_runs)
             return True
+        if sub == 'subagents':
+            from teaagent.subagents._approval_queue import try_get_approval_queue
+            from teaagent.tui._approval_subagents import (
+                format_subagent_approval_batch,
+                resolve_parent_run_id,
+                tui_approve_subagent_request,
+                tui_deny_subagent_request,
+            )
+
+            if len(args) == 1:
+                text, payload = format_subagent_approval_batch(
+                    parent_run_id=resolve_parent_run_id(
+                        None, fallback=tui.last_run_id
+                    )
+                )
+                for line in text.splitlines():
+                    tui.output_fn(line)
+                tui._print_json(payload)
+                return True
+            action = args[1]
+            parent_run_id = resolve_parent_run_id(
+                _parse_flag_value(args, '--parent-run-id'),
+                fallback=tui.last_run_id,
+            )
+            if not parent_run_id:
+                tui.output_fn(
+                    'error: specify --parent-run-id or run a parent agent task first '
+                    '(only one active queue can be inferred)'
+                )
+                return True
+            if action == 'approve-all':
+                queue = try_get_approval_queue(parent_run_id)
+                if queue is None:
+                    tui.output_fn(f"error: no active queue for '{parent_run_id}'")
+                    return True
+                count = queue.approve_all_pending_sync()
+                tui.output_fn(f'approved {count} subagent request(s)')
+                return True
+            if action == 'deny-all':
+                queue = try_get_approval_queue(parent_run_id)
+                if queue is None:
+                    tui.output_fn(f"error: no active queue for '{parent_run_id}'")
+                    return True
+                reason = _parse_flag_value(args, '--reason') or 'Denied by operator'
+                count = queue.deny_all_pending_sync(reason=reason)
+                tui.output_fn(f'denied {count} subagent request(s)')
+                return True
+            if action in {'approve', 'deny'}:
+                if len(args) < 3:
+                    tui.output_fn(f'error: approvals subagents {action} requires request_id')
+                    return True
+                request_id = args[2]
+                if action == 'approve':
+                    ok, message = tui_approve_subagent_request(
+                        request_id, parent_run_id
+                    )
+                else:
+                    reason = _parse_flag_value(args, '--reason') or 'Denied by operator'
+                    ok, message = tui_deny_subagent_request(
+                        request_id, parent_run_id, reason=reason
+                    )
+                tui.output_fn(message if ok else f'error: {message}')
+                return True
+            tui.output_fn(f"error: unknown approvals subagents action '{action}'")
+            return True
         tui.output_fn(f"error: unknown approvals subcommand '{sub}'")
         return True
     if action == 'ask':
@@ -773,3 +838,12 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         return _handle_tui_command(tui, f'ask {raw_command}')
     tui.output_fn(f"error: unknown command '{action}'. Type 'help'.")
     return True
+
+
+def _parse_flag_value(args: list[str], flag: str) -> Optional[str]:
+    if flag not in args:
+        return None
+    index = args.index(flag)
+    if index + 1 >= len(args):
+        return None
+    return args[index + 1]

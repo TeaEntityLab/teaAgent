@@ -26,3 +26,7 @@ def bind_parent_run_id(run_id: str) -> Token[str]:
 
 def reset_parent_run_id(token: Token[str]) -> None:
     _parent_run_id.reset(token)
+
+
+def reset_parallel_approval_mode(token: Token[bool]) -> None:
+    _parallel_approval.reset(token)

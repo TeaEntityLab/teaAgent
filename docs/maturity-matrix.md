@@ -35,8 +35,8 @@ Scale reference (internal engineering, not market validation):
 | Run undo | Stable | `test_run_undo_acceptance_flow.py` | — |
 | Failure cards (TTL/invalidate) | Stable | `tests/test_governance_fuzz.py`, automated invalidation rules | — |
 | Failure cards (auto-invalidation CLI) | Beta | `teaagent memory failures auto-invalidate` | Per-project customization |
-| Centralized approval queue | Beta | `tests/test_subagent_approval_queue_integration.py`, `approval subagents` CLI | Parent TUI batch approve |
-| Multi-agent / tournament | Foundation | Phase 6 modules, swarm lineage + `SubagentManager` | Full LLM swarm execution path |
+| Centralized approval queue | Beta | CLI + TUI `approvals subagents`, integration tests | Persist queue across processes |
+| Multi-agent / tournament | Beta | `ParallelExecutor` + `SubagentManager`, swarm lineage | Full swarm LLM execution path |
 | MCP trust policy CLI | Beta | `tests/test_tranche_bc_governance.py`, `mcp trust` | Per-server defaults |
 | Read-only numeric `--parallel` | Beta | CLI guard in `agent run` | Swarm read-only analysis |
 | Governance fuzz tests | Stable | `tests/test_governance_fuzz.py` | CI governance gate |
