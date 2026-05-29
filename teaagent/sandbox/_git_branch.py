@@ -56,6 +56,7 @@ def stash_save(root: str | Path, label: str) -> Optional[str]:
     """Save current changes to git stash and return stash ID.
 
     Uses `git stash push -u` to include untracked files.
+    Returns the actual stash reflog selector (e.g., 'stash@{0}').
     """
     try:
         result = subprocess.run(
@@ -65,20 +66,30 @@ def stash_save(root: str | Path, label: str) -> Optional[str]:
             text=True,
             check=True,
         )
-        # Extract stash reference from output
-        if 'Saved working directory' in result.stdout:
-            # Return stash@{0} format
-            return 'stash@{0}'
-        return None
+        if 'Saved working directory' not in result.stdout:
+            return None
+        # Get the actual stash reflog selector for our labeled stash
+        list_result = subprocess.run(
+            ['git', 'stash', 'list', '--format=%gd', '-1', f'--grep={label}'],
+            cwd=Path(root).resolve(),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        stash_ref = list_result.stdout.strip()
+        return stash_ref if stash_ref else 'stash@{0}'
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
 
 
-def stash_pop(root: str | Path) -> bool:
-    """Pop the most recent git stash."""
+def stash_pop(root: str | Path, stash_ref: Optional[str] = None) -> bool:
+    """Pop a specific git stash. If stash_ref is None, pops the most recent."""
     try:
+        cmd = ['git', 'stash', 'pop']
+        if stash_ref:
+            cmd.append(stash_ref)
         subprocess.run(
-            ['git', 'stash', 'pop'],
+            cmd,
             cwd=Path(root).resolve(),
             capture_output=True,
             text=True,
@@ -259,7 +270,7 @@ class GitBranchSandbox:
 
             # Pop stash if we auto-stashed
             if self._stash_id:
-                stash_pop(self._root)
+                stash_pop(self._root, self._stash_id)
 
             return GitSandboxResult(success=True)
         except subprocess.CalledProcessError as exc:
@@ -416,7 +427,7 @@ class GitBranchSandbox:
 
             # Pop stash if we auto-stashed
             if self._stash_id:
-                stash_pop(self._root)
+                stash_pop(self._root, self._stash_id)
 
             return GitSandboxResult(success=True)
         except subprocess.CalledProcessError as exc:
@@ -434,7 +445,7 @@ class GitBranchSandbox:
         """Keep sandbox branch for manual review."""
         # Just pop stash if we auto-stashed, leave branch active
         if self._stash_id:
-            stash_pop(self._root)
+            stash_pop(self._root, self._stash_id)
         return GitSandboxResult(
             success=True,
             branch_name=self._branch_name,

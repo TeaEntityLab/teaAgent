@@ -479,34 +479,39 @@ class CentralizedApprovalQueue:
         batch_id = self.generate_batch_id()
         batch = ApprovalBatch(batch_id=batch_id, parent_run_id=self._parent_run_id)
 
-        for request_id in request_ids:
-            request = self._requests.get(request_id)
-            if request and request.status == ApprovalRequestStatus.PENDING:
-                batch.add_request(request)
+        with self._sync_lock:
+            for request_id in request_ids:
+                request = self._requests.get(request_id)
+                if request and request.status == ApprovalRequestStatus.PENDING:
+                    batch.add_request(request)
 
-        self._batches[batch_id] = batch
+            self._batches[batch_id] = batch
         logger.info(f'Created batch {batch_id} with {len(batch.requests)} requests')
         return batch_id
 
     def get_pending_requests(self) -> list[SubagentApprovalRequest]:
         """Get all pending requests."""
-        return [
-            r
-            for r in self._requests.values()
-            if r.status == ApprovalRequestStatus.PENDING
-        ]
+        with self._sync_lock:
+            return [
+                r
+                for r in self._requests.values()
+                if r.status == ApprovalRequestStatus.PENDING
+            ]
 
     def get_request(self, request_id: str) -> Optional[SubagentApprovalRequest]:
         """Get a specific request by ID."""
-        return self._requests.get(request_id)
+        with self._sync_lock:
+            return self._requests.get(request_id)
 
     def get_batch(self, batch_id: str) -> Optional[ApprovalBatch]:
         """Get a specific batch by ID."""
-        return self._batches.get(batch_id)
+        with self._sync_lock:
+            return self._batches.get(batch_id)
 
     def get_all_batches(self) -> list[ApprovalBatch]:
         """Get all batches."""
-        return list(self._batches.values())
+        with self._sync_lock:
+            return list(self._batches.values())
 
     async def cancel_request(self, request_id: str) -> bool:
         """Cancel a pending request (e.g., if subagent is terminated)."""
@@ -560,7 +565,7 @@ class CentralizedApprovalQueue:
 
 # Global registry for (workspace, parent_run_id) -> queue instances
 _approval_queues: dict[tuple[str, str], CentralizedApprovalQueue] = {}
-_queue_lock = asyncio.Lock()
+_queue_lock = threading.Lock()
 
 
 def _queue_key(workspace_root: Optional[Path], parent_run_id: str) -> tuple[str, str]:
@@ -631,11 +636,12 @@ def get_approval_queue(
 ) -> CentralizedApprovalQueue:
     """Get or create the approval queue for a given parent run."""
     key = _queue_key(workspace_root, parent_run_id)
-    if key not in _approval_queues:
-        _approval_queues[key] = CentralizedApprovalQueue(
-            parent_run_id, workspace_root=workspace_root
-        )
-    return _approval_queues[key]
+    with _queue_lock:
+        if key not in _approval_queues:
+            _approval_queues[key] = CentralizedApprovalQueue(
+                parent_run_id, workspace_root=workspace_root
+            )
+        return _approval_queues[key]
 
 
 def approve_request_cross_process(
@@ -691,8 +697,7 @@ async def get_approval_queue_async(
     workspace_root: Optional[Path] = None,
 ) -> CentralizedApprovalQueue:
     """Get or create the approval queue for a given parent run (async)."""
-    async with _queue_lock:
-        return get_approval_queue(parent_run_id, workspace_root=workspace_root)
+    return get_approval_queue(parent_run_id, workspace_root=workspace_root)
 
 
 def make_centralized_subagent_approval_handler(
@@ -743,8 +748,8 @@ async def cleanup_queue(
     workspace_root: Optional[Path] = None,
 ) -> None:
     """Clean up the approval queue for a completed parent run."""
-    async with _queue_lock:
-        key = _queue_key(workspace_root, parent_run_id)
+    key = _queue_key(workspace_root, parent_run_id)
+    with _queue_lock:
         queue = _approval_queues.pop(key, None)
-        if queue:
-            await queue.cleanup()
+    if queue:
+        await queue.cleanup()

@@ -63,12 +63,14 @@ class JITApprovalServer:
         self._server: Optional[asyncio.Server] = None
         self._clients: set[asyncio.Queue[dict[str, Any]]] = set()
         self._pending_events: dict[str, asyncio.Event] = {}
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def start(self) -> None:
         """Start the SSE server."""
         self._server = await asyncio.start_server(
             self._handle_connection, self._host, self._port
         )
+        self._loop = asyncio.get_running_loop()
         logger.info(f'JIT Approval Server started on {self._host}:{self._port}')
 
     async def stop(self) -> None:
@@ -77,6 +79,7 @@ class JITApprovalServer:
             self._server.close()
             await self._server.wait_closed()
             self._server = None
+            self._loop = None
             logger.info('JIT Approval Server stopped')
 
     async def _handle_connection(
@@ -162,13 +165,15 @@ class JITApprovalServer:
         return result
 
     def _schedule_broadcast(self, coro: Any) -> None:
-        """Schedule SSE broadcast only when an event loop is active."""
+        """Schedule SSE broadcast, handling calls from non-event-loop threads."""
+        if self._loop is not None and self._loop.is_running():
+            self._loop.call_soon_threadsafe(asyncio.ensure_future, coro)
+            return
         try:
             loop = asyncio.get_running_loop()
+            loop.create_task(coro)
         except RuntimeError:
             coro.close()
-            return
-        loop.create_task(coro)
 
     async def _broadcast_request(self, record: ApprovalRequestRecord) -> None:
         """Broadcast a request to all connected clients.
@@ -187,7 +192,7 @@ class JITApprovalServer:
 
         event = {'type': 'approval_request', 'data': event_data}
 
-        for queue in self._clients:
+        for queue in list(self._clients):
             await queue.put(event)
 
     async def _wait_for_approval(
@@ -294,7 +299,7 @@ class JITApprovalServer:
 
         event = {'type': 'approval_result', 'data': event_data}
 
-        for queue in self._clients:
+        for queue in list(self._clients):
             await queue.put(event)
 
     async def _broadcast_rejection(self, record: ApprovalRequestRecord) -> None:
@@ -311,7 +316,7 @@ class JITApprovalServer:
 
         event = {'type': 'approval_result', 'data': event_data}
 
-        for queue in self._clients:
+        for queue in list(self._clients):
             await queue.put(event)
 
     def get_pending_requests(self) -> list[ApprovalRequestRecord]:

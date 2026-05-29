@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -84,7 +85,12 @@ class DenyRule:
             actual = arguments.get(arg_key)
             if actual is None:
                 return False
-            if not fnmatch.fnmatch(str(actual), arg_pattern):
+            actual_str = str(actual)
+            # Match raw path and normalized path (handles ./ prefix, .. components, symlinks)
+            normalized = os.path.normpath(actual_str)
+            if not fnmatch.fnmatch(actual_str, arg_pattern) and not fnmatch.fnmatch(
+                normalized, arg_pattern
+            ):
                 return False
         return True
 
@@ -122,15 +128,15 @@ def build_protected_dir_rules() -> list[DenyRule]:
     return [
         DenyRule(
             id='protect-git-dir',
-            tool_pattern='workspace_write_file',
-            argument_pattern={'path': '.git/*'},
+            tool_pattern='workspace_write_*',
+            argument_pattern={'path': '.git*'},
             description='Block writes inside .git directory',
             message='Writes to .git/ are blocked by default to protect repository integrity.',
         ),
         DenyRule(
             id='protect-teaagent-dir',
-            tool_pattern='workspace_write_file',
-            argument_pattern={'path': '.teaagent/*'},
+            tool_pattern='workspace_write_*',
+            argument_pattern={'path': '.teaagent*'},
             description='Block writes inside .teaagent directory',
             message='Writes to .teaagent/ are blocked by default to protect agent configuration.',
         ),

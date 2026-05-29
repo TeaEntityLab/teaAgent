@@ -11,7 +11,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
+from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 from teaagent.llm import LLMAdapter, LLMMessage, LLMRequest
@@ -31,6 +35,20 @@ class AgentSpecification:
     specialization_level: str = 'expert'  # expert, intermediate, basic
     personality_traits: tuple[str, ...] = ()
     constraints: tuple[str, ...] = ()
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    """Write content atomically using temp file + rename."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(content)
+        os.replace(tmp_path, str(path))
+    except Exception:
+        with suppress(OSError):
+            os.unlink(tmp_path)
+        raise
 
 
 class AgentFactory:
@@ -193,9 +211,10 @@ Respond with the system prompt as markdown (no JSON wrapper).
             'license': 'MIT',
         }
 
-        manifest_path = agent_dir / 'plugin.json'
-        with open(manifest_path, 'w', encoding='utf-8') as f:
-            json.dump(manifest, f, indent=2)
+        _atomic_write(
+            agent_dir / 'plugin.json',
+            json.dumps(manifest, indent=2),
+        )
 
         # Create agent.py with the plugin
         agent_code = f'''"""Dynamic agent: {agent.name}"""
@@ -214,9 +233,7 @@ def register(registry):
     )
 '''
 
-        agent_path = agent_dir / 'agent.py'
-        with open(agent_path, 'w', encoding='utf-8') as f:
-            f.write(agent_code)
+        _atomic_write(agent_dir / 'agent.py', agent_code)
 
         logger.info(f'Persisted agent to disk: {agent_dir}')
 

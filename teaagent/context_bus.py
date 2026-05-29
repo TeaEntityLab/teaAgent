@@ -15,6 +15,7 @@ import random
 import sqlite3
 import threading
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -125,6 +126,10 @@ class ContextBus:
             try:
                 cursor.execute(sql, params)
                 return
+            except sqlite3.DatabaseError as exc:
+                logger.error(f'SQLite database error, attempting reconnect: {exc}')
+                self._reconnect()
+                raise
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
                     raise
@@ -152,6 +157,10 @@ class ContextBus:
             try:
                 conn.commit()
                 return
+            except sqlite3.DatabaseError as exc:
+                logger.error(f'SQLite database error, attempting reconnect: {exc}')
+                self._reconnect()
+                raise
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
                     raise
@@ -166,6 +175,21 @@ class ContextBus:
                     f'retrying in {delay:.2f}s'
                 )
                 time.sleep(delay)
+
+    def _reconnect(self) -> None:
+        """Reconnect to the database after corruption or file deletion."""
+        if self._connection:
+            with suppress(Exception):
+                self._connection.close()
+        self._connection = sqlite3.connect(
+            self._db_path, check_same_thread=False, timeout=5.0
+        )
+        cursor = self._connection.cursor()
+        if self._config.enable_wal_mode:
+            cursor.execute('PRAGMA journal_mode=WAL')
+            cursor.execute('PRAGMA synchronous=NORMAL')
+        self._connection.commit()
+        logger.warning('Reconnected to context bus database')
 
     def publish_delta(self, delta: DeltaCard) -> None:
         """Publish a Delta card to the bus.
@@ -263,6 +287,7 @@ class ContextBus:
             rag_store: RAG store to archive to.
         """
         deltas = self.subscribe_deltas()
+        max_timestamp = max((d.timestamp for d in deltas), default=None)
 
         for delta in deltas:
             # Convert Delta to RAG document
@@ -289,23 +314,34 @@ class ContextBus:
             except Exception as exc:
                 logger.error(f'Failed to archive Delta to RAG: {exc}')
 
-        # Clear Delta cards after archiving
-        self._clear_deltas()
+        # Clear Delta cards after archiving (only those up to the batch timestamp)
+        self._clear_deltas(max_timestamp=max_timestamp)
 
         logger.info(f'Archived {len(deltas)} Delta cards to RAG')
 
-    def _clear_deltas(self) -> None:
-        """Clear all Delta cards for the current workflow."""
+    def _clear_deltas(self, max_timestamp: Optional[float] = None) -> None:
+        """Clear all Delta cards for the current workflow.
+
+        Args:
+            max_timestamp: If set, only clear deltas with timestamp <= this value.
+        """
         with self._lock:
             conn = self._connection
             if conn is None:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
-            self._execute_with_retry(
-                cursor,
-                'DELETE FROM delta_cards WHERE workflow_id = ?',
-                (self._workflow_id,),
-            )
+            if max_timestamp is not None:
+                self._execute_with_retry(
+                    cursor,
+                    'DELETE FROM delta_cards WHERE workflow_id = ? AND timestamp <= ?',
+                    (self._workflow_id, max_timestamp),
+                )
+            else:
+                self._execute_with_retry(
+                    cursor,
+                    'DELETE FROM delta_cards WHERE workflow_id = ?',
+                    (self._workflow_id,),
+                )
             self._commit_with_retry(conn)
 
     def cleanup_old_deltas(self) -> None:

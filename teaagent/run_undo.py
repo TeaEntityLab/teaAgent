@@ -292,8 +292,8 @@ class UndoJournal:
     def restore(self) -> UndoResult:
         """Revert all captured file writes.
 
-        Iterates journal entries in **reverse** order so that a file written
-        multiple times is restored to its state before the *first* write.
+        Iterates journal entries in **forward** order (oldest first) so that
+        the pre-write snapshot from the earliest entry is used for each file.
         Returns an :class:`UndoResult` describing what was changed.
         """
         restored: list[str] = []
@@ -301,7 +301,7 @@ class UndoJournal:
         errors: list[str] = []
 
         seen: set[str] = set()
-        for entry in reversed(self._entries):
+        for entry in self._entries:
             if entry.path in seen:
                 continue
             seen.add(entry.path)

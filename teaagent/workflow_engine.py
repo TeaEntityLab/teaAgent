@@ -14,6 +14,7 @@ import difflib
 import logging
 import os
 import subprocess
+import threading
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, cast
@@ -88,6 +89,7 @@ class WorkflowEngine:
         self._active_workflow: Optional[WorkflowExecution] = None
         self._enable_self_healing = enable_self_healing
         self._max_self_healing_attempts = max_self_healing_attempts
+        self._workflow_lock = threading.Lock()
 
     def execute_workflow(self, plan: WorkflowPlan) -> WorkflowExecution:
         """Execute a workflow plan from start to finish.
@@ -98,24 +100,27 @@ class WorkflowEngine:
         Returns:
             WorkflowExecution with results.
         """
-        execution = WorkflowExecution(plan=plan, state=WorkflowState.IN_PROGRESS)
-        self._active_workflow = execution
+        with self._workflow_lock:
+            execution = WorkflowExecution(plan=plan, state=WorkflowState.IN_PROGRESS)
+            self._active_workflow = execution
 
-        for step in plan.steps:
-            execution.current_step = step.step_id
-            result = self._execute_step(step)
-            execution.step_results[step.step_id] = result
+            for step in plan.steps:
+                execution.current_step = step.step_id
+                result = self._execute_step(step)
+                execution.step_results[step.step_id] = result
 
-            if not result.success:
-                execution.state = WorkflowState.FAILED
-                logger.error(f'Workflow failed at step {step.step_id}: {result.error}')
-                break
+                if not result.success:
+                    execution.state = WorkflowState.FAILED
+                    logger.error(
+                        f'Workflow failed at step {step.step_id}: {result.error}'
+                    )
+                    break
 
-        if execution.state == WorkflowState.IN_PROGRESS:
-            execution.state = WorkflowState.COMPLETED
+            if execution.state == WorkflowState.IN_PROGRESS:
+                execution.state = WorkflowState.COMPLETED
 
-        self._active_workflow = None
-        return execution
+            self._active_workflow = None
+            return execution
 
     def _execute_step(self, step: WorkflowStep) -> StepExecution:
         """Execute a single workflow step.
@@ -437,6 +442,7 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
         Args:
             execution: WorkflowExecution to cancel.
         """
-        execution.state = WorkflowState.FAILED
-        self._active_workflow = None
-        logger.info('Workflow cancelled')
+        with self._workflow_lock:
+            execution.state = WorkflowState.FAILED
+            self._active_workflow = None
+            logger.info('Workflow cancelled')

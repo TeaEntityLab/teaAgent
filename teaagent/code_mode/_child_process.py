@@ -95,3 +95,18 @@ def _apply_resource_limits(sandbox: CodeModeSandbox) -> None:
             soft = min(soft, hard)
         with suppress(ValueError):
             resource.setrlimit(resource.RLIMIT_AS, (soft, hard))
+
+    # Limit child processes to prevent fork bombs
+    if hasattr(resource, 'RLIMIT_NPROC'):
+        try:
+            _, nproc_hard = resource.getrlimit(resource.RLIMIT_NPROC)
+            # Allow at most 8 child processes (plus the code mode process itself)
+            resource.setrlimit(
+                resource.RLIMIT_NPROC,
+                (
+                    8,
+                    min(nproc_hard, 16) if nproc_hard != resource.RLIM_INFINITY else 16,
+                ),
+            )
+        except (ValueError, OSError):
+            pass  # Platform doesn't support or permission denied

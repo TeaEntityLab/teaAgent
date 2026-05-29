@@ -4,6 +4,20 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Security & Concurrency Audit (19 fixes)**:
+  - **JIT Server**: Fixed `_clients` set mutation during broadcast iteration (`list(self._clients)`); `_schedule_broadcast` now thread-safe via `call_soon_threadsafe`
+  - **Approval Queue**: Replaced `asyncio.Lock` with `threading.Lock` for global queue registry; `get_pending_requests` now holds `_sync_lock` during iteration
+  - **Context Bus**: `archive_to_rag` passes `max_timestamp` to `_clear_deltas` preventing data loss; added `_reconnect()` for database corruption recovery
+  - **Swarm**: Added `timeout` to `ThreadPoolExecutor.as_completed()` preventing indefinite hangs; atomic writes for `prompt_gene_pool.jsonl`
+  - **Git Sandbox**: `stash_save` now returns actual stash reflog selector instead of hardcoded `stash@{0}`; `stash_pop` accepts optional stash reference
+  - **Workflow Engine**: Added `threading.Lock` for thread-safe `execute_workflow`/`cancel_workflow`
+  - **Undo Journal**: Fixed restore order — processes entries forward (oldest first) to restore original pre-write state for multi-write files
+  - **Policy**: Added brace expansion, process substitution extraction, and non-string/non-list fallback to shell normalization
+  - **File Policy**: Widened protected dir patterns (`.git*`, `workspace_write_*`); added `os.path.normpath` normalization in `DenyRule.matches()`
+  - **Tool Permissions**: `register_tool_permission` blocks DESTRUCTIVE→SAFE downgrade without `allow_downgrade=True`
+  - **Code Mode**: Added `RLIMIT_NPROC` (max 8 child processes) to prevent fork bombs
+  - **Agent Factory**: Atomic file writes via temp file + `os.replace()` in `_persist_agent`
+
 - **Security & Concurrency Hardening (5 fixes)**:
   - **JIT Approval Server async refactor** (`teaagent/jit_approval_server.py`): Converted `_wait_for_approval` from synchronous `time.sleep(1)` spin-lock to `async def` using `asyncio.Event` + `asyncio.wait_for`, preventing asyncio event loop starvation during approval waits. `request_approval` is now `async def`.
   - **Context Bus SQLite concurrency** (`teaagent/context_bus.py`): Added `timeout=30.0` to `sqlite3.connect` and `_execute_with_retry` helper with exponential backoff (5 retries, 0.1s base delay + jitter) catching `sqlite3.OperationalError` on lock contention. Applied to `publish_delta`, `_clear_deltas`, `cleanup_old_deltas`.

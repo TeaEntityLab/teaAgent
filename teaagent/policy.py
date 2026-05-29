@@ -319,6 +319,24 @@ class ApprovalPolicy:
         # Pass 4: Extract content from $() subshells
         dollar_contents = re.findall(r'\$\(([^)]*)\)', normalized)
 
+        # Pass 4b: Extract content from process substitution <(...)
+        process_sub_contents = re.findall(r'<\(([^)]*)\)', normalized)
+
+        # Pass 4c: Expand brace patterns like /pr{od,oduction} -> /prod /production
+        def _expand_braces(s: str) -> str:
+            """Expand simple brace alternation: a{b,c}d -> abd acd"""
+            match = re.search(r'\{([^{}]+)\}', s)
+            if not match:
+                return s
+            prefix = s[: match.start()]
+            suffix = s[match.end() :]
+            alternatives = match.group(1).split(',')
+            expanded = ' '.join(prefix + alt.strip() + suffix for alt in alternatives)
+            # Recurse for nested braces (one level)
+            return _expand_braces(expanded) if '{' in expanded else expanded
+
+        brace_expanded = _expand_braces(normalized)
+
         # Pass 5: Try shlex split for final normalization
         try:
             tokens = shlex.split(normalized)
@@ -328,7 +346,9 @@ class ApprovalPolicy:
 
         # Combine: check the main normalized string PLUS any extracted subshell contents
         all_variants = [normalized]
-        for content in backtick_contents + dollar_contents:
+        if brace_expanded != normalized:
+            all_variants.append(brace_expanded.lower())
+        for content in backtick_contents + dollar_contents + process_sub_contents:
             # Recursively normalize subshell contents (one level deep)
             all_variants.append(content.lower())
 
@@ -378,6 +398,11 @@ class ApprovalPolicy:
                     elif isinstance(command_arg, list):
                         joined_cmd = ' '.join(str(item) for item in command_arg)
                         normalized_cmd = self._normalize_shell_arg(joined_cmd)
+                        if pattern in normalized_cmd:
+                            return True
+                    else:
+                        # Fallback: convert any other type to string and check
+                        normalized_cmd = self._normalize_shell_arg(str(command_arg))
                         if pattern in normalized_cmd:
                             return True
 

@@ -13,6 +13,7 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,6 +34,8 @@ from teaagent.sandbox import GitBranchSandbox
 from teaagent.subagents._approval_queue import get_approval_queue
 
 logger = logging.getLogger(__name__)
+
+_gene_pool_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -171,7 +174,7 @@ def save_prompt_to_gene_pool(
         'task_id': task_id,
         'saved_at': time.time(),
     }
-    with path.open('a', encoding='utf-8') as handle:
+    with _gene_pool_lock, path.open('a', encoding='utf-8') as handle:
         handle.write(json.dumps(entry, separators=(',', ':')) + '\n')
     return path
 
@@ -615,22 +618,47 @@ class SwarmManager:
         if not subagents:
             return []
         results: list[SubagentResult] = []
+        timeout = getattr(self, '_lock_timeout_seconds', 600)
         with ThreadPoolExecutor(max_workers=self._max_parallel) as executor:
             future_to_subagent = {
                 executor.submit(subagent.execute): subagent for subagent in subagents
             }
-            for future in as_completed(future_to_subagent):
-                subagent = future_to_subagent[future]
-                try:
-                    results.append(future.result())
-                except Exception as exc:
-                    results.append(
-                        SubagentResult(
-                            task_id=subagent._task.task_id,
-                            success=False,
-                            error=str(exc),
+            try:
+                for future in as_completed(future_to_subagent, timeout=timeout):
+                    subagent = future_to_subagent[future]
+                    try:
+                        results.append(future.result())
+                    except Exception as exc:
+                        results.append(
+                            SubagentResult(
+                                task_id=subagent._task.task_id,
+                                success=False,
+                                error=str(exc),
+                            )
                         )
-                    )
+            except FuturesTimeoutError:
+                logger.warning('Swarm execution timed out, collecting partial results')
+                # Collect results from futures that have already completed
+                for future, subagent in future_to_subagent.items():
+                    if future.done():
+                        try:
+                            results.append(future.result())
+                        except Exception as exc:
+                            results.append(
+                                SubagentResult(
+                                    task_id=subagent._task.task_id,
+                                    success=False,
+                                    error=str(exc),
+                                )
+                            )
+                    else:
+                        results.append(
+                            SubagentResult(
+                                task_id=subagent._task.task_id,
+                                success=False,
+                                error='Timed out',
+                            )
+                        )
         return results
 
     def _resolve_pending_consensus(self, pending: dict[str, str]) -> dict[str, Any]:

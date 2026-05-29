@@ -115,12 +115,31 @@ class ToolPermissionManager:
                 requires_approval=True,
             )
 
-    def register_tool_permission(self, permission: ToolPermission) -> None:
+    def register_tool_permission(
+        self,
+        permission: ToolPermission,
+        *,
+        allow_downgrade: bool = False,
+    ) -> None:
         """Register or update tool permission metadata.
 
         Args:
             permission: Tool permission to register.
+            allow_downgrade: If False (default), prevent downgrading a DESTRUCTIVE
+                tool to SAFE or INSPECT. Set to True only for intentional reclassification.
         """
+        existing = self._tool_permissions.get(permission.name)
+        if (
+            existing is not None
+            and not allow_downgrade
+            and existing.safety_level == ToolSafetyLevel.DESTRUCTIVE
+            and permission.safety_level != ToolSafetyLevel.DESTRUCTIVE
+        ):
+            logger.warning(
+                f'Blocked downgrade of {permission.name} from DESTRUCTIVE to '
+                f'{permission.safety_level.value}. Use allow_downgrade=True to override.'
+            )
+            return
         self._tool_permissions[permission.name] = permission
 
     def get_tool_permission(self, tool_name: str) -> Optional[ToolPermission]:
