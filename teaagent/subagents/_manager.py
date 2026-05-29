@@ -84,6 +84,8 @@ class SubagentManager:
         max_tool_calls: Optional[int] = None,
         batch_index: Optional[int] = None,
         isolation: str = DEFAULT_SUBAGENT_ISOLATION,
+        skill_path: Optional[str | Path] = None,
+        skill_risk_level: Optional[Any] = None,
     ) -> dict[str, Any]:
         from teaagent.chat_agent import run_chat_agent
 
@@ -124,7 +126,7 @@ class SubagentManager:
         if normalized_isolation is None:
             return _error(
                 f'unsupported subagent isolation: {isolation!r}; '
-                f'use one of: shared, worktree, container',
+                f'use one of: shared, worktree, directory-snapshot, docker, auto',
                 lineage=_lineage_or_none(
                     parent_run_id,
                     def_name or 'generic',
@@ -135,6 +137,33 @@ class SubagentManager:
             )
         isolation = normalized_isolation
 
+        cpu_quota: Optional[float] = None
+        memory_limit: Optional[str] = None
+        if isolation == 'auto':
+            if skill_path is None:
+                return _error(
+                    'isolation=auto requires skill_path for sandbox routing',
+                    lineage=_lineage_or_none(
+                        parent_run_id,
+                        def_name or 'generic',
+                        depth + 1,
+                        batch_index,
+                        'auto',
+                    ),
+                )
+            from teaagent.consensus import RiskLevel
+            from teaagent.skill_router import plan_skill_isolation
+
+            risk = skill_risk_level
+            if risk is None:
+                risk = RiskLevel.MEDIUM
+            elif isinstance(risk, str):
+                risk = RiskLevel(risk)
+            plan = plan_skill_isolation(Path(skill_path), risk)
+            isolation = plan.isolation
+            cpu_quota = plan.cpu_quota
+            memory_limit = plan.memory_limit
+
         def_used = sub_def.name if sub_def else 'generic'
         iso_ctx, iso_error = prepare_subagent_isolation(
             self._root,
@@ -142,6 +171,8 @@ class SubagentManager:
             session_key=new_isolation_session_key(
                 parent_run_id=parent_run_id, def_name=def_used
             ),
+            cpu_quota=cpu_quota,
+            memory_limit=memory_limit,
         )
         if iso_ctx is None:
             return _error(

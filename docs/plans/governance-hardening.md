@@ -20,6 +20,8 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 | Swarm LLM | `SwarmManager.with_agent_execution` + `SubagentManager` | Shipped |
 | Hardening+ | adversarial plugin runtime tests, queue cleanup TTL, handler AST gate | Shipped |
 | Refactor | `teaagent.sandbox` package, approval store module split | Shipped |
+| Phase 4 | Federated consensus + swarm pre-approval gate | Beta |
+| Phase 5 | Skill sandbox routing (`isolation=auto`) + docker limits | Beta |
 
 ## Verification commands
 
@@ -27,6 +29,7 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 pytest tests/test_governance_fuzz.py tests/test_governance_adversarial_runtime.py \
   tests/test_tranche_bc_governance.py tests/test_approval_queue_persistence.py \
   tests/test_subagent_approval_queue_integration.py tests/policy/
+pytest tests/acceptance/test_consensus_flow.py tests/acceptance/test_sandbox_enhancement_flow.py
 teaagent approval subagents prune --root . --max-age-hours 168
 teaagent selftest --root .
 teaagent tool lint --root .
@@ -35,7 +38,7 @@ teaagent tool lint --root .
 ## Open decisions
 
 1. **Swarm LLM execution** — real adapter path exists via `SwarmManager.with_agent_execution`; deeper tournament benchmarks remain optional.
-2. **Phase 4–5** (federated consensus E2E, WASM sandbox routing)—see `docs/backlog-priority.md`; not part of this plan.
+2. **Phase 4–5** — consensus and sandbox routing are **Beta** with acceptance tests; async voting UX and WASM execution remain optional hardening (see `docs/backlog-priority.md`).
 3. **Dependabot #10** — reconcile GitHub Security alert if `pip-audit` stays clean (see `SECURITY.md`).
 
 ## Related

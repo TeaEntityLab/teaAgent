@@ -7,6 +7,7 @@ and consensus state tracking.
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
 import logging
@@ -754,6 +755,23 @@ class VotingMechanism:
         return len(to_remove)
 
 
+def peer_vote_signature(peer: PeerIdentity, task_description: str) -> str:
+    """Build the test/dev signature format used by ``PeerIdentity.verify_signature``."""
+    return hashlib.sha256((task_description + peer.ssh_public_key).encode()).hexdigest()
+
+
+def task_matches_pre_approval(task_description: str, config: ConsensusConfig) -> bool:
+    """Return True when *task_description* matches configured pre-approval patterns."""
+    if not config.enable_pre_approval:
+        return False
+    if not config.pre_approved_patterns:
+        return True
+    return any(
+        fnmatch.fnmatch(task_description, pattern)
+        for pattern in config.pre_approved_patterns
+    )
+
+
 class ConsensusEngine:
     """Core consensus engine coordinating voting and attestation."""
 
@@ -911,6 +929,26 @@ class ConsensusEngine:
             self._save_state()
 
         return state
+
+    def cast_approving_votes_for_active_peers(self, proposal_id: str) -> int:
+        """Cast approve votes from active peers (trusted local orchestration)."""
+        state = self.get_consensus_status(proposal_id)
+        if state is None:
+            return 0
+        cast = 0
+        description = state.proposal.task_description
+        for peer in self.peer_registry.list_active():
+            if peer.name not in state.required_peers:
+                continue
+            signature = peer_vote_signature(peer, description)
+            if self.submit_vote(
+                proposal_id,
+                peer.name,
+                VoteDecision.APPROVE,
+                signature,
+            ):
+                cast += 1
+        return cast
 
     def generate_attestation(self, proposal_id: str) -> Optional[Dict]:
         """Generate attestation for an approved proposal.

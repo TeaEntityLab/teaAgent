@@ -16,7 +16,7 @@ from teaagent.workspace_tools._config import _load_gitignore_matcher
 logger = logging.getLogger(__name__)
 
 SUPPORTED_SUBAGENT_ISOLATIONS = frozenset(
-    {'shared', 'worktree', 'directory-snapshot', 'docker'}
+    {'shared', 'worktree', 'directory-snapshot', 'docker', 'auto'}
 )
 DEPRECATED_ISOLATION_ALIASES = {'container': 'directory-snapshot'}
 

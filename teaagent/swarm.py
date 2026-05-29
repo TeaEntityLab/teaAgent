@@ -25,6 +25,8 @@ from teaagent.consensus import (
     ConsensusStatus,
     PeerRegistry,
     RiskLevel,
+    VotingThreshold,
+    task_matches_pre_approval,
 )
 from teaagent.resource_monitor import is_process_alive
 from teaagent.sandbox import GitBranchSandbox
@@ -569,13 +571,26 @@ class SwarmManager:
                         task_description=subagent._task.description,
                         risk_level=subagent._task.risk_level,
                         proposed_by='swarm-orchestrator',
+                        threshold=VotingThreshold.SIMPLE_MAJORITY,
                     )
 
-                    # Wait for consensus (simplified - in production, this would be async)
-                    # For now, we'll check if it's already approved or fallback
                     status = self._consensus_engine.get_consensus_status(
                         state.proposal.id
                     )
+                    if (
+                        status
+                        and status.status != ConsensusStatus.APPROVED
+                        and task_matches_pre_approval(
+                            subagent._task.description,
+                            self._consensus_config,
+                        )
+                    ):
+                        self._consensus_engine.cast_approving_votes_for_active_peers(
+                            state.proposal.id
+                        )
+                        status = self._consensus_engine.get_consensus_status(
+                            state.proposal.id
+                        )
 
                     if status and status.status == ConsensusStatus.APPROVED:
                         task_results[subagent._task.task_id] = {

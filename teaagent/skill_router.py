@@ -41,6 +41,44 @@ class RoutingDecision:
             self.warnings = []
 
 
+@dataclass(frozen=True)
+class SkillIsolationPlan:
+    """Resolved subagent isolation from skill routing."""
+
+    isolation: str
+    sandbox_type: SandboxType
+    reason: str
+    cpu_quota: Optional[float] = None
+    memory_limit: Optional[str] = None
+
+
+def isolation_for_sandbox_type(sandbox_type: SandboxType) -> str:
+    """Map sandbox router output to ``prepare_subagent_isolation`` mode."""
+    if sandbox_type == SandboxType.DOCKER:
+        return 'docker'
+    if sandbox_type in {SandboxType.DIRECTORY_SNAPSHOT, SandboxType.WASM}:
+        return 'directory-snapshot'
+    return 'directory-snapshot'
+
+
+def plan_skill_isolation(
+    skill_path: Path,
+    risk_level: RiskLevel,
+    *,
+    router: Optional[SkillRouter] = None,
+) -> SkillIsolationPlan:
+    """Route a skill to an isolation mode and docker resource limits."""
+    skill_router = router or SkillRouter()
+    decision = skill_router.route_skill(skill_path, risk_level)
+    return SkillIsolationPlan(
+        isolation=isolation_for_sandbox_type(decision.sandbox_type),
+        sandbox_type=decision.sandbox_type,
+        reason=decision.reason,
+        cpu_quota=skill_router.docker_cpu_quota,
+        memory_limit=skill_router.docker_memory_limit,
+    )
+
+
 class SkillRouter:
     """Routes skills to appropriate sandboxes."""
 

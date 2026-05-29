@@ -54,38 +54,42 @@ _No open P0 items._
 
 ---
 
-## Future Roadmap — Phase 4-5 (Not Yet Implemented)
+## Future Roadmap — Phase 4-5 (Beta — core shipped, E2E hardening ongoing)
 
-The following items are planned for future evolution but not yet implemented. See [architecture.md](architecture.md#future-roadmap-phase-4-5) for detailed specifications.
+Phase 4 (consensus) and Phase 5 (sandbox routing) core modules are shipped with CLI
+and unit tests. Remaining work is production async voting UX and docker/WASM
+dogfood benchmarks. See [architecture.md](architecture.md#future-roadmap-phase-4-5).
 
-### Phase 4: Federated Swarm Consensus & Peer Attestations
+### Phase 4: Federated Swarm Consensus & Peer Attestations — **Beta**
 
-| Task | Priority | Description | Files |
-|------|----------|-------------|-------|
-| Consensus Data Structures | P1 | Define core data structures for consensus system (peers, votes, proposals, state) | `teaagent/consensus.py`, `tests/test_consensus.py` |
-| Peer Identity Management | P1 | Implement peer registration and SSH key verification with cryptographic validation | `teaagent/consensus.py`, `teaagent/swarm.py` |
-| Voting Mechanism | P1 | Implement voting logic for proposals with threshold checking and timeout handling | `teaagent/consensus.py` |
-| Consensus Engine | P0 | Core consensus engine with state management, attestation signatures, and conflict resolution | `teaagent/consensus.py` |
-| Swarm Integration | P0 | Integrate consensus into existing swarm orchestration with fallback mechanisms | `teaagent/swarm.py`, `teaagent/runner/_core.py` |
-| CLI Commands for Consensus | P2 | Add CLI commands for consensus management (peers list/add/remove, consensus status/history) | `teaagent/cli/_handlers/_swarm.py`, `teaagent/cli/_swarm_parsers.py` |
+| Task | Priority | Status | Evidence |
+|------|----------|--------|----------|
+| Consensus data structures | P1 | Shipped | `teaagent/consensus.py`, `tests/test_consensus.py` |
+| Peer identity management | P1 | Shipped | `PeerRegistry`, CLI `teaagent consensus peers` |
+| Voting mechanism | P1 | Shipped | `VotingMechanism`, `tests/test_consensus.py` |
+| Consensus engine | P0 | Shipped | `ConsensusEngine`, attestation + pre-approval |
+| Swarm integration | P0 | Shipped | `SwarmManager` + pre-approval gate |
+| CLI commands | P2 | Shipped | `teaagent/cli/_handlers/_consensus.py` |
+| E2E acceptance | P2 | Shipped | `tests/acceptance/test_consensus_flow.py` |
 
-### Phase 5: Hardened Sandbox Virtualization
+### Phase 5: Hardened Sandbox Virtualization — **Beta**
 
-| Task | Priority | Description | Files |
-|------|----------|-------------|-------|
-| Docker Resource Limits | P1 | Add CPU and memory resource constraints to Docker isolation with health monitoring | `teaagent/subagents/_isolation.py` |
-| WASM Runtime Wrapper | P0 | Create lightweight WASM runtime for Python-compatible modules with memory isolation | `teaagent/wasm_runtime.py` |
-| Skill Execution Routing | P1 | Route skills to appropriate sandbox based on risk level with fallback mechanisms | `teaagent/skill_loader.py`, `teaagent/subagents/_isolation.py` |
-| Resource Monitoring | P2 | Implement real-time resource usage tracking with per-sandbox accounting and alerting | `teaagent/subagents/_isolation.py`, `teaagent/telemetry/` |
-| CLI Commands for Sandbox | P2 | Add CLI commands for sandbox configuration and monitoring | `teaagent/cli/_handlers/_isolation.py`, `teaagent/cli/_isolation_parsers.py` |
+| Task | Priority | Status | Evidence |
+|------|----------|--------|----------|
+| Docker resource limits | P1 | Shipped | `prepare_subagent_isolation` `--cpus` / `--memory` |
+| WASM runtime wrapper | P0 | Shipped | `teaagent/wasm_runtime.py`, `tests/test_wasm_runtime.py` |
+| Skill execution routing | P1 | Shipped | `teaagent/skill_router.py`, `isolation=auto` on subagents |
+| Resource monitoring | P2 | Shipped | `teaagent/resource_monitor.py`, `teaagent sandbox monitor` |
+| CLI commands | P2 | Shipped | `teaagent/cli/_handlers/_sandbox.py` |
+| E2E acceptance | P2 | Shipped | `tests/acceptance/test_sandbox_enhancement_flow.py` |
 
-### Verification Tasks
+### Remaining (optional hardening)
 
-| Task | Priority | Description | Files |
-|------|----------|-------------|-------|
-| Consensus Integration Tests | P2 | End-to-end testing of consensus system with full swarm workflow | `tests/acceptance/test_consensus_flow.py` |
-| Sandbox Integration Tests | P2 | End-to-end testing of sandbox enhancements with skill execution | `tests/acceptance/test_sandbox_enhancement_flow.py` |
-| Documentation Updates | P2 | Update CLI docs, API docs, and examples for new features | `docs/cli.md`, `docs/api.md`, `docs/USAGE.md` |
+| Task | Priority | Description |
+|------|----------|-------------|
+| Async consensus UX | P2 | Non-blocking vote collection in swarm parent runs |
+| WASM skill execution | P1 | Execute compatible skills inside WASM runtime (not just route) |
+| Docker dogfood benchmarks | P2 | CI optional job for docker isolation smoke |
 
 ---
 
