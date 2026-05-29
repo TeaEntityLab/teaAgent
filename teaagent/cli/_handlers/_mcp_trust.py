@@ -14,8 +14,26 @@ from teaagent.mcp_trust import (
 )
 
 
+def _redact_sensitive(value: Any) -> Any:
+    if isinstance(value, dict):
+        redacted: dict[str, Any] = {}
+        for key, item in value.items():
+            if key == 'trusted':
+                redacted[key] = '[REDACTED]'
+            else:
+                redacted[key] = _redact_sensitive(item)
+        return redacted
+    if isinstance(value, list):
+        return [_redact_sensitive(item) for item in value]
+    return value
+
+
 def _print_json(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            _redact_sensitive(value), ensure_ascii=False, indent=2, sort_keys=True
+        )
+    )
 
 
 def mcp_trust_list_command(args: argparse.Namespace) -> int:
