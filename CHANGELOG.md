@@ -6,13 +6,21 @@ All notable changes to TeaAgent are tracked here.
 
 - **Vote Relay OOM Fix**: Added `MAX_HTTP_BODY_BYTES=1_048_576` guard to `vote_relay.py::_read_json()` — rejects oversized payloads with `ValueError('body too large')` instead of unbounded `rfile.read()` (DoS vector; matches `signature_relay.py` pattern)
 
-- **Verification-Driven Hardening (6 fixes)**:
+- **Verification-Driven Hardening (12 fixes)**:
+  **Batch 1 (initial fixes):**
   - **SEC-05-REV** (`federated_sync.py`): `_validate_relay_url` now resolves hostnames via DNS and checks all resolved IPs against private ranges — blocks wildcard DNS SSRF attacks (e.g. `192.168.1.1.nip.io`)
   - **SEC-04-REV** (`jit_approval_server.py`): `start()` now enforces loopback binding with `ip_address(self._host).is_loopback` check at runtime
   - **F-01-REV** (`graphqlite_production.py`): `_fetch_document` escapes backslashes before single quotes — `doc_id.replace("\\", "\\\\").replace("'", "''")` for Cypher/SQLite defense-in-depth
   - **FIND-01-REV** (`_approval_queue_store.py`): Lock method uses dedicated `.json.lock` file instead of data file — prevents `flock` orphanage from `os.replace` inode swap
   - **FIND-02-REV** (`_approval_queue.py`): `reload_from_store` now resolves `_pending_futures` (asyncio.Future) alongside `_sync_waiters` — prevents async subagent hangs on disk-approved requests
   - **F-02-REV** (`memory_legacy.py`): `_atomic_write_entries` uses UUID-suffixed temp path instead of static `.jsonl.tmp` — eliminates temp file collisions
+  **Batch 2 (verification-driven remediation):**
+  - **SEC-04-REG** (`jit_approval_server.py`): `start()` now resolves hostname (`'localhost'`) before `ipaddress.ip_address()` — prevents `ValueError` on standard loopback hostname; uses `socket.gethostbyname()` with fallback
+  - **SEC-05-TOCTOU** (`federated_sync.py`): `_validate_relay_url` bakes the resolved IP into the returned URL — prevents DNS rebinding TOCTOU between validation and HTTP fetch
+  - **F-01-CYPHER** (`graphqlite_production.py`): Replaced manual string escaping with parameterized queries (`$doc_id`, `$term` placeholders) — eliminates Cypher injection risk entirely; updated both `_fetch_document` and `graph_retrieve`
+  - **FIND-03-LOCK** (`_approval_queue_store.py`): `prune_stale` now acquires exclusive file lock before read/delete — prevents concurrent write races during queue pruning
+  - **FIND-02-THREADSAFE** (`_approval_queue.py`): `reload_from_store` uses `call_soon_threadsafe` for async future resolution — prevents asyncio event loop corruption from background threads
+  - **F-02-FLOCK** (`memory_legacy.py`): Replaced `threading.Lock()` with `fcntl.flock`-based cross-process file lock — prevents silent data loss when subagents run in separate processes
 
 - **Deep Audit Remediation (10 fixes)**:
   - **SEC-01** (`tool_permissions.py`): Unknown/unregistered tools now require JIT approval — added `permission is None` guard in `check_tool_access` to prevent safe-default bypass

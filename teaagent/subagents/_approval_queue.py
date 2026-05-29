@@ -14,6 +14,7 @@ Key design decisions:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import threading
 import time
@@ -138,6 +139,7 @@ class CentralizedApprovalQueue:
         self._lock = asyncio.Lock()
         self._sync_lock = threading.Lock()
         self._store = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
         if self._workspace_root is not None:
             from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
@@ -170,7 +172,7 @@ class CentralizedApprovalQueue:
                             event.set()
                         future = self._pending_futures.get(request_id)
                         if future is not None and not future.done():
-                            future.set_result(True)
+                            self._resolve_future_threadsafe(future, True)
                     elif loaded.status in {
                         ApprovalRequestStatus.DENIED,
                         ApprovalRequestStatus.CANCELLED,
@@ -181,11 +183,24 @@ class CentralizedApprovalQueue:
                             event.set()
                         future = self._pending_futures.get(request_id)
                         if future is not None and not future.done():
-                            future.set_result(False)
+                            self._resolve_future_threadsafe(future, False)
 
     def _persist(self) -> None:
         if self._store is not None:
             self._store.save(self._parent_run_id, self._requests, self._batches)
+
+    def _resolve_future_threadsafe(
+        self, future: asyncio.Future[bool], value: bool
+    ) -> None:
+        """Resolve an asyncio.Future from a sync/background thread.
+
+        Uses ``call_soon_threadsafe`` when an event loop is available to avoid
+        violating asyncio's single-thread constraint.
+        """
+        if self._loop is not None and self._loop.is_running():
+            self._loop.call_soon_threadsafe(future.set_result, value)
+        else:
+            future.set_result(value)
 
     def generate_request_id(self) -> str:
         return uuid4().hex
@@ -355,6 +370,8 @@ class CentralizedApprovalQueue:
             with self._sync_lock:
                 self._requests[request_id] = request
             # Create a future for this request
+            with contextlib.suppress(RuntimeError):
+                self._loop = asyncio.get_running_loop()
             future: asyncio.Future[bool] = asyncio.Future()
             self._pending_futures[request_id] = future
 

@@ -517,7 +517,14 @@ class FederatedGraphSync:
                     f"URL host '{host}' resolves to private IP range: {ip_str}"
                 )
 
-        return url
+        # Bake resolved IP into URL to prevent DNS rebinding TOCTOU
+        # The actual HTTP connection uses this IP, not re-resolving the hostname.
+        resolved_host = sorted(resolved_ips)[0]
+        new_netloc = (
+            f"{resolved_host}:{parsed.port}" if parsed.port else str(resolved_host)
+        )
+        safe_url = parsed._replace(netloc=new_netloc).geturl()
+        return safe_url
 
     def broadcast_approval_request(
         self,

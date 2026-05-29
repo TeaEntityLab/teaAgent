@@ -133,12 +133,12 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
 
         for term in query_terms:
             try:
-                cypher = (
-                    f"MATCH p=(a:Entity {{name: '{term}'}})"
+                results = self.graph.query(
+                    'MATCH p=(a:Entity {name: $term})'
                     f'-[*1..{max_depth}]-(b:Entity) '
-                    f'RETURN nodes(p) as nodes, relationships(p) as rels'
+                    'RETURN nodes(p) as nodes, relationships(p) as rels',
+                    params={'term': term},
                 )
-                results = self.graph.query(cypher)
             except (sqlite3.Error, OSError, ValueError, TypeError) as exc:
                 logger.debug('Graph query failed for term %s: %s', term, exc)
                 continue
@@ -193,10 +193,9 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
 
     def _fetch_document(self, doc_id: str) -> Optional[dict[str, Any]]:
         try:
-            # Escape backslashes first, then single quotes (SQLite escaping)
-            safe_doc_id = doc_id.replace("\\", "\\\\").replace("'", "''")
             results = self.graph.query(
-                f"MATCH (d:Document {{doc_id: '{safe_doc_id}'}}) RETURN d"
+                'MATCH (d:Document {doc_id: $doc_id}) RETURN d',
+                params={'doc_id': doc_id},
             )
             if results:
                 return results[0].get('d', {})

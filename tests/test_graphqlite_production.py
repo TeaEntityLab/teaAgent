@@ -24,7 +24,7 @@ class FakeGraphQLiteGraph:
     ) -> None:
         self.edges.append((source, target, properties, rel_type))
 
-    def query(self, cypher: str):
+    def query(self, cypher: str, params: dict | None = None):
         self.queries.append(cypher)
         if 'MATCH (d:Document' in cypher:
             if "doc_id: '" in cypher:
@@ -67,7 +67,7 @@ class FakeGraphQLiteGraph:
                 }
             ]
         if 'nodes(p)' in cypher:
-            name = cypher.split("name: '")[1].split("'")[0]
+            name = (params or {}).get('term', 'alice')
             return [
                 {
                     'nodes': [{'name': name}, {'name': 'acme'}],

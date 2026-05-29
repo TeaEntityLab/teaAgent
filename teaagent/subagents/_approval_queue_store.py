@@ -254,16 +254,18 @@ class ApprovalQueueStore:
             if mtime > cutoff:
                 skipped_recent.append(parent_run_id)
                 continue
-            snapshot = self._load_unlocked(parent_run_id)
-            has_pending = any(
-                raw.get('status') == ApprovalRequestStatus.PENDING.value
-                for raw in snapshot.requests.values()
-            )
-            if has_pending:
-                skipped_pending.append(parent_run_id)
-                continue
-            path.unlink(missing_ok=True)
-            removed.append(parent_run_id)
+            # Acquire exclusive lock to prevent concurrent read/write races
+            with self.lock(parent_run_id):
+                snapshot = self._load_unlocked(parent_run_id)
+                has_pending = any(
+                    raw.get('status') == ApprovalRequestStatus.PENDING.value
+                    for raw in snapshot.requests.values()
+                )
+                if has_pending:
+                    skipped_pending.append(parent_run_id)
+                    continue
+                path.unlink(missing_ok=True)
+                removed.append(parent_run_id)
         return ApprovalQueuePruneReport(
             removed_parent_run_ids=removed,
             skipped_pending=skipped_pending,

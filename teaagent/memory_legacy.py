@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import json
 import os
-import threading
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List
+from typing import Any, Iterator, List
 from uuid import uuid4
 
 from teaagent.audit import utc_now
@@ -45,7 +45,6 @@ class MemoryCatalog:
         self.path = self.root / '.teaagent' / 'memory.jsonl'
         self.quarantine_path = self.root / '.teaagent' / 'memory-quarantine.jsonl'
         self.readonly = readonly
-        self._file_lock = threading.Lock()
         if not readonly:
             self.path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -128,6 +127,34 @@ class MemoryCatalog:
                 return entry
         raise FileNotFoundError(f"memory '{memory_id}' not found")
 
+    def _lock_path(self) -> Path:
+        return self.path.with_suffix('.lock')
+
+    @contextmanager
+    def _cross_process_lock(self) -> Iterator[None]:
+        """Cross-process file lock via ``fcntl.flock``.
+
+        Subagents run in separate processes so ``threading.Lock()`` is
+        insufficient.  This lock serialises read-modify-write cycles across
+        all processes that share the same ``memory.jsonl`` file.
+        """
+        lock_path = self._lock_path()
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open('w', encoding='utf-8') as handle:
+            try:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            except (ImportError, OSError):
+                pass
+            try:
+                yield
+            finally:
+                try:
+                    import fcntl
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                except (ImportError, OSError):
+                    pass
+
     def _read_entries(self) -> List[MemoryEntry]:
         if not self.path.exists():
             return []
@@ -166,7 +193,7 @@ class MemoryCatalog:
         if not self.path.exists():
             return 0
 
-        with self._file_lock:
+        with self._cross_process_lock():
             entries = self._read_entries()
             filtered = [entry for entry in entries if entry.branch_name != branch_name]
             deleted_count = len(entries) - len(filtered)
@@ -190,7 +217,7 @@ class MemoryCatalog:
         if not self.path.exists():
             return 0
 
-        with self._file_lock:
+        with self._cross_process_lock():
             entries = self._read_entries()
             filtered = [entry for entry in entries if entry.run_id != run_id]
             deleted_count = len(entries) - len(filtered)
@@ -215,7 +242,7 @@ class MemoryCatalog:
         if not self.path.exists():
             return 0
 
-        with self._file_lock:
+        with self._cross_process_lock():
             entries = self._read_entries()
             to_quarantine = [
                 entry for entry in entries if entry.branch_name == branch_name

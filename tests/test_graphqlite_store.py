@@ -25,7 +25,7 @@ class FakeGraphQLiteGraph:
     def upsert_edge(self, source, target, properties, rel_type=None):
         self.edges.append((source, target, properties, rel_type))
 
-    def query(self, cypher):
+    def query(self, cypher, params=None):
         self.queries.append(cypher)
         return [{'ok': True}]
 
