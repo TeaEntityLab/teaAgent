@@ -6,13 +6,19 @@ import json
 import logging
 import threading
 import time
-from dataclasses import dataclass, field
+from contextlib import suppress
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
+from teaagent.control_plane_tenant import (
+    ControlPlaneRegistry,
+    ControlPlaneState,
+    JitDiffRecord,
+    sanitize_tenant_id,
+)
 from teaagent.jit_approval_server import JITApprovalServer
 
 logger = logging.getLogger(__name__)
@@ -27,79 +33,6 @@ def format_sse_event(event_type: str, data: dict[str, Any]) -> str:
     return f'event: {event_type}\ndata: {json.dumps(data, separators=(",", ":"))}\n\n'
 
 
-@dataclass
-class JitDiffRecord:
-    """Prompt or patch diff surfaced for dashboard review."""
-
-    request_id: str
-    agent_name: str
-    old_text: str
-    new_text: str
-    unified_diff: str
-    created_at: float = field(default_factory=time.time)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            'request_id': self.request_id,
-            'agent_name': self.agent_name,
-            'old_text': self.old_text,
-            'new_text': self.new_text,
-            'unified_diff': self.unified_diff,
-            'created_at': self.created_at,
-        }
-
-
-@dataclass
-class ControlPlaneState:
-    """Mutable snapshots streamed to the HTML dashboard."""
-
-    workflow: dict[str, Any] | None = None
-    focus: dict[str, Any] | None = None
-    jit_diffs: list[JitDiffRecord] = field(default_factory=list)
-    polish_notes: str = ''
-    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
-
-    def set_workflow(self, payload: dict[str, Any] | None) -> None:
-        with self._lock:
-            self.workflow = payload
-
-    def set_focus(self, payload: dict[str, Any] | None) -> None:
-        with self._lock:
-            self.focus = payload
-
-    def set_polish_notes(self, notes: str) -> None:
-        with self._lock:
-            self.polish_notes = notes
-
-    def publish_jit_diff(
-        self,
-        request_id: str,
-        agent_name: str,
-        old_text: str,
-        new_text: str,
-        unified_diff: str,
-    ) -> JitDiffRecord:
-        record = JitDiffRecord(
-            request_id=request_id,
-            agent_name=agent_name,
-            old_text=old_text,
-            new_text=new_text,
-            unified_diff=unified_diff,
-        )
-        with self._lock:
-            self.jit_diffs.append(record)
-        return record
-
-    def snapshot(self) -> dict[str, Any]:
-        with self._lock:
-            return {
-                'workflow': self.workflow,
-                'focus': self.focus,
-                'jit_diffs': [item.to_dict() for item in self.jit_diffs],
-                'polish_notes': self.polish_notes,
-            }
-
-
 class ControlPlaneServer:
     """Threaded HTTP server for dashboard static assets and SSE APIs."""
 
@@ -109,6 +42,7 @@ class ControlPlaneServer:
         host: str = '127.0.0.1',
         port: int = 0,
         state: ControlPlaneState | None = None,
+        tenant_registry: ControlPlaneRegistry | None = None,
         jit_server: JITApprovalServer | None = None,
         dashboard_dir: Path | None = None,
         sse_interval_seconds: float = 1.0,
@@ -116,13 +50,20 @@ class ControlPlaneServer:
     ) -> None:
         self.host = host
         self.port = port
-        self.state = state or ControlPlaneState()
+        self.registry = tenant_registry or ControlPlaneRegistry()
+        if state is not None:
+            self.registry.seed(self.registry.default_tenant, state)
         self.jit_server = jit_server
         self.dashboard_dir = (dashboard_dir or DASHBOARD_DIR).resolve()
         self.sse_interval_seconds = sse_interval_seconds
         self.max_sse_events = max_sse_events
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
+
+    @property
+    def state(self) -> ControlPlaneState:
+        """Default-tenant state (backward compatible)."""
+        return self.registry.get_or_create(self.registry.default_tenant)
 
     def start(self, *, daemon: bool = True) -> None:
         """Start serving in a background thread."""
@@ -141,12 +82,19 @@ class ControlPlaneServer:
         self._thread.start()
         logger.info('Control plane listening on %s', self.base_url)
 
+    def _shutdown_httpd(self, httpd: ThreadingHTTPServer | None) -> None:
+        if httpd is None:
+            return
+        with suppress(Exception):
+            httpd.shutdown()
+        with suppress(Exception):
+            httpd.server_close()
+
     def stop(self) -> None:
         """Shut down the HTTP server."""
-        if self._httpd is not None:
-            self._httpd.shutdown()
-            self._httpd.server_close()
-            self._httpd = None
+        httpd = self._httpd
+        self._httpd = None
+        self._shutdown_httpd(httpd)
         if self._thread is not None:
             self._thread.join(timeout=5.0)
             self._thread = None
@@ -166,9 +114,9 @@ class ControlPlaneServer:
         except KeyboardInterrupt:
             pass
         finally:
-            httpd.shutdown()
-            httpd.server_close()
-            self._httpd = None
+            if self._httpd is httpd:
+                self._httpd = None
+            self._shutdown_httpd(httpd)
 
     @property
     def base_url(self) -> str:
@@ -211,6 +159,12 @@ def _make_handler(
                 return
             if path == '/api/health':
                 self._json_response(HTTPStatus.OK, {'status': 'ok'})
+                return
+            if path == '/api/tenants':
+                self._json_response(
+                    HTTPStatus.OK,
+                    {'tenants': self.server.plane.registry.list_tenants()},
+                )
                 return
             if path == '/api/workflow/stream':
                 self._sse_stream('workflow_update', self._workflow_payload)
@@ -278,19 +232,33 @@ def _make_handler(
             self.end_headers()
             self.wfile.write(body)
 
+        def _tenant_state(self) -> ControlPlaneState:
+            header = self.headers.get('X-TeaAgent-Tenant', '').strip()
+            parsed = urlparse(self.path)
+            tenant = header
+            if not tenant and parsed.path.startswith('/api/tenants/'):
+                parts = [part for part in parsed.path.split('/') if part]
+                if len(parts) >= 3 and parts[0] == 'api' and parts[1] == 'tenants':
+                    tenant = parts[2]
+            try:
+                tenant_id = sanitize_tenant_id(tenant)
+            except ValueError as exc:
+                raise ValueError(str(exc)) from exc
+            return self.server.plane.registry.get_or_create(tenant_id)
+
         def _workflow_payload(self) -> dict[str, Any]:
-            snap = self.server.plane.state.snapshot()
+            snap = self._tenant_state().snapshot()
             return {
                 'workflow': snap.get('workflow'),
                 'polish_notes': snap.get('polish_notes', ''),
             }
 
         def _focus_payload(self) -> dict[str, Any]:
-            snap = self.server.plane.state.snapshot()
+            snap = self._tenant_state().snapshot()
             return {'focus': snap.get('focus')}
 
         def _jit_payload(self) -> dict[str, Any]:
-            snap = self.server.plane.state.snapshot()
+            snap = self._tenant_state().snapshot()
             return {
                 'pending': self.server.plane._pending_approvals(),
                 'diffs': snap.get('jit_diffs', []),
@@ -346,7 +314,11 @@ def _make_handler(
 
         def _polish_action(self, body: dict[str, Any]) -> None:
             notes = str(body.get('notes', '')).strip()
-            self.server.plane.state.set_polish_notes(notes)
+            try:
+                self._tenant_state().set_polish_notes(notes)
+            except ValueError as exc:
+                self._json_response(HTTPStatus.BAD_REQUEST, {'error': str(exc)})
+                return
             self._json_response(HTTPStatus.OK, {'ok': True, 'notes': notes})
 
     return Handler

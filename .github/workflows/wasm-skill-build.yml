@@ -1,0 +1,68 @@
+# Reusable workflow: build and validate WASM skill modules for TeaAgent sandboxes.
+# Call from a skill repo:
+#   uses: TeaEntityLab/teaAgent/.github/workflows/wasm-skill-build.yml@main
+#   with:
+#     skill_path: skills/my-skill
+
+name: WASM Skill Build
+
+on:
+  workflow_call:
+    inputs:
+      skill_path:
+        description: Path to skill directory inside the caller repository
+        required: true
+        type: string
+      rust_target:
+        description: wasm32-wasi target triple
+        required: false
+        type: string
+        default: wasm32-wasi
+    secrets:
+      TEAAgent_CHECKOUT_TOKEN:
+        description: Optional token when calling across private forks
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-wasm-skill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ inputs.rust_target }}
+
+      - name: Install wasm32 target
+        run: rustup target add ${{ inputs.rust_target }}
+
+      - name: Build skill WASM (when Cargo.toml present)
+        working-directory: ${{ inputs.skill_path }}
+        run: |
+          if [ -f Cargo.toml ]; then
+            cargo build --release --target ${{ inputs.rust_target }}
+            mkdir -p dist
+            cp "target/${{ inputs.rust_target }}/release/"*.wasm dist/tool.wasm 2>/dev/null || \
+              cp "target/${{ inputs.rust_target }}/release/"*.wasm dist/ || true
+          else
+            echo "No Cargo.toml in skill_path; skipping compile (provide prebuilt *.wasm)"
+          fi
+
+      - name: Write wasm manifest
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -e .
+          teaagent sandbox wasm-contract "${{ inputs.skill_path }}" --write-manifest --validate
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-skill-${{ github.run_id }}
+          path: |
+            ${{ inputs.skill_path }}/dist/
+            ${{ inputs.skill_path }}/*.wasm
+            ${{ inputs.skill_path }}/wasm_manifest.json

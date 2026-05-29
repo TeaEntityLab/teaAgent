@@ -310,3 +310,36 @@ def consensus_vote_command(args: argparse.Namespace) -> int:
     else:
         print('Failed to submit vote.')
         return 1
+
+
+def consensus_relay_serve_command(args: argparse.Namespace) -> int:
+    """Serve HTTP relay for SSH-signed production peer votes."""
+    from teaagent.vote_relay import VoteRelayServer
+
+    engine = _consensus_engine_from_args(args)
+    relay = VoteRelayServer(
+        engine,
+        host=args.host,
+        port=args.port,
+        require_ssh=not args.allow_dev_signatures,
+    )
+    relay.serve_blocking()
+    return 0
+
+
+def consensus_relay_submit_command(args: argparse.Namespace) -> int:
+    """Submit an SSH-signed vote to a remote relay."""
+    from teaagent.consensus import VoteDecision
+    from teaagent.vote_relay import VoteRelayClient
+
+    client = VoteRelayClient(args.relay_url)
+    result = client.submit_vote(
+        proposal_id=args.proposal_id,
+        peer_name=args.peer_name,
+        decision=VoteDecision(args.decision),
+        task_description=args.task_description,
+        private_key_path=args.private_key,
+        comment=args.comment,
+    )
+    print(json.dumps(result, indent=2))
+    return 0 if result.get('ok') else 1

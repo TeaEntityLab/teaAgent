@@ -65,6 +65,8 @@ from ._consensus import (
     consensus_request_command,
     consensus_status_command,
     consensus_vote_command,
+    consensus_relay_serve_command,
+    consensus_relay_submit_command,
     consensus_votes_import_command,
     consensus_wait_command,
 )
@@ -384,6 +386,8 @@ __all__ = [
     'consensus_history_command',
     'consensus_request_command',
     'consensus_vote_command',
+    'consensus_relay_serve_command',
+    'consensus_relay_submit_command',
     'consensus_wait_command',
     'consensus_votes_import_command',
     'control_plane_serve_command',

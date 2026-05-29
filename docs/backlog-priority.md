@@ -105,6 +105,9 @@ docker-smoke CI) is shipped. See [architecture.md](architecture.md#phase-4-5-roa
 | Comparator tournament from subagent results | P2 | Shipped | `teaagent/tournament/benchmark.py`, `tests/test_phase6_remaining_features.py` |
 | Control plane swarm dogfood | P2 | Shipped | `teaagent/control_plane_bridge.py`, `SwarmManager(control_plane_state=…)` |
 | WASM skill contract CLI | P2 | Shipped | `teaagent/wasm_skill.py`, `teaagent sandbox wasm-contract` |
+| SSH vote relay (production peers) | P1 | Shipped | `teaagent/vote_relay.py`, `teaagent consensus relay` |
+| WASM skill CI template workflow | P2 | Shipped | `.github/workflows/wasm-skill-build.yml`, `docs/wasm-skill-ci.md` |
+| Multi-tenant control plane | P2 | Shipped | `teaagent/control_plane_tenant.py`, `X-TeaAgent-Tenant` |
 
 ---
 

@@ -335,6 +335,7 @@ class SwarmManager:
         prompt_by_task_id: dict[str, str] | None = None,
         subagent_manager: Any = None,
         control_plane_state: Any = None,
+        control_plane_tenant_id: str = 'default',
     ) -> None:
         self._root = Path(root).resolve()
         self._max_parallel = max_parallel
@@ -347,6 +348,7 @@ class SwarmManager:
         self._consensus_config = consensus_config or ConsensusConfig()
         self._consensus_engine: Optional[ConsensusEngine] = None
         self._control_plane_state = control_plane_state
+        self._control_plane_tenant_id = control_plane_tenant_id
         self._lock_timeout_seconds = lock_timeout_seconds
         self._subagent_pids: dict[str, int] = {}
         self._subagent_heartbeats: dict[str, float] = {}
@@ -397,6 +399,7 @@ class SwarmManager:
             phase=phase,
             subagents=snapshot,
             totals=totals,
+            tenant_id=self._control_plane_tenant_id,
         )
 
     @classmethod

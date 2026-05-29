@@ -75,20 +75,12 @@ class PeerIdentity:
         object.__setattr__(self, 'fingerprint', fingerprint)
 
     def verify_signature(self, message: str, signature: str) -> bool:
-        """Verify a signature from this peer.
-
-        Args:
-            message: The message that was signed
-            signature: The signature to verify
-
-        Returns:
-            True if signature is valid, False otherwise
-        """
+        """Verify a dev hash or production SSH signature from this peer."""
         try:
-            # Parse SSH public key
-            # This is a simplified version - in production, use proper SSH key parsing
-            # For now, we'll use a simple hash-based verification
-            # In production, this should use proper SSH signature verification
+            from teaagent.ssh_signatures import is_ssh_signature_blob, verify_message_ssh
+
+            if is_ssh_signature_blob(signature):
+                return verify_message_ssh(self.ssh_public_key, message, signature)
             expected_sig = hashlib.sha256(
                 (message + self.ssh_public_key).encode()
             ).hexdigest()
@@ -761,9 +753,24 @@ class VotingMechanism:
         return len(to_remove)
 
 
-def peer_vote_signature(peer: PeerIdentity, task_description: str) -> str:
+def peer_vote_signature(
+    peer: PeerIdentity,
+    task_description: str,
+    *,
+    proposal_id: str | None = None,
+    peer_name: str | None = None,
+    decision: str | None = None,
+) -> str:
     """Build the test/dev signature format used by ``PeerIdentity.verify_signature``."""
-    return hashlib.sha256((task_description + peer.ssh_public_key).encode()).hexdigest()
+    from teaagent.ssh_signatures import build_vote_signing_message
+
+    if proposal_id and peer_name and decision:
+        message = build_vote_signing_message(
+            proposal_id, peer_name, decision, task_description
+        )
+    else:
+        message = task_description
+    return hashlib.sha256((message + peer.ssh_public_key).encode()).hexdigest()
 
 
 def parse_vote_import_payload(raw: object) -> list[dict[str, object]]:
@@ -955,10 +962,19 @@ class ConsensusEngine:
         if not state:
             return False
 
-        # Verify the signature is from the claimed peer
-        if not self.peer_registry.verify_peer(
-            peer_name, state.proposal.task_description, signature
-        ):
+        from teaagent.ssh_signatures import build_vote_signing_message
+
+        canonical = build_vote_signing_message(
+            proposal_id,
+            peer_name,
+            decision.value,
+            state.proposal.task_description,
+        )
+        legacy = state.proposal.task_description
+        verified = self.peer_registry.verify_peer(
+            peer_name, canonical, signature
+        ) or self.peer_registry.verify_peer(peer_name, legacy, signature)
+        if not verified:
             return False
 
         # Cast the vote
@@ -1012,7 +1028,13 @@ class ConsensusEngine:
         for peer in self.peer_registry.list_active():
             if peer.name not in state.required_peers:
                 continue
-            signature = peer_vote_signature(peer, description)
+            signature = peer_vote_signature(
+                peer,
+                description,
+                proposal_id=proposal_id,
+                peer_name=peer.name,
+                decision=VoteDecision.APPROVE.value,
+            )
             if self.submit_vote(
                 proposal_id,
                 peer.name,

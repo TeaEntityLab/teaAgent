@@ -100,6 +100,8 @@ def register(
         handlers.get('vote'),
         handlers.get('wait'),
         handlers.get('votes_import'),
+        handlers.get('relay_serve'),
+        handlers.get('relay_submit'),
     )
 
 
@@ -117,6 +119,8 @@ def _consensus(
     vote_handler: Optional[Callable] = None,
     wait_handler: Optional[Callable] = None,
     votes_import_handler: Optional[Callable] = None,
+    relay_serve_handler: Optional[Callable] = None,
+    relay_submit_handler: Optional[Callable] = None,
 ) -> None:
     """Register consensus subcommands."""
     consensus_parser = subparsers.add_parser('consensus', help='Consensus management')
@@ -243,3 +247,45 @@ def _consensus(
     vote_cmd.add_argument('--peer-storage', help='Path to peer registry storage')
     vote_cmd.add_argument('--consensus-storage', help='Path to consensus state storage')
     vote_cmd.set_defaults(func=vote_handler)
+
+    relay_parser = consensus_subs.add_parser(
+        'relay', help='SSH-signed vote relay for remote production peers'
+    )
+    relay_subs = relay_parser.add_subparsers(
+        dest='relay_command', required=True, help='Relay commands'
+    )
+    relay_serve = relay_subs.add_parser('serve', help='Start vote relay HTTP server')
+    relay_serve.add_argument('--host', default='127.0.0.1')
+    relay_serve.add_argument('--port', type=int, default=8790)
+    relay_serve.add_argument(
+        '--allow-dev-signatures',
+        action='store_true',
+        help='Accept dev hash signatures (not for production)',
+    )
+    relay_serve.add_argument('--peer-storage', help='Path to peer registry storage')
+    relay_serve.add_argument(
+        '--consensus-storage', help='Path to consensus state storage'
+    )
+    relay_serve.set_defaults(func=relay_serve_handler)
+
+    relay_submit = relay_subs.add_parser(
+        'submit', help='Submit an SSH-signed vote to a remote relay'
+    )
+    relay_submit.add_argument('--relay-url', required=True, help='Relay base URL')
+    relay_submit.add_argument('proposal_id', help='Proposal ID')
+    relay_submit.add_argument('peer_name', help='Peer name')
+    relay_submit.add_argument(
+        'decision', choices=['approve', 'reject', 'abstain'], help='Vote decision'
+    )
+    relay_submit.add_argument(
+        '--private-key',
+        required=True,
+        help='SSH private key path for signing',
+    )
+    relay_submit.add_argument(
+        '--task-description',
+        required=True,
+        help='Task description from the proposal (for canonical signing)',
+    )
+    relay_submit.add_argument('--comment', help='Optional vote comment')
+    relay_submit.set_defaults(func=relay_submit_handler)

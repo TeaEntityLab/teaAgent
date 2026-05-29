@@ -41,9 +41,9 @@ Scale reference (internal engineering, not market validation):
 | Read-only numeric `--parallel` | Beta | CLI guard in `agent run` | Swarm read-only analysis |
 | Governance fuzz tests | Stable | `tests/test_governance_fuzz.py`, `tests/test_governance_hardening.py` | — |
 | CI governance gate | Stable | `.github/workflows/ci.yml` governance-gate job | — |
-| Phase 4 consensus | Beta | `teaagent consensus wait`, `votes-import`, async swarm polling | Remote SSH-signed vote relay |
-| Phase 5 sandbox routing + execution | Beta | `teaagent sandbox wasm-contract`, `skill_executor` WASM path | External WASM build CI templates |
-| Phase 6 skill writer / control plane | Beta | `control_plane_bridge`, swarm workflow publish | Multi-tenant hosted control plane |
+| Phase 4 consensus | Beta | `consensus relay`, `ssh_signatures`, `votes-import` | Relay mTLS + API tokens on WAN |
+| Phase 5 sandbox routing + execution | Beta | `wasm-skill-build.yml`, `sandbox wasm-contract` | Org-wide WASM signing in CI |
+| Phase 6 skill writer / control plane | Beta | `ControlPlaneRegistry`, `X-TeaAgent-Tenant` | Per-tenant authZ at gateway |
 
 ## Surfaces (summary)
 

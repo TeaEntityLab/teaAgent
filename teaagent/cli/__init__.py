@@ -83,6 +83,8 @@ from teaagent.cli._handlers import (
     consensus_request_command,
     consensus_status_command,
     consensus_vote_command,
+    consensus_relay_serve_command,
+    consensus_relay_submit_command,
     consensus_votes_import_command,
     consensus_wait_command,
     control_plane_serve_command,
@@ -396,6 +398,8 @@ def build_parser() -> argparse.ArgumentParser:
             'vote': consensus_vote_command,
             'wait': consensus_wait_command,
             'votes_import': consensus_votes_import_command,
+            'relay_serve': consensus_relay_serve_command,
+            'relay_submit': consensus_relay_submit_command,
         },
     )
     register_sandbox(

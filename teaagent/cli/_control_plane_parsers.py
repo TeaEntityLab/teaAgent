@@ -42,4 +42,9 @@ def register(
         default=1.0,
         help='SSE poll interval for dashboard streams. Default 1.0.',
     )
+    serve_cmd.add_argument(
+        '--default-tenant',
+        default='default',
+        help='Default tenant when X-TeaAgent-Tenant header is omitted.',
+    )
     serve_cmd.set_defaults(func=handlers.get('serve'))
