@@ -155,6 +155,7 @@ class ApprovalPolicy:
         plan_contract: Any = None,  # PlanContract if available
         read_only: bool | None = None,
         description: str = '',
+        handler: Any | None = None,
     ) -> None:
         if self.permission_mode == PermissionMode.READ_ONLY:
             block_reason = read_only_runtime_block_reason(
@@ -162,6 +163,7 @@ class ApprovalPolicy:
                 description=description,
                 read_only=read_only,
                 destructive=destructive,
+                handler=handler,
             )
             if block_reason is not None:
                 raise ToolPermissionError(block_reason)

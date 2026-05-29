@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-import re
+import inspect
 from dataclasses import dataclass
 from typing import Literal
 
@@ -70,21 +70,10 @@ def _check_write_keywords_in_text(text: str) -> list[str]:
 
 
 def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
-    """Perform AST-based fuzz checking on handler code for write operations.
-    
-    This is used by selftest to detect tools marked as read_only that contain
-    write-like operations in their handler implementation.
-    
-    Args:
-        handler_code: Source code of the tool handler
-        is_read_only: Whether the tool is marked as read_only
-        
-    Returns:
-        List of detected write-like operations (empty if none found or not read_only)
-    """
+    """AST-check handler source for write-like operations when marked read_only."""
     if not is_read_only:
         return []
-    
+
     write_operations = []
     try:
         tree = ast.parse(handler_code)
@@ -92,14 +81,26 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
             # Check for function calls that might write
             if isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Attribute):
-                    # Check for file operations like .write(), .save(), etc.
-                    if node.func.attr in {'write', 'save', 'create', 'delete', 'remove', 
-                                          'update', 'edit', 'append', 'overwrite'}:
+                    if node.func.attr in {
+                        'write',
+                        'save',
+                        'create',
+                        'delete',
+                        'remove',
+                        'update',
+                        'edit',
+                        'append',
+                        'overwrite',
+                    }:
                         write_operations.append(f'{node.func.attr}()')
-                elif isinstance(node.func, ast.Name):
-                    # Check for built-in functions like open(), mkdir(), etc.
-                    if node.func.id in {'open', 'mkdir', 'remove', 'rmdir', 'unlink'}:
-                        write_operations.append(f'{node.func.id}()')
+                elif isinstance(node.func, ast.Name) and node.func.id in {
+                    'open',
+                    'mkdir',
+                    'remove',
+                    'rmdir',
+                    'unlink',
+                }:
+                    write_operations.append(f'{node.func.id}()')
             # Check for assignments that might modify state
             elif isinstance(node, ast.AugAssign):
                 write_operations.append('augmented_assignment')
@@ -185,7 +186,7 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
                 'destructive tools cannot be read_only',
             )
         )
-    
+
     # Static analysis: check for write-like keywords in description
     if ann.read_only:
         write_keywords = _check_write_keywords_in_text(tool.description)
@@ -198,7 +199,30 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
                     f'read_only tool description contains write-like keywords: {", ".join(write_keywords)}',
                 )
             )
-    
+        try:
+            handler_source = inspect.getsource(tool.handler)
+        except (OSError, TypeError):
+            issues.append(
+                ToolLintIssue(
+                    name,
+                    'warning',
+                    'handler_source_unavailable',
+                    'read_only tool handler source could not be inspected',
+                )
+            )
+        else:
+            write_ops = fuzz_check_handler_code(handler_source, is_read_only=True)
+            if write_ops:
+                preview = ', '.join(write_ops[:5])
+                issues.append(
+                    ToolLintIssue(
+                        name,
+                        'error',
+                        'read_only_handler_mutation',
+                        f'read_only handler appears to mutate ({preview})',
+                    )
+                )
+
     # Validate capability manifest if present
     if tool.capability_manifest:
         manifest_tier = tool.capability_manifest.get('security_tier')
@@ -211,7 +235,7 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
                     f'capability manifest security_tier must be one of: Low, Medium, High, Critical (got: {manifest_tier})',
                 )
             )
-        
+
         # Check if manifest tier conflicts with calculated tier
         calculated_tier = tool.get_security_tier()
         if manifest_tier and manifest_tier != calculated_tier:
@@ -223,7 +247,7 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
                     f'capability manifest security_tier ({manifest_tier}) differs from calculated tier ({calculated_tier}) based on annotations',
                 )
             )
-    
+
     return issues
 
 

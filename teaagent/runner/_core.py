@@ -227,6 +227,7 @@ class AgentRunner:
                         plan_contract=plan_contract,
                         read_only=tool.annotations.read_only,
                         description=tool.description,
+                        handler=tool.handler,
                     )
                 except ToolPermissionError as exc:
                     secret = None
