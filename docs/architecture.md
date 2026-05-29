@@ -320,6 +320,8 @@ User / CLI
 | `RunStore`       | JSONL   | `atomic_write_text` (lock + replace) | Run history and replay       |
 | `UltraworkStore` | JSONL   | `atomic_write_text`                  | Worker lifecycle records     |
 | `SQLiteOAuthStore`| SQLite | WAL + `BEGIN IMMEDIATE`              | OAuth clients/codes/nonces   |
+| `ContextBus`      | SQLite | WAL; per-thread connections        | Cross-agent Delta cards      |
+| `FederatedGraphSync` | JSON | none (single-writer file)         | Graph sync state + exports   |
 
 All state is externalized to the filesystem. In-memory runner state is
 temporary only — every meaningful event persists to disk before the caller

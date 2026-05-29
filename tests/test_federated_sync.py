@@ -190,6 +190,12 @@ def test_export_import_sync_message():
         assert len(imported.changes) == len(message.changes)
 
 
+def test_import_sync_message_oserror_returns_none(tmp_path: Path):
+    sync = FederatedGraphSync(str(tmp_path), 'agent-1')
+    missing = tmp_path / 'does-not-exist.json'
+    assert sync.import_sync_message(missing) is None
+
+
 def test_sync_state_persistence():
     with tempfile.TemporaryDirectory() as tmpdir:
         sync1 = FederatedGraphSync(tmpdir, 'agent-1')

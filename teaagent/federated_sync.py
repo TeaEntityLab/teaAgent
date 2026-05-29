@@ -447,7 +447,8 @@ class FederatedGraphSync:
                 sequence_number=data['sequence_number'],
                 graph_version=data['graph_version'],
             )
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, OSError):
+            logger.warning('Failed to import sync message from %s', path)
             return None
 
     def broadcast_approval_request(

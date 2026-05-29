@@ -140,7 +140,7 @@ TeaAgent includes cognitive evolution features for adaptive multi-agent systems:
 - Graceful fallback when validation tools are unavailable
 
 **Cross-Sandbox Context Bus:**
-- Real-time Delta sharing between parallel agents via WAL-mode SQLite
+- Real-time Delta sharing between parallel agents via WAL-mode SQLite (per-thread connections; see `docs/context-bus-and-federated-sync.md`)
 - Delta cards for code changes, discoveries, errors, and context updates
 - Filtered subscriptions by agent, type, and timestamp
 - Automatic RAG archive after workflow completion

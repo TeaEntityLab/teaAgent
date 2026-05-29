@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import threading
 from pathlib import Path
 
 from teaagent.context_bus import (
@@ -167,6 +168,37 @@ class TestContextBus:
 
             assert bus.get_delta_count() == 0
 
+            bus.close()
+
+    def test_parallel_publish_from_threads(self):
+        """Concurrent publishes use per-thread SQLite connections."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / 'context_bus.db'
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
+            bus = ContextBus(config)
+            errors: list[Exception] = []
+
+            def publish(i: int) -> None:
+                try:
+                    bus.publish_delta(
+                        DeltaCard(
+                            delta_id=f'delta-{i}',
+                            delta_type=DeltaType.DISCOVERY,
+                            source_agent=f'agent-{i % 3}',
+                            content=f'content-{i}',
+                        )
+                    )
+                except Exception as exc:  # pragma: no cover - surfaced below
+                    errors.append(exc)
+
+            threads = [threading.Thread(target=publish, args=(i,)) for i in range(12)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            assert not errors
+            assert bus.get_delta_count() == 12
             bus.close()
 
     def test_delta_card_metadata(self):
