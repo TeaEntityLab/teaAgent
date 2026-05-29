@@ -64,6 +64,11 @@ def register(
     fail_list.add_argument(
         '--active-only', action='store_true', help='Hide expired/invalidated cards.'
     )
+    fail_list.add_argument(
+        '--confidence-filter', 
+        choices=['low', 'medium', 'high'],
+        help='Filter by confidence level.'
+    )
     fail_list.set_defaults(func=handlers['failures_list'])
 
     fail_show = fail_subs.add_parser('show', help='Show one failure card.')
@@ -88,3 +93,12 @@ def register(
     )
     fail_auto.add_argument('--root', default='.', help='Workspace root.')
     fail_auto.set_defaults(func=handlers['failures_auto_invalidate'])
+
+    fail_review = fail_subs.add_parser(
+        'review', help='Review active failure cards for curation decisions.'
+    )
+    fail_review.add_argument('--root', default='.', help='Workspace root.')
+    fail_review.add_argument(
+        '--limit', type=int, default=10, help='Maximum cards to review.'
+    )
+    fail_review.set_defaults(func=handlers['failures_review'])

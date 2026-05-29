@@ -23,6 +23,7 @@ class ToolAnnotations:
     read_only: bool = False
     destructive: bool = False
     idempotent: bool = False
+    security_tier: str = "Medium"  # Low, Medium, High, Critical
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,24 @@ class ToolDefinition:
     annotations: ToolAnnotations
     handler: ToolHandler
     rate_limit: Optional[ToolRateLimit] = None
+    capability_manifest: Optional[dict[str, Any]] = None  # Declared capabilities for security tier mapping
+
+    def get_security_tier(self) -> str:
+        """Calculate security tier based on capability manifest and annotations."""
+        if self.capability_manifest:
+            declared_tier = self.capability_manifest.get('security_tier')
+            if declared_tier in {'Low', 'Medium', 'High', 'Critical'}:
+                return declared_tier
+        
+        # Default tier calculation based on annotations
+        if self.annotations.destructive:
+            if self.annotations.read_only:
+                return 'Critical'  # Contradictory state is critical
+            return 'High'
+        elif self.annotations.read_only:
+            return 'Low'
+        else:
+            return 'Medium'
 
 
 class _RateLimiterState:

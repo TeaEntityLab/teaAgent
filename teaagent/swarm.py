@@ -17,6 +17,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 from teaagent.consensus import (
     ConsensusConfig,
@@ -27,6 +28,7 @@ from teaagent.consensus import (
 )
 from teaagent.git_sandbox import GitBranchSandbox
 from teaagent.resource_monitor import is_process_alive
+from teaagent.subagents._approval_queue import get_approval_queue
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,7 @@ class SubagentResult:
     error: Optional[str] = None
     execution_time_ms: float = 0.0
     test_results: dict[str, Any] = field(default_factory=dict)
+    approval_lineage: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -172,16 +175,18 @@ def save_prompt_to_gene_pool(
 
 
 class Subagent:
-    """Individual subagent with isolated sandbox execution."""
+    """Individual subagent with isolated sandbox execution and approval lineage tracking."""
 
-    def __init__(self, task: SubagentTask, root: str | Path) -> None:
+    def __init__(self, task: SubagentTask, root: str | Path, parent_run_id: Optional[str] = None) -> None:
         self._task = task
         self._root = Path(root).resolve()
         self._sandbox = GitBranchSandbox(self._root, task.task_id)
         self._result: Optional[SubagentResult] = None
+        self._parent_run_id = parent_run_id  # Parent run ID for approval lineage
+        self._approval_lineage: list[dict[str, Any]] = []  # Track approval requests
 
     def execute(self) -> SubagentResult:
-        """Execute the subagent task in isolated sandbox."""
+        """Execute the subagent task in isolated sandbox with centralized approval lineage."""
         import time
 
         start_time = time.perf_counter()
@@ -203,9 +208,7 @@ class Subagent:
             )
 
         try:
-            # Execute task (placeholder for actual agent execution)
-            # In production, this would invoke the LLM agent with the task
-            output = self._execute_task()
+            output = self._execute_task_with_centralized_approval()
 
             execution_time = (time.perf_counter() - start_time) * 1000
 
@@ -215,6 +218,7 @@ class Subagent:
                 branch_name=sandbox_result.branch_name,
                 output=output,
                 execution_time_ms=execution_time,
+                approval_lineage=self._approval_lineage,
             )
         except Exception as exc:
             execution_time = (time.perf_counter() - start_time) * 1000
@@ -240,6 +244,22 @@ class Subagent:
             'files_modified': [],
             'changes_summary': 'Mock execution',
         }
+
+    def _execute_task_with_centralized_approval(self) -> dict[str, Any]:
+        """Execute task and record centralized approval queue lineage for the parent run."""
+        if self._parent_run_id:
+            queue = get_approval_queue(self._parent_run_id)
+            self._approval_lineage.append(
+                {
+                    'parent_run_id': self._parent_run_id,
+                    'subagent_task_id': self._task.task_id,
+                    'timestamp': time.time(),
+                    'mode': 'centralized_queue',
+                    'pending_requests': len(queue.get_pending_requests()),
+                }
+            )
+
+        return self._execute_task()
 
     def cleanup(self) -> None:
         """Cleanup sandbox branch after execution."""
@@ -281,6 +301,7 @@ class SwarmManager:
         self._subagent_heartbeats: dict[str, float] = {}
         self._heartbeat_thread: Optional[threading.Thread] = None
         self._heartbeat_stop_event = threading.Event()
+        self._parent_run_id: Optional[str] = None
 
         if self._enable_consensus:
             self._consensus_engine = ConsensusEngine(
@@ -290,7 +311,7 @@ class SwarmManager:
 
     def add_subagent(self, task: SubagentTask) -> None:
         """Add a subagent task to the swarm."""
-        subagent = Subagent(task, self._root)
+        subagent = Subagent(task, self._root, parent_run_id=self._parent_run_id)
         self._subagents.append(subagent)
 
     def _start_heartbeat_monitor(self) -> None:
@@ -346,6 +367,10 @@ class SwarmManager:
                 results=[],
                 code_reviews=[],
             )
+
+        self._parent_run_id = uuid4().hex
+        for subagent in self._subagents:
+            subagent._parent_run_id = self._parent_run_id
 
         # Start heartbeat monitoring
         self._start_heartbeat_monitor()

@@ -7,6 +7,11 @@ from typing import Any, Optional
 
 from teaagent.llm import LLMAdapter
 from teaagent.run_store import RunStore
+from teaagent.subagent_run_context import get_parallel_approval_mode
+from teaagent.subagents._approval_queue import (
+    make_centralized_subagent_approval_handler,
+    should_use_centralized_approval,
+)
 from teaagent.subagents._isolation import (
     new_isolation_session_key,
     normalize_subagent_isolation,
@@ -150,6 +155,42 @@ class SubagentManager:
                 ),
             )
 
+        task_spec = task
+        if sub_def and sub_def.system_prompt.strip():
+            task_spec = f'[{sub_def.name} role]\n{sub_def.system_prompt.strip()}\n\n---\n\nTask: {task}'
+
+        child_depth = depth + 1
+        worktree_rel: Optional[str] = None
+        container_rel: Optional[str] = None
+        if iso_ctx.worktree_path is not None:
+            worktree_rel = _path_relative_to_root(iso_ctx.worktree_path, self._root)
+        if iso_ctx.container_path is not None:
+            container_rel = _path_relative_to_root(iso_ctx.container_path, self._root)
+
+        use_centralized = should_use_centralized_approval(
+            parent_run_id=parent_run_id,
+            batch_index=batch_index,
+            parallel_mode=get_parallel_approval_mode(),
+        )
+        approval_handler = self._parent_config.approval_handler
+        if use_centralized:
+            permission_mode = (
+                sub_def.permission_mode
+                if sub_def and sub_def.permission_mode is not None
+                else self._parent_config.permission_mode
+            )
+            approval_handler = make_centralized_subagent_approval_handler(
+                parent_run_id=parent_run_id,
+                subagent_id=f'{parent_run_id}:{def_used}:{batch_index or 0}',
+                subagent_name=def_used,
+                permission_mode=str(
+                    getattr(permission_mode, 'value', permission_mode)
+                ),
+                isolation=isolation,
+                batch_index=batch_index,
+                worktree_path=worktree_rel,
+            )
+
         sub_config = replace(
             self._parent_config,
             root=iso_ctx.child_root,
@@ -165,19 +206,9 @@ class SubagentManager:
                 if sub_def and sub_def.permission_mode is not None
                 else self._parent_config.permission_mode
             ),
+            approval_handler=approval_handler,
         )
 
-        task_spec = task
-        if sub_def and sub_def.system_prompt.strip():
-            task_spec = f'[{sub_def.name} role]\n{sub_def.system_prompt.strip()}\n\n---\n\nTask: {task}'
-
-        child_depth = depth + 1
-        worktree_rel: Optional[str] = None
-        container_rel: Optional[str] = None
-        if iso_ctx.worktree_path is not None:
-            worktree_rel = _path_relative_to_root(iso_ctx.worktree_path, self._root)
-        if iso_ctx.container_path is not None:
-            container_rel = _path_relative_to_root(iso_ctx.container_path, self._root)
         lineage = SubagentLineage(
             parent_run_id=parent_run_id,
             def_name=def_used,

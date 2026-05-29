@@ -61,6 +61,7 @@ class WorkflowStep:
     agent_name: str
     tools: tuple[str, ...] = field(default_factory=tuple)
     dependencies: tuple[int, ...] = field(default_factory=tuple)
+    validation_profile: str = 'standard'  # fast, standard, or strict
 
 
 @dataclass

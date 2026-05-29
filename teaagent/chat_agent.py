@@ -501,6 +501,18 @@ def run_chat_agent(
             'plan_content_hash': plan_contract.get('content_hash'),
         }
     try:
+        # Pass plan_contract to runner for policy validation
+        if plan_contract and isinstance(plan_contract, dict):
+            from teaagent.plan import PlanContract
+            # Reconstruct PlanContract from dict for runner use
+            runner._plan_contract = PlanContract(
+                path=Path(plan_contract.get('path', '')),
+                rel_path=plan_contract.get('rel_path', ''),
+                content_hash=plan_contract.get('content_hash', ''),
+                task=plan_contract.get('task', ''),
+                file_targets=frozenset(plan_contract.get('file_targets', [])),
+            )
+        
         result = runner.run(
             task=task,
             decide=lambda context: engine.decide(with_memories(context, memories)),

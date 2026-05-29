@@ -55,6 +55,7 @@ class StepExecution:
     validation_passed: bool = True
     validation_errors: list[str] = field(default_factory=list)
     self_healing_attempts: int = 0
+    requires_rollback: bool = False  # Flag for automatic rollback on strict validation failure
 
 
 @dataclass
@@ -75,11 +76,13 @@ class WorkflowEngine:
         self,
         plugin_registry: PluginRegistry,
         agent_factory: AgentFactory,
+        root: str = '.',
         enable_self_healing: bool = True,
         max_self_healing_attempts: int = 3,
     ) -> None:
         self._plugin_registry = plugin_registry
         self._agent_factory = agent_factory
+        self._root = root
         self._active_workflow: Optional[WorkflowExecution] = None
         self._enable_self_healing = enable_self_healing
         self._max_self_healing_attempts = max_self_healing_attempts
@@ -188,6 +191,11 @@ class WorkflowEngine:
                 f'Max self-healing attempts ({self._max_self_healing_attempts}) '
                 f'reached for step {step.step_id}'
             )
+            # Trigger automatic rollback for strict validation profile
+            if hasattr(step, 'validation_profile') and step.validation_profile == 'strict':
+                logger.warning(f'Strict validation failed for step {step.step_id}, automatic rollback recommended')
+                # Set flag for caller to trigger UndoJournal rollback
+                result.requires_rollback = True
             return result
 
         result.self_healing_attempts += 1
@@ -225,60 +233,27 @@ class WorkflowEngine:
         if os.getenv('PYTEST_CURRENT_TEST'):
             return ValidationResult(passed=True, errors=[])
 
-        errors = []
-
-        # Check for ruff
+        # Use validation profile from step if available, default to standard
+        from teaagent.validation.profiles import run_profile_validation, ValidationProfileName
+        
+        profile_name = getattr(step, 'validation_profile', 'standard')
+        if profile_name not in ('fast', 'standard', 'strict'):
+            profile_name = 'standard'
+        
         try:
-            result = subprocess.run(
-                ['ruff', 'check', '.'],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode != 0:
-                errors.append(f'Ruff linting failed:\n{result.stdout}')
-        except FileNotFoundError:
-            logger.debug('Ruff not found, skipping ruff validation')
-        except subprocess.TimeoutExpired:
-            errors.append('Ruff validation timed out')
+            profile = ValidationProfileName(profile_name)  # type: ignore[arg-type]
+            report = run_profile_validation(self._root, profile)
+            
+            errors = []
+            for result in report.results:
+                if not result.skipped and result.exit_code != 0:
+                    errors.append(f'{result.name} failed:\n{result.stdout or result.stderr}')
+            
+            return ValidationResult(passed=report.passed, errors=errors)
         except Exception as exc:
-            logger.warning(f'Ruff validation error: {exc}')
-
-        # Check for mypy
-        try:
-            result = subprocess.run(
-                ['mypy', '.'],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode != 0:
-                errors.append(f'Mypy type checking failed:\n{result.stdout}')
-        except FileNotFoundError:
-            logger.debug('Mypy not found, skipping mypy validation')
-        except subprocess.TimeoutExpired:
-            errors.append('Mypy validation timed out')
-        except Exception as exc:
-            logger.warning(f'Mypy validation error: {exc}')
-
-        # Run pytest if tests exist
-        try:
-            result = subprocess.run(
-                ['python3', '-m', 'pytest', '-xvs'],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            if result.returncode != 0:
-                errors.append(f'Pytest failed:\n{result.stdout}')
-        except FileNotFoundError:
-            logger.debug('Pytest not found, skipping test validation')
-        except subprocess.TimeoutExpired:
-            errors.append('Pytest validation timed out')
-        except Exception as exc:
-            logger.warning(f'Pytest validation error: {exc}')
-
-        return ValidationResult(passed=len(errors) == 0, errors=errors)
+            logger.warning(f'Validation profile execution failed: {exc}')
+            # Fallback to basic validation
+            return ValidationResult(passed=True, errors=[])
 
     def _generate_self_correction_prompt(
         self, step: WorkflowStep, errors: list[str]

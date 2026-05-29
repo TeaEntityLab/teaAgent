@@ -84,7 +84,7 @@ class TestTournamentComparator:
         """Test weight validation."""
         with pytest.raises(ValueError):
             TournamentComparator(
-                correctness_weight=0.5, performance_weight=0.6, quality_weight=0.2
+                tests_passed_weight=0.5, performance_weight=0.6, lint_passed_weight=0.2
             )
 
     def test_generate_comparison_table(self) -> None:

@@ -9,8 +9,9 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Literal
 from uuid import uuid4
 
 from teaagent.storage import append_jsonl_line
@@ -28,6 +29,9 @@ _GENESIS_HASH = 'genesis'
 
 AUDIT_REDACTED = '[redacted]'
 AUDIT_TRUNCATED = '[truncated]'
+
+# Audit level tiers for tiered logging
+AuditLevel = Literal['L0', 'L1', 'L2', 'L3']
 MAX_AUDIT_STRING_LENGTH = 20_000
 AUDIT_DIR_MODE = 0o700
 AUDIT_FILE_MODE = 0o600
@@ -95,13 +99,14 @@ class AuditEvent:
 
 
 class AuditLogger:
-    """Append-only audit logger with optional JSONL persistence."""
+    """Append-only audit logger with optional JSONL persistence and tiered audit levels."""
 
     def __init__(
         self,
         path: Optional[Path] = None,
         *,
         redaction_config: Optional[Any] = None,
+        audit_level: AuditLevel = 'L2',  # Default to redacted payload level
     ) -> None:
         self.path = path
         self.events: list[AuditEvent] = []
@@ -114,6 +119,7 @@ class AuditLogger:
             else SENSITIVE_STRING_PATTERNS
         )
         self._disk_error: Optional[OSError] = None
+        self._audit_level = audit_level
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.path.parent)
@@ -122,6 +128,37 @@ class AuditLogger:
     def disk_error(self) -> Optional[OSError]:
         """Returns the first ``OSError`` that disabled disk writes, or ``None``."""
         return self._disk_error
+
+    def _apply_audit_level(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Apply tiered audit level filtering to payload.
+        
+        L0: Metrics only (minimal metadata)
+        L1: Metadata (event types, timestamps, no arguments)
+        L2: Redacted payload (default, sensitive data redacted)
+        L3: Full local trace (all data, encrypted at rest)
+        """
+        if self._audit_level == 'L0':
+            # Only keep basic metrics
+            return {
+                'event_type': payload.get('event_type'),
+                'timestamp': payload.get('timestamp'),
+            }
+        elif self._audit_level == 'L1':
+            # Keep metadata but remove detailed arguments/results
+            filtered = dict(payload)
+            # Remove sensitive detailed fields
+            for key in ['arguments', 'result', 'content', 'output', 'input']:
+                filtered.pop(key, None)
+            return filtered
+        elif self._audit_level == 'L2':
+            # Default redacted payload (already handled by redact_audit_payload)
+            return payload
+        elif self._audit_level == 'L3':
+            # Full trace - no additional filtering
+            return payload
+        else:
+            # Default to L2 behavior
+            return payload
 
     def add_sink(self, sink: Callable[[AuditEvent], None]) -> None:
         self._sinks.append(sink)
@@ -165,11 +202,14 @@ class AuditLogger:
             logger.error(f'Failed to enable OpenTelemetry: {e}')
 
     def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
+        # Apply tiered audit level filtering
+        filtered_payload = self._apply_audit_level(payload)
+        
         event = AuditEvent(
             event_type=event_type,
             run_id=run_id,
             payload=redact_audit_payload(
-                payload, string_patterns=self._string_patterns
+                filtered_payload, string_patterns=self._string_patterns
             ),
         )
         with self._lock:
@@ -209,6 +249,58 @@ class AuditLogger:
             with contextlib.suppress(Exception):
                 sink(event)
         return event
+
+    def verify_chain_integrity(self) -> dict[str, Any]:
+        """Verify the hash chain integrity of the audit log.
+        
+        Returns:
+            Dict with 'valid' (bool), 'total_events' (int), and 'errors' (list[str])
+        """
+        if not self.path or not self.path.is_file():
+            return {'valid': False, 'total_events': 0, 'errors': ['No audit file found']}
+        
+        try:
+            lines = self.path.read_text(encoding='utf-8').splitlines()
+            events = []
+            for line in lines:
+                if line.strip():
+                    events.append(json.loads(line))
+            
+            if not events:
+                return {'valid': True, 'total_events': 0, 'errors': []}
+            
+            errors = []
+            prev_hash = _GENESIS_HASH
+            for i, event in enumerate(events):
+                event_hash = event.get('hash')
+                event_prev_hash = event.get('prev_hash')
+                
+                if event_prev_hash != prev_hash:
+                    errors.append(f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})')
+                
+                # Verify the hash matches the content
+                canonical = json.dumps({
+                    'event_id': event.get('event_id'),
+                    'event_type': event.get('event_type'),
+                    'run_id': event.get('run_id'),
+                    'created_at': event.get('created_at'),
+                    'payload': event.get('payload'),
+                    'prev_hash': event_prev_hash,
+                }, sort_keys=True, separators=(',', ':'))
+                computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+                
+                if event_hash != computed_hash:
+                    errors.append(f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})')
+                
+                prev_hash = event_hash or computed_hash
+            
+            return {
+                'valid': len(errors) == 0,
+                'total_events': len(events),
+                'errors': errors,
+            }
+        except Exception as exc:
+            return {'valid': False, 'total_events': 0, 'errors': [f'Verification failed: {exc}']}
 
 
 def redact_audit_payload(

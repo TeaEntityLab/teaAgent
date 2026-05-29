@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import time
 
 import pytest
+from cryptography.fernet import Fernet
 
 from teaagent.hooks import HookError, HookRegistry, mcp_tool_filter_hook
 from teaagent.mcp_trust import (
@@ -63,18 +65,27 @@ def test_failure_card_auto_reviewer_never_blocks() -> None:
 
 
 def test_mcp_trust_policy_persist_and_hook_blocks(tmp_path) -> None:
-    policy = load_mcp_trust_policy(tmp_path)
-    update_global_tools(policy, deny=['blocked_tool'])
-    save_mcp_trust_policy(tmp_path, policy)
-    reloaded = load_mcp_trust_policy(tmp_path)
-    assert 'blocked_tool' in reloaded.denied_tools
+    # Set up test encryption key for MCP trust policy (must be valid Fernet key)
+    test_key = Fernet.generate_key()
+    os.environ['TEAAGENT_MCP_TRUST_KEY'] = test_key.decode('utf-8')
+    
+    try:
+        policy = load_mcp_trust_policy(tmp_path)
+        update_global_tools(policy, deny=['blocked_tool'])
+        save_mcp_trust_policy(tmp_path, policy)
+        reloaded = load_mcp_trust_policy(tmp_path)
+        assert 'blocked_tool' in reloaded.denied_tools
 
-    registry = HookRegistry()
-    registry.register_pre_hook(
-        mcp_tool_filter_hook(
-            allowed_tools=frozenset(),
-            blocked_tools=frozenset({'blocked_tool'}),
+        registry = HookRegistry()
+        registry.register_pre_hook(
+            mcp_tool_filter_hook(
+                allowed_tools=frozenset(),
+                blocked_tools=frozenset({'blocked_tool'}),
+            )
         )
-    )
-    with pytest.raises(HookError):
-        registry.run_pre_hooks('blocked_tool', {})
+        with pytest.raises(HookError):
+            registry.run_pre_hooks('blocked_tool', {})
+    finally:
+        # Clean up test environment variable
+        if 'TEAAGENT_MCP_TRUST_KEY' in os.environ:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']

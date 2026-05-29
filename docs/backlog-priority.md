@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-24 (competitive gap closure complete)
+Last updated: 2026-05-29 (5-Loop Governance Hardening completed)
 
 ---
 
@@ -44,12 +44,48 @@ Items below were deferred at baseline and have since been implemented in-repo.
 | Hook lifecycle acceptance elevation (16 tests: PreToolUse veto, PostToolUse chaining, permission_check_hook deny/allow/patterns, all 8 Claude Code events, registry enabled flag) | P1 | `tests/acceptance/test_hook_lifecycle_flow.py` |
 | Architecture comparison matrix documenting TeaAgent vs Claude Code/Codex/OpenCode feature coverage | P2 | `docs/architecture.md` |
 | Use-case matrix updated with LSP, sub-agent orchestration, mtime guard, and protected paths entries | P2 | `docs/use-cases.md`, `docs/use-case-matrix.md` |
+| 5-Loop Governance Hardening (Tool, Coding, Audit, Memory, Swarm) | P0 | `teaagent/tools.py`, `teaagent/governance/tool_lint.py`, `teaagent/selftest.py`, `teaagent/plan_mode.py`, `teaagent/workflow_engine.py`, `teaagent/audit.py`, `teaagent/memory/failure_card.py`, `teaagent/swarm.py`, `teaagent/tournament/`, `docs/architecture.md` |
 
 ---
 
 ## Open — High (P0)
 
 _No open P0 items._
+
+---
+
+## Future Roadmap — Phase 4-5 (Not Yet Implemented)
+
+The following items are planned for future evolution but not yet implemented. See [architecture.md](architecture.md#future-roadmap-phase-4-5) for detailed specifications.
+
+### Phase 4: Federated Swarm Consensus & Peer Attestations
+
+| Task | Priority | Description | Files |
+|------|----------|-------------|-------|
+| Consensus Data Structures | P1 | Define core data structures for consensus system (peers, votes, proposals, state) | `teaagent/consensus.py`, `tests/test_consensus.py` |
+| Peer Identity Management | P1 | Implement peer registration and SSH key verification with cryptographic validation | `teaagent/consensus.py`, `teaagent/swarm.py` |
+| Voting Mechanism | P1 | Implement voting logic for proposals with threshold checking and timeout handling | `teaagent/consensus.py` |
+| Consensus Engine | P0 | Core consensus engine with state management, attestation signatures, and conflict resolution | `teaagent/consensus.py` |
+| Swarm Integration | P0 | Integrate consensus into existing swarm orchestration with fallback mechanisms | `teaagent/swarm.py`, `teaagent/runner/_core.py` |
+| CLI Commands for Consensus | P2 | Add CLI commands for consensus management (peers list/add/remove, consensus status/history) | `teaagent/cli/_handlers/_swarm.py`, `teaagent/cli/_swarm_parsers.py` |
+
+### Phase 5: Hardened Sandbox Virtualization
+
+| Task | Priority | Description | Files |
+|------|----------|-------------|-------|
+| Docker Resource Limits | P1 | Add CPU and memory resource constraints to Docker isolation with health monitoring | `teaagent/subagents/_isolation.py` |
+| WASM Runtime Wrapper | P0 | Create lightweight WASM runtime for Python-compatible modules with memory isolation | `teaagent/wasm_runtime.py` |
+| Skill Execution Routing | P1 | Route skills to appropriate sandbox based on risk level with fallback mechanisms | `teaagent/skill_loader.py`, `teaagent/subagents/_isolation.py` |
+| Resource Monitoring | P2 | Implement real-time resource usage tracking with per-sandbox accounting and alerting | `teaagent/subagents/_isolation.py`, `teaagent/telemetry/` |
+| CLI Commands for Sandbox | P2 | Add CLI commands for sandbox configuration and monitoring | `teaagent/cli/_handlers/_isolation.py`, `teaagent/cli/_isolation_parsers.py` |
+
+### Verification Tasks
+
+| Task | Priority | Description | Files |
+|------|----------|-------------|-------|
+| Consensus Integration Tests | P2 | End-to-end testing of consensus system with full swarm workflow | `tests/acceptance/test_consensus_flow.py` |
+| Sandbox Integration Tests | P2 | End-to-end testing of sandbox enhancements with skill execution | `tests/acceptance/test_sandbox_enhancement_flow.py` |
+| Documentation Updates | P2 | Update CLI docs, API docs, and examples for new features | `docs/cli.md`, `docs/api.md`, `docs/USAGE.md` |
 
 ---
 

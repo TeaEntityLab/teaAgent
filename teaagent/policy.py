@@ -151,6 +151,7 @@ class ApprovalPolicy:
         destructive: bool,
         arguments: dict[str, Any] | None = None,
         jit_state: JITApprovalState | None = None,
+        plan_contract: Any = None,  # PlanContract if available
     ) -> None:
         if not destructive:
             return
@@ -164,6 +165,14 @@ class ApprovalPolicy:
                 'workspace_apply_patch',
                 'workspace_edit_at_hash',
             }:
+                # Check plan contract file target validation
+                if plan_contract and arguments:
+                    file_path = arguments.get('path') if isinstance(arguments, dict) else None
+                    if file_path and not plan_contract.allows_file_write(file_path):
+                        raise ToolPermissionError(
+                            f"Tool '{tool_name}' targeting '{file_path}' is not in approved plan file targets. "
+                            f"Plan: {plan_contract.rel_path}"
+                        )
                 return
             raise ToolPermissionError(
                 f"Tool '{tool_name}' requires prompt/allow/danger-full-access permission mode."

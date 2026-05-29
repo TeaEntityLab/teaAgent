@@ -22,14 +22,32 @@ class PlanContract:
     rel_path: str
     content_hash: str
     task: str
+    file_targets: frozenset[str] = frozenset()  # Approved file targets for write operations
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, str | list[str]]:
         return {
             'path': str(self.path),
             'rel_path': self.rel_path,
             'content_hash': self.content_hash,
             'task': self.task,
+            'file_targets': sorted(self.file_targets),
         }
+    
+    def allows_file_write(self, file_path: str) -> bool:
+        """Check if a file path is within the approved target list."""
+        if not self.file_targets:
+            # If no specific targets specified, allow all (backward compatibility)
+            return True
+        
+        # Check if the file path matches any approved target
+        # Support both exact matches and directory prefixes
+        for target in self.file_targets:
+            if file_path == target:
+                return True
+            if file_path.startswith(target + '/') or file_path.startswith(target + '\\'):
+                return True
+        
+        return False
 
 
 def plan_content_hash(content: str) -> str:
@@ -68,11 +86,36 @@ def load_plan_contract(
         raise ValueError('plan artifact missing **Task:** line in Summary section')
     task = match.group(1).strip()
     rel_path = path.relative_to(workspace).as_posix()
+    
+    # Extract file targets from plan content (if specified in "Files likely touched" section)
+    file_targets = frozenset()
+    if 'Files likely touched' in content:
+        # Simple extraction: look for file paths in the relevant section
+        lines = content.split('\n')
+        in_files_section = False
+        for line in lines:
+            if 'Files likely touched' in line:
+                in_files_section = True
+                continue
+            if in_files_section:
+                if line.strip().startswith('##') or line.strip().startswith('#'):
+                    break
+                # Extract file paths from markdown list items
+                if line.strip().startswith('-') or line.strip().startswith('*'):
+                    # Remove markdown formatting and extract path
+                    cleaned = line.strip().lstrip('-*').strip()
+                    # Remove backticks and extra text
+                    if '`' in cleaned:
+                        cleaned = cleaned.split('`')[1] if '`' in cleaned else cleaned.split('`')[0]
+                    if cleaned and not cleaned.endswith('(discover relevant tests)'):
+                        file_targets = file_targets | {cleaned}
+    
     return PlanContract(
         path=path,
         rel_path=rel_path,
         content_hash=plan_content_hash(content),
         task=task,
+        file_targets=file_targets,
     )
 
 

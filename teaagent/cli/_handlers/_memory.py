@@ -78,6 +78,12 @@ def memory_failures_list_command(args: argparse.Namespace) -> int:
 
     storage = FailureCardStorage(args.root)
     cards = storage.list_active() if args.active_only else storage.list_all()
+    
+    # Add confidence filtering if requested
+    confidence_filter = getattr(args, 'confidence_filter', None)
+    if confidence_filter:
+        cards = [card for card in cards if card.confidence == confidence_filter]
+    
     print_json([card.to_dict() for card in cards])
     return 0
 
@@ -150,6 +156,54 @@ def memory_failures_auto_invalidate_command(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def memory_failures_review_command(args: argparse.Namespace) -> int:
+    from teaagent.memory.failure_card import FailureCardStorage
+
+    storage = FailureCardStorage(args.root)
+    cards = storage.list_active()[:args.limit]
+    
+    review_results = []
+    for card in cards:
+        review_results.append({
+            'card_id': card.id,
+            'error_type': card.error_type,
+            'file_path': card.file_path,
+            'confidence': card.confidence,
+            'effective_behavior': card.effective_behavior(),
+            'is_active': card.is_active(),
+            'expires_at': card.expires_at,
+            'recommendation': _get_review_recommendation(card),
+        })
+    
+    print_json({
+        'status': 'ok',
+        'total_reviewed': len(review_results),
+        'cards': review_results,
+    })
+    return 0
+
+
+def _get_review_recommendation(card) -> str:
+    """Generate curation recommendation for a failure card."""
+    if not card.is_active():
+        return 'already_inactive'
+    
+    if card.confidence == 'low':
+        if card.effective_behavior() == 'block':
+            return 'downgrade_to_warning'  # Low confidence should not block
+        return 'keep_monitoring'
+    
+    if card.confidence == 'medium':
+        if card.effective_behavior() == 'block':
+            return 'consider_downgrade'  # Medium confidence blocking may be too aggressive
+        return 'keep_monitoring'
+    
+    if card.confidence == 'high':
+        return 'keep'  # High confidence cards are valuable
+    
+    return 'review_manually'
 
 
 def print_json(value: Any) -> None:

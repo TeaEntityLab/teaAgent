@@ -32,32 +32,44 @@ class ComparisonResult:
 
 
 class TournamentComparator:
-    """Comparator for tournament approaches."""
+    """Comparator for tournament approaches with weighted security-aware schema."""
 
     def __init__(
         self,
-        correctness_weight: float = 0.5,
-        performance_weight: float = 0.3,
-        quality_weight: float = 0.2,
+        tests_passed_weight: float = 0.40,
+        performance_weight: float = 0.15,
+        lint_passed_weight: float = 0.10,
+        diff_size_weight: float = 0.10,
+        architectural_fit_weight: float = 0.15,
+        security_risk_weight: float = 0.10,
     ) -> None:
-        """Initialize tournament comparator.
+        """Initialize tournament comparator with security-aware weighted schema.
 
         Args:
-            correctness_weight: Weight for correctness metric (0-1)
+            tests_passed_weight: Weight for test pass rate (0-1)
             performance_weight: Weight for performance metric (0-1)
-            quality_weight: Weight for code quality metric (0-1)
+            lint_passed_weight: Weight for lint pass rate (0-1)
+            diff_size_weight: Weight for diff size (smaller is better) (0-1)
+            architectural_fit_weight: Weight for architectural fit score (0-1)
+            security_risk_weight: Weight for security risk (lower is better) (0-1)
         """
-        self.correctness_weight = correctness_weight
+        self.tests_passed_weight = tests_passed_weight
         self.performance_weight = performance_weight
-        self.quality_weight = quality_weight
+        self.lint_passed_weight = lint_passed_weight
+        self.diff_size_weight = diff_size_weight
+        self.architectural_fit_weight = architectural_fit_weight
+        self.security_risk_weight = security_risk_weight
 
         # Validate weights sum to 1
-        total = correctness_weight + performance_weight + quality_weight
+        total = (
+            tests_passed_weight + performance_weight + lint_passed_weight +
+            diff_size_weight + architectural_fit_weight + security_risk_weight
+        )
         if abs(total - 1.0) > 0.01:
             raise ValueError(f'Weights must sum to 1.0, got {total}')
 
     def compare(self, metrics: List[BenchmarkMetrics]) -> List[ComparisonResult]:
-        """Compare approaches and calculate weighted scores.
+        """Compare approaches and calculate weighted scores using security-aware schema.
 
         Args:
             metrics: List of benchmark metrics for each approach
@@ -68,10 +80,20 @@ class TournamentComparator:
         results = []
 
         for metric in metrics:
+            # Calculate weighted score using available metrics
+            # Tests passed (40%), Performance (15%), Lint quality (10%)
+            # Code quality (15%), Diff size (10%), Security (10%)
+            lint_score = 1.0 if metric.lint_warnings == 0 else max(0.5, 1.0 - metric.lint_warnings / 20)
+            diff_score = max(0, 1.0 - min(metric.lines_changed / 1000, 1.0))  # Smaller is better
+            security_score = metric.correctness  # Higher correctness = lower security risk
+            
             weighted_score = (
-                metric.correctness * self.correctness_weight
-                + metric.performance * self.performance_weight
-                + metric.code_quality * self.quality_weight
+                metric.test_pass_rate * self.tests_passed_weight +
+                metric.performance * self.performance_weight +
+                lint_score * self.lint_passed_weight +
+                diff_score * self.diff_size_weight +
+                metric.code_quality * self.architectural_fit_weight +
+                security_score * self.security_risk_weight
             )
 
             result = ComparisonResult(

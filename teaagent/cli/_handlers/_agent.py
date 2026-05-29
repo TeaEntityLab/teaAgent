@@ -233,19 +233,36 @@ def _resolve_validation_profile(args: argparse.Namespace) -> Optional[str]:
 def _require_plan_gate(
     args: argparse.Namespace, plan_contract: Optional[PlanContract]
 ) -> Optional[int]:
-    if not getattr(args, 'require_plan', False):
-        return None
+    # Strict plan-before-write enforcement for workspace-write mode (user-approved)
     mode = parse_permission_mode(args.permission_mode)
     if mode == PermissionMode.READ_ONLY:
         return None
+    
+    # Check if strict plan enforcement is enabled (default for workspace-write)
+    require_plan = getattr(args, 'require_plan', False)
+    skip_plan_check = getattr(args, 'skip_plan_check', False)
+    
+    # If user explicitly skips plan check, allow it (with warning logged elsewhere)
+    if skip_plan_check:
+        return None
+    
+    # For workspace-write mode, enforce plan requirement by default
+    if mode == PermissionMode.WORKSPACE_WRITE and not require_plan:
+        # Auto-enable require_plan for workspace-write mode unless explicitly skipped
+        require_plan = True
+    
+    if not require_plan:
+        return None
+    
     if plan_contract is not None:
         return None
     print_json(
         {
             'status': 'error',
             'message': (
-                '--require-plan needs a bound plan. Run `teaagent plan` then '
-                '`teaagent run --from-plan .teaagent/plans/<file>.md --require-plan`.'
+                'Plan-before-write enforcement requires a bound plan. Run `teaagent plan` then '
+                '`teaagent run --from-plan .teaagent/plans/<file>.md --require-plan`. '
+                'Use --skip-plan-check to override (not recommended).'
             ),
         }
     )

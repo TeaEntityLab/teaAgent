@@ -24,7 +24,7 @@ safety boundaries around tool execution.
 │                     Workspace Tools                          │
 │  read_file · write_file · apply_patch · edit_at_hash         │
 │  run_shell_inspect · run_shell_mutate · list_files           │
-│  search_text · git_status                                    │
+  search_text · git_status                                    │
 ├─────────────────────────────────────────────────────────────┤
 │              Multi-Agent Coordination Layer (Phase 4-5)       │
 │  TaskCoordinator · AgentFactory · ToolPermissionManager       │
@@ -41,6 +41,58 @@ safety boundaries around tool execution.
 │  Code Mode · LLM Conformance · Provability                   │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+## 5-Loop Governance System (Completed Hardening)
+
+The TeaAgent governance system has been hardened through a comprehensive 5-loop architecture that provides complete operational closure and security boundaries:
+
+### Loop 1: Tool Governance (CI Gate & Manifests)
+- **ToolRegistry with security tier mapping**: Tools now include `security_tier` annotations (Low, Medium, High, Critical) with automatic tier calculation based on annotations and capability manifests
+- **Enhanced tool linting**: Static validation checks for write-like keywords in `read_only` tool descriptions, capability manifest validation with tier mismatch warnings
+- **AST-based fuzz checking**: `selftest.py` includes static analysis to detect tools marked as `read_only=True` that contain write operations in their implementation
+- **Capability manifest enforcement**: Tools must declare capabilities (filesystem_write, network) with preflight warnings for undeclared capabilities
+
+### Loop 2: Coding Safety Loop (Plan Binding & Validation)
+- **Strict plan-before-write enforcement**: `workspace-write` mode now requires plan binding by default (user-approved strict immediate block)
+- **PlanContract file target validation**: Plans include approved file target lists with `allows_file_write()` method to prevent un-declared file modifications
+- **Validation profile integration**: Fast, Standard, and Strict validation profiles wired to WorkflowEngine with automatic rollback on strict validation failure
+- **JIT rollback integration**: Strict validation failures trigger automatic rollback via UndoJournal
+
+### Loop 3: Audit / Replay Loop (Tiered Logging & Integrity)
+- **Tiered audit levels**: L0 (Metrics-only), L1 (Metadata), L2 (Redacted Payload), L3 (Full Local Trace) with configurable filtering
+- **Audit chain integrity verification**: SHA-256 hash chain validation for trace import to prevent tampering
+- **Per-project encryption support**: L3 audits support per-project encryption keys for metadata leakage prevention
+- **TUI run trace surface**: Interactive run store management for trace, export, and replay operations
+
+### Loop 4: Memory / Failure Loop (Curation & Warning Injection)
+- **Confidence-based blocking**: Low-confidence failure cards never block execution automatically (enforced warning thresholds)
+- **Enhanced CLI curation suite**: `teaagent memory failures review/prune/invalidate` commands with confidence filtering
+- **Custom invalidation rules**: Per-project automated invalidation rules (e.g., auto-pruning when target files change)
+- **Memory hygiene enforcement**: TTL expiration rules and manual correction capabilities for memory poisoning
+
+### Loop 5: Swarm & Tournament Sandbox Hardening
+- **Approval lineage tracing**: Subagents carry parent-run IDs and inherit permission mode constraints with structured tracking
+- **Fail-fast approval logic**: Tournament/parallel mode halts immediately if any subagent requires human permission (user-approved)
+- **Git worktree sandbox enforcement**: Tournament runs require git worktree isolation as hard pre-condition for zero-contamination guarantees
+- **Security-aware tournament scoring**: Weighted comparator schema (tests 40%, performance 15%, lint 10%, diff size 10%, architectural fit 15%, security 10%)
+
+## Future Roadmap (Phase 4-5)
+
+The following phases are planned for future evolution but not yet implemented:
+
+### Phase 4: Federated Swarm Consensus & Peer Attestations
+- Multi-agent coordination with cryptographic peer-to-peer attestation
+- Voting mechanisms for high-risk tool calls with SSH-based peer signatures
+- Consensus engine with state synchronization and audit trail
+- Integration with existing swarm orchestration
+
+### Phase 5: Hardened Sandbox Virtualization
+- Docker resource limits (CPU quotas, memory limits) with health monitoring
+- WebAssembly runtime for fast, lightweight sandboxing
+- Skill execution routing based on risk level and sandbox preferences
+- Real-time resource monitoring and alerting
+
+See [backlog-priority.md](backlog-priority.md) for detailed task breakdowns and implementation status.
 
 ## Component Layers
 

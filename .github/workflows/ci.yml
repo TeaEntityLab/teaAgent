@@ -176,6 +176,12 @@ jobs:
       - name: Run governance fuzz tests
         run: pytest tests/test_governance_fuzz.py -v
 
+      - name: Run tranche BC and approval queue integration tests
+        run: pytest tests/test_tranche_bc_governance.py tests/test_subagent_approval_queue_integration.py -v
+
+      - name: Run security selftest
+        run: teaagent selftest --root .
+
       - name: Run tool lint validation
         run: |
           # Create a temporary workspace to test tool lint

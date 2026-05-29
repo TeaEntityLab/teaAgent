@@ -88,7 +88,7 @@ class ParallelExecutor:
         index: int,
         results_lock: threading.Lock,
     ) -> None:
-        """Execute a single agent on a branch.
+        """Execute a single agent on a branch with git worktree sandbox enforcement.
 
         Args:
             task: The task description
@@ -98,12 +98,61 @@ class ParallelExecutor:
             results_lock: Lock for thread-safe result storage
         """
         start_time = time.time()
+        execution_root = self.root  # Use local variable to avoid affecting other threads
 
         try:
+            # Enforce git worktree sandboxing as hard pre-condition
+            # Check if branch is a worktree (not main branch)
+            try:
+                # Get current git branch
+                branch_check = subprocess.run(
+                    ['git', 'branch', '--show-current'],
+                    cwd=execution_root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                current_branch = branch_check.stdout.strip()
+                
+                # If we're on main/master, enforce worktree requirement
+                if current_branch in {'main', 'master'}:
+                    # Create a worktree for this tournament branch
+                    worktree_path = execution_root / '.teaagent' / 'worktrees' / branch
+                    try:
+                        subprocess.run(
+                            ['git', 'worktree', 'add', str(worktree_path), branch],
+                            cwd=execution_root,
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                        )
+                        # Use worktree as execution root
+                        execution_root = worktree_path
+                    except subprocess.CalledProcessError as exc:
+                        success = False
+                        output = ''
+                        error = f'Failed to create git worktree for tournament isolation: {exc.stderr}'
+                        execution_time = time.time() - start_time
+                        agent_result = AgentResult(
+                            approach_id=f'opt{index + 1}',
+                            branch_name=branch,
+                            success=success,
+                            output=output,
+                            error=error,
+                            execution_time=execution_time,
+                            metadata={'sandbox_enforced': False},
+                        )
+                        with results_lock:
+                            self.results.append(agent_result)
+                        return
+            except subprocess.CalledProcessError:
+                # If git check fails, proceed with warning
+                pass
+
             # Switch to branch
             subprocess.run(
                 ['git', 'checkout', branch],
-                cwd=self.root,
+                cwd=execution_root,
                 capture_output=True,
                 text=True,
                 check=True,
@@ -117,12 +166,12 @@ class ParallelExecutor:
                 'run',
                 f'{task} (approach: {hint})',
                 '--root',
-                str(self.root),
+                str(execution_root),
             ]
 
             result = subprocess.run(
                 command,
-                cwd=self.root,
+                cwd=execution_root,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
@@ -155,7 +204,7 @@ class ParallelExecutor:
             output=output,
             error=error,
             execution_time=execution_time,
-            metadata={},
+            metadata={'sandbox_enforced': True},
         )
 
         with results_lock:

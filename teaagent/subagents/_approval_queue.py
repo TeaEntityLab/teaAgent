@@ -15,11 +15,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 from uuid import uuid4
+
+from teaagent.runner._types import ApprovalHandler, ApprovalRequest
 
 logger = logging.getLogger(__name__)
 
@@ -113,13 +116,102 @@ class CentralizedApprovalQueue:
         self._requests: dict[str, SubagentApprovalRequest] = {}
         self._batches: dict[str, ApprovalBatch] = {}
         self._pending_futures: dict[str, asyncio.Future[bool]] = {}
+        self._sync_waiters: dict[str, threading.Event] = {}
+        self._sync_results: dict[str, bool] = {}
         self._lock = asyncio.Lock()
+        self._sync_lock = threading.Lock()
 
     def generate_request_id(self) -> str:
         return uuid4().hex
 
     def generate_batch_id(self) -> str:
         return uuid4().hex
+
+    def submit_request_sync(
+        self,
+        subagent_id: str,
+        subagent_name: str,
+        tool_name: str,
+        tool_arguments: dict[str, Any],
+        permission_mode: str,
+        isolation: str,
+        batch_index: Optional[int] = None,
+        worktree_path: Optional[str] = None,
+    ) -> bool:
+        """Submit a destructive tool request and block until approved/denied/timeout."""
+        request_id = self.generate_request_id()
+        request = SubagentApprovalRequest(
+            request_id=request_id,
+            subagent_id=subagent_id,
+            parent_run_id=self._parent_run_id,
+            subagent_name=subagent_name,
+            tool_name=tool_name,
+            tool_arguments=tool_arguments,
+            permission_mode=permission_mode,
+            isolation=isolation,
+            batch_index=batch_index,
+            worktree_path=worktree_path,
+        )
+        event = threading.Event()
+        with self._sync_lock:
+            self._requests[request_id] = request
+            self._sync_waiters[request_id] = event
+
+        logger.info(
+            'Submitted sync approval request %s from subagent %s for tool %s',
+            request_id,
+            subagent_name,
+            tool_name,
+        )
+
+        if not event.wait(timeout=request.timeout_seconds):
+            with self._sync_lock:
+                if request_id in self._requests:
+                    self._requests[request_id].status = ApprovalRequestStatus.TIMEOUT
+                self._sync_waiters.pop(request_id, None)
+                self._sync_results.pop(request_id, None)
+            logger.warning('Sync approval request %s timed out', request_id)
+            return False
+
+        with self._sync_lock:
+            result = self._sync_results.pop(request_id, False)
+            self._sync_waiters.pop(request_id, None)
+        return result
+
+    def approve_request_sync(
+        self, request_id: str, approved_by: str = 'human'
+    ) -> bool:
+        """Approve a pending sync request (parent TUI / CLI)."""
+        with self._sync_lock:
+            request = self._requests.get(request_id)
+            if not request or request.status != ApprovalRequestStatus.PENDING:
+                return False
+            request.status = ApprovalRequestStatus.APPROVED
+            request.approved_at = datetime.now(timezone.utc).isoformat()
+            self._sync_results[request_id] = True
+            event = self._sync_waiters.get(request_id)
+        if event is not None:
+            event.set()
+        logger.info('Approved sync request %s by %s', request_id, approved_by)
+        return True
+
+    def deny_request_sync(
+        self, request_id: str, reason: str = 'Denied by human'
+    ) -> bool:
+        """Deny a pending sync request (parent TUI / CLI)."""
+        with self._sync_lock:
+            request = self._requests.get(request_id)
+            if not request or request.status != ApprovalRequestStatus.PENDING:
+                return False
+            request.status = ApprovalRequestStatus.DENIED
+            request.denied_at = datetime.now(timezone.utc).isoformat()
+            request.denial_reason = reason
+            self._sync_results[request_id] = False
+            event = self._sync_waiters.get(request_id)
+        if event is not None:
+            event.set()
+        logger.info('Denied sync request %s: %s', request_id, reason)
+        return True
 
     async def submit_request(
         self,
@@ -383,6 +475,47 @@ async def get_approval_queue_async(parent_run_id: str) -> CentralizedApprovalQue
                 parent_run_id
             )
         return _approval_queues[parent_run_id]
+
+
+def make_centralized_subagent_approval_handler(
+    *,
+    parent_run_id: str,
+    subagent_id: str,
+    subagent_name: str,
+    permission_mode: str,
+    isolation: str,
+    batch_index: Optional[int] = None,
+    worktree_path: Optional[str] = None,
+) -> ApprovalHandler:
+    """Route destructive subagent tool prompts through the parent approval queue."""
+
+    queue = get_approval_queue(parent_run_id)
+
+    def handler(request: ApprovalRequest) -> bool:
+        return queue.submit_request_sync(
+            subagent_id=subagent_id,
+            subagent_name=subagent_name,
+            tool_name=request.tool_name,
+            tool_arguments=request.arguments,
+            permission_mode=permission_mode,
+            isolation=isolation,
+            batch_index=batch_index,
+            worktree_path=worktree_path,
+        )
+
+    return handler
+
+
+def should_use_centralized_approval(
+    *,
+    parent_run_id: str,
+    batch_index: Optional[int],
+    parallel_mode: bool = False,
+) -> bool:
+    """True when subagent destructive approvals belong in the parent queue."""
+    if not parent_run_id.strip():
+        return False
+    return batch_index is not None or parallel_mode
 
 
 async def cleanup_queue(parent_run_id: str) -> None:

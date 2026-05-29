@@ -194,12 +194,18 @@ class AgentRunner:
                         allow_all_destructive=True,
                     )
                 try:
+                    # Get plan contract from context if available
+                    plan_contract = None
+                    if hasattr(self, '_plan_contract'):
+                        plan_contract = self._plan_contract
+                    
                     self.approval_policy.assert_allowed(
                         tool_name=decision.tool_name,
                         call_id=decision.call_id,
                         destructive=tool.annotations.destructive,
                         arguments=decision.arguments,
                         jit_state=self.jit_state,
+                        plan_contract=plan_contract,
                     )
                 except ToolPermissionError as exc:
                     secret = None

@@ -58,6 +58,7 @@ def _commands_for_profile(
             ('ruff', ['ruff', 'check']),
             ('mypy', ['mypy', '.']),
         ]
+    # Strict profile includes full test suite
     return [
         ('ruff', ['ruff', 'check']),
         ('mypy', ['mypy', '.']),

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -23,6 +25,27 @@ _SHELL_MUTATE_NAMES = frozenset(
     }
 )
 
+# Keywords that suggest write operations in docstrings or code
+_WRITE_KEYWORDS = frozenset(
+    {
+        'write',
+        'save',
+        'create',
+        'delete',
+        'remove',
+        'modify',
+        'update',
+        'edit',
+        'append',
+        'overwrite',
+        'truncate',
+        'mkdir',
+        'touch',
+        'chmod',
+        'chown',
+    }
+)
+
 
 @dataclass(frozen=True)
 class ToolLintIssue:
@@ -30,6 +53,56 @@ class ToolLintIssue:
     level: IssueLevel
     code: str
     message: str
+
+
+def _check_write_keywords_in_text(text: str) -> list[str]:
+    """Extract write-like keywords found in text."""
+    found = []
+    text_lower = text.lower()
+    for keyword in _WRITE_KEYWORDS:
+        if keyword in text_lower:
+            found.append(keyword)
+    return found
+
+
+def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
+    """Perform AST-based fuzz checking on handler code for write operations.
+    
+    This is used by selftest to detect tools marked as read_only that contain
+    write-like operations in their handler implementation.
+    
+    Args:
+        handler_code: Source code of the tool handler
+        is_read_only: Whether the tool is marked as read_only
+        
+    Returns:
+        List of detected write-like operations (empty if none found or not read_only)
+    """
+    if not is_read_only:
+        return []
+    
+    write_operations = []
+    try:
+        tree = ast.parse(handler_code)
+        for node in ast.walk(tree):
+            # Check for function calls that might write
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute):
+                    # Check for file operations like .write(), .save(), etc.
+                    if node.func.attr in {'write', 'save', 'create', 'delete', 'remove', 
+                                          'update', 'edit', 'append', 'overwrite'}:
+                        write_operations.append(f'{node.func.attr}()')
+                elif isinstance(node.func, ast.Name):
+                    # Check for built-in functions like open(), mkdir(), etc.
+                    if node.func.id in {'open', 'mkdir', 'remove', 'rmdir', 'unlink'}:
+                        write_operations.append(f'{node.func.id}()')
+            # Check for assignments that might modify state
+            elif isinstance(node, ast.AugAssign):
+                write_operations.append('augmented_assignment')
+    except (SyntaxError, ValueError):
+        # If we can't parse the AST, skip this check
+        pass
+    return write_operations
 
 
 def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
@@ -108,6 +181,45 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
                 'destructive tools cannot be read_only',
             )
         )
+    
+    # Static analysis: check for write-like keywords in description
+    if ann.read_only:
+        write_keywords = _check_write_keywords_in_text(tool.description)
+        if write_keywords:
+            issues.append(
+                ToolLintIssue(
+                    name,
+                    'warning',
+                    'read_only_with_write_keywords',
+                    f'read_only tool description contains write-like keywords: {", ".join(write_keywords)}',
+                )
+            )
+    
+    # Validate capability manifest if present
+    if tool.capability_manifest:
+        manifest_tier = tool.capability_manifest.get('security_tier')
+        if manifest_tier not in {'Low', 'Medium', 'High', 'Critical'}:
+            issues.append(
+                ToolLintIssue(
+                    name,
+                    'error',
+                    'invalid_security_tier',
+                    f'capability manifest security_tier must be one of: Low, Medium, High, Critical (got: {manifest_tier})',
+                )
+            )
+        
+        # Check if manifest tier conflicts with calculated tier
+        calculated_tier = tool.get_security_tier()
+        if manifest_tier and manifest_tier != calculated_tier:
+            issues.append(
+                ToolLintIssue(
+                    name,
+                    'warning',
+                    'security_tier_mismatch',
+                    f'capability manifest security_tier ({manifest_tier}) differs from calculated tier ({calculated_tier}) based on annotations',
+                )
+            )
+    
     return issues
 
 
