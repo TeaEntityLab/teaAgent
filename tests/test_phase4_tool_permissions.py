@@ -176,3 +176,42 @@ class TestToolPermissionManager:
         agent_tools = manager.get_agent_tools('test-agent')
         assert 'read_file' in agent_tools
         assert 'write_file' not in agent_tools
+
+    def test_approval_is_per_agent_not_global(self):
+        """Regression: approving tool for agent-A must NOT grant access to agent-B."""
+
+        def mock_approve(request: PermissionRequest) -> bool:
+            return request.agent_name == 'agent-a'
+
+        manager = ToolPermissionManager(approval_callback=mock_approve)
+
+        # Grant both agents access to the destructive tool
+        manager.grant_agent_tool_access(
+            'agent-a', ('write_file',), allow_destructive=True
+        )
+        manager.grant_agent_tool_access(
+            'agent-b', ('write_file',), allow_destructive=True
+        )
+
+        # Both should require JIT approval initially
+        has_access_a, reason_a = manager.check_tool_access('agent-a', 'write_file')
+        has_access_b, reason_b = manager.check_tool_access('agent-b', 'write_file')
+        assert has_access_a is False
+        assert has_access_b is False
+
+        # Approve for agent-a only
+        manager.request_tool_approval('agent-a', 'write_file', 'testing')
+
+        # Agent-a should now have access, agent-b should still be blocked
+        has_access_a, _ = manager.check_tool_access('agent-a', 'write_file')
+        has_access_b, reason_b = manager.check_tool_access('agent-b', 'write_file')
+        assert has_access_a is True, 'Approved agent should have access'
+        assert has_access_b is False, 'Unapproved agent must still be blocked'
+        assert 'requires JIT approval' in reason_b
+
+        # Global tool permission must NOT have been mutated
+        perm = manager.get_tool_permission('write_file')
+        assert perm is not None
+        assert perm.requires_approval is True, (
+            'Global requires_approval must remain True'
+        )

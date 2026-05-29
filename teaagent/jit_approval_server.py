@@ -10,6 +10,7 @@ This module implements the Cooragent remote JIT approval server that:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -61,6 +62,7 @@ class JITApprovalServer:
         self._requests: dict[str, ApprovalRequestRecord] = {}
         self._server: Optional[asyncio.Server] = None
         self._clients: set[asyncio.Queue[dict[str, Any]]] = set()
+        self._pending_events: dict[str, asyncio.Event] = {}
 
     async def start(self) -> None:
         """Start the SSE server."""
@@ -110,7 +112,7 @@ class JITApprovalServer:
         writer.write(message.encode('utf-8'))
         await writer.drain()
 
-    def request_approval(
+    async def request_approval(
         self, agent_name: str, tool_name: str, reason: str
     ) -> ApprovalRequestRecord:
         """Request JIT approval for a tool.
@@ -143,12 +145,19 @@ class JITApprovalServer:
 
         self._requests[request_id] = record
 
+        # Create event for this request
+        event = asyncio.Event()
+        self._pending_events[request_id] = event
+
         # Broadcast to all connected clients (if async server is running)
         if self._clients:
-            self._schedule_broadcast(self._broadcast_request(record))
+            await self._broadcast_request(record)
 
         # Wait for approval or timeout
-        result = self._wait_for_approval(record)
+        result = await self._wait_for_approval(record, event)
+
+        # Clean up pending event
+        self._pending_events.pop(request_id, None)
 
         return result
 
@@ -181,27 +190,21 @@ class JITApprovalServer:
         for queue in self._clients:
             await queue.put(event)
 
-    def _wait_for_approval(
-        self, record: ApprovalRequestRecord
+    async def _wait_for_approval(
+        self, record: ApprovalRequestRecord, event: asyncio.Event
     ) -> ApprovalRequestRecord:
-        """Wait for approval or timeout.
+        """Wait for approval or timeout without blocking the event loop.
 
         Args:
             record: ApprovalRequestRecord to wait for.
+            event: asyncio.Event to signal approval/rejection.
 
         Returns:
             Updated ApprovalRequestRecord with final status.
         """
-        # In a real implementation, this would use async/await with timeout
-        # For now, we'll simulate with a timeout check
-        deadline = record.created_at + record.timeout_seconds
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(event.wait(), timeout=record.timeout_seconds)
 
-        while time.time() < deadline:
-            if record.status != ApprovalStatus.PENDING:
-                break
-            time.sleep(1)
-
-        # Check for timeout
         if record.status == ApprovalStatus.PENDING:
             record.status = ApprovalStatus.TIMEOUT
             logger.warning(
@@ -230,6 +233,11 @@ class JITApprovalServer:
         record.status = ApprovalStatus.APPROVED
         record.approved_at = time.time()
         record.request.approved = True
+
+        # Signal the waiting coroutine
+        event = self._pending_events.get(request_id)
+        if event:
+            event.set()
 
         # Update permission manager
         self._permission_manager.request_tool_approval(
@@ -262,6 +270,11 @@ class JITApprovalServer:
         record.status = ApprovalStatus.REJECTED
         record.rejected_at = time.time()
         record.request.approved = False
+
+        # Signal the waiting coroutine
+        event = self._pending_events.get(request_id)
+        if event:
+            event.set()
 
         self._schedule_broadcast(self._broadcast_rejection(record))
 

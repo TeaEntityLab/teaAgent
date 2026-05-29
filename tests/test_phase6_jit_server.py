@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import patch
 
 from teaagent.jit_approval_server import ApprovalStatus, JITApprovalServer
 from teaagent.tool_permissions import ToolPermissionManager
@@ -22,18 +21,13 @@ def test_jit_wait_times_out_with_short_deadline() -> None:
     manager = ToolPermissionManager()
     server = JITApprovalServer(manager, timeout_seconds=1)
 
-    with (
-        patch('teaagent.jit_approval_server.time.sleep', return_value=None),
-        patch(
-            'teaagent.jit_approval_server.time.time',
-            side_effect=[1000.0, 1000.1, 1001.2, 1001.3],
-        ),
-    ):
-        record = server.request_approval(
+    async def _run() -> None:
+        record = await server.request_approval(
             'agent-a', 'workspace_write_file', 'needs write'
         )
+        assert record.status == ApprovalStatus.TIMEOUT
 
-    assert record.status == ApprovalStatus.TIMEOUT
+    asyncio.run(_run())
 
 
 def test_send_sse_event_format() -> None:

@@ -10,16 +10,19 @@ This document maps threats to mitigations and verification. It complements [tool
 | Mislabelled tool annotations (`read_only` on write tool) | High | `teaagent tool lint`; runtime policy on destructive flag | `tests/test_tranche_b_governance.py`, `tests/test_governance_fuzz.py` | Plugin handlers not sandboxed by default — trust boundary |
 | Path traversal / symlink escape | High | Workspace path resolution; protected paths | `test_contract_policy.py`, `test_protected_paths_flow.py` | Fuzz coverage ongoing |
 | Shell mutation in workspace-write mode | High | `ApprovalPolicy` blocks non-file destructive tools in workspace-write | `tests/policy/test_permission_matrix.py` | Dangerous flag lists in shell classifier — maintain with tests |
+| Shell command obfuscation bypass | High | Multi-pass `_normalize_shell_arg` (quotes, escapes, backticks, `$()`, shlex); list-argument normalization | `tests/test_policy.py` (MultiSigQuorumTests) | Catches `rm -r"f" /prod`, backtick injection, list-based bypass |
 | Secret leakage in audit logs | Medium | Audit redaction keys and truncation | `test_audit_chain_integrity_flow.py` | Over-redaction reduces debuggability — export tiers future work |
 | Audit log tampering | Medium | Hash chain (`audit verify`); fsync | `test_audit_chain_integrity_flow.py` | Local-only unless signed export |
 | Plugin supply-chain execution | High | Plugin verify/install gates; entry-point audit | `test_plugin_install_security_flow.py` | Capability manifest formalization in progress |
 | MCP server tool explosion / exfiltration | High | MCP tool filter hook; HTTP auth for remote MCP | `test_remote_mcp_consumption_flow.py` | MCP trust CLI implemented — per-server defaults |
 | Memory poisoning / failure-card bias | Medium | Failure cards; warning injection; automated invalidation rules | `test_memory_auto_curation_flow.py`, `tests/test_governance_fuzz.py` | TTL/confidence schema enforced with conservative defaults |
-| Subagent privilege escalation | High | Subagent defs; lineage; isolation modes; centralized approval queue | `test_subagent_lineage_flow.py`, worktree/container isolation flows, `tests/test_governance_fuzz.py` | Tournament approval lineage — Foundation, queue implemented |
+| Subagent privilege escalation | High | Per-agent JIT approval (`_agent_approved_tools`); subagent defs; lineage; isolation modes; centralized approval queue | `test_subagent_lineage_flow.py`, `test_approval_is_per_agent_not_global`, worktree/container isolation flows, `tests/test_governance_fuzz.py` | Global mutation fixed — approval now scoped per-agent |
 | Parallel branch contamination | Medium | Git sandbox branches; worktree isolation | `test_subagent_worktree_isolation_flow.py` | Main-branch write blocked in tournament — verify per release |
 | Unplanned destructive writes | High | Strict plan-before-write enforcement in workspace-write mode | `tests/test_governance_fuzz.py`, `tests/test_tranche_b_governance.py` | `--skip-plan-check` override available for power users |
 | Provider response schema drift | Low | JSON schema for model decisions | `test_live_provider_conformance_flow.py` | Provider-specific quirks remain |
 | Unbounded run cost | Medium | `RunBudget`; iteration/tool/cost caps | `test_p0_harness.py`, `test_p0_slo_flow.py` | User must configure caps |
+| JIT approval server unresponsive during wait | High | Async `_wait_for_approval` using `asyncio.Event` + `asyncio.wait_for`; SSE server remains responsive | `tests/test_phase6_jit_server.py` | Fixed synchronous `time.sleep` spin-lock blocking event loop |
+| Context Bus SQLite lock contention | Medium | `timeout=30.0` on `sqlite3.connect`; `_execute_with_retry` with exponential backoff (5 retries) | `tests/test_phase5_context_bus.py` | Cross-process WAL contention under parallel swarm workloads |
 
 ## Trust Boundaries
 

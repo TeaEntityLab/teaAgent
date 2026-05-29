@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import sqlite3
 import threading
 import time
@@ -72,7 +73,9 @@ class ContextBus:
     def _initialize_database(self) -> None:
         """Initialize the context bus database schema."""
         with self._lock:
-            self._connection = sqlite3.connect(self._db_path, check_same_thread=False)
+            self._connection = sqlite3.connect(
+                self._db_path, check_same_thread=False, timeout=5.0
+            )
             cursor = self._connection.cursor()
 
             # Enable WAL mode for concurrent access
@@ -108,6 +111,62 @@ class ContextBus:
 
             self._connection.commit()
 
+    def _execute_with_retry(
+        self,
+        cursor: sqlite3.Cursor,
+        sql: str,
+        params: tuple[Any, ...] = (),
+        *,
+        max_retries: int = 5,
+        base_delay: float = 0.1,
+    ) -> None:
+        """Execute a SQL statement with exponential backoff on lock contention."""
+        for attempt in range(max_retries):
+            try:
+                cursor.execute(sql, params)
+                return
+            except sqlite3.OperationalError as exc:
+                if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
+                    raise
+                if attempt == max_retries - 1:
+                    logger.error(
+                        f'SQLite operation failed after {max_retries} retries: {exc}'
+                    )
+                    raise
+                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                logger.warning(
+                    f'SQLite lock contention (attempt {attempt + 1}/{max_retries}), '
+                    f'retrying in {delay:.2f}s'
+                )
+                time.sleep(delay)
+
+    def _commit_with_retry(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        max_retries: int = 5,
+        base_delay: float = 0.1,
+    ) -> None:
+        """Commit with exponential backoff on lock contention."""
+        for attempt in range(max_retries):
+            try:
+                conn.commit()
+                return
+            except sqlite3.OperationalError as exc:
+                if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
+                    raise
+                if attempt == max_retries - 1:
+                    logger.error(
+                        f'SQLite commit failed after {max_retries} retries: {exc}'
+                    )
+                    raise
+                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                logger.warning(
+                    f'SQLite commit contention (attempt {attempt + 1}/{max_retries}), '
+                    f'retrying in {delay:.2f}s'
+                )
+                time.sleep(delay)
+
     def publish_delta(self, delta: DeltaCard) -> None:
         """Publish a Delta card to the bus.
 
@@ -120,7 +179,8 @@ class ContextBus:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
 
-            cursor.execute(
+            self._execute_with_retry(
+                cursor,
                 """
                 INSERT OR REPLACE INTO delta_cards
                 (delta_id, workflow_id, delta_type, source_agent, content, timestamp, metadata)
@@ -136,8 +196,7 @@ class ContextBus:
                     json.dumps(delta.metadata),
                 ),
             )
-
-            conn.commit()
+            self._commit_with_retry(conn)
             logger.info(f'Published Delta {delta.delta_id} from {delta.source_agent}')
 
     def subscribe_deltas(
@@ -242,11 +301,12 @@ class ContextBus:
             if conn is None:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
-            cursor.execute(
+            self._execute_with_retry(
+                cursor,
                 'DELETE FROM delta_cards WHERE workflow_id = ?',
                 (self._workflow_id,),
             )
-            conn.commit()
+            self._commit_with_retry(conn)
 
     def cleanup_old_deltas(self) -> None:
         """Clean up old Delta cards based on age."""
@@ -257,12 +317,13 @@ class ContextBus:
             if conn is None:
                 raise RuntimeError('Context bus connection is not initialized')
             cursor = conn.cursor()
-            cursor.execute(
+            self._execute_with_retry(
+                cursor,
                 'DELETE FROM delta_cards WHERE timestamp < ?',
                 (cutoff_time,),
             )
             deleted = cursor.rowcount
-            conn.commit()
+            self._commit_with_retry(conn)
 
             if deleted > 0:
                 logger.info(f'Cleaned up {deleted} old Delta cards')

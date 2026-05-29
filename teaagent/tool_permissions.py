@@ -56,6 +56,7 @@ class ToolPermissionManager:
         self._approval_callback = approval_callback
         self._tool_permissions: dict[str, ToolPermission] = {}
         self._agent_tool_whitelist: dict[str, set[str]] = {}
+        self._agent_approved_tools: dict[str, set[str]] = {}
         self._initialize_default_permissions()
 
     def _initialize_default_permissions(self) -> None:
@@ -197,13 +198,11 @@ class ToolPermissionManager:
             return False, f'Tool {tool_name} not in agent whitelist'
 
         # Check if tool requires JIT approval
-        # Skip approval check if tool was explicitly approved via request_tool_approval
         permission = self.get_tool_permission(tool_name)
         if permission and permission.requires_approval:
-            # Check if this is an approved tool (added via JIT approval)
-            # We'll use a suffix to mark approved tools
-            approved_key = f'{tool_name}_approved'
-            if approved_key in self._tool_permissions:
+            # Check if this specific agent has JIT approval for this tool
+            agent_approved = self._agent_approved_tools.get(agent_name, set())
+            if tool_name in agent_approved:
                 return True, None
             return False, f'Tool {tool_name} requires JIT approval'
 
@@ -239,22 +238,15 @@ class ToolPermissionManager:
             request.approved = False
 
         if request.approved:
-            # Add to whitelist for this session
+            # Add to whitelist for this agent
             agent_tools = self._agent_tool_whitelist.get(agent_name, set())
             agent_tools.add(tool_name)
             self._agent_tool_whitelist[agent_name] = agent_tools
 
-            # Remove approval requirement for this tool for this session
-            permission = self.get_tool_permission(tool_name)
-            if permission and permission.requires_approval:
-                # Update the permission to not require approval
-                updated_permission = ToolPermission(
-                    name=permission.name,
-                    safety_level=permission.safety_level,
-                    description=permission.description,
-                    requires_approval=False,
-                )
-                self._tool_permissions[tool_name] = updated_permission
+            # Track per-agent JIT approval (does NOT mutate global tool permissions)
+            agent_approved = self._agent_approved_tools.get(agent_name, set())
+            agent_approved.add(tool_name)
+            self._agent_approved_tools[agent_name] = agent_approved
 
         return request
 
@@ -269,6 +261,9 @@ class ToolPermissionManager:
         if agent_tools and tool_name in agent_tools:
             agent_tools.remove(tool_name)
             logger.info(f'Revoked {tool_name} access for agent {agent_name}')
+        agent_approved = self._agent_approved_tools.get(agent_name)
+        if agent_approved:
+            agent_approved.discard(tool_name)
 
     def get_agent_tools(self, agent_name: str) -> set[str]:
         """Get all tools an agent has access to.

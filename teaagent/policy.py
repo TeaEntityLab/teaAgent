@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shlex
 import sys
 import time
@@ -289,6 +290,50 @@ class ApprovalPolicy:
                 print('\n[TeaAgent] Interrupted. Denying permission.')
                 return 'd'
 
+    @staticmethod
+    def _normalize_shell_arg(command: str) -> str:
+        """Normalize a shell command string through multiple passes to defeat obfuscation.
+
+        Applies successive normalization to catch:
+        - Quoted strings: rm -r"f" /prod -> rm -rf /prod
+        - Backtick injection: `echo /prod` -> /prod
+        - Subshell expansion: $(echo /prod) -> /prod
+        - Escaped characters: r\\m -> rm
+        - Double-encoded sequences
+        """
+        if not command:
+            return command
+
+        normalized = command
+
+        # Pass 1: Strip surrounding quotes from each token
+        # "foo" -> foo, 'bar' -> bar
+        normalized = re.sub(r"""(["'])(.*?)\1""", r'\2', normalized)
+
+        # Pass 2: Remove backslash escapes: \r -> r, \" -> "
+        normalized = re.sub(r'\\(.)', r'\1', normalized)
+
+        # Pass 3: Extract content from backtick subshells: `cmd` -> cmd
+        backtick_contents = re.findall(r'`([^`]*)`', normalized)
+
+        # Pass 4: Extract content from $() subshells
+        dollar_contents = re.findall(r'\$\(([^)]*)\)', normalized)
+
+        # Pass 5: Try shlex split for final normalization
+        try:
+            tokens = shlex.split(normalized)
+            normalized = ' '.join(tokens).lower()
+        except ValueError:
+            normalized = normalized.lower()
+
+        # Combine: check the main normalized string PLUS any extracted subshell contents
+        all_variants = [normalized]
+        for content in backtick_contents + dollar_contents:
+            # Recursively normalize subshell contents (one level deep)
+            all_variants.append(content.lower())
+
+        return ' | '.join(all_variants)
+
     def _is_high_risk_operation(
         self, tool_name: str, arguments: dict[str, Any] | None
     ) -> bool:
@@ -323,20 +368,18 @@ class ApprovalPolicy:
                 if pattern in args_str:
                     return True
 
-                # For command-like arguments, try shell normalization
+                # Multi-pass normalization for command-like arguments
                 if 'command' in arguments or 'cmd' in arguments:
                     command_arg = arguments.get('command') or arguments.get('cmd', '')
                     if isinstance(command_arg, str):
-                        try:
-                            # Normalize the command to catch escape sequences
-                            normalized = shlex.split(command_arg)
-                            normalized_cmd = ' '.join(normalized).lower()
-                            if pattern in normalized_cmd:
-                                return True
-                        except ValueError:
-                            # If parsing fails, fall back to string matching
-                            if pattern in command_arg.lower():
-                                return True
+                        normalized_cmd = self._normalize_shell_arg(command_arg)
+                        if pattern in normalized_cmd:
+                            return True
+                    elif isinstance(command_arg, list):
+                        joined_cmd = ' '.join(str(item) for item in command_arg)
+                        normalized_cmd = self._normalize_shell_arg(joined_cmd)
+                        if pattern in normalized_cmd:
+                            return True
 
         return False
 
