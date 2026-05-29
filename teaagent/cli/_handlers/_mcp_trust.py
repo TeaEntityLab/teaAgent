@@ -15,10 +15,24 @@ from teaagent.mcp_trust import (
 
 
 def _redact_sensitive(value: Any) -> Any:
+    def _is_sensitive_key(key: Any) -> bool:
+        if not isinstance(key, str):
+            return False
+        normalized = key.strip().lower()
+        if normalized in {'trusted', 'trust', 'secret', 'token', 'password', 'key'}:
+            return True
+        return (
+            'trusted' in normalized
+            or 'secret' in normalized
+            or 'token' in normalized
+            or 'password' in normalized
+            or normalized.endswith('_key')
+        )
+
     if isinstance(value, dict):
         redacted: dict[str, Any] = {}
         for key, item in value.items():
-            if key == 'trusted':
+            if _is_sensitive_key(key):
                 redacted[key] = '[REDACTED]'
             else:
                 redacted[key] = _redact_sensitive(item)
