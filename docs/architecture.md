@@ -76,21 +76,25 @@ The TeaAgent governance system has been hardened through a comprehensive 5-loop 
 - **Git worktree sandbox enforcement**: Tournament runs require git worktree isolation as hard pre-condition for zero-contamination guarantees
 - **Security-aware tournament scoring**: Weighted comparator schema (tests 40%, performance 15%, lint 10%, diff size 10%, architectural fit 15%, security 10%)
 
-## Future Roadmap (Phase 4-5)
+## Phase 4-5 Roadmap (Beta)
 
-The following phases are planned for future evolution but not yet implemented:
+Core Phase 4 (consensus) and Phase 5 (sandbox routing) modules are shipped with CLI,
+unit tests, and E2E acceptance. Remaining work is production async voting UX and
+docker/WASM dogfood benchmarks. See [backlog-priority.md](backlog-priority.md) for
+task-level status.
 
-### Phase 4: Federated Swarm Consensus & Peer Attestations
-- Multi-agent coordination with cryptographic peer-to-peer attestation
-- Voting mechanisms for high-risk tool calls with SSH-based peer signatures
-- Consensus engine with state synchronization and audit trail
-- Integration with existing swarm orchestration
+### Phase 4: Federated Swarm Consensus & Peer Attestations — **Beta**
+- `ConsensusEngine`, peer registry, voting mechanisms, and attestation trail
+- Swarm pre-approval gate when `ConsensusConfig.enable_pre_approval` matches task patterns
+- CLI: `teaagent consensus` (`teaagent/cli/_handlers/_consensus.py`)
+- E2E: `tests/acceptance/test_consensus_flow.py`
 
-### Phase 5: Hardened Sandbox Virtualization
-- Docker resource limits (CPU quotas, memory limits) with health monitoring
-- WebAssembly runtime for fast, lightweight sandboxing
-- Skill execution routing based on risk level and sandbox preferences
-- Real-time resource monitoring and alerting
+### Phase 5: Hardened Sandbox Virtualization — **Beta**
+- Docker resource limits via `prepare_subagent_isolation` (`--cpus` / `--memory`)
+- WASM runtime wrapper (`teaagent/wasm_runtime.py`) and skill routing (`teaagent/skill_router.py`)
+- `isolation=auto` on subagents with `skill_path` / `skill_risk_level`
+- Resource monitoring CLI (`teaagent sandbox monitor`)
+- E2E: `tests/acceptance/test_sandbox_enhancement_flow.py`
 
 See [backlog-priority.md](backlog-priority.md) for detailed task breakdowns and implementation status.
 

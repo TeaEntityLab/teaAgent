@@ -191,6 +191,9 @@ jobs:
       - name: Check plan-before-write enforcement
         run: pytest tests/test_tranche_b_governance.py -k "plan" -v
 
+      - name: Run Phase 4-5 acceptance and adversarial governance tests
+        run: pytest tests/acceptance/test_consensus_flow.py tests/acceptance/test_sandbox_enhancement_flow.py tests/test_governance_adversarial_runtime.py -v
+
   package:
     runs-on: ubuntu-latest
 
