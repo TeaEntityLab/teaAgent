@@ -1,0 +1,19 @@
+{
+  "multi_sig": {
+    "enabled": true,
+    "required_approvals": 2,
+    "peer_agent_ids": ["peer-a", "peer-b"],
+    "peer_public_keys": {
+      "peer-a": "ssh-ed25519 AAAA... peer-a@host",
+      "peer-b": "ssh-ed25519 AAAA... peer-b@host"
+    },
+    "peer_relay_urls": {
+      "peer-a": "https://peer-a.example:8791",
+      "peer-b": "https://peer-b.example:8791"
+    },
+    "local_relay_base_url": "https://collector.example:8791",
+    "timeout_seconds": 300,
+    "high_risk_patterns": ["/prod", "/production"],
+    "allow_dev_signatures": false
+  }
+}

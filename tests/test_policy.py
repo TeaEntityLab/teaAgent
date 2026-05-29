@@ -767,6 +767,39 @@ class MultiSigQuorumTests(unittest.TestCase):
         self.assertEqual(config.high_risk_patterns, [])
         self.assertEqual(config.timeout_seconds, 300)
 
+    def test_multi_sig_config_from_workspace_json(self) -> None:
+        import json
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / '.teaagent').mkdir()
+            (root / '.teaagent' / 'config.json').write_text(
+                json.dumps(
+                    {
+                        'multi_sig': {
+                            'enabled': True,
+                            'required_approvals': 2,
+                            'peer_agent_ids': ['peer-a'],
+                            'peer_relay_urls': {
+                                'peer-a': 'https://peer-a.example:8791'
+                            },
+                            'local_relay_base_url': 'https://collector.example:8791',
+                        }
+                    }
+                ),
+                encoding='utf-8',
+            )
+            config = MultiSigQuorumConfig.from_workspace_config(root)
+            self.assertTrue(config.enabled)
+            self.assertEqual(
+                config.peer_relay_urls['peer-a'], 'https://peer-a.example:8791'
+            )
+            self.assertEqual(
+                config.local_relay_base_url, 'https://collector.example:8791'
+            )
+
     def test_multi_sig_config_custom(self) -> None:
         """Verify custom multi-sig configuration."""
         config = MultiSigQuorumConfig(

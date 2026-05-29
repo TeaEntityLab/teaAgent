@@ -111,8 +111,12 @@ teaagent sync signature-relay submit \
   --request-id <id> --peer-id peer-1 --signature "<ssh-blob>"
 ```
 
-Configure `MultiSigQuorumConfig.local_relay_base_url` and `peer_relay_urls` in policy,
-or set `TEAAGENT_SIGNATURE_RELAY_TOKEN` / `TEAAGENT_RELAY_TOKEN` for HTTP client auth.
+Set relay URLs in `.teaagent/config.json` under `multi_sig` (loaded automatically by
+`ApprovalPolicy` / `chat_agent`). See
+[multi-sig-wan-deployment.md](multi-sig-wan-deployment.md) and
+[templates/multi-sig/config.json.example](../templates/multi-sig/config.json.example).
+
+Set `TEAAGENT_SIGNATURE_RELAY_TOKEN` / `TEAAGENT_RELAY_TOKEN` for HTTP client auth.
 
 API:
 

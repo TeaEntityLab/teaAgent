@@ -71,6 +71,9 @@ Principle: **smallest verifiable step** per phase; no big-bang refactors.
 
 Full SQLite audit/run migration remains **P4+ / backlog** — not started.
 
+**Release gate (2026-05-29):** `TEAAGENT_PRECOMMIT_FULL=1 pre-commit run --all-files` green;
+`uv run pytest -q` → 2641 passed. Dependabot #10: dismiss as *fixed* (`jaraco-context` 6.1.2 in `uv.lock`).
+
 ---
 
 ## Cost controls (operational)

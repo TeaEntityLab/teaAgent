@@ -218,6 +218,23 @@ uv export --format requirements-txt -o /tmp/req.txt
 uv run pip-audit -r /tmp/req.txt
 ```
 
+**Dependabot alert #10 (CVE-2026-23949):** Resolved in-tree as of 2026-05-29 — `uv.lock`
+pins `jaraco-context` **6.1.2** (>= 6.1.0). Dismiss in GitHub **Security → Dependabot →
+alert #10 → Close as fixed** with reason: *fix already on default branch*.
+
+```bash
+# Verify locally
+python3 -c "import importlib.metadata as m; print(m.version('jaraco.context'))"
+teaagent selftest --root .
+```
+
+If `gh` is installed and authenticated:
+
+```bash
+gh api -X PATCH repos/TeaEntityLab/teaAgent/dependabot/alerts/10 \
+  -f state=fixed -f dismissed_reason=fix_started
+```
+
 If GitHub Dependabot still reports an open alert while `pip-audit` is clean, reconcile
 in the repository **Security → Dependabot** UI (dismiss as fixed/upstream, or refresh
 the lockfile after the advisory maps to a patched release).

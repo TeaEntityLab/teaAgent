@@ -12,6 +12,7 @@ import time
 import warnings
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from teaagent.errors import ToolPermissionError
@@ -109,6 +110,48 @@ class MultiSigQuorumConfig:
         default_factory=list
     )  # Patterns triggering multi-sig
     timeout_seconds: int = 300  # Timeout for collecting signatures
+
+    @classmethod
+    def from_workspace_config(cls, root: str | Path) -> MultiSigQuorumConfig:
+        """Load ``multi_sig`` section from ``<root>/.teaagent/config.json``."""
+        from teaagent.config_loader import load_workspace_config
+
+        section = load_workspace_config(root).get('multi_sig')
+        if not isinstance(section, dict):
+            return cls()
+
+        peer_ids = section.get('peer_agent_ids') or []
+        if not isinstance(peer_ids, list):
+            peer_ids = []
+
+        patterns = section.get('high_risk_patterns') or []
+        if not isinstance(patterns, list):
+            patterns = []
+
+        relay_urls = section.get('peer_relay_urls') or {}
+        if not isinstance(relay_urls, dict):
+            relay_urls = {}
+
+        public_keys = section.get('peer_public_keys') or {}
+        if not isinstance(public_keys, dict):
+            public_keys = {}
+
+        local_relay = section.get('local_relay_base_url')
+        local_relay_url = str(local_relay).strip() if local_relay else None
+        if local_relay_url == '':
+            local_relay_url = None
+
+        return cls(
+            enabled=bool(section.get('enabled', False)),
+            required_approvals=int(section.get('required_approvals', 2)),
+            peer_agent_ids=[str(item) for item in peer_ids],
+            peer_public_keys={str(k): str(v) for k, v in public_keys.items()},
+            peer_relay_urls={str(k): str(v).rstrip('/') for k, v in relay_urls.items()},
+            local_relay_base_url=local_relay_url,
+            allow_dev_signatures=bool(section.get('allow_dev_signatures', False)),
+            high_risk_patterns=[str(item) for item in patterns],
+            timeout_seconds=int(section.get('timeout_seconds', 300)),
+        )
 
 
 @dataclass(frozen=True)

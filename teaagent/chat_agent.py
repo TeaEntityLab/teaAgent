@@ -29,7 +29,7 @@ from teaagent.llm import (
     LLMRequest,
 )
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy, MultiSigQuorumConfig, PermissionMode
 from teaagent.prompt import (
     DECISION_JSON_SCHEMA,
     assemble_agent_prompt,
@@ -478,6 +478,7 @@ def run_chat_agent(
             permission_mode=config.permission_mode,
             approval_store=approval_store,
             approval_origin_run_id=context_extra.get('resumed_from') or run_id,
+            multi_sig_config=MultiSigQuorumConfig.from_workspace_config(config.root),
         ),
         approval_handler=config.approval_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),
