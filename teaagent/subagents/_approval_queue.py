@@ -16,9 +16,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -111,8 +113,14 @@ class CentralizedApprovalQueue:
     and provides a unified interface for the parent TUI to review and approve/deny.
     """
 
-    def __init__(self, parent_run_id: str) -> None:
+    def __init__(
+        self,
+        parent_run_id: str,
+        *,
+        workspace_root: Optional[Path] = None,
+    ) -> None:
         self._parent_run_id = parent_run_id
+        self._workspace_root = Path(workspace_root).resolve() if workspace_root else None
         self._requests: dict[str, SubagentApprovalRequest] = {}
         self._batches: dict[str, ApprovalBatch] = {}
         self._pending_futures: dict[str, asyncio.Future[bool]] = {}
@@ -120,6 +128,49 @@ class CentralizedApprovalQueue:
         self._sync_results: dict[str, bool] = {}
         self._lock = asyncio.Lock()
         self._sync_lock = threading.Lock()
+        self._store = None
+        if self._workspace_root is not None:
+            from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+
+            self._store = ApprovalQueueStore(self._workspace_root)
+            self.reload_from_store()
+
+    def reload_from_store(self) -> None:
+        """Merge on-disk queue state (for cross-process approve/deny)."""
+        if self._store is None:
+            return
+        from teaagent.subagents._approval_queue_store import request_from_dict
+
+        snapshot = self._store.load(self._parent_run_id)
+        with self._sync_lock:
+            for request_id, raw in snapshot.requests.items():
+                loaded = request_from_dict(raw)
+                existing = self._requests.get(request_id)
+                if existing is None:
+                    self._requests[request_id] = loaded
+                    continue
+                if existing.status == ApprovalRequestStatus.PENDING:
+                    existing.status = loaded.status
+                    existing.approved_at = loaded.approved_at
+                    existing.denied_at = loaded.denied_at
+                    existing.denial_reason = loaded.denial_reason
+                    if loaded.status == ApprovalRequestStatus.APPROVED:
+                        self._sync_results[request_id] = True
+                        event = self._sync_waiters.get(request_id)
+                        if event is not None:
+                            event.set()
+                    elif loaded.status in {
+                        ApprovalRequestStatus.DENIED,
+                        ApprovalRequestStatus.CANCELLED,
+                    }:
+                        self._sync_results[request_id] = False
+                        event = self._sync_waiters.get(request_id)
+                        if event is not None:
+                            event.set()
+
+    def _persist(self) -> None:
+        if self._store is not None:
+            self._store.save(self._parent_run_id, self._requests, self._batches)
 
     def generate_request_id(self) -> str:
         return uuid4().hex
@@ -157,6 +208,7 @@ class CentralizedApprovalQueue:
             self._requests[request_id] = request
             self._sync_waiters[request_id] = event
 
+        self._persist()
         logger.info(
             'Submitted sync approval request %s from subagent %s for tool %s',
             request_id,
@@ -164,12 +216,36 @@ class CentralizedApprovalQueue:
             tool_name,
         )
 
-        if not event.wait(timeout=request.timeout_seconds):
+        deadline = time.monotonic() + request.timeout_seconds
+        poll_interval = 0.25
+        while time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            if self._store is not None:
+                self.reload_from_store()
+            if event.wait(timeout=min(poll_interval, max(remaining, 0))):
+                break
+            with self._sync_lock:
+                current = self._requests.get(request_id)
+                if current is None:
+                    continue
+                if current.status == ApprovalRequestStatus.APPROVED:
+                    self._sync_results[request_id] = True
+                    event.set()
+                    break
+                if current.status in {
+                    ApprovalRequestStatus.DENIED,
+                    ApprovalRequestStatus.CANCELLED,
+                }:
+                    self._sync_results[request_id] = False
+                    event.set()
+                    break
+        else:
             with self._sync_lock:
                 if request_id in self._requests:
                     self._requests[request_id].status = ApprovalRequestStatus.TIMEOUT
                 self._sync_waiters.pop(request_id, None)
                 self._sync_results.pop(request_id, None)
+            self._persist()
             logger.warning('Sync approval request %s timed out', request_id)
             return False
 
@@ -192,6 +268,7 @@ class CentralizedApprovalQueue:
             event = self._sync_waiters.get(request_id)
         if event is not None:
             event.set()
+        self._persist()
         logger.info('Approved sync request %s by %s', request_id, approved_by)
         return True
 
@@ -228,6 +305,7 @@ class CentralizedApprovalQueue:
             event = self._sync_waiters.get(request_id)
         if event is not None:
             event.set()
+        self._persist()
         logger.info('Denied sync request %s: %s', request_id, reason)
         return True
 
@@ -471,28 +549,52 @@ class CentralizedApprovalQueue:
             logger.info(f"Cleaned up {len(to_remove)} requests, {len(empty_batches)} batches")
 
 
-# Global registry for parent run_id to queue instances
-_approval_queues: dict[str, CentralizedApprovalQueue] = {}
+# Global registry for (workspace, parent_run_id) -> queue instances
+_approval_queues: dict[tuple[str, str], CentralizedApprovalQueue] = {}
 _queue_lock = asyncio.Lock()
 
 
-def list_active_parent_run_ids() -> list[str]:
-    """Return parent run IDs with in-memory approval queues."""
-    return sorted(_approval_queues.keys())
+def _queue_key(
+    workspace_root: Optional[Path], parent_run_id: str
+) -> tuple[str, str]:
+    if workspace_root is None:
+        return ('', parent_run_id)
+    return (str(Path(workspace_root).resolve()), parent_run_id)
+
+
+def list_active_parent_run_ids(
+    workspace_root: Optional[Path] = None,
+) -> list[str]:
+    """Return parent run IDs with in-memory or on-disk approval queues."""
+    root_key = (
+        str(Path(workspace_root).resolve()) if workspace_root is not None else None
+    )
+    keys: set[str] = set()
+    for ws, parent_id in _approval_queues:
+        if root_key is None or ws == root_key:
+            keys.add(parent_id)
+    if workspace_root is not None:
+        from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+
+        keys.update(ApprovalQueueStore(workspace_root).list_parent_run_ids())
+    return sorted(keys)
 
 
 def snapshot_pending_subagent_requests(
     parent_run_id: Optional[str] = None,
+    *,
+    workspace_root: Optional[Path] = None,
 ) -> list[dict[str, Any]]:
     """Serialize pending subagent approval requests for CLI/TUI."""
     items: list[dict[str, Any]] = []
-    if parent_run_id:
-        parent_ids = [parent_run_id] if parent_run_id in _approval_queues else []
-    else:
-        parent_ids = list_active_parent_run_ids()
-
+    parent_ids = (
+        [parent_run_id]
+        if parent_run_id
+        else list_active_parent_run_ids(workspace_root)
+    )
     for pid in parent_ids:
-        queue = _approval_queues[pid]
+        queue = get_approval_queue(pid, workspace_root=workspace_root)
+        queue.reload_from_store()
         for request in queue.get_pending_requests():
             payload = request.to_dict()
             payload['parent_run_id'] = pid
@@ -502,28 +604,90 @@ def snapshot_pending_subagent_requests(
 
 def try_get_approval_queue(
     parent_run_id: str,
+    *,
+    workspace_root: Optional[Path] = None,
 ) -> Optional[CentralizedApprovalQueue]:
-    """Return an existing queue without creating one."""
-    return _approval_queues.get(parent_run_id)
+    """Return an existing queue without creating an empty on-disk file."""
+    key = _queue_key(workspace_root, parent_run_id)
+    if key in _approval_queues:
+        return _approval_queues[key]
+    if workspace_root is not None:
+        from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+
+        if ApprovalQueueStore(workspace_root).exists(parent_run_id):
+            return get_approval_queue(parent_run_id, workspace_root=workspace_root)
+    return None
 
 
-def get_approval_queue(parent_run_id: str) -> CentralizedApprovalQueue:
+def get_approval_queue(
+    parent_run_id: str,
+    *,
+    workspace_root: Optional[Path] = None,
+) -> CentralizedApprovalQueue:
     """Get or create the approval queue for a given parent run."""
-    # This is a synchronous wrapper for the async version
-    # In practice, this should be called from an async context
-    if parent_run_id not in _approval_queues:
-        _approval_queues[parent_run_id] = CentralizedApprovalQueue(parent_run_id)
-    return _approval_queues[parent_run_id]
+    key = _queue_key(workspace_root, parent_run_id)
+    if key not in _approval_queues:
+        _approval_queues[key] = CentralizedApprovalQueue(
+            parent_run_id, workspace_root=workspace_root
+        )
+    return _approval_queues[key]
 
 
-async def get_approval_queue_async(parent_run_id: str) -> CentralizedApprovalQueue:
+def approve_request_cross_process(
+    workspace_root: Path,
+    parent_run_id: str,
+    request_id: str,
+    *,
+    approved_by: str = 'human',
+) -> bool:
+    """Approve via disk when the parent process holds the in-memory waiter."""
+    from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+
+    store = ApprovalQueueStore(workspace_root)
+    ok = store.update_request_status(
+        parent_run_id,
+        request_id,
+        ApprovalRequestStatus.APPROVED,
+        approved_by=approved_by,
+    )
+    if ok:
+        queue = try_get_approval_queue(parent_run_id, workspace_root=workspace_root)
+        if queue is not None:
+            queue.reload_from_store()
+    return ok
+
+
+def deny_request_cross_process(
+    workspace_root: Path,
+    parent_run_id: str,
+    request_id: str,
+    *,
+    reason: str = 'Denied by human',
+) -> bool:
+    from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+
+    store = ApprovalQueueStore(workspace_root)
+    ok = store.update_request_status(
+        parent_run_id,
+        request_id,
+        ApprovalRequestStatus.DENIED,
+        reason=reason,
+    )
+    if ok:
+        queue = try_get_approval_queue(parent_run_id, workspace_root=workspace_root)
+        if queue is not None:
+            queue.reload_from_store()
+    return ok
+
+
+async def get_approval_queue_async(
+    parent_run_id: str,
+    *,
+    workspace_root: Optional[Path] = None,
+) -> CentralizedApprovalQueue:
     """Get or create the approval queue for a given parent run (async)."""
     async with _queue_lock:
-        if parent_run_id not in _approval_queues:
-            _approval_queues[parent_run_id] = CentralizedApprovalQueue(
-                parent_run_id
-            )
-        return _approval_queues[parent_run_id]
+        return get_approval_queue(parent_run_id, workspace_root=workspace_root)
 
 
 def make_centralized_subagent_approval_handler(
@@ -535,10 +699,11 @@ def make_centralized_subagent_approval_handler(
     isolation: str,
     batch_index: Optional[int] = None,
     worktree_path: Optional[str] = None,
+    workspace_root: Optional[Path] = None,
 ) -> ApprovalHandler:
     """Route destructive subagent tool prompts through the parent approval queue."""
 
-    queue = get_approval_queue(parent_run_id)
+    queue = get_approval_queue(parent_run_id, workspace_root=workspace_root)
 
     def handler(request: ApprovalRequest) -> bool:
         return queue.submit_request_sync(
@@ -567,9 +732,14 @@ def should_use_centralized_approval(
     return batch_index is not None or parallel_mode
 
 
-async def cleanup_queue(parent_run_id: str) -> None:
+async def cleanup_queue(
+    parent_run_id: str,
+    *,
+    workspace_root: Optional[Path] = None,
+) -> None:
     """Clean up the approval queue for a completed parent run."""
     async with _queue_lock:
-        queue = _approval_queues.pop(parent_run_id, None)
+        key = _queue_key(workspace_root, parent_run_id)
+        queue = _approval_queues.pop(key, None)
         if queue:
             await queue.cleanup()

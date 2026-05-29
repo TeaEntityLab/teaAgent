@@ -67,7 +67,7 @@ class ParallelExecutor:
 
         parent_id = parent_run_id or self._parent_run_id or uuid4().hex
         self._parent_run_id = parent_id
-        get_approval_queue(parent_id)
+        get_approval_queue(parent_id, workspace_root=self.root)
 
         self.results = []
         threads: list[threading.Thread] = []

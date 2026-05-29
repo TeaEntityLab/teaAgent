@@ -177,13 +177,23 @@ def save_prompt_to_gene_pool(
 class Subagent:
     """Individual subagent with isolated sandbox execution and approval lineage tracking."""
 
-    def __init__(self, task: SubagentTask, root: str | Path, parent_run_id: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        task: SubagentTask,
+        root: str | Path,
+        parent_run_id: Optional[str] = None,
+        *,
+        subagent_manager: Any = None,
+        batch_index: int = 0,
+    ) -> None:
         self._task = task
         self._root = Path(root).resolve()
         self._sandbox = GitBranchSandbox(self._root, task.task_id)
         self._result: Optional[SubagentResult] = None
-        self._parent_run_id = parent_run_id  # Parent run ID for approval lineage
-        self._approval_lineage: list[dict[str, Any]] = []  # Track approval requests
+        self._parent_run_id = parent_run_id
+        self._subagent_manager = subagent_manager
+        self._batch_index = batch_index
+        self._approval_lineage: list[dict[str, Any]] = []
 
     def execute(self) -> SubagentResult:
         """Execute the subagent task in isolated sandbox with centralized approval lineage."""
@@ -212,13 +222,15 @@ class Subagent:
 
             execution_time = (time.perf_counter() - start_time) * 1000
 
+            success = output.get('status') == 'completed'
             return SubagentResult(
                 task_id=self._task.task_id,
-                success=True,
+                success=success,
                 branch_name=sandbox_result.branch_name,
                 output=output,
                 execution_time_ms=execution_time,
                 approval_lineage=self._approval_lineage,
+                test_results=output.get('test_results', {}),
             )
         except Exception as exc:
             execution_time = (time.perf_counter() - start_time) * 1000
@@ -231,24 +243,59 @@ class Subagent:
             )
 
     def _execute_task(self) -> dict[str, Any]:
-        """Execute the actual task (placeholder for LLM agent call)."""
-        # This is a placeholder - in production, this would:
-        # 1. Invoke the LLM agent with the task description
-        # 2. Allow the agent to use tools within the sandbox
-        # 3. Capture the output and any code changes
-
-        # For now, return a mock result
+        """Run the swarm task via SubagentManager or a lightweight mock."""
+        if self._subagent_manager is not None and self._parent_run_id:
+            return self._execute_task_via_subagent_manager()
         return {
             'task': self._task.description,
             'status': 'completed',
             'files_modified': [],
-            'changes_summary': 'Mock execution',
+            'changes_summary': 'Mock execution (no SubagentManager configured)',
+            'execution': 'mock',
+        }
+
+    def _execute_task_via_subagent_manager(self) -> dict[str, Any]:
+        from teaagent.subagent_run_context import (
+            bind_parallel_approval_mode,
+            bind_parent_run_id,
+            reset_parallel_approval_mode,
+            reset_parent_run_id,
+        )
+
+        parallel_token = bind_parallel_approval_mode(True)
+        parent_token = bind_parent_run_id(self._parent_run_id or '')
+        try:
+            payload = self._subagent_manager.run_subagent(
+                task=self._task.description,
+                parent_run_id=self._parent_run_id or '',
+                depth=0,
+                batch_index=self._batch_index,
+                isolation='worktree',
+            )
+        finally:
+            reset_parent_run_id(parent_token)
+            reset_parallel_approval_mode(parallel_token)
+
+        status = str(payload.get('status', 'error'))
+        return {
+            'task': self._task.description,
+            'status': status,
+            'run_id': payload.get('run_id'),
+            'final_answer': payload.get('final_answer'),
+            'lineage': payload.get('lineage'),
+            'execution': 'subagent_manager',
+            'test_results': {
+                'tokens': float(payload.get('iterations', 1)),
+                'errors': 0 if status == 'completed' else 1,
+            },
         }
 
     def _execute_task_with_centralized_approval(self) -> dict[str, Any]:
         """Execute task and record centralized approval queue lineage for the parent run."""
         if self._parent_run_id:
-            queue = get_approval_queue(self._parent_run_id)
+            queue = get_approval_queue(
+                self._parent_run_id, workspace_root=self._root
+            )
             self._approval_lineage.append(
                 {
                     'parent_run_id': self._parent_run_id,
@@ -286,10 +333,12 @@ class SwarmManager:
         consensus_config: Optional[ConsensusConfig] = None,
         lock_timeout_seconds: int = 60,
         prompt_by_task_id: dict[str, str] | None = None,
+        subagent_manager: Any = None,
     ) -> None:
         self._root = Path(root).resolve()
         self._max_parallel = max_parallel
         self._prompt_by_task_id = dict(prompt_by_task_id or {})
+        self._subagent_manager = subagent_manager
         self._subagents: list[Subagent] = []
         self._results: list[SubagentResult] = []
         self._enable_consensus = enable_consensus
@@ -311,8 +360,38 @@ class SwarmManager:
 
     def add_subagent(self, task: SubagentTask) -> None:
         """Add a subagent task to the swarm."""
-        subagent = Subagent(task, self._root, parent_run_id=self._parent_run_id)
+        batch_index = len(self._subagents)
+        subagent = Subagent(
+            task,
+            self._root,
+            parent_run_id=self._parent_run_id,
+            subagent_manager=self._subagent_manager,
+            batch_index=batch_index,
+        )
         self._subagents.append(subagent)
+
+    @classmethod
+    def with_agent_execution(
+        cls,
+        root: str | Path,
+        *,
+        config: Any,
+        adapter: Any,
+        registry: Any = None,
+        **kwargs: Any,
+    ) -> SwarmManager:
+        """Create a swarm that runs real agent work through ``SubagentManager``."""
+        from teaagent.subagents._manager import SubagentManager
+        from teaagent.workspace_tools._files import build_workspace_tool_registry
+
+        tool_registry = registry or build_workspace_tool_registry(root)
+        manager = SubagentManager(
+            root=Path(root).resolve(),
+            parent_config=config,
+            parent_adapter=adapter,
+        )
+        manager.bind_registry(tool_registry)
+        return cls(root, subagent_manager=manager, **kwargs)
 
     def _start_heartbeat_monitor(self) -> None:
         """Start background heartbeat monitoring for subagent timeout detection."""
@@ -369,8 +448,10 @@ class SwarmManager:
             )
 
         self._parent_run_id = uuid4().hex
-        for subagent in self._subagents:
+        for index, subagent in enumerate(self._subagents):
             subagent._parent_run_id = self._parent_run_id
+            subagent._batch_index = index
+        get_approval_queue(self._parent_run_id, workspace_root=self._root)
 
         # Start heartbeat monitoring
         self._start_heartbeat_monitor()

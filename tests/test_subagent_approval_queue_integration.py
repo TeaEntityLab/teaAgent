@@ -99,8 +99,8 @@ def test_centralized_handler_denied() -> None:
     assert results == [False]
 
 
-def test_approval_subagents_cli_list_approve() -> None:
-    queue = get_approval_queue('parent-cli')
+def test_approval_subagents_cli_list_approve(tmp_path) -> None:
+    queue = get_approval_queue('parent-cli', workspace_root=tmp_path)
     results: list[bool] = []
 
     def waiter() -> None:
@@ -123,7 +123,7 @@ def test_approval_subagents_cli_list_approve() -> None:
     for _ in range(50):
         out = io.StringIO()
         with redirect_stdout(out):
-            assert main(['approval', 'subagents', 'list']) == 0
+            assert main(['approval', 'subagents', 'list', '--root', str(tmp_path)]) == 0
         payload = json.loads(out.getvalue())
         if payload['count'] == 1:
             request_id = payload['pending'][0]['request_id']
@@ -143,6 +143,8 @@ def test_approval_subagents_cli_list_approve() -> None:
                     request_id,
                     '--parent-run-id',
                     'parent-cli',
+                    '--root',
+                    str(tmp_path),
                 ]
             )
             == 0

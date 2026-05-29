@@ -189,6 +189,7 @@ class SubagentManager:
                 isolation=isolation,
                 batch_index=batch_index,
                 worktree_path=worktree_rel,
+                workspace_root=self._root,
             )
 
         sub_config = replace(

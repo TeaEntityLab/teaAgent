@@ -16,7 +16,9 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 | CLI | `teaagent approval subagents list|approve|deny|approve-all|deny-all` | Shipped |
 | TUI | `approvals subagents` batch table + approve/deny/all | Shipped |
 | Tournament | `ParallelExecutor` + `parallel_executor_with_manager` | Shipped |
-| Next | full swarm LLM path, adversarial plugin runtime tests | Open |
+| Persistence | `.teaagent/approval_queues/<parent_run_id>.json` | Shipped |
+| Swarm LLM | `SwarmManager.with_agent_execution` + `SubagentManager` | Shipped |
+| Next | adversarial plugin runtime tests, queue cleanup TTL | Open |
 
 ## Verification commands
 
