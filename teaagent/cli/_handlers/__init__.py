@@ -7,7 +7,10 @@ from ._agent import (
     agent_resume_command,
     agent_run_show,
     agent_run_task,
+    agent_runs_export,
     agent_runs_list,
+    agent_runs_replay,
+    agent_runs_trace,
     agent_status_command,
     agent_subagent_review_apply_command,
     agent_subagent_review_check_command,
@@ -36,6 +39,7 @@ from ._audit import (
     audit_verify_command,
 )
 from ._chat import chat_command
+from ._tool import tool_inspect_command, tool_lint_command, tool_list_command
 from ._cloud import (
     cloud_cancel_command,
     cloud_capabilities_command,
@@ -229,6 +233,9 @@ __all__ = [
     'agent_run_show',
     'agent_run_task',
     'agent_runs_list',
+    'agent_runs_trace',
+    'agent_runs_export',
+    'agent_runs_replay',
     'agent_status_command',
     'agent_subagent_review_apply_command',
     'agent_subagent_review_check_command',
@@ -321,6 +328,9 @@ __all__ = [
     'plugin_list_command',
     'plugin_show_command',
     'plugin_verify_command',
+    'tool_list_command',
+    'tool_inspect_command',
+    'tool_lint_command',
     'consensus_peers_list_command',
     'consensus_peers_add_command',
     'consensus_peers_remove_command',

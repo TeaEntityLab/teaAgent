@@ -218,12 +218,23 @@ def add_agent_run_arguments(
     p.add_argument(
         '--validate',
         action='store_true',
-        help='Enable LSP/static analysis validation with self-healing loop.',
+        help='Run post-run validation (default profile: standard).',
+    )
+    p.add_argument(
+        '--validation-profile',
+        choices=['fast', 'standard', 'strict'],
+        default=None,
+        help='Validation profile when --validate is set (default: standard).',
     )
     p.add_argument(
         '--no-validate',
         action='store_true',
         help='Disable validation even if configured.',
+    )
+    p.add_argument(
+        '--require-plan',
+        action='store_true',
+        help='Block workspace writes unless --from-plan bound a plan artifact.',
     )
     p.add_argument(
         '--telemetry-otlp-endpoint',
@@ -987,19 +998,53 @@ def _add_automation_v2_arguments(parser: argparse.ArgumentParser) -> None:
 
 def _runs(
     subs: argparse._SubParsersAction,  # type: ignore[type-arg]
-    handler: Callable,
+    handlers: dict[str, Callable],
     *,
     top_level: bool = False,
 ) -> None:
-    help_text = 'List persisted agent runs.'
+    help_text = 'Inspect persisted agent runs.'
     if top_level:
-        help_text = 'List persisted agent runs (alias for agent runs).'
+        help_text = 'Inspect persisted agent runs (alias for agent runs).'
     p = subs.add_parser('runs', help=help_text)
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
-    p.add_argument('--limit', type=int, default=20, help='Maximum runs to list.')
-    defaults: dict[str, object] = {'func': handler}
+    p.add_argument(
+        '--limit',
+        type=int,
+        default=20,
+        help='Maximum runs to list (list subcommand / default action).',
+    )
+    run_subs = p.add_subparsers(dest='runs_command')
+
+    list_p = run_subs.add_parser('list', help='List persisted runs.')
+    list_p.add_argument('--limit', type=int, default=20)
+    list_p.set_defaults(func=handlers['list'])
+
+    show_p = run_subs.add_parser('show', help='Show run JSONL events.')
+    show_p.add_argument('run_id')
+    show_p.set_defaults(func=handlers['show'])
+
+    trace_p = run_subs.add_parser('trace', help='Show run audit timeline.')
+    trace_p.add_argument('run_id')
+    trace_p.add_argument(
+        '--text',
+        action='store_true',
+        help='Print human-readable timeline instead of JSON.',
+    )
+    trace_p.set_defaults(func=handlers['trace'])
+
+    export_p = run_subs.add_parser('export', help='Export run trace and completeness.')
+    export_p.add_argument('run_id')
+    export_p.set_defaults(func=handlers['export'])
+
+    replay_p = run_subs.add_parser(
+        'replay', help='Dry-run replay of tool/approval chain (no re-execution).'
+    )
+    replay_p.add_argument('run_id')
+    replay_p.set_defaults(func=handlers['replay'])
+
+    defaults: dict[str, object] = {'func': handlers['list'], 'runs_command': 'list'}
     if top_level:
         defaults['command'] = 'runs'
     p.set_defaults(**defaults)

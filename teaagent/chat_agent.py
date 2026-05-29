@@ -91,6 +91,8 @@ class ChatAgentConfig:
     hook_registry: Optional[HookRegistry] = None
     auto_mode_config: Optional[AutoModeConfig] = None
     use_approval_store: bool = True
+    require_plan: bool = False
+    validation_profile: Optional[str] = None
 
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
@@ -477,6 +479,7 @@ def run_chat_agent(
         checkpoint_store=config.checkpoint_store,
         cancel_token=config.cancel_token,
         auto_mode_config=config.auto_mode_config,
+        require_plan=config.require_plan,
     )
     heartbeat: Optional[Heartbeat] = None
     if config.heartbeat_seconds > 0:

@@ -16,7 +16,10 @@ from teaagent.cli._handlers import (
     agent_resume_command,
     agent_run_show,
     agent_run_task,
+    agent_runs_export,
     agent_runs_list,
+    agent_runs_replay,
+    agent_runs_trace,
     agent_status_command,
     agent_subagent_review_apply_command,
     agent_subagent_review_check_command,
@@ -142,6 +145,9 @@ from teaagent.cli._handlers import (
     skill_verify_tsb_command,
     start_tui,
     status_short_command,
+    tool_inspect_command,
+    tool_lint_command,
+    tool_list_command,
     sync_export,
     sync_import,
     sync_status,
@@ -232,6 +238,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._plugin_parsers import register as register_plugin
     from teaagent.cli._sandbox_parsers import register as register_sandbox
     from teaagent.cli._skill_parsers import register as register_skill
+    from teaagent.cli._tool_parsers import register as register_tool
 
     parser = argparse.ArgumentParser(
         prog='teaagent', description='TeaAgent harness utilities.'
@@ -336,6 +343,14 @@ def build_parser() -> argparse.ArgumentParser:
             'verify': plugin_verify_command,
         },
     )
+    register_tool(
+        subparsers,
+        {
+            'list': tool_list_command,
+            'inspect': tool_inspect_command,
+            'lint': tool_lint_command,
+        },
+    )
     register_consensus(
         subparsers,
         {
@@ -370,7 +385,13 @@ def build_parser() -> argparse.ArgumentParser:
             'preflight': agent_preflight_command,
             'plan': agent_plan_command,
             'resume': agent_resume_command,
-            'runs': agent_runs_list,
+            'runs': {
+                'list': agent_runs_list,
+                'show': agent_run_show,
+                'trace': agent_runs_trace,
+                'export': agent_runs_export,
+                'replay': agent_runs_replay,
+            },
             'chat': chat_command,
         },
     )
@@ -384,7 +405,13 @@ def build_parser() -> argparse.ArgumentParser:
             'resume': agent_resume_command,
             'undo': agent_undo_command,
             'status': agent_status_command,
-            'runs': agent_runs_list,
+            'runs': {
+                'list': agent_runs_list,
+                'show': agent_run_show,
+                'trace': agent_runs_trace,
+                'export': agent_runs_export,
+                'replay': agent_runs_replay,
+            },
             'show': agent_run_show,
             'card': agent_card_command,
             'attach': agent_attach_command,

@@ -24,7 +24,7 @@ from teaagent.git_sandbox import ParallelExperimentStack
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.plan import PlanContract
-from teaagent.policy import parse_permission_mode
+from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
@@ -222,6 +222,60 @@ def agent_resume_command(args: argparse.Namespace) -> int:
     )
 
 
+def _resolve_validation_profile(args: argparse.Namespace) -> Optional[str]:
+    if getattr(args, 'no_validate', False):
+        return None
+    if getattr(args, 'validate', False):
+        return getattr(args, 'validation_profile', None) or 'standard'
+    return None
+
+
+def _require_plan_gate(args: argparse.Namespace, plan_contract: Optional[PlanContract]) -> Optional[int]:
+    if not getattr(args, 'require_plan', False):
+        return None
+    mode = parse_permission_mode(args.permission_mode)
+    if mode == PermissionMode.READ_ONLY:
+        return None
+    if plan_contract is not None:
+        return None
+    print_json(
+        {
+            'status': 'error',
+            'message': (
+                '--require-plan needs a bound plan. Run `teaagent plan` then '
+                '`teaagent run --from-plan .teaagent/plans/<file>.md --require-plan`.'
+            ),
+        }
+    )
+    return 2
+
+
+def _run_post_validation(
+    args: argparse.Namespace,
+    *,
+    result: RunResult,
+    store: RunStore,
+    profile: str,
+) -> int:
+    from teaagent.audit import AuditLogger
+    from teaagent.validation.profiles import run_profile_validation
+
+    report = run_profile_validation(args.root, profile)  # type: ignore[arg-type]
+    path = store.run_path(result.run_id)
+    if path.is_file():
+        audit = AuditLogger(path=path)
+        audit.record('validation_started', result.run_id, profile=profile)
+        audit.record(
+            'validation_finished',
+            result.run_id,
+            passed=report.passed,
+            report=report.to_dict(),
+        )
+    payload = {'validation': report.to_dict(), 'run_id': result.run_id}
+    print_json(payload)
+    return 0 if report.passed else 1
+
+
 def _execute_agent_task(
     args: argparse.Namespace,
     task: str,
@@ -262,6 +316,9 @@ def _execute_agent_task(
         merged_context_extra['resumed_from'] = resumed_from
     if plan_contract is not None:
         merged_context_extra['plan_contract'] = plan_contract.to_dict()
+    gate_exit = _require_plan_gate(args, plan_contract)
+    if gate_exit is not None:
+        return gate_exit
     store = RunStore(args.root)
     audit = store.audit_logger()
     from teaagent.git_sandbox import GitBranchSandbox
@@ -419,6 +476,8 @@ def _execute_agent_task(
             skill_prompt_mode=(
                 'index_only' if getattr(args, 'skill_index_only', False) else 'eager'
             ),
+            require_plan=getattr(args, 'require_plan', False),
+            validation_profile=_resolve_validation_profile(args),
         ),
         audit=audit,
         task_spec=task_spec,
@@ -428,6 +487,14 @@ def _execute_agent_task(
     store.logger_for_result(result, audit)
     if undo_journal.has_entries:
         undo_journal.save_to(store.undo_path(result.run_id))
+
+    validation_profile = _resolve_validation_profile(args)
+    if validation_profile and result.status == 'completed':
+        validation_exit = _run_post_validation(
+            args, result=result, store=store, profile=validation_profile
+        )
+        if validation_exit != 0:
+            return validation_exit
 
     # Handle git sandbox resolution
     if git_sandbox_available:
@@ -2016,6 +2083,49 @@ def agent_status_command(args: argparse.Namespace) -> int:
 def agent_runs_list(args: argparse.Namespace) -> int:
     store = RunStore(args.root, readonly=True)
     print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
+    return 0
+
+
+def agent_runs_trace(args: argparse.Namespace) -> int:
+    from teaagent.run_trace import build_run_trace, format_trace_text
+
+    store = RunStore(args.root, readonly=True)
+    try:
+        events = store.show_run(args.run_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    trace = build_run_trace(events)
+    if getattr(args, 'text', False):
+        print(format_trace_text(trace))
+        return 0
+    print_json({'run_id': args.run_id, 'trace': trace})
+    return 0
+
+
+def agent_runs_export(args: argparse.Namespace) -> int:
+    from teaagent.run_trace import dumps_export, export_run
+
+    store = RunStore(args.root, readonly=True)
+    try:
+        events = store.show_run(args.run_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print(dumps_export(export_run(events, run_id=args.run_id)))
+    return 0
+
+
+def agent_runs_replay(args: argparse.Namespace) -> int:
+    from teaagent.run_trace import dumps_export, replay_dry_run
+
+    store = RunStore(args.root, readonly=True)
+    try:
+        events = store.show_run(args.run_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    print(dumps_export(replay_dry_run(events, run_id=args.run_id)))
     return 0
 
 

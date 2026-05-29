@@ -10,10 +10,18 @@ This module provides:
 from __future__ import annotations
 
 from teaagent.validation.tool_detector import detect_available_tools
+from teaagent.validation.profiles import (
+    PROFILE_NAMES,
+    ProfileValidationReport,
+    run_profile_validation,
+)
 from teaagent.validation.validators import ValidationResult, ValidationRunner
 
 __all__ = [
+    'PROFILE_NAMES',
+    'ProfileValidationReport',
     'detect_available_tools',
     'ValidationRunner',
     'ValidationResult',
+    'run_profile_validation',
 ]
