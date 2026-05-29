@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -110,6 +111,8 @@ class SQLiteMigrationStore:
 
 
 class MigrationRunner:
+    _migration_lock = threading.Lock()
+
     def __init__(
         self,
         store: SQLiteMigrationStore,
@@ -133,22 +136,29 @@ class MigrationRunner:
                 dry_run_pending=[m.version for m in pending],
             )
 
-        applied: list[int] = []
-        skipped: list[int] = []
+        with self._migration_lock:
+            # Re-read applied versions under lock to avoid TOCTOU
+            applied_versions = set(self._store.applied_versions())
+            pending = [m for m in self._migrations if m.version not in applied_versions]
 
-        for migration in pending:
-            try:
-                if self._target_conn is not None:
-                    self._target_conn.executescript(migration.sql)
-                self._store.mark_applied(migration)
-                applied.append(migration.version)
-            except Exception:
-                skipped.append(migration.version)
-                raise
+            applied: list[int] = []
+            skipped: list[int] = []
 
-        # Perform WAL checkpoint after applying migrations to clean up sidecar files
-        if applied:
-            self._store.checkpoint(mode='TRUNCATE')
+            for migration in pending:
+                try:
+                    if self._target_conn is not None:
+                        self._target_conn.execute('BEGIN IMMEDIATE')
+                        self._target_conn.executescript(migration.sql)
+                        self._target_conn.execute('COMMIT')
+                    self._store.mark_applied(migration)
+                    applied.append(migration.version)
+                except Exception:
+                    skipped.append(migration.version)
+                    raise
+
+            # Perform WAL checkpoint after applying migrations to clean up sidecar files
+            if applied:
+                self._store.checkpoint(mode='TRUNCATE')
 
         return MigrationResult(
             applied=applied,

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import subprocess
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+
+_sandbox_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -155,24 +158,25 @@ class GitBranchSandbox:
                 )
 
         try:
-            # Get current branch
-            result = subprocess.run(
-                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            self._original_branch = result.stdout.strip()
+            with _sandbox_lock:
+                # Get current branch
+                result = subprocess.run(
+                    ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self._original_branch = result.stdout.strip()
 
-            # Create and checkout temporary branch
-            subprocess.run(
-                ['git', 'checkout', '-b', self._branch_name],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+                # Create and checkout temporary branch
+                subprocess.run(
+                    ['git', 'checkout', '-b', self._branch_name],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
             return GitSandboxResult(
                 success=True,
@@ -234,43 +238,44 @@ class GitBranchSandbox:
             )
 
         try:
-            # Clean sandbox branch before checkout to avoid conflicts
-            subprocess.run(
-                ['git', 'reset', '--hard', 'HEAD'],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            subprocess.run(
-                ['git', 'clean', '-fd'],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+            with _sandbox_lock:
+                # Clean sandbox branch before checkout to avoid conflicts
+                subprocess.run(
+                    ['git', 'reset', '--hard', 'HEAD'],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                subprocess.run(
+                    ['git', 'clean', '-fd'],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
-            # Switch back to original branch
-            subprocess.run(
-                ['git', 'checkout', self._original_branch],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+                # Switch back to original branch
+                subprocess.run(
+                    ['git', 'checkout', self._original_branch],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
-            # Delete sandbox branch
-            subprocess.run(
-                ['git', 'branch', '-D', self._branch_name],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+                # Delete sandbox branch
+                subprocess.run(
+                    ['git', 'branch', '-D', self._branch_name],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
-            # Pop stash if we auto-stashed
-            if self._stash_id:
-                stash_pop(self._root, self._stash_id)
+                # Pop stash if we auto-stashed
+                if self._stash_id:
+                    stash_pop(self._root, self._stash_id)
 
             return GitSandboxResult(success=True)
         except subprocess.CalledProcessError as exc:
@@ -305,129 +310,130 @@ class GitBranchSandbox:
             )
 
         try:
-            # Switch back to original branch
-            subprocess.run(
-                ['git', 'checkout', self._original_branch],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+            with _sandbox_lock:
+                # Switch back to original branch
+                subprocess.run(
+                    ['git', 'checkout', self._original_branch],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
-            if squash:
-                # Squash merge
-                subprocess.run(
-                    ['git', 'merge', '--squash', self._branch_name],
-                    cwd=self._root,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                subprocess.run(
-                    [
-                        'git',
-                        'commit',
-                        '-m',
-                        f'chore: applied TeaAgent modifications for run {self._run_id}',
-                    ],
-                    cwd=self._root,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-            else:
-                # Normal merge
-                try:
+                if squash:
+                    # Squash merge
                     subprocess.run(
-                        ['git', 'merge', self._branch_name],
+                        ['git', 'merge', '--squash', self._branch_name],
                         cwd=self._root,
                         capture_output=True,
                         text=True,
                         check=True,
                     )
-                except subprocess.CalledProcessError as e:
-                    # Merge failed, check for conflicts
-                    # Check if the failure was due to conflicts or other issues
-                    if has_merge_conflicts(self._root):
-                        # This is a conflict - proceed to conflict resolution
-                        pass
-                    else:
-                        # This is a different merge error (e.g., unrelated histories, local changes)
-                        return GitSandboxResult(
-                            success=False,
-                            error=f'Merge failed (not a conflict): {e.stderr or e.stdout or "Unknown error"}',
-                        )
-
-            # Check for merge conflicts
-            if has_merge_conflicts(self._root):
-                conflicted_files = get_conflicted_files(self._root)
-
-                # Attempt self-healing conflict resolution if enabled
-                if enable_self_healing and conflict_provider and conflict_model:
-                    resolution_results = resolve_conflicts_with_llm(
-                        self._root,
-                        conflicted_files,
-                        conflict_provider,
-                        conflict_model,
-                        enable_self_healing=True,
-                        max_iterations=3,
+                    subprocess.run(
+                        [
+                            'git',
+                            'commit',
+                            '-m',
+                            f'chore: applied TeaAgent modifications for run {self._run_id}',
+                        ],
+                        cwd=self._root,
+                        capture_output=True,
+                        text=True,
+                        check=True,
                     )
-
-                    # Check if all conflicts were resolved
-                    manual_files = [
-                        f
-                        for f, status in resolution_results.items()
-                        if status in ('manual', 'failed')
-                    ]
-
-                    if not manual_files:
-                        # All conflicts resolved, stage and commit
-                        subprocess.run(
-                            ['git', 'add', '.'],
-                            cwd=self._root,
-                            capture_output=True,
-                            text=True,
-                            check=True,
-                        )
-                        subprocess.run(
-                            [
-                                'git',
-                                'commit',
-                                '-m',
-                                f'chore: resolved merge conflicts for run {self._run_id}',
-                            ],
-                            cwd=self._root,
-                            capture_output=True,
-                            text=True,
-                            check=True,
-                        )
-                    else:
-                        return GitSandboxResult(
-                            success=False,
-                            error=f'Self-healing incomplete. {len(manual_files)} files require manual resolution: {manual_files}',
-                            has_conflicts=True,
-                            conflicted_files=manual_files,
-                        )
                 else:
-                    return GitSandboxResult(
-                        success=False,
-                        error='Merge conflicts detected. Resolve conflicts manually or use conflict resolution tools.',
-                        has_conflicts=True,
-                        conflicted_files=conflicted_files,
-                    )
+                    # Normal merge
+                    try:
+                        subprocess.run(
+                            ['git', 'merge', self._branch_name],
+                            cwd=self._root,
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                        )
+                    except subprocess.CalledProcessError as e:
+                        # Merge failed, check for conflicts
+                        # Check if the failure was due to conflicts or other issues
+                        if has_merge_conflicts(self._root):
+                            # This is a conflict - proceed to conflict resolution
+                            pass
+                        else:
+                            # This is a different merge error (e.g., unrelated histories, local changes)
+                            return GitSandboxResult(
+                                success=False,
+                                error=f'Merge failed (not a conflict): {e.stderr or e.stdout or "Unknown error"}',
+                            )
 
-            # Delete sandbox branch
-            subprocess.run(
-                ['git', 'branch', '-D', self._branch_name],
-                cwd=self._root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+                # Check for merge conflicts
+                if has_merge_conflicts(self._root):
+                    conflicted_files = get_conflicted_files(self._root)
 
-            # Pop stash if we auto-stashed
-            if self._stash_id:
-                stash_pop(self._root, self._stash_id)
+                    # Attempt self-healing conflict resolution if enabled
+                    if enable_self_healing and conflict_provider and conflict_model:
+                        resolution_results = resolve_conflicts_with_llm(
+                            self._root,
+                            conflicted_files,
+                            conflict_provider,
+                            conflict_model,
+                            enable_self_healing=True,
+                            max_iterations=3,
+                        )
+
+                        # Check if all conflicts were resolved
+                        manual_files = [
+                            f
+                            for f, status in resolution_results.items()
+                            if status in ('manual', 'failed')
+                        ]
+
+                        if not manual_files:
+                            # All conflicts resolved, stage and commit
+                            subprocess.run(
+                                ['git', 'add', '.'],
+                                cwd=self._root,
+                                capture_output=True,
+                                text=True,
+                                check=True,
+                            )
+                            subprocess.run(
+                                [
+                                    'git',
+                                    'commit',
+                                    '-m',
+                                    f'chore: resolved merge conflicts for run {self._run_id}',
+                                ],
+                                cwd=self._root,
+                                capture_output=True,
+                                text=True,
+                                check=True,
+                            )
+                        else:
+                            return GitSandboxResult(
+                                success=False,
+                                error=f'Self-healing incomplete. {len(manual_files)} files require manual resolution: {manual_files}',
+                                has_conflicts=True,
+                                conflicted_files=manual_files,
+                            )
+                    else:
+                        return GitSandboxResult(
+                            success=False,
+                            error='Merge conflicts detected. Resolve conflicts manually or use conflict resolution tools.',
+                            has_conflicts=True,
+                            conflicted_files=conflicted_files,
+                        )
+
+                # Delete sandbox branch
+                subprocess.run(
+                    ['git', 'branch', '-D', self._branch_name],
+                    cwd=self._root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+
+                # Pop stash if we auto-stashed
+                if self._stash_id:
+                    stash_pop(self._root, self._stash_id)
 
             return GitSandboxResult(success=True)
         except subprocess.CalledProcessError as exc:

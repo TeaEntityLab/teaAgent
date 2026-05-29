@@ -346,7 +346,8 @@ class CentralizedApprovalQueue:
         )
 
         async with self._lock:
-            self._requests[request_id] = request
+            with self._sync_lock:
+                self._requests[request_id] = request
             # Create a future for this request
             future: asyncio.Future[bool] = asyncio.Future()
             self._pending_futures[request_id] = future
@@ -362,8 +363,9 @@ class CentralizedApprovalQueue:
             return result
         except asyncio.TimeoutError:
             async with self._lock:
-                if request_id in self._requests:
-                    self._requests[request_id].status = ApprovalRequestStatus.TIMEOUT
+                with self._sync_lock:
+                    if request_id in self._requests:
+                        self._requests[request_id].status = ApprovalRequestStatus.TIMEOUT
             logger.warning(f'Approval request {request_id} timed out')
             return False
         finally:
@@ -375,19 +377,20 @@ class CentralizedApprovalQueue:
     ) -> bool:
         """Approve a specific request."""
         async with self._lock:
-            request = self._requests.get(request_id)
-            if not request:
-                logger.warning(f'Request {request_id} not found')
-                return False
+            with self._sync_lock:
+                request = self._requests.get(request_id)
+                if not request:
+                    logger.warning(f'Request {request_id} not found')
+                    return False
 
-            if request.status != ApprovalRequestStatus.PENDING:
-                logger.warning(
-                    f'Request {request_id} already has status {request.status.value}'
-                )
-                return False
+                if request.status != ApprovalRequestStatus.PENDING:
+                    logger.warning(
+                        f'Request {request_id} already has status {request.status.value}'
+                    )
+                    return False
 
-            request.status = ApprovalRequestStatus.APPROVED
-            request.approved_at = datetime.now(timezone.utc).isoformat()
+                request.status = ApprovalRequestStatus.APPROVED
+                request.approved_at = datetime.now(timezone.utc).isoformat()
 
             future = self._pending_futures.get(request_id)
             if future and not future.done():
@@ -401,20 +404,21 @@ class CentralizedApprovalQueue:
     ) -> bool:
         """Deny a specific request."""
         async with self._lock:
-            request = self._requests.get(request_id)
-            if not request:
-                logger.warning(f'Request {request_id} not found')
-                return False
+            with self._sync_lock:
+                request = self._requests.get(request_id)
+                if not request:
+                    logger.warning(f'Request {request_id} not found')
+                    return False
 
-            if request.status != ApprovalRequestStatus.PENDING:
-                logger.warning(
-                    f'Request {request_id} already has status {request.status.value}'
-                )
-                return False
+                if request.status != ApprovalRequestStatus.PENDING:
+                    logger.warning(
+                        f'Request {request_id} already has status {request.status.value}'
+                    )
+                    return False
 
-            request.status = ApprovalRequestStatus.DENIED
-            request.denied_at = datetime.now(timezone.utc).isoformat()
-            request.denial_reason = reason
+                request.status = ApprovalRequestStatus.DENIED
+                request.denied_at = datetime.now(timezone.utc).isoformat()
+                request.denial_reason = reason
 
             future = self._pending_futures.get(request_id)
             if future and not future.done():
@@ -426,23 +430,26 @@ class CentralizedApprovalQueue:
     async def approve_batch(self, batch_id: str, approved_by: str = 'human') -> int:
         """Approve all requests in a batch. Returns count of approved requests."""
         async with self._lock:
-            batch = self._batches.get(batch_id)
-            if not batch:
-                logger.warning(f'Batch {batch_id} not found')
-                return 0
+            with self._sync_lock:
+                batch = self._batches.get(batch_id)
+                if not batch:
+                    logger.warning(f'Batch {batch_id} not found')
+                    return 0
 
-            approved_count = 0
+                approved_count = 0
+                for request in batch.requests:
+                    if request.status == ApprovalRequestStatus.PENDING:
+                        request.status = ApprovalRequestStatus.APPROVED
+                        request.approved_at = datetime.now(timezone.utc).isoformat()
+                        approved_count += 1
+
+                batch.status = ApprovalRequestStatus.APPROVED
+
             for request in batch.requests:
-                if request.status == ApprovalRequestStatus.PENDING:
-                    request.status = ApprovalRequestStatus.APPROVED
-                    request.approved_at = datetime.now(timezone.utc).isoformat()
-
+                if request.status == ApprovalRequestStatus.APPROVED:
                     future = self._pending_futures.get(request.request_id)
                     if future and not future.done():
                         future.set_result(True)
-                    approved_count += 1
-
-            batch.status = ApprovalRequestStatus.APPROVED
 
         logger.info(f'Approved {approved_count} requests in batch {batch_id}')
         return approved_count
@@ -452,24 +459,27 @@ class CentralizedApprovalQueue:
     ) -> int:
         """Deny all requests in a batch. Returns count of denied requests."""
         async with self._lock:
-            batch = self._batches.get(batch_id)
-            if not batch:
-                logger.warning(f'Batch {batch_id} not found')
-                return 0
+            with self._sync_lock:
+                batch = self._batches.get(batch_id)
+                if not batch:
+                    logger.warning(f'Batch {batch_id} not found')
+                    return 0
 
-            denied_count = 0
+                denied_count = 0
+                for request in batch.requests:
+                    if request.status == ApprovalRequestStatus.PENDING:
+                        request.status = ApprovalRequestStatus.DENIED
+                        request.denied_at = datetime.now(timezone.utc).isoformat()
+                        request.denial_reason = reason
+                        denied_count += 1
+
+                batch.status = ApprovalRequestStatus.DENIED
+
             for request in batch.requests:
-                if request.status == ApprovalRequestStatus.PENDING:
-                    request.status = ApprovalRequestStatus.DENIED
-                    request.denied_at = datetime.now(timezone.utc).isoformat()
-                    request.denial_reason = reason
-
+                if request.status == ApprovalRequestStatus.DENIED:
                     future = self._pending_futures.get(request.request_id)
                     if future and not future.done():
                         future.set_result(False)
-                    denied_count += 1
-
-            batch.status = ApprovalRequestStatus.DENIED
 
         logger.info(f'Denied {denied_count} requests in batch {batch_id}: {reason}')
         return denied_count
@@ -516,14 +526,15 @@ class CentralizedApprovalQueue:
     async def cancel_request(self, request_id: str) -> bool:
         """Cancel a pending request (e.g., if subagent is terminated)."""
         async with self._lock:
-            request = self._requests.get(request_id)
-            if not request:
-                return False
+            with self._sync_lock:
+                request = self._requests.get(request_id)
+                if not request:
+                    return False
 
-            if request.status != ApprovalRequestStatus.PENDING:
-                return False
+                if request.status != ApprovalRequestStatus.PENDING:
+                    return False
 
-            request.status = ApprovalRequestStatus.CANCELLED
+                request.status = ApprovalRequestStatus.CANCELLED
 
             future = self._pending_futures.get(request_id)
             if future and not future.done():
@@ -535,27 +546,28 @@ class CentralizedApprovalQueue:
     async def cleanup(self) -> None:
         """Clean up completed requests to prevent memory leaks."""
         async with self._lock:
-            to_remove = [
-                rid
-                for rid, req in self._requests.items()
-                if req.status
-                in {
-                    ApprovalRequestStatus.APPROVED,
-                    ApprovalRequestStatus.DENIED,
-                    ApprovalRequestStatus.TIMEOUT,
-                    ApprovalRequestStatus.CANCELLED,
-                }
-                and rid not in self._pending_futures
-            ]
-            for rid in to_remove:
-                self._requests.pop(rid, None)
+            with self._sync_lock:
+                to_remove = [
+                    rid
+                    for rid, req in self._requests.items()
+                    if req.status
+                    in {
+                        ApprovalRequestStatus.APPROVED,
+                        ApprovalRequestStatus.DENIED,
+                        ApprovalRequestStatus.TIMEOUT,
+                        ApprovalRequestStatus.CANCELLED,
+                    }
+                    and rid not in self._pending_futures
+                ]
+                for rid in to_remove:
+                    self._requests.pop(rid, None)
 
-            # Clean up empty batches
-            empty_batches = [
-                bid for bid, batch in self._batches.items() if not batch.requests
-            ]
-            for bid in empty_batches:
-                self._batches.pop(bid, None)
+                # Clean up empty batches
+                empty_batches = [
+                    bid for bid, batch in self._batches.items() if not batch.requests
+                ]
+                for bid in empty_batches:
+                    self._batches.pop(bid, None)
 
         if to_remove or empty_batches:
             logger.info(

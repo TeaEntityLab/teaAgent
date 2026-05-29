@@ -33,6 +33,8 @@ from teaagent.tls_server import wrap_server_socket
 
 logger = logging.getLogger(__name__)
 
+MAX_HTTP_BODY_BYTES = 1_048_576
+
 
 @dataclass(frozen=True)
 class VoteRelayPayload:
@@ -358,6 +360,8 @@ def _make_relay_handler(relay: VoteRelayServer) -> type[BaseHTTPRequestHandler]:
 
         def _read_json(self) -> dict[str, Any]:
             length = int(self.headers.get('Content-Length', '0') or '0')
+            if length > MAX_HTTP_BODY_BYTES:
+                raise ValueError('body too large')
             raw = self.rfile.read(length) if length > 0 else b'{}'
             data = json.loads(raw.decode('utf-8'))
             if not isinstance(data, dict):

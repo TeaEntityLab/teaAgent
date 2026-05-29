@@ -246,13 +246,14 @@ class JITApprovalServer:
                 event.set()
 
         try:
-            agent_approved = self._permission_manager._agent_approved_tools.setdefault(
-                record.request.agent_name, set()
+            self._permission_manager.request_tool_approval(
+                record.request.agent_name,
+                record.request.tool_name,
+                f'Approved via remote UI by {record.request.agent_name}',
             )
-            agent_approved.add(record.request.tool_name)
-        except AttributeError:
+        except Exception as exc:
             logger.warning(
-                'Permission manager does not support direct tool whitelisting'
+                f'Failed to register JIT approval via permission manager: {exc}'
             )
 
         self._schedule_broadcast(self._broadcast_approval(record))

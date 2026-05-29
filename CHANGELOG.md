@@ -4,6 +4,14 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Vote Relay OOM Fix**: Added `MAX_HTTP_BODY_BYTES=1_048_576` guard to `vote_relay.py::_read_json()` — rejects oversized payloads with `ValueError('body too large')` instead of unbounded `rfile.read()` (DoS vector; matches `signature_relay.py` pattern)
+
+- **Swarm/Approval/Migration Security Hardening (4 fixes)**:
+  - **Workspace Contamination**: Added `_sandbox_lock` (module-level `threading.Lock`) to `GitBranchSandbox.start/rollback/merge` — serializes git checkout operations across parallel `ThreadPoolExecutor` threads so concurrent subagents don't race on branch creation in the same working tree
+  - **JIT Approval Bypass**: Made JIT approvals single-use — `check_tool_access` now calls `agent_approved.discard(tool_name)` after a successful check; `request_tool_approval` no longer redundantly adds tools to `_agent_tool_whitelist`; `jit_approval_server.py` uses the proper `request_tool_approval` API instead of directly manipulating `_agent_approved_tools`
+  - **Split Lock Races**: Centralized `_approval_queue` dict protection under `self._sync_lock` (`threading.Lock`) in all 7 async methods that mutate `self._requests`/`self._batches` — eliminates data races between `asyncio.Lock`-gated and `threading.Lock`-gated callers
+  - **Migration Collisions**: Wrapped `MigrationRunner.apply_pending` in `_migration_lock` (`threading.Lock`), re-reads `applied_versions` under lock (TOCTOU fix), and wraps `executescript` in `BEGIN IMMEDIATE`/`COMMIT` for SQLite-level write serialization
+
 - **Residual Risk Fixes (3 fixes)**:
   - **Policy**: `_run_async_signature_collection` now uses a shared instance-level `ThreadPoolExecutor` instead of creating a new executor per call; executor field properly declared in frozen dataclass via `field(init=False)`
   - **Context Bus**: `subscribe_deltas` and `get_delta_count` restructured to release `self._lock` before calling `_execute_with_retry` — prevents lock-held-during-sleep thread starvation for writers

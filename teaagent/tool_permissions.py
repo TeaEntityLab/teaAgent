@@ -222,6 +222,8 @@ class ToolPermissionManager:
             # Check if this specific agent has JIT approval for this tool
             agent_approved = self._agent_approved_tools.get(agent_name, set())
             if tool_name in agent_approved:
+                # Consume the single-use JIT approval
+                agent_approved.discard(tool_name)
                 return True, None
             return False, f'Tool {tool_name} requires JIT approval'
 
@@ -257,12 +259,8 @@ class ToolPermissionManager:
             request.approved = False
 
         if request.approved:
-            # Add to whitelist for this agent
-            agent_tools = self._agent_tool_whitelist.get(agent_name, set())
-            agent_tools.add(tool_name)
-            self._agent_tool_whitelist[agent_name] = agent_tools
-
-            # Track per-agent JIT approval (does NOT mutate global tool permissions)
+            # Track per-agent JIT approval (does NOT mutate global tool permissions
+            # or the agent whitelist — grant_agent_tool_access already handles that).
             agent_approved = self._agent_approved_tools.get(agent_name, set())
             agent_approved.add(tool_name)
             self._agent_approved_tools[agent_name] = agent_approved
