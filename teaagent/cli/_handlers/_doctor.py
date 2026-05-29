@@ -863,4 +863,6 @@ def print_json(value: Any) -> None:
         value = redact_wizard_payload(value)
     value = _sanitize_doctor_payload(value)
     safe_value = _redact_sensitive_fields(value)
-    print(json.dumps(safe_value, ensure_ascii=False, sort_keys=True))
+    # Final defense-in-depth pass at the logging sink.
+    safe_value = _redact_sensitive_fields(_sanitize_doctor_payload(safe_value))
+    print(json.dumps(safe_value, ensure_ascii=False, sort_keys=True, default=str))
