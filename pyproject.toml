@@ -58,7 +58,7 @@ managed-google-adk = [
     "google-adk",
 ]
 managed-vertex = [
-    "google-cloud-aiplatform>=1.60",
+    "google-cloud-aiplatform>=1.154.0",
 ]
 telemetry = [
     "opentelemetry-api>=1.20",
