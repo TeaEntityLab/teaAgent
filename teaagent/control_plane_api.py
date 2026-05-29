@@ -67,6 +67,10 @@ class ControlPlaneState:
         with self._lock:
             self.focus = payload
 
+    def set_polish_notes(self, notes: str) -> None:
+        with self._lock:
+            self.polish_notes = notes
+
     def publish_jit_diff(
         self,
         request_id: str,
@@ -221,7 +225,13 @@ def _make_handler(
 
         def do_POST(self) -> None:
             path = urlparse(self.path).path
-            body = self._read_json_body()
+            try:
+                body = self._read_json_body()
+            except (ValueError, UnicodeDecodeError) as exc:
+                self._json_response(
+                    HTTPStatus.BAD_REQUEST, {'error': f'invalid JSON body: {exc}'}
+                )
+                return
             if path == '/api/jit/approve':
                 self._jit_action(body, approve=True)
                 return
@@ -336,8 +346,7 @@ def _make_handler(
 
         def _polish_action(self, body: dict[str, Any]) -> None:
             notes = str(body.get('notes', '')).strip()
-            with self.server.plane.state._lock:
-                self.server.plane.state.polish_notes = notes
+            self.server.plane.state.set_polish_notes(notes)
             self._json_response(HTTPStatus.OK, {'ok': True, 'notes': notes})
 
     return Handler

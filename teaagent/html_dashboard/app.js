@@ -30,7 +30,14 @@ function renderJit(data) {
   for (const item of data.pending || []) {
     const card = document.createElement('div');
     card.className = 'pending-card';
-    card.innerHTML = `<strong>${item.tool_name}</strong> by ${item.agent_name}<br/><span>${item.reason}</span>`;
+    const nameEl = document.createElement('strong');
+    nameEl.textContent = item.tool_name;
+    card.appendChild(nameEl);
+    card.appendChild(document.createTextNode(' by ' + item.agent_name));
+    card.appendChild(document.createElement('br'));
+    const reasonEl = document.createElement('span');
+    reasonEl.textContent = item.reason;
+    card.appendChild(reasonEl);
     const actions = document.createElement('div');
     actions.className = 'actions';
     const approve = document.createElement('button');

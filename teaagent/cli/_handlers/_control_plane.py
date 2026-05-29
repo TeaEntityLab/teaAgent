@@ -11,7 +11,8 @@ from teaagent.tool_permissions import ToolPermissionManager
 
 def control_plane_serve_command(args: argparse.Namespace) -> int:
     """Start the HTML control plane (workflow, focus, JIT approvals)."""
-    manager = ToolPermissionManager()
+    # Callback always approves — the dashboard is the sole approval authority
+    manager = ToolPermissionManager(approval_callback=lambda req: True)
     jit = JITApprovalServer(manager, timeout_seconds=args.jit_timeout_seconds)
     state = ControlPlaneState()
     server = ControlPlaneServer(
