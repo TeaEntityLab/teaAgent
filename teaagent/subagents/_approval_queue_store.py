@@ -100,14 +100,15 @@ class ApprovalQueueStore:
         return hmac.compare_digest(expected, stored)
 
     @contextmanager
-    def lock(self, parent_run_id: str) -> Iterator[None]:
+    def lock(self, parent_run_id: str, shared: bool = False) -> Iterator[None]:
         path = self.queue_path(parent_run_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open('a+', encoding='utf-8') as handle:
             try:
                 import fcntl
 
-                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                lock_flag = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
+                fcntl.flock(handle.fileno(), lock_flag)
             except (ImportError, OSError):
                 pass
             try:
@@ -124,7 +125,7 @@ class ApprovalQueueStore:
         path = self.queue_path(parent_run_id)
         if not path.is_file():
             return QueueDiskSnapshot(parent_run_id, {}, {})
-        with self.lock(parent_run_id):
+        with self.lock(parent_run_id, shared=True):
             raw = json.loads(path.read_text(encoding='utf-8'))
         if not isinstance(raw, dict):
             return QueueDiskSnapshot(parent_run_id, {}, {})
@@ -151,14 +152,14 @@ class ApprovalQueueStore:
         batches: dict[str, ApprovalBatch],
     ) -> None:
         path = self.queue_path(parent_run_id)
-        payload = {
-            'parent_run_id': parent_run_id,
-            'requests': {rid: req.to_dict() for rid, req in requests.items()},
-            'batches': {bid: batch.to_dict() for bid, batch in batches.items()},
-        }
-        if self.hmac_secret:
-            payload['_hmac'] = self._compute_hmac(payload)
         with self.lock(parent_run_id):
+            payload = {
+                'parent_run_id': parent_run_id,
+                'requests': {rid: req.to_dict() for rid, req in requests.items()},
+                'batches': {bid: batch.to_dict() for bid, batch in batches.items()},
+            }
+            if self.hmac_secret:
+                payload['_hmac'] = self._compute_hmac(payload)
             temp = path.with_suffix('.json.tmp')
             temp.write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2) + '\n',

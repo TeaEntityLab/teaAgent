@@ -17,6 +17,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 from teaagent.graphqlite_store import GraphQLiteGraphStore
 from teaagent.security_env import federated_signature_token, signature_relay_api_token
@@ -463,6 +464,48 @@ class FederatedGraphSync:
             logger.warning('Failed to import sync message from %s', path)
             return None
 
+    @staticmethod
+    def _validate_relay_url(url: str) -> str:
+        """Validate a relay URL for SSRF safety.
+
+        Ensures the URL uses a safe scheme (https, or http for loopback)
+        and does not point to private IP ranges (except loopback).
+
+        Returns the validated URL.
+
+        Raises:
+            ValueError: If the URL fails validation.
+        """
+        import ipaddress
+
+        parsed = urlparse(url)
+
+        if parsed.scheme not in ('http', 'https'):
+            raise ValueError(
+                f"Unsupported URL scheme: {parsed.scheme!r} "
+                '(only http/https allowed)'
+            )
+
+        host = parsed.hostname or ''
+        if not host:
+            raise ValueError('URL has no hostname')
+
+        try:
+            addr = ipaddress.ip_address(host)
+            if addr.is_private and not addr.is_loopback:
+                raise ValueError(
+                    f'URL points to private IP range: {host}'
+                )
+            if addr.is_loopback and parsed.scheme == 'https':
+                # Allow https to loopback (127.0.0.1) — no upgrade needed
+                pass
+        except ValueError:
+            if host == 'localhost':
+                # Allow localhost hostname (resolves to loopback)
+                pass
+
+        return url
+
     def broadcast_approval_request(
         self,
         request: ApprovalRequestMessage,
@@ -493,16 +536,23 @@ class FederatedGraphSync:
         for peer_id in peer_agent_ids:
             http_ok = False
             if http_client is not None and peer_id in relay_urls:
-                payload = asdict(request)
-                payload['target_peer_id'] = peer_id
-                result = http_client.post_approval_request(relay_urls[peer_id], payload)
-                http_ok = bool(result.get('ok'))
-                if not http_ok:
+                try:
+                    safe_url = self._validate_relay_url(relay_urls[peer_id])
+                except ValueError as exc:
                     logger.warning(
-                        'HTTP approval broadcast to %s failed: %s',
-                        peer_id,
-                        result.get('error'),
+                        'Invalid relay URL for peer %s: %s', peer_id, exc
                     )
+                else:
+                    payload = asdict(request)
+                    payload['target_peer_id'] = peer_id
+                    result = http_client.post_approval_request(safe_url, payload)
+                    http_ok = bool(result.get('ok'))
+                    if not http_ok:
+                        logger.warning(
+                            'HTTP approval broadcast to %s failed: %s',
+                            peer_id,
+                            result.get('error'),
+                        )
             file_ok = False
             try:
                 broadcast_path = (

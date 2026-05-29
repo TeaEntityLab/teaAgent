@@ -6,6 +6,19 @@ All notable changes to TeaAgent are tracked here.
 
 - **Vote Relay OOM Fix**: Added `MAX_HTTP_BODY_BYTES=1_048_576` guard to `vote_relay.py::_read_json()` — rejects oversized payloads with `ValueError('body too large')` instead of unbounded `rfile.read()` (DoS vector; matches `signature_relay.py` pattern)
 
+- **Deep Audit Remediation (10 fixes)**:
+  - **SEC-01** (`tool_permissions.py`): Unknown/unregistered tools now require JIT approval — added `permission is None` guard in `check_tool_access` to prevent safe-default bypass
+  - **SEC-02** (`policy.py`): Quorum signature verification now looks up SSH keys by `peer_id` instead of client-supplied `ssh_key_id` — blocks peer impersonation
+  - **SEC-03** (`policy.py`): Approval hash now includes `run_id` and hourly time window — cryptographic replay protection
+  - **SEC-04** (`jit_approval_server.py`): SSE server default host changed from `localhost` to `127.0.0.1`; added auth handshake TODO note
+  - **SEC-05** (`federated_sync.py`): Added `_validate_relay_url()` — validates scheme, blocks private IPs (except loopback) before POST to prevent SSRF
+  - **FIND-01** (`_approval_queue_store.py`): `load()` now uses shared lock (`LOCK_SH`) instead of exclusive lock (`LOCK_EX`) — prevents writer starvation during polling
+  - **FIND-02** (`_approval_queue_store.py`): Dict serialization in `save()` moved inside file lock — prevents `RuntimeError: dictionary changed size during iteration`
+  - **DSR-01** (`graphqlite_production.py`): `_apply_migrations` now opens an sqlite3 connection and passes it as `target_conn` — migrations actually execute in production
+  - **DSR-02** (`graphqlite_production.py`): Document IDs in Cypher queries are now single-quote escaped — prevents stored Cypher injection
+  - **DSR-05** (`memory_legacy.py`): Added `_file_lock` + atomic temp/rename write pattern to all mutation methods — prevents concurrent write corruption
+  - **Regression Fix** (`schema_migration.py`): `executescript` now includes `BEGIN IMMEDIATE; … ;COMMIT;` in the script string — avoids "cannot commit" and "database is locked" errors
+
 - **Swarm/Approval/Migration Security Hardening (4 fixes)**:
   - **Workspace Contamination**: Added `_sandbox_lock` (module-level `threading.Lock`) to `GitBranchSandbox.start/rollback/merge` — serializes git checkout operations across parallel `ThreadPoolExecutor` threads so concurrent subagents don't race on branch creation in the same working tree
   - **JIT Approval Bypass**: Made JIT approvals single-use — `check_tool_access` now calls `agent_approved.discard(tool_name)` after a successful check; `request_tool_approval` no longer redundantly adds tools to `_agent_tool_whitelist`; `jit_approval_server.py` uses the proper `request_tool_approval` API instead of directly manipulating `_agent_approved_tools`

@@ -227,6 +227,9 @@ class ToolPermissionManager:
                 return True, None
             return False, f'Tool {tool_name} requires JIT approval'
 
+        if permission is None or permission.requires_approval:
+            return False, f'Tool {tool_name} requires JIT approval (unknown/unregistered)'
+
         return True, None
 
     def request_tool_approval(

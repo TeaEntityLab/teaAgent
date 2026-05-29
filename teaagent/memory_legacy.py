@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, List
@@ -43,6 +45,7 @@ class MemoryCatalog:
         self.path = self.root / '.teaagent' / 'memory.jsonl'
         self.quarantine_path = self.root / '.teaagent' / 'memory-quarantine.jsonl'
         self.readonly = readonly
+        self._file_lock = threading.Lock()
         if not readonly:
             self.path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -141,6 +144,14 @@ class MemoryCatalog:
                 entries.append(entry)
         return entries
 
+    def _atomic_write_entries(self, entries: List[MemoryEntry]) -> None:
+        temp = self.path.with_suffix('.jsonl.tmp')
+        temp.write_text(
+            '\n'.join(json.dumps(entry.to_dict(), sort_keys=True) for entry in entries),
+            encoding='utf-8',
+        )
+        os.replace(temp, self.path)
+
     def delete_by_branch(self, branch_name: str) -> int:
         """Delete all memory entries associated with a specific branch.
 
@@ -155,18 +166,13 @@ class MemoryCatalog:
         if not self.path.exists():
             return 0
 
-        entries = self._read_entries()
-        filtered = [entry for entry in entries if entry.branch_name != branch_name]
-        deleted_count = len(entries) - len(filtered)
+        with self._file_lock:
+            entries = self._read_entries()
+            filtered = [entry for entry in entries if entry.branch_name != branch_name]
+            deleted_count = len(entries) - len(filtered)
 
-        if deleted_count > 0:
-            # Rewrite file with filtered entries
-            self.path.write_text(
-                '\n'.join(
-                    json.dumps(entry.to_dict(), sort_keys=True) for entry in filtered
-                ),
-                encoding='utf-8',
-            )
+            if deleted_count > 0:
+                self._atomic_write_entries(filtered)
 
         return deleted_count
 
@@ -184,18 +190,13 @@ class MemoryCatalog:
         if not self.path.exists():
             return 0
 
-        entries = self._read_entries()
-        filtered = [entry for entry in entries if entry.run_id != run_id]
-        deleted_count = len(entries) - len(filtered)
+        with self._file_lock:
+            entries = self._read_entries()
+            filtered = [entry for entry in entries if entry.run_id != run_id]
+            deleted_count = len(entries) - len(filtered)
 
-        if deleted_count > 0:
-            # Rewrite file with filtered entries
-            self.path.write_text(
-                '\n'.join(
-                    json.dumps(entry.to_dict(), sort_keys=True) for entry in filtered
-                ),
-                encoding='utf-8',
-            )
+            if deleted_count > 0:
+                self._atomic_write_entries(filtered)
 
         return deleted_count
 
@@ -214,32 +215,32 @@ class MemoryCatalog:
         if not self.path.exists():
             return 0
 
-        entries = self._read_entries()
-        to_quarantine = [entry for entry in entries if entry.branch_name == branch_name]
-        quarantined_count = len(to_quarantine)
+        with self._file_lock:
+            entries = self._read_entries()
+            to_quarantine = [
+                entry for entry in entries if entry.branch_name == branch_name
+            ]
+            quarantined_count = len(to_quarantine)
 
-        if quarantined_count > 0:
-            # Remove from main catalog
-            filtered = [entry for entry in entries if entry.branch_name != branch_name]
-            self.path.write_text(
-                '\n'.join(
-                    json.dumps(entry.to_dict(), sort_keys=True) for entry in filtered
-                ),
-                encoding='utf-8',
-            )
+            if quarantined_count > 0:
+                filtered = [
+                    entry for entry in entries if entry.branch_name != branch_name
+                ]
+                self._atomic_write_entries(filtered)
 
-            # Add to quarantine
-            for entry in to_quarantine:
-                row = {
-                    **entry.to_dict(),
-                    'quarantine': True,
-                    'provenance': {
-                        'reason': reason,
-                        'original_branch': branch_name,
-                        'quarantined_at': utc_now(),
-                    },
-                }
-                append_jsonl_line(self.quarantine_path, json.dumps(row, sort_keys=True))
+                for entry in to_quarantine:
+                    row = {
+                        **entry.to_dict(),
+                        'quarantine': True,
+                        'provenance': {
+                            'reason': reason,
+                            'original_branch': branch_name,
+                            'quarantined_at': utc_now(),
+                        },
+                    }
+                    append_jsonl_line(
+                        self.quarantine_path, json.dumps(row, sort_keys=True)
+                    )
 
         return quarantined_count
 

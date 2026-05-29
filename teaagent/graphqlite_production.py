@@ -108,8 +108,12 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
 
     def _apply_migrations(self) -> None:
         store = SQLiteMigrationStore(self._prod_config.database)
-        runner = MigrationRunner(store, list(_GRAPHQLITE_SCHEMA_MIGRATIONS))
-        runner.apply_pending()
+        conn = sqlite3.connect(self._prod_config.database)
+        try:
+            runner = MigrationRunner(store, list(_GRAPHQLITE_SCHEMA_MIGRATIONS), target_conn=conn)
+            runner.apply_pending()
+        finally:
+            conn.close()
 
     def migration_status(self) -> dict[str, Any]:
         if self._prod_config.database == ':memory:':
@@ -189,8 +193,9 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
 
     def _fetch_document(self, doc_id: str) -> Optional[dict[str, Any]]:
         try:
+            safe_doc_id = doc_id.replace("'", "''")
             results = self.graph.query(
-                f"MATCH (d:Document {{doc_id: '{doc_id}'}}) RETURN d"
+                f"MATCH (d:Document {{doc_id: '{safe_doc_id}'}}) RETURN d"
             )
             if results:
                 return results[0].get('d', {})

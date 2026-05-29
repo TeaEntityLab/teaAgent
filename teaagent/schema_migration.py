@@ -147,9 +147,13 @@ class MigrationRunner:
             for migration in pending:
                 try:
                     if self._target_conn is not None:
-                        self._target_conn.execute('BEGIN IMMEDIATE')
-                        self._target_conn.executescript(migration.sql)
-                        self._target_conn.execute('COMMIT')
+                        # executescript issues implicit COMMIT first, so
+                        # include BEGIN IMMEDIATE in the script itself.
+                        # COMMIT closes the transaction before mark_applied
+                        # below (which opens a separate connection).
+                        self._target_conn.executescript(
+                            'BEGIN IMMEDIATE;\n' + migration.sql + ';\nCOMMIT;'
+                        )
                     self._store.mark_applied(migration)
                     applied.append(migration.version)
                 except Exception:

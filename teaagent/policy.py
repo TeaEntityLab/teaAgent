@@ -561,7 +561,7 @@ class ApprovalPolicy:
             return False
 
     def _generate_approval_hash(
-        self, tool_name: str, call_id: str, arguments: dict[str, Any] | None
+        self, tool_name: str, call_id: str, arguments: dict[str, Any] | None, *, run_id: str = ''
     ) -> str:
         """Generate cryptographic hash for approval request."""
         content = json.dumps(
@@ -569,6 +569,8 @@ class ApprovalPolicy:
                 'tool_name': tool_name,
                 'call_id': call_id,
                 'arguments': arguments or {},
+                'run_id': run_id,
+                'time_window': int(time.time() / 3600),
             },
             sort_keys=True,
         )
@@ -637,7 +639,7 @@ class ApprovalPolicy:
             is_valid = _verify_ssh_signature(
                 signature=sig_msg.signature,
                 message=message_to_verify,
-                ssh_key_id=sig_msg.ssh_key_id,
+                ssh_key_id=sig_msg.peer_id,
                 peer_public_keys=self.multi_sig_config.peer_public_keys,
                 allow_dev_signatures=(
                     self.multi_sig_config.allow_dev_signatures or env_allow_dev()

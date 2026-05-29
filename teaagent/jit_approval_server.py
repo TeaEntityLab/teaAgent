@@ -47,12 +47,17 @@ class ApprovalRequestRecord:
 
 
 class JITApprovalServer:
-    """SSE server for remote JIT tool approval."""
+    """SSE server for remote JIT tool approval.
+
+    NOTE: Only 127.0.0.1 is supported as the bind address for security
+    (no auth handshake exists). Do not bind to 0.0.0.0 or any non-loopback
+    interface.
+    """
 
     def __init__(
         self,
         permission_manager: ToolPermissionManager,
-        host: str = 'localhost',
+        host: str = '127.0.0.1',
         port: int = 8765,
         timeout_seconds: int = 180,
     ) -> None:
@@ -88,6 +93,8 @@ class JITApprovalServer:
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         """Handle incoming SSE client connections."""
+        # TODO: Add auth handshake before processing events.
+        # Currently there is no authentication — any local process can connect.
         # Simple SSE implementation
         # In production, use a proper SSE library like sse-starlette or aiohttp-sse
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
