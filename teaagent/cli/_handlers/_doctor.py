@@ -853,6 +853,8 @@ def _sanitize_doctor_payload(value: Any) -> Any:
         return sanitized
     if isinstance(value, list):
         return [_sanitize_doctor_payload(item) for item in value]
+    if isinstance(value, str) and _looks_like_sensitive_string(value):
+        return _REDACTED
     return value
 
 
