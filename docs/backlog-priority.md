@@ -91,6 +91,17 @@ docker-smoke CI) is shipped. See [architecture.md](architecture.md#phase-4-5-roa
 | WASM skill execution | P1 | Shipped | `teaagent/skill_executor.py`, `teaagent sandbox execute` |
 | Docker dogfood benchmarks | P2 | Shipped | Optional CI `docker-smoke` job (`tests/test_phase6_docker.py`) |
 
+### Phase 6: Skill writer, docker monitor, control plane — **Beta**
+
+| Task | Priority | Status | Evidence |
+|------|----------|--------|----------|
+| SkillWriter publish + review | P1 | Shipped | `teaagent/skill_writer.py`, `tests/test_phase6_skill_writer.py` |
+| Docker resource monitor + abort | P1 | Shipped | `teaagent/docker_sandbox.py`, `tests/test_phase6_docker.py` |
+| Prompt tournament scoring | P2 | Shipped | `teaagent/swarm.py`, `tests/test_phase6_swarm_score.py` |
+| Control plane HTTP + dashboard | P2 | Shipped | `teaagent/control_plane_api.py`, `tests/test_phase6_control_plane.py` |
+| Control plane CLI | P2 | Shipped | `teaagent control-plane serve` |
+| JIT approval server | P2 | Shipped | `teaagent/jit_approval_server.py`, `tests/test_phase6_jit_server.py` |
+
 ---
 
 ## Open — Daily-use ergonomics

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import threading
 import time
 import urllib.request
 
@@ -41,6 +42,20 @@ def test_format_sse_event() -> None:
     frame = format_sse_event('workflow_update', {'state': 'running'})
     assert 'event: workflow_update' in frame
     assert 'data: {"state":"running"}' in frame
+
+
+def test_control_plane_serve_blocking_binds_port() -> None:
+    state = ControlPlaneState()
+    server = ControlPlaneServer(host='127.0.0.1', port=0, state=state)
+    thread = threading.Thread(target=lambda: server.serve_blocking(announce=False))
+    thread.start()
+    try:
+        time.sleep(0.1)
+        with urllib.request.urlopen(f'{server.base_url}/') as resp:
+            assert resp.status == 200
+    finally:
+        server.stop()
+        thread.join(timeout=3)
 
 
 def test_control_plane_serves_dashboard_and_sse() -> None:

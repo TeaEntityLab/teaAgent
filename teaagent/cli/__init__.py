@@ -83,6 +83,7 @@ from teaagent.cli._handlers import (
     consensus_request_command,
     consensus_status_command,
     consensus_vote_command,
+    control_plane_serve_command,
     daily_journal_command,
     doctor_aigateway,
     doctor_all,
@@ -247,6 +248,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._agent_parsers import register as register_agent
     from teaagent.cli._cloud_parsers import register as register_cloud
     from teaagent.cli._consensus_parsers import register as register_consensus
+    from teaagent.cli._control_plane_parsers import register as register_control_plane
     from teaagent.cli._ergonomics_parsers import register as register_ergonomics
     from teaagent.cli._gateway_parsers import register as register_gateway
     from teaagent.cli._mcp_parsers import register as register_mcp
@@ -400,6 +402,10 @@ def build_parser() -> argparse.ArgumentParser:
             'check_wasm': sandbox_check_wasm_command,
             'check_compatibility': sandbox_check_compatibility_command,
         },
+    )
+    register_control_plane(
+        subparsers,
+        {'serve': control_plane_serve_command},
     )
     from teaagent.cli._agent_parsers import register_top_level_agent_aliases
 

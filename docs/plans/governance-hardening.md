@@ -32,6 +32,7 @@ pytest tests/test_governance_fuzz.py tests/test_governance_adversarial_runtime.p
   tests/test_subagent_approval_queue_integration.py tests/policy/
 pytest tests/test_skill_executor.py tests/test_phase6_*.py
 pytest tests/acceptance/test_consensus_flow.py tests/acceptance/test_sandbox_enhancement_flow.py
+teaagent control-plane serve --host 127.0.0.1 --port 8765  # manual smoke; Ctrl+C to stop
 teaagent approval subagents prune --root . --max-age-hours 168
 teaagent selftest --root .
 teaagent tool lint --root .
@@ -40,7 +41,7 @@ teaagent tool lint --root .
 ## Open decisions
 
 1. **Swarm LLM execution** — real adapter path exists via `SwarmManager.with_agent_execution`; deeper tournament benchmarks remain optional.
-2. **Phase 4–5** — consensus and sandbox routing are **Beta** with acceptance tests; async voting UX and WASM skill execution are shipped (see `docs/backlog-priority.md`).
+2. **Phase 4–6** — consensus, sandbox execution, and control-plane CLI are **Beta** with acceptance/unit tests (see `docs/backlog-priority.md`).
 3. **Dependabot #10** — reconcile GitHub Security alert if `pip-audit` stays clean (see `SECURITY.md`).
 
 ## Related

@@ -98,6 +98,13 @@ WASM modules and deeper tournament benchmarks. See [backlog-priority.md](backlog
 - Resource monitoring CLI (`teaagent sandbox monitor`)
 - E2E: `tests/acceptance/test_sandbox_enhancement_flow.py`
 
+### Phase 6: Skill writer, docker monitor, control plane — **Beta**
+- `SkillWriter` publish/review pipeline (`teaagent/skill_writer.py`)
+- Docker sandbox resource monitor + abort (`teaagent/docker_sandbox.py`)
+- Prompt tournament fitness scoring in `SwarmManager` (`.teaagent/prompt_gene_pool.jsonl`)
+- Control plane HTTP + dashboard (`teaagent/control_plane_api.py`, `teaagent/html_dashboard/`)
+- CLI: `teaagent control-plane serve` (workflow/focus/JIT SSE dashboard)
+
 See [backlog-priority.md](backlog-priority.md) for detailed task breakdowns and implementation status.
 
 ## Component Layers

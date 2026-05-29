@@ -663,6 +663,16 @@ teaagent sandbox monitor <container_id> --duration 30
 
 Skill execution uses `teaagent/skill_executor.py` (subprocess, Docker, or WASM module when present).
 
+## Control plane (Phase 6 Beta)
+
+Local dashboard for workflow state, focus stack, and JIT approvals:
+
+```bash
+teaagent control-plane serve --host 127.0.0.1 --port 8765
+```
+
+Opens `teaagent/html_dashboard/` with SSE streams (`/api/workflow/stream`, `/api/focus/stream`, `/api/jit/diff`) and JIT approve/reject endpoints.
+
 ## Preflight and Daily Brief
 
 **Daily start ritual (recommended):** run `agent daily` read-only before every session to see

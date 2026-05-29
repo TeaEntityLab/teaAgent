@@ -43,7 +43,7 @@ Scale reference (internal engineering, not market validation):
 | CI governance gate | Stable | `.github/workflows/ci.yml` governance-gate job | — |
 | Phase 4 consensus | Beta | `tests/acceptance/test_consensus_flow.py`, `async_vote_collection` | External peer voting UX |
 | Phase 5 sandbox routing + execution | Beta | `tests/test_skill_executor.py`, `teaagent sandbox execute` | Native `.wasm` skill modules |
-| Phase 6 skill writer / docker monitor | Beta | `tests/test_phase6_*.py`, optional `docker-smoke` CI | Control plane dashboard dogfood |
+| Phase 6 skill writer / control plane | Beta | `tests/test_phase6_*.py`, `teaagent control-plane serve` | Dashboard production dogfood |
 
 ## Surfaces (summary)
 

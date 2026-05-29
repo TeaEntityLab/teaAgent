@@ -66,6 +66,7 @@ from ._consensus import (
     consensus_status_command,
     consensus_vote_command,
 )
+from ._control_plane import control_plane_serve_command
 from ._doctor import (
     doctor_aigateway,
     doctor_all,
@@ -380,6 +381,7 @@ __all__ = [
     'consensus_history_command',
     'consensus_request_command',
     'consensus_vote_command',
+    'control_plane_serve_command',
     'sandbox_route_command',
     'sandbox_execute_command',
     'sandbox_monitor_command',

@@ -147,6 +147,25 @@ class ControlPlaneServer:
             self._thread.join(timeout=5.0)
             self._thread = None
 
+    def serve_blocking(self, *, announce: bool = True) -> None:
+        """Serve on the foreground thread until interrupted."""
+        handler = _make_handler(self)
+        httpd = ControlPlaneHTTPServer((self.host, self.port), handler, self)
+        self._httpd = httpd
+        self.port = int(httpd.server_address[1])
+        logger.info('Control plane listening on %s', self.base_url)
+        if announce:
+            print(f'TeaAgent control plane running at {self.base_url}')
+            print('Press Ctrl+C to stop.')
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            self._httpd = None
+
     @property
     def base_url(self) -> str:
         return f'http://{self.host}:{self.port}'
