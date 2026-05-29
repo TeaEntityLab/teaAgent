@@ -298,6 +298,8 @@ class ConsensusConfig:
     allow_abstain: bool = True
     enable_pre_approval: bool = False
     pre_approved_patterns: List[str] = field(default_factory=list)
+    async_vote_collection: bool = False
+    vote_poll_timeout_seconds: float = 2.0
 
     def to_dict(self) -> Dict:
         """Convert config to dictionary."""
@@ -309,6 +311,8 @@ class ConsensusConfig:
             'allow_abstain': self.allow_abstain,
             'enable_pre_approval': self.enable_pre_approval,
             'pre_approved_patterns': self.pre_approved_patterns,
+            'async_vote_collection': self.async_vote_collection,
+            'vote_poll_timeout_seconds': self.vote_poll_timeout_seconds,
         }
 
     @classmethod
@@ -324,6 +328,10 @@ class ConsensusConfig:
             allow_abstain=data.get('allow_abstain', True),
             enable_pre_approval=data.get('enable_pre_approval', False),
             pre_approved_patterns=data.get('pre_approved_patterns', []),
+            async_vote_collection=data.get('async_vote_collection', False),
+            vote_poll_timeout_seconds=float(
+                data.get('vote_poll_timeout_seconds', 2.0)
+            ),
         )
 
 
@@ -949,6 +957,33 @@ class ConsensusEngine:
             ):
                 cast += 1
         return cast
+
+    def poll_until_resolved(
+        self,
+        proposal_id: str,
+        *,
+        timeout_seconds: float,
+        interval_seconds: float = 0.05,
+    ) -> Optional[ConsensusState]:
+        """Poll consensus status without blocking longer than ``timeout_seconds``."""
+        import time
+
+        deadline = time.monotonic() + max(timeout_seconds, 0.0)
+        latest: Optional[ConsensusState] = None
+        while True:
+            latest = self.get_consensus_status(proposal_id)
+            if latest is None:
+                return None
+            if latest.status in {
+                ConsensusStatus.APPROVED,
+                ConsensusStatus.REJECTED,
+                ConsensusStatus.TIMEOUT,
+                ConsensusStatus.CANCELLED,
+            }:
+                return latest
+            if time.monotonic() >= deadline:
+                return latest
+            time.sleep(interval_seconds)
 
     def generate_attestation(self, proposal_id: str) -> Optional[Dict]:
         """Generate attestation for an approved proposal.

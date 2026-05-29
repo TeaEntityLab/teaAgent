@@ -85,11 +85,11 @@ dogfood benchmarks. See [architecture.md](architecture.md#future-roadmap-phase-4
 
 ### Remaining (optional hardening)
 
-| Task | Priority | Description |
-|------|----------|-------------|
-| Async consensus UX | P2 | Non-blocking vote collection in swarm parent runs |
-| WASM skill execution | P1 | Execute compatible skills inside WASM runtime (not just route) |
-| Docker dogfood benchmarks | P2 | CI optional job for docker isolation smoke |
+| Task | Priority | Status | Description |
+|------|----------|--------|-------------|
+| Async consensus UX | P2 | Shipped | Non-blocking vote collection via `async_vote_collection` + poll |
+| WASM skill execution | P1 | Shipped | `teaagent/skill_executor.py`, `teaagent sandbox execute` |
+| Docker dogfood benchmarks | P2 | Shipped | Optional CI `docker-smoke` job (`tests/test_phase6_docker.py`) |
 
 ---
 

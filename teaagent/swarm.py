@@ -459,36 +459,47 @@ class SwarmManager:
         self._start_heartbeat_monitor()
 
         try:
-            # Check consensus for high-risk tasks if enabled
+            results: list[SubagentResult] = []
             if self._enable_consensus and self._consensus_engine:
                 consensus_results = self._check_consensus_for_tasks()
-                if not consensus_results.get('all_approved', True):
-                    # Some tasks were not approved, filter them out
+                pending = consensus_results.get('pending', {})
+                use_async = bool(
+                    pending and self._consensus_config.async_vote_collection
+                )
+                if not use_async and not consensus_results.get('all_approved', True):
                     self._filter_subagents_by_consensus(consensus_results)
-
-            # Execute subagents in parallel with thread pool
-            results = []
-            with ThreadPoolExecutor(max_workers=self._max_parallel) as executor:
-                future_to_subagent = {
-                    executor.submit(subagent.execute): subagent
-                    for subagent in self._subagents
-                }
-
-                for future in as_completed(future_to_subagent):
-                    subagent = future_to_subagent[future]
-                    try:
-                        result = future.result()
-                        results.append(result)
-                    except Exception as exc:
-                        results.append(
-                            SubagentResult(
-                                task_id=subagent._task.task_id,
-                                success=False,
-                                error=str(exc),
-                            )
+                    results = self._execute_subagent_batch(self._subagents)
+                elif use_async:
+                    immediate = [
+                        subagent
+                        for subagent in self._subagents
+                        if not subagent._task.require_consensus
+                        or consensus_results.get('task_results', {})
+                        .get(subagent._task.task_id, {})
+                        .get('approved', False)
+                    ]
+                    deferred = [
+                        subagent
+                        for subagent in self._subagents
+                        if subagent._task.task_id in pending
+                    ]
+                    results = self._execute_subagent_batch(immediate)
+                    resolved = self._resolve_pending_consensus(pending)
+                    approved_ids = set(resolved.get('approved_task_ids', []))
+                    if approved_ids:
+                        approved_deferred = [
+                            subagent
+                            for subagent in deferred
+                            if subagent._task.task_id in approved_ids
+                        ]
+                        results.extend(
+                            self._execute_subagent_batch(approved_deferred)
                         )
+                else:
+                    results = self._execute_subagent_batch(self._subagents)
+            else:
+                results = self._execute_subagent_batch(self._subagents)
 
-            # Cleanup all subagents
             for subagent in self._subagents:
                 subagent.cleanup()
 
@@ -551,6 +562,48 @@ class SwarmManager:
         )
         return winner_id, winner_score, best_result
 
+    def _execute_subagent_batch(
+        self, subagents: list[Any]
+    ) -> list[SubagentResult]:
+        """Execute a batch of subagents in parallel."""
+        if not subagents:
+            return []
+        results: list[SubagentResult] = []
+        with ThreadPoolExecutor(max_workers=self._max_parallel) as executor:
+            future_to_subagent = {
+                executor.submit(subagent.execute): subagent for subagent in subagents
+            }
+            for future in as_completed(future_to_subagent):
+                subagent = future_to_subagent[future]
+                try:
+                    results.append(future.result())
+                except Exception as exc:
+                    results.append(
+                        SubagentResult(
+                            task_id=subagent._task.task_id,
+                            success=False,
+                            error=str(exc),
+                        )
+                    )
+        return results
+
+    def _resolve_pending_consensus(
+        self, pending: dict[str, str]
+    ) -> dict[str, Any]:
+        """Poll pending proposals and return task IDs approved during the wait."""
+        if not self._consensus_engine:
+            return {'approved_task_ids': []}
+        approved_task_ids: list[str] = []
+        timeout = self._consensus_config.vote_poll_timeout_seconds
+        for task_id, proposal_id in pending.items():
+            status = self._consensus_engine.poll_until_resolved(
+                proposal_id,
+                timeout_seconds=timeout,
+            )
+            if status and status.status == ConsensusStatus.APPROVED:
+                approved_task_ids.append(task_id)
+        return {'approved_task_ids': approved_task_ids}
+
     def _check_consensus_for_tasks(self) -> dict[str, Any]:
         """Check consensus for tasks that require it.
 
@@ -558,9 +611,10 @@ class SwarmManager:
             Dictionary with 'all_approved' boolean and 'task_results' mapping
         """
         if not self._consensus_engine:
-            return {'all_approved': True, 'task_results': {}}
+            return {'all_approved': True, 'task_results': {}, 'pending': {}}
 
         task_results: dict[str, dict[str, Any]] = {}
+        pending: dict[str, str] = {}
         all_approved = True
 
         for subagent in self._subagents:
@@ -599,6 +653,12 @@ class SwarmManager:
                                 state.proposal.id
                             ),
                         }
+                    elif (
+                        status
+                        and status.status == ConsensusStatus.VOTING
+                        and self._consensus_config.async_vote_collection
+                    ):
+                        pending[subagent._task.task_id] = state.proposal.id
                     else:
                         task_results[subagent._task.task_id] = {
                             'approved': False,
@@ -612,7 +672,11 @@ class SwarmManager:
                     }
                     all_approved = False
 
-        return {'all_approved': all_approved, 'task_results': task_results}
+        return {
+            'all_approved': all_approved and not pending,
+            'task_results': task_results,
+            'pending': pending,
+        }
 
     def _filter_subagents_by_consensus(self, consensus_results: dict[str, Any]) -> None:
         """Filter out subagents whose tasks were not approved by consensus.

@@ -142,6 +142,7 @@ from teaagent.cli._handlers import (
     replay_steps,
     sandbox_check_compatibility_command,
     sandbox_check_wasm_command,
+    sandbox_execute_command,
     sandbox_monitor_command,
     sandbox_route_command,
     session_list_command,
@@ -394,6 +395,7 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers,
         {
             'route': sandbox_route_command,
+            'execute': sandbox_execute_command,
             'monitor': sandbox_monitor_command,
             'check_wasm': sandbox_check_wasm_command,
             'check_compatibility': sandbox_check_compatibility_command,

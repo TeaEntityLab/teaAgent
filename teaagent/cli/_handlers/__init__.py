@@ -187,6 +187,7 @@ from ._replay import (
 from ._sandbox import (
     sandbox_check_compatibility_command,
     sandbox_check_wasm_command,
+    sandbox_execute_command,
     sandbox_monitor_command,
     sandbox_route_command,
 )
@@ -380,6 +381,7 @@ __all__ = [
     'consensus_request_command',
     'consensus_vote_command',
     'sandbox_route_command',
+    'sandbox_execute_command',
     'sandbox_monitor_command',
     'sandbox_check_wasm_command',
     'sandbox_check_compatibility_command',

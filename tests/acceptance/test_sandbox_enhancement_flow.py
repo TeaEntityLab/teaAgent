@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 from teaagent.consensus import RiskLevel
+from teaagent.skill_executor import execute_skill
 from teaagent.skill_router import (
     SandboxType,
     SkillRouter,
@@ -53,3 +54,16 @@ def test_skill_router_docker_config_applied_to_plan() -> None:
         plan = plan_skill_isolation(skill_path, RiskLevel.MEDIUM, router=router)
         assert plan.cpu_quota == 1.5
         assert plan.memory_limit == '512m'
+
+
+def test_execute_skill_routes_and_runs_low_risk_tool() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        skill_path = Path(tmp)
+        (skill_path / 'SKILL.md').write_text('# helper\n', encoding='utf-8')
+        (skill_path / 'tool.py').write_text(
+            'def run(payload):\n    return {"value": payload["n"]}\n',
+            encoding='utf-8',
+        )
+        result = execute_skill(skill_path, {'n': 7}, risk_level=RiskLevel.LOW)
+        assert result.success is True
+        assert result.output == {'value': 7}

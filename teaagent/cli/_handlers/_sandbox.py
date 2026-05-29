@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from teaagent.resource_monitor import ResourceMonitor
+from teaagent.skill_executor import execute_skill
 from teaagent.skill_router import SandboxType, SkillRouter
 from teaagent.wasm_runtime import is_wasm_available
 
@@ -95,6 +96,54 @@ def sandbox_monitor_command(args: argparse.Namespace) -> int:
 
     monitor.stop()
     return 0
+
+
+def sandbox_execute_command(args: argparse.Namespace) -> int:
+    """Execute a skill tool module inside a routed sandbox."""
+    skill_path = Path(args.skill_path)
+    if not skill_path.exists():
+        print(f'Error: Skill path does not exist: {skill_path}')
+        return 1
+
+    from teaagent.consensus import RiskLevel
+
+    try:
+        payload = json.loads(args.payload)
+    except json.JSONDecodeError as exc:
+        print(f'Error: Invalid JSON payload: {exc}')
+        return 1
+    if not isinstance(payload, dict):
+        print('Error: Payload must be a JSON object')
+        return 1
+
+    risk_level = RiskLevel(args.risk_level)
+    preferred_sandbox = (
+        SandboxType(args.preferred_sandbox) if args.preferred_sandbox else None
+    )
+    router = SkillRouter(
+        default_sandbox=SandboxType(args.default_sandbox),
+        wasm_memory_limit_mb=args.wasm_memory_limit_mb,
+        docker_cpu_quota=args.docker_cpu_quota,
+        docker_memory_limit=args.docker_memory_limit,
+    )
+    result = execute_skill(
+        skill_path,
+        payload,
+        risk_level=risk_level,
+        router=router,
+        preferred_sandbox=preferred_sandbox,
+    )
+    print(f'Success: {result.success}')
+    print(f'Sandbox: {result.sandbox_type.value}')
+    print(f'Backend: {result.execution_backend}')
+    if result.reason:
+        print(f'Reason: {result.reason}')
+    if result.error:
+        print(f'Error: {result.error}')
+    if result.success:
+        print(json.dumps(result.output, indent=2, default=str))
+        return 0
+    return 1
 
 
 def sandbox_check_wasm_command(args: argparse.Namespace) -> int:

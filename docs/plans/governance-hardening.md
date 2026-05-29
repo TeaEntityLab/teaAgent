@@ -38,7 +38,7 @@ teaagent tool lint --root .
 ## Open decisions
 
 1. **Swarm LLM execution** — real adapter path exists via `SwarmManager.with_agent_execution`; deeper tournament benchmarks remain optional.
-2. **Phase 4–5** — consensus and sandbox routing are **Beta** with acceptance tests; async voting UX and WASM execution remain optional hardening (see `docs/backlog-priority.md`).
+2. **Phase 4–5** — consensus and sandbox routing are **Beta** with acceptance tests; async voting UX and WASM skill execution are shipped (see `docs/backlog-priority.md`).
 3. **Dependabot #10** — reconcile GitHub Security alert if `pip-audit` stays clean (see `SECURITY.md`).
 
 ## Related

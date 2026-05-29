@@ -47,6 +47,48 @@ def _sandbox_route(
     route_cmd.set_defaults(func=route_handler)
 
 
+def _sandbox_execute(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    execute_handler: Optional[Callable] = None,
+) -> None:
+    execute_cmd = subparsers.add_parser(
+        'execute', help='Execute a skill inside a routed sandbox'
+    )
+    execute_cmd.add_argument('skill_path', help='Path to the skill directory')
+    execute_cmd.add_argument(
+        '--payload',
+        default='{}',
+        help='JSON object payload passed to skill run()',
+    )
+    execute_cmd.add_argument(
+        '--risk-level',
+        choices=['low', 'medium', 'high', 'critical'],
+        default='medium',
+        help='Risk level of the skill',
+    )
+    execute_cmd.add_argument(
+        '--preferred-sandbox',
+        choices=['auto', 'directory-snapshot', 'docker', 'wasm'],
+        help='Preferred sandbox type',
+    )
+    execute_cmd.add_argument(
+        '--default-sandbox',
+        choices=['auto', 'directory-snapshot', 'docker', 'wasm'],
+        default='auto',
+        help='Default sandbox type',
+    )
+    execute_cmd.add_argument(
+        '--wasm-memory-limit-mb', type=int, default=256, help='WASM memory limit in MB'
+    )
+    execute_cmd.add_argument(
+        '--docker-cpu-quota', type=float, help='Docker CPU quota in cores'
+    )
+    execute_cmd.add_argument(
+        '--docker-memory-limit', help='Docker memory limit (e.g., 1g, 512m)'
+    )
+    execute_cmd.set_defaults(func=execute_handler)
+
+
 def _sandbox_monitor(
     subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
     monitor_handler: Optional[Callable] = None,
@@ -105,6 +147,7 @@ def register(
         handlers.get('monitor'),
         handlers.get('check_wasm'),
         handlers.get('check_compatibility'),
+        handlers.get('execute'),
     )
 
 
@@ -114,6 +157,7 @@ def _sandbox(
     monitor_handler: Optional[Callable] = None,
     check_wasm_handler: Optional[Callable] = None,
     check_compatibility_handler: Optional[Callable] = None,
+    execute_handler: Optional[Callable] = None,
 ) -> None:
     """Register sandbox subcommands."""
     sandbox_parser = subparsers.add_parser('sandbox', help='Sandbox management')
@@ -123,5 +167,6 @@ def _sandbox(
     )
 
     _sandbox_route(sandbox_subs, route_handler)
+    _sandbox_execute(sandbox_subs, execute_handler)
     _sandbox_monitor(sandbox_subs, monitor_handler)
     _sandbox_check(sandbox_subs, check_wasm_handler, check_compatibility_handler)

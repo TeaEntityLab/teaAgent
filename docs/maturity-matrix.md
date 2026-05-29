@@ -41,6 +41,9 @@ Scale reference (internal engineering, not market validation):
 | Read-only numeric `--parallel` | Beta | CLI guard in `agent run` | Swarm read-only analysis |
 | Governance fuzz tests | Stable | `tests/test_governance_fuzz.py`, `tests/test_governance_hardening.py` | — |
 | CI governance gate | Stable | `.github/workflows/ci.yml` governance-gate job | — |
+| Phase 4 consensus | Beta | `tests/acceptance/test_consensus_flow.py`, async vote polling | Production async UX |
+| Phase 5 sandbox routing + execution | Beta | `tests/test_skill_executor.py`, `test_sandbox_enhancement_flow.py` | WASM native modules |
+| Phase 6 skill writer / docker monitor | Beta | `tests/test_phase6_*.py`, optional `docker-smoke` CI job | — |
 
 ## Surfaces (summary)
 
@@ -50,7 +53,7 @@ Scale reference (internal engineering, not market validation):
 | First-hour onboarding | Stable | `test_first_hour_e2e_flow.py` |
 | VS Code extension | Stable | `test_vscode_extension_mcp_boot_flow.py` |
 | Plugin install gate | Beta | `test_plugin_install_security_flow.py` |
-| Code Mode container | Foundation | `docker_sandbox.py`, Phase 6 monitor |
+| Code Mode container | Beta | `docker_sandbox.py`, `tests/test_phase6_docker.py` | Docker dogfood benchmarks |
 | Managed cloud runtime | Foundation | `test_managed_runtime_flow.py` |
 
 ## Honest External Posture
