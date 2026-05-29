@@ -12,6 +12,7 @@ import functools
 import hashlib
 import json
 import logging
+import socket
 import threading
 import time
 from dataclasses import dataclass, field
@@ -490,19 +491,31 @@ class FederatedGraphSync:
         if not host:
             raise ValueError('URL has no hostname')
 
+        # Resolve hostname to IP addresses to block wildcard DNS SSRF
         try:
             addr = ipaddress.ip_address(host)
+            # host is a literal IP address
             if addr.is_private and not addr.is_loopback:
                 raise ValueError(
                     f'URL points to private IP range: {host}'
                 )
-            if addr.is_loopback and parsed.scheme == 'https':
-                # Allow https to loopback (127.0.0.1) — no upgrade needed
-                pass
+            return url  # literal IP is valid (loopback or public)
         except ValueError:
-            if host == 'localhost':
-                # Allow localhost hostname (resolves to loopback)
-                pass
+            pass  # host is not a literal IP — resolve it below
+
+        # Resolve hostname to actual IP addresses
+        try:
+            ips = socket.getaddrinfo(host, 80)
+            resolved_ips = {ip[4][0] for ip in ips}
+        except socket.gaierror as exc:
+            raise ValueError(f"Failed to resolve host '{host}': {exc}") from exc
+
+        for ip_str in resolved_ips:
+            addr = ipaddress.ip_address(ip_str)
+            if addr.is_private and not addr.is_loopback:
+                raise ValueError(
+                    f"URL host '{host}' resolves to private IP range: {ip_str}"
+                )
 
         return url
 

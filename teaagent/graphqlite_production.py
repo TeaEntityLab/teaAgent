@@ -193,7 +193,8 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
 
     def _fetch_document(self, doc_id: str) -> Optional[dict[str, Any]]:
         try:
-            safe_doc_id = doc_id.replace("'", "''")
+            # Escape backslashes first, then single quotes (SQLite escaping)
+            safe_doc_id = doc_id.replace("\\", "\\\\").replace("'", "''")
             results = self.graph.query(
                 f"MATCH (d:Document {{doc_id: '{safe_doc_id}'}}) RETURN d"
             )

@@ -101,7 +101,7 @@ class ApprovalQueueStore:
 
     @contextmanager
     def lock(self, parent_run_id: str, shared: bool = False) -> Iterator[None]:
-        path = self.queue_path(parent_run_id)
+        path = self.queue_path(parent_run_id).with_suffix('.json.lock')
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open('a+', encoding='utf-8') as handle:
             try:

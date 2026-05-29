@@ -74,6 +74,14 @@ class JITApprovalServer:
 
     async def start(self) -> None:
         """Start the SSE server."""
+        # Security: server has no auth handshake — must bind to loopback only
+        import ipaddress
+        addr = ipaddress.ip_address(self._host)
+        if not addr.is_loopback:
+            raise ValueError(
+                f"JIT Approval Server has no authentication — "
+                f"must bind to loopback (got {self._host})"
+            )
         self._server = await asyncio.start_server(
             self._handle_connection, self._host, self._port
         )

@@ -6,6 +6,14 @@ All notable changes to TeaAgent are tracked here.
 
 - **Vote Relay OOM Fix**: Added `MAX_HTTP_BODY_BYTES=1_048_576` guard to `vote_relay.py::_read_json()` — rejects oversized payloads with `ValueError('body too large')` instead of unbounded `rfile.read()` (DoS vector; matches `signature_relay.py` pattern)
 
+- **Verification-Driven Hardening (6 fixes)**:
+  - **SEC-05-REV** (`federated_sync.py`): `_validate_relay_url` now resolves hostnames via DNS and checks all resolved IPs against private ranges — blocks wildcard DNS SSRF attacks (e.g. `192.168.1.1.nip.io`)
+  - **SEC-04-REV** (`jit_approval_server.py`): `start()` now enforces loopback binding with `ip_address(self._host).is_loopback` check at runtime
+  - **F-01-REV** (`graphqlite_production.py`): `_fetch_document` escapes backslashes before single quotes — `doc_id.replace("\\", "\\\\").replace("'", "''")` for Cypher/SQLite defense-in-depth
+  - **FIND-01-REV** (`_approval_queue_store.py`): Lock method uses dedicated `.json.lock` file instead of data file — prevents `flock` orphanage from `os.replace` inode swap
+  - **FIND-02-REV** (`_approval_queue.py`): `reload_from_store` now resolves `_pending_futures` (asyncio.Future) alongside `_sync_waiters` — prevents async subagent hangs on disk-approved requests
+  - **F-02-REV** (`memory_legacy.py`): `_atomic_write_entries` uses UUID-suffixed temp path instead of static `.jsonl.tmp` — eliminates temp file collisions
+
 - **Deep Audit Remediation (10 fixes)**:
   - **SEC-01** (`tool_permissions.py`): Unknown/unregistered tools now require JIT approval — added `permission is None` guard in `check_tool_access` to prevent safe-default bypass
   - **SEC-02** (`policy.py`): Quorum signature verification now looks up SSH keys by `peer_id` instead of client-supplied `ssh_key_id` — blocks peer impersonation

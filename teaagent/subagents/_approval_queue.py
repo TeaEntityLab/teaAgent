@@ -168,6 +168,9 @@ class CentralizedApprovalQueue:
                         event = self._sync_waiters.get(request_id)
                         if event is not None:
                             event.set()
+                        future = self._pending_futures.get(request_id)
+                        if future is not None and not future.done():
+                            future.set_result(True)
                     elif loaded.status in {
                         ApprovalRequestStatus.DENIED,
                         ApprovalRequestStatus.CANCELLED,
@@ -176,6 +179,9 @@ class CentralizedApprovalQueue:
                         event = self._sync_waiters.get(request_id)
                         if event is not None:
                             event.set()
+                        future = self._pending_futures.get(request_id)
+                        if future is not None and not future.done():
+                            future.set_result(False)
 
     def _persist(self) -> None:
         if self._store is not None:

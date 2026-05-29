@@ -145,7 +145,7 @@ class MemoryCatalog:
         return entries
 
     def _atomic_write_entries(self, entries: List[MemoryEntry]) -> None:
-        temp = self.path.with_suffix('.jsonl.tmp')
+        temp = self.path.with_suffix(f'.jsonl.tmp.{uuid4().hex}')
         temp.write_text(
             '\n'.join(json.dumps(entry.to_dict(), sort_keys=True) for entry in entries),
             encoding='utf-8',
