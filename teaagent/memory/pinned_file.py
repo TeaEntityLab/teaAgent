@@ -9,9 +9,12 @@ This module provides:
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -99,13 +102,7 @@ class PinnedFileStorage:
                     return []
                 return data
         except (OSError, json.JSONDecodeError) as exc:
-            # Log warning but don't crash
-            import sys
-
-            print(
-                f'[TeaAgent] Warning: Failed to read pinned files: {exc}',
-                file=sys.stderr,
-            )
+            logger.warning('Failed to read pinned files: %s', exc)
             return []
 
     def _write_pinned_files(self, pinned_files: list[dict]) -> None:
@@ -118,12 +115,7 @@ class PinnedFileStorage:
             with open(self.storage_file, 'w', encoding='utf-8') as f:
                 json.dump(pinned_files, f, indent=2)
         except OSError as exc:
-            import sys
-
-            print(
-                f'[TeaAgent] Warning: Failed to write pinned files: {exc}',
-                file=sys.stderr,
-            )
+            logger.warning('Failed to write pinned files: %s', exc)
 
     def add(self, file_path: str) -> bool:
         """Add a file to the pinned list.

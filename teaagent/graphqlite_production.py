@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import contextlib
+import logging
+import sqlite3
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -16,6 +18,8 @@ from teaagent.schema_migration import (
     SchemaMigration,
     SQLiteMigrationStore,
 )
+
+logger = logging.getLogger(__name__)
 
 _PRODUCTION_PRAGMAS: tuple[str, ...] = (
     'PRAGMA journal_mode=WAL',
@@ -99,7 +103,7 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
 
     def _ensure_indexes(self) -> None:
         for mig in _GRAPHQLITE_SCHEMA_MIGRATIONS[1:]:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(sqlite3.Error, OSError):
                 self.graph.query(mig.sql)
 
     def _apply_migrations(self) -> None:
@@ -131,7 +135,8 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
                     f'RETURN nodes(p) as nodes, relationships(p) as rels'
                 )
                 results = self.graph.query(cypher)
-            except Exception:
+            except (sqlite3.Error, OSError, ValueError, TypeError) as exc:
+                logger.debug('Graph query failed for term %s: %s', term, exc)
                 continue
 
             for row in results:
@@ -189,8 +194,8 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
             )
             if results:
                 return results[0].get('d', {})
-        except Exception:
-            pass
+        except (sqlite3.Error, OSError, ValueError, TypeError) as exc:
+            logger.debug('Failed to fetch document %s: %s', doc_id, exc)
         return None
 
     def sync_to_knowledge_graph(self, knowledge_graph: KnowledgeGraph) -> None:
@@ -210,8 +215,8 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
                         },
                     )
                 )
-        except Exception:
-            pass
+        except (sqlite3.Error, OSError, ValueError, TypeError) as exc:
+            logger.warning('Failed to sync documents to knowledge graph: %s', exc)
 
         try:
             edge_rows = self.graph.query(
@@ -228,5 +233,5 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
                         document_ids=tuple(row.get('doc_ids', [])),
                     )
                 )
-        except Exception:
-            pass
+        except (sqlite3.Error, OSError, ValueError, TypeError) as exc:
+            logger.warning('Failed to sync edges to knowledge graph: %s', exc)

@@ -11,9 +11,6 @@ if TYPE_CHECKING:
 from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
-from teaagent.git_sandbox import (
-    ParallelExperimentStack,
-)
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
@@ -25,6 +22,9 @@ from teaagent.model_routing import route_model
 from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalRequest, RunResult
+from teaagent.sandbox import (
+    ParallelExperimentStack,
+)
 from teaagent.session import ChatMessage, ChatSession, SessionStore
 
 InputFn = Callable[[str], str]

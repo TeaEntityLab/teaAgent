@@ -31,6 +31,14 @@ from ._agent import (
     automation_tick_command,
     interactive_review_command,
 )
+from ._approval_subagents import (
+    approval_subagents_approve_all_command,
+    approval_subagents_approve_command,
+    approval_subagents_deny_all_command,
+    approval_subagents_deny_command,
+    approval_subagents_list_command,
+    approval_subagents_prune_command,
+)
 from ._audit import (
     audit_list_command,
     audit_prune_command,
@@ -75,14 +83,6 @@ from ._env import (
     env_lock_command,
     env_provision_command,
     env_verify_command,
-)
-from ._approval_subagents import (
-    approval_subagents_approve_all_command,
-    approval_subagents_approve_command,
-    approval_subagents_deny_all_command,
-    approval_subagents_deny_command,
-    approval_subagents_list_command,
-    approval_subagents_prune_command,
 )
 from ._ergonomics import (
     approval_approve_command,

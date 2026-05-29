@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import tarfile
 import tempfile
 from dataclasses import dataclass, field
@@ -23,6 +24,8 @@ try:
     SIGSTORE_AVAILABLE = True
 except ImportError:
     SIGSTORE_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -458,7 +461,8 @@ class TSBVerifier:
                                     f'Path traversal attempt detected: {member.name}',
                                 )
                             tar.extract(member, tmp_path)
-            except Exception as exc:
+            except (tarfile.TarError, OSError, ValueError) as exc:
+                logger.warning('Failed to extract TSB: %s', exc)
                 return False, f'Failed to extract TSB: {exc}'
 
             # Read manifest
@@ -543,7 +547,8 @@ class TSBVerifier:
                         )
                         if not is_valid:
                             return False, f'Provenance verification failed: {message}'
-                    except Exception as exc:
+                    except (ImportError, ValueError, TypeError, OSError) as exc:
+                        logger.warning('Provenance verifier error: %s', exc)
                         return False, f'Provenance verifier error: {exc}'
                 else:
                     # Fallback: sigstore not available, cannot verify signatures securely

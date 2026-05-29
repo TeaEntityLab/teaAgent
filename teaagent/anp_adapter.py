@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass, field
@@ -14,6 +15,8 @@ from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner
 from teaagent.runner._types import ApprovalHandler, FinalAnswer, ToolRequest
 from teaagent.tools import ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ANPAdapterError(RuntimeError):
@@ -73,7 +76,8 @@ class ANPInboundAdapter:
     def try_handle_task(self, payload: dict[str, Any]) -> dict[str, Any]:
         try:
             return self.handle_task(payload)
-        except Exception as exc:
+        except (ValueError, KeyError, TypeError, OSError, RuntimeError) as exc:
+            logger.warning('ANP task handling failed: %s', exc)
             return {'status': 'error', 'error': str(exc)}
 
 
@@ -182,7 +186,8 @@ class ANPBidirectionalRouter:
         try:
             local_output = self._local_runner(task, payload)
             return ANPRoutingResult(output=local_output, source='local')
-        except Exception:
+        except (OSError, ValueError, TypeError, RuntimeError) as exc:
+            logger.warning('Local ANP routing failed, falling back to remote: %s', exc)
             if not remote_endpoint:
                 raise
             remote = self._outbound.delegate(
@@ -460,7 +465,7 @@ class ANPGovernedService:
                 context=payload,
                 remote_endpoint=remote_endpoint,
             )
-        except Exception as exc:
+        except (OSError, ValueError, TypeError, ConnectionError, RuntimeError, FuturesTimeoutError) as exc:
             self.audit.record(
                 'anp_outbound_failed',
                 cid,

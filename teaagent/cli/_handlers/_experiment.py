@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from teaagent.git_sandbox import (
+from teaagent.sandbox import (
     ParallelExperimentStack,
     find_orphaned_sandbox_branches,
     is_git_repository,

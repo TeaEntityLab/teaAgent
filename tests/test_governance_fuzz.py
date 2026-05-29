@@ -11,16 +11,19 @@ These tests are designed to catch runtime escapes and policy bypasses.
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
-from teaagent.governance.plan_gate import assert_write_allowed, WRITE_TOOLS
-from teaagent.policy import PermissionMode
+
+import pytest
+
+from teaagent.errors import ToolPermissionError
+from teaagent.governance.plan_gate import WRITE_TOOLS, assert_write_allowed
 from teaagent.memory.failure_card import (
     AutoInvalidationRule,
     FailureCard,
     FailureCardStorage,
     MemoryAutoInvalidationConfig,
 )
+from teaagent.policy import PermissionMode
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     CentralizedApprovalQueue,
@@ -34,9 +37,9 @@ class TestPlanBeforeWriteFuzz:
     def test_workspace_write_mode_strict_default(self):
         """Test that workspace-write mode enforces plan-by-default."""
         context = {}  # No plan contract
-        
+
         # Should block without plan in workspace-write mode
-        with pytest.raises(Exception):  # ToolPermissionError
+        with pytest.raises(ToolPermissionError):
             assert_write_allowed(
                 tool_name='workspace_write_file',
                 permission_mode=PermissionMode.WORKSPACE_WRITE,
@@ -48,7 +51,7 @@ class TestPlanBeforeWriteFuzz:
     def test_skip_plan_check_override(self):
         """Test that --skip-plan-check allows writes without plan."""
         context = {}  # No plan contract
-        
+
         # Should allow with skip_plan_check=True
         assert_write_allowed(
             tool_name='workspace_write_file',
@@ -62,7 +65,7 @@ class TestPlanBeforeWriteFuzz:
     def test_read_only_mode_blocks_all_writes(self):
         """Test that read-only mode blocks all write tools regardless of plan."""
         context = {'plan_contract': {'content_hash': 'abc123'}}
-        
+
         # Plan gate doesn't block based on permission mode - that's handled by ApprovalPolicy
         # This test documents that plan gate only enforces plan requirement, not permission mode
         for tool in WRITE_TOOLS:
@@ -84,9 +87,9 @@ class TestPlanBeforeWriteFuzz:
             {'plan_contract': {'content_hash': None}},  # None hash
             {'plan_contract': {'content_hash': 123}},  # Wrong type
         ]
-        
+
         for context in malformed_contexts:
-            with pytest.raises(Exception):
+            with pytest.raises(ToolPermissionError):
                 assert_write_allowed(
                     tool_name='workspace_write_file',
                     permission_mode=PermissionMode.WORKSPACE_WRITE,
@@ -104,7 +107,7 @@ class TestMemoryInvalidationFuzz:
         # Create a test file
         test_file = tmp_path / "test.py"
         test_file.write_text("original content")
-        
+
         # Create a failure card for this file
         storage = FailureCardStorage(tmp_path)
         card = FailureCard.create(
@@ -117,7 +120,7 @@ class TestMemoryInvalidationFuzz:
             confidence='high',
         )
         storage.append(card)
-        
+
         # Configure auto-invalidation for file signature changes
         config = MemoryAutoInvalidationConfig(
             rules=[
@@ -130,19 +133,19 @@ class TestMemoryInvalidationFuzz:
             ],
             enabled=True,
         )
-        
+
         # First run to store signature
         storage.apply_auto_invalidation(config)
-        
+
         # Modify the file
         test_file.write_text("modified content")
-        
+
         # Apply auto-invalidation again to detect change
         counts = storage.apply_auto_invalidation(config)
-        
+
         # Should have invalidated the card
         assert counts.get('file_signature_change', 0) == 1
-        
+
         # Verify card is now inactive
         updated_card = storage.get_by_id(card.id)
         assert updated_card is not None
@@ -161,16 +164,16 @@ class TestMemoryInvalidationFuzz:
             context_files=['test.py'],
         )
         storage.append(card)
-        
+
         # Disabled configuration
         config = MemoryAutoInvalidationConfig(enabled=False, rules=[])
-        
+
         # Apply auto-invalidation
         counts = storage.apply_auto_invalidation(config)
-        
+
         # Should have no effect
         assert counts == {}
-        
+
         # Card should still be active
         updated_card = storage.get_by_id(card.id)
         assert updated_card is not None
@@ -182,12 +185,12 @@ class TestMemoryInvalidationFuzz:
         src_file = tmp_path / "src" / "auth.py"
         src_file.parent.mkdir(parents=True, exist_ok=True)
         src_file.write_text("auth code")
-        
+
         other_file = tmp_path / "other.py"
         other_file.write_text("other code")
-        
+
         storage = FailureCardStorage(tmp_path)
-        
+
         # Create cards for both files
         auth_card = FailureCard.create(
             run_id='test-run-1',
@@ -197,7 +200,7 @@ class TestMemoryInvalidationFuzz:
             task_description='auth task',
             context_files=['src/auth.py'],
         )
-        
+
         other_card = FailureCard.create(
             run_id='test-run-2',
             error_type='SyntaxError',
@@ -206,10 +209,10 @@ class TestMemoryInvalidationFuzz:
             task_description='other task',
             context_files=['other.py'],
         )
-        
+
         storage.append(auth_card)
         storage.append(other_card)
-        
+
         # Configure rule with path filter for src/auth/**
         config = MemoryAutoInvalidationConfig(
             rules=[
@@ -223,20 +226,20 @@ class TestMemoryInvalidationFuzz:
             ],
             enabled=True,
         )
-        
+
         # First run to store signatures
         storage.apply_auto_invalidation(config)
-        
+
         # Modify both files
         src_file.write_text("modified auth code")
         other_file.write_text("modified other code")
-        
+
         # Apply auto-invalidation again to detect changes
         counts = storage.apply_auto_invalidation(config)
-        
+
         # Should only invalidate the auth card
         assert counts.get('file_signature_change', 0) == 1
-        
+
         # Verify auth card is inactive, other card is still active
         auth_updated = storage.get_by_id(auth_card.id)
         other_updated = storage.get_by_id(other_card.id)
@@ -267,7 +270,7 @@ class TestApprovalQueueSecurity:
     def test_batch_creation(self):
         """Test that batches can be created from requests."""
         queue = CentralizedApprovalQueue(parent_run_id='parent-123')
-        
+
         # Add some pending requests
         request_ids = []
         for i in range(3):
@@ -284,7 +287,7 @@ class TestApprovalQueueSecurity:
             )
             queue._requests[request_id] = request
             request_ids.append(request_id)
-        
+
         # Create batch
         batch_id = queue.create_batch(request_ids)
         assert batch_id is not None
@@ -293,7 +296,7 @@ class TestApprovalQueueSecurity:
     def test_pending_requests_filter(self):
         """Test that get_pending_requests only returns pending requests."""
         queue = CentralizedApprovalQueue(parent_run_id='parent-123')
-        
+
         # Add pending request
         pending_id = queue.generate_request_id()
         pending_request = SubagentApprovalRequest(
@@ -307,7 +310,7 @@ class TestApprovalQueueSecurity:
             isolation='worktree',
         )
         queue._requests[pending_id] = pending_request
-        
+
         # Add completed request
         completed_id = queue.generate_request_id()
         completed_request = SubagentApprovalRequest(
@@ -322,7 +325,7 @@ class TestApprovalQueueSecurity:
             status=ApprovalRequestStatus.APPROVED,
         )
         queue._requests[completed_id] = completed_request
-        
+
         # Only pending should be returned
         pending = queue.get_pending_requests()
         assert len(pending) == 1
@@ -335,9 +338,9 @@ class TestGovernanceIntegration:
     def test_plan_gate_blocks_without_skip_flag(self, tmp_path: Path):
         """Test that plan gate enforcement requires explicit skip flag."""
         context = {}
-        
+
         # Should block without plan
-        with pytest.raises(Exception):
+        with pytest.raises(ToolPermissionError):
             assert_write_allowed(
                 tool_name='workspace_write_file',
                 permission_mode=PermissionMode.WORKSPACE_WRITE,
@@ -345,7 +348,7 @@ class TestGovernanceIntegration:
                 require_plan=False,
                 skip_plan_check=False,
             )
-        
+
         # Should allow with skip flag
         assert_write_allowed(
             tool_name='workspace_write_file',
@@ -358,23 +361,23 @@ class TestGovernanceIntegration:
     def test_memory_auto_invalidation_conservative_defaults(self, tmp_path: Path):
         """Test that default auto-invalidation rules are conservative."""
         config = MemoryAutoInvalidationConfig.default()
-        
+
         # Should be enabled by default
         assert config.enabled is True
-        
+
         # Should have conservative rules
         assert len(config.rules) == 3
-        
+
         # File signature change should invalidate (high confidence)
         file_rule = next(r for r in config.rules if r.trigger == 'file_signature_change')
         assert file_rule.confidence == 'high'
         assert file_rule.action == 'invalidate'
-        
+
         # Test refactor should warn (medium confidence)
         test_rule = next(r for r in config.rules if r.trigger == 'test_refactor')
         assert test_rule.confidence == 'medium'
         assert test_rule.action == 'warn'
-        
+
         # Dependency change should warn (medium confidence)
         dep_rule = next(r for r in config.rules if r.trigger == 'dependency_version_change')
         assert dep_rule.confidence == 'medium'

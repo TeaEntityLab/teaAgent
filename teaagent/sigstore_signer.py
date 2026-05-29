@@ -8,9 +8,12 @@ eliminating the need for manual SSH key management and cosign CLI dependencies.
 from __future__ import annotations
 
 import base64
+import logging
 import os
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 try:
     from sigstore.sign import Signer
@@ -112,7 +115,8 @@ class SigstoreSigner:
 
             return materials
 
-        except Exception as exc:
+        except (ImportError, OSError, ValueError, TypeError, RuntimeError) as exc:
+            logger.warning('Sigstore signing failed: %s', exc)
             raise ValueError(f'Sigstore signing failed: {exc}') from exc
 
     def verify(
@@ -172,7 +176,8 @@ class SigstoreSigner:
 
             return result is not None
 
-        except Exception as exc:
+        except (ImportError, OSError, ValueError, TypeError, RuntimeError) as exc:
+            logger.warning('Sigstore verification failed: %s', exc)
             raise ValueError(f'Sigstore verification failed: {exc}') from exc
 
 

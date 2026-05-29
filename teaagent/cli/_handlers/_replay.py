@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from pathlib import Path
 
 from teaagent.audit import AuditLogger
 from teaagent.run_store import RunStore
+
+logger = logging.getLogger(__name__)
 
 
 def print_json(data: dict) -> None:
@@ -31,7 +34,8 @@ def replay_list(args: argparse.Namespace) -> int:
 
     try:
         summaries = run_store.list_runs(limit=limit)
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        logger.warning('Failed to list runs: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -77,7 +81,8 @@ def replay_steps(args: argparse.Namespace) -> int:
     try:
         audit = AuditLogger(path=run_path)
         entries = audit.events
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        logger.warning('Failed to read audit log: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -137,7 +142,8 @@ def replay_fork(args: argparse.Namespace) -> int:
     try:
         audit = AuditLogger(path=run_path)
         entries = audit.events
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        logger.warning('Failed to read audit log: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -181,7 +187,8 @@ def replay_fork(args: argparse.Namespace) -> int:
         checkpoint_path.write_text(
             json.dumps(checkpoint_data, indent=2), encoding='utf-8'
         )
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
+        logger.warning('Failed to write checkpoint: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -229,7 +236,8 @@ def replay_resume(args: argparse.Namespace) -> int:
 
     try:
         checkpoint_data = json.loads(checkpoint_path.read_text(encoding='utf-8'))
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        logger.warning('Failed to read checkpoint: %s', exc)
         print_json(
             {
                 'ok': False,

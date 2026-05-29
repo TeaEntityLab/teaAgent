@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import time
@@ -38,10 +40,15 @@ class ApprovalQueuePruneReport:
 class ApprovalQueueStore:
     """Persist approval queue state under ``.teaagent/approval_queues/``."""
 
-    def __init__(self, workspace_root: Path) -> None:
+    def __init__(
+        self,
+        workspace_root: Path,
+        hmac_secret: Optional[str] = None,
+    ) -> None:
         self.workspace_root = Path(workspace_root).resolve()
         self.queue_dir = self.workspace_root / '.teaagent' / 'approval_queues'
         self.queue_dir.mkdir(parents=True, exist_ok=True)
+        self.hmac_secret = hmac_secret
 
     def queue_path(self, parent_run_id: str) -> Path:
         safe_id = parent_run_id.replace('/', '_')
@@ -55,6 +62,42 @@ class ApprovalQueueStore:
 
     def exists(self, parent_run_id: str) -> bool:
         return self.queue_path(parent_run_id).is_file()
+
+    def _compute_hmac(self, payload: dict) -> str:
+        """Return HMAC-SHA256 hex digest of *payload* (deterministic JSON key order)."""
+        if not self.hmac_secret:
+            return ''
+        # Exclude existing _hmac key to avoid self-referential signing
+        clean = {k: v for k, v in payload.items() if k != '_hmac'}
+        body = json.dumps(clean, sort_keys=True, ensure_ascii=False)
+        return hmac.new(
+            self.hmac_secret.encode('utf-8'),
+            body.encode('utf-8'),
+            hashlib.sha256,
+        ).hexdigest()
+
+    def _verify_hmac(self, raw: dict) -> bool:
+        """Verify the ``_hmac`` field on *raw* matches the computed HMAC.
+
+        Returns ``False`` when HMAC is absent or the digest doesn't match.
+        Returns ``True`` when ``hmac_secret`` is unset (no verification
+        required, backward compatibility).
+        """
+        if not self.hmac_secret:
+            return True
+        stored = raw.get('_hmac')
+        if not stored:
+            return False
+        expected = hmac.new(
+            self.hmac_secret.encode('utf-8'),
+            json.dumps(
+                {k: v for k, v in raw.items() if k != '_hmac'},
+                sort_keys=True,
+                ensure_ascii=False,
+            ).encode('utf-8'),
+            hashlib.sha256,
+        ).hexdigest()
+        return hmac.compare_digest(expected, stored)
 
     @contextmanager
     def lock(self, parent_run_id: str) -> Iterator[None]:
@@ -85,6 +128,14 @@ class ApprovalQueueStore:
             raw = json.loads(path.read_text(encoding='utf-8'))
         if not isinstance(raw, dict):
             return QueueDiskSnapshot(parent_run_id, {}, {})
+        if self.hmac_secret and not self._verify_hmac(raw):
+            import logging
+
+            logging.getLogger(__name__).warning(
+                'HMAC verification failed for approval queue %s — returning empty snapshot',
+                parent_run_id,
+            )
+            return QueueDiskSnapshot(parent_run_id, {}, {})
         requests = raw.get('requests', {})
         batches = raw.get('batches', {})
         if not isinstance(requests, dict):
@@ -105,6 +156,8 @@ class ApprovalQueueStore:
             'requests': {rid: req.to_dict() for rid, req in requests.items()},
             'batches': {bid: batch.to_dict() for bid, batch in batches.items()},
         }
+        if self.hmac_secret:
+            payload['_hmac'] = self._compute_hmac(payload)
         with self.lock(parent_run_id):
             temp = path.with_suffix('.json.tmp')
             temp.write_text(
@@ -148,6 +201,14 @@ class ApprovalQueueStore:
         raw = json.loads(path.read_text(encoding='utf-8'))
         if not isinstance(raw, dict):
             return QueueDiskSnapshot(parent_run_id, {}, {})
+        if self.hmac_secret and not self._verify_hmac(raw):
+            import logging
+
+            logging.getLogger(__name__).warning(
+                'HMAC verification failed (unlocked) for approval queue %s — returning empty',
+                parent_run_id,
+            )
+            return QueueDiskSnapshot(parent_run_id, {}, {})
         requests = raw.get('requests', {})
         batches = raw.get('batches', {})
         return QueueDiskSnapshot(
@@ -163,6 +224,8 @@ class ApprovalQueueStore:
             'requests': snapshot.requests,
             'batches': snapshot.batches,
         }
+        if self.hmac_secret:
+            payload['_hmac'] = self._compute_hmac(payload)
         temp = path.with_suffix('.json.tmp')
         temp.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + '\n',
@@ -207,10 +270,21 @@ class ApprovalQueueStore:
         )
 
 
+def default_hmac_secret() -> Optional[str]:
+    """Read the HMAC key from ``TEAAGENT_APPROVAL_HMAC_KEY`` env var.
+
+    Returns ``None`` when the variable is unset or empty so that callers
+    fall back to backward-compatible unauthenticated mode.
+    """
+    return os.environ.get('TEAAGENT_APPROVAL_HMAC_KEY') or None
+
+
 def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
     from datetime import datetime, timezone
 
-    status = ApprovalRequestStatus(data.get('status', ApprovalRequestStatus.PENDING.value))
+    status = ApprovalRequestStatus(
+        data.get('status', ApprovalRequestStatus.PENDING.value)
+    )
     return SubagentApprovalRequest(
         request_id=str(data['request_id']),
         subagent_id=str(data['subagent_id']),

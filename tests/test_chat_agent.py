@@ -296,14 +296,18 @@ class ChatAgentTests(unittest.TestCase):
                 task='write',
                 adapter=write_adapter,
                 config=ChatAgentConfig.from_root(
-                    tmp, permission_mode=PermissionMode.WORKSPACE_WRITE
+                    tmp,
+                    permission_mode=PermissionMode.WORKSPACE_WRITE,
+                    skip_plan_check=True,
                 ),
             )
             shell_result = run_chat_agent(
                 task='shell',
                 adapter=shell_adapter,
                 config=ChatAgentConfig.from_root(
-                    tmp, permission_mode=PermissionMode.WORKSPACE_WRITE
+                    tmp,
+                    permission_mode=PermissionMode.WORKSPACE_WRITE,
+                    skip_plan_check=True,
                 ),
             )
 

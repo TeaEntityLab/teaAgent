@@ -32,13 +32,13 @@ class PlanContract:
             'task': self.task,
             'file_targets': sorted(self.file_targets),
         }
-    
+
     def allows_file_write(self, file_path: str) -> bool:
         """Check if a file path is within the approved target list."""
         if not self.file_targets:
             # If no specific targets specified, allow all (backward compatibility)
             return True
-        
+
         # Check if the file path matches any approved target
         # Support both exact matches and directory prefixes
         for target in self.file_targets:
@@ -46,7 +46,7 @@ class PlanContract:
                 return True
             if file_path.startswith(target + '/') or file_path.startswith(target + '\\'):
                 return True
-        
+
         return False
 
 
@@ -86,9 +86,9 @@ def load_plan_contract(
         raise ValueError('plan artifact missing **Task:** line in Summary section')
     task = match.group(1).strip()
     rel_path = path.relative_to(workspace).as_posix()
-    
+
     # Extract file targets from plan content (if specified in "Files likely touched" section)
-    file_targets = frozenset()
+    file_targets: frozenset[str] = frozenset()
     if 'Files likely touched' in content:
         # Simple extraction: look for file paths in the relevant section
         lines = content.split('\n')
@@ -109,7 +109,7 @@ def load_plan_contract(
                         cleaned = cleaned.split('`')[1] if '`' in cleaned else cleaned.split('`')[0]
                     if cleaned and not cleaned.endswith('(discover relevant tests)'):
                         file_targets = file_targets | {cleaned}
-    
+
     return PlanContract(
         path=path,
         rel_path=rel_path,

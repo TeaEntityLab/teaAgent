@@ -5,6 +5,7 @@ import json
 import shlex
 import sys
 import time
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
@@ -14,6 +15,9 @@ from teaagent.read_only_gate import read_only_runtime_block_reason
 
 if TYPE_CHECKING:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+# Sentinel: False until a real cryptography library is integrated.
+_SSH_VERIFICATION_IMPLEMENTED = False
 
 
 @dataclass
@@ -67,14 +71,14 @@ def _verify_ssh_signature(
     Returns:
         True if signature is valid, False otherwise
     """
-    # For now, implement a basic check that:
-    # 1. ssh_key_id is provided
-    # 2. The signature is not empty
-    # 3. The peer_id exists in peer_public_keys
+    warnings.warn(
+        'SSH signature verification is a placeholder. '
+        'Do not rely on multi-sig quorum for production security.',
+        stacklevel=2,
+    )
 
-    # In a production implementation, this would use cryptography libraries
-    # to actually verify the SSH signature against the public key
-    # For now, we implement a placeholder that enforces the structure
+    # PLACEHOLDER: Real implementation requires cryptography library
+    # (e.g., paramiko, ssh-keygen -Y verify)
 
     if not signature or not signature.strip():
         return False
@@ -82,9 +86,6 @@ def _verify_ssh_signature(
     if not ssh_key_id or not ssh_key_id.strip():
         return False
 
-    # Check if we have a public key for this peer
-    # In production, you'd load SSH public keys from ~/.ssh/authorized_keys
-    # or a configured peer registry
     return bool(peer_public_keys)
 
 
@@ -178,11 +179,13 @@ class ApprovalPolicy:
             }:
                 # Check plan contract file target validation
                 if plan_contract and arguments:
-                    file_path = arguments.get('path') if isinstance(arguments, dict) else None
+                    file_path = (
+                        arguments.get('path') if isinstance(arguments, dict) else None
+                    )
                     if file_path and not plan_contract.allows_file_write(file_path):
                         raise ToolPermissionError(
                             f"Tool '{tool_name}' targeting '{file_path}' is not in approved plan file targets. "
-                            f"Plan: {plan_contract.rel_path}"
+                            f'Plan: {plan_contract.rel_path}'
                         )
                 return
             raise ToolPermissionError(
@@ -224,6 +227,14 @@ class ApprovalPolicy:
                 # Consume the scoped approval after successful match (one-time use)
                 self.approval_store.consume_scoped_approval(matching_record.record_id)
                 return
+        # Warn if multi-sig is enabled but SSH verification is not cryptographically enforced
+        if self.multi_sig_config.enabled and not _SSH_VERIFICATION_IMPLEMENTED:
+            warnings.warn(
+                'Multi-sig quorum is enabled but SSH signature verification is not '
+                'cryptographically enforced. Do not rely on multi-sig quorum for production security.',
+                stacklevel=2,
+            )
+
         # Check multi-sig quorum if enabled and this is a high-risk operation
         if (
             self.multi_sig_config.enabled

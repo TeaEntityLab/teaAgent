@@ -26,8 +26,8 @@ from teaagent.consensus import (
     PeerRegistry,
     RiskLevel,
 )
-from teaagent.git_sandbox import GitBranchSandbox
 from teaagent.resource_monitor import is_process_alive
+from teaagent.sandbox import GitBranchSandbox
 from teaagent.subagents._approval_queue import get_approval_queue
 
 logger = logging.getLogger(__name__)

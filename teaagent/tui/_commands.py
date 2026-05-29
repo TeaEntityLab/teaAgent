@@ -1,19 +1,12 @@
 from __future__ import annotations
 
+import logging
 import shlex
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from teaagent.daily import build_daily_brief
-from teaagent.git_sandbox import (
-    GitSandboxResult,
-    ParallelExperimentStack,
-    abort_merge,
-    get_conflicted_files,
-    resolve_conflict_accept_ours,
-    resolve_conflict_accept_theirs,
-)
 from teaagent.graphqlite_store import (
     GraphQLiteRuntimeError,
     GraphQLiteUnavailableError,
@@ -25,6 +18,16 @@ from teaagent.model_routing import analyze_complexity, estimate_tokens, route_mo
 from teaagent.policy import parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore
+from teaagent.sandbox import (
+    GitSandboxResult,
+    ParallelExperimentStack,
+    abort_merge,
+    get_conflicted_files,
+    resolve_conflict_accept_ours,
+    resolve_conflict_accept_theirs,
+)
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from teaagent.session import ChatSession
@@ -436,7 +439,8 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         try:
             tui._run_agent_task(' '.join(task_args), clarify_first=clarify_first)
-        except Exception as exc:
+        except (OSError, ValueError, TypeError, RuntimeError) as exc:
+            logger.warning('TUI ask command failed: %s', exc)
             tui._print_json({'error': str(exc), 'status': 'failed:system'})
         return True
     if action == 'clarify':
@@ -498,7 +502,8 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 return True
             try:
                 tui._run_agent_task(' '.join(args))
-            except Exception as exc:
+            except (OSError, ValueError, TypeError, RuntimeError) as exc:
+                logger.warning('TUI run command failed: %s', exc)
                 tui._print_json({'error': str(exc), 'status': 'failed:system'})
             return True
         if action == 'permissions':

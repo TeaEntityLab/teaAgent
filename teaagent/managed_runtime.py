@@ -3,9 +3,12 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import logging
 import secrets
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional, Protocol, runtime_checkable
+
+logger = logging.getLogger(__name__)
 
 # Sentinel so callers can pass audit_logger=None without ambiguity.
 _AUDIT_UNSET = object()
@@ -316,7 +319,8 @@ class AnthropicManagedRuntime:
 
             anthropic.Anthropic(api_key=self._api_key).models.list()
             return True
-        except Exception:
+        except (ImportError, OSError, ValueError, ConnectionError) as exc:
+            logger.debug('Anthropic health check failed: %s', exc)
             return False
 
 
@@ -383,7 +387,8 @@ class OpenAIManagedRuntime:
 
             openai.OpenAI(api_key=self._api_key).models.list()
             return True
-        except Exception:
+        except (ImportError, OSError, ValueError, ConnectionError) as exc:
+            logger.debug('OpenAI health check failed: %s', exc)
             return False
 
 
@@ -462,7 +467,8 @@ class GoogleADKRuntime:
             import google.adk  # noqa: F401
 
             return True
-        except Exception:
+        except (ImportError, OSError, ValueError, TypeError) as exc:
+            logger.debug('Google ADK health check failed: %s', exc)
             return False
 
 
@@ -526,5 +532,6 @@ class VertexAgentRuntime:
         try:
             engine = self._get_engine()
             return bool(getattr(engine, 'resource_name', None))
-        except Exception:
+        except (ImportError, OSError, ValueError, ConnectionError) as exc:
+            logger.debug('Vertex AI health check failed: %s', exc)
             return False

@@ -68,7 +68,7 @@ def test_mcp_trust_policy_persist_and_hook_blocks(tmp_path) -> None:
     # Set up test encryption key for MCP trust policy (must be valid Fernet key)
     test_key = Fernet.generate_key()
     os.environ['TEAAGENT_MCP_TRUST_KEY'] = test_key.decode('utf-8')
-    
+
     try:
         policy = load_mcp_trust_policy(tmp_path)
         update_global_tools(policy, deny=['blocked_tool'])

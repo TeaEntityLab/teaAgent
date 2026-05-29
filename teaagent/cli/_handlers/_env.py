@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import subprocess
 import sys
 
 from teaagent.env_manager import EnvironmentManager
+
+logger = logging.getLogger(__name__)
 
 
 def print_json(value: dict) -> None:
@@ -38,7 +42,8 @@ def env_provision_command(args: argparse.Namespace) -> int:
             }
         )
         return 1
-    except Exception as exc:
+    except (OSError, subprocess.SubprocessError, ValueError, ImportError) as exc:
+        logger.warning('Environment provision failed: %s', exc)
         print_json(
             {
                 'status': 'error',
@@ -72,7 +77,8 @@ def env_verify_command(args: argparse.Namespace) -> int:
                 }
             )
             return 1
-    except Exception as exc:
+    except (OSError, ValueError, ImportError) as exc:
+        logger.warning('Environment verify failed: %s', exc)
         print_json(
             {
                 'status': 'error',
@@ -111,7 +117,8 @@ def env_lock_command(args: argparse.Namespace) -> int:
             }
         )
         return 1
-    except Exception as exc:
+    except (OSError, ValueError, ImportError) as exc:
+        logger.warning('Environment lock failed: %s', exc)
         print_json(
             {
                 'status': 'error',

@@ -23,11 +23,9 @@ import contextlib
 
 from teaagent.hooks import (
     HookError,
+    HookPermissionMode,
     HookRegistry,
     permission_check_hook,
-)
-from teaagent.hooks import (
-    PermissionMode as HookPermissionMode,
 )
 
 

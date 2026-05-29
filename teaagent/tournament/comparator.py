@@ -86,7 +86,7 @@ class TournamentComparator:
             lint_score = 1.0 if metric.lint_warnings == 0 else max(0.5, 1.0 - metric.lint_warnings / 20)
             diff_score = max(0, 1.0 - min(metric.lines_changed / 1000, 1.0))  # Smaller is better
             security_score = metric.correctness  # Higher correctness = lower security risk
-            
+
             weighted_score = (
                 metric.test_pass_rate * self.tests_passed_weight +
                 metric.performance * self.performance_weight +

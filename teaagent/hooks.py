@@ -9,6 +9,13 @@ This module implements an 8-event hook lifecycle compatible with Claude Code:
 - Stop: Before session stops
 - SubagentStop: After subagent completes
 - SessionEnd: After session ends
+
+NOTE: This module defines its own ``HookPermissionMode`` enum for use with
+the ``permission_check_hook`` function.  It is intentionally distinct from
+``teaagent.policy.PermissionMode`` (READ_ONLY, WORKSPACE_WRITE, PROMPT,
+ALLOW, DANGER_FULL_ACCESS) which governs the overall agent permission policy.
+The hook-level mode controls per-tool-call veto logic within the
+PreToolUse event.
 """
 
 from __future__ import annotations
@@ -347,8 +354,14 @@ def shell_command_hook(
 # --- Permission System Hooks (Claude Code compatible) ---
 
 
-class PermissionMode(Enum):
-    """Permission modes similar to Claude Code."""
+class HookPermissionMode(Enum):
+    """Permission modes for the hook-level permission check hook.
+
+    Distinct from ``teaagent.policy.PermissionMode`` (READ_ONLY,
+    WORKSPACE_WRITE, PROMPT, ALLOW, DANGER_FULL_ACCESS) which governs the
+    overall agent permission policy.  This enum controls per-tool-call
+    veto logic within the PreToolUse event.
+    """
 
     AUTO = 'auto'
     ASK = 'ask'
@@ -357,7 +370,7 @@ class PermissionMode(Enum):
 
 
 def permission_check_hook(
-    mode: PermissionMode = PermissionMode.AUTO,
+    mode: HookPermissionMode = HookPermissionMode.AUTO,
     *,
     allow_patterns: frozenset[str] = frozenset(),
     deny_patterns: frozenset[str] = frozenset(),
@@ -375,9 +388,9 @@ def permission_check_hook(
     """Permission check hook that enforces Allow/Ask/Deny patterns."""
 
     def _hook(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
-        if mode == PermissionMode.ALLOW:
+        if mode == HookPermissionMode.ALLOW:
             return None
-        if mode == PermissionMode.DENY:
+        if mode == HookPermissionMode.DENY:
             raise HookError(f"Tool '{tool_name}' is blocked by permission policy")
 
         if tool_name in destructive_tools:

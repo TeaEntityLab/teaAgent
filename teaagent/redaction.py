@@ -50,6 +50,8 @@ class RedactionConfig:
         Redact Anthropic API keys (``sk-ant-...``).
     database_urls:
         Redact database connection strings with credentials.
+    ssh_keys:
+        Redact SSH private key blocks (``BEGIN *PRIVATE KEY``).
     extra_patterns:
         Additional ``(compiled_pattern, replacement)`` tuples applied after
         the built-in groups.
@@ -65,6 +67,7 @@ class RedactionConfig:
     openai_keys: bool = True
     anthropic_keys: bool = True
     database_urls: bool = True
+    ssh_keys: bool = True
     extra_patterns: list[_Pattern] = field(default_factory=list)
 
     def build_patterns(self) -> list[_Pattern]:
@@ -151,6 +154,15 @@ class RedactionConfig:
                 (
                     re.compile(r'(?i)(postgres|mysql|mongo|redis)://[^:]+:[^@]+@'),
                     r'\1://[redacted]:[redacted]@',
+                )
+            )
+        if self.ssh_keys:
+            patterns.append(
+                (
+                    re.compile(
+                        r'-----BEGIN[ A-Z]*PRIVATE KEY-----[\s\S]*?-----END[ A-Z]*PRIVATE KEY-----'
+                    ),
+                    '[redacted-ssh-key]',
                 )
             )
         patterns.extend(self.extra_patterns)

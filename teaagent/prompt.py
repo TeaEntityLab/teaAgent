@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -16,6 +18,8 @@ from teaagent.skill_loader import (
     skills_to_prompt_section,
 )
 from teaagent.tools import ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 DECISION_INSTRUCTIONS = """You are TeaAgent, a coding-agent harness.
 You must respond with exactly one JSON object and no prose.
@@ -99,8 +103,6 @@ async def run_aci_injector(
     async def fetch_cache_context() -> str:
         await asyncio.sleep(0)
         try:
-            import sqlite3
-
             conn = sqlite3.connect(cache_db_path)
             cursor = conn.cursor()
             cursor.execute(
@@ -113,7 +115,8 @@ async def run_aci_injector(
             return '\n'.join(
                 f'- Cache [{source}]: {text[:150]}...' for text, source in rows
             )
-        except Exception:
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            logger.debug('Cache context fetch failed: %s', exc)
             return ''
 
     try:
@@ -149,7 +152,8 @@ async def run_aci_injector(
         if cache_result:
             return f'Cache Context (degraded):\n{cache_result}'
         return ''
-    except Exception:
+    except (OSError, ValueError, TypeError, ConnectionError) as exc:
+        logger.debug('Async context fetch failed: %s', exc)
         return ''
 
 

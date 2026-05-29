@@ -9,10 +9,13 @@ This module provides:
 
 from __future__ import annotations
 
+import logging
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -132,7 +135,8 @@ class BenchmarkRunner:
             return 1.0 if result.returncode == 0 else 0.0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return 0.0
-        except Exception:
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            logger.debug('Benchmark correctness measurement failed: %s', exc)
             return 0.0
 
     def _measure_performance(self) -> float:

@@ -7,7 +7,7 @@ from typing import Any
 
 from teaagent.errors import ToolPermissionError
 from teaagent.governance.audit_completeness import check_audit_completeness
-from teaagent.governance.tool_lint import fuzz_check_handler_code, lint_registry
+from teaagent.governance.tool_lint import lint_registry
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.workspace_tools import build_workspace_tool_registry
 
@@ -18,10 +18,10 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
     registry = build_workspace_tool_registry(workspace)
     lint_issues = lint_registry(registry)
     lint_errors = [issue for issue in lint_issues if issue.level == 'error']
-    
+
     # Check for read_only tools with write-like keywords in descriptions
     read_only_write_keyword_warnings = [
-        issue for issue in lint_issues 
+        issue for issue in lint_issues
         if issue.level == 'warning' and issue.code == 'read_only_with_write_keywords'
     ]
 

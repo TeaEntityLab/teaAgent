@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import sqlite3
 from pathlib import Path
 
 from teaagent.federated_sync import FederatedGraphSync, SyncAck
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
+
+logger = logging.getLogger(__name__)
 
 
 def print_json(data: dict) -> None:
@@ -32,7 +36,8 @@ def sync_export(args: argparse.Namespace) -> int:
     try:
         config = GraphQLiteConfig(database=str(root / '.teaagent' / 'graphqlite.db'))
         graph_store = GraphQLiteGraphStore(config)
-    except Exception as exc:
+    except (OSError, ValueError, ImportError, sqlite3.Error) as exc:
+        logger.warning('Failed to initialize graph store: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -47,7 +52,8 @@ def sync_export(args: argparse.Namespace) -> int:
     # Create sync message with pending changes
     try:
         message = sync.create_sync_message()
-    except Exception as exc:
+    except (ValueError, OSError, TypeError) as exc:
+        logger.warning('Failed to create sync message: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -59,7 +65,8 @@ def sync_export(args: argparse.Namespace) -> int:
     # Export to file
     try:
         sync.export_sync_message(message, output_path)
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
+        logger.warning('Failed to export sync message: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -108,7 +115,8 @@ def sync_import(args: argparse.Namespace) -> int:
     try:
         config = GraphQLiteConfig(database=str(root / '.teaagent' / 'graphqlite.db'))
         graph_store = GraphQLiteGraphStore(config)
-    except Exception as exc:
+    except (OSError, ValueError, ImportError, sqlite3.Error) as exc:
+        logger.warning('Failed to initialize graph store: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -123,7 +131,8 @@ def sync_import(args: argparse.Namespace) -> int:
     # Import sync message
     try:
         message = sync.import_sync_message(input_path)
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, ValueError, KeyError) as exc:
+        logger.warning('Failed to import sync message: %s', exc)
         print_json(
             {
                 'ok': False,
@@ -144,7 +153,8 @@ def sync_import(args: argparse.Namespace) -> int:
     # Process sync message
     try:
         ack: SyncAck = sync.process_sync_message(message)
-    except Exception as exc:
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        logger.warning('Failed to process sync message: %s', exc)
         print_json(
             {
                 'ok': False,

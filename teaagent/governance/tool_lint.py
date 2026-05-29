@@ -81,7 +81,73 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
             # Check for function calls that might write
             if isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Attribute):
-                    if node.func.attr in {
+                    # Check for subprocess module calls
+                    if (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == 'subprocess'
+                        and node.func.attr
+                        in {
+                            'run',
+                            'call',
+                            'Popen',
+                            'check_output',
+                            'check_call',
+                        }
+                    ):
+                        write_operations.append(f'subprocess.{node.func.attr}()')
+                        # Check for subprocess with string commands (bypass surface)
+                        if (
+                            node.args
+                            and isinstance(
+                                node.args[0], (ast.Constant, ast.JoinedStr)
+                            )
+                        ):
+                            write_operations.append(
+                                f'subprocess.{node.func.attr}(string_cmd)'
+                            )
+                    # Check for os module calls
+                    elif (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == 'os'
+                        and node.func.attr
+                        in {
+                            'system',
+                            'popen',
+                            'remove',
+                            'unlink',
+                            'rename',
+                            'replace',
+                            'mkdir',
+                            'makedirs',
+                            'rmdir',
+                        }
+                    ):
+                        write_operations.append(f'os.{node.func.attr}()')
+                        # Check for os.system with string commands (bypass surface)
+                        if (
+                            node.func.attr == 'system'
+                            and node.args
+                            and isinstance(
+                                node.args[0], (ast.Constant, ast.JoinedStr)
+                            )
+                        ):
+                            write_operations.append('os.system(string_cmd)')
+                    # Check for shutil module calls
+                    elif (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == 'shutil'
+                        and node.func.attr
+                        in {
+                            'rmtree',
+                            'move',
+                            'copy',
+                            'copy2',
+                            'copyfile',
+                        }
+                    ):
+                        write_operations.append(f'shutil.{node.func.attr}()')
+                    # Generic attribute check for write-like method calls
+                    elif node.func.attr in {
                         'write',
                         'save',
                         'create',
@@ -99,8 +165,18 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
                     'remove',
                     'rmdir',
                     'unlink',
+                    'eval',
+                    'exec',
+                    'compile',
                 }:
                     write_operations.append(f'{node.func.id}()')
+                    # Check for eval/exec/compile with dynamic content (bypass surface)
+                    if (
+                        node.func.id in {'eval', 'exec', 'compile'}
+                        and node.args
+                        and not isinstance(node.args[0], ast.Constant)
+                    ):
+                        write_operations.append(f'{node.func.id}(dynamic)')
             # Check for assignments that might modify state
             elif isinstance(node, ast.AugAssign):
                 write_operations.append('augmented_assignment')

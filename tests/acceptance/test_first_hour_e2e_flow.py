@@ -131,6 +131,7 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
                 str(tmp_path),
                 '--permission-mode',
                 'workspace-write',
+                '--skip-plan-check',
                 '--max-iterations',
                 '8',
                 '--max-tool-calls',

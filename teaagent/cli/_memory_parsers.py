@@ -65,7 +65,7 @@ def register(
         '--active-only', action='store_true', help='Hide expired/invalidated cards.'
     )
     fail_list.add_argument(
-        '--confidence-filter', 
+        '--confidence-filter',
         choices=['low', 'medium', 'high'],
         help='Filter by confidence level.'
     )

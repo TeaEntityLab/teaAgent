@@ -20,7 +20,6 @@ from teaagent.automations import (
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.daily import build_daily_brief
-from teaagent.git_sandbox import ParallelExperimentStack
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.plan import PlanContract
@@ -28,6 +27,7 @@ from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
+from teaagent.sandbox import ParallelExperimentStack
 from teaagent.skill_candidates import SkillCandidateStore
 
 
@@ -237,23 +237,23 @@ def _require_plan_gate(
     mode = parse_permission_mode(args.permission_mode)
     if mode == PermissionMode.READ_ONLY:
         return None
-    
+
     # Check if strict plan enforcement is enabled (default for workspace-write)
     require_plan = getattr(args, 'require_plan', False)
     skip_plan_check = getattr(args, 'skip_plan_check', False)
-    
+
     # If user explicitly skips plan check, allow it (with warning logged elsewhere)
     if skip_plan_check:
         return None
-    
+
     # For workspace-write mode, enforce plan requirement by default
     if mode == PermissionMode.WORKSPACE_WRITE and not require_plan:
         # Auto-enable require_plan for workspace-write mode unless explicitly skipped
         require_plan = True
-    
+
     if not require_plan:
         return None
-    
+
     if plan_contract is not None:
         return None
     print_json(
@@ -358,8 +358,8 @@ def _execute_agent_task(
         return gate_exit
     store = RunStore(args.root)
     audit = store.audit_logger()
-    from teaagent.git_sandbox import GitBranchSandbox
     from teaagent.run_undo import UndoJournal
+    from teaagent.sandbox import GitBranchSandbox
 
     # Initialize git sandbox if available (will be updated with actual run_id later)
     git_sandbox = GitBranchSandbox(args.root, run_id='pending')
@@ -430,7 +430,7 @@ def _execute_agent_task(
     # Add git transaction sink if sandbox is active
     git_transaction_sink = None
     if git_sandbox_available:
-        from teaagent.git_sandbox import GitTransactionSink
+        from teaagent.sandbox import GitTransactionSink
 
         git_transaction_sink = GitTransactionSink(git_sandbox)
         audit.add_sink(git_transaction_sink)
@@ -589,7 +589,7 @@ def _execute_agent_task(
                         print('  [m] Launch mergetool for manual resolution')
                         resolution = input('Choice: ').strip().lower()
 
-                        from teaagent.git_sandbox import (
+                        from teaagent.sandbox import (
                             abort_merge,
                             resolve_conflict_accept_ours,
                             resolve_conflict_accept_theirs,
@@ -640,7 +640,7 @@ def _execute_agent_task(
                                     capture_output=True,
                                 )
                                 if git_sandbox._stash_id:
-                                    from teaagent.git_sandbox import stash_pop
+                                    from teaagent.sandbox import stash_pop
 
                                     stash_pop(args.root)
                                 print(
@@ -676,7 +676,7 @@ def _execute_agent_task(
                                 capture_output=True,
                             )
                             if git_sandbox._stash_id:
-                                from teaagent.git_sandbox import stash_pop
+                                from teaagent.sandbox import stash_pop
 
                                 stash_pop(args.root)
                             print('[TeaAgent] Conflicts resolved using Agent version.')
@@ -702,7 +702,7 @@ def _execute_agent_task(
                                 capture_output=True,
                             )
                             if git_sandbox._stash_id:
-                                from teaagent.git_sandbox import stash_pop
+                                from teaagent.sandbox import stash_pop
 
                                 stash_pop(args.root)
                             print(
@@ -730,7 +730,7 @@ def _execute_agent_task(
                                 capture_output=True,
                             )
                             if git_sandbox._stash_id:
-                                from teaagent.git_sandbox import stash_pop
+                                from teaagent.sandbox import stash_pop
 
                                 stash_pop(args.root)
                             print(
@@ -1200,8 +1200,8 @@ def agent_plan_command(args: argparse.Namespace) -> int:
 
 
 def agent_undo_command(args: argparse.Namespace) -> int:
-    from teaagent.git_sandbox import GitBranchSandbox
     from teaagent.run_undo import UndoJournal
+    from teaagent.sandbox import GitBranchSandbox
 
     store = RunStore(args.root)
     run_id = getattr(args, 'run_id', None)

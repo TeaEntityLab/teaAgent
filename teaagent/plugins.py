@@ -59,7 +59,8 @@ def _entry_points(group: str) -> list[Any]:
         if sys.version_info >= (3, 12):
             return list(eps.select(group=group))
         return list(eps.get(group, []))
-    except Exception:
+    except (ImportError, ValueError) as exc:
+        logger.warning('Failed to load entry points: %s', exc)
         return []
 
 
@@ -97,9 +98,9 @@ def _audit_plugin_source(ep: Any) -> bool:
             'Ensure package is from a trusted source.'
         )
         return True
-    except Exception:
+    except (OSError, ImportError, ValueError, TypeError) as exc:
         # If audit fails, fail-safe: allow but warn
-        logger.warning(f'Plugin source audit failed for: {ep.name}')
+        logger.warning('Plugin source audit failed for %s: %s', ep.name, exc)
         return True
 
 
@@ -143,7 +144,8 @@ def load_plugins(
             fn = ep.load()
             fn(registry)
             loaded.append(name)
-        except Exception:
+        except Exception as exc:
+            logger.warning('Plugin %s failed to load: %s', name, exc)
             failed.append(name)
 
     return PluginLoadResult(loaded=loaded, failed=failed)

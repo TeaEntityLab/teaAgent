@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
-from teaagent.git_sandbox import is_git_repository
 from teaagent.llm import available_providers
 from teaagent.llm._config import PROVIDER_CONFIGS
+from teaagent.sandbox import is_git_repository
 from teaagent.wizard import (
     merge_env_exports,
     read_keychain_secret,
@@ -778,7 +778,7 @@ def doctor_migration_command(args: argparse.Namespace) -> int:
 
 def doctor_git_sandbox(args: argparse.Namespace) -> int:
     """Check for orphaned git sandbox branches."""
-    from teaagent.git_sandbox import (
+    from teaagent.sandbox import (
         find_orphaned_sandbox_branches,
         prune_sandbox_branch,
     )

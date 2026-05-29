@@ -63,7 +63,7 @@ class ToolDefinition:
             declared_tier = self.capability_manifest.get('security_tier')
             if declared_tier in {'Low', 'Medium', 'High', 'Critical'}:
                 return declared_tier
-        
+
         # Default tier calculation based on annotations
         if self.annotations.destructive:
             if self.annotations.read_only:

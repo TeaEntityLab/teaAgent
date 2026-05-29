@@ -9,9 +9,8 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Literal
+from typing import Any, Literal, Optional
 from uuid import uuid4
 
 from teaagent.storage import append_jsonl_line
@@ -131,7 +130,7 @@ class AuditLogger:
 
     def _apply_audit_level(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Apply tiered audit level filtering to payload.
-        
+
         L0: Metrics only (minimal metadata)
         L1: Metadata (event types, timestamps, no arguments)
         L2: Redacted payload (default, sensitive data redacted)
@@ -204,7 +203,7 @@ class AuditLogger:
     def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
         # Apply tiered audit level filtering
         filtered_payload = self._apply_audit_level(payload)
-        
+
         event = AuditEvent(
             event_type=event_type,
             run_id=run_id,
@@ -252,32 +251,32 @@ class AuditLogger:
 
     def verify_chain_integrity(self) -> dict[str, Any]:
         """Verify the hash chain integrity of the audit log.
-        
+
         Returns:
             Dict with 'valid' (bool), 'total_events' (int), and 'errors' (list[str])
         """
         if not self.path or not self.path.is_file():
             return {'valid': False, 'total_events': 0, 'errors': ['No audit file found']}
-        
+
         try:
             lines = self.path.read_text(encoding='utf-8').splitlines()
             events = []
             for line in lines:
                 if line.strip():
                     events.append(json.loads(line))
-            
+
             if not events:
                 return {'valid': True, 'total_events': 0, 'errors': []}
-            
+
             errors = []
             prev_hash = _GENESIS_HASH
             for i, event in enumerate(events):
                 event_hash = event.get('hash')
                 event_prev_hash = event.get('prev_hash')
-                
+
                 if event_prev_hash != prev_hash:
                     errors.append(f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})')
-                
+
                 # Verify the hash matches the content
                 canonical = json.dumps({
                     'event_id': event.get('event_id'),
@@ -288,12 +287,12 @@ class AuditLogger:
                     'prev_hash': event_prev_hash,
                 }, sort_keys=True, separators=(',', ':'))
                 computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
-                
+
                 if event_hash != computed_hash:
                     errors.append(f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})')
-                
+
                 prev_hash = event_hash or computed_hash
-            
+
             return {
                 'valid': len(errors) == 0,
                 'total_events': len(events),

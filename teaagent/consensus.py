@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set
+
+logger = logging.getLogger(__name__)
 
 
 class RiskLevel(Enum):
@@ -89,7 +92,8 @@ class PeerIdentity:
                 (message + self.ssh_public_key).encode()
             ).hexdigest()
             return signature == expected_sig
-        except Exception:
+        except (ValueError, TypeError) as exc:
+            logger.debug('Signature verification failed: %s', exc)
             return False
 
 
@@ -516,8 +520,9 @@ class PeerRegistry:
                     is_active=peer_data.get('is_active', True),
                 )
                 self._peers[peer.name] = peer
-        except Exception:
+        except (json.JSONDecodeError, OSError, KeyError, ValueError, TypeError) as exc:
             # If loading fails, start with empty registry
+            logger.warning('Failed to load peer registry: %s', exc)
             self._peers = {}
 
 
@@ -1049,6 +1054,7 @@ class ConsensusEngine:
             for state_data in data.get('consensus_states', []):
                 state = ConsensusState.from_dict(state_data)
                 self.voting_mechanism._active_votes[state.proposal.id] = state
-        except Exception:
+        except (json.JSONDecodeError, OSError, KeyError, ValueError, TypeError) as exc:
             # If loading fails, start with empty state
+            logger.warning('Failed to load consensus state: %s', exc)
             self.voting_mechanism._active_votes = {}

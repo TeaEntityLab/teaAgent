@@ -48,9 +48,12 @@ class ApprovalPolicyTests(unittest.TestCase):
     def test_non_destructive_tool_always_allowed(self) -> None:
         for mode in PermissionMode:
             policy = ApprovalPolicy(permission_mode=mode)
-            policy.assert_allowed(
+            kwargs: dict = dict(
                 tool_name='workspace_read_file', call_id='c1', destructive=False
             )
+            if mode == PermissionMode.READ_ONLY:
+                kwargs['read_only'] = True
+            policy.assert_allowed(**kwargs)
 
     def test_read_only_blocks_destructive(self) -> None:
         policy = ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY)

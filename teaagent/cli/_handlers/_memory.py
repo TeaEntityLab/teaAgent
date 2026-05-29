@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from teaagent.memory import MemoryCatalog
+from teaagent.memory.failure_card import FailureCard
 from teaagent.provenance_gate import (
     PersistenceSubstrate,
     evaluate_persistent_write,
@@ -78,12 +79,12 @@ def memory_failures_list_command(args: argparse.Namespace) -> int:
 
     storage = FailureCardStorage(args.root)
     cards = storage.list_active() if args.active_only else storage.list_all()
-    
+
     # Add confidence filtering if requested
     confidence_filter = getattr(args, 'confidence_filter', None)
     if confidence_filter:
         cards = [card for card in cards if card.confidence == confidence_filter]
-    
+
     print_json([card.to_dict() for card in cards])
     return 0
 
@@ -163,7 +164,7 @@ def memory_failures_review_command(args: argparse.Namespace) -> int:
 
     storage = FailureCardStorage(args.root)
     cards = storage.list_active()[:args.limit]
-    
+
     review_results = []
     for card in cards:
         review_results.append({
@@ -176,7 +177,7 @@ def memory_failures_review_command(args: argparse.Namespace) -> int:
             'expires_at': card.expires_at,
             'recommendation': _get_review_recommendation(card),
         })
-    
+
     print_json({
         'status': 'ok',
         'total_reviewed': len(review_results),
@@ -185,24 +186,24 @@ def memory_failures_review_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def _get_review_recommendation(card) -> str:
+def _get_review_recommendation(card: FailureCard) -> str:
     """Generate curation recommendation for a failure card."""
     if not card.is_active():
         return 'already_inactive'
-    
+
     if card.confidence == 'low':
         if card.effective_behavior() == 'block':
             return 'downgrade_to_warning'  # Low confidence should not block
         return 'keep_monitoring'
-    
+
     if card.confidence == 'medium':
         if card.effective_behavior() == 'block':
             return 'consider_downgrade'  # Medium confidence blocking may be too aggressive
         return 'keep_monitoring'
-    
+
     if card.confidence == 'high':
         return 'keep'  # High confidence cards are valuable
-    
+
     return 'review_manually'
 
 

@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.graphqlite_store import GraphQLiteGraphStore
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -257,9 +260,10 @@ class FederatedGraphSync:
                     accepted_changes.append(change.change_id)
                 else:
                     rejected_changes.append(change.change_id)
-            except Exception as exc:
+            except (ValueError, KeyError, TypeError, OSError) as exc:
                 rejected_changes.append(change.change_id)
                 conflicts.append(f'{change.change_id}: {str(exc)}')
+                logger.warning('Failed to apply change %s: %s', change.change_id, exc)
 
         # Update peer state
         self._sync_state.peer_states[message.sender_agent_id] = {
@@ -309,7 +313,8 @@ class FederatedGraphSync:
                 label=change.data.get('label', 'CodeNode'),
             )
             return True
-        except Exception:
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            logger.debug('Failed to apply node add %s: %s', change.node_id, exc)
             return False
 
     def _apply_node_update(self, change: GraphChange) -> bool:
@@ -325,7 +330,8 @@ class FederatedGraphSync:
                 label=change.data.get('label', 'CodeNode'),
             )
             return True
-        except Exception:
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            logger.debug('Failed to apply node update %s: %s', change.node_id, exc)
             return False
 
     def _apply_node_delete(self, change: GraphChange) -> bool:
@@ -337,7 +343,8 @@ class FederatedGraphSync:
         try:
             self._graph_store.graph.delete_node(change.node_id)
             return True
-        except Exception:
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            logger.debug('Failed to apply node delete %s: %s', change.node_id, exc)
             return False
 
     def _apply_edge_add(self, change: GraphChange) -> bool:
@@ -358,7 +365,8 @@ class FederatedGraphSync:
                     change.data,
                 )
                 return True
-        except Exception:
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            logger.debug('Failed to apply edge add %s: %s', change.edge_id, exc)
             return False
         return False
 
@@ -375,7 +383,8 @@ class FederatedGraphSync:
             if from_id and to_id:
                 self._graph_store.graph.delete_edge(from_id, to_id, edge_type)
                 return True
-        except Exception:
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            logger.debug('Failed to apply edge delete %s: %s', change.edge_id, exc)
             return False
         return False
 
@@ -482,7 +491,8 @@ class FederatedGraphSync:
 
                 broadcast_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
                 results[peer_id] = True
-            except Exception:
+            except OSError as exc:
+                logger.warning('Failed to broadcast approval to %s: %s', peer_id, exc)
                 results[peer_id] = False
 
         return results
@@ -575,5 +585,6 @@ class FederatedGraphSync:
 
             sig_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
             return True
-        except Exception:
+        except OSError as exc:
+            logger.warning('Failed to submit approval signature: %s', exc)
             return False

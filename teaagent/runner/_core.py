@@ -85,6 +85,7 @@ class AgentRunner:
                     f'Failed to load {len(plugin_result.failed)} plugin(s): {plugin_result.failed}'
                 )
 
+        self._plan_contract: Any = None
         self._read_only_registry_lint_errors: list[Any] = []
         if self.approval_policy.permission_mode == PermissionMode.READ_ONLY:
             from teaagent.governance.tool_lint import lint_registry

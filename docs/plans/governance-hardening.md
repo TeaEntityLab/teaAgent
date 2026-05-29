@@ -1,6 +1,6 @@
 # Governance Hardening Plan (in-repo)
 
-Last updated: 2026-05-29
+Last updated: 2026-05-28
 
 ## Goal
 
@@ -18,7 +18,8 @@ Close the five governance loops with verifiable runtime behavior—not greenfiel
 | Tournament | `ParallelExecutor` + `parallel_executor_with_manager` | Shipped |
 | Persistence | `.teaagent/approval_queues/<parent_run_id>.json` | Shipped |
 | Swarm LLM | `SwarmManager.with_agent_execution` + `SubagentManager` | Shipped |
-| Hardening+ | adversarial plugin runtime tests, queue cleanup TTL | Shipped |
+| Hardening+ | adversarial plugin runtime tests, queue cleanup TTL, handler AST gate | Shipped |
+| Refactor | `teaagent.sandbox` package, approval store module split | Shipped |
 
 ## Verification commands
 
@@ -33,9 +34,9 @@ teaagent tool lint --root .
 
 ## Open decisions
 
-1. **Parent TUI** for `CentralizedApprovalQueue` batch approve/deny (queue is wired; UX pending).
-2. **Swarm LLM execution** still uses sandbox placeholder; lineage records queue mode when `parent_run_id` is set.
-3. **Phase 4–5** (federated consensus E2E, WASM sandbox routing)—see `docs/backlog-priority.md`.
+1. **Swarm LLM execution** — real adapter path exists via `SwarmManager.with_agent_execution`; deeper tournament benchmarks remain optional.
+2. **Phase 4–5** (federated consensus E2E, WASM sandbox routing)—see `docs/backlog-priority.md`; not part of this plan.
+3. **Dependabot #10** — reconcile GitHub Security alert if `pip-audit` stays clean (see `SECURITY.md`).
 
 ## Related
 

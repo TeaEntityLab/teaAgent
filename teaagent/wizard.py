@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shlex
 import subprocess
@@ -11,6 +12,8 @@ from typing import Any, Callable, Optional
 from teaagent.llm import available_providers
 from teaagent.llm._config import PROVIDER_CONFIGS
 from teaagent.policy import PermissionMode
+
+logger = logging.getLogger(__name__)
 
 _SECRET_KEY_FRAGMENTS = (
     'api_key',
@@ -151,7 +154,8 @@ def read_keychain_secret(env_var: str) -> str:
             text=True,
             check=False,
         )
-    except Exception:
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug('Keychain lookup failed for %s: %s', service, exc)
         return ''
     if proc.returncode != 0:
         return ''
@@ -339,7 +343,8 @@ def run_first_session_setup(
         from teaagent.workspace_tools import build_workspace_tool_registry
 
         tools_count = len(build_workspace_tool_registry(root).mcp_metadata())
-    except Exception as exc:
+    except (ImportError, ValueError, TypeError, OSError) as exc:
+        logger.warning('Failed to load workspace tools metadata: %s', exc)
         warnings.append(f'workspace tools metadata: {exc}')
 
     daily_dry_run: dict[str, Any] = {'ok': False}
@@ -359,7 +364,8 @@ def run_first_session_setup(
                 'ok': True,
                 'usage_level': brief.get('token_budget', {}).get('usage_level'),
             }
-        except Exception as exc:
+        except (ImportError, ValueError, TypeError, OSError) as exc:
+            logger.warning('Daily dry-run planning failed: %s', exc)
             daily_dry_run = {'ok': False, 'error': str(exc)}
             warnings.append(f'daily dry-run planning failed: {exc}')
 

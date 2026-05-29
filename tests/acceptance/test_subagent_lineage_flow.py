@@ -50,7 +50,7 @@ def test_cli_subagent_run_includes_lineage_in_tool_observation() -> None:
                     '--root',
                     tmp,
                     '--permission-mode',
-                    'read-only',
+                    'allow',
                 ]
             )
 

@@ -40,6 +40,7 @@ def test_agent_undo_restores_last_run_writes(tmp_path: Path) -> None:
                 str(tmp_path),
                 '--permission-mode',
                 'workspace-write',
+                '--skip-plan-check',
                 '--max-iterations',
                 '6',
                 '--max-tool-calls',

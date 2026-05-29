@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -12,6 +13,8 @@ from teaagent.code_ontology import CodeOntologyGraph
 from teaagent.hybrid_search import indexed_db_path, search_if_indexed
 from teaagent.memory import MemoryCatalog
 from teaagent.rag import tokenize
+
+logger = logging.getLogger(__name__)
 
 _CODE_SUFFIXES = {'.py', '.pyi', '.ts', '.tsx', '.js', '.jsx'}
 _INDEX_MARKERS = (
@@ -56,7 +59,8 @@ def _resolve_code_analysis_config(
         enabled = rc.get('code_analysis_enabled')
         if isinstance(enabled, bool) and enabled:
             return CodeAnalysisConfig.from_root(root, enabled=True)
-    except Exception:
+    except (ImportError, OSError, ValueError, TypeError, KeyError) as exc:
+        logger.debug('Failed to resolve code analysis config: %s', exc)
         return None
     return None
 
@@ -198,8 +202,8 @@ def _symbol_hints(
                 )
                 if hydrated:
                     return hydrated
-            except Exception:
-                pass
+            except (OSError, ValueError, TypeError, ConnectionError) as exc:
+                logger.debug('LSP symbol hydration failed: %s', exc)
 
     hints: list[dict[str, Any]] = []
     for entry in candidate_files:
@@ -263,7 +267,8 @@ def _graphqlite_hits(
 
         store = GraphQLiteGraphStore(GraphQLiteConfig(database=str(db_path)))
         rows = store.query(_GRAPHQLITE_DOCUMENT_QUERY)
-    except Exception:
+    except (OSError, ImportError, ValueError) as exc:
+        logger.debug('GraphQLite query failed: %s', exc)
         return []
     if not isinstance(rows, list):
         return []
@@ -325,7 +330,8 @@ def _code_ontology_hits(root: Path, task: str, *, limit: int) -> list[dict[str, 
                         return hits
 
         return hits
-    except Exception:
+    except (OSError, ImportError, ValueError) as exc:
+        logger.debug('Code ontology extraction failed: %s', exc)
         return []
 
 
@@ -436,7 +442,8 @@ def _graph_rag_evidence(
                 'reason': 'code_ontology_dependency_analysis',
             }
             combined.extend(ontology_hits)
-    except Exception as exc:
+    except (OSError, ValueError, TypeError, ImportError) as exc:
+        logger.warning('Graph RAG search failed: %s', exc)
         return {
             'status': 'indexed',
             'indexes': indexes,

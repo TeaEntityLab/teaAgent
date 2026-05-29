@@ -6,6 +6,7 @@ subprocess ``teaagent run`` fallback when no manager is configured.
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import threading
 import time
@@ -21,6 +22,8 @@ from teaagent.subagent_run_context import (
     reset_parent_run_id,
 )
 from teaagent.subagents._approval_queue import get_approval_queue
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -136,7 +139,8 @@ class ParallelExecutor:
             success = status == 'completed'
             output = str(payload.get('final_answer') or payload.get('run_id', ''))
             error = None if success else str(payload.get('message', status))
-        except Exception as exc:
+        except (OSError, ValueError, TypeError, RuntimeError) as exc:
+            logger.warning('Subagent execution failed for approach %d: %s', index, exc)
             success = False
             output = ''
             error = str(exc)
@@ -209,7 +213,8 @@ class ParallelExecutor:
             success = False
             output = exc.stdout or ''
             error = exc.stderr or str(exc)
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
+            logger.warning('Subprocess execution failed for approach %d: %s', index, exc)
             success = False
             output = ''
             error = str(exc)

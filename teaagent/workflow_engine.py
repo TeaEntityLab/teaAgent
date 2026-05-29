@@ -16,7 +16,7 @@ import os
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Optional, cast
 
 from teaagent.agent_factory import AgentFactory
 from teaagent.coordinator import WorkflowPlan, WorkflowStep
@@ -155,8 +155,9 @@ class WorkflowEngine:
                 result = self._validate_and_heal_step(step, result)
 
             return result
-        except Exception as exc:
+        except (OSError, ValueError, TypeError, RuntimeError) as exc:
             execution_time = time.time() - start_time
+            logger.warning('Step %s execution failed: %s', step.step_id, exc)
             return StepExecution(
                 step_id=step.step_id,
                 success=False,
@@ -216,8 +217,8 @@ class WorkflowEngine:
 
             # Re-execute the step
             return self._execute_step(step)
-        except Exception as exc:
-            logger.error(f'Self-healing failed: {exc}')
+        except (ImportError, ValueError, TypeError, OSError) as exc:
+            logger.error('Self-healing failed: %s', exc)
             return result
 
     def _run_validation(self, step: WorkflowStep) -> 'ValidationResult':
@@ -234,24 +235,27 @@ class WorkflowEngine:
             return ValidationResult(passed=True, errors=[])
 
         # Use validation profile from step if available, default to standard
-        from teaagent.validation.profiles import run_profile_validation, ValidationProfileName
-        
+        from teaagent.validation.profiles import (
+            ValidationProfileName,
+            run_profile_validation,
+        )
+
         profile_name = getattr(step, 'validation_profile', 'standard')
         if profile_name not in ('fast', 'standard', 'strict'):
             profile_name = 'standard'
-        
+
         try:
-            profile = ValidationProfileName(profile_name)  # type: ignore[arg-type]
+            profile = cast(ValidationProfileName, profile_name)
             report = run_profile_validation(self._root, profile)
-            
+
             errors = []
             for result in report.results:
                 if not result.skipped and result.exit_code != 0:
                     errors.append(f'{result.name} failed:\n{result.stdout or result.stderr}')
-            
+
             return ValidationResult(passed=report.passed, errors=errors)
-        except Exception as exc:
-            logger.warning(f'Validation profile execution failed: {exc}')
+        except (OSError, ImportError, ValueError, subprocess.SubprocessError) as exc:
+            logger.warning('Validation profile execution failed: %s', exc)
             # Fallback to basic validation
             return ValidationResult(passed=True, errors=[])
 
@@ -327,7 +331,8 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
         try:
             self._agent_factory.hot_reload_agent(agent_name, new_prompt)
             return True, f'Polished agent {agent_name}'
-        except Exception as exc:
+        except (ImportError, ValueError, TypeError, OSError) as exc:
+            logger.warning('Failed to polish agent %s: %s', agent_name, exc)
             return False, f'Failed to polish agent: {exc}'
 
     def _generate_unified_diff(self, old: str, new: str, label: str) -> str:

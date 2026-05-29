@@ -69,7 +69,7 @@ def test_plan_before_write_enforcement() -> None:
             require_plan=False,  # Not explicitly required, but workspace-write defaults to strict
             skip_plan_check=False,
         )
-    
+
     # Should allow with skip_plan_check override
     assert_write_allowed(
         tool_name='workspace_write_file',

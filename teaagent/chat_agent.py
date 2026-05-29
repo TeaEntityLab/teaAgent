@@ -512,7 +512,7 @@ def run_chat_agent(
                 task=plan_contract.get('task', ''),
                 file_targets=frozenset(plan_contract.get('file_targets', [])),
             )
-        
+
         result = runner.run(
             task=task,
             decide=lambda context: engine.decide(with_memories(context, memories)),

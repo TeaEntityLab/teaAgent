@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import threading
 from contextlib import suppress
@@ -9,6 +10,8 @@ from typing import Any, Optional
 
 from ._types import CodeModeResult, CodeModeSandbox
 from ._validation import UnsafeCodeError, validate_plain_data
+
+logger = logging.getLogger(__name__)
 
 CONTAINER_CODE_MODE_SCRIPT = r"""
 import json

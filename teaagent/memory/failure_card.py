@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import uuid
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from pathlib import Path
 from typing import ClassVar, Optional
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TTL_SECONDS = 30 * 86400
 VALID_CONFIDENCE = frozenset({'low', 'medium', 'high'})
@@ -254,13 +257,7 @@ class FailureCardStorage:
                     return []
                 return data
         except (OSError, json.JSONDecodeError) as exc:
-            # Log warning but don't crash
-            import sys
-
-            print(
-                f'[TeaAgent] Warning: Failed to read failure cards: {exc}',
-                file=sys.stderr,
-            )
+            logger.warning('Failed to read failure cards: %s', exc)
             return []
 
     def _write_cards(self, cards: list[dict]) -> None:
@@ -273,12 +270,7 @@ class FailureCardStorage:
             with open(self.storage_file, 'w', encoding='utf-8') as f:
                 json.dump(cards, f, indent=2)
         except OSError as exc:
-            import sys
-
-            print(
-                f'[TeaAgent] Warning: Failed to write failure cards: {exc}',
-                file=sys.stderr,
-            )
+            logger.warning('Failed to write failure cards: %s', exc)
 
     def append(self, card: FailureCard) -> None:
         """Append a failure card to storage.
