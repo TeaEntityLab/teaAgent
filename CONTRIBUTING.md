@@ -24,6 +24,23 @@ Run the same checks as CI before opening a pull request:
 .venv/bin/pytest -q
 ```
 
+Pre-commit runs a smoke subset by default. For the full test suite locally:
+
+```bash
+TEAAGENT_PRECOMMIT_FULL=1 pre-commit run --all-files
+```
+
+### CI jobs
+
+| Job | Blocks merge? | Purpose |
+|-----|---------------|---------|
+| `lint` | Yes | Ruff, mypy, format |
+| `governance-gate` | Yes | Governance fuzz, plan gate, Phase 4–5 acceptance, Phase 5 unit tests |
+| `docker-smoke` | **No** (`continue-on-error`) | `tests/test_phase6_docker.py` when Docker/Podman is available |
+| `package` | Yes | Wheel/sdist build |
+
+Run `pytest tests/test_phase6_docker.py` locally before relying on container Code Mode in production.
+
 ## Pull Requests
 
 - Keep changes small and focused.

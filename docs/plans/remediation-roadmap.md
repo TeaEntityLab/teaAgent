@@ -48,12 +48,12 @@ Principle: **smallest verifiable step** per phase; no big-bang refactors.
 
 | # | Task | Output |
 |---|------|--------|
-| P3.1 | Reconcile README Foundation vs maturity Beta | README + matrix sync |
-| P3.2 | Fix `architecture.md` duplicate section numbers | Editorial |
-| P3.3 | threat-model verification columns for rows 26, 32 | Link to new tests |
-| P3.4 | governance-gate: add phase5/6 unit files | `.github/workflows/ci.yml` |
+| P3.1 | ✅ Reconcile README Foundation vs maturity Beta | README + matrix sync |
+| P3.2 | ✅ Fix `architecture.md` duplicate section numbers | Editorial |
+| P3.3 | ✅ threat-model verification columns (Context Bus, async P2P, swarm, workflow rollback) | `docs/threat-model.md` |
+| P3.4 | ✅ governance-gate: Phase 5 unit files; docker only in `docker-smoke` | `.github/workflows/ci.yml` |
 | P3.5 | ✅ Optional pre-commit smoke (`TEAAGENT_PRECOMMIT_FULL=1` for full suite) | `.pre-commit-config.yaml` |
-| P3.6 | docker-smoke: decide block vs advisory | CI policy doc |
+| P3.6 | ✅ docker-smoke advisory (`continue-on-error`); documented in CONTRIBUTING | `CONTRIBUTING.md` |
 | P3.7 | ✅ Plugin fail-closed when `TEAAGENT_PLUGINS_STRICT=1` | S-H8 | `plugins.py` |
 
 ---

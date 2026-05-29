@@ -105,19 +105,22 @@ TeaAgent includes persistent memory features to learn from past mistakes and syn
 - Commands: `/pin <file>`, `/unpin <file>`, `/pinned` (list)
 - Visual indicator in prompt shows pinned file count (e.g., `teaagent📌2>`)
 
-### 8. Self-Healing Validation (Foundation)
+### 8. Self-Healing Validation (Beta)
 
-TeaAgent includes LSP/static analysis validation foundation for code correctness:
+LSP/static analysis validation is integrated with the agent runner and workflow engine:
 
 **Validation Tools:**
 - Auto-detects available tools (ruff, mypy, tsc, eslint)
 - Validates code before committing changes
 - Supports Python, TypeScript, and JavaScript projects
-- Enable with `--validate` flag (opt-in)
+- Enable with `--validate` on `agent run` or via workflow self-healing steps
 
-### 9. Tournament Selection (Foundation)
+See [maturity-matrix.md](docs/maturity-matrix.md) for surface status and test pointers.
 
-TeaAgent includes tournament-style parallel execution foundation for architecture exploration:
+### 9. Tournament Selection (Beta)
+
+Tournament-style parallel execution runs in `SwarmManager` with git worktree isolation,
+security-weighted scoring, and centralized approval queue integration:
 
 **Parallel Execution:**
 - Create isolated git sandbox branches for multiple approaches
@@ -125,9 +128,9 @@ TeaAgent includes tournament-style parallel execution foundation for architectur
 - Execute subagents in parallel with resource limits
 - Benchmark correctness, performance, and code quality
 - Compare approaches with weighted scoring
-- Enable with `--parallel N` flag (opt-in)
+- Enable with `--parallel N` on `agent run` (read-only analysis) or swarm/tournament modes
 
-**Status:** Foundation implemented. Full integration with agent runner and human approval workflow documented in spec files for future implementation.
+**Status:** Beta — shipped in harness with governance gates; hosted tournament dashboards remain future work. See [maturity-matrix.md](docs/maturity-matrix.md).
 
 ### 10. Cognitive Swarm Evolution (Phase 5)
 

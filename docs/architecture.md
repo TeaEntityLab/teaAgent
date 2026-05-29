@@ -80,8 +80,8 @@ The TeaAgent governance system has been hardened through a comprehensive 5-loop 
 
 Core Phase 4 (consensus) and Phase 5 (sandbox routing/execution) modules are shipped
 with CLI, unit tests, and E2E acceptance. Optional hardening (async vote polling,
-WASM skill execution, docker-smoke CI) is shipped; remaining Beta work is native
-WASM modules and deeper tournament benchmarks. See [backlog-priority.md](backlog-priority.md).
+WASM skill execution) is shipped; `docker-smoke` CI is advisory (see [CONTRIBUTING.md](../CONTRIBUTING.md#ci-jobs)).
+Remaining Beta work is native WASM modules and deeper tournament benchmarks. See [backlog-priority.md](backlog-priority.md).
 
 ### Phase 4: Federated Swarm Consensus & Peer Attestations — **Beta**
 - `ConsensusEngine`, peer registry, voting mechanisms, and attestation trail
@@ -193,18 +193,6 @@ Restricted Python execution with AST allow-list validation:
 Code Mode allows only a fixed set of AST nodes and builtin functions — no
 imports, no attributes, no arbitrary calls.
 
-### 5. Code Mode
-
-Restricted Python execution with AST allow-list validation:
-
-| Backend               | Isolation Level                                |
-|-----------------------|------------------------------------------------|
-| Child process (default)| `RLIMIT_CPU`, wall-clock timeout, advisory `RLIMIT_AS` |
-| Container              | Docker/Podman: `--network none`, `--read-only`, `--cap-drop=ALL`, non-root, tmpfs, CPU/memory/PID limits, streaming output cap, image digest pinning, image allowlist |
-
-Code Mode allows only a fixed set of AST nodes and builtin functions — no
-imports, no attributes, no arbitrary calls.
-
 ### 6. Governance Hardening (Tranche B)
 
 **Plan-before-Write Enforcement:**
@@ -235,7 +223,7 @@ imports, no attributes, no arbitrary calls.
 - Tests conservative defaults and path filtering
 - Integrated into CI governance gate
 
-### 8. OAuth 2.1 / DPoP
+### 7. OAuth 2.1 / DPoP
 
 `OAuth21AuthorizationServer` and `OAuth21ResourceServer` implement the
 authorization code grant with PKCE (S256) and optional DPoP proof-of-possession:
@@ -247,7 +235,7 @@ authorization code grant with PKCE (S256) and optional DPoP proof-of-possession:
 - `SQLiteOAuthStore` provides durable client/authorization-code/nonce storage
   with PBKDF2-SHA256 client-secret hashing.
 
-### 9. MCP Transport
+### 8. MCP Transport
 
 Two transports share the same `handle_mcp_request()` dispatch:
 
@@ -261,7 +249,7 @@ The HTTP server enforces:
 - `Mcp-Session-Id` session tracking.
 - Body size limits with `413` for oversized payloads.
 
-### 8. LLM Integration
+### 9. LLM Integration
 
 `teaagent.llm` provides a unified adapter layer (`LLMAdapter`) across 13
 registered providers in `PROVIDER_CONFIGS`: `claude`, `gpt`, `gemini`,
@@ -275,7 +263,7 @@ adapter implements `chat()` returning an `LLMResponse`. Features include:
 - Cost budget pre-flight.
 - Streaming via `stream=True` and `on_chunk` callbacks.
 
-### 9. External Federation Boundary (ANP Adapter)
+### 10. External Federation Boundary (ANP Adapter)
 
 TeaAgent treats ANP as an optional external federation surface through a
 bidirectional adapter boundary:
