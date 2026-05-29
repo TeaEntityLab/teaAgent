@@ -93,11 +93,15 @@ class WorkflowEngine:
         self._max_self_healing_attempts = max_self_healing_attempts
         self._workflow_lock = threading.Lock()
 
-    def execute_workflow(self, plan: WorkflowPlan) -> WorkflowExecution:
+    def execute_workflow(
+        self, plan: WorkflowPlan, audit_logger: Optional[AuditLogger] = None
+    ) -> WorkflowExecution:
         """Execute a workflow plan from start to finish.
 
         Args:
             plan: WorkflowPlan to execute.
+            audit_logger: Optional shared AuditLogger; if provided, the
+                UndoJournal sink is attached to it so rollback events are captured.
 
         Returns:
             WorkflowExecution with results.
@@ -108,8 +112,8 @@ class WorkflowEngine:
 
             # Set up UndoJournal for rollback support on strict validation failures
             journal = UndoJournal(root=self._root)
-            audit = AuditLogger()
-            audit.add_sink(journal)
+            if audit_logger is not None:
+                audit_logger.add_sink(journal)
 
             for step in plan.steps:
                 execution.current_step = step.step_id
@@ -193,13 +197,16 @@ class WorkflowEngine:
         except (OSError, ValueError, TypeError, RuntimeError) as exc:
             execution_time = time.time() - start_time
             logger.warning('Step %s execution failed: %s', step.step_id, exc)
-            return StepExecution(
+            result = StepExecution(
                 step_id=step.step_id,
                 success=False,
                 error=str(exc),
                 execution_time_seconds=execution_time,
                 self_healing_attempts=current_attempt,
             )
+            if self._enable_self_healing:
+                result = self._validate_and_heal_step(step, result)
+            return result
 
     def _validate_and_heal_step(
         self, step: WorkflowStep, result: StepExecution
@@ -404,13 +411,18 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
         return '\n'.join(diff)
 
     def resume_workflow(
-        self, execution: WorkflowExecution, from_step: Optional[int] = None
+        self,
+        execution: WorkflowExecution,
+        from_step: Optional[int] = None,
+        audit_logger: Optional[AuditLogger] = None,
     ) -> WorkflowExecution:
         """Resume a paused workflow from a specific step.
 
         Args:
             execution: WorkflowExecution to resume.
             from_step: Step to resume from (defaults to current step).
+            audit_logger: Optional shared AuditLogger; if provided, the
+                UndoJournal sink is attached to it so rollback events are captured.
 
         Returns:
             Updated WorkflowExecution.
@@ -420,8 +432,8 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
 
             # Set up UndoJournal for rollback support on strict validation failures
             journal = UndoJournal(root=self._root)
-            audit = AuditLogger()
-            audit.add_sink(journal)
+            if audit_logger is not None:
+                audit_logger.add_sink(journal)
 
             start_step = from_step or execution.current_step
 

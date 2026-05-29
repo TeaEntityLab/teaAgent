@@ -167,7 +167,7 @@ class JITApprovalServer:
     def _schedule_broadcast(self, coro: Any) -> None:
         """Schedule SSE broadcast, handling calls from non-event-loop threads."""
         if self._loop is not None and self._loop.is_running():
-            self._loop.call_soon_threadsafe(asyncio.ensure_future, coro)
+            asyncio.run_coroutine_threadsafe(coro, self._loop)
             return
         try:
             loop = asyncio.get_running_loop()
@@ -244,12 +244,16 @@ class JITApprovalServer:
         if event:
             event.set()
 
-        # Update permission manager
-        self._permission_manager.request_tool_approval(
-            record.request.agent_name,
-            record.request.tool_name,
-            record.request.reason,
-        )
+        # Directly whitelist the approved tool in the permission manager
+        try:
+            agent_approved = self._permission_manager._agent_approved_tools.setdefault(
+                record.request.agent_name, set()
+            )
+            agent_approved.add(record.request.tool_name)
+        except AttributeError:
+            logger.warning(
+                'Permission manager does not support direct tool whitelisting'
+            )
 
         self._schedule_broadcast(self._broadcast_approval(record))
 

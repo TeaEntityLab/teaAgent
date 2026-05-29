@@ -202,6 +202,10 @@ class Subagent:
         self.is_running: bool = False
         self.last_heartbeat: float = time.time()
 
+    def tick_heartbeat(self) -> None:
+        """Update last heartbeat timestamp for thread-liveness monitoring."""
+        self.last_heartbeat = time.time()
+
     def execute(self) -> SubagentResult:
         """Execute the subagent task in isolated sandbox with centralized approval lineage."""
         import time
@@ -372,6 +376,10 @@ class SwarmManager:
         self._heartbeat_stop_event = threading.Event()
         self._heartbeat_lock = threading.Lock()
         self._parent_run_id: Optional[str] = None
+        self._subagent_results: dict[str, SubagentResult] = {}
+
+        if self._subagent_manager is not None:
+            self._subagent_manager._swarm_manager = self
 
         if self._enable_consensus:
             self._consensus_engine = ConsensusEngine(
@@ -482,10 +490,15 @@ class SwarmManager:
                         continue
 
                     if current_time - last_heartbeat > self._lock_timeout_seconds:
-                        logger.warning(
+                        logger.error(
                             f'Subagent thread hang detected: {task_id} has not checked in for '
                             f'{current_time - last_heartbeat:.1f} seconds, '
                             f'timeout after {self._lock_timeout_seconds}s'
+                        )
+                        self._subagent_results[task_id] = SubagentResult(
+                            task_id=task_id,
+                            success=False,
+                            error=f'Subagent execution exceeded liveness timeout threshold ({self._lock_timeout_seconds}s)',
                         )
                         self._subagent_heartbeats.pop(task_id, None)
                         self._subagent_pids.pop(task_id, None)

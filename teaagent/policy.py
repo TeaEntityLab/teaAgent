@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import hashlib
 import json
 import logging
@@ -528,7 +529,9 @@ class ApprovalPolicy:
 
         # Collect signatures from peers — offload async to avoid event loop starvation
         signature_messages = self._run_async_signature_collection(
-            sync, request.request_id
+            sync,
+            request.request_id,
+            required_approvals=self.multi_sig_config.required_approvals,
         )
 
         # Convert signature messages to PeerSignature objects with verification
@@ -563,17 +566,22 @@ class ApprovalPolicy:
         self,
         sync: Any,
         request_id: str,
+        *,
+        required_approvals: int = 1,
     ) -> Any:
         """Run async signature collection without starving the event loop.
 
         Detects whether an event loop is active and dispatches accordingly:
-        - If called from the event loop thread, uses a new event loop to avoid deadlock.
-        - If another thread has a running loop, offloads via run_coroutine_threadsafe.
-        - Otherwise, runs the coroutine in a fresh event loop.
+        - If called from a thread with a running event loop, offloads to a
+          ThreadPoolExecutor so the coroutine runs in a fresh thread with its
+          own event loop (avoids ``RuntimeError: Cannot run the event loop
+          from within a running event loop``).
+        - Otherwise, runs the coroutine via ``asyncio.run()``.
         """
         coro = sync.collect_approval_signatures(
             request_id,
             timeout_seconds=self.multi_sig_config.timeout_seconds,
+            required_approvals=required_approvals,
         )
         try:
             loop = asyncio.get_running_loop()
@@ -581,13 +589,20 @@ class ApprovalPolicy:
             loop = None
 
         if loop is not None and loop.is_running():
-            # We are on the event loop thread — run_coroutine_threadsafe + result()
-            # would block the event loop. Create a fresh loop.
-            new_loop = asyncio.new_event_loop()
-            try:
-                return new_loop.run_until_complete(coro)
-            finally:
-                new_loop.close()
+            # We are on the event loop thread — offload to a worker thread
+            # that creates its own event loop to run the coroutine.
+            def _run_in_thread() -> Any:
+                new_loop = asyncio.new_event_loop()
+                try:
+                    asyncio.set_event_loop(new_loop)
+                    return new_loop.run_until_complete(coro)
+                finally:
+                    new_loop.close()
+
+            timeout = self.multi_sig_config.timeout_seconds + 5
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_run_in_thread)
+                return future.result(timeout=timeout)
         return asyncio.run(coro)
 
 

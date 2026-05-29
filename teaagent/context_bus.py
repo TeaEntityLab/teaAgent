@@ -136,13 +136,16 @@ class ContextBus:
                         f'SQLite database error failed after reconnect attempts: {exc}'
                     )
                     raise
+                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
                 logger.warning(
                     f'SQLite database error (attempt {attempt + 1}/{max_retries}), reconnecting: {exc}'
                 )
+                with suppress(Exception):
+                    cursor.connection.rollback()
+                time.sleep(delay)
                 self._reconnect()
                 assert self._connection is not None
                 cursor = self._connection.cursor()
-                time.sleep(base_delay * (2**attempt) + random.uniform(0, 0.05))
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
                     raise
@@ -156,6 +159,8 @@ class ContextBus:
                     f'SQLite lock contention (attempt {attempt + 1}/{max_retries}), '
                     f'retrying in {delay:.2f}s'
                 )
+                with suppress(Exception):
+                    cursor.connection.rollback()
                 time.sleep(delay)
 
         raise RuntimeError(
@@ -178,13 +183,13 @@ class ContextBus:
                 if attempt == max_retries - 1:
                     logger.error(f'SQLite commit database error failed: {exc}')
                     raise
+                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
                 logger.warning(
-                    f'SQLite commit database error (attempt {attempt + 1}/{max_retries}), reconnecting: {exc}'
+                    f'SQLite commit database error (attempt {attempt + 1}/{max_retries}): {exc}'
                 )
-                self._reconnect()
-                assert self._connection is not None
-                conn = self._connection
-                time.sleep(base_delay * (2**attempt) + random.uniform(0, 0.05))
+                with suppress(Exception):
+                    conn.rollback()
+                time.sleep(delay)
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
                     raise
@@ -198,6 +203,8 @@ class ContextBus:
                     f'SQLite commit contention (attempt {attempt + 1}/{max_retries}), '
                     f'retrying in {delay:.2f}s'
                 )
+                with suppress(Exception):
+                    conn.rollback()
                 time.sleep(delay)
 
     def _reconnect(self) -> None:
@@ -221,37 +228,52 @@ class ContextBus:
         Args:
             delta: DeltaCard to publish.
         """
-        with self._lock:
-            conn = self._connection
-            if conn is None:
-                raise RuntimeError('Context bus connection is not initialized')
-            cursor = conn.cursor()
+        max_retries = 5
+        base_delay = 0.1
 
-            try:
-                self._execute_with_retry(
-                    cursor,
-                    """
-                    INSERT OR REPLACE INTO delta_cards
-                    (delta_id, workflow_id, delta_type, source_agent, content, timestamp, metadata)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        delta.delta_id,
-                        self._workflow_id,
-                        delta.delta_type.value,
-                        delta.source_agent,
-                        delta.content,
-                        delta.timestamp,
-                        json.dumps(delta.metadata),
-                    ),
-                )
-                self._commit_with_retry(conn)
-                logger.info(
-                    f'Published Delta {delta.delta_id} from {delta.source_agent}'
-                )
-            except sqlite3.Error:
-                conn.rollback()
-                raise
+        for attempt in range(max_retries):
+            with self._lock:
+                conn = self._connection
+                if conn is None:
+                    raise RuntimeError('Context bus connection is not initialized')
+                cursor = conn.cursor()
+
+                try:
+                    cursor.execute(
+                        """
+                        INSERT OR REPLACE INTO delta_cards
+                        (delta_id, workflow_id, delta_type, source_agent, content, timestamp, metadata)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            delta.delta_id,
+                            self._workflow_id,
+                            delta.delta_type.value,
+                            delta.source_agent,
+                            delta.content,
+                            delta.timestamp,
+                            json.dumps(delta.metadata),
+                        ),
+                    )
+                    conn.commit()
+                    logger.info(
+                        f'Published Delta {delta.delta_id} from {delta.source_agent}'
+                    )
+                    return
+                except sqlite3.Error as exc:
+                    with suppress(Exception):
+                        conn.rollback()
+                    if attempt == max_retries - 1:
+                        raise
+                    delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                    logger.warning(
+                        f'publish_delta failed (attempt {attempt + 1}/{max_retries}): {exc}, '
+                        f'reconnecting and retrying in {delay:.2f}s'
+                    )
+                    self._reconnect()
+
+            # Sleep outside the lock to avoid thread starvation
+            time.sleep(delay)
 
     def subscribe_deltas(
         self,
@@ -355,44 +377,81 @@ class ContextBus:
         Args:
             max_timestamp: If set, only clear deltas with timestamp <= this value.
         """
-        with self._lock:
-            conn = self._connection
-            if conn is None:
-                raise RuntimeError('Context bus connection is not initialized')
-            cursor = conn.cursor()
-            if max_timestamp is not None:
-                self._execute_with_retry(
-                    cursor,
-                    'DELETE FROM delta_cards WHERE workflow_id = ? AND timestamp <= ?',
-                    (self._workflow_id, max_timestamp),
-                )
-            else:
-                self._execute_with_retry(
-                    cursor,
-                    'DELETE FROM delta_cards WHERE workflow_id = ?',
-                    (self._workflow_id,),
-                )
-            self._commit_with_retry(conn)
+        max_retries = 5
+        base_delay = 0.1
+
+        for attempt in range(max_retries):
+            with self._lock:
+                conn = self._connection
+                if conn is None:
+                    raise RuntimeError('Context bus connection is not initialized')
+                cursor = conn.cursor()
+
+                try:
+                    if max_timestamp is not None:
+                        cursor.execute(
+                            'DELETE FROM delta_cards WHERE workflow_id = ? AND timestamp <= ?',
+                            (self._workflow_id, max_timestamp),
+                        )
+                    else:
+                        cursor.execute(
+                            'DELETE FROM delta_cards WHERE workflow_id = ?',
+                            (self._workflow_id,),
+                        )
+                    conn.commit()
+                    return
+                except sqlite3.Error as exc:
+                    with suppress(Exception):
+                        conn.rollback()
+                    if attempt == max_retries - 1:
+                        raise
+                    delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                    logger.warning(
+                        f'_clear_deltas failed (attempt {attempt + 1}/{max_retries}): {exc}, '
+                        f'reconnecting and retrying in {delay:.2f}s'
+                    )
+                    self._reconnect()
+
+            # Sleep outside the lock to avoid thread starvation
+            time.sleep(delay)
 
     def cleanup_old_deltas(self) -> None:
         """Clean up old Delta cards based on age."""
         cutoff_time = time.time() - self._config.max_delta_age_seconds
+        max_retries = 5
+        base_delay = 0.1
 
-        with self._lock:
-            conn = self._connection
-            if conn is None:
-                raise RuntimeError('Context bus connection is not initialized')
-            cursor = conn.cursor()
-            cursor = self._execute_with_retry(
-                cursor,
-                'DELETE FROM delta_cards WHERE timestamp < ?',
-                (cutoff_time,),
-            )
-            deleted = cursor.rowcount
-            self._commit_with_retry(conn)
+        for attempt in range(max_retries):
+            with self._lock:
+                conn = self._connection
+                if conn is None:
+                    raise RuntimeError('Context bus connection is not initialized')
+                cursor = conn.cursor()
 
-            if deleted > 0:
-                logger.info(f'Cleaned up {deleted} old Delta cards')
+                try:
+                    cursor.execute(
+                        'DELETE FROM delta_cards WHERE timestamp < ?',
+                        (cutoff_time,),
+                    )
+                    deleted = cursor.rowcount
+                    conn.commit()
+                    if deleted > 0:
+                        logger.info(f'Cleaned up {deleted} old Delta cards')
+                    return
+                except sqlite3.Error as exc:
+                    with suppress(Exception):
+                        conn.rollback()
+                    if attempt == max_retries - 1:
+                        raise
+                    delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                    logger.warning(
+                        f'cleanup_old_deltas failed (attempt {attempt + 1}/{max_retries}): {exc}, '
+                        f'reconnecting and retrying in {delay:.2f}s'
+                    )
+                    self._reconnect()
+
+            # Sleep outside the lock to avoid thread starvation
+            time.sleep(delay)
 
     def get_delta_count(self) -> int:
         """Get the count of Delta cards for the current workflow.

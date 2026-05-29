@@ -7,6 +7,7 @@ intelligence with conflict resolution and incremental updates.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -501,12 +502,16 @@ class FederatedGraphSync:
         self,
         request_id: str,
         timeout_seconds: int,
+        *,
+        required_approvals: int = 1,
     ) -> list[ApprovalSignatureMessage]:
         """Collect approval signatures from peers for a request asynchronously.
 
         Args:
             request_id: The approval request ID to collect signatures for.
             timeout_seconds: Maximum time to wait for signatures.
+            required_approvals: Minimum number of peer approvals needed.
+                Collection short-circuits once this threshold is reached.
 
         Returns:
             List of signature messages received from peers.
@@ -514,6 +519,7 @@ class FederatedGraphSync:
         import asyncio
 
         signatures: list[ApprovalSignatureMessage] = []
+        seen_peers: set[str] = set()
         approvals_dir = self._root / '.teaagent' / 'pending_approvals'
 
         if not approvals_dir.exists():
@@ -528,20 +534,24 @@ class FederatedGraphSync:
             for sig_file in approvals_dir.glob(f'{request_id}_signature_*.json'):
                 try:
                     data = json.loads(sig_file.read_text(encoding='utf-8'))
+                    peer_id = data['peer_id']
+                    if peer_id in seen_peers:
+                        continue
                     sig_msg = ApprovalSignatureMessage(
                         request_id=data['request_id'],
-                        peer_id=data['peer_id'],
+                        peer_id=peer_id,
                         signature=data['signature'],
                         ssh_key_id=data.get('ssh_key_id'),
                         timestamp=data.get('timestamp', time.time()),
                     )
+                    with contextlib.suppress(OSError):
+                        sig_file.unlink()
+                    seen_peers.add(peer_id)
                     signatures.append(sig_msg)
-                    # Remove processed signature file
-                    sig_file.unlink()
                 except (json.JSONDecodeError, KeyError):
                     continue
 
-            if signatures:
+            if len(signatures) >= required_approvals:
                 break
 
             await asyncio.sleep(poll_interval)

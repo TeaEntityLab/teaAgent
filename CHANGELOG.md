@@ -4,6 +4,14 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Concurrency & Transaction Audit Round 3 (6 fixes)**:
+  - **Federated Sync**: `collect_approval_signatures` now accepts `required_approvals` parameter and waits for quorum instead of breaking on first signature; deduplicates peer signatures
+  - **Policy**: `_run_async_signature_collection` offloads to `ThreadPoolExecutor` worker thread with fresh event loop — prevents `RuntimeError: cannot run event loop from within running loop`
+  - **Context Bus**: `_execute_with_retry`/`_commit_with_retry` no longer hold `self._lock` during `time.sleep()` (fixes thread starvation); added rollback in all OperationalError paths; `publish_delta`/`_clear_deltas`/`cleanup_old_deltas` restructured with retry loops that sleep outside the lock
+  - **Swarm**: `SwarmManager` now binds `_swarm_manager` to `subagent_manager` (fixes heartbeat registration being silently skipped); `tick_heartbeat()` method on Subagent for periodic liveness updates; heartbeat monitor now stores `SubagentResult(success=False, error=...)` on hang detection instead of silently discarding
+  - **JIT Approval Server**: `approve_request` directly whitelists tool in permission manager instead of calling `request_tool_approval()` (fixes silent override of manual approvals); `_schedule_broadcast` uses `asyncio.run_coroutine_threadsafe` instead of non-thread-safe `call_soon_threadsafe(asyncio.ensure_future)`
+  - **Workflow Engine**: `execute_workflow`/`resume_workflow` accept optional `audit_logger` parameter and attach `UndoJournal` sink to caller-provided logger (fixes no-op rollback); `_execute_step` exception handler now routes to self-healing instead of immediate failure return
+
 - **Oracle Review Fixes (7 concurrency/architecture fixes)**:
   - **Context Bus**: `_execute_with_retry` now returns `sqlite3.Cursor` — callers (`subscribe_deltas`, `get_delta_count`, `cleanup_old_deltas`) use the reconnected cursor for `fetchall()`/`fetchone()`/`rowcount` instead of the stale pre-reconnect cursor; `except Exception` narrowed to `except sqlite3.Error` in `publish_delta`
   - **Swarm**: `register_subagent_heartbeat` stores subagent reference directly instead of `id(subagent_ref)` (fixes `getattr(int, 'is_running', False)` always returning False); added `_heartbeat_lock` for thread-safe access to heartbeat dicts
