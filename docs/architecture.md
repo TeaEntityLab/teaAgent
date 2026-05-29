@@ -26,9 +26,11 @@ safety boundaries around tool execution.
 │  run_shell_inspect · run_shell_mutate · list_files           │
 │  search_text · git_status                                    │
 ├─────────────────────────────────────────────────────────────┤
-│              Multi-Agent Coordination Layer (Phase 4)         │
+│              Multi-Agent Coordination Layer (Phase 4-5)       │
 │  TaskCoordinator · AgentFactory · ToolPermissionManager       │
 │  WorkflowEngine (polish mode, multi-step execution)          │
+│  ContextBus (cross-sandbox Delta sharing)                     │
+│  JITApprovalServer (remote SSE with timeout)                │
 ├─────────────────────────────────────────────────────────────┤
 │                      State Layer                             │
 │  AuditLogger · RunStore · MemoryCatalog · UltraworkStore     │

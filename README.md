@@ -126,6 +126,34 @@ TeaAgent includes tournament-style parallel execution foundation for architectur
 
 **Status:** Foundation implemented. Full integration with agent runner and human approval workflow documented in spec files for future implementation.
 
+### 10. Cognitive Swarm Evolution (Phase 5)
+
+TeaAgent includes cognitive evolution features for adaptive multi-agent systems:
+
+**Self-Healing Validation:**
+- Automatic ruff, mypy, and pytest validation after code changes
+- Hot-reload agents with self-correction prompts on validation failure
+- Configurable max self-healing attempts (default: 3)
+- Graceful fallback when validation tools are unavailable
+
+**Cross-Sandbox Context Bus:**
+- Real-time Delta sharing between parallel agents via WAL-mode SQLite
+- Delta cards for code changes, discoveries, errors, and context updates
+- Filtered subscriptions by agent, type, and timestamp
+- Automatic RAG archive after workflow completion
+
+**Evolutionary Prompt Tuning:**
+- Performance-based agent prompt evolution
+- LLM-powered prompt refinement with heuristic fallback
+- Success metrics tracking (accuracy, speed, etc.)
+- Hot-reload support for iterative improvement
+
+**Remote JIT Approval:**
+- SSE-based remote approval server for destructive tool requests
+- 3-minute timeout with safe abort
+- Approval queue management for multi-agent workflows
+- Integration with ToolPermissionManager for enforcement
+
 ## Architecture
 
 ```
@@ -153,7 +181,7 @@ CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace T
 - **Context Compaction**: Automatic context compression at 75-92% token usage (Claude Code compatible).
 - **Plan Mode**: Read-only exploration mode for safe codebase analysis.
 - **ACP Adapter**: Agent Client Protocol integration for VS Code, Zed, and JetBrains IDEs.
-- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation, ToolPermissionManager for safety control, and WorkflowEngine for multi-step execution with polish mode.
+- **Multi-Agent Coordination**: TaskCoordinator for classification/routing, AgentFactory for dynamic agent generation with evolutionary prompt tuning, ToolPermissionManager for safety control, WorkflowEngine for multi-step execution with self-healing validation, ContextBus for cross-sandbox Delta sharing, and JITApprovalServer for remote approval with timeout.
 
 See [docs/architecture.md](docs/architecture.md) for component details, data flow, and extension points.
 

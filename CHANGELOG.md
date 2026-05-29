@@ -4,6 +4,12 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- Added Phase 5 Cognitive Swarm Evolution with self-healing validation, cross-sandbox Delta sharing, evolutionary prompt tuning, and remote JIT approval:
+  - `teaagent/workflow_engine.py`: Self-healing validation loops with ruff/mypy/pytest checks, automatic hot-reload and re-execution (max 3 attempts)
+  - `teaagent/context_bus.py`: Cross-sandbox Delta sharing via WAL-mode SQLite for concurrent access, with publish/subscribe and RAG archive
+  - `teaagent/agent_factory.py`: Evolutionary prompt self-tuning based on performance feedback with LLM and heuristic fallback
+  - `teaagent/jit_approval_server.py`: Remote SSE JIT approval server with 3-minute timeout and safe abort
+  - Added 29 tests across 4 test files for Phase 5 components
 - Added Cooragent multi-agent integration with task coordination, dynamic agent generation, tool permissions, and workflow execution:
   - `teaagent/coordinator.py`: Task classification by type (code_review, testing, documentation, refactoring, debugging, feature_implementation, general) with LLM-based and heuristic classification
   - `teaagent/agent_factory.py`: Dynamic agent generation with LLM-structured system prompts, memory/disk registration, and hot-reload support
