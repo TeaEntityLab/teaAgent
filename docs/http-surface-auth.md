@@ -23,6 +23,23 @@ TeaAgent vote relay and control plane support **Bearer tokens**, optional **mTLS
 
 Relay mode ignores `tenants` (any valid relay token may submit votes).
 
+### Auto-discovered relay token file (loopback)
+
+When `--api-token-file` is omitted, relay serve loads the first existing file:
+
+1. `TEAAGENT_RELAY_TOKEN_FILE` (path)
+2. `.teaagent/relay-tokens.json` (workspace)
+3. `~/.teaagent/relay-tokens.json`
+
+## Environment flags
+
+| Variable | Effect |
+|----------|--------|
+| `TEAAGENT_STRICT_LOCAL=1` | MCP HTTP on loopback requires `auth_token` or OAuth |
+| `TEAAGENT_ALLOW_DEV_SIGNATURES=1` | Allow dev-hash signatures (multi-sig / relay dev mode only) |
+| `TEAAGENT_PLUGINS_STRICT=1` | Block unverified plugin entry points (site-packages / unknown source) |
+| `TEAAGENT_PRECOMMIT_FULL=1` | Run full pytest in pre-commit (default: smoke subset) |
+
 ## Headers
 
 | Header | Use |

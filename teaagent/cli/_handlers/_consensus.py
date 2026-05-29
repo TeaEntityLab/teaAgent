@@ -362,11 +362,13 @@ def consensus_relay_serve_command(args: argparse.Namespace) -> int:
             window_seconds=float(getattr(args, 'rate_limit_window', 60.0)),
         )
     try:
+        allow_dev = bool(getattr(args, 'allow_dev_signatures', False))
         relay = VoteRelayServer(
             engine,
             host=args.host,
             port=args.port,
-            require_ssh=not args.allow_dev_signatures,
+            require_ssh=not allow_dev,
+            allow_dev_signatures=allow_dev,
             auth_policy=policy,
             ssl_context=_relay_ssl_context(args),
             rate_limiter=rate_limiter,

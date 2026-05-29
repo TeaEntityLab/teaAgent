@@ -79,13 +79,15 @@ def test_prompt_mode_requires_approval_for_destructive() -> None:
         )
 
 
-def test_prompt_mode_allows_approved_call_id() -> None:
+def test_prompt_mode_preapproved_without_store_still_blocks() -> None:
     policy = ApprovalPolicy(
         permission_mode=PermissionMode.PROMPT,
-        approved_call_ids=frozenset({'call-approved'}),
+        preapproved_call_ids=frozenset({'call-approved'}),
     )
-    policy.assert_allowed(
-        tool_name='workspace_run_shell_mutate',
-        call_id='call-approved',
-        destructive=True,
-    )
+    with pytest.raises(ToolPermissionError):
+        policy.assert_allowed(
+            tool_name='workspace_run_shell_mutate',
+            call_id='call-approved',
+            destructive=True,
+            arguments={'command': 'echo hi'},
+        )

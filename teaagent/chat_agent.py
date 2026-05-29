@@ -473,7 +473,7 @@ def run_chat_agent(
         audit=audit_logger,
         budget=runner_budget,
         approval_policy=ApprovalPolicy(
-            approved_call_ids=config.approved_call_ids,
+            preapproved_call_ids=config.approved_call_ids,
             allow_all_destructive=config.allow_destructive,
             permission_mode=config.permission_mode,
             approval_store=approval_store,

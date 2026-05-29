@@ -22,6 +22,7 @@ from teaagent.ergonomics._approval_grants import (
     _stable_grant_id,
 )
 from teaagent.ergonomics._approval_persistence import ApprovalPersistence
+from teaagent.storage import file_lock
 
 _RootType = Union[ApprovalPersistence, str, Path]
 
@@ -269,25 +270,74 @@ class ApprovalPresetStore:
         return records
 
     def consume_scoped_approval(self, record_id: str) -> bool:
-        data = self._load()
-        found = False
-        for item in data.get('scoped_approvals', []):
-            if not isinstance(item, dict):
-                continue
-            if item.get('record_id') == record_id and not item.get('consumed_at'):
-                item['consumed_at'] = datetime.now(timezone.utc).isoformat()
-                data['audit'].append(
-                    {
-                        'action': 'consume_scoped_approval',
-                        'record_id': record_id,
-                        'consumed_at': item['consumed_at'],
-                    }
-                )
-                found = True
-                break
-        if found:
-            self._save(data)
-        return found
+        with file_lock(self.path):
+            data = self._load()
+            found = False
+            for item in data.get('scoped_approvals', []):
+                if not isinstance(item, dict):
+                    continue
+                if item.get('record_id') == record_id and not item.get('consumed_at'):
+                    item['consumed_at'] = datetime.now(timezone.utc).isoformat()
+                    data['audit'].append(
+                        {
+                            'action': 'consume_scoped_approval',
+                            'record_id': record_id,
+                            'consumed_at': item['consumed_at'],
+                        }
+                    )
+                    found = True
+                    break
+            if found:
+                self._save(data)
+            return found
+
+    def try_consume_scoped_approval(
+        self,
+        run_id: str,
+        call_id: str,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> bool:
+        """Atomically match and consume a scoped approval under file lock."""
+        secret = self._get_workspace_secret()
+        argument_digest_v2 = _compute_argument_digest(arguments, secret)
+        argument_digest_v1 = _compute_argument_digest(arguments)
+        with file_lock(self.path):
+            data = self._load()
+            now = datetime.now(timezone.utc)
+            for item in data.get('scoped_approvals', []):
+                if not isinstance(item, dict):
+                    continue
+                if item.get('run_id') != run_id:
+                    continue
+                if item.get('consumed_at'):
+                    continue
+                if item.get('expires_at'):
+                    try:
+                        expires = datetime.fromisoformat(item['expires_at'])
+                        if expires.tzinfo is None:
+                            expires = expires.replace(tzinfo=timezone.utc)
+                        if now >= expires:
+                            continue
+                    except ValueError:
+                        continue
+                if (
+                    item.get('call_id') == call_id
+                    and item.get('tool_name') == tool_name
+                    and item.get('argument_digest')
+                    in (argument_digest_v2, argument_digest_v1)
+                ):
+                    item['consumed_at'] = now.isoformat()
+                    data['audit'].append(
+                        {
+                            'action': 'consume_scoped_approval',
+                            'record_id': item.get('record_id'),
+                            'consumed_at': item['consumed_at'],
+                        }
+                    )
+                    self._save(data)
+                    return True
+            return False
 
     def check_scoped_approval(
         self,

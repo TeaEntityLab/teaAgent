@@ -314,7 +314,7 @@ class MultiSigPlaceholderTests(unittest.TestCase):
 
         self.assertTrue(_policy._SSH_VERIFICATION_IMPLEMENTED)
 
-    def test_ssh_verification_dev_hash(self) -> None:
+    def test_ssh_verification_dev_hash_when_allowed(self) -> None:
         import hashlib
 
         pubkey = 'ssh-ed25519 AAAA'
@@ -326,11 +326,28 @@ class MultiSigPlaceholderTests(unittest.TestCase):
                 message=message,
                 ssh_key_id='peer1',
                 peer_public_keys={'peer1': pubkey},
+                allow_dev_signatures=True,
             )
         )
         self.assertFalse(
             _verify_ssh_signature(
                 signature='bad',
+                message=message,
+                ssh_key_id='peer1',
+                peer_public_keys={'peer1': pubkey},
+                allow_dev_signatures=True,
+            )
+        )
+
+    def test_ssh_verification_dev_hash_rejected_by_default(self) -> None:
+        import hashlib
+
+        pubkey = 'ssh-ed25519 AAAA'
+        message = 'request-hash'
+        expected = hashlib.sha256((message + pubkey).encode()).hexdigest()
+        self.assertFalse(
+            _verify_ssh_signature(
+                signature=expected,
                 message=message,
                 ssh_key_id='peer1',
                 peer_public_keys={'peer1': pubkey},

@@ -6,6 +6,9 @@ policy has a regression that could allow unapproved destructive operations.
 
 from __future__ import annotations
 
+import pytest
+
+from teaagent.errors import ToolPermissionError
 from teaagent.policy import ApprovalPolicy, PermissionMode
 
 
@@ -54,14 +57,18 @@ def test_unapproved_destructive_call_raises_in_prompt_mode() -> None:
     assert raised
 
 
-def test_approved_call_id_passes_in_prompt_mode() -> None:
+def test_preapproved_call_id_without_store_blocked_in_prompt_mode() -> None:
     policy = ApprovalPolicy(
         permission_mode=PermissionMode.PROMPT,
-        approved_call_ids=frozenset({'approved-1'}),
+        preapproved_call_ids=frozenset({'approved-1'}),
     )
-    policy.assert_allowed(
-        tool_name='workspace_write_file', call_id='approved-1', destructive=True
-    )
+    with pytest.raises(ToolPermissionError):
+        policy.assert_allowed(
+            tool_name='workspace_write_file',
+            call_id='approved-1',
+            destructive=True,
+            arguments={'path': 'x.txt', 'content': 'y'},
+        )
 
 
 def test_allow_mode_accepts_all_destructive() -> None:

@@ -58,7 +58,11 @@ class RunStore:
         if audit.path is None or audit.path == self.run_path(result.run_id):
             return
         target = self.run_path(result.run_id)
-        atomic_write_text(target, audit.path.read_text(encoding='utf-8'))
+        from teaagent.storage import file_lock
+
+        with file_lock(audit.path):
+            content = audit.path.read_text(encoding='utf-8')
+        atomic_write_text(target, content)
         secure_audit_file(target)
         audit.path.unlink(missing_ok=True)
 

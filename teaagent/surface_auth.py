@@ -126,6 +126,23 @@ class SurfaceAuthPolicy:
         return cls(entries=entries, require_auth=True)
 
 
+def default_relay_token_file() -> Path | None:
+    """Discover optional local relay token file (loopback hardening)."""
+    import os
+
+    env_path = os.environ.get('TEAAGENT_RELAY_TOKEN_FILE', '').strip()
+    if env_path:
+        path = Path(env_path)
+        return path if path.is_file() else None
+    for candidate in (
+        Path('.teaagent/relay-tokens.json'),
+        Path.home() / '.teaagent' / 'relay-tokens.json',
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def load_surface_auth_policy(
     *,
     api_token: str | None = None,
@@ -133,6 +150,8 @@ def load_surface_auth_policy(
     relay_mode: bool = False,
 ) -> SurfaceAuthPolicy | None:
     """Load policy from CLI flags; returns ``None`` when auth is disabled."""
+    if api_token_file is None and relay_mode:
+        api_token_file = default_relay_token_file()
     if api_token_file is not None:
         return SurfaceAuthPolicy.from_token_file(api_token_file, relay_mode=relay_mode)
     if api_token:

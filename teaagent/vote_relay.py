@@ -60,6 +60,7 @@ def verify_relay_vote(
     payload: VoteRelayPayload,
     *,
     require_ssh: bool = True,
+    allow_dev_signatures: bool = False,
 ) -> tuple[bool, str]:
     """Validate peer identity and SSH signature before casting."""
     state = engine.get_consensus_status(payload.proposal_id)
@@ -83,7 +84,10 @@ def verify_relay_vote(
     if is_ssh_signature_blob(payload.signature):
         if not verify_message_ssh(peer.ssh_public_key, message, payload.signature):
             return False, 'SSH signature verification failed'
-    elif not peer.verify_signature(message, payload.signature):
+        return True, ''
+    if not allow_dev_signatures:
+        return False, 'dev signatures disabled; use SSH signature blob'
+    if not peer.verify_signature(message, payload.signature):
         legacy = state.proposal.task_description
         if not peer.verify_signature(legacy, payload.signature):
             return False, 'dev signature verification failed'
@@ -95,9 +99,15 @@ def submit_relay_vote(
     payload: VoteRelayPayload,
     *,
     require_ssh: bool = True,
+    allow_dev_signatures: bool = False,
 ) -> dict[str, Any]:
     """Verify and submit a vote through the consensus engine."""
-    ok, reason = verify_relay_vote(engine, payload, require_ssh=require_ssh)
+    ok, reason = verify_relay_vote(
+        engine,
+        payload,
+        require_ssh=require_ssh,
+        allow_dev_signatures=allow_dev_signatures,
+    )
     if not ok:
         return {'ok': False, 'error': reason}
     decision = VoteDecision(payload.decision)
@@ -192,6 +202,7 @@ class VoteRelayServer:
         host: str = '127.0.0.1',
         port: int = 8790,
         require_ssh: bool = True,
+        allow_dev_signatures: bool = False,
         auth_policy: SurfaceAuthPolicy | None = None,
         ssl_context: ssl.SSLContext | None = None,
         rate_limiter: TokenRateLimiter | None = None,
@@ -200,6 +211,7 @@ class VoteRelayServer:
         self.host = host
         self.port = port
         self.require_ssh = require_ssh
+        self.allow_dev_signatures = allow_dev_signatures
         self.auth_policy = auth_policy
         self.ssl_context = ssl_context
         self.rate_limiter = rate_limiter
@@ -339,6 +351,7 @@ def _make_relay_handler(relay: VoteRelayServer) -> type[BaseHTTPRequestHandler]:
                 self.server.relay.engine,
                 payload,
                 require_ssh=self.server.relay.require_ssh,
+                allow_dev_signatures=self.server.relay.allow_dev_signatures,
             )
             status = HTTPStatus.OK if result.get('ok') else HTTPStatus.BAD_REQUEST
             self._json(status, result)

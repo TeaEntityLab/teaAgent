@@ -83,25 +83,28 @@ def _audit_plugin_source(ep: Any) -> bool:
                 module_path = Path(spec.origin).resolve()
                 # Check if module is in site-packages (third-party)
                 if 'site-packages' in str(module_path):
+                    from teaagent.security_env import plugins_strict_audit
+
                     logger.warning(
                         f'Loading plugin from third-party package: {ep.name} '
                         f'at {module_path}. Verify package source before use.'
                     )
-                    # Still allow loading but warn - could be made stricter in future
-                    return True
+                    return not plugins_strict_audit()
         except (ImportError, ValueError):
             pass
 
-        # If we can't determine the source, allow but warn
+        from teaagent.security_env import plugins_strict_audit
+
         logger.warning(
             f'Unable to verify source for plugin: {ep.name}. '
             'Ensure package is from a trusted source.'
         )
-        return True
+        return not plugins_strict_audit()
     except (OSError, ImportError, ValueError, TypeError) as exc:
-        # If audit fails, fail-safe: allow but warn
+        from teaagent.security_env import plugins_strict_audit
+
         logger.warning('Plugin source audit failed for %s: %s', ep.name, exc)
-        return True
+        return not plugins_strict_audit()
 
 
 def load_plugins(

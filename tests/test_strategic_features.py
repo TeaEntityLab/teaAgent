@@ -113,9 +113,13 @@ def test_vote_relay_dev_signature(tmp_path: Path) -> None:
         decision='approve',
         signature=sig,
     )
-    ok, reason = verify_relay_vote(engine, payload, require_ssh=False)
+    ok, reason = verify_relay_vote(
+        engine, payload, require_ssh=False, allow_dev_signatures=True
+    )
     assert ok, reason
-    result = submit_relay_vote(engine, payload, require_ssh=False)
+    result = submit_relay_vote(
+        engine, payload, require_ssh=False, allow_dev_signatures=True
+    )
     assert result['ok'] is True
 
 
@@ -126,7 +130,13 @@ def test_vote_relay_server_health(tmp_path: Path) -> None:
         config=ConsensusConfig(),
         storage_path=tmp_path / 'consensus.json',
     )
-    relay = VoteRelayServer(engine, host='127.0.0.1', port=0, require_ssh=False)
+    relay = VoteRelayServer(
+        engine,
+        host='127.0.0.1',
+        port=0,
+        require_ssh=False,
+        allow_dev_signatures=True,
+    )
     relay.start()
     try:
         import urllib.request

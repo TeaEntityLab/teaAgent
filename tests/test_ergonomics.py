@@ -692,7 +692,6 @@ def test_resume_policy_strict_exact_match_wiring(tmp_path: Path) -> None:
 
     # 2. Build ApprovalPolicy with empty legacy approved_call_ids
     policy = ApprovalPolicy(
-        approved_call_ids=frozenset(),
         permission_mode=PermissionMode.PROMPT,
         approval_store=store,
         approval_origin_run_id=run_id,

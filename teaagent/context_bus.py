@@ -191,16 +191,21 @@ class ContextBus:
         )
 
     def _reconnect(self) -> None:
-        """Close all connections and bump generation (caller must hold ``_lock``)."""
-        for conn in list(self._all_connections):
+        """Close the current thread's connection and bump generation.
+
+        Other threads refresh lazily on next ``_get_connection`` (P2.1).
+        Caller must hold ``_lock``.
+        """
+        conn = getattr(self._thread_local, 'connection', None)
+        if conn is not None:
             with suppress(Exception):
                 conn.close()
-        self._all_connections.clear()
-        self._connection_generation += 1
+            self._all_connections.discard(conn)
         if hasattr(self._thread_local, 'connection'):
             del self._thread_local.connection
         if hasattr(self._thread_local, 'generation'):
             del self._thread_local.generation
+        self._connection_generation += 1
         logger.warning('Reconnected to context bus database')
 
     def _get_connection(self) -> sqlite3.Connection:

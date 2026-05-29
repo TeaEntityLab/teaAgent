@@ -171,7 +171,7 @@ class ANPGovernedServiceTests(unittest.TestCase):
         service = ANPGovernedService(
             registry=build_registry(),
             audit=audit,
-            approval_policy=ApprovalPolicy(approved_call_ids=frozenset({'call-ok'})),
+            approval_policy=ApprovalPolicy(allow_all_destructive=True),
         )
         result = service.handle_inbound(
             {

@@ -214,6 +214,9 @@ class AuditLogger:
         with self._lock:
             self.events.append(event)
             if self.path is not None and self._disk_error is None:
+                from teaagent.audit_chain import last_chain_hash
+
+                self._prev_hash = last_chain_hash(self.path)
                 prev = self._prev_hash
                 canonical = json.dumps(
                     {

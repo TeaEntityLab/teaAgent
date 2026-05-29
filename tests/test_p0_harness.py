@@ -137,12 +137,27 @@ class P0HarnessTests(unittest.TestCase):
         self.assertIn('tool_call_denied', [event.event_type for event in audit.events])
 
     def test_approved_destructive_tool_can_run(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(
-            registry=build_registry(destructive=True),
-            audit=audit,
-            approval_policy=ApprovalPolicy(frozenset({'call-1'})),
-        )
+        import tempfile
+
+        from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = ApprovalPresetStore(tmpdir)
+            store.add_scoped_approval(
+                run_id='run-3',
+                call_id='call-1',
+                tool_name='pilot_echo',
+                arguments={'value': 'approved'},
+            )
+            audit = AuditLogger()
+            runner = AgentRunner(
+                registry=build_registry(destructive=True),
+                audit=audit,
+                approval_policy=ApprovalPolicy(
+                    approval_store=store,
+                    approval_origin_run_id='run-3',
+                ),
+            )
 
         def decide(context):
             if not context['observations']:
@@ -153,10 +168,10 @@ class P0HarnessTests(unittest.TestCase):
                 )
             return FinalAnswer(content='done')
 
-        result = runner.run(task='approved action', decide=decide, run_id='run-3')
+            result = runner.run(task='approved action', decide=decide, run_id='run-3')
 
-        self.assertEqual(result.status, 'completed')
-        self.assertEqual(result.tool_calls, 1)
+            self.assertEqual(result.status, 'completed')
+            self.assertEqual(result.tool_calls, 1)
 
     def test_iteration_budget_stops_non_terminating_agent(self) -> None:
         audit = AuditLogger()

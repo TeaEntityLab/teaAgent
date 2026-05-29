@@ -21,13 +21,13 @@ Principle: **smallest verifiable step** per phase; no big-bang refactors.
 
 | # | Task | Risk addressed | Tests to add |
 |---|------|--------------|--------------|
-| P1.1 | Gate dev-hash behind explicit flag; reject in production relay/multi-sig | S-C1 | `test_dev_hash_rejected_when_strict` |
-| P1.2 | Mark file-based multi-sig experimental in CLI/docs | S-C2 | — |
-| P1.3 | Remove legacy `approved_call_ids` path | S-H1 | Argument mismatch denial |
-| P1.4 | MCP loopback require token when `TEAAGENT_STRICT_LOCAL=1` | S-H5 | `test_mcp_loopback_requires_token` |
-| P1.5 | Vote relay: default `auth_policy` from token file on loopback | S-H6 | CLI integration smoke |
-| P1.6 | Atomic scoped-approval consume under flock | S-M1 | Concurrent consume test |
-| P1.7 | Shell obfuscation adversarial matrix | S-H4 | Extend `tests/test_policy.py` |
+| P1.1 | ✅ Gate dev-hash behind explicit flag (`TEAAGENT_ALLOW_DEV_SIGNATURES`) | S-C1 | `tests/test_remediation_p1_p2.py` |
+| P1.2 | ✅ Mark file-based multi-sig experimental in docs | S-C2 | `federated_sync` docstring |
+| P1.3 | ✅ Ignore legacy `approved_call_ids` in `assert_allowed` | S-H1 | Updated policy/contract tests |
+| P1.4 | ✅ MCP loopback require token when `TEAAGENT_STRICT_LOCAL=1` | S-H5 | `test_remediation_p1_p2.py` |
+| P1.5 | ✅ Vote relay auto-load `relay-tokens.json` / env | S-H6 | `surface_auth.default_relay_token_file` |
+| P1.6 | ✅ Atomic scoped-approval consume under flock | S-M1 | `try_consume_scoped_approval` + test |
+| P1.7 | ✅ Shell obfuscation adversarial matrix | S-H4 | `ShellObfuscationTests` |
 
 ---
 
@@ -35,12 +35,12 @@ Principle: **smallest verifiable step** per phase; no big-bang refactors.
 
 | # | Task | Risk addressed | Tests to add |
 |---|------|--------------|--------------|
-| P2.1 | Per-thread-only `ContextBus._reconnect` | C-H3 | Publish + reconnect stress |
-| P2.2 | `archive_to_rag` in single SQLite transaction | C-H6 | Concurrent publish + archive |
-| P2.3 | AuditLogger singleton-per-path or reload `prev_hash` | C-H2 | Two-loggers same file |
-| P2.4 | `RunStore.logger_for_result` under file_lock | C-M13 | Append during finalize |
-| P2.5 | Swarm: propagate hang into `results` + optional cancel | C-M11 | Hang scenario test |
-| P2.6 | Workflow strict-validation rollback test | Doc drift | `test_workflow_strict_rollback` |
+| P2.1 | ✅ Per-thread-only `ContextBus._reconnect` | C-H3 | Generation bump; other threads lazy refresh |
+| P2.2 | `archive_to_rag` in single SQLite transaction | C-H6 | Future |
+| P2.3 | ✅ AuditLogger reload `prev_hash` before append | C-H2 | `test_two_loggers_same_path_preserve_chain` |
+| P2.4 | ✅ `RunStore.logger_for_result` under file_lock | C-M13 | Read under lock |
+| P2.5 | ✅ Swarm merge heartbeat hang into `results` | C-M11 | `execute_swarm` |
+| P2.6 | ✅ Workflow strict-validation rollback test | Doc drift | `WorkflowRollbackTests` |
 
 ---
 
@@ -52,9 +52,9 @@ Principle: **smallest verifiable step** per phase; no big-bang refactors.
 | P3.2 | Fix `architecture.md` duplicate section numbers | Editorial |
 | P3.3 | threat-model verification columns for rows 26, 32 | Link to new tests |
 | P3.4 | governance-gate: add phase5/6 unit files | `.github/workflows/ci.yml` |
-| P3.5 | Optional pre-commit smoke job (subset pytest) | `.pre-commit-config.yaml` |
+| P3.5 | ✅ Optional pre-commit smoke (`TEAAGENT_PRECOMMIT_FULL=1` for full suite) | `.pre-commit-config.yaml` |
 | P3.6 | docker-smoke: decide block vs advisory | CI policy doc |
-| P3.7 | Plugin fail-closed audit or allowlist | S-H8 |
+| P3.7 | ✅ Plugin fail-closed when `TEAAGENT_PLUGINS_STRICT=1` | S-H8 | `plugins.py` |
 
 ---
 

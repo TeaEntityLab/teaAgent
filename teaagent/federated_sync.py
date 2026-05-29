@@ -466,7 +466,7 @@ class FederatedGraphSync:
         request: ApprovalRequestMessage,
         peer_agent_ids: list[str],
     ) -> dict[str, bool]:
-        """Broadcast approval request to peer agents for multi-sig quorum.
+        """Broadcast approval request (EXPERIMENTAL file-based multi-sig, not authenticated P2P).
 
         Args:
             request: Approval request message to broadcast.

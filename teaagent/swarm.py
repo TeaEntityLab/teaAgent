@@ -574,6 +574,11 @@ class SwarmManager:
             else:
                 results = self._execute_subagent_batch(self._subagents)
 
+            reported_ids = {r.task_id for r in results}
+            for task_id, hang_result in self._subagent_results.items():
+                if task_id not in reported_ids:
+                    results.append(hang_result)
+
             for subagent in self._subagents:
                 subagent.cleanup()
 

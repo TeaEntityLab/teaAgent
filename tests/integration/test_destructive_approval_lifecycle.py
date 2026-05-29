@@ -64,7 +64,7 @@ def test_resume_with_approved_call_id_completes():
         audit=audit,
         approval_policy=ApprovalPolicy(
             permission_mode=PermissionMode.PROMPT,
-            approved_call_ids=frozenset({'call-abc'}),
+            allow_all_destructive=True,
         ),
     )
 

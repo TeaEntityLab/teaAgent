@@ -98,11 +98,22 @@ class ApprovalPolicyTests(unittest.TestCase):
             tool_name='workspace_write_file', call_id='any', destructive=True
         )
 
-    def test_prompt_mode_with_approved_call_id_passes(self) -> None:
-        policy = ApprovalPolicy(approved_call_ids=frozenset({'call-42'}))
-        policy.assert_allowed(
-            tool_name='workspace_write_file', call_id='call-42', destructive=True
-        )
+    def test_prompt_mode_preapproved_call_id_with_store(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            policy = ApprovalPolicy(
+                approval_store=store,
+                approval_origin_run_id='run-x',
+                preapproved_call_ids=frozenset({'call-42'}),
+            )
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='call-42',
+                destructive=True,
+                arguments={'path': 'a.txt', 'content': 'b'},
+            )
 
     def test_prompt_mode_without_approval_blocks(self) -> None:
         policy = ApprovalPolicy()

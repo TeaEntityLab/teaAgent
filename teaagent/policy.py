@@ -66,8 +66,10 @@ def _verify_ssh_signature(
     message: str,
     ssh_key_id: Optional[str],
     peer_public_keys: dict[str, str],
+    *,
+    allow_dev_signatures: bool = False,
 ) -> bool:
-    """Verify an SSH or dev-hash signature against known peer public keys."""
+    """Verify an SSH signature; dev-hash only when explicitly allowed."""
     import hashlib
     import secrets
 
@@ -82,6 +84,8 @@ def _verify_ssh_signature(
         return False
     if is_ssh_signature_blob(signature):
         return verify_message_ssh(pubkey, message, signature)
+    if not allow_dev_signatures:
+        return False
     expected = hashlib.sha256((message + pubkey).encode()).hexdigest()
     return secrets.compare_digest(signature, expected)
 
@@ -96,6 +100,7 @@ class MultiSigQuorumConfig:
     peer_public_keys: dict[str, str] = field(
         default_factory=dict
     )  # Mapping of peer_id to SSH public key
+    allow_dev_signatures: bool = False  # Dev-hash quorum signatures (non-production)
     high_risk_patterns: list[str] = field(
         default_factory=list
     )  # Patterns triggering multi-sig
@@ -128,9 +133,8 @@ class PermissionMode(str, Enum):
 class ApprovalPolicy:
     """Session-scoped approval policy for high-risk tool calls."""
 
-    # Deprecated: approved_call_ids is a legacy escape hatch kept for CLI argument/test compatibility.
-    # New workflows must use run-scoped exact-match scoped_approvals.
-    approved_call_ids: frozenset[str] = field(default_factory=frozenset)
+    # CLI/TUI ``--approve-call-id`` / ``approve <call_id>`` — binds scoped approval at execute time.
+    preapproved_call_ids: frozenset[str] = field(default_factory=frozenset)
     allow_all_destructive: bool = False
     permission_mode: PermissionMode = PermissionMode.PROMPT
     approval_store: ApprovalPresetStore | None = None
@@ -226,16 +230,41 @@ class ApprovalPolicy:
             self.approval_store
             and self.approval_origin_run_id
             and arguments is not None
-        ):
-            matching_record = self.approval_store.check_scoped_approval(
+            and self.approval_store.try_consume_scoped_approval(
                 run_id=self.approval_origin_run_id,
                 call_id=call_id,
                 tool_name=tool_name,
                 arguments=arguments,
             )
-            if matching_record:
-                # Consume the scoped approval after successful match (one-time use)
-                self.approval_store.consume_scoped_approval(matching_record.record_id)
+        ):
+            return
+        if (
+            call_id in self.preapproved_call_ids
+            and self.approval_store
+            and self.approval_origin_run_id
+            and arguments is not None
+        ):
+            if (
+                self.approval_store.check_scoped_approval(
+                    run_id=self.approval_origin_run_id,
+                    call_id=call_id,
+                    tool_name=tool_name,
+                    arguments=arguments,
+                )
+                is None
+            ):
+                self.approval_store.add_scoped_approval(
+                    run_id=self.approval_origin_run_id,
+                    call_id=call_id,
+                    tool_name=tool_name,
+                    arguments=arguments,
+                )
+            if self.approval_store.try_consume_scoped_approval(
+                run_id=self.approval_origin_run_id,
+                call_id=call_id,
+                tool_name=tool_name,
+                arguments=arguments,
+            ):
                 return
         # Warn if multi-sig is enabled but SSH verification is not cryptographically enforced
         if self.multi_sig_config.enabled and not _SSH_VERIFICATION_IMPLEMENTED:
@@ -253,30 +282,26 @@ class ApprovalPolicy:
         ):
             return
             # If multi-sig fails, proceed to normal approval flow
-        # Legacy Fallback: bare call_id check for explicit CLI --approve-call-id backward compatibility.
-        # This fallback is deprecated and scheduled for future removal.
-        if destructive and call_id not in self.approved_call_ids:
-            # Try JIT interactive prompt if enabled and TTY is available
-            if self.enable_jit_prompt and sys.stdin.isatty() and jit_state:
-                choice = self._prompt_jit_approval(tool_name, call_id, arguments)
-                if choice == 'o':  # Once - add to approved_call_ids
-                    jit_state.approve_once(call_id)
-                    return
-                elif choice == 's':  # Session - add to session_approved_tools
-                    jit_state.approve_session(tool_name)
-                    return
-                elif choice == 'd':  # Deny
-                    raise ToolPermissionError(
-                        f"Tool call '{call_id}' for '{tool_name}' was denied by user."
-                    )
-                elif choice == 'e':  # Explain
-                    raise ToolPermissionError(
-                        f"Tool call '{call_id}' for '{tool_name}' requires approval. "
-                        f'Tool: {tool_name}, Call ID: {call_id}, Arguments: {arguments}'
-                    )
-            raise ToolPermissionError(
-                f"Tool call '{call_id}' for '{tool_name}' requires explicit approval."
-            )
+        if self.enable_jit_prompt and sys.stdin.isatty() and jit_state:
+            choice = self._prompt_jit_approval(tool_name, call_id, arguments)
+            if choice == 'o':
+                jit_state.approve_once(call_id)
+                return
+            if choice == 's':
+                jit_state.approve_session(tool_name)
+                return
+            if choice == 'd':
+                raise ToolPermissionError(
+                    f"Tool call '{call_id}' for '{tool_name}' was denied by user."
+                )
+            if choice == 'e':
+                raise ToolPermissionError(
+                    f"Tool call '{call_id}' for '{tool_name}' requires approval. "
+                    f'Tool: {tool_name}, Call ID: {call_id}, Arguments: {arguments}'
+                )
+        raise ToolPermissionError(
+            f"Tool call '{call_id}' for '{tool_name}' requires explicit approval."
+        )
 
     def _prompt_jit_approval(
         self,
@@ -552,11 +577,16 @@ class ApprovalPolicy:
         for sig_msg in signature_messages:
             # Verify the signature before accepting it
             message_to_verify = request.request_hash
+            from teaagent.security_env import allow_dev_signatures as env_allow_dev
+
             is_valid = _verify_ssh_signature(
                 signature=sig_msg.signature,
                 message=message_to_verify,
                 ssh_key_id=sig_msg.ssh_key_id,
                 peer_public_keys=self.multi_sig_config.peer_public_keys,
+                allow_dev_signatures=(
+                    self.multi_sig_config.allow_dev_signatures or env_allow_dev()
+                ),
             )
 
             if not is_valid:

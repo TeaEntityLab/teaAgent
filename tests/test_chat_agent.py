@@ -270,9 +270,7 @@ class ChatAgentTests(unittest.TestCase):
             result = run_chat_agent(
                 task='write',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(
-                    tmp, approved_call_ids=frozenset({'write-1'})
-                ),
+                config=ChatAgentConfig.from_root(tmp, allow_destructive=True),
             )
 
             self.assertEqual(result.status, 'completed')

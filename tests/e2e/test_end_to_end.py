@@ -71,7 +71,7 @@ class EndToEndTests(unittest.TestCase):
                 adapter=FakeAdapter(['{"type":"final","content":"resumed"}']),
                 config=ChatAgentConfig.from_root(
                     root,
-                    approved_call_ids=frozenset({'write-1'}),
+                    allow_destructive=True,
                     max_iterations=2,
                     max_tool_calls=2,
                 ),

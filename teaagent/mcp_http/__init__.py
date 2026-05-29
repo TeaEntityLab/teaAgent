@@ -76,10 +76,21 @@ def build_mcp_http_server(
     allowed_origins: Optional[list[str]] = None,
     oauth_server: Optional[OAuth21AuthorizationServer] = None,
 ) -> tuple[ThreadingHTTPServer, MCPSessionStore]:
+    from teaagent.security_env import strict_local_services
+
     if not is_loopback_host(host) and auth_token is None and oauth_server is None:
         raise ValueError(
             f'Refusing to bind MCP HTTP to non-loopback host {host!r} without '
             'auth_token or oauth_server. Pass auth_token=, oauth_server=, or bind to 127.0.0.1.'
+        )
+    if (
+        is_loopback_host(host)
+        and strict_local_services()
+        and auth_token is None
+        and oauth_server is None
+    ):
+        raise ValueError(
+            'TEAAGENT_STRICT_LOCAL=1 requires auth_token or oauth_server on loopback MCP HTTP'
         )
     sessions = MCPSessionStore()
     origins = frozenset(allowed_origins) if allowed_origins else None
