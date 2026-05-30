@@ -11,6 +11,7 @@ from unittest.mock import PropertyMock, patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
 from teaagent.tui import TeaAgentTUI
 
@@ -319,8 +320,6 @@ class TUITests(unittest.TestCase):
             # Setup a persisted run with a pending approval using the audit logger
             audit = run_store.audit_logger(run_id)
             audit.record('run_started', run_id, task='ask write file')
-
-            from teaagent.ergonomics._approval_grants import _compute_argument_digest
 
             args_payload = {'path': 'x.txt', 'content': 'val'}
             digest = _compute_argument_digest(args_payload)
