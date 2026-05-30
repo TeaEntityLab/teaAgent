@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
-import json
 from typing import Any
 
+from teaagent.cli._output import print_json
 from teaagent.memory import MemoryCatalog
 from teaagent.memory.failure_card import FailureCard
 from teaagent.provenance_gate import (
@@ -211,7 +211,3 @@ def _get_review_recommendation(card: FailureCard) -> str:
         return 'keep'  # High confidence cards are valuable
 
     return 'review_manually'
-
-
-def print_json(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))

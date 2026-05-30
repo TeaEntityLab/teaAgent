@@ -7,11 +7,11 @@ which allows CLI operators to manage parallel sandbox branches for experimentati
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 from pathlib import Path
 from typing import Any
 
+from teaagent.cli._output import print_json
 from teaagent.sandbox import (
     ParallelExperimentStack,
     find_orphaned_sandbox_branches,
@@ -333,8 +333,3 @@ def experiment_cancel(args: argparse.Namespace) -> int:
         }
     )
     return 0
-
-
-def print_json(data: dict[str, Any]) -> None:
-    """Print data as JSON to stdout."""
-    print(json.dumps(data, indent=2))

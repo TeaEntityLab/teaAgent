@@ -9,6 +9,11 @@ Key design decisions:
 - Parent TUI shows aggregated requests with full lineage context
 - Human can approve/deny individually or in batch
 - Denied requests trigger fallback strategies in respective subagents
+
+Note: This queue is a coordination layer for subagent approvals. The actual
+approval logic (permission modes, JIT, grants, scoped approvals) is handled
+by the unified ApprovalManager in teaagent.approval_manager, which is used
+by ApprovalPolicy in the main runner.
 """
 
 from __future__ import annotations

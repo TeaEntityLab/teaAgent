@@ -3,21 +3,16 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sqlite3
 import ssl
 from pathlib import Path
 
+from teaagent.cli._output import print_json
 from teaagent.federated_sync import FederatedGraphSync, SyncAck
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 
 logger = logging.getLogger(__name__)
-
-
-def print_json(data: dict) -> None:
-    """Print JSON output."""
-    print(json.dumps(data, indent=2))
 
 
 def sync_export(args: argparse.Namespace) -> int:

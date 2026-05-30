@@ -5,8 +5,9 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
+from teaagent.approval_manager import JITApprovalState
 from teaagent.errors import ToolPermissionError
-from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
+from teaagent.policy import ApprovalPolicy, PermissionMode
 
 
 class JITApprovalStateTests(unittest.TestCase):
@@ -83,18 +84,27 @@ class ApprovalPolicyJITTests(unittest.TestCase):
             self.assertIn('requires explicit approval', str(cm.exception))
 
     def test_jit_state_without_jit_state_raises_error(self) -> None:
-        """Test that JIT without jit_state parameter raises permission error."""
+        """Test that JIT without jit_state parameter raises permission error.
+
+        Note: In the new architecture, ApprovalManager always has its own JIT state.
+        The external jit_state parameter is synced with the manager's state.
+        This test is updated to reflect the new behavior where JIT prompting
+        still occurs but uses the manager's internal state.
+        """
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
 
-        with patch('sys.stdin.isatty', return_value=True):
+        with (
+            patch('sys.stdin.isatty', return_value=True),
+            patch('builtins.input', return_value='d'),  # Deny the request
+        ):
             with self.assertRaises(ToolPermissionError) as cm:
                 policy.assert_allowed(
                     tool_name='workspace_write_file',
                     call_id='call-123',
                     destructive=True,
-                    jit_state=None,  # No JIT state
+                    jit_state=None,  # No external JIT state, but manager has one
                 )
-            self.assertIn('requires explicit approval', str(cm.exception))
+            self.assertIn('denied by user', str(cm.exception))
 
     def test_jit_disabled_skips_prompt(self) -> None:
         """Test that disabled JIT skips interactive prompt."""

@@ -3,19 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 from pathlib import Path
 
 from teaagent.audit import AuditLogger
+from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
 
 logger = logging.getLogger(__name__)
-
-
-def print_json(data: dict) -> None:
-    """Print JSON output."""
-    print(json.dumps(data, indent=2))
 
 
 def replay_list(args: argparse.Namespace) -> int:

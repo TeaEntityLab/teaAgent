@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 from typing import Any
 
+from teaagent.cli._output import print_json
 from teaagent.llm import LLMMessage, LLMRequest, available_providers
 from teaagent.model_routing import route_model
 
@@ -79,7 +79,3 @@ def model_capabilities(args: argparse.Namespace) -> int:
         return 0
     print_json(build_capability_table())
     return 0
-
-
-def print_json(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))

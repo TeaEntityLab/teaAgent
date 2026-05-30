@@ -18,6 +18,7 @@ from teaagent.automations import (
     compute_next_run_at,
 )
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.cli._output import print_json
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.daily import build_daily_brief
 from teaagent.intent import build_task_spec, clarify_task
@@ -2330,7 +2331,3 @@ def _execute_parallel_experiment(
     )
 
     return 0
-
-
-def print_json(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))

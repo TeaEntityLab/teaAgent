@@ -36,7 +36,7 @@ class ApprovalRequest:
     workspace_secret: Optional[bytes] = None
 
     def to_dict(self) -> dict[str, Any]:
-        from teaagent.ergonomics.approval_store import _compute_argument_digest
+        from teaagent.ergonomics._approval_grants import _compute_argument_digest
 
         if self.workspace_secret is not None:
             digest = _compute_argument_digest(self.arguments, self.workspace_secret)

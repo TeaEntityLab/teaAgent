@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
 from teaagent.audit_chain import verify_audit_chain
+from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
 
 
@@ -199,7 +199,3 @@ def audit_verify_command(args: argparse.Namespace) -> int:
         }
     )
     return 0
-
-
-def print_json(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))

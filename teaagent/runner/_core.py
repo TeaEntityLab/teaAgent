@@ -23,6 +23,9 @@ from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.tools import ToolRegistry
 
+from ._approval_manager import ApprovalManager
+from ._auto_mode_manager import AutoModeManager
+from ._plan_validator import PlanValidator
 from ._types import ApprovalHandler, ApprovalRequest, DecisionFn, FinalAnswer, RunResult
 
 
@@ -60,19 +63,27 @@ class AgentRunner:
         self.audit = audit
         self.budget = budget or RunBudget()
         self.budget.validate()
-        self.approval_policy = approval_policy or ApprovalPolicy()
-        self.approval_handler = approval_handler
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
         self.checkpoint_store = checkpoint_store
         self.cancel_token = cancel_token
         self.file_policy = file_policy
-        self.jit_state = jit_state or JITApprovalState()
-        self.require_plan = require_plan
-        self.skip_plan_check = skip_plan_check
-        self.auto_mode_guard: Optional[AutoModeGuard] = None
-        if auto_mode_config is not None and auto_mode_config.enabled:
-            self.auto_mode_guard = AutoModeGuard(config=auto_mode_config)
+
+        # Initialize manager classes
+        self.approval_policy = approval_policy or ApprovalPolicy()
+        self.approval_manager = ApprovalManager(
+            approval_policy=self.approval_policy,
+            approval_handler=approval_handler,
+            jit_state=jit_state,
+        )
+        self.plan_validator = PlanValidator(
+            approval_policy=self.approval_policy,
+            require_plan=require_plan,
+            skip_plan_check=skip_plan_check,
+        )
+        self.auto_mode_manager = AutoModeManager(
+            auto_mode_config=auto_mode_config,
+        )
 
         # Load entry-point plugins if workspace root is provided
         if workspace_root is not None:
@@ -85,14 +96,14 @@ class AgentRunner:
                     f'Failed to load {len(plugin_result.failed)} plugin(s): {plugin_result.failed}'
                 )
 
-        self._plan_contract: Any = None
-        self._read_only_registry_lint_errors: list[Any] = []
+        # Initialize read-only lint errors for plan validator
         if self.approval_policy.permission_mode == PermissionMode.READ_ONLY:
             from teaagent.governance.tool_lint import lint_registry
 
-            self._read_only_registry_lint_errors = [
+            lint_errors = [
                 issue for issue in lint_registry(registry) if issue.level == 'error'
             ]
+            self.plan_validator.set_read_only_lint_errors(lint_errors)
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
@@ -132,8 +143,7 @@ class AgentRunner:
 
         while iterations < self.budget.max_iterations:
             iterations += 1
-            if self.auto_mode_guard is not None:
-                self.auto_mode_guard.record_iteration()
+            self.auto_mode_manager.record_iteration()
             self.audit.record('iteration_started', current_run_id, iteration=iterations)
             try:
                 if self.cancel_token is not None and self.cancel_token.is_set():
@@ -155,8 +165,8 @@ class AgentRunner:
                         output_tokens=output_tokens,
                     )
                     extra_meta: dict[str, Any] = {}
-                    if self.auto_mode_guard is not None:
-                        extra_meta['auto_mode'] = self.auto_mode_guard.summary()
+                    if self.auto_mode_manager.is_enabled():
+                        extra_meta['auto_mode'] = self.auto_mode_manager.summary()
                     return RunResult(
                         run_id=current_run_id,
                         final_answer=decision,
@@ -183,116 +193,72 @@ class AgentRunner:
                         tool_name=decision.tool_name,
                         arguments=decision.arguments,
                     )
-                from teaagent.governance.plan_gate import assert_write_allowed
-
-                assert_write_allowed(
+                self.plan_validator.validate_write_allowed(
                     tool_name=decision.tool_name,
-                    permission_mode=self.approval_policy.permission_mode,
                     context=context,
-                    require_plan=self.require_plan,
-                    skip_plan_check=getattr(self, 'skip_plan_check', False),
                 )
                 # Auto mode: block disallowed tools, auto-approve allowed ones
-                if self.auto_mode_guard is not None:
-                    if not self.auto_mode_guard.is_tool_allowed(decision.tool_name):
-                        raise ToolPermissionError(
-                            f"Auto mode: tool '{decision.tool_name}' is not allowed"
-                        )
-                    # In auto mode, skip approval prompts for allowed tools
-                    self.approval_policy = ApprovalPolicy(
-                        allow_all_destructive=True,
-                    )
+                self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
+                auto_approve_policy = self.auto_mode_manager.get_auto_approve_policy()
+                if auto_approve_policy is not None:
+                    self.approval_policy = auto_approve_policy
                 try:
-                    # Get plan contract from context if available
-                    plan_contract = None
-                    if hasattr(self, '_plan_contract'):
-                        plan_contract = self._plan_contract
+                    # Get plan contract from plan validator
+                    plan_contract = self.plan_validator.get_plan_contract()
 
-                    if (
-                        self.approval_policy.permission_mode == PermissionMode.READ_ONLY
-                        and getattr(self, '_read_only_registry_lint_errors', None)
-                    ):
-                        raise ToolPermissionError(
-                            'Tool registry has lint errors; read-only runs cannot '
-                            f'invoke tools ({len(self._read_only_registry_lint_errors)} error(s))'
-                        )
+                    # Check read-only lint errors
+                    lint_error = self.plan_validator.check_read_only_lint_errors()
+                    if lint_error:
+                        raise ToolPermissionError(lint_error)
+
                     self.approval_policy.assert_allowed(
                         tool_name=decision.tool_name,
                         call_id=decision.call_id,
                         destructive=tool.annotations.destructive,
                         arguments=decision.arguments,
-                        jit_state=self.jit_state,
+                        jit_state=self.approval_manager.jit_state,
                         plan_contract=plan_contract,
                         read_only=tool.annotations.read_only,
                         description=tool.description,
                         handler=tool.handler,
                     )
                 except ToolPermissionError as exc:
-                    secret = None
-                    if self.approval_policy and self.approval_policy.approval_store:
-                        secret = (
-                            self.approval_policy.approval_store._get_workspace_secret()
-                        )
-                    approval_request = ApprovalRequest(
+                    approval_request = self.approval_manager.create_approval_request(
                         call_id=decision.call_id,
                         tool_name=decision.tool_name,
                         arguments=decision.arguments,
                         reason=str(exc),
                         annotations=annotations,
                         run_id=current_run_id,
-                        workspace_secret=secret,
                     )
-                    if self._can_request_approval(tool.annotations.destructive):
-                        pending_payload = approval_request.to_dict()
-                        pending_payload.pop('run_id', None)
-                        self.audit.record(
-                            'tool_call_pending_approval',
-                            current_run_id,
-                            **pending_payload,
+                    if self.approval_manager.can_request_approval(tool.annotations.destructive):
+                        approved = self.approval_manager.handle_approval_request(
+                            approval_request=approval_request,
+                            audit=self.audit,
+                            run_id=current_run_id,
+                            checkpoint_store=self.checkpoint_store,
+                            context=context,
+                            cost_cents=cost_cents,
                         )
-                        if self.approval_handler is None:
-                            self.audit.record(
-                                'run_paused',
-                                current_run_id,
-                                status='pending_approval',
-                                approval=approval_request.to_dict(),
-                                cost_cents=cost_cents,
-                            )
-                            if self.checkpoint_store is not None:
-                                self.checkpoint_store.save(current_run_id, context)
-                            return RunResult(
-                                run_id=current_run_id,
-                                final_answer=None,
-                                iterations=iterations,
-                                tool_calls=tool_calls,
-                                status='pending_approval',
-                                metadata={'approval': approval_request.to_dict()},
-                                cost_cents=cost_cents,
-                                input_tokens=input_tokens,
-                                output_tokens=output_tokens,
-                            )
-                        if self.approval_handler(approval_request):
-                            self.audit.record(
-                                'tool_call_approved',
-                                current_run_id,
-                                call_id=decision.call_id,
-                                tool_name=decision.tool_name,
-                            )
-                        else:
-                            self.audit.record(
-                                'tool_call_denied',
-                                current_run_id,
-                                call_id=decision.call_id,
-                                tool_name=decision.tool_name,
-                            )
+                        if not approved:
+                            if self.approval_manager.approval_handler is None:
+                                return RunResult(
+                                    run_id=current_run_id,
+                                    final_answer=None,
+                                    iterations=iterations,
+                                    tool_calls=tool_calls,
+                                    status='pending_approval',
+                                    metadata={'approval': approval_request.to_dict()},
+                                    cost_cents=cost_cents,
+                                    input_tokens=input_tokens,
+                                    output_tokens=output_tokens,
+                                )
                             raise
                     else:
-                        blocked_payload = approval_request.to_dict()
-                        blocked_payload.pop('run_id', None)
-                        self.audit.record(
-                            'tool_call_blocked',
-                            current_run_id,
-                            **blocked_payload,
+                        self.approval_manager.record_blocked(
+                            approval_request=approval_request,
+                            audit=self.audit,
+                            run_id=current_run_id,
                         )
                         raise
                 self.audit.record(
@@ -326,8 +292,7 @@ class AgentRunner:
                         self.checkpoint_store.save(current_run_id, context)
                     continue
                 tool_calls += 1
-                if self.auto_mode_guard is not None:
-                    self.auto_mode_guard.record_tool_call()
+                self.auto_mode_manager.record_tool_call()
                 observation = {
                     'call_id': decision.call_id,
                     'tool_name': decision.tool_name,
@@ -410,10 +375,4 @@ class AgentRunner:
             cost_cents=cost_cents,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-        )
-
-    def _can_request_approval(self, destructive: bool) -> bool:
-        return (
-            destructive
-            and self.approval_policy.permission_mode == PermissionMode.PROMPT
         )

@@ -611,7 +611,7 @@ def test_agent_resume_auto_approve_creates_scoped_approval(
     # Write events: run_started and a tool_call_pending_approval
     audit.record('run_started', run_id, task='write a file')
 
-    from teaagent.ergonomics.approval_store import _compute_argument_digest
+    from teaagent.ergonomics._approval_grants import _compute_argument_digest
 
     args_payload = {'path': 'hello.txt', 'data': 'hi'}
     digest = _compute_argument_digest(args_payload)
@@ -665,7 +665,7 @@ def test_agent_resume_auto_approve_creates_scoped_approval(
     assert record.call_id == 'pending-call-456'
     assert record.tool_name == 'workspace_write_file'
     # Argument digest check
-    from teaagent.ergonomics.approval_store import _compute_argument_digest
+    from teaagent.ergonomics._approval_grants import _compute_argument_digest
 
     expected_digest = _compute_argument_digest({'path': 'hello.txt', 'data': 'hi'})
     assert record.argument_digest == expected_digest

@@ -320,7 +320,7 @@ class TUITests(unittest.TestCase):
             audit = run_store.audit_logger(run_id)
             audit.record('run_started', run_id, task='ask write file')
 
-            from teaagent.ergonomics.approval_store import _compute_argument_digest
+            from teaagent.ergonomics._approval_grants import _compute_argument_digest
 
             args_payload = {'path': 'x.txt', 'content': 'val'}
             digest = _compute_argument_digest(args_payload)

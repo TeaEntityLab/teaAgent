@@ -3,19 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import subprocess
 import sys
 
+from teaagent.cli._output import print_json
 from teaagent.env_manager import EnvironmentManager
 
 logger = logging.getLogger(__name__)
-
-
-def print_json(value: dict) -> None:
-    """Print value as JSON."""
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))
 
 
 def env_provision_command(args: argparse.Namespace) -> int:

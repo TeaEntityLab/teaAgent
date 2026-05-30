@@ -3,21 +3,16 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from datetime import datetime
 from pathlib import Path
 
+from teaagent.cli._output import print_json
 from teaagent.tsb_format import (
     TSBBuilder,
     TSBMetadata,
     TSBVerifier,
 )
-
-
-def print_json(value: dict) -> None:
-    """Print value as JSON."""
-    print(json.dumps(value, ensure_ascii=False, sort_keys=True))
 
 
 def skill_publish_command(args: argparse.Namespace) -> int:
