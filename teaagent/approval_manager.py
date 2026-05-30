@@ -300,10 +300,19 @@ class MultiSigQuorumManager:
             if pattern.lower() in tool_lower:
                 return True
         if arguments:
+            # Lazy import to avoid circular dependency (policy.py imports from this module).
+            from teaagent.policy import ApprovalPolicy  # type: ignore[import]
+
             for _key, value in arguments.items():
                 if isinstance(value, str):
+                    # Normalize the string value to defeat shell obfuscation before
+                    # pattern matching — mirrors the normalization in
+                    # ApprovalPolicy._is_high_risk_operation.
+                    normalized_value = ApprovalPolicy._normalize_shell_arg(value)
+                    raw_value = value.lower()
                     for pattern in self.config.high_risk_patterns:
-                        if pattern.lower() in value.lower():
+                        pat_lower = pattern.lower()
+                        if pat_lower in raw_value or pat_lower in normalized_value:
                             return True
         return False
 

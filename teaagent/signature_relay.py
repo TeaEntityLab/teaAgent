@@ -136,6 +136,14 @@ def require_signature_relay_bind_auth(
         )
 
 
+_APPROVAL_SIGNATURE_NAMESPACE = 'teaagent-approval-relay'
+
+
+def _build_approval_message(request_id: str, peer_id: str) -> str:
+    """Canonical message for signing and verifying approval signatures."""
+    return '\n'.join(('approve-request', request_id, peer_id))
+
+
 class SignatureRelayClient:
     """HTTP client for approval request broadcast and signature collection."""
 
@@ -222,6 +230,7 @@ class SignatureRelayServer:
         ssl_context: ssl.SSLContext | None = None,
         rate_limiter: TokenRateLimiter | None = None,
         store: SignatureRelayStore | None = None,
+        peer_public_keys: dict[str, str] | None = None,
     ) -> None:
         self.host = host
         self.port = port
@@ -229,6 +238,7 @@ class SignatureRelayServer:
         self.ssl_context = ssl_context
         self.rate_limiter = rate_limiter
         self.store = store or SignatureRelayStore()
+        self.peer_public_keys = peer_public_keys or {}
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
         require_signature_relay_bind_auth(host, auth_policy)
@@ -405,6 +415,35 @@ def _make_signature_relay_handler(
             except (KeyError, TypeError, ValueError) as exc:
                 self._json(HTTPStatus.BAD_REQUEST, {'ok': False, 'error': str(exc)})
                 return
+            # Verify SSH signature when key_id is provided and we have a peer registry
+            if sig.ssh_key_id is not None:
+                pubkey = self.server.relay.peer_public_keys.get(sig.ssh_key_id)
+                if not pubkey:
+                    self._json(
+                        HTTPStatus.FORBIDDEN,
+                        {
+                            'ok': False,
+                            'error': f'unknown ssh_key_id: {sig.ssh_key_id}',
+                        },
+                    )
+                    return
+                message = _build_approval_message(sig.request_id, sig.peer_id)
+                from teaagent.ssh_signatures import (
+                    is_ssh_signature_blob,
+                    verify_message_ssh,
+                )
+
+                if is_ssh_signature_blob(sig.signature) and not verify_message_ssh(
+                        pubkey,
+                        message,
+                        sig.signature,
+                        namespace=_APPROVAL_SIGNATURE_NAMESPACE,
+                    ):
+                        self._json(
+                            HTTPStatus.FORBIDDEN,
+                            {'ok': False, 'error': 'SSH signature verification failed'},
+                        )
+                        return
             added = self.server.relay.store.add_signature(sig)
             status = HTTPStatus.OK if added else HTTPStatus.CONFLICT
             self._json(

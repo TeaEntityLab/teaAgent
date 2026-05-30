@@ -5,28 +5,27 @@ When a write raises OSError (e.g. ENOSPC) the logger:
 - Continues recording events in memory.
 - Records a synthetic _disk_write_error event.
 - Exposes the error via the .disk_error property.
-- Disables further disk writes to avoid repeated failures.
+- Skips further disk writes during a 30-second cooldown, then retries.
 """
 
 from __future__ import annotations
 
 import errno
 import os
-from pathlib import Path
 from unittest.mock import patch
 
 from teaagent.audit import AuditLogger
 
 
-def _enospc_write(path: Path, line: str) -> None:
-    raise OSError(errno.ENOSPC, os.strerror(errno.ENOSPC), str(path))
+def _enospc_fsync(fd: int) -> None:
+    raise OSError(errno.ENOSPC, os.strerror(errno.ENOSPC))
 
 
 def test_disk_full_does_not_raise(tmp_path):
     log = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log)
 
-    with patch('teaagent.audit.append_jsonl_line', side_effect=_enospc_write):
+    with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')  # must not raise
 
     assert len(audit.events) >= 1
@@ -36,7 +35,7 @@ def test_in_memory_events_captured_after_disk_full(tmp_path):
     log = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log)
 
-    with patch('teaagent.audit.append_jsonl_line', side_effect=_enospc_write):
+    with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')
         audit.record('run_completed', 'r1', answer='ok')
 
@@ -49,7 +48,7 @@ def test_disk_error_event_recorded(tmp_path):
     log = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log)
 
-    with patch('teaagent.audit.append_jsonl_line', side_effect=_enospc_write):
+    with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')
 
     error_events = [e for e in audit.events if e.event_type == '_disk_write_error']
@@ -65,7 +64,7 @@ def test_disk_error_property_set(tmp_path):
     log = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log)
 
-    with patch('teaagent.audit.append_jsonl_line', side_effect=_enospc_write):
+    with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')
 
     assert audit.disk_error is not None
@@ -84,16 +83,16 @@ def test_further_writes_skipped_after_disk_full(tmp_path):
     audit = AuditLogger(path=log)
     call_count = {'n': 0}
 
-    def counting_fail(path, line):
+    def counting_fail(fd: int) -> None:
         call_count['n'] += 1
         raise OSError(errno.ENOSPC, 'No space left')
 
-    with patch('teaagent.audit.append_jsonl_line', side_effect=counting_fail):
+    with patch('teaagent.audit.os.fsync', side_effect=counting_fail):
         audit.record('event1', 'r1')
         audit.record('event2', 'r1')
         audit.record('event3', 'r1')
 
-    # Only the first call should have actually tried (once we know disk is full, skip)
+    # Only the first call should have actually tried (cooldown prevents retries)
     assert call_count['n'] == 1, 'should not retry writes after first ENOSPC'
 
 
@@ -102,10 +101,10 @@ def test_non_enospc_oserror_also_handled(tmp_path):
     log = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log)
 
-    def permission_denied(path, line):
+    def permission_denied(fd: int) -> None:
         raise OSError(errno.EACCES, 'Permission denied')
 
-    with patch('teaagent.audit.append_jsonl_line', side_effect=permission_denied):
+    with patch('teaagent.audit.os.fsync', side_effect=permission_denied):
         audit.record('run_started', 'r1')
 
     assert audit.disk_error is not None

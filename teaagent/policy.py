@@ -155,6 +155,13 @@ class ApprovalPolicy:
 
         normalized = command
 
+        # Extract subshell content from ORIGINAL command BEFORE $VAR stripping
+        # (Pass 3/4).  This prevents Pass 0 from consuming e.g. $rm from
+        # $(rm -rf /prod), which would lose the dangerous verb.
+        backtick_contents = re.findall(r'`([^`]*)`', command)
+        dollar_contents = re.findall(r'\$\(([^)]*)\)', command)
+        process_sub_contents = re.findall(r'<\(([^)]*)\)', command)
+
         # Pass 0: Strip shell environment variable references
         # $VAR or ${VAR} -> '' (shell evaluates unset vars as empty)
         # Must run BEFORE quote stripping so $u'rod' -> 'rod' -> rod
@@ -168,16 +175,9 @@ class ApprovalPolicy:
         # Pass 2: Remove backslash escapes: \r -> r, \" -> "
         normalized = re.sub(r'\\(.)', r'\1', normalized)
 
-        # Pass 3: Extract content from backtick subshells: `cmd` -> cmd
-        backtick_contents = re.findall(r'`([^`]*)`', normalized)
+        # Pass 3/4 were moved before Pass 0 — extraction now happens above.
 
-        # Pass 4: Extract content from $() subshells
-        dollar_contents = re.findall(r'\$\(([^)]*)\)', normalized)
-
-        # Pass 4b: Extract content from process substitution <(...)
-        process_sub_contents = re.findall(r'<\(([^)]*)\)', normalized)
-
-        # Pass 4c: Expand brace patterns like /pr{od,oduction} -> /prod /production
+        # Pass 4b: Expand brace patterns like /pr{od,oduction} -> /prod /production
         def _expand_braces(s: str) -> str:
             """Expand simple brace alternation: a{b,c}d -> abd acd"""
             match = re.search(r'\{([^{}]+)\}', s)
@@ -219,8 +219,8 @@ class ApprovalPolicy:
         if brace_expanded != normalized:
             all_variants.append(brace_expanded.lower())
         for content in backtick_contents + dollar_contents + process_sub_contents:
-            # Recursively normalize subshell contents (one level deep)
-            all_variants.append(content.lower())
+            # Recursively normalize subshell contents to catch nested patterns
+            all_variants.append(ApprovalPolicy._normalize_shell_arg(content))
 
         return ' | '.join(all_variants)
 

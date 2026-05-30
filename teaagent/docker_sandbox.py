@@ -32,6 +32,7 @@ class DockerSandbox:
         memory_limit_mb: float = 512.0,
         workspace_mount_path: str | Path = '.',
         *,
+        workspace_root: str | Path | None = None,
         audit_logger: AuditLogger | None = None,
         run_id: str = '',
     ) -> None:
@@ -39,6 +40,9 @@ class DockerSandbox:
         self.cpu_cores = cpu_cores
         self.memory_limit_mb = memory_limit_mb
         self.workspace_mount = Path(workspace_mount_path)
+        self.workspace_root = (
+            Path(workspace_root).resolve() if workspace_root is not None else Path.cwd().resolve()
+        )
         self.audit_logger = audit_logger
         self.run_id = run_id
         self.container_id: str | None = None
@@ -128,7 +132,13 @@ class DockerSandbox:
                 message=preflight.get('reason', 'docker unavailable'),
             )
 
-        mount_spec = f'{self.workspace_mount.resolve()}:/workspace'
+        resolved_mount = self.workspace_mount.resolve()
+        resolved_root = self.workspace_root.resolve()
+        if not str(resolved_mount).startswith(str(resolved_root)):
+            raise ValueError(
+                f'Workspace mount path {resolved_mount} is outside workspace root {resolved_root}'
+            )
+        mount_spec = f'{resolved_mount}:/workspace'
         result = subprocess.run(
             [
                 'docker',

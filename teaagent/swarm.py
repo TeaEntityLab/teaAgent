@@ -59,6 +59,7 @@ class SubagentResult:
     output: dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
     execution_time_ms: float = 0.0
+    cost_cents: float = 0.0
     test_results: dict[str, Any] = field(default_factory=dict)
     approval_lineage: list[dict[str, Any]] = field(default_factory=list)
 
@@ -85,6 +86,7 @@ class SwarmReport:
     code_reviews: list[CodeReview]
     best_result: Optional[SubagentResult] = None
     total_execution_time_ms: float = 0.0
+    total_cost_cents: float = 0.0
     tournament_winner_id: Optional[str] = None
     tournament_winner_score: float = 0.0
 
@@ -244,11 +246,13 @@ class Subagent:
             self.is_running = False
 
             success = output.get('status') == 'completed'
+            cost_cents = float(output.get('cost_cents', 0.0) or 0.0)
             return SubagentResult(
                 task_id=self._task.task_id,
                 success=success,
                 branch_name=sandbox_result.branch_name,
                 output=output,
+                cost_cents=cost_cents,
                 execution_time_ms=execution_time,
                 approval_lineage=self._approval_lineage,
                 test_results=output.get('test_results', {}),
@@ -602,6 +606,7 @@ class SwarmManager:
                 },
             )
 
+            total_cost_cents = sum(getattr(r, 'cost_cents', 0.0) or 0.0 for r in results)
             return SwarmReport(
                 total_subagents=len(self._subagents),
                 successful_subagents=successful,
@@ -610,6 +615,7 @@ class SwarmManager:
                 code_reviews=[],  # Will be populated by code review phase
                 best_result=best_result,
                 total_execution_time_ms=total_time,
+                total_cost_cents=total_cost_cents,
                 tournament_winner_id=winner_id,
                 tournament_winner_score=winner_score,
             )

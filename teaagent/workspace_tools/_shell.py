@@ -182,7 +182,7 @@ _DANGEROUS_FIND_FLAGS = frozenset(
     {'-delete', '-exec', '-execdir', '-ok', '-okdir', '-fprint', '-fprint0', '-fprintf'}
 )
 _DANGEROUS_RG_FLAGS = frozenset({'--pre', '--pre-open', '--open-files-in-viewer', '-O'})
-_DANGEROUS_GIT_FLAGS = frozenset({'--output', '-o'})
+_DANGEROUS_GIT_FLAGS = frozenset({'--output', '-o', '--ext-diff'})
 
 
 def _is_allowed_inspect_argv(parts: list[str]) -> bool:

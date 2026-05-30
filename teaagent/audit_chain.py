@@ -10,6 +10,10 @@ Each event persisted by ``AuditLogger`` carries two extra fields:
     SHA-256 hex digest of *this* event's canonical JSON (which includes
     ``prev_hash``).
 
+``chain_hmac``
+    Optional HMAC-SHA256 signature over ``hash``, keyed with a per-run
+    secret.  Provided when the caller supplied ``secret_key``.
+
 ``verify_audit_chain`` reads a JSONL audit log and confirms that every
 chained event's hash is correct and that the ``prev_hash`` chain is
 unbroken.  Any insertion, deletion, or content modification produces a
@@ -22,6 +26,7 @@ and the chain is reset at that point (backward compatibility).
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -64,8 +69,25 @@ def compute_event_hash(obj: dict) -> str:
     return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 
 
-def verify_audit_chain(log_path: Path) -> ChainVerificationResult:
+def compute_chain_hmac(event_hash: str, secret_key: bytes) -> str:
+    """Return the HMAC-SHA256 hex digest for *event_hash* keyed with *secret_key*.
+
+    This binds each audit event to the per-run secret so that an attacker
+    who can write the audit file cannot forge the chain without the key.
+    """
+    return hmac.new(secret_key, event_hash.encode('utf-8'), hashlib.sha256).hexdigest()
+
+
+def verify_audit_chain(
+    log_path: Path,
+    secret_key: Optional[bytes] = None,
+) -> ChainVerificationResult:
     """Verify the SHA-256 hash chain of a JSONL audit log file.
+
+    When *secret_key* is provided, also verifies the HMAC-SHA256 signature
+    (``chain_hmac``) of every event that carries one.  Events written
+    without HMAC (e.g. by an older version) are still accepted for
+    backward compatibility.
 
     Returns :class:`ChainVerificationResult` with ``valid=True`` when
     every chained event is intact.  On failure the ``error`` field
@@ -125,6 +147,19 @@ def verify_audit_chain(log_path: Path) -> ChainVerificationResult:
                     f'{obj.get("event_id", "?")} — content may have been tampered'
                 ),
             )
+
+        # Verify HMAC when the event carries one and a key was provided.
+        if secret_key is not None and 'chain_hmac' in obj:
+            expected_hmac = compute_chain_hmac(obj['hash'], secret_key)
+            if obj['chain_hmac'] != expected_hmac:
+                return ChainVerificationResult(
+                    valid=False,
+                    event_count=i,
+                    error=(
+                        f'Line {i + 1}: HMAC mismatch for event '
+                        f'{obj.get("event_id", "?")} — signature does not match key'
+                    ),
+                )
 
         prev_hash = obj['hash']
 

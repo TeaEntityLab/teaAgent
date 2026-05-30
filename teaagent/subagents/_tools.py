@@ -172,6 +172,7 @@ def _register(
                 'status': {'type': 'string'},
                 'iterations': {'type': 'integer'},
                 'tool_calls': {'type': 'integer'},
+                'cost_cents': {'type': 'number'},
                 'final_answer': {'type': 'string'},
                 'message': {'type': 'string'},
                 'lineage': {
@@ -350,6 +351,7 @@ def _register_batch(
                             'status': {'type': 'string'},
                             'iterations': {'type': 'integer'},
                             'tool_calls': {'type': 'integer'},
+                            'cost_cents': {'type': 'number'},
                             'final_answer': {'type': 'string'},
                             'message': {'type': 'string'},
                             'lineage': {

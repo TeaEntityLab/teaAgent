@@ -199,39 +199,36 @@ class ResourceMonitor:
         self._violations = []
 
     def _parse_memory_string(self, memory_str: str) -> float:
-        """Parse Docker memory string to MB.
+        import re
 
-        Args:
-            memory_str: Memory string (e.g., "1.2GiB", "512MiB")
-
-        Returns:
-            Memory in MB
-        """
         memory_str = memory_str.strip().upper()
+        units = {
+            'TIB': 1024 * 1024 * 1024,
+            'TB': 1024 * 1024 * 1024,
+            'T': 1024 * 1024 * 1024,
+            'GIB': 1024,
+            'GB': 1024,
+            'G': 1024,
+            'MIB': 1,
+            'MB': 1,
+            'M': 1,
+            'KIB': 1 / 1024,
+            'KB': 1 / 1024,
+            'K': 1 / 1024,
+        }
+        # Suffix order in regex matters: longer first avoids GIB matching just G
+        match = re.match(
+            r'^([+-]?\d+(?:\.\d+)?)\s*(TIB|TB|T|GIB|GB|G|MIB|MB|M|KIB|KB|K)$',
+            memory_str,
+        )
+        if match:
+            return float(match.group(1)) * units[match.group(2)]
 
-        # Remove unit suffix
-        if memory_str.endswith('GIB') or memory_str.endswith('GB'):
-            value = float(memory_str[:-3].strip())
-            return value * 1024
-        elif memory_str.endswith('MIB') or memory_str.endswith('MB'):
-            # Remove unit suffix (3 chars for MiB/MiB, 2 chars for MB/MB)
-            if memory_str.endswith('MIB'):
-                memory_str = memory_str[:-3]
-            else:
-                memory_str = memory_str[:-2]
-            value = float(memory_str.strip())
-            return value
-        elif memory_str.endswith('KIB') or memory_str.endswith('KB'):
-            # Remove unit suffix (3 chars for KiB/KiB, 2 chars for KB/KB)
-            if memory_str.endswith('KIB'):
-                memory_str = memory_str[:-3]
-            else:
-                memory_str = memory_str[:-2]
-            value = float(memory_str.strip())
-            return value / 1024
-        else:
-            # Assume bytes
+        try:
             return float(memory_str) / (1024 * 1024)
+        except ValueError:
+            logger.warning('Unable to parse memory string: %s', memory_str)
+            return 0.0
 
     def is_monitoring(self) -> bool:
         """Check if monitoring is active.

@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 from uuid import uuid4
 
-from teaagent.storage import append_jsonl_line, file_lock
+from teaagent.storage import file_lock
 
 try:
     from teaagent.telemetry import TelemetryConfig, configure_telemetry
@@ -83,6 +84,7 @@ class AuditEvent:
         *,
         prev_hash: Optional[str] = None,
         event_hash: Optional[str] = None,
+        chain_hmac: Optional[str] = None,
     ) -> str:
         data: dict[str, Any] = {
             'event_id': self.event_id,
@@ -94,6 +96,8 @@ class AuditEvent:
         if prev_hash is not None:
             data['prev_hash'] = prev_hash
             data['hash'] = event_hash or ''
+            if chain_hmac is not None:
+                data['chain_hmac'] = chain_hmac
         return json.dumps(data, sort_keys=True)
 
 
@@ -118,6 +122,9 @@ class AuditLogger:
             else SENSITIVE_STRING_PATTERNS
         )
         self._disk_error: Optional[OSError] = None
+        self._last_disk_error_time: float = 0.0
+        self._disk_error_cooldown_seconds: float = 30.0
+        self._chain_key: bytes = os.urandom(32)
         self._audit_level = audit_level
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -125,8 +132,22 @@ class AuditLogger:
 
     @property
     def disk_error(self) -> Optional[OSError]:
-        """Returns the first ``OSError`` that disabled disk writes, or ``None``."""
-        return self._disk_error
+        """Returns the most recent ``OSError`` if still within cooldown, or ``None``.
+
+        A transient error causes a 30-second cooldown (default), not permanent
+        silence.  After the cooldown expires disk writes are retried.
+        """
+        if (
+            self._disk_error is not None
+            and time.monotonic() - self._last_disk_error_time
+            < self._disk_error_cooldown_seconds
+        ):
+            return self._disk_error
+        return None
+
+    def get_chain_key(self) -> bytes:
+        """Return the per-run HMAC secret key for external chain verification."""
+        return self._chain_key
 
     def _apply_audit_level(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Apply tiered audit level filtering to payload.
@@ -224,11 +245,13 @@ class AuditLogger:
         with self._lock:
             self.events.append(event)
             path = self.path
-            disk_error = self._disk_error
             sinks = list(self._sinks)
 
-        if path is not None and disk_error is None:
-            from teaagent.audit_chain import last_chain_hash
+        if path is not None and self.disk_error is None:
+            from teaagent.audit_chain import (
+                compute_chain_hmac,
+                last_chain_hash,
+            )
 
             try:
                 with file_lock(path):
@@ -248,11 +271,14 @@ class AuditLogger:
                     current_hash = hashlib.sha256(
                         canonical.encode('utf-8')
                     ).hexdigest()
+                    chain_hmac = compute_chain_hmac(current_hash, self._chain_key)
                     path.parent.mkdir(parents=True, exist_ok=True)
                     with path.open('a', encoding='utf-8') as handle:
                         handle.write(
                             event.to_json(
-                                prev_hash=prev, event_hash=current_hash
+                                prev_hash=prev,
+                                event_hash=current_hash,
+                                chain_hmac=chain_hmac,
                             ).rstrip('\n')
                             + '\n'
                         )
@@ -261,9 +287,12 @@ class AuditLogger:
                     secure_audit_file(path)
                 with self._lock:
                     self._prev_hash = current_hash
+                    self._disk_error = None
+                    self._last_disk_error_time = 0.0
             except OSError as exc:
                 with self._lock:
                     self._disk_error = exc
+                    self._last_disk_error_time = time.monotonic()
                     err_event = AuditEvent(
                         event_type='_disk_write_error',
                         run_id=event.run_id,

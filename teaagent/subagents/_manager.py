@@ -263,9 +263,11 @@ class SubagentManager:
                 depth=child_depth,
                 initial_context_extra={'subagent_lineage': lineage.to_dict()},
             )
+            sub_cost_cents = getattr(sub_result, 'cost_cents', 0.0) or 0.0
             sub_audit.record(
                 'subagent_lineage',
                 sub_result.run_id,
+                cost_cents=sub_cost_cents,
                 **lineage.to_dict(),
             )
             review = capture_subagent_review(
@@ -297,6 +299,7 @@ class SubagentManager:
                 completed_at=completed_at,
                 iterations=sub_result.iterations,
                 tool_calls=sub_result.tool_calls,
+                cost_cents=sub_cost_cents,
                 final_answer=(
                     sub_result.final_answer.content if sub_result.final_answer else ''
                 ),
@@ -350,6 +353,7 @@ def _success(session: SubagentSession) -> dict[str, Any]:
         'status': session.status,
         'iterations': session.iterations,
         'tool_calls': session.tool_calls,
+        'cost_cents': session.cost_cents,
         'final_answer': session.final_answer,
         'lineage': session.lineage.to_dict(),
         'message': '',

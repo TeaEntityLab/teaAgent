@@ -72,6 +72,7 @@ class SubagentSession:
     completed_at: Optional[str] = None
     iterations: int = 0
     tool_calls: int = 0
+    cost_cents: float = 0.0
     final_answer: str = ''
     review: Optional[dict[str, Any]] = None
 

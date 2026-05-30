@@ -43,7 +43,6 @@ class PermissionRequest:
     agent_name: str
     reason: str
     approved: bool = False
-    approval_token: Optional[str] = None
 
 
 class ToolPermissionManager:
