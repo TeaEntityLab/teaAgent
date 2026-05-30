@@ -155,6 +155,12 @@ class ApprovalPolicy:
 
         normalized = command
 
+        # Pass 0: Strip shell environment variable references
+        # $VAR or ${VAR} -> '' (shell evaluates unset vars as empty)
+        # Must run BEFORE quote stripping so $u'rod' -> 'rod' -> rod
+        normalized = re.sub(r'\$\{[a-zA-Z_][a-zA-Z0-9_]*\}', '', normalized)
+        normalized = re.sub(r'\$[a-zA-Z_][a-zA-Z0-9_]*', '', normalized)
+
         # Pass 1: Strip surrounding quotes from each token
         # "foo" -> foo, 'bar' -> bar
         normalized = re.sub(r"""(["'])(.*?)\1""", r'\2', normalized)
@@ -189,7 +195,22 @@ class ApprovalPolicy:
         # Pass 5: Try shlex split for final normalization
         try:
             tokens = shlex.split(normalized)
-            normalized = ' '.join(tokens).lower()
+            # Collapse adjacent single-char flags: rm -r -f -> rm -rf
+            collapsed: list[str] = []
+            i = 0
+            while i < len(tokens):
+                tok = tokens[i]
+                if tok.startswith('-') and len(tok) == 2 and tok != '--':
+                    merged = tok
+                    i += 1
+                    while i < len(tokens) and tokens[i].startswith('-') and len(tokens[i]) == 2 and tokens[i] != '--':
+                        merged += tokens[i][1:]
+                        i += 1
+                    collapsed.append(merged)
+                else:
+                    collapsed.append(tok)
+                    i += 1
+            normalized = ' '.join(collapsed).lower()
         except ValueError:
             normalized = normalized.lower()
 

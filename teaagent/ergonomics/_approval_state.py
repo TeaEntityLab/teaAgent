@@ -84,16 +84,18 @@ class ApprovalPresetStore:
         }
 
     def add_approved_call_id(self, call_id: str) -> None:
-        data = self._load()
-        if call_id not in data['approved_call_ids']:
-            data['approved_call_ids'].append(call_id)
-            self._save(data)
+        with file_lock(self.path):
+            data = self._load()
+            if call_id not in data['approved_call_ids']:
+                data['approved_call_ids'].append(call_id)
+                self._save(data)
 
     def remove_approved_call_id(self, call_id: str) -> None:
-        data = self._load()
-        if call_id in data['approved_call_ids']:
-            data['approved_call_ids'].remove(call_id)
-            self._save(data)
+        with file_lock(self.path):
+            data = self._load()
+            if call_id in data['approved_call_ids']:
+                data['approved_call_ids'].remove(call_id)
+                self._save(data)
 
     def list_approved_call_ids(self) -> list[str]:
         return self._load()['approved_call_ids']
@@ -125,59 +127,61 @@ class ApprovalPresetStore:
         return records
 
     def prune_scoped_approvals(self) -> int:
-        data = self._load()
-        now = datetime.now(timezone.utc)
+        with file_lock(self.path):
+            data = self._load()
+            now = datetime.now(timezone.utc)
 
-        pruned = []
-        keep = []
-        for item in data.get('scoped_approvals', []):
-            if not isinstance(item, dict):
-                continue
-            should_prune = False
-            if item.get('consumed_at'):
-                should_prune = True
-            elif item.get('expires_at'):
-                try:
-                    expires = datetime.fromisoformat(item['expires_at'])
-                    if expires.tzinfo is None:
-                        expires = expires.replace(tzinfo=timezone.utc)
-                    if now >= expires:
-                        should_prune = True
-                except ValueError:
+            pruned = []
+            keep = []
+            for item in data.get('scoped_approvals', []):
+                if not isinstance(item, dict):
+                    continue
+                should_prune = False
+                if item.get('consumed_at'):
                     should_prune = True
+                elif item.get('expires_at'):
+                    try:
+                        expires = datetime.fromisoformat(item['expires_at'])
+                        if expires.tzinfo is None:
+                            expires = expires.replace(tzinfo=timezone.utc)
+                        if now >= expires:
+                            should_prune = True
+                    except ValueError:
+                        should_prune = True
 
-            if should_prune:
-                pruned.append(item.get('record_id', 'unknown'))
-            else:
-                keep.append(item)
+                if should_prune:
+                    pruned.append(item.get('record_id', 'unknown'))
+                else:
+                    keep.append(item)
 
-        if len(pruned) > 0:
-            data['scoped_approvals'] = keep
-            data['audit'].append(
-                {
-                    'action': 'prune_scoped_approvals',
-                    'pruned_record_ids': pruned,
-                    'created_at': now.isoformat(),
-                }
-            )
-            self._save(data)
-        return len(pruned)
+            if len(pruned) > 0:
+                data['scoped_approvals'] = keep
+                data['audit'].append(
+                    {
+                        'action': 'prune_scoped_approvals',
+                        'pruned_record_ids': pruned,
+                        'created_at': now.isoformat(),
+                    }
+                )
+                self._save(data)
+            return len(pruned)
 
     def clear_legacy_approved_call_ids(self) -> int:
-        data = self._load()
-        original_ids = data.get('approved_call_ids', [])
-        count = len(original_ids)
-        if count > 0:
-            data['approved_call_ids'] = []
-            data['audit'].append(
-                {
-                    'action': 'clear_legacy_approved_call_ids',
-                    'cleared_call_ids': list(original_ids),
-                    'created_at': datetime.now(timezone.utc).isoformat(),
-                }
-            )
-            self._save(data)
-        return count
+        with file_lock(self.path):
+            data = self._load()
+            original_ids = data.get('approved_call_ids', [])
+            count = len(original_ids)
+            if count > 0:
+                data['approved_call_ids'] = []
+                data['audit'].append(
+                    {
+                        'action': 'clear_legacy_approved_call_ids',
+                        'cleared_call_ids': list(original_ids),
+                        'created_at': datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+                self._save(data)
+            return count
 
     def add_scoped_approval(
         self,
@@ -220,19 +224,20 @@ class ApprovalPresetStore:
             key_id=key_id,
         )
 
-        data = self._load()
-        data['scoped_approvals'].append(record.to_dict())
-        data['audit'].append(
-            {
-                'action': 'scoped_approval',
-                'record_id': record.record_id,
-                'run_id': run_id,
-                'call_id': call_id,
-                'tool_name': tool_name,
-                'created_at': now,
-            }
-        )
-        self._save(data)
+        with file_lock(self.path):
+            data = self._load()
+            data['scoped_approvals'].append(record.to_dict())
+            data['audit'].append(
+                {
+                    'action': 'scoped_approval',
+                    'record_id': record.record_id,
+                    'run_id': run_id,
+                    'call_id': call_id,
+                    'tool_name': tool_name,
+                    'created_at': now,
+                }
+            )
+            self._save(data)
         return record
 
     def list_scoped_approvals_for_run(self, run_id: str) -> list[ScopedApprovalRecord]:
@@ -376,19 +381,20 @@ class ApprovalPresetStore:
 
     def revoke(self, grant_id: str) -> bool:
         self._migrate_missing_grant_ids()
-        before = len(self.list_grants())
-        self._remove_grant(grant_id)
-        if len(self.list_grants()) >= before:
-            return False
-        data = self._load()
-        data['audit'].append(
-            {
-                'action': 'revoke',
-                'grant_id': grant_id,
-                'created_at': datetime.now(timezone.utc).isoformat(),
-            }
-        )
-        self._save(data)
+        with file_lock(self.path):
+            before = len(self.list_grants())
+            self._remove_grant(grant_id)
+            if len(self.list_grants()) >= before:
+                return False
+            data = self._load()
+            data['audit'].append(
+                {
+                    'action': 'revoke',
+                    'grant_id': grant_id,
+                    'created_at': datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            self._save(data)
         return True
 
     def grant(
@@ -416,12 +422,13 @@ class ApprovalPresetStore:
             command_prefixes=tuple(command_prefixes or ()),
             expires_at=expires_at,
         )
-        data = self._load()
-        grants = [g for g in data['grants'] if isinstance(g, dict)]
-        grants.append(entry.to_dict())
-        data['grants'] = grants
-        data['audit'].append({'action': 'grant', **entry.to_dict()})
-        self._save(data)
+        with file_lock(self.path):
+            data = self._load()
+            grants = [g for g in data['grants'] if isinstance(g, dict)]
+            grants.append(entry.to_dict())
+            data['grants'] = grants
+            data['audit'].append({'action': 'grant', **entry.to_dict()})
+            self._save(data)
         return entry
 
     def deny(
@@ -624,17 +631,18 @@ class ApprovalPresetStore:
             return False
         if decision == 'allow' and matched is not None:
             if matched.scope == 'once':
-                self._remove_grant(matched.grant_id)
-                data = self._load()
-                data['audit'].append(
-                    {
-                        'action': 'consume_once',
-                        'grant_id': matched.grant_id,
-                        'tool_name': matched.tool_name,
-                        'created_at': datetime.now(timezone.utc).isoformat(),
-                    }
-                )
-                self._save(data)
+                with file_lock(self.path):
+                    self._remove_grant(matched.grant_id)
+                    data = self._load()
+                    data['audit'].append(
+                        {
+                            'action': 'consume_once',
+                            'grant_id': matched.grant_id,
+                            'tool_name': matched.tool_name,
+                            'created_at': datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
+                    self._save(data)
             return True
         return False
 

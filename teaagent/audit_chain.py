@@ -135,6 +135,38 @@ def last_chain_hash(log_path: Path) -> str:
     """Return the hash to use as ``prev_hash`` when appending to an existing log."""
     if not log_path.is_file():
         return GENESIS_HASH
+
+    _TAIL_SIZE = 4096
+    try:
+        file_size = log_path.stat().st_size
+        if file_size == 0:
+            return GENESIS_HASH
+        with log_path.open('rb') as f:
+            f.seek(max(0, file_size - _TAIL_SIZE))
+            tail = f.read().decode('utf-8', errors='replace')
+    except OSError:
+        return GENESIS_HASH
+
+    for raw_line in reversed(tail.splitlines()):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if 'prev_hash' not in obj or 'hash' not in obj:
+            return GENESIS_HASH
+        if isinstance(obj.get('hash'), str) and obj['hash']:
+            return obj['hash']
+        return GENESIS_HASH
+
+    if file_size > _TAIL_SIZE:
+        return _last_chain_hash_full(log_path)
+    return GENESIS_HASH
+
+
+def _last_chain_hash_full(log_path: Path) -> str:
     last_hash = GENESIS_HASH
     for line in log_path.read_text(encoding='utf-8').splitlines():
         line = line.strip()

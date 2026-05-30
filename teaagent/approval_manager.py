@@ -7,9 +7,13 @@ multi-sig quorum across the system.
 
 from __future__ import annotations
 
+import asyncio
 import concurrent.futures
+import hashlib
+import json
 import logging
 import sys
+import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -309,7 +313,211 @@ class MultiSigQuorumManager:
         call_id: str,
         arguments: dict[str, Any] | None,
     ) -> bool:
-        return False
+        """Check multi-signature quorum for high-risk operations.
+
+        Returns:
+            True if quorum is reached and operation is approved, False otherwise.
+        """
+        if not self.config.enabled:
+            return False
+
+        if not self.agent_id:
+            print(
+                '[Governance] Multi-Signature Quorum enabled but agent_id not set. '
+                'Falling back to standard approval.'
+            )
+            return False
+
+        request_hash = self._generate_approval_hash(tool_name, call_id, arguments)
+        request = ApprovalRequest(
+            request_id=hashlib.sha256(
+                f'{self.agent_id}{call_id}{time.time()}'.encode()
+            ).hexdigest()[:16],
+            tool_name=tool_name,
+            call_id=call_id,
+            arguments=arguments or {},
+            request_hash=request_hash,
+            timestamp=time.time(),
+            requester_agent_id=self.agent_id,
+        )
+
+        print(
+            f'[Governance] Multi-Signature Quorum is enabled. '
+            f'Seeking {self.config.required_approvals} peer approvals...'
+        )
+        print(
+            f'[Broadcast...] Sending JIT signature requests to peers '
+            f'{self.config.peer_agent_ids}...'
+        )
+
+        signatures = self._collect_peer_signatures(request)
+
+        if len(signatures) >= self.config.required_approvals:
+            print(
+                f'[✓] Quorum Reached '
+                f'({len(signatures)}/{self.config.required_approvals} approvals).'
+            )
+            for sig in signatures:
+                print(
+                    f'[{sig.peer_id}]: SIGNED '
+                    f'(SSH-Key-ID: {sig.ssh_key_id or "unknown"})'
+                )
+            return True
+        else:
+            print(
+                f'[✗] Quorum Not Reached '
+                f'({len(signatures)}/{self.config.required_approvals} required).'
+            )
+            return False
+
+    def _generate_approval_hash(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None,
+        *,
+        run_id: str = '',
+    ) -> str:
+        """Generate cryptographic hash for approval request."""
+        content = json.dumps(
+            {
+                'tool_name': tool_name,
+                'call_id': call_id,
+                'arguments': arguments or {},
+                'run_id': run_id,
+                'time_window': int(time.time() / 3600),
+            },
+            sort_keys=True,
+        )
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def _collect_peer_signatures(
+        self, request: ApprovalRequest
+    ) -> list[PeerSignature]:
+        """Collect peer signatures for approval request.
+
+        Integrates with federated_sync to broadcast the request via P2P sync,
+        wait for peers to sign with their SSH keys, and verify signatures.
+        """
+        try:
+            from teaagent.federated_sync import (
+                ApprovalRequestMessage,
+                FederatedGraphSync,
+            )
+        except ImportError:
+            logger.warning('Federated sync not available for multi-sig quorum')
+            return []
+
+        sync = FederatedGraphSync(
+            root=str(Path.cwd()),
+            agent_id=self.agent_id or 'unknown',
+        )
+
+        submit_url = None
+        local_relay = self.config.local_relay_base_url
+        if local_relay:
+            submit_url = f'{local_relay.rstrip("/")}/api/v1/approval-signatures'
+
+        approval_request = ApprovalRequestMessage(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            call_id=request.call_id,
+            arguments=request.arguments or {},
+            request_hash=request.request_hash,
+            timestamp=request.timestamp,
+            requester_agent_id=request.requester_agent_id,
+            required_approvals=self.config.required_approvals,
+            timeout_seconds=self.config.timeout_seconds,
+            signature_submit_url=submit_url,
+        )
+
+        sync.broadcast_approval_request(
+            approval_request,
+            self.config.peer_agent_ids,
+            peer_relay_urls=self.config.peer_relay_urls,
+        )
+
+        signature_messages = self._run_async_signature_collection(
+            sync,
+            request.request_id,
+            required_approvals=self.config.required_approvals,
+            relay_base_url=local_relay,
+        )
+
+        peer_signatures: list[PeerSignature] = []
+        for sig_msg in signature_messages:
+            message_to_verify = request.request_hash
+            from teaagent.security_env import (
+                allow_dev_signatures as env_allow_dev,
+            )
+
+            is_valid = _verify_ssh_signature(
+                signature=sig_msg.signature,
+                message=message_to_verify,
+                ssh_key_id=sig_msg.peer_id,
+                peer_public_keys=self.config.peer_public_keys,
+                allow_dev_signatures=(
+                    self.config.allow_dev_signatures or env_allow_dev()
+                ),
+            )
+
+            if not is_valid:
+                print(
+                    f'[Security] Rejected invalid signature from peer '
+                    f'{sig_msg.peer_id}'
+                )
+                continue
+
+            peer_sig = PeerSignature(
+                peer_id=sig_msg.peer_id,
+                signature=sig_msg.signature,
+                timestamp=sig_msg.timestamp,
+                ssh_key_id=sig_msg.ssh_key_id,
+            )
+            peer_signatures.append(peer_sig)
+
+        return peer_signatures
+
+    def _run_async_signature_collection(
+        self,
+        sync: Any,
+        request_id: str,
+        *,
+        required_approvals: int = 1,
+        relay_base_url: str | None = None,
+    ) -> Any:
+        """Run async signature collection without starving the event loop.
+
+        Detects whether an event loop is active and dispatches accordingly:
+        - If called from a thread with a running event loop, offloads to a
+          ThreadPoolExecutor so the coroutine runs in a fresh thread with its
+          own event loop.
+        - Otherwise, runs the coroutine via ``asyncio.run()``.
+        """
+        coro = sync.collect_approval_signatures(
+            request_id,
+            timeout_seconds=self.config.timeout_seconds,
+            required_approvals=required_approvals,
+            relay_base_url=relay_base_url,
+        )
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            def _run_in_thread() -> Any:
+                new_loop = asyncio.new_event_loop()
+                try:
+                    asyncio.set_event_loop(new_loop)
+                    return new_loop.run_until_complete(coro)
+                finally:
+                    new_loop.close()
+
+            timeout = self.config.timeout_seconds + 5
+            future = self._executor.submit(_run_in_thread)
+            return future.result(timeout=timeout)
+        return asyncio.run(coro)
 
     def shutdown(self) -> None:
         self._executor.shutdown(wait=True)

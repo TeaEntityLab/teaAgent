@@ -220,43 +220,49 @@ class AuditLogger:
                 filtered_payload, string_patterns=self._string_patterns
             ),
         )
+        # SAFETY: self._lock and file_lock must never be held simultaneously (deadlock).
         with self._lock:
             self.events.append(event)
-            if self.path is not None and self._disk_error is None:
-                from teaagent.audit_chain import last_chain_hash
+            path = self.path
+            disk_error = self._disk_error
+            sinks = list(self._sinks)
 
-                try:
-                    with file_lock(self.path):
-                        self._prev_hash = last_chain_hash(self.path)
-                        prev = self._prev_hash
-                        canonical = json.dumps(
-                            {
-                                'event_id': event.event_id,
-                                'event_type': event.event_type,
-                                'run_id': event.run_id,
-                                'created_at': event.created_at,
-                                'payload': event.payload,
-                                'prev_hash': prev,
-                            },
-                            sort_keys=True,
-                            separators=(',', ':'),
+        if path is not None and disk_error is None:
+            from teaagent.audit_chain import last_chain_hash
+
+            try:
+                with file_lock(path):
+                    prev = last_chain_hash(path)
+                    canonical = json.dumps(
+                        {
+                            'event_id': event.event_id,
+                            'event_type': event.event_type,
+                            'run_id': event.run_id,
+                            'created_at': event.created_at,
+                            'payload': event.payload,
+                            'prev_hash': prev,
+                        },
+                        sort_keys=True,
+                        separators=(',', ':'),
+                    )
+                    current_hash = hashlib.sha256(
+                        canonical.encode('utf-8')
+                    ).hexdigest()
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    with path.open('a', encoding='utf-8') as handle:
+                        handle.write(
+                            event.to_json(
+                                prev_hash=prev, event_hash=current_hash
+                            ).rstrip('\n')
+                            + '\n'
                         )
-                        current_hash = hashlib.sha256(
-                            canonical.encode('utf-8')
-                        ).hexdigest()
-                        self.path.parent.mkdir(parents=True, exist_ok=True)
-                        with self.path.open('a', encoding='utf-8') as handle:
-                            handle.write(
-                                event.to_json(
-                                    prev_hash=prev, event_hash=current_hash
-                                ).rstrip('\n')
-                                + '\n'
-                            )
-                            handle.flush()
-                            os.fsync(handle.fileno())
-                        self._prev_hash = current_hash
-                        secure_audit_file(self.path)
-                except OSError as exc:
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    secure_audit_file(path)
+                with self._lock:
+                    self._prev_hash = current_hash
+            except OSError as exc:
+                with self._lock:
                     self._disk_error = exc
                     err_event = AuditEvent(
                         event_type='_disk_write_error',
@@ -264,7 +270,6 @@ class AuditLogger:
                         payload={'error': str(exc), 'errno': exc.errno},
                     )
                     self.events.append(err_event)
-            sinks = list(self._sinks)
         failed_sinks = []
         for sink in sinks:
             try:

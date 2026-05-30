@@ -150,25 +150,6 @@ class ContextBus:
             try:
                 cursor.execute(sql, params)
                 return cursor
-            except sqlite3.DatabaseError as exc:
-                if attempt == max_retries - 1:
-                    logger.error(
-                        'SQLite database error failed after reconnect attempts: %s',
-                        exc,
-                    )
-                    raise
-                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
-                logger.warning(
-                    'SQLite database error (attempt %s/%s), reconnecting: %s',
-                    attempt + 1,
-                    max_retries,
-                    exc,
-                )
-                with suppress(Exception):
-                    cursor.connection.rollback()
-                time.sleep(delay)
-                self._reconnect_self_thread()
-                cursor = self._get_connection().cursor()
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
                     raise
@@ -189,6 +170,25 @@ class ContextBus:
                 with suppress(Exception):
                     cursor.connection.rollback()
                 time.sleep(delay)
+            except sqlite3.DatabaseError as exc:
+                if attempt == max_retries - 1:
+                    logger.error(
+                        'SQLite database error failed after reconnect attempts: %s',
+                        exc,
+                    )
+                    raise
+                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
+                logger.warning(
+                    'SQLite database error (attempt %s/%s), reconnecting: %s',
+                    attempt + 1,
+                    max_retries,
+                    exc,
+                )
+                with suppress(Exception):
+                    cursor.connection.rollback()
+                time.sleep(delay)
+                self._reconnect_self_thread()
+                cursor = self._get_connection().cursor()
 
         raise RuntimeError(
             'Unexpected: _execute_with_retry loop exited without returning or raising'

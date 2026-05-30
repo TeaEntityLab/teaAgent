@@ -22,6 +22,7 @@ from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.cli._output import print_json
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.daily import build_daily_brief
+from teaagent.ergonomics.human_output import format_preflight_summary
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
 from teaagent.plan import PlanContract
@@ -1312,7 +1313,10 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
         memory_limit=args.memory_limit,
         context_profile=args.context_profile,
     )
-    print_json(report.to_dict())
+    if args.human:
+        print(format_preflight_summary(report.to_dict(), root=args.root))
+    else:
+        print_json(report.to_dict())
     return 0 if report.to_dict()['ready'] else 2
 
 
