@@ -453,7 +453,10 @@ def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
     except Exception:
         # Clean up temp file on error
         if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
+            try:
+                os.unlink(tmp_path)
+            except OSError as exc:
+                logger.warning(f'Temp file cleanup failed: {tmp_path}: {exc}')
         raise
     
     stat = path.stat()
