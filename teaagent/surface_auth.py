@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -82,9 +83,15 @@ def extract_bearer_token(headers: HeaderMap) -> str | None:
 
 @dataclass(frozen=True)
 class TokenEntry:
-    """Hashed token with optional tenant scope (``None`` = admin / relay-global)."""
+    """Hashed token with optional tenant scope (``None`` = admin / relay-global).
+
+    If ``salt_hex`` is set, ``token_hash`` was created with a random salt
+    via ``hash_token_with_salt()``; otherwise it uses the fixed-salt PBKDF2
+    from ``hash_token()`` for backward compatibility.
+    """
 
     token_hash: str
+    salt_hex: str | None = None
     tenants: frozenset[str] | None = None
 
 
@@ -95,17 +102,38 @@ class SurfaceAuthPolicy:
     entries: list[TokenEntry] = field(default_factory=list)
     require_auth: bool = True
 
+    @staticmethod
+    def _fast_reject_token(raw_token: str) -> bool:
+        """Return True to reject *before* PBKDF2 (DoS defence)."""
+        return not raw_token or len(raw_token) > 256
+
     def validate_token(self, raw_token: str) -> bool:
-        digest = hash_token(raw_token)
-        return any(
-            secrets.compare_digest(digest, entry.token_hash) for entry in self.entries
-        )
+        if self._fast_reject_token(raw_token):
+            return False
+        for entry in self.entries:
+            if entry.salt_hex is not None:
+                if verify_token_with_salt(raw_token, entry.token_hash, entry.salt_hex):
+                    return True
+            else:
+                digest = hash_token(raw_token)
+                if secrets.compare_digest(digest, entry.token_hash):
+                    return True
+        return False
 
     def allowed_tenants(self, raw_token: str) -> frozenset[str] | None:
         """Return allowed tenant ids, ``None`` for admin (all tenants), empty if invalid."""
-        digest = hash_token(raw_token)
+        if self._fast_reject_token(raw_token):
+            return frozenset()
         for entry in self.entries:
-            if secrets.compare_digest(digest, entry.token_hash):
+            match: bool
+            if entry.salt_hex is not None:
+                match = verify_token_with_salt(
+                    raw_token, entry.token_hash, entry.salt_hex
+                )
+            else:
+                digest = hash_token(raw_token)
+                match = secrets.compare_digest(digest, entry.token_hash)
+            if match:
                 return entry.tenants
         return frozenset()
 
@@ -139,9 +167,9 @@ class SurfaceAuthPolicy:
             raise ValueError('token file must be a JSON object')
         entries: list[TokenEntry] = []
         for index, item in enumerate(data.get('tokens', [])):
-            if not isinstance(item, dict) or 'token' not in item:
-                raise ValueError(f'tokens[{index}] must include "token"')
-            raw = str(item['token'])
+            if not isinstance(item, dict):
+                raise ValueError(f'tokens[{index}] must be a JSON object')
+            # Determine tenants
             tenants: frozenset[str] | None
             if relay_mode:
                 tenants = None
@@ -155,7 +183,33 @@ class SurfaceAuthPolicy:
                     tenants = frozenset(str(t) for t in raw_tenants)
             else:
                 tenants = frozenset()
-            entries.append(TokenEntry(token_hash=hash_token(raw), tenants=tenants))
+
+            # Pre-hashed token (recommended for production configs)
+            if 'hash_hex' in item and 'salt_hex' in item:
+                hash_hex = str(item['hash_hex'])
+                salt_hex = str(item['salt_hex'])
+                if not re.match(r'^[a-f0-9]{64}$', hash_hex):
+                    raise ValueError(
+                        f'tokens[{index}].hash_hex must be a 64-char hex '
+                        f'string (SHA-256)'
+                    )
+                if not re.match(r'^[a-f0-9]{32}$', salt_hex):
+                    raise ValueError(
+                        f'tokens[{index}].salt_hex must be a 32-char hex '
+                        f'string (16-byte salt)'
+                    )
+                entries.append(
+                    TokenEntry(token_hash=hash_hex, salt_hex=salt_hex, tenants=tenants)
+                )
+            # Legacy raw token
+            elif 'token' in item:
+                raw = str(item['token'])
+                entries.append(TokenEntry(token_hash=hash_token(raw), tenants=tenants))
+            else:
+                raise ValueError(
+                    f'tokens[{index}] must include "token" (raw) or '
+                    f'"hash_hex"+"salt_hex" (pre-hashed)'
+                )
         if not entries:
             raise ValueError('token file must define at least one token')
         return cls(entries=entries, require_auth=True)
@@ -209,6 +263,8 @@ def authorize_request(
     token = extract_bearer_token(headers)
     if not token:
         return False, 'missing bearer token'
+    if SurfaceAuthPolicy._fast_reject_token(token):
+        return False, 'invalid bearer token'
     if not policy.validate_token(token):
         return False, 'invalid bearer token'
     if require_admin and not policy.is_admin(token):
