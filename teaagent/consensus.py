@@ -7,14 +7,18 @@ and consensus state tracking.
 
 from __future__ import annotations
 
+import contextlib
 import fnmatch
 import hashlib
 import json
 import logging
+import os
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -874,6 +878,7 @@ class ConsensusEngine:
         self.config = config
         self.storage_path = storage_path
         self.voting_mechanism = VotingMechanism(config)
+        self._lock = threading.RLock()
         self._load_state()
 
     def request_consensus(
@@ -1192,19 +1197,35 @@ class ConsensusEngine:
         return f'prop-{hash_value}'
 
     def _save_state(self) -> None:
-        """Save consensus state to storage."""
+        """Save consensus state to storage atomically under reentrant lock."""
         if not self.storage_path:
             return
 
-        data = {
-            'consensus_states': [
-                state.to_dict()
-                for state in self.voting_mechanism._active_votes.values()
-            ],
-        }
+        with self._lock:
+            data = {
+                'consensus_states': [
+                    state.to_dict()
+                    for state in self.voting_mechanism._active_votes.values()
+                ],
+            }
 
-        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        self.storage_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+            # Atomic write via tempfile + rename prevents partial/corrupt state
+            with NamedTemporaryFile(
+                'w',
+                dir=str(self.storage_path.parent),
+                delete=False,
+                suffix='.tmp',
+            ) as tmp:
+                try:
+                    json.dump(data, tmp, indent=2)
+                    tmp.flush()
+                    os.fsync(tmp.fileno())
+                    os.replace(tmp.name, self.storage_path)
+                except BaseException:
+                    with contextlib.suppress(OSError):
+                        os.unlink(tmp.name)
+                    raise
 
     def _load_state(self) -> None:
         """Load consensus state from storage."""

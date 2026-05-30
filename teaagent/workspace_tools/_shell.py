@@ -140,7 +140,7 @@ def run_shell_inspect(
 ) -> dict[str, Any]:
     command = args['command']
     assert_shell_command_size_allowed(config, command)
-    policy = classify_shell_command_policy(command)
+    policy = classify_shell_command_policy(command, workspace_root=config.root)
     if policy != 'inspect':
         raise ValueError(
             'command is not inspect-safe; retry with workspace_run_shell_mutate'
@@ -255,19 +255,13 @@ def shell_arg_escapes_workspace(arg: str, workspace_root: Path | None = None) ->
     # This prevents false positives on legitimate relative paths
     if workspace_root is not None:
         try:
-            # Resolve the argument to its canonical form to detect symlinks
-            resolved_path = Path(arg).expanduser().resolve()
-            # Check if the resolved path is absolute (escapes relative workspace)
-            if resolved_path.is_absolute():
-                return True
-            # Check if the resolved path still contains parent directory references after resolution
-            if '..' in resolved_path.parts:
-                return True
-            # Check if resolved path is within workspace root
+            # Resolve relative to workspace_root (the CWD at execution time)
+            resolved_path = (workspace_root.resolve() / arg).resolve()
+            # Check if the resolved path is within workspace root
             try:
                 resolved_path.relative_to(workspace_root.resolve())
             except ValueError:
-                # Path is not within workspace root
+                # Path is not within workspace root (e.g. symlink escape)
                 return True
         except (OSError, ValueError):
             # If path resolution fails, treat it as potentially unsafe

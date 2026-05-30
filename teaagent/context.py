@@ -71,7 +71,10 @@ class ContextCompactor:
 
         compacted = dict(context)
         compacted['observations'] = recent
-        compacted['compacted_summary'] = summary
+        existing_summary = context.get('compacted_summary', '')
+        compacted['compacted_summary'] = (
+            f'{existing_summary}\nThen, {summary}' if existing_summary else summary
+        )
         compacted['memory_keys'] = pinned
         compacted['compaction_count'] = context.get('compaction_count', 0) + 1
         compacted['compression_ratio'] = compression_ratio
@@ -180,8 +183,13 @@ class ContextCompactor:
         if not messages:
             return []
 
-        # Always keep system message
-        system_messages = [m for m in messages if m.get('role') == 'system']
+        # Always keep system message, excluding auto-generated compaction notifications
+        system_messages = [
+            m
+            for m in messages
+            if m.get('role') == 'system'
+            and not m.get('content', '').startswith('[Context compaction:')
+        ]
         user_assistant = [m for m in messages if m.get('role') in ('user', 'assistant')]
 
         current_tokens = sum(

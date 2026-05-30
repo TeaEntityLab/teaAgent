@@ -24,9 +24,13 @@ def consume_sse_json_chunks(
     *,
     on_data: Callable[[dict[str, Any]], None],
 ) -> None:
-    for data in iter_sse_data_lines(lines):
-        try:
-            parsed = json.loads(data)
-        except json.JSONDecodeError:
-            continue
-        on_data(parsed)
+    try:
+        for data in iter_sse_data_lines(lines):
+            try:
+                parsed = json.loads(data)
+            except json.JSONDecodeError:
+                continue
+            on_data(parsed)
+    finally:
+        if hasattr(lines, 'close'):
+            lines.close()  # type: ignore[union-attr]

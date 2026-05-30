@@ -14,7 +14,7 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 try:
-    from wasmer import Module, Store  # type: ignore
+    from wasmer import Module, Store, wasi  # type: ignore[import-untyped]
 
     WASMER_AVAILABLE = True
 except ImportError:
@@ -27,8 +27,14 @@ except ImportError:
     class _DummyModule:
         pass
 
+    class _DummyWasi:
+        @staticmethod
+        def get_imports(*_: object) -> object:  # type: ignore[misc]
+            return {}
+
     Store = _DummyStore  # type: ignore[misc,assignment]
     Module = _DummyModule  # type: ignore[misc,assignment]
+    wasi = _DummyWasi  # type: ignore[misc,assignment]
 
 
 @dataclass
@@ -87,8 +93,11 @@ class WASMRuntime:
             # Load the module
             module = Module(store, wasm_path.read_bytes())
 
-            # Create instance with memory limit
-            self._instance = module.instantiate(store)
+            # Set up WASI imports for filesystem and capability access
+            wasi_imports = wasi.get_imports(store)
+
+            # Create instance with WASI imports and memory limit
+            self._instance = module.instantiate(store, import_objects=wasi_imports)
 
             logger.info(f'Loaded WASM module from {wasm_path}')
             return True
