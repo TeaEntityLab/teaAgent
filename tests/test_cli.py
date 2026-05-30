@@ -873,7 +873,7 @@ class CLITests(unittest.TestCase):
                     '--oauth-issuer',
                     'https://issuer.test',
                     '--oauth-signing-key',
-                    'signing-secret-key-12345',
+                    'signing-secret-key-at-least-32-chars',
                     '--oauth-dpop-replay-ttl',
                     '120',
                 ]

@@ -9,7 +9,7 @@ import pytest
 
 from teaagent.gateway_oauth import OAuthTenantMap
 from teaagent.http_rate_limit import TokenRateLimiter
-from teaagent.policy import _SSH_VERIFICATION_IMPLEMENTED
+from teaagent.approval_manager import _SSH_VERIFICATION_IMPLEMENTED
 
 
 def test_token_rate_limiter_blocks_burst() -> None:
