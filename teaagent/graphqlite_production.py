@@ -130,6 +130,19 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
     def graph_retrieve(
         self, query: str, *, max_depth: int = 2, limit: int = 5
     ) -> list[RetrievalResult]:
+        # Cast and bound max_depth to prevent Cypher injection via f-string
+        # (line 140 formats max_depth directly into the query pattern).
+        try:
+            max_depth = int(max_depth)
+        except (ValueError, TypeError):
+            logger.warning('Invalid max_depth %r, falling back to default 2', max_depth)
+            max_depth = 2
+        if max_depth < 1 or max_depth > 10:
+            logger.warning(
+                'max_depth %d out of range [1,10], clamping', max_depth
+            )
+            max_depth = max(1, min(max_depth, 10))
+
         query_terms = set(tokenize(query))
         scored: dict[str, RetrievalResult] = {}
 
