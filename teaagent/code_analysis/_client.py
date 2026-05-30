@@ -154,7 +154,8 @@ class StdioLSPClient(LSPClient):
 
     def _request(self, method: str, params: dict[str, Any]) -> Any:
         self._ensure_proc()
-        assert self._proc is not None
+        if self._proc is None:
+            raise RuntimeError('LSP process not available')
         self._request_id += 1
         req_id = self._request_id
         payload = {'jsonrpc': '2.0', 'id': req_id, 'method': method, 'params': params}
@@ -174,14 +175,16 @@ class StdioLSPClient(LSPClient):
         self._write_payload(payload)
 
     def _write_payload(self, payload: dict[str, Any]) -> None:
-        assert self._proc is not None and self._proc.stdin is not None
+        if self._proc is None or self._proc.stdin is None:
+            raise RuntimeError('LSP process or stdin not available')
         body = json.dumps(payload).encode('utf-8')
         header = f'Content-Length: {len(body)}\r\n\r\n'.encode('ascii')
         self._proc.stdin.write(header + body)
         self._proc.stdin.flush()
 
     def _read_payload(self) -> dict[str, Any]:
-        assert self._proc is not None and self._proc.stdout is not None
+        if self._proc is None or self._proc.stdout is None:
+            raise RuntimeError('LSP process or stdout not available')
         length = _read_content_length(self._proc.stdout)
         body = self._proc.stdout.read(length)
         if not body:
@@ -207,7 +210,10 @@ def _read_content_length(stream: Any) -> int:
         lower = line.decode('ascii', errors='ignore').lower()
         if lower.startswith('content-length:'):
             raw = lower.split(':', 1)[1].strip()
-            length = int(raw)
+            try:
+                length = int(raw)
+            except ValueError:
+                raise RuntimeError(f'Invalid Content-Length header: {raw}')
     if length is None:
         raise RuntimeError('missing Content-Length header in LSP response')
     return length

@@ -578,8 +578,8 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             payload, root=str(tui.root), title='TeaAgent daily'
         ).splitlines():
             tui.output_fn(line)
-        for recommendation in payload['recommendations'][:1]:
-            tui.output_fn(f'next: {recommendation["command"]}')
+        for recommendation in payload.get('recommendations', [])[:1]:
+            tui.output_fn(f'next: {recommendation.get("command", "unknown")}')
         tui._print_json(payload)
         return True
     if action == 'memory':

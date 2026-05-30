@@ -435,7 +435,10 @@ class ContextBus:
             'SELECT COUNT(*) FROM delta_cards WHERE workflow_id = ?',
             (self._workflow_id,),
         )
-        return cursor.fetchone()[0]
+        row = cursor.fetchone()
+        if row is None:
+            return 0
+        return row[0]
 
     def close(self) -> None:
         """Close all context bus connections."""

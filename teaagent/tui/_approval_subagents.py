@@ -40,10 +40,13 @@ def format_subagent_approval_batch(
             f'{"#":>3}  {"request_id":<14}  {"subagent":<12}  {"tool":<28}  {"batch":>5}  {"isolation"}'
         )
         for index, item in enumerate(pending, start=1):
+            request_id = item.get("request_id", "unknown")[:14]
+            subagent_name = item.get("subagent_name", "unknown")[:12]
+            tool_name = item.get("tool_name", "unknown")[:28]
             lines.append(
-                f'{index:>3}  {item["request_id"][:14]:<14}  '
-                f'{item["subagent_name"][:12]:<12}  '
-                f'{item["tool_name"][:28]:<28}  '
+                f'{index:>3}  {request_id:<14}  '
+                f'{subagent_name:<12}  '
+                f'{tool_name:<28}  '
                 f'{str(item.get("batch_index", "")):>5}  '
                 f'{item.get("isolation", "")}'
             )

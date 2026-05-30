@@ -58,15 +58,17 @@ def write_default_eval_dataset(
             }
         )
     if task.strip():
-        token = task.strip().split()[0]
-        if len(token) >= 4:
-            cases.append(
-                {
-                    'id': 'reference_mentions_task_token',
-                    'check': 'reference_contains',
-                    'substring': token,
-                }
-            )
+        parts = task.strip().split()
+        if parts:
+            token = parts[0]
+            if len(token) >= 4:
+                cases.append(
+                    {
+                        'id': 'reference_mentions_task_token',
+                        'check': 'reference_contains',
+                        'substring': token,
+                    }
+                )
     payload = {'schema_version': 1, 'cases': cases}
     path = eval_dataset_path(candidate_dir)
     atomic_write_text(path, json.dumps(payload, indent=2) + '\n')

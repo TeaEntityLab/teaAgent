@@ -45,5 +45,6 @@ def _call_with_retry(
                 time.sleep(retry_config.delay(attempt))
                 continue
             raise
-    assert last_exc is not None
+    if last_exc is None:
+        raise RuntimeError('No exception captured during retries')
     raise last_exc

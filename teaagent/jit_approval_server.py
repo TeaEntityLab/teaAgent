@@ -132,7 +132,13 @@ class JITApprovalServer:
                     await writer.wait_closed()
                     return
 
-                client_token = auth_line.split(' ', 2)[2]
+                parts = auth_line.split(' ', 2)
+                if len(parts) < 3:
+                    logger.warning('Invalid auth header format')
+                    writer.close()
+                    await writer.wait_closed()
+                    return
+                client_token = parts[2]
                 import secrets
                 if not secrets.compare_digest(client_token, self._auth_token):
                     logger.warning('SSE client provided invalid auth token')

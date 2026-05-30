@@ -1088,9 +1088,11 @@ def approval_next_command(args: argparse.Namespace) -> int:
 
         # Build suggestions
         suggestions = []
-        if check_result['matched_grant']:
+        matched_grant = check_result.get('matched_grant', {})
+        if matched_grant:
+            scope = matched_grant.get('scope', 'unknown')
             suggestions.append(
-                f'This tool call matches a {check_result["matched_grant"]["scope"]} grant but may need explicit approval'
+                f'This tool call matches a {scope} grant but may need explicit approval'
             )
         else:
             suggestions.append(

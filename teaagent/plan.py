@@ -110,11 +110,8 @@ def load_plan_contract(
                     cleaned = line.strip().lstrip('-*').strip()
                     # Remove backticks and extra text
                     if '`' in cleaned:
-                        cleaned = (
-                            cleaned.split('`')[1]
-                            if '`' in cleaned
-                            else cleaned.split('`')[0]
-                        )
+                        parts = cleaned.split('`')
+                        cleaned = parts[1] if len(parts) > 1 else parts[0]
                     if cleaned and not cleaned.endswith('(discover relevant tests)'):
                         file_targets = file_targets | {cleaned}
 

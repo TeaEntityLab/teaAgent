@@ -281,7 +281,8 @@ def _make_handler(
                 if error == 'missing body':
                     return None, 'missing JSON-RPC body'
                 return None, error
-            assert length is not None
+            if length is None:
+                return None, 'missing Content-Length header'
             raw = self.rfile.read(length)
             try:
                 return json.loads(raw.decode('utf-8')), None

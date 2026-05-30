@@ -1634,7 +1634,7 @@ def automation_template_command(args: argparse.Namespace) -> int:
         template=template.name,
     )
     print_json(payload)
-    if payload['ticket']['errors']:
+    if payload.get('ticket', {}).get('errors'):
         return 1
     return 0
 

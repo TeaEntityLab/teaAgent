@@ -493,10 +493,11 @@ class TSBVerifier:
                 bundle_hash_obj.update(audit_path.read_bytes())
             bundle_hash = bundle_hash_obj.hexdigest()
 
-            if manifest_data['attestation']['bundle_hash'] != bundle_hash:
+            attestation = manifest_data.get('attestation', {})
+            if attestation.get('bundle_hash') != bundle_hash:
                 return (
                     False,
-                    f'Bundle hash mismatch: expected {manifest_data["attestation"]["bundle_hash"]}, got {bundle_hash}',
+                    f'Bundle hash mismatch: expected {attestation.get("bundle_hash")}, got {bundle_hash}',
                 )
 
             # Verify audit chain
@@ -511,16 +512,16 @@ class TSBVerifier:
 
                 # Verify audit hash
                 audit_hash = hashlib.sha256(audit_path.read_bytes()).hexdigest()
-                if manifest_data['attestation']['audit_chain_hash'] != audit_hash:
+                if attestation.get('audit_chain_hash') != audit_hash:
                     return (
                         False,
-                        f'Audit hash mismatch: expected {manifest_data["attestation"]["audit_chain_hash"]}, got {audit_hash}',
+                        f'Audit hash mismatch: expected {attestation.get("audit_chain_hash")}, got {audit_hash}',
                     )
 
             # Verify signature if requested
             if verify_signature:
                 # Require signature when verification is enabled, unless allow_unsigned is set
-                if not manifest_data['attestation']['author_signature']:
+                if not attestation.get('author_signature'):
                     if allow_unsigned:
                         # Allow unsigned bundles in development mode
                         return (

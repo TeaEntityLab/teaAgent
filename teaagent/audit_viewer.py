@@ -32,7 +32,7 @@ _HTML_FOOTER = '</body></html>'
 
 
 def _status_class(status: str) -> str:
-    s = status.split(':')[0]
+    s = status.split(':')[0] if status else 'unknown'
     return f'status-{s}'
 
 

@@ -169,7 +169,7 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
         if uses_workers_ai_direct
         else 'unknown'
     )
-    all_ok = checks['api_token']['ok'] and checks['base_url']['ok']
+    all_ok = checks.get('api_token', {}).get('ok', False) and checks.get('base_url', {}).get('ok', False)
     endpoint_profile = (
         'gateway-openai-compatible-unified'
         if mode == 'gateway-compat'
@@ -196,7 +196,7 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
             0,
             'Set WORKERS_AI_BASE_URL to AI Gateway workers-ai endpoint: https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/workers-ai/v1',
         )
-    if not checks['aig_auth_header']['ok']:
+    if not checks.get('aig_auth_header', {}).get('ok', False):
         next_steps.append(
             'If Authenticated Gateway is enabled: export WORKERS_AI_EXTRA_HEADERS=\'{"cf-aig-authorization":"Bearer <gateway_token>"}\''
         )

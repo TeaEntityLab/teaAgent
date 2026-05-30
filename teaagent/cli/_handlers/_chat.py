@@ -276,8 +276,6 @@ def execute_shell_command(command: str, root: Path) -> None:
     if executable == 'chown' and '-R' in args:
         print('[TeaAgent] Error: chown -R not allowed in shell escape.')
         return
-        print(f'[TeaAgent] Error: Invalid command syntax: {exc}')
-        return
 
     # Execute the command
     try:

@@ -237,11 +237,13 @@ class SkillRouter:
                         warnings=compat_result['warnings'],
                     )
                 else:
+                    issues = compat_result.get("issues", [])
+                    issue_desc = issues[0] if issues else "unknown"
                     return RoutingDecision(
                         sandbox_type=SandboxType.DOCKER,
-                        reason=f'High risk: WASM incompatible ({compat_result["issues"][0]}), using Docker',
+                        reason=f'High risk: WASM incompatible ({issue_desc}), using Docker',
                         fallback_available=True,
-                        warnings=compat_result['issues'],
+                        warnings=issues,
                     )
             else:
                 return RoutingDecision(

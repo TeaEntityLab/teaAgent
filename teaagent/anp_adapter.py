@@ -376,7 +376,10 @@ class ANPGovernedService:
                     arguments=arguments,
                     call_id=call_id,
                 )
-            observation = run_context['observations'][0]
+            observations = run_context.get('observations', [])
+            if not observations:
+                return FinalAnswer(content='', metadata={'error': 'No observations'})
+            observation = observations[0]
             if 'error' in observation:
                 return FinalAnswer(
                     content='',
