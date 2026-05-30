@@ -117,7 +117,7 @@ class OAuthKeyRingCLIRotationWindowTests(unittest.TestCase):
                 json.dumps(
                     {
                         'active_kid': 'v1',
-                        'keys': {'v1': 'signing-secret-key-12345'},
+                        'keys': {'v1': 'signing-secret-key-at-least-32-chars'},
                     }
                 ),
                 encoding='utf-8',
@@ -132,7 +132,7 @@ class OAuthKeyRingCLIRotationWindowTests(unittest.TestCase):
                     '--oauth-issuer',
                     'https://issuer.test',
                     '--oauth-signing-key',
-                    'signing-secret-key-12345',
+                    'signing-secret-key-at-least-32-chars',
                     '--oauth-key-ring-file',
                     str(key_ring_path),
                     '--oauth-rotation-window',
@@ -153,7 +153,7 @@ class OAuthKeyRingCLIRotationWindowTests(unittest.TestCase):
                 json.dumps(
                     {
                         'active_kid': 'v1',
-                        'keys': {'v1': 'signing-secret-key-12345'},
+                        'keys': {'v1': 'signing-secret-key-at-least-32-chars'},
                     }
                 ),
                 encoding='utf-8',
@@ -168,7 +168,7 @@ class OAuthKeyRingCLIRotationWindowTests(unittest.TestCase):
                     '--oauth-issuer',
                     'https://issuer.test',
                     '--oauth-signing-key',
-                    'signing-secret-key-12345',
+                    'signing-secret-key-at-least-32-chars',
                     '--oauth-key-ring-file',
                     str(key_ring_path),
                 ]
