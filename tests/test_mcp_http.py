@@ -397,7 +397,7 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
         from teaagent.oauth21 import OAuth21AuthorizationServer
 
         oauth_server = OAuth21AuthorizationServer(
-            signing_key='super-secret-key-16chars',
+            signing_key='super-secret-key-at-least-32-chars',
             issuer='http://127.0.0.1:0',
             **oauth_kwargs,
         )

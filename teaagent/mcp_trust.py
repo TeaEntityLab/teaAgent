@@ -73,8 +73,28 @@ def trust_policy_path(root: str | Path) -> Path:
 
 
 def _get_trust_policy_fernet() -> Fernet:
+    """Get Fernet instance for MCP trust policy encryption with validation."""
+    if 'TEAAGENT_MCP_TRUST_KEY' not in os.environ:
+        raise ValueError(
+            'TEAAGENT_MCP_TRUST_KEY environment variable is required for MCP trust policy encryption. '
+            'Generate a valid key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
+        )
+    
     key = os.environ['TEAAGENT_MCP_TRUST_KEY']
-    return Fernet(key.encode('utf-8'))
+    
+    # Validate key format - Fernet keys must be 32 bytes, base64-encoded
+    try:
+        key_bytes = key.encode('utf-8')
+        # Validate by attempting to create Fernet instance
+        fernet = Fernet(key_bytes)
+    except Exception as e:
+        raise ValueError(
+            f'Invalid TEAAGENT_MCP_TRUST_KEY format: {e}. '
+            'The key must be a valid Fernet key (32 bytes, base64-encoded). '
+            'Generate a valid key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
+        ) from e
+    
+    return fernet
 
 
 def _serialize_policy(policy: MCPTrustPolicy) -> str:

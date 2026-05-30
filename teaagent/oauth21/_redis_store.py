@@ -4,6 +4,7 @@ import hmac
 import json
 import time
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 from teaagent.oauth21._store import (
     _CLIENT_SECRET_KDF,
@@ -86,11 +87,32 @@ class RedisOAuthStore:
         raw = self._redis.get(self._k('client', client_id))
         if raw is None:
             return None
-        data = json.loads(raw)
+        
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Invalid JSON in client data for '{client_id}': {e}") from e
+        
+        redirect_uris_data = data.get('redirect_uris')
+        if not isinstance(redirect_uris_data, list):
+            raise ValueError(f"redirect_uris must be a list for client '{client_id}', got {type(redirect_uris_data).__name__}")
+        
+        redirect_uris = set()
+        for uri in redirect_uris_data:
+            uri_str = str(uri)
+            # Basic URI validation - ensure it's a valid URL format
+            try:
+                parsed = urlparse(uri_str)
+                if not parsed.scheme or not parsed.netloc:
+                    raise ValueError(f"Invalid URI format: '{uri_str}'")
+            except Exception as e:
+                raise ValueError(f"Invalid URI format '{uri_str}': {e}") from e
+            redirect_uris.add(uri_str)
+        
         return OAuth21Client(
             client_id=data['client_id'],
             client_secret='',
-            redirect_uris=frozenset(data['redirect_uris']),
+            redirect_uris=frozenset(redirect_uris),
             scope=data['scope'],
         )
 

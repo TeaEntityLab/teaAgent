@@ -11,12 +11,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Protocol
+from urllib.parse import urlparse
 
 from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode, _RefreshToken
 
 _SQLITE_SCHEMA_VERSION = 3
 _CLIENT_SECRET_KDF = 'pbkdf2_sha256'
-_CLIENT_SECRET_ITERATIONS = 210_000
+_CLIENT_SECRET_ITERATIONS = 600_000
 _CLIENT_SECRET_SALT_BYTES = 16
 
 
@@ -179,11 +180,31 @@ class SQLiteOAuthStore:
             ).fetchone()
         if row is None:
             return None
-        redirect_uris = frozenset(str(uri) for uri in json.loads(row[1]))
+        
+        try:
+            parsed_uris = json.loads(row[1])
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Invalid JSON in redirect_uris for client '{client_id}': {e}") from e
+        
+        if not isinstance(parsed_uris, list):
+            raise ValueError(f"redirect_uris must be a list for client '{client_id}', got {type(parsed_uris).__name__}")
+        
+        redirect_uris = set()
+        for uri in parsed_uris:
+            uri_str = str(uri)
+            # Basic URI validation - ensure it's a valid URL format
+            try:
+                parsed = urlparse(uri_str)
+                if not parsed.scheme or not parsed.netloc:
+                    raise ValueError(f"Invalid URI format: '{uri_str}'")
+            except Exception as e:
+                raise ValueError(f"Invalid URI format '{uri_str}': {e}") from e
+            redirect_uris.add(uri_str)
+        
         return OAuth21Client(
             client_id=str(row[0]),
             client_secret='',
-            redirect_uris=redirect_uris,
+            redirect_uris=frozenset(redirect_uris),
             scope=str(row[2]),
         )
 
@@ -239,15 +260,17 @@ class SQLiteOAuthStore:
             if row is None:
                 return None
             conn.execute('DELETE FROM oauth_codes WHERE code = ?', (code,))
-        return _AuthorizationCode(
-            code=str(row[0]),
-            client_id=str(row[1]),
-            redirect_uri=str(row[2]),
-            code_challenge=str(row[3]),
-            code_challenge_method=str(row[4]),
-            expires_at=float(row[5]),
-            scope=str(row[6]),
-        )
+            # Construct the return value before transaction closes
+            result = _AuthorizationCode(
+                code=str(row[0]),
+                client_id=str(row[1]),
+                redirect_uri=str(row[2]),
+                code_challenge=str(row[3]),
+                code_challenge_method=str(row[4]),
+                expires_at=float(row[5]),
+                scope=str(row[6]),
+            )
+        return result
 
     def save_nonce(self, nonce: str, created_at: float) -> None:
         with self._connect() as conn:
@@ -279,7 +302,9 @@ class SQLiteOAuthStore:
             if row is None:
                 return None
             conn.execute('DELETE FROM oauth_nonces WHERE nonce = ?', (nonce,))
-        return float(row[0])
+            # Capture the return value before transaction closes
+            result = float(row[0])
+        return result
 
     def delete_nonce(self, nonce: str) -> None:
         with self._connect() as conn:
@@ -339,14 +364,16 @@ class SQLiteOAuthStore:
                 'DELETE FROM oauth_refresh_tokens WHERE token = ?',
                 (token,),
             )
-        return _RefreshToken(
-            token=str(row[0]),
-            client_id=str(row[1]),
-            scope=str(row[2]),
-            expires_at=float(row[3]),
-            family_id=str(row[4]),
-            cnf_jkt=str(row[5]) if row[5] is not None else None,
-        )
+            # Construct the return value before transaction closes
+            result = _RefreshToken(
+                token=str(row[0]),
+                client_id=str(row[1]),
+                scope=str(row[2]),
+                expires_at=float(row[3]),
+                family_id=str(row[4]),
+                cnf_jkt=str(row[5]) if row[5] is not None else None,
+            )
+        return result
 
     def record_refresh_reuse(
         self, token: str, family_id: str, *, expires_at: float

@@ -425,7 +425,7 @@ class ResourceServerTests(unittest.TestCase):
 
     def test_validate_token_with_wrong_signing_key(self) -> None:
         other_rs = OAuth21ResourceServer(
-            signing_key='different-secret-key-16bytes',
+            signing_key='different-secret-key-at-least-32-bytes',
             issuer='https://mcp.test',
         )
         access_token = self._issue_bearer_token()

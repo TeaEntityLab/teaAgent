@@ -4,6 +4,7 @@ import json
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, Optional
+from urllib.parse import urlparse
 
 from teaagent.oauth21._store import (
     _CLIENT_SECRET_KDF,
@@ -153,11 +154,31 @@ class PostgreSQLOAuthStore:
             row = cur.fetchone()
         if row is None:
             return None
-        redirect_uris = frozenset(str(u) for u in json.loads(row[1]))
+        
+        try:
+            parsed_uris = json.loads(row[1])
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Invalid JSON in redirect_uris for client '{client_id}': {e}") from e
+        
+        if not isinstance(parsed_uris, list):
+            raise ValueError(f"redirect_uris must be a list for client '{client_id}', got {type(parsed_uris).__name__}")
+        
+        redirect_uris = set()
+        for uri in parsed_uris:
+            uri_str = str(uri)
+            # Basic URI validation - ensure it's a valid URL format
+            try:
+                parsed = urlparse(uri_str)
+                if not parsed.scheme or not parsed.netloc:
+                    raise ValueError(f"Invalid URI format: '{uri_str}'")
+            except Exception as e:
+                raise ValueError(f"Invalid URI format '{uri_str}': {e}") from e
+            redirect_uris.add(uri_str)
+        
         return OAuth21Client(
             client_id=str(row[0]),
             client_secret='',
-            redirect_uris=redirect_uris,
+            redirect_uris=frozenset(redirect_uris),
             scope=str(row[2]),
         )
 

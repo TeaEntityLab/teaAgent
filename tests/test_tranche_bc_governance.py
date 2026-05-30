@@ -10,6 +10,7 @@ from cryptography.fernet import Fernet
 
 from teaagent.hooks import HookError, HookRegistry, mcp_tool_filter_hook
 from teaagent.mcp_trust import (
+    _get_trust_policy_fernet,
     load_mcp_trust_policy,
     save_mcp_trust_policy,
     update_global_tools,
@@ -85,6 +86,53 @@ def test_mcp_trust_policy_persist_and_hook_blocks(tmp_path) -> None:
         )
         with pytest.raises(HookError):
             registry.run_pre_hooks('blocked_tool', {})
+    finally:
+        # Clean up test environment variable
+        if 'TEAAGENT_MCP_TRUST_KEY' in os.environ:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+
+def test_mcp_trust_policy_missing_env_var_raises_error() -> None:
+    """Test that missing TEAAGENT_MCP_TRUST_KEY environment variable raises informative error."""
+    # Ensure environment variable is not set
+    if 'TEAAGENT_MCP_TRUST_KEY' in os.environ:
+        del os.environ['TEAAGENT_MCP_TRUST_KEY']
+    
+    with pytest.raises(ValueError) as exc_info:
+        _get_trust_policy_fernet()
+    
+    assert 'TEAAGENT_MCP_TRUST_KEY environment variable is required' in str(exc_info.value)
+    assert 'Fernet.generate_key()' in str(exc_info.value)
+
+
+def test_mcp_trust_policy_invalid_key_format_raises_error() -> None:
+    """Test that invalid Fernet key format raises informative error."""
+    # Set an invalid key (not a valid Fernet key)
+    os.environ['TEAAGENT_MCP_TRUST_KEY'] = 'invalid_key_format'
+    
+    try:
+        with pytest.raises(ValueError) as exc_info:
+            _get_trust_policy_fernet()
+        
+        assert 'Invalid TEAAGENT_MCP_TRUST_KEY format' in str(exc_info.value)
+        assert 'Fernet.generate_key()' in str(exc_info.value)
+    finally:
+        # Clean up test environment variable
+        if 'TEAAGENT_MCP_TRUST_KEY' in os.environ:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+
+def test_mcp_trust_policy_save_with_invalid_key_raises_error(tmp_path) -> None:
+    """Test that save_mcp_trust_policy raises error with invalid key."""
+    # Set an invalid key
+    os.environ['TEAAGENT_MCP_TRUST_KEY'] = 'invalid_key_format'
+    
+    try:
+        policy = load_mcp_trust_policy(tmp_path)
+        with pytest.raises(ValueError) as exc_info:
+            save_mcp_trust_policy(tmp_path, policy)
+        
+        assert 'Invalid TEAAGENT_MCP_TRUST_KEY format' in str(exc_info.value)
     finally:
         # Clean up test environment variable
         if 'TEAAGENT_MCP_TRUST_KEY' in os.environ:

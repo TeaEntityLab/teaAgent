@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import shutil
 import time
 from datetime import datetime, timezone
@@ -305,6 +306,31 @@ class ApprovalPersistence:
                         }
                     )
                     verified_count += 1
+                # Check directory ownership
+                stat_info = teaagent_dir.stat()
+                if stat_info.st_uid != os.getuid():
+                    checks.append(
+                        {
+                            'name': 'teaagent_dir_ownership',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'.teaagent/ is owned by uid {stat_info.st_uid}; '
+                                f'expected current user uid {os.getuid()}. '
+                                f'This is a security risk. Run: sudo chown {os.getuid()} {teaagent_dir}'
+                            ),
+                        }
+                    )
+                else:
+                    checks.append(
+                        {
+                            'name': 'teaagent_dir_ownership',
+                            'ok': True,
+                            'severity': 'info',
+                            'message': f'.teaagent/ is owned by current user (uid {os.getuid()})',
+                        }
+                    )
+                    verified_count += 1
             except OSError as exc:
                 checks.append(
                     {
@@ -362,6 +388,31 @@ class ApprovalPersistence:
                             'ok': True,
                             'severity': 'info',
                             'message': f'.teaagent/secret has correct mode {oct(mode)}',
+                        }
+                    )
+                    verified_count += 1
+                # Check secret file ownership
+                stat_info = secret_path.stat()
+                if stat_info.st_uid != os.getuid():
+                    checks.append(
+                        {
+                            'name': 'secret_file_ownership',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'.teaagent/secret is owned by uid {stat_info.st_uid}; '
+                                f'expected current user uid {os.getuid()}. '
+                                f'This is a security risk. Run: sudo chown {os.getuid()} {secret_path}'
+                            ),
+                        }
+                    )
+                else:
+                    checks.append(
+                        {
+                            'name': 'secret_file_ownership',
+                            'ok': True,
+                            'severity': 'info',
+                            'message': f'.teaagent/secret is owned by current user (uid {os.getuid()})',
                         }
                     )
                     verified_count += 1
@@ -474,6 +525,31 @@ class ApprovalPersistence:
                             'ok': True,
                             'severity': 'info',
                             'message': f'approvals.json has correct mode {oct(mode)}',
+                        }
+                    )
+                    verified_count += 1
+                # Check approvals.json ownership
+                stat_info = self.path.stat()
+                if stat_info.st_uid != os.getuid():
+                    checks.append(
+                        {
+                            'name': 'approvals_file_ownership',
+                            'ok': False,
+                            'severity': 'error',
+                            'message': (
+                                f'approvals.json is owned by uid {stat_info.st_uid}; '
+                                f'expected current user uid {os.getuid()}. '
+                                f'This is a security risk. Run: sudo chown {os.getuid()} {self.path}'
+                            ),
+                        }
+                    )
+                else:
+                    checks.append(
+                        {
+                            'name': 'approvals_file_ownership',
+                            'ok': True,
+                            'severity': 'info',
+                            'message': f'approvals.json is owned by current user (uid {os.getuid()})',
                         }
                     )
                     verified_count += 1

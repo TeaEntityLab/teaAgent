@@ -50,8 +50,8 @@ class OAuth21AuthorizationServer:
         store: Optional[OAuthStore] = None,
         key_ring: Optional[OAuthKeyRing] = None,
     ) -> None:
-        if not signing_key or len(signing_key) < 16:
-            raise ValueError('signing_key must be at least 16 characters')
+        if not signing_key or len(signing_key) < 32:
+            raise ValueError('signing_key must be at least 32 characters')
         self._key = signing_key.encode('utf-8')
         self._key_ring = key_ring or OAuthKeyRing.single(self._key)
         self._issuer = issuer

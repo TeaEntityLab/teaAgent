@@ -236,6 +236,75 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
             )
             self.assertIsNotNone(rotated.refresh_token)
 
+    def test_invalid_json_in_redirect_uris_raises_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store_path = Path(tmp) / 'oauth.sqlite3'
+            store = SQLiteOAuthStore(store_path)
+            
+            # Manually insert invalid JSON into the database
+            with sqlite3.connect(store_path) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO oauth_clients
+                        (client_id, client_secret, client_secret_hash,
+                         client_secret_salt, client_secret_kdf,
+                         redirect_uris_json, scope)
+                    VALUES (?, '', ?, ?, ?, ?, ?)
+                    """,
+                    ('client-1', b'hash', b'salt', 'pbkdf2_sha256', 'invalid-json{', 'mcp'),
+                )
+            
+            # Should raise ValueError when trying to get the client
+            with self.assertRaises(ValueError) as cm:
+                store.get_client('client-1')
+            self.assertIn('Invalid JSON', str(cm.exception))
+
+    def test_non_list_redirect_uris_raises_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store_path = Path(tmp) / 'oauth.sqlite3'
+            store = SQLiteOAuthStore(store_path)
+            
+            # Insert a string instead of a list
+            with sqlite3.connect(store_path) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO oauth_clients
+                        (client_id, client_secret, client_secret_hash,
+                         client_secret_salt, client_secret_kdf,
+                         redirect_uris_json, scope)
+                    VALUES (?, '', ?, ?, ?, ?, ?)
+                    """,
+                    ('client-1', b'hash', b'salt', 'pbkdf2_sha256', '"https://client/cb"', 'mcp'),
+                )
+            
+            # Should raise ValueError when trying to get the client
+            with self.assertRaises(ValueError) as cm:
+                store.get_client('client-1')
+            self.assertIn('must be a list', str(cm.exception))
+
+    def test_invalid_uri_format_raises_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store_path = Path(tmp) / 'oauth.sqlite3'
+            store = SQLiteOAuthStore(store_path)
+            
+            # Insert an invalid URI (missing scheme)
+            with sqlite3.connect(store_path) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO oauth_clients
+                        (client_id, client_secret, client_secret_hash,
+                         client_secret_salt, client_secret_kdf,
+                         redirect_uris_json, scope)
+                    VALUES (?, '', ?, ?, ?, ?, ?)
+                    """,
+                    ('client-1', b'hash', b'salt', 'pbkdf2_sha256', '["not-a-valid-uri"]', 'mcp'),
+                )
+            
+            # Should raise ValueError when trying to get the client
+            with self.assertRaises(ValueError) as cm:
+                store.get_client('client-1')
+            self.assertIn('Invalid URI format', str(cm.exception))
+
 
 if __name__ == '__main__':
     unittest.main()
