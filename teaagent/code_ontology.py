@@ -55,7 +55,16 @@ class CodeEdge:
 class CodeOntologyGraph:
     """Manages code ontology graph with GraphQLite integration."""
 
-    def __init__(self, root: str | Path, graph_store: Optional[Any] = None):
+    def __init__(
+        self, root: str | Path, graph_store: Optional[Any] = None
+    ) -> None:
+        """Initialize code ontology graph.
+        
+        Args:
+            root: Root directory for code analysis
+            graph_store: Optional GraphQLite graph store instance for persistence.
+                        Must have .graph.upsert_node(), .graph.upsert_edge(), and .query() methods.
+        """
         self.root = Path(root).resolve()
         self.graph_store = graph_store
         self.builder = CodeOntologyBuilder(root)
@@ -168,7 +177,12 @@ class CodeOntologyGraph:
 class CodeOntologyBuilder:
     """Builds code ontology graph from source files."""
 
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path) -> None:
+        """Initialize code ontology builder.
+        
+        Args:
+            root: Root directory for code analysis
+        """
         self.root = Path(root).resolve()
         self.nodes: list[CodeNode] = []
         self.edges: list[CodeEdge] = []
@@ -242,7 +256,13 @@ class CodeOntologyBuilder:
 class CodeOntologyVisitor(ast.NodeVisitor):
     """AST visitor for extracting code structure."""
 
-    def __init__(self, file_path: str, module_id: str):
+    def __init__(self, file_path: str, module_id: str) -> None:
+        """Initialize AST visitor for code structure extraction.
+        
+        Args:
+            file_path: Path to the source file being analyzed
+            module_id: Unique identifier for the module
+        """
         self.file_path = file_path
         self.module_id = module_id
         self.nodes: list[CodeNode] = []
