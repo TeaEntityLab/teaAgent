@@ -772,8 +772,8 @@ class CLITests(unittest.TestCase):
                     {
                         'active_kid': 'v2',
                         'keys': {
-                            'v1': 'legacy-signing-secret-0001',
-                            'v2': 'active-signing-secret-0002',
+                            'v1': 'legacy-signing-secret-at-least-32-chars',
+                            'v2': 'active-signing-secret-at-least-32-chars',
                         },
                     }
                 ),
@@ -789,7 +789,7 @@ class CLITests(unittest.TestCase):
                     '--oauth-issuer',
                     'https://issuer.test',
                     '--oauth-signing-key',
-                    'fallback-signing-key-1234',
+                    'fallback-signing-key-at-least-32-chars',
                     '--oauth-key-ring-file',
                     str(key_ring_path),
                 ]
