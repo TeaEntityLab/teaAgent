@@ -39,15 +39,42 @@ from teaagent.workspace_tools._shell import (
 )
 
 
-def build_workspace_tool_registry(root: str | Path = '.') -> ToolRegistry:
+def build_workspace_tool_registry(
+    root: str | Path = '.',
+    config_provider: Any = None,
+) -> ToolRegistry:
+    """Build tool registry with dependency injection support.
+    
+    Args:
+        root: Workspace root directory
+        config_provider: Optional configuration provider for dependency injection
+        
+    Returns:
+        Tool registry with registered tools
+    """
+    from teaagent.workspace_tools.factory import ToolFactory
+    from teaagent.workspace_tools.config_provider import StaticConfigProvider
+    
+    config = WorkspaceToolConfig.from_root(root)
+    
+    if config_provider is None:
+        config_provider = StaticConfigProvider(config)
+    
+    factory = ToolFactory(config)
     registry = ToolRegistry()
-    register_workspace_tools(registry, WorkspaceToolConfig.from_root(root))
+    register_workspace_tools(registry, factory)
     return registry
 
 
 def register_workspace_tools(
-    registry: ToolRegistry, config: WorkspaceToolConfig
+    registry: ToolRegistry, factory: Any
 ) -> None:
+    """Register workspace tools using factory for dependency injection.
+    
+    Args:
+        registry: Tool registry to register tools in
+        factory: ToolFactory for creating tool handlers
+    """
     registry.register(
         name='workspace_read_file',
         description='Read a UTF-8 text file inside the workspace root.',
@@ -65,7 +92,7 @@ def register_workspace_tools(
             required=['path', 'content', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda args: read_file(config, args),
+        handler=factory.create_read_file_handler(),
     )
     registry.register(
         name='workspace_write_file',
@@ -88,7 +115,7 @@ def register_workspace_tools(
             required=['path', 'bytes_written'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=True),
-        handler=lambda args: write_file(config, args),
+        handler=factory.create_write_file_handler(),
     )
     registry.register(
         name='workspace_read_file_hashed',
@@ -107,7 +134,7 @@ def register_workspace_tools(
             required=['path', 'content', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda args: read_file_hashed(config, args),
+        handler=lambda args: read_file_hashed(factory._config, args),
     )
     registry.register(
         name='workspace_edit_at_hash',
@@ -127,7 +154,7 @@ def register_workspace_tools(
             required=['path', 'line', 'hash'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
-        handler=lambda args: edit_at_hash(config, args),
+        handler=factory.create_edit_at_hash_handler(),
     )
     registry.register(
         name='workspace_apply_patch',
@@ -141,7 +168,7 @@ def register_workspace_tools(
             required=['path', 'replacements'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
-        handler=lambda args: apply_patch(config, args),
+        handler=lambda args: apply_patch(factory._config, args),
     )
     registry.register(
         name='workspace_list_files',
@@ -159,7 +186,7 @@ def register_workspace_tools(
             required=['files', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda args: list_files(config, args),
+        handler=lambda args: list_files(factory._config, args),
     )
     registry.register(
         name='workspace_search_text',
@@ -182,7 +209,7 @@ def register_workspace_tools(
             required=['matches', 'truncated'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda args: search_text(config, args),
+        handler=lambda args: search_text(factory._config, args),
     )
     registry.register(
         name='workspace_hybrid_index',
@@ -215,7 +242,7 @@ def register_workspace_tools(
             ],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
-        handler=lambda args: hybrid_index(config, args),
+        handler=lambda args: hybrid_index(factory._config, args),
     )
     registry.register(
         name='workspace_hybrid_search',
@@ -239,7 +266,7 @@ def register_workspace_tools(
             required=['backend', 'collection', 'query', 'hits'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda args: hybrid_search(config, args),
+        handler=lambda args: hybrid_search(factory._config, args),
     )
     registry.register(
         name='workspace_knowledge_index',
@@ -260,7 +287,7 @@ def register_workspace_tools(
             required=['backend', 'result'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
-        handler=lambda args: knowledge_index(config, args),
+        handler=lambda args: knowledge_index(factory._config, args),
     )
     registry.register(
         name='workspace_knowledge_search',
@@ -281,7 +308,7 @@ def register_workspace_tools(
             required=['backend', 'result'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda args: knowledge_search(config, args),
+        handler=lambda args: knowledge_search(factory._config, args),
     )
     registry.register(
         name='workspace_code_parse',
@@ -303,7 +330,7 @@ def register_workspace_tools(
             required=['backend', 'action', 'result'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda args: code_parse(config, args),
+        handler=lambda args: code_parse(factory._config, args),
     )
     registry.register(
         name='workspace_git_status',
@@ -328,7 +355,7 @@ def register_workspace_tools(
             required=['stdout', 'stderr', 'exit_code'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=False),
-        handler=lambda args: run_shell_inspect(config, args),
+        handler=lambda args: run_shell_inspect(factory._config, args),
     )
     registry.register(
         name='workspace_run_shell_mutate',
@@ -342,7 +369,7 @@ def register_workspace_tools(
             required=['stdout', 'stderr', 'exit_code'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
-        handler=lambda args: run_shell(config, args),
+        handler=factory.create_run_shell_handler(),
     )
     registry.register(
         name='workspace_run_shell',
@@ -356,7 +383,7 @@ def register_workspace_tools(
             required=['stdout', 'stderr', 'exit_code'],
         ),
         annotations=ToolAnnotations(destructive=True, idempotent=False),
-        handler=lambda args: run_shell(config, args),
+        handler=factory.create_run_shell_handler(),
     )
 
     _register_browser_tools_if_available(registry)
