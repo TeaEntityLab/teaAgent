@@ -329,14 +329,70 @@ def build_workspace_tool_registry(
 
 ## Success Criteria
 
-- ✅ No lambda closures capturing configuration
-- ✅ ToolFactory handles all tool creation
-- ✅ Dependency injection supported
-- ✅ Dynamic configuration updates supported
-- ✅ All tests passing
-- ✅ No breaking changes to public API
-- ✅ Documentation updated
-- ✅ Migration guide provided
+- ✅ No lambda closures capturing configuration in tool registration
+- ✅ ToolFactory handles all tool creation with dependency injection
+- ✅ ToolConfigProvider interface implemented and used
+- ✅ Dynamic configuration updates supported via `update_config()` method
+- ✅ All existing tests passing
+- ✅ New unit tests for ToolFactory, ToolConfigProvider, and ToolBuilder
+- ✅ No breaking changes to public API (backward compatible)
+- ✅ Documentation updated with new patterns
+- ✅ Migration guide provided with before/after examples
+- ✅ Performance impact < 5% overhead compared to current implementation
+
+## Performance Considerations
+
+- **ToolFactory Overhead**: Minimal overhead from factory method calls (< 1%)
+- **Config Updates**: `update_config()` is O(1) operation
+- **Memory Impact**: Slight increase from additional objects (< 100KB)
+- **Test Performance**: Improved test performance due to easier mocking
+
+## Migration Examples
+
+### Before (Current Pattern)
+```python
+# workspace_tools/_files.py
+def build_workspace_tool_registry(root: str | Path) -> ToolRegistry:
+    config = WorkspaceToolConfig.from_root(root)
+    registry = ToolRegistry()
+    
+    registry.register(
+        'workspace_read_file',
+        lambda args: read_file(config, args),  # Lambda captures config
+        # metadata
+    )
+    
+    return registry
+```
+
+### After (New Pattern)
+```python
+# workspace_tools/_files.py
+from teaagent.workspace_tools.factory import ToolFactory
+
+def build_workspace_tool_registry(
+    root: str | Path,
+    config_provider: ToolConfigProvider | None = None,
+) -> ToolRegistry:
+    config = WorkspaceToolConfig.from_root(root)
+    factory = ToolFactory(config)
+    registry = ToolRegistry()
+    
+    registry.register(
+        'workspace_read_file',
+        factory.create_read_file_handler(),  # Factory creates handler
+        # metadata
+    )
+    
+    return registry
+```
+
+### Dynamic Configuration Update
+```python
+# Update configuration at runtime
+factory.update_config(new_config)
+# All subsequent tool calls use new configuration
+```
 
 ## Alternatives Considered
 

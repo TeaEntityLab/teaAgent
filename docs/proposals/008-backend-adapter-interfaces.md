@@ -464,14 +464,71 @@ class BackendAdapterRegistry:
 
 ## Success Criteria
 
-- ✅ Consistent interfaces across all backend adapters
-- ✅ Standard error handling implemented
-- ✅ Protocol compliance validation
-- ✅ Centralized registry with lifecycle management
-- ✅ All tests passing
-- ✅ No breaking changes to public API
-- ✅ Documentation updated
-- ✅ Migration guide provided
+- ✅ Consistent interfaces across all backend adapters (unified BackendAdapter base class)
+- ✅ Standard error handling implemented with BackendError hierarchy
+- ✅ Protocol compliance validation via BackendAdapterValidator
+- ✅ Centralized registry with lifecycle management (initialize/shutdown/health checks)
+- ✅ All existing tests passing
+- ✅ New unit tests for BackendAdapter, BackendAdapterFactory, and BackendAdapterRegistry
+- ✅ No breaking changes to public API (backward compatible)
+- ✅ Documentation updated with new patterns
+- ✅ Migration guide provided with before/after examples
+- ✅ Health check endpoint operational for monitoring
+- ✅ Performance impact < 5% overhead compared to current implementation
+
+## Performance Considerations
+
+- **Adapter Overhead**: Minimal overhead from base class methods (< 2%)
+- **Validation Overhead**: Validation only during registration, not runtime
+- **Health Check Overhead**: Health checks are async and non-blocking
+- **Memory Impact**: Slight increase from registry and validation (< 200KB)
+- **Initialization**: Lazy initialization to reduce startup time
+
+## Migration Examples
+
+### Before (Current Pattern)
+```python
+# external_backends/__init__.py
+_KNOWLEDGE_BACKENDS: dict[str, KnowledgeSearchBackend] = {}
+
+def register_knowledge_backend(name: str, backend: KnowledgeSearchBackend) -> None:
+    _KNOWLEDGE_BACKENDS[name] = backend
+
+def get_knowledge_backend(name: str) -> KnowledgeSearchBackend | None:
+    return _KNOWLEDGE_BACKENDS.get(name)
+```
+
+### After (New Pattern)
+```python
+# external_backends/__init__.py
+from teaagent.external_backends.registry import BackendAdapterRegistry
+
+_default_registry = BackendAdapterRegistry()
+
+def register_knowledge_backend(
+    name: str,
+    backend: KnowledgeSearchBackend,
+    validate: bool = True,
+) -> None:
+    _default_registry.register_knowledge_backend(name, backend, validate)
+
+def get_knowledge_backend(name: str) -> KnowledgeSearchBackend | None:
+    return _default_registry.get_knowledge_backend(name)
+
+def get_default_registry() -> BackendAdapterRegistry:
+    return _default_registry
+```
+
+### Health Check Usage
+```python
+# Check health of all backends
+registry = get_default_registry()
+health_status = registry.check_health_all()
+
+for backend_name, (healthy, message) in health_status.items():
+    if not healthy:
+        print(f'{backend_name} is unhealthy: {message}')
+```
 
 ## Alternatives Considered
 
