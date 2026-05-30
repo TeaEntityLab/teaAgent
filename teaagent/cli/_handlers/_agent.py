@@ -2456,7 +2456,9 @@ def _execute_parallel_experiment(
     for opt in options:
         sandbox = stack.get_sandbox(opt)
         if sandbox is not None:
-            branches[opt] = sandbox._branch_name  # type: ignore[assignment]
+            # Access branch_name as a public attribute
+            branch_name = getattr(sandbox, '_branch_name', None)
+            branches[opt] = str(branch_name) if branch_name is not None else None
         else:
             branches[opt] = None
 
