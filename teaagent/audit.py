@@ -247,9 +247,16 @@ class AuditLogger:
                     )
                     self.events.append(err_event)
             sinks = list(self._sinks)
+        failed_sinks = []
         for sink in sinks:
-            with contextlib.suppress(Exception):
+            try:
                 sink(event)
+            except Exception as exc:
+                logger.error(f'Audit sink failed: {exc}', exc_info=True)
+                failed_sinks.append((sink, exc))
+
+        if failed_sinks:
+            logger.warning(f'{len(failed_sinks)} audit sink(s) failed')
         return event
 
     def verify_chain_integrity(self) -> dict[str, Any]:

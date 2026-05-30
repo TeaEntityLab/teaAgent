@@ -101,6 +101,7 @@ class ContainerCodeModeBackend:
         sandbox: CodeModeSandbox,
     ) -> CodeModeResult:
         payload = json.dumps({'code': code, 'inputs': inputs})
+        process = None
         try:
             process = subprocess.Popen(
                 self._build_command(sandbox),
@@ -110,12 +111,22 @@ class ContainerCodeModeBackend:
             )
         except OSError as exc:
             raise UnsafeCodeError(f'Code Mode container runtime failed: {exc}') from exc
-        stdout, stderr = _communicate_with_output_limit(
-            process,
-            payload.encode('utf-8'),
-            timeout_seconds=sandbox.timeout_seconds,
-            max_output_bytes=sandbox.max_output_bytes,
-        )
+
+        try:
+            stdout, stderr = _communicate_with_output_limit(
+                process,
+                payload.encode('utf-8'),
+                timeout_seconds=sandbox.timeout_seconds,
+                max_output_bytes=sandbox.max_output_bytes,
+            )
+        finally:
+            # Ensure process is terminated even if communication fails
+            if process is not None and process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
         if process.returncode != 0:
             detail = (stderr or stdout).strip()
             raise UnsafeCodeError(f'Code Mode container failed: {detail}')

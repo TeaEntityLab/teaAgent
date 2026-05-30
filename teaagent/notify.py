@@ -115,10 +115,25 @@ def _deliver_webhook(url: str, payload: dict[str, Any], *, timeout: float) -> No
 
 def _run_shell(command: str, payload: dict[str, Any]) -> None:
     import os
+    import shlex
 
-    env = {**os.environ, 'TEAAGENT_WORKER_ID': str(payload.get('worker_id', ''))}
+    # Filter environment variables to prevent secret leakage
+    sensitive_patterns = ['TOKEN', 'KEY', 'SECRET', 'PASSWORD', 'CREDENTIAL', 'AUTH']
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not any(pattern in k.upper() for pattern in sensitive_patterns)
+    }
+    env['TEAAGENT_WORKER_ID'] = str(payload.get('worker_id', ''))
+
     with contextlib.suppress(Exception):
-        subprocess.run(command, shell=True, env=env, timeout=10)
+        # Use shlex.split() for safe command parsing and shell=False to prevent injection
+        try:
+            args = shlex.split(command)
+            subprocess.run(args, shell=False, env=env, timeout=10)
+        except ValueError:
+            # If shlex.split fails, the command is malformed - skip execution
+            pass
 
 
 def _deliver_slack(url: str, payload: dict[str, Any], *, timeout: float) -> None:

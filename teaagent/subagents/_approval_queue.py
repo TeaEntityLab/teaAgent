@@ -369,11 +369,11 @@ class CentralizedApprovalQueue:
         async with self._lock:
             with self._sync_lock:
                 self._requests[request_id] = request
-            # Create a future for this request
-            with contextlib.suppress(RuntimeError):
-                self._loop = asyncio.get_running_loop()
-            future: asyncio.Future[bool] = asyncio.Future()
-            self._pending_futures[request_id] = future
+                # Create a future for this request inside the sync_lock to prevent race conditions
+                with contextlib.suppress(RuntimeError):
+                    self._loop = asyncio.get_running_loop()
+                future: asyncio.Future[bool] = asyncio.Future()
+                self._pending_futures[request_id] = future
 
         logger.info(
             f'Submitted approval request {request_id} from subagent {subagent_name} '
@@ -415,9 +415,10 @@ class CentralizedApprovalQueue:
                 request.status = ApprovalRequestStatus.APPROVED
                 request.approved_at = datetime.now(timezone.utc).isoformat()
 
-            future = self._pending_futures.get(request_id)
-            if future and not future.done():
-                future.set_result(True)
+                # Access future inside sync_lock to prevent race conditions
+                future = self._pending_futures.get(request_id)
+                if future and not future.done():
+                    future.set_result(True)
 
         logger.info(f'Approved request {request_id} by {approved_by}')
         return True
@@ -443,9 +444,10 @@ class CentralizedApprovalQueue:
                 request.denied_at = datetime.now(timezone.utc).isoformat()
                 request.denial_reason = reason
 
-            future = self._pending_futures.get(request_id)
-            if future and not future.done():
-                future.set_result(False)
+                # Access future inside sync_lock to prevent race conditions
+                future = self._pending_futures.get(request_id)
+                if future and not future.done():
+                    future.set_result(False)
 
         logger.info(f'Denied request {request_id}: {reason}')
         return True

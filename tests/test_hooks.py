@@ -125,7 +125,7 @@ class TestBuiltInHooks(unittest.TestCase):
     def test_shell_command_hook_fails_on_bad_command(self) -> None:
         registry = HookRegistry()
         registry.register_post_hook(
-            shell_command_hook('exit 1', on_tools=frozenset({'my_tool'}))
+            shell_command_hook('false', on_tools=frozenset({'my_tool'}))
         )
         with self.assertRaises(HookError):
             registry.run_post_hooks('my_tool', {}, {})

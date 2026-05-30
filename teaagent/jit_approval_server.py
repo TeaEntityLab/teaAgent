@@ -60,11 +60,13 @@ class JITApprovalServer:
         host: str = '127.0.0.1',
         port: int = 8765,
         timeout_seconds: int = 180,
+        auth_token: Optional[str] = None,
     ) -> None:
         self._permission_manager = permission_manager
         self._host = host
         self._port = port
         self._timeout_seconds = timeout_seconds
+        self._auth_token = auth_token
         self._requests: dict[str, ApprovalRequestRecord] = {}
         self._server: Optional[asyncio.Server] = None
         self._clients: set[asyncio.Queue[dict[str, Any]]] = set()
@@ -113,8 +115,36 @@ class JITApprovalServer:
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         """Handle incoming SSE client connections."""
-        # TODO: Add auth handshake before processing events.
-        # Currently there is no authentication — any local process can connect.
+        # Authentication handshake
+        if self._auth_token:
+            try:
+                auth_line = await reader.readline()
+                if not auth_line:
+                    logger.warning('SSE client disconnected during auth handshake')
+                    writer.close()
+                    await writer.wait_closed()
+                    return
+
+                auth_line = auth_line.decode('utf-8').strip()
+                if not auth_line.startswith('Authorization: Bearer '):
+                    logger.warning('SSE client missing auth token')
+                    writer.close()
+                    await writer.wait_closed()
+                    return
+
+                client_token = auth_line.split(' ', 2)[2]
+                import secrets
+                if not secrets.compare_digest(client_token, self._auth_token):
+                    logger.warning('SSE client provided invalid auth token')
+                    writer.close()
+                    await writer.wait_closed()
+                    return
+            except Exception as exc:
+                logger.error(f'Error during auth handshake: {exc}')
+                writer.close()
+                await writer.wait_closed()
+                return
+
         # Simple SSE implementation
         # In production, use a proper SSE library like sse-starlette or aiohttp-sse
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -132,8 +162,12 @@ class JITApprovalServer:
                 await self._send_sse_event(writer, event['type'], event['data'])
         except asyncio.CancelledError:
             logger.info('SSE client disconnected')
+        except (ConnectionResetError, BrokenPipeError):
+            logger.info('SSE client connection lost')
         finally:
             self._clients.discard(queue)
+            writer.close()
+            await writer.wait_closed()
 
     async def _send_sse_event(
         self, writer: asyncio.StreamWriter, event_type: str, data: dict[str, Any]

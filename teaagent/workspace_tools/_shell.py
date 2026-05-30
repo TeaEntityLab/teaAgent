@@ -23,12 +23,17 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
         default=config.command_timeout_seconds,
         maximum=config.max_shell_timeout_seconds,
     )
-    # Create a safe environment with sanitized pager settings
+    # Create a safe environment with sanitized pager settings and filtered secrets
+    sensitive_patterns = ['TOKEN', 'KEY', 'SECRET', 'PASSWORD', 'CREDENTIAL', 'AUTH']
     env = {
-        **os.environ,
+        k: v
+        for k, v in os.environ.items()
+        if not any(pattern in k.upper() for pattern in sensitive_patterns)
+    }
+    env.update({
         'PAGER': 'cat',
         'GIT_PAGER': 'cat',
-    }
+    })
     result = subprocess.run(
         command,
         cwd=str(config.root),
@@ -48,12 +53,17 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
 def run_shell_argv(
     config: WorkspaceToolConfig, argv: list[str], *, timeout_seconds: int
 ) -> dict[str, Any]:
-    # Create a safe environment with sanitized pager settings
+    # Create a safe environment with sanitized pager settings and filtered secrets
+    sensitive_patterns = ['TOKEN', 'KEY', 'SECRET', 'PASSWORD', 'CREDENTIAL', 'AUTH']
     env = {
-        **os.environ,
+        k: v
+        for k, v in os.environ.items()
+        if not any(pattern in k.upper() for pattern in sensitive_patterns)
+    }
+    env.update({
         'PAGER': 'cat',
         'GIT_PAGER': 'cat',
-    }
+    })
     result = subprocess.run(
         argv,
         cwd=str(config.root),

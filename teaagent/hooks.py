@@ -334,9 +334,12 @@ def shell_command_hook(
         if target_tools and tool_name not in target_tools:
             return None
         try:
+            # Use shlex.split() for safe command parsing and shell=False to prevent injection
+            import shlex
+            args = shlex.split(command)
             subprocess.run(
-                command,
-                shell=True,
+                args,
+                shell=False,
                 capture_output=True,
                 text=True,
                 check=True,
