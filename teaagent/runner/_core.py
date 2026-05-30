@@ -6,7 +6,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
-from teaagent.auto_mode import AutoModeConfig, AutoModeGuard
+from teaagent.auto_mode import AutoModeConfig
 from teaagent.budget import RunBudget
 from teaagent.context import ContextCompactor
 from teaagent.errors import (
@@ -26,7 +26,7 @@ from teaagent.tools import ToolRegistry
 from ._approval_manager import ApprovalManager
 from ._auto_mode_manager import AutoModeManager
 from ._plan_validator import PlanValidator
-from ._types import ApprovalHandler, ApprovalRequest, DecisionFn, FinalAnswer, RunResult
+from ._types import ApprovalHandler, DecisionFn, FinalAnswer, RunResult
 
 
 class AgentRunner:
@@ -231,7 +231,9 @@ class AgentRunner:
                         annotations=annotations,
                         run_id=current_run_id,
                     )
-                    if self.approval_manager.can_request_approval(tool.annotations.destructive):
+                    if self.approval_manager.can_request_approval(
+                        tool.annotations.destructive
+                    ):
                         approved = self.approval_manager.handle_approval_request(
                             approval_request=approval_request,
                             audit=self.audit,

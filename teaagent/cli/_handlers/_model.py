@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import os
-from typing import Any
 
 from teaagent.cli._output import print_json
 from teaagent.llm import LLMMessage, LLMRequest, available_providers

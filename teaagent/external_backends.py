@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import subprocess
+from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,73 @@ from typing import Any, Optional, Protocol
 
 from teaagent.hybrid_search import get_hybrid_backend
 from teaagent.mcp_client import MCPHTTPClient
+
+
+@dataclass
+class BackendConfig:
+    """Configuration for backend adapters."""
+
+    root: Path
+    timeout: int = 30
+    max_retries: int = 3
+    additional_config: dict[str, Any] | None = None
+
+
+class BackendAdapter(ABC):
+    """Base class for backend adapters with consistent interface."""
+
+    def __init__(self, config: BackendConfig):
+        self._config = config
+        self._initialized = False
+
+    @abstractmethod
+    def initialize(self) -> None: ...
+
+    @abstractmethod
+    def shutdown(self) -> None: ...
+
+    @abstractmethod
+    def check_health(self) -> tuple[bool, str]: ...
+
+    def is_initialized(self) -> bool:
+        return self._initialized
+
+    def get_config(self) -> BackendConfig:
+        return self._config
+
+
+class BackendError(Exception):
+    """Base class for backend errors."""
+
+    def __init__(
+        self,
+        message: str,
+        backend_name: str,
+        details: dict[str, Any] | None = None,
+    ):
+        super().__init__(message)
+        self._backend_name = backend_name
+        self._details = details or {}
+
+    @property
+    def backend_name(self) -> str:
+        return self._backend_name
+
+    @property
+    def details(self) -> dict[str, Any]:
+        return self._details
+
+
+class BackendInitializationError(BackendError):
+    pass
+
+
+class BackendExecutionError(BackendError):
+    pass
+
+
+class BackendHealthCheckError(BackendError):
+    pass
 
 
 class KnowledgeSearchBackend(Protocol):
@@ -64,6 +132,153 @@ def get_code_parse_backend(name: str) -> CodeParseBackend:
     return backend
 
 
+class BackendAdapterValidator:
+    """Validator for backend adapter protocol compliance."""
+
+    @staticmethod
+    def validate_knowledge_backend(
+        backend: Any,
+    ) -> tuple[bool, list[str]]:
+        errors = []
+        for method in ('health', 'index', 'search', 'get'):
+            if not hasattr(backend, method):
+                errors.append(f'Missing required method: {method}')
+        return (len(errors) == 0, errors)
+
+    @staticmethod
+    def validate_code_parse_backend(
+        backend: Any,
+    ) -> tuple[bool, list[str]]:
+        errors = []
+        for method in ('health', 'overview', 'symbols', 'definition', 'references'):
+            if not hasattr(backend, method):
+                errors.append(f'Missing required method: {method}')
+        return (len(errors) == 0, errors)
+
+
+class BackendAdapterFactory:
+    """Factory for creating backend adapters."""
+
+    @staticmethod
+    def create_knowledge_backend(
+        backend_type: str,
+        config: BackendConfig,
+    ) -> KnowledgeSearchBackend:
+        if backend_type == 'local':
+            return LocalKnowledgeAdapter(config=config)
+        raise ValueError(f"Unknown knowledge backend type: '{backend_type}'")
+
+    @staticmethod
+    def create_code_parse_backend(
+        backend_type: str,
+        config: BackendConfig,
+    ) -> CodeParseBackend:
+        if backend_type == 'cx_cli':
+            return CxCliAdapter()
+        raise ValueError(f"Unknown code parse backend type: '{backend_type}'")
+
+
+class BackendAdapterRegistry:
+    """Registry for backend adapters with validation and lifecycle management."""
+
+    def __init__(self, validate: bool = True):
+        self._knowledge_backends: dict[str, KnowledgeSearchBackend] = {}
+        self._code_parse_backends: dict[str, CodeParseBackend] = {}
+        self._validate = validate
+        self._validator = BackendAdapterValidator()
+
+    def register_knowledge_backend(
+        self,
+        name: str,
+        backend: KnowledgeSearchBackend,
+    ) -> None:
+        if not name.strip():
+            raise ValueError('backend name must be non-empty')
+        if self._validate:
+            valid, errors = self._validator.validate_knowledge_backend(backend)
+            if not valid:
+                raise ValueError(f"Validation failed for '{name}': {', '.join(errors)}")
+        self._knowledge_backends[name] = backend
+
+    def register_code_parse_backend(
+        self,
+        name: str,
+        backend: CodeParseBackend,
+    ) -> None:
+        if not name.strip():
+            raise ValueError('backend name must be non-empty')
+        if self._validate:
+            valid, errors = self._validator.validate_code_parse_backend(backend)
+            if not valid:
+                raise ValueError(f"Validation failed for '{name}': {', '.join(errors)}")
+        self._code_parse_backends[name] = backend
+
+    def get_knowledge_backend(self, name: str) -> KnowledgeSearchBackend:
+        backend = self._knowledge_backends.get(name)
+        if backend is None:
+            raise ValueError(f"unknown knowledge backend '{name}'")
+        return backend
+
+    def get_code_parse_backend(self, name: str) -> CodeParseBackend:
+        backend = self._code_parse_backends.get(name)
+        if backend is None:
+            raise ValueError(f"unknown code parse backend '{name}'")
+        return backend
+
+    def initialize_all(self) -> None:
+        for backend in list(self._knowledge_backends.values()):
+            if hasattr(backend, 'initialize'):
+                backend.initialize()  # type: ignore[union-attr]
+        for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
+            if hasattr(backend, 'initialize'):
+                backend.initialize()  # type: ignore[union-attr]
+
+    def shutdown_all(self) -> None:
+        for backend in list(self._knowledge_backends.values()):
+            if hasattr(backend, 'shutdown'):
+                backend.shutdown()  # type: ignore[union-attr]
+        for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
+            if hasattr(backend, 'shutdown'):
+                backend.shutdown()  # type: ignore[union-attr]
+
+    def health_check_all(self) -> dict[str, dict[str, Any]]:
+        results: dict[str, dict[str, Any]] = {}
+        for name, backend in self._knowledge_backends.items():
+            if hasattr(backend, 'check_health'):
+                try:
+                    healthy, msg = backend.check_health()  # type: ignore[union-attr]
+                    results[f'knowledge/{name}'] = {'healthy': healthy, 'message': msg}
+                except Exception as exc:
+                    results[f'knowledge/{name}'] = {
+                        'healthy': False,
+                        'message': str(exc),
+                    }
+        for name, backend in self._code_parse_backends.items():  # type: ignore[assignment]
+            if hasattr(backend, 'check_health'):
+                try:
+                    healthy, msg = backend.check_health()  # type: ignore[union-attr]
+                    results[f'codeparse/{name}'] = {'healthy': healthy, 'message': msg}
+                except Exception as exc:
+                    results[f'codeparse/{name}'] = {
+                        'healthy': False,
+                        'message': str(exc),
+                    }
+        return results
+
+    def list_knowledge_backends(self) -> list[str]:
+        return list(self._knowledge_backends.keys())
+
+    def list_code_parse_backends(self) -> list[str]:
+        return list(self._code_parse_backends.keys())
+
+
+_default_registry = BackendAdapterRegistry(validate=False)
+
+
+def get_default_registry() -> BackendAdapterRegistry:
+    return _default_registry
+
+
 @dataclass(frozen=True)
 class FallbackKnowledgeBackend:
     primary: str
@@ -103,9 +318,24 @@ class FallbackKnowledgeBackend:
             return result
 
 
-@dataclass(frozen=True)
-class LocalKnowledgeAdapter:
+@dataclass
+class LocalKnowledgeAdapter(BackendAdapter):
+    """Local knowledge backend adapter with BackendAdapter base class."""
+
+    config: BackendConfig
     hybrid_backend_name: str = 'local'
+
+    def __post_init__(self) -> None:
+        BackendAdapter.__init__(self, self.config)
+
+    def initialize(self) -> None:
+        self._initialized = True
+
+    def shutdown(self) -> None:
+        self._initialized = False
+
+    def check_health(self) -> tuple[bool, str]:
+        return (True, 'Local backend is healthy')
 
     def health(self, *, root: Path) -> dict[str, Any]:
         _ = root
@@ -129,10 +359,31 @@ class LocalKnowledgeAdapter:
         return {'backend': 'local', 'path': str(args['path']), 'content': content}
 
 
-@dataclass(frozen=True)
-class QmdMcpAdapter:
+@dataclass
+class QmdMcpAdapter(BackendAdapter):
+    """QMD MCP backend adapter with BackendAdapter base class."""
+
     endpoint: str
+    config: BackendConfig
     auth_token: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        BackendAdapter.__init__(self, self.config)
+
+    def initialize(self) -> None:
+        self._initialized = True
+
+    def shutdown(self) -> None:
+        self._initialized = False
+
+    def check_health(self) -> tuple[bool, str]:
+        try:
+            with self._client() as client:
+                client.initialize()
+                status = client.call_tool('status', {})
+            return (True, f'QMD MCP backend is healthy: {status}')
+        except Exception as exc:
+            return (False, f'QMD MCP backend health check failed: {exc}')
 
     def health(self, *, root: Path) -> dict[str, Any]:
         _ = root
@@ -339,5 +590,8 @@ class CodegraphMcpAdapter:
 
 
 # Default registrations
-register_knowledge_backend('local', LocalKnowledgeAdapter())
+_default_local = LocalKnowledgeAdapter(config=BackendConfig(root=Path()))
+register_knowledge_backend('local', _default_local)
 register_code_parse_backend('cx_cli', CxCliAdapter())
+_default_registry.register_knowledge_backend('local', _default_local)
+_default_registry.register_code_parse_backend('cx_cli', CxCliAdapter())

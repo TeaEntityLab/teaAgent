@@ -240,7 +240,7 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store_path = Path(tmp) / 'oauth.sqlite3'
             store = SQLiteOAuthStore(store_path)
-            
+
             # Manually insert invalid JSON into the database
             with sqlite3.connect(store_path) as conn:
                 conn.execute(
@@ -251,9 +251,16 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
                          redirect_uris_json, scope)
                     VALUES (?, '', ?, ?, ?, ?, ?)
                     """,
-                    ('client-1', b'hash', b'salt', 'pbkdf2_sha256', 'invalid-json{', 'mcp'),
+                    (
+                        'client-1',
+                        b'hash',
+                        b'salt',
+                        'pbkdf2_sha256',
+                        'invalid-json{',
+                        'mcp',
+                    ),
                 )
-            
+
             # Should raise ValueError when trying to get the client
             with self.assertRaises(ValueError) as cm:
                 store.get_client('client-1')
@@ -263,7 +270,7 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store_path = Path(tmp) / 'oauth.sqlite3'
             store = SQLiteOAuthStore(store_path)
-            
+
             # Insert a string instead of a list
             with sqlite3.connect(store_path) as conn:
                 conn.execute(
@@ -274,9 +281,16 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
                          redirect_uris_json, scope)
                     VALUES (?, '', ?, ?, ?, ?, ?)
                     """,
-                    ('client-1', b'hash', b'salt', 'pbkdf2_sha256', '"https://client/cb"', 'mcp'),
+                    (
+                        'client-1',
+                        b'hash',
+                        b'salt',
+                        'pbkdf2_sha256',
+                        '"https://client/cb"',
+                        'mcp',
+                    ),
                 )
-            
+
             # Should raise ValueError when trying to get the client
             with self.assertRaises(ValueError) as cm:
                 store.get_client('client-1')
@@ -286,7 +300,7 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store_path = Path(tmp) / 'oauth.sqlite3'
             store = SQLiteOAuthStore(store_path)
-            
+
             # Insert an invalid URI (missing scheme)
             with sqlite3.connect(store_path) as conn:
                 conn.execute(
@@ -297,9 +311,16 @@ class SQLiteOAuthStoreTests(unittest.TestCase):
                          redirect_uris_json, scope)
                     VALUES (?, '', ?, ?, ?, ?, ?)
                     """,
-                    ('client-1', b'hash', b'salt', 'pbkdf2_sha256', '["not-a-valid-uri"]', 'mcp'),
+                    (
+                        'client-1',
+                        b'hash',
+                        b'salt',
+                        'pbkdf2_sha256',
+                        '["not-a-valid-uri"]',
+                        'mcp',
+                    ),
                 )
-            
+
             # Should raise ValueError when trying to get the client
             with self.assertRaises(ValueError) as cm:
                 store.get_client('client-1')

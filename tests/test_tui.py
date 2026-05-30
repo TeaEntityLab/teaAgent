@@ -1141,12 +1141,10 @@ class TUITests(unittest.TestCase):
         with patch.object(tui, '_start_file_watcher'):
             with patch.object(tui, '_load_tui_state'):
                 with patch.object(tui, '_save_tui_state'):
-                    with patch(
-                        'teaagent.tui.run_chat_agent'
-                    ) as mock_run, patch(
-                        'teaagent.tui.RunStore'
-                    ) as mock_store, patch(
-                        'teaagent.tui.create_llm_adapter'
+                    with (
+                        patch('teaagent.tui.run_chat_agent') as mock_run,
+                        patch('teaagent.tui.RunStore') as mock_store,
+                        patch('teaagent.tui.create_llm_adapter'),
                     ):
                         mock_run.return_value = unittest.mock.MagicMock(
                             run_id='test-run',
@@ -1160,7 +1158,9 @@ class TUITests(unittest.TestCase):
                         mock_store.return_value.list_runs.return_value = []
                         mock_store.return_value.show_run.return_value = {}
                         mock_store.return_value.logger_for_result = lambda *a: None
-                        mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+                        mock_store.return_value.audit_logger = lambda: (
+                            unittest.mock.MagicMock()
+                        )
 
                         tui._run_agent_task('test task')
 
@@ -1172,8 +1172,10 @@ class TUITests(unittest.TestCase):
         """Verify watcher starts and stops cleanly."""
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        with patch.object(tui, '_start_file_watcher') as mock_start, \
-             patch.object(tui, '_stop_file_watcher') as mock_stop:
+        with (
+            patch.object(tui, '_start_file_watcher') as mock_start,
+            patch.object(tui, '_stop_file_watcher') as mock_stop,
+        ):
             # Pin should try to start watcher
             tui._handle_pin(['nonexistent.py'])
             # unpin should not call stop since pin failed
@@ -1193,7 +1195,6 @@ class TUITests(unittest.TestCase):
         )
         exit_code = tui.run()
         self.assertEqual(exit_code, 0)
-
 
     # ── chat_command() delegation ─────────────────────────────────────────────
 
@@ -1221,9 +1222,13 @@ class TUITests(unittest.TestCase):
             memory_limit=10,
         )
 
-        with patch('teaagent.tui.run_tui') as mock_run, \
-             patch('teaagent.cli._handlers._chat.parse_permission_mode',
-                   return_value=PermissionMode.ALLOW):
+        with (
+            patch('teaagent.tui.run_tui') as mock_run,
+            patch(
+                'teaagent.cli._handlers._chat.parse_permission_mode',
+                return_value=PermissionMode.ALLOW,
+            ),
+        ):
             chat_command(args)
 
         self.assertEqual(mock_run.call_args[1]['provider'], 'test-provider')
@@ -1254,8 +1259,7 @@ class TUITests(unittest.TestCase):
             permission_mode='prompt',
         )
 
-        with patch('teaagent.tui.run_tui',
-                   side_effect=KeyboardInterrupt):
+        with patch('teaagent.tui.run_tui', side_effect=KeyboardInterrupt):
             exit_code = chat_command(args)
         self.assertEqual(exit_code, 130)
 
@@ -1273,8 +1277,7 @@ class TUITests(unittest.TestCase):
             permission_mode='prompt',
         )
 
-        with patch('teaagent.tui.run_tui',
-                   side_effect=RuntimeError('test error')):
+        with patch('teaagent.tui.run_tui', side_effect=RuntimeError('test error')):
             exit_code = chat_command(args)
         self.assertEqual(exit_code, 1)
 
@@ -1293,9 +1296,13 @@ class TUITests(unittest.TestCase):
             permission_mode='prompt',
         )
 
-        with patch('teaagent.tui.run_tui') as mock_run, \
-             patch('teaagent.cli._handlers._chat.parse_permission_mode',
-                   return_value=PermissionMode.PROMPT):
+        with (
+            patch('teaagent.tui.run_tui') as mock_run,
+            patch(
+                'teaagent.cli._handlers._chat.parse_permission_mode',
+                return_value=PermissionMode.PROMPT,
+            ),
+        ):
             chat_command(args)
 
         self.assertEqual(mock_run.call_args[1].get('memory_limit'), 5)

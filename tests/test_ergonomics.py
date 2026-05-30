@@ -677,7 +677,8 @@ def test_agent_resume_auto_approve_creates_scoped_approval(
 
 def test_resume_policy_strict_exact_match_wiring(tmp_path: Path) -> None:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
-    from teaagent.policy import ApprovalPolicy, PermissionMode, ToolPermissionError
+    from teaagent.errors import ToolPermissionError
+    from teaagent.policy import ApprovalPolicy, PermissionMode
 
     store = ApprovalPresetStore(tmp_path)
     run_id = 'run-wiring-test-999'

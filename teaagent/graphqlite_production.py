@@ -110,7 +110,9 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
         store = SQLiteMigrationStore(self._prod_config.database)
         conn = sqlite3.connect(self._prod_config.database)
         try:
-            runner = MigrationRunner(store, list(_GRAPHQLITE_SCHEMA_MIGRATIONS), target_conn=conn)
+            runner = MigrationRunner(
+                store, list(_GRAPHQLITE_SCHEMA_MIGRATIONS), target_conn=conn
+            )
             runner.apply_pending()
         finally:
             conn.close()

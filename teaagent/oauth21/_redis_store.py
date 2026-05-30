@@ -87,16 +87,20 @@ class RedisOAuthStore:
         raw = self._redis.get(self._k('client', client_id))
         if raw is None:
             return None
-        
+
         try:
             data = json.loads(raw)
         except (json.JSONDecodeError, TypeError) as e:
-            raise ValueError(f"Invalid JSON in client data for '{client_id}': {e}") from e
-        
+            raise ValueError(
+                f"Invalid JSON in client data for '{client_id}': {e}"
+            ) from e
+
         redirect_uris_data = data.get('redirect_uris')
         if not isinstance(redirect_uris_data, list):
-            raise ValueError(f"redirect_uris must be a list for client '{client_id}', got {type(redirect_uris_data).__name__}")
-        
+            raise ValueError(
+                f"redirect_uris must be a list for client '{client_id}', got {type(redirect_uris_data).__name__}"
+            )
+
         redirect_uris = set()
         for uri in redirect_uris_data:
             uri_str = str(uri)
@@ -108,7 +112,7 @@ class RedisOAuthStore:
             except Exception as e:
                 raise ValueError(f"Invalid URI format '{uri_str}': {e}") from e
             redirect_uris.add(uri_str)
-        
+
         return OAuth21Client(
             client_id=data['client_id'],
             client_secret='',

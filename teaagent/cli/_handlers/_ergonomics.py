@@ -22,7 +22,7 @@ def _truncate_string(s: str, max_len: int = 40, suffix: str = '...') -> str:
     """Truncate a string to max_len, adding suffix if truncated."""
     if len(s) <= max_len:
         return s
-    return s[:max_len - len(suffix)] + suffix
+    return s[: max_len - len(suffix)] + suffix
 
 
 def _wrap_approval_store_errors(func: Callable[[], int]) -> int:
@@ -262,17 +262,17 @@ def approval_list_command(args: argparse.Namespace) -> int:
 
 def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None:
     """Parse approval arguments from --arguments-json or --arg key=value pairs.
-    
+
     Returns:
         Parsed arguments dict, or None if no arguments provided.
-    
+
     Raises:
         ValueError: If argument parsing fails (error message included).
     """
     import json
-    
+
     arguments: dict[str, Any] = {}
-    
+
     # Parse --arguments-json if provided (highest priority)
     if args.arguments_json:
         try:
@@ -285,7 +285,9 @@ def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None
         # Parse --arg key=value pairs
         for arg_pair in args.arg:
             if '=' not in arg_pair:
-                raise ValueError(f'Invalid --arg format: {arg_pair} (expected key=value)')
+                raise ValueError(
+                    f'Invalid --arg format: {arg_pair} (expected key=value)'
+                )
             key, value = arg_pair.split('=', 1)
             arguments[key] = value
 
@@ -294,14 +296,14 @@ def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None
             arguments['path'] = args.path
         if args.command and 'command' not in arguments:
             arguments['command'] = args.command
-    
+
     return arguments or None
 
 
 def approval_check_command(args: argparse.Namespace) -> int:
     def _check() -> int:
         store = ApprovalPresetStore(args.root, readonly=True)
-        
+
         try:
             arguments = _parse_approval_arguments(args)
         except ValueError as exc:
@@ -327,7 +329,7 @@ def approval_check_command(args: argparse.Namespace) -> int:
 def approval_explain_command(args: argparse.Namespace) -> int:
     def _explain() -> int:
         store = ApprovalPresetStore(args.root, readonly=True)
-        
+
         try:
             arguments = _parse_approval_arguments(args)
         except ValueError as exc:

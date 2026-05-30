@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import subprocess
 from pathlib import Path
-from typing import Any
 
 from teaagent.cli._output import print_json
 from teaagent.sandbox import (

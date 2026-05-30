@@ -7,7 +7,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 from teaagent.memory.failure_card import FailureCardStorage
 from teaagent.memory.pinned_file import PinnedFileStorage
@@ -229,18 +229,21 @@ def execute_shell_command(command: str, root: Path) -> None:
         'format',
         'del /f /q',
     ]
-    
+
     command_lower = command.lower()
     for pattern in destructive_patterns:
         if pattern in command_lower:
-            print(f'[TeaAgent] Error: Destructive command blocked for safety: {command}')
+            print(
+                f'[TeaAgent] Error: Destructive command blocked for safety: {command}'
+            )
             return
 
     try:
         # Parse command safely
         import shlex
+
         args = shlex.split(command)
-        
+
         # Execute with timeout
         result = subprocess.run(
             args,
@@ -249,13 +252,13 @@ def execute_shell_command(command: str, root: Path) -> None:
             text=True,
             timeout=30,
         )
-        
+
         # Display output
         if result.stdout:
             print(result.stdout)
         if result.stderr:
             print(result.stderr, file=sys.stderr)
-            
+
     except subprocess.TimeoutExpired:
         print('[TeaAgent] Error: Command timed out after 30 seconds')
     except FileNotFoundError:

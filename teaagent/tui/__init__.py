@@ -402,9 +402,17 @@ class TeaAgentTUI:
                 return
             self.output_fn(f'memory failures: {len(cards)} card(s)')
             for i, card in enumerate(cards, 1):
-                ts = datetime.fromtimestamp(card.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                loc = f'{card.file_path}:{card.line_number}' if card.line_number else card.file_path or '?'
-                self.output_fn(f'  [{i}] run #{card.run_id} {card.error_type} at {loc} ({ts})')
+                ts = datetime.fromtimestamp(card.timestamp).strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                )
+                loc = (
+                    f'{card.file_path}:{card.line_number}'
+                    if card.line_number
+                    else card.file_path or '?'
+                )
+                self.output_fn(
+                    f'  [{i}] run #{card.run_id} {card.error_type} at {loc} ({ts})'
+                )
                 self.output_fn(f'       task: {card.task_description}')
                 self.output_fn(f'       error: {card.error_message}')
         except Exception as exc:
@@ -413,6 +421,7 @@ class TeaAgentTUI:
     def _handle_memory_clear(self, args: list[str]) -> None:
         try:
             from teaagent.memory.failure_card import FailureCardStorage
+
             storage = FailureCardStorage(self.root)
             if args:
                 try:
@@ -438,6 +447,7 @@ class TeaAgentTUI:
             return
         try:
             from teaagent.memory.pinned_file import PinnedFileStorage
+
             storage = PinnedFileStorage(self.root)
             file_path = args[0]
             if storage.add(file_path):
@@ -458,6 +468,7 @@ class TeaAgentTUI:
             return
         try:
             from teaagent.memory.pinned_file import PinnedFileStorage
+
             storage = PinnedFileStorage(self.root)
             file_path = args[0]
             if storage.remove(file_path):
@@ -475,6 +486,7 @@ class TeaAgentTUI:
             from datetime import datetime
 
             from teaagent.memory.pinned_file import PinnedFileStorage
+
             storage = PinnedFileStorage(self.root)
             pinned = storage.list_all()
             if not pinned:
@@ -482,7 +494,9 @@ class TeaAgentTUI:
                 return
             self.output_fn(f'pinned ({len(pinned)}):')
             for pf in pinned:
-                mod = datetime.fromtimestamp(pf.last_modified).strftime('%Y-%m-%d %H:%M:%S')
+                mod = datetime.fromtimestamp(pf.last_modified).strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                )
                 self.output_fn(f'  {pf.file_path} (modified: {mod})')
         except Exception as exc:
             self.output_fn(f'error: pinned: {exc}')
@@ -538,6 +552,7 @@ class TeaAgentTUI:
         """Stop the file watcher."""
         if self._file_watcher and self._watcher_running:
             from contextlib import suppress
+
             with suppress(Exception):
                 self._file_watcher.stop()
             self._watcher_running = False
@@ -589,7 +604,9 @@ class TeaAgentTUI:
                 capture_output=True,
                 text=True,
             )
-            stash_exists = self._checkpoint_ref and self._checkpoint_ref in result.stdout
+            stash_exists = (
+                self._checkpoint_ref and self._checkpoint_ref in result.stdout
+            )
             if not stash_exists:
                 self.output_fn('no checkpoint stash found')
                 return False
@@ -615,7 +632,9 @@ class TeaAgentTUI:
                     text=True,
                 )
                 if checkout_result.returncode != 0:
-                    self.output_fn(f'error: failed to restore files: {checkout_result.stderr}')
+                    self.output_fn(
+                        f'error: failed to restore files: {checkout_result.stderr}'
+                    )
                     return False
 
             pop_result = subprocess.run(
@@ -660,7 +679,7 @@ class TeaAgentTUI:
             return
         level = args[0].lower()
         if level not in ('low', 'normal', 'high'):
-            self.output_fn("error: effort must be low, normal, or high")
+            self.output_fn('error: effort must be low, normal, or high')
             return
         self._effort_level = level
         if level == 'low':
@@ -694,7 +713,9 @@ class TeaAgentTUI:
         self.output_fn('undo: ok' if ok else 'undo: failed')
 
     def _handle_background(self) -> None:
-        self.output_fn('background: use teaagent agent run --detach from CLI for background tasks')
+        self.output_fn(
+            'background: use teaagent agent run --detach from CLI for background tasks'
+        )
 
     def _get_session_store(self) -> SessionStore:
         if self._session_store is None:

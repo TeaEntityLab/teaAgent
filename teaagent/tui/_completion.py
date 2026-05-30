@@ -99,6 +99,5 @@ class TeaAgentCompleter(Completer):
             completions = complete_symbols(text, self._root)
 
         return [
-            Completion(c, start_position=-(len(c) - len(text)))
-            for c in completions
+            Completion(c, start_position=-(len(c) - len(text))) for c in completions
         ]

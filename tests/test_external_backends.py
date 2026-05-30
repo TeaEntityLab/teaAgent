@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from teaagent.external_backends import (
+    BackendConfig,
     CxCliAdapter,
     FallbackKnowledgeBackend,
     LocalKnowledgeAdapter,
@@ -147,7 +148,7 @@ def test_cx_cli_adapter_parses_json_and_raw_output(tmp_path: Path) -> None:
 def test_local_knowledge_adapter_reads_file(tmp_path: Path) -> None:
     doc = tmp_path / 'note.txt'
     doc.write_text('local knowledge', encoding='utf-8')
-    adapter = LocalKnowledgeAdapter()
+    adapter = LocalKnowledgeAdapter(config=BackendConfig(root=tmp_path))
     payload = adapter.get(root=tmp_path, args={'path': 'note.txt'})
     assert payload['content'] == 'local knowledge'
     assert adapter.health(root=tmp_path)['ok'] is True

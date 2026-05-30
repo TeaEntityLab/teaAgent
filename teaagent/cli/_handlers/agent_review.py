@@ -9,6 +9,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from teaagent.cli._output import print_json
+
 
 def interactive_review_mode(root: str, run_id: str) -> int:
     """Interactive review mode for suspended sessions.
@@ -35,12 +37,10 @@ def interactive_review_mode(root: str, run_id: str) -> int:
         print(f'[TeaAgent] Error loading suspension data: {exc}')
         return 1
 
-    print(f'[TeaAgent] Interactive Review Mode')
+    print('[TeaAgent] Interactive Review Mode')
     print(f'[TeaAgent] Run ID: {run_id}')
     print(f'[TeaAgent] Mode: {suspension_data.get("mode", "unknown")}')
-    print(
-        f'Suspended at: {time.ctime(suspension_data.get("timestamp", 0))}'
-    )
+    print(f'Suspended at: {time.ctime(suspension_data.get("timestamp", 0))}')
     print()
 
     # Get changed files from the run

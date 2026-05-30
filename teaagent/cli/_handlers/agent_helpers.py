@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.plan import PlanContract
-from teaagent.policy import PermissionMode
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
 
 

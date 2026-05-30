@@ -483,8 +483,7 @@ class FederatedGraphSync:
 
         if parsed.scheme not in ('http', 'https'):
             raise ValueError(
-                f"Unsupported URL scheme: {parsed.scheme!r} "
-                '(only http/https allowed)'
+                f'Unsupported URL scheme: {parsed.scheme!r} (only http/https allowed)'
             )
 
         host = parsed.hostname or ''
@@ -496,9 +495,7 @@ class FederatedGraphSync:
             addr = ipaddress.ip_address(host)
             # host is a literal IP address
             if addr.is_private and not addr.is_loopback:
-                raise ValueError(
-                    f'URL points to private IP range: {host}'
-                )
+                raise ValueError(f'URL points to private IP range: {host}')
             return url  # literal IP is valid (loopback or public)
         except ValueError:
             pass  # host is not a literal IP — resolve it below
@@ -521,7 +518,7 @@ class FederatedGraphSync:
         # The actual HTTP connection uses this IP, not re-resolving the hostname.
         resolved_host = sorted(resolved_ips)[0]
         new_netloc = (
-            f"{resolved_host}:{parsed.port}" if parsed.port else str(resolved_host)
+            f'{resolved_host}:{parsed.port}' if parsed.port else str(resolved_host)
         )
         safe_url = parsed._replace(netloc=new_netloc).geturl()
         return safe_url
@@ -559,9 +556,7 @@ class FederatedGraphSync:
                 try:
                     safe_url = self._validate_relay_url(relay_urls[peer_id])
                 except ValueError as exc:
-                    logger.warning(
-                        'Invalid relay URL for peer %s: %s', peer_id, exc
-                    )
+                    logger.warning('Invalid relay URL for peer %s: %s', peer_id, exc)
                 else:
                     payload = asdict(request)
                     payload['target_peer_id'] = peer_id

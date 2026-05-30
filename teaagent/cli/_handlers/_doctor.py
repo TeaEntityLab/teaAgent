@@ -169,7 +169,9 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
         if uses_workers_ai_direct
         else 'unknown'
     )
-    all_ok = checks.get('api_token', {}).get('ok', False) and checks.get('base_url', {}).get('ok', False)
+    all_ok = checks.get('api_token', {}).get('ok', False) and checks.get(
+        'base_url', {}
+    ).get('ok', False)
     endpoint_profile = (
         'gateway-openai-compatible-unified'
         if mode == 'gateway-compat'

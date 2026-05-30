@@ -3,22 +3,16 @@
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import subprocess
 import sys
-import time
-from pathlib import Path
 
 from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
-from teaagent.automations import AutomationStore
 
 from .agent_helpers import _prepare_task
 
 
 def agent_plan_command(args: argparse.Namespace) -> int:
-    from teaagent.plan import PlanContract, load_plan_contract
+    from teaagent.plan import load_plan_contract
 
     try:
         contract = load_plan_contract(
@@ -191,7 +185,6 @@ def agent_attach_command(args: argparse.Namespace) -> int:
     if getattr(args, 'follow', False):
         from teaagent.ergonomics.session_stream import stream_run_events
         from teaagent.streaming.events import (
-            StreamEvent,
             audit_dict_to_stream_event,
             emit_stream_event,
         )
@@ -207,11 +200,11 @@ def agent_attach_command(args: argparse.Namespace) -> int:
         stream_run_events(
             args.root,
             args.run_id,
-            on_event=lambda event: emit_stream_event(
-                audit_dict_to_stream_event(event)
-            )
-            if getattr(args, 'json_stream', False)
-            else None,
+            on_event=lambda event: (
+                emit_stream_event(audit_dict_to_stream_event(event))
+                if getattr(args, 'json_stream', False)
+                else None
+            ),
             on_text=lambda text: print(text, end=''),
         )
         return 0

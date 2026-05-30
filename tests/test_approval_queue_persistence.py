@@ -126,7 +126,7 @@ def test_reload_from_store_handles_invalid_snapshot_structure(tmp_path: Path) ->
     """Test that reload_from_store handles corrupted snapshot data gracefully."""
     parent_id = 'parent-corrupt'
     queue = get_approval_queue(parent_id, workspace_root=tmp_path)
-    
+
     # Write a file with invalid structure (requests not a dict)
     path = tmp_path / '.teaagent' / 'approval_queues' / f'{parent_id}.json'
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,7 +134,7 @@ def test_reload_from_store_handles_invalid_snapshot_structure(tmp_path: Path) ->
         '{"parent_run_id":"parent-corrupt","requests":"not-a-dict","batches":{}}\n',
         encoding='utf-8',
     )
-    
+
     # Should not crash, just log warning and skip
     queue.reload_from_store()
     assert len(queue._requests) == 0
@@ -144,7 +144,7 @@ def test_reload_from_store_handles_invalid_request_data(tmp_path: Path) -> None:
     """Test that reload_from_store handles individual invalid request data."""
     parent_id = 'parent-invalid-req'
     queue = get_approval_queue(parent_id, workspace_root=tmp_path)
-    
+
     # Write a file with one valid and one invalid request
     path = tmp_path / '.teaagent' / 'approval_queues' / f'{parent_id}.json'
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -158,7 +158,7 @@ def test_reload_from_store_handles_invalid_request_data(tmp_path: Path) -> None:
         '},"batches":{}}\n',
         encoding='utf-8',
     )
-    
+
     # Should load valid request, skip invalid one
     queue.reload_from_store()
     assert len(queue._requests) == 1
@@ -170,7 +170,7 @@ def test_reload_from_store_handles_missing_required_fields(tmp_path: Path) -> No
     """Test that reload_from_store handles requests with missing required fields."""
     parent_id = 'parent-missing-fields'
     queue = get_approval_queue(parent_id, workspace_root=tmp_path)
-    
+
     # Write a file with request missing required field
     path = tmp_path / '.teaagent' / 'approval_queues' / f'{parent_id}.json'
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -182,7 +182,7 @@ def test_reload_from_store_handles_missing_required_fields(tmp_path: Path) -> No
         '},"batches":{}}\n',
         encoding='utf-8',
     )
-    
+
     # Should skip request with missing fields
     queue.reload_from_store()
     assert len(queue._requests) == 0
@@ -192,7 +192,7 @@ def test_reload_from_store_handles_invalid_status_enum(tmp_path: Path) -> None:
     """Test that reload_from_store handles requests with invalid status enum values."""
     parent_id = 'parent-invalid-status'
     queue = get_approval_queue(parent_id, workspace_root=tmp_path)
-    
+
     # Write a file with request having invalid status
     path = tmp_path / '.teaagent' / 'approval_queues' / f'{parent_id}.json'
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -205,7 +205,7 @@ def test_reload_from_store_handles_invalid_status_enum(tmp_path: Path) -> None:
         '},"batches":{}}\n',
         encoding='utf-8',
     )
-    
+
     # Should skip request with invalid status
     queue.reload_from_store()
     assert len(queue._requests) == 0

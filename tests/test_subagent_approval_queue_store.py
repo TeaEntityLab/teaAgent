@@ -329,7 +329,7 @@ class TestRequestFromDict:
             'subagent_name': 'test-agent',
             # Missing tool_name
         }
-        with pytest.raises(ValueError, match="Missing required field: tool_name"):
+        with pytest.raises(ValueError, match='Missing required field: tool_name'):
             request_from_dict(data)
 
     def test_empty_required_field_raises_error(self) -> None:
@@ -340,7 +340,9 @@ class TestRequestFromDict:
             'subagent_name': 'test-agent',
             'tool_name': '',  # Empty string
         }
-        with pytest.raises(ValueError, match="Required field 'tool_name' cannot be empty"):
+        with pytest.raises(
+            ValueError, match="Required field 'tool_name' cannot be empty"
+        ):
             request_from_dict(data)
 
     def test_none_required_field_raises_error(self) -> None:
@@ -351,7 +353,9 @@ class TestRequestFromDict:
             'subagent_name': 'test-agent',
             'tool_name': None,  # None value
         }
-        with pytest.raises(ValueError, match="Required field 'tool_name' cannot be empty"):
+        with pytest.raises(
+            ValueError, match="Required field 'tool_name' cannot be empty"
+        ):
             request_from_dict(data)
 
     def test_invalid_status_raises_error(self) -> None:
@@ -375,7 +379,7 @@ class TestRequestFromDict:
             'tool_name': 'bash',
             'tool_arguments': 'not_a_dict',  # Should be dict
         }
-        with pytest.raises(ValueError, match="tool_arguments must be a dict"):
+        with pytest.raises(ValueError, match='tool_arguments must be a dict'):
             request_from_dict(data)
 
     def test_invalid_timeout_seconds_type_raises_error(self) -> None:
@@ -387,7 +391,7 @@ class TestRequestFromDict:
             'tool_name': 'bash',
             'timeout_seconds': 'not_a_number',
         }
-        with pytest.raises(ValueError, match="Invalid timeout_seconds"):
+        with pytest.raises(ValueError, match='Invalid timeout_seconds'):
             request_from_dict(data)
 
     def test_negative_timeout_seconds_raises_error(self) -> None:
@@ -399,7 +403,7 @@ class TestRequestFromDict:
             'tool_name': 'bash',
             'timeout_seconds': -10,
         }
-        with pytest.raises(ValueError, match="must be positive"):
+        with pytest.raises(ValueError, match='must be positive'):
             request_from_dict(data)
 
     def test_zero_timeout_seconds_raises_error(self) -> None:
@@ -411,7 +415,7 @@ class TestRequestFromDict:
             'tool_name': 'bash',
             'timeout_seconds': 0,
         }
-        with pytest.raises(ValueError, match="timeout_seconds must be positive"):
+        with pytest.raises(ValueError, match='timeout_seconds must be positive'):
             request_from_dict(data)
 
     def test_invalid_batch_index_type_raises_error(self) -> None:
@@ -423,7 +427,7 @@ class TestRequestFromDict:
             'tool_name': 'bash',
             'batch_index': 'not_a_number',
         }
-        with pytest.raises(ValueError, match="Invalid batch_index"):
+        with pytest.raises(ValueError, match='Invalid batch_index'):
             request_from_dict(data)
 
     def test_negative_batch_index_raises_error(self) -> None:
@@ -435,7 +439,7 @@ class TestRequestFromDict:
             'tool_name': 'bash',
             'batch_index': -1,
         }
-        with pytest.raises(ValueError, match="must be non-negative"):
+        with pytest.raises(ValueError, match='must be non-negative'):
             request_from_dict(data)
 
     def test_invalid_timestamp_type_raises_error(self) -> None:
@@ -447,7 +451,9 @@ class TestRequestFromDict:
             'tool_name': 'bash',
             'created_at': 123456,  # Should be string
         }
-        with pytest.raises(ValueError, match="Field 'created_at' must be a string or None"):
+        with pytest.raises(
+            ValueError, match="Field 'created_at' must be a string or None"
+        ):
             request_from_dict(data)
 
     def test_valid_enum_status_values(self) -> None:
@@ -459,7 +465,7 @@ class TestRequestFromDict:
             ApprovalRequestStatus.TIMEOUT.value,
             ApprovalRequestStatus.CANCELLED.value,
         ]
-        
+
         for status_value in valid_statuses:
             data = {
                 'request_id': 'r1',

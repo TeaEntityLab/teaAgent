@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 import unittest
 from dataclasses import FrozenInstanceError
@@ -520,9 +519,12 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
             # by verifying the check exists and passes for current user
             result = store.check_security_health()
             dir_ownership_check = next(
-                (c for c in result['checks'] if c['name'] == 'teaagent_dir_ownership'), None
+                (c for c in result['checks'] if c['name'] == 'teaagent_dir_ownership'),
+                None,
             )
-            self.assertIsNotNone(dir_ownership_check, 'teaagent_dir_ownership check should be present')
+            self.assertIsNotNone(
+                dir_ownership_check, 'teaagent_dir_ownership check should be present'
+            )
             # Should pass since we own the directory
             self.assertTrue(dir_ownership_check['ok'])
 
@@ -533,9 +535,12 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
             store._get_workspace_secret()  # create secret
             result = store.check_security_health()
             secret_ownership_check = next(
-                (c for c in result['checks'] if c['name'] == 'secret_file_ownership'), None
+                (c for c in result['checks'] if c['name'] == 'secret_file_ownership'),
+                None,
             )
-            self.assertIsNotNone(secret_ownership_check, 'secret_file_ownership check should be present')
+            self.assertIsNotNone(
+                secret_ownership_check, 'secret_file_ownership check should be present'
+            )
             # Should pass since we own the file
             self.assertTrue(secret_ownership_check['ok'])
 
@@ -546,9 +551,17 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
             store.grant(tool_name='shell_exec', scope='once')  # create the file
             result = store.check_security_health()
             approvals_ownership_check = next(
-                (c for c in result['checks'] if c['name'] == 'approvals_file_ownership'), None
+                (
+                    c
+                    for c in result['checks']
+                    if c['name'] == 'approvals_file_ownership'
+                ),
+                None,
             )
-            self.assertIsNotNone(approvals_ownership_check, 'approvals_file_ownership check should be present')
+            self.assertIsNotNone(
+                approvals_ownership_check,
+                'approvals_file_ownership check should be present',
+            )
             # Should pass since we own the file
             self.assertTrue(approvals_ownership_check['ok'])
 
@@ -968,7 +981,9 @@ class MultiSigQuorumTests(unittest.TestCase):
                 arguments={'path': '/prod/config.json'},
             )
 
-    @unittest.skip("Multi-sig quorum requires federated_sync which may not be available in test environment")
+    @unittest.skip(
+        'Multi-sig quorum requires federated_sync which may not be available in test environment'
+    )
     def test_multi_sig_quorum_stub_returns_false(self) -> None:
         """Verify stub implementation returns False (no quorum)."""
         config = MultiSigQuorumConfig(enabled=True, required_approvals=2)

@@ -3,14 +3,8 @@
 from __future__ import annotations
 
 import argparse
-import contextlib
-import json
-import os
 import signal
-import subprocess
-import sys
 import time
-from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.automations import (
@@ -20,10 +14,6 @@ from teaagent.automations import (
     compute_next_run_at,
 )
 from teaagent.cli._output import print_json
-from teaagent.run_store import RunStore
-from teaagent.skill_candidates import SkillCandidateStore
-
-from .agent_helpers import _prepare_task
 
 
 def automation_add_command(args: argparse.Namespace) -> int:
@@ -150,9 +140,7 @@ def automation_pause_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
     try:
         spec = store.get(args.automation_id)
-        updated = store.update(
-            AutomationSpec(**{**spec.to_dict(), 'enabled': False})
-        )
+        updated = store.update(AutomationSpec(**{**spec.to_dict(), 'enabled': False}))
     except (FileNotFoundError, ValueError) as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -164,9 +152,7 @@ def automation_resume_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
     try:
         spec = store.get(args.automation_id)
-        updated = store.update(
-            AutomationSpec(**{**spec.to_dict(), 'enabled': True})
-        )
+        updated = store.update(AutomationSpec(**{**spec.to_dict(), 'enabled': True}))
     except (FileNotFoundError, ValueError) as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1

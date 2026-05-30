@@ -66,7 +66,9 @@ class AgentExecutionFactory:
         """Create a RunStore instance."""
         return RunStore(self.root)
 
-    def create_audit_logger(self, store: RunStore, run_id: Optional[str] = None) -> AuditLogger:
+    def create_audit_logger(
+        self, store: RunStore, run_id: Optional[str] = None
+    ) -> AuditLogger:
         """Create an AuditLogger instance."""
         if run_id:
             return store.audit_logger(run_id)

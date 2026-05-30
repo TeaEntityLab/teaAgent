@@ -79,9 +79,9 @@ def _get_trust_policy_fernet() -> Fernet:
             'TEAAGENT_MCP_TRUST_KEY environment variable is required for MCP trust policy encryption. '
             'Generate a valid key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
         )
-    
+
     key = os.environ['TEAAGENT_MCP_TRUST_KEY']
-    
+
     # Validate key format - Fernet keys must be 32 bytes, base64-encoded
     try:
         key_bytes = key.encode('utf-8')
@@ -93,7 +93,7 @@ def _get_trust_policy_fernet() -> Fernet:
             'The key must be a valid Fernet key (32 bytes, base64-encoded). '
             'Generate a valid key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
         ) from e
-    
+
     return fernet
 
 

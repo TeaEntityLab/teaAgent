@@ -173,6 +173,14 @@ class ToolRegistry:
         state = self._rate_states.get(name)
         return state.call_count() if state is not None else 0
 
+    def invoke(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Compatibility alias for ``execute()``.
+
+        .. deprecated:: 0.13
+            Use :meth:`execute` instead.
+        """
+        return self.execute(name, arguments)
+
     def execute(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         tool = self.get(name)
         validate_object_schema(tool.input_schema, arguments, label=f'tool.{name}.input')

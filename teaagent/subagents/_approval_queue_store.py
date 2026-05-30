@@ -307,10 +307,10 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
         'subagent_name',
         'tool_name',
     ]
-    
+
     for field in required_fields:
         if field not in data:
-            raise ValueError(f"Missing required field: {field}")
+            raise ValueError(f'Missing required field: {field}')
         if not data[field]:
             raise ValueError(f"Required field '{field}' cannot be empty or None")
 
@@ -330,7 +330,7 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
         tool_arguments = {}
     elif not isinstance(tool_arguments, dict):
         raise ValueError(
-            f"tool_arguments must be a dict, got {type(tool_arguments).__name__}"
+            f'tool_arguments must be a dict, got {type(tool_arguments).__name__}'
         )
 
     # Validate timeout_seconds
@@ -341,9 +341,9 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
         raise ValueError(
             f"Invalid timeout_seconds '{timeout_seconds}': must be a positive integer"
         ) from e
-    
+
     if timeout_seconds <= 0:
-        raise ValueError(f"timeout_seconds must be positive, got {timeout_seconds}")
+        raise ValueError(f'timeout_seconds must be positive, got {timeout_seconds}')
 
     # Validate optional integer fields
     batch_index = data.get('batch_index')
@@ -354,9 +354,9 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
             raise ValueError(
                 f"Invalid batch_index '{batch_index}': must be a non-negative integer"
             ) from e
-        
+
         if batch_index < 0:
-            raise ValueError(f"batch_index must be non-negative, got {batch_index}")
+            raise ValueError(f'batch_index must be non-negative, got {batch_index}')
 
     # Validate timestamp fields (optional, but must be strings if present)
     for field in ['created_at', 'approved_at', 'denied_at']:

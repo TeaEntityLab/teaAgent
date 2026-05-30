@@ -10,7 +10,6 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 import sys
-import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path

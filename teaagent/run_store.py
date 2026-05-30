@@ -173,14 +173,14 @@ class RunStore:
             # Validate event is a dictionary
             if not isinstance(event, dict):
                 continue
-            
+
             event_type = event.get('event_type')
             payload = event.get('payload')
-            
+
             # Validate payload is a dictionary, default to empty dict
             if not isinstance(payload, dict):
                 payload = {}
-            
+
             if event_type == 'tool_call_pending_approval':
                 call_id = payload.get('call_id')
                 tool_name = payload.get('tool_name')
@@ -204,7 +204,10 @@ class RunStore:
                 if pending and isinstance(pending, dict):
                     pending_call_id = pending.get('call_id')
                     payload_call_id = payload.get('call_id')
-                    if pending_call_id is not None and pending_call_id == payload_call_id:
+                    if (
+                        pending_call_id is not None
+                        and pending_call_id == payload_call_id
+                    ):
                         pending = None
         return pending
 

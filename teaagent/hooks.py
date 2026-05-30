@@ -338,6 +338,7 @@ def shell_command_hook(
         try:
             # Use shlex.split() for safe command parsing and shell=False to prevent injection
             import shlex
+
             args = shlex.split(command)
             subprocess.run(
                 args,

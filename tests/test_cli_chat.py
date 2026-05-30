@@ -12,7 +12,11 @@ from teaagent.cli._handlers._chat import chat_command
 from teaagent.cli._handlers.agent_review import interactive_review_mode
 from teaagent.cli._handlers.chat_commands import execute_shell_command
 from teaagent.cli._handlers.chat_completion import complete_file_path, complete_symbol
-from teaagent.cli._handlers.chat_repl import print_chat_help, run_chat_repl, suspend_to_background
+from teaagent.cli._handlers.chat_repl import (
+    print_chat_help,
+    run_chat_repl,
+    suspend_to_background,
+)
 
 
 def test_print_chat_help(capsys):

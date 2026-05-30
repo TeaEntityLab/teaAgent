@@ -4,24 +4,23 @@ This test suite validates the security improvements made to address
 medium-severity security vulnerabilities.
 """
 
-import pytest
-import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
-from teaagent.workspace_tools._files import (
-    read_file,
-    write_file,
-    edit_at_hash,
-    build_workspace_tool_registry,
-    WorkspaceToolConfig,
-)
-from teaagent.workspace_tools._shell import run_shell, run_shell_argv
+import pytest
+
 from teaagent.context_bus import ContextBus, ContextBusConfig
 from teaagent.llm._retry import LLMRetryConfig
-from teaagent.cli._handlers._chat import chat_command
-from teaagent.surface_auth import hash_token, hash_token_with_salt, verify_token_with_salt
+from teaagent.surface_auth import (
+    hash_token,
+    hash_token_with_salt,
+    verify_token_with_salt,
+)
+from teaagent.workspace_tools._files import (
+    WorkspaceToolConfig,
+    build_workspace_tool_registry,
+)
+from teaagent.workspace_tools._shell import run_shell
 
 
 class TestShellCommandInjectionFix:
@@ -32,13 +31,10 @@ class TestShellCommandInjectionFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Test that shell commands are parsed safely
-            result = run_shell(
-                config,
-                {'command': 'echo "test"'}
-            )
-            
+            result = run_shell(config, {'command': 'echo "test"'})
+
             # Should not have shell=True in subprocess call
             assert 'stdout' in result
             assert 'stderr' in result
@@ -48,18 +44,21 @@ class TestShellCommandInjectionFix:
         """Verify that dangerous commands are blocked."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
-            
+
             # Test dangerous command blocking
             dangerous_commands = [
                 'rm -rf /',
                 'mkfs',
                 'dd if=/dev/zero of=/dev/sda',
             ]
-            
+
             for cmd in dangerous_commands:
                 result = run_shell(config, {'command': cmd})
                 # Should either block or fail safely
-                assert result['exit_code'] != 0 or 'error' in result.get('stderr', '').lower()
+                assert (
+                    result['exit_code'] != 0
+                    or 'error' in result.get('stderr', '').lower()
+                )
 
 
 class TestRegexValidationFix:
@@ -70,16 +69,16 @@ class TestRegexValidationFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Test invalid regex pattern
             result = registry.invoke(
                 'workspace_search_text',
                 {
                     'path': '.',
                     'pattern': '[invalid(',  # Invalid regex
-                }
+                },
             )
-            
+
             # Should handle invalid regex gracefully
             assert 'error' in result or 'stderr' in result
 
@@ -88,18 +87,21 @@ class TestRegexValidationFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Test regex with potential ReDoS
             result = registry.invoke(
                 'workspace_search_text',
                 {
                     'path': '.',
                     'pattern': '(a+)+',  # Potential ReDoS pattern
-                }
+                },
             )
-            
+
             # Should complete without hanging
-            assert 'error' not in result or 'timeout' not in result.get('stderr', '').lower()
+            assert (
+                'error' not in result
+                or 'timeout' not in result.get('stderr', '').lower()
+            )
 
 
 class TestTOCTOUFix:
@@ -110,10 +112,10 @@ class TestTOCTOUFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('original')
-            
+
             # Write with expected_mtime validation
             stat = test_file.stat()
             result = registry.invoke(
@@ -122,9 +124,9 @@ class TestTOCTOUFix:
                     'path': 'test.txt',
                     'content': 'updated',
                     'expected_mtime': stat.st_mtime,
-                }
+                },
             )
-            
+
             # Should succeed with same mtime
             assert result.get('ok', True) or 'error' not in result
 
@@ -133,10 +135,10 @@ class TestTOCTOUFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('original')
-            
+
             # Try to write with wrong mtime
             result = registry.invoke(
                 'workspace_write_file',
@@ -144,9 +146,9 @@ class TestTOCTOUFix:
                     'path': 'test.txt',
                     'content': 'updated',
                     'expected_mtime': 0.0,  # Wrong mtime
-                }
+                },
             )
-            
+
             # Should fail with mtime error
             assert 'error' in result or 'mtime' in result.get('stderr', '').lower()
 
@@ -159,19 +161,16 @@ class TestSymlinkValidationFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Create a symlink
             target_file = Path(tmpdir) / 'target.txt'
             target_file.write_text('content')
             symlink = Path(tmpdir) / 'link.txt'
             symlink.symlink_to(target_file)
-            
+
             # Try to read through symlink
-            result = registry.invoke(
-                'workspace_read_file',
-                {'path': 'link.txt'}
-            )
-            
+            result = registry.invoke('workspace_read_file', {'path': 'link.txt'})
+
             # Should block symlink
             assert 'error' in result or 'symlink' in result.get('stderr', '').lower()
 
@@ -180,22 +179,22 @@ class TestSymlinkValidationFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Create a symlink
             target_file = Path(tmpdir) / 'target.txt'
             target_file.write_text('content')
             symlink = Path(tmpdir) / 'link.txt'
             symlink.symlink_to(target_file)
-            
+
             # Try to write through symlink
             result = registry.invoke(
                 'workspace_write_file',
                 {
                     'path': 'link.txt',
                     'content': 'updated',
-                }
+                },
             )
-            
+
             # Should block symlink
             assert 'error' in result or 'symlink' in result.get('stderr', '').lower()
 
@@ -209,7 +208,7 @@ class TestSecureRandomFix:
         config = LLMRetryConfig()
         delay1 = config.delay(0)
         delay2 = config.delay(0)
-        
+
         # Delays should be different (using secrets.randbelow)
         assert delay1 != delay2
 
@@ -218,7 +217,7 @@ class TestSecureRandomFix:
         # Test that retry delay uses secrets
         config = LLMRetryConfig()
         delays = [config.delay(i) for i in range(10)]
-        
+
         # Delays should be different (using secrets.randbelow)
         assert len(set(delays)) > 1  # At least some variety
 
@@ -231,14 +230,15 @@ class TestEnvironmentVariableFilteringFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Set a sensitive environment variable
             import os
+
             os.environ['TEST_SECRET_TOKEN'] = 'secret_value'
-            
+
             # Run a command
             result = run_shell(config, {'command': 'echo test'})
-            
+
             # Sensitive variable should not be in environment
             # (This is verified by checking the implementation uses allowlist)
             assert result['exit_code'] == 0
@@ -252,7 +252,7 @@ class TestWeakTokenHashingFix:
         token = 'test_token'
         hash1 = hash_token(token)
         hash2 = hash_token(token)
-        
+
         # Should be deterministic (fixed salt for backward compatibility)
         assert hash1 == hash2
         assert len(hash1) == 64  # SHA256 hex length
@@ -262,7 +262,7 @@ class TestWeakTokenHashingFix:
         token = 'test_token'
         hash1, salt1 = hash_token_with_salt(token)
         hash2, salt2 = hash_token_with_salt(token)
-        
+
         # Should use different salts
         assert salt1 != salt2
         assert hash1 != hash2
@@ -272,10 +272,10 @@ class TestWeakTokenHashingFix:
         """Verify that token verification works correctly."""
         token = 'test_token'
         hash_hex, salt_hex = hash_token_with_salt(token)
-        
+
         # Verify correct token
         assert verify_token_with_salt(token, hash_hex, salt_hex) is True
-        
+
         # Verify wrong token
         assert verify_token_with_salt('wrong_token', hash_hex, salt_hex) is False
 
@@ -288,10 +288,10 @@ class TestLineValidationFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('line1\nline2\nline3')
-            
+
             # Test invalid line number (too high)
             result = registry.invoke(
                 'workspace_edit_at_hash',
@@ -301,9 +301,9 @@ class TestLineValidationFix:
                     'hash': 'some_hash',
                     'old': 'line1',
                     'new': 'updated',
-                }
+                },
             )
-            
+
             # Should fail with line out of range error
             assert 'error' in result or 'line' in result.get('stderr', '').lower()
 
@@ -312,10 +312,10 @@ class TestLineValidationFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('line1\nline2\nline3')
-            
+
             # Test invalid line number type
             result = registry.invoke(
                 'workspace_edit_at_hash',
@@ -325,9 +325,9 @@ class TestLineValidationFix:
                     'hash': 'some_hash',
                     'old': 'line1',
                     'new': 'updated',
-                }
+                },
             )
-            
+
             # Should fail with type error
             assert 'error' in result or 'integer' in result.get('stderr', '').lower()
 
@@ -340,13 +340,12 @@ class TestPathTraversalFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Try to read file outside workspace using path traversal
             result = registry.invoke(
-                'workspace_read_file',
-                {'path': '../../../etc/passwd'}
+                'workspace_read_file', {'path': '../../../etc/passwd'}
             )
-            
+
             # Should block path traversal
             assert 'error' in result or 'outside' in result.get('stderr', '').lower()
 
@@ -359,11 +358,11 @@ class TestEmptyFileValidationFix:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-            
+
             # Create empty file
             test_file = Path(tmpdir) / 'empty.txt'
             test_file.write_text('')
-            
+
             # Try to edit empty file
             result = registry.invoke(
                 'workspace_edit_at_hash',
@@ -373,9 +372,9 @@ class TestEmptyFileValidationFix:
                     'hash': 'some_hash',
                     'old': '',
                     'new': 'content',
-                }
+                },
             )
-            
+
             # Should fail with empty file error
             assert 'error' in result or 'empty' in result.get('stderr', '').lower()
 
@@ -386,20 +385,24 @@ class TestContextBusValidationFix:
     def test_workflow_id_validation(self):
         """Verify that workflow_id is validated."""
         with pytest.raises(ValueError, match='workflow_id cannot be empty'):
-            ContextBus(ContextBusConfig(
-                db_path=Path('/tmp/test.db'),
-                workflow_id='',  # Invalid empty workflow_id
-                max_delta_age_seconds=3600,
-            ))
+            ContextBus(
+                ContextBusConfig(
+                    db_path=Path('/tmp/test.db'),
+                    workflow_id='',  # Invalid empty workflow_id
+                    max_delta_age_seconds=3600,
+                )
+            )
 
     def test_max_delta_age_validation(self):
         """Verify that max_delta_age_seconds is validated."""
         with pytest.raises(ValueError, match='max_delta_age_seconds must be positive'):
-            ContextBus(ContextBusConfig(
-                db_path=Path('/tmp/test.db'),
-                workflow_id='test-workflow',
-                max_delta_age_seconds=-1,  # Invalid negative value
-            ))
+            ContextBus(
+                ContextBusConfig(
+                    db_path=Path('/tmp/test.db'),
+                    workflow_id='test-workflow',
+                    max_delta_age_seconds=-1,  # Invalid negative value
+                )
+            )
 
 
 if __name__ == '__main__':

@@ -29,23 +29,42 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
         argv = shlex.split(command)
     except ValueError as e:
         raise ValueError(f'Invalid command syntax: {e}') from e
-    
+
     # Create a safe environment using allowlist approach
     SAFE_ENV_PATTERNS = {
-        'PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'LC_*',
-        'PAGER', 'EDITOR', 'GIT_*', 'SSH_*', 'JAVA_HOME',
-        'PYTHON_*', 'NODE_*', 'RUST_*', 'GO_*', 'TERM',
-        'DISPLAY', 'XDG_*', 'TMPDIR', 'TEMP', 'TMP'
+        'PATH',
+        'HOME',
+        'USER',
+        'SHELL',
+        'LANG',
+        'LC_*',
+        'PAGER',
+        'EDITOR',
+        'GIT_*',
+        'SSH_*',
+        'JAVA_HOME',
+        'PYTHON_*',
+        'NODE_*',
+        'RUST_*',
+        'GO_*',
+        'TERM',
+        'DISPLAY',
+        'XDG_*',
+        'TMPDIR',
+        'TEMP',
+        'TMP',
     }
     env = {
         k: v
         for k, v in os.environ.items()
         if any(fnmatch.fnmatch(k, pattern) for pattern in SAFE_ENV_PATTERNS)
     }
-    env.update({
-        'PAGER': 'cat',
-        'GIT_PAGER': 'cat',
-    })
+    env.update(
+        {
+            'PAGER': 'cat',
+            'GIT_PAGER': 'cat',
+        }
+    )
     result = subprocess.run(
         argv,
         cwd=str(config.root),
@@ -67,20 +86,39 @@ def run_shell_argv(
 ) -> dict[str, Any]:
     # Create a safe environment using allowlist approach
     SAFE_ENV_PATTERNS = {
-        'PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'LC_*',
-        'PAGER', 'EDITOR', 'GIT_*', 'SSH_*', 'JAVA_HOME',
-        'PYTHON_*', 'NODE_*', 'RUST_*', 'GO_*', 'TERM',
-        'DISPLAY', 'XDG_*', 'TMPDIR', 'TEMP', 'TMP'
+        'PATH',
+        'HOME',
+        'USER',
+        'SHELL',
+        'LANG',
+        'LC_*',
+        'PAGER',
+        'EDITOR',
+        'GIT_*',
+        'SSH_*',
+        'JAVA_HOME',
+        'PYTHON_*',
+        'NODE_*',
+        'RUST_*',
+        'GO_*',
+        'TERM',
+        'DISPLAY',
+        'XDG_*',
+        'TMPDIR',
+        'TEMP',
+        'TMP',
     }
     env = {
         k: v
         for k, v in os.environ.items()
         if any(fnmatch.fnmatch(k, pattern) for pattern in SAFE_ENV_PATTERNS)
     }
-    env.update({
-        'PAGER': 'cat',
-        'GIT_PAGER': 'cat',
-    })
+    env.update(
+        {
+            'PAGER': 'cat',
+            'GIT_PAGER': 'cat',
+        }
+    )
     result = subprocess.run(
         argv,
         cwd=str(config.root),

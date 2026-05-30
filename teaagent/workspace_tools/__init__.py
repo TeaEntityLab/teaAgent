@@ -27,3 +27,6 @@ from teaagent.workspace_tools._helpers import (
 from teaagent.workspace_tools._shell import (
     classify_shell_command_policy as classify_shell_command_policy,
 )
+from teaagent.workspace_tools.builder import (
+    ToolRegistryBuilder as ToolRegistryBuilder,
+)

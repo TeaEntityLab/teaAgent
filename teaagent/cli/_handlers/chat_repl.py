@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import readline
 import subprocess
@@ -20,7 +19,6 @@ from teaagent.memory.file_watcher import FileWatcher
 from teaagent.memory.pinned_file import PinnedFileStorage
 
 from .chat_commands import (
-    execute_shell_command,
     get_failure_warnings,
     handle_memory_clear,
     handle_memory_failures,
@@ -662,9 +660,7 @@ def run_chat_repl(
             # Handle cost command
             if user_input == '/cost':
                 print(f'[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}')
-                print(
-                    f'[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}'
-                )
+                print(f'[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}')
                 print(
                     f'[TeaAgent] Remaining: ${(max_cost_budget_cents - session_cost_cents) / 100:.2f}'
                 )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import hashlib
 import json
 import logging
@@ -261,7 +260,9 @@ class AuditLogger:
             try:
                 sink(event)
             except Exception as exc:
-                logger.error(f'Audit sink {sink.__class__.__name__} failed: {exc}', exc_info=True)
+                logger.error(
+                    f'Audit sink {sink.__class__.__name__} failed: {exc}', exc_info=True
+                )
                 failed_sinks.append((sink, exc))
 
         if failed_sinks:

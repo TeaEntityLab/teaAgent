@@ -455,7 +455,9 @@ class CentralizedApprovalQueue:
             async with self._lock:
                 with self._sync_lock:
                     if request_id in self._requests:
-                        self._requests[request_id].status = ApprovalRequestStatus.TIMEOUT
+                        self._requests[
+                            request_id
+                        ].status = ApprovalRequestStatus.TIMEOUT
             logger.warning(f'Approval request {request_id} timed out')
             return False
         finally:

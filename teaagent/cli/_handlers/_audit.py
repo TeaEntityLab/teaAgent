@@ -4,7 +4,6 @@ import argparse
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
 
 from teaagent.audit_chain import verify_audit_chain
 from teaagent.cli._output import print_json

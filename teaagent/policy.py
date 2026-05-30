@@ -7,13 +7,9 @@ import json
 import logging
 import re
 import shlex
-import sys
 import time
-import warnings
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from teaagent.approval_manager import (
     ApprovalManager,
@@ -24,8 +20,6 @@ from teaagent.approval_manager import (
     PermissionMode,
     _verify_ssh_signature,
 )
-from teaagent.errors import ToolPermissionError
-from teaagent.read_only_gate import read_only_runtime_block_reason
 
 if TYPE_CHECKING:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
@@ -313,7 +307,12 @@ class ApprovalPolicy:
             return False
 
     def _generate_approval_hash(
-        self, tool_name: str, call_id: str, arguments: dict[str, Any] | None, *, run_id: str = ''
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None,
+        *,
+        run_id: str = '',
     ) -> str:
         """Generate cryptographic hash for approval request."""
         content = json.dumps(

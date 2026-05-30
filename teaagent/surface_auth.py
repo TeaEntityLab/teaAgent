@@ -31,7 +31,7 @@ def is_loopback_host(host: str) -> bool:
 
 def hash_token(raw: str) -> str:
     """Hash a token using PBKDF2 with a fixed salt for backward compatibility.
-    
+
     Note: For new token storage, use hash_token_with_salt() which returns
     both the hash and salt for stronger security.
     """
@@ -43,7 +43,7 @@ def hash_token(raw: str) -> str:
 
 def hash_token_with_salt(raw: str) -> tuple[str, str]:
     """Hash a token using PBKDF2 with a random salt for stronger security.
-    
+
     Returns:
         Tuple of (hash_hex, salt_hex) for storage
     """
@@ -54,12 +54,12 @@ def hash_token_with_salt(raw: str) -> tuple[str, str]:
 
 def verify_token_with_salt(raw: str, hash_hex: str, salt_hex: str) -> bool:
     """Verify a token against a salted hash.
-    
+
     Args:
         raw: The raw token to verify
         hash_hex: The stored hash as hex string
         salt_hex: The stored salt as hex string
-    
+
     Returns:
         True if the token matches, False otherwise
     """

@@ -46,7 +46,7 @@ DEFAULT_SESSION_GRANT_TTL_HOURS = 8.0
 
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
     """Resolve selected skills from args, returning frozenset or None.
-    
+
     Returns:
         - Empty frozenset if no_auto_skills is set
         - Frozenset of skill names if provided
@@ -880,11 +880,11 @@ def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
 
 def _load_suspension_data(root_path: Path, run_id: str) -> dict[str, Any] | None:
     """Load and validate suspension data for a given run_id.
-    
+
     Args:
         root_path: The workspace root directory
         run_id: The background task run_id to review
-        
+
     Returns:
         Suspension data dict, or None if loading fails
     """
@@ -915,7 +915,7 @@ def _load_suspension_data(root_path: Path, run_id: str) -> dict[str, Any] | None
 
 def _display_review_header(run_id: str, suspension_data: dict[str, Any]) -> None:
     """Display the review mode header with run information.
-    
+
     Args:
         run_id: The background task run_id
         suspension_data: The loaded suspension data
@@ -931,10 +931,10 @@ def _display_review_header(run_id: str, suspension_data: dict[str, Any]) -> None
 
 def _get_changed_files(root_path: Path) -> list[str] | None:
     """Get list of changed files from git.
-    
+
     Args:
         root_path: The workspace root directory
-        
+
     Returns:
         List of changed file paths, or None if git fails
     """
@@ -961,7 +961,7 @@ def _get_changed_files(root_path: Path) -> list[str] | None:
 
 def _display_file_list(changed_files: list[str]) -> None:
     """Display the list of changed files and review commands.
-    
+
     Args:
         changed_files: List of changed file paths
     """
@@ -981,7 +981,7 @@ def _display_file_list(changed_files: list[str]) -> None:
 
 def _show_file_diff(root_path: Path, file_path: str) -> None:
     """Display git diff for a specific file.
-    
+
     Args:
         root_path: The workspace root directory
         file_path: Path to the file to show diff for
@@ -1008,13 +1008,13 @@ def _handle_review_choice(
     review_decisions: dict[str, str],
 ) -> bool:
     """Handle user's review choice for a file.
-    
+
     Args:
         choice: User's choice (y/e/r/n/q)
         file_path: Path to the file being reviewed
         root_path: The workspace root directory
         review_decisions: Dict to store review decisions
-        
+
     Returns:
         True if review should continue, False if user quit
     """
@@ -1055,7 +1055,7 @@ def _display_review_summary(
     review_decisions: dict[str, str], changed_files: list[str]
 ) -> None:
     """Display summary of review decisions.
-    
+
     Args:
         review_decisions: Dict of file path to decision
         changed_files: List of all changed files
@@ -1079,7 +1079,7 @@ def _save_review_decisions(
     changed_files: list[str],
 ) -> None:
     """Save review decisions to file with ACP compliance.
-    
+
     Args:
         tea_dir: The .teaagent directory
         run_id: The background task run_id

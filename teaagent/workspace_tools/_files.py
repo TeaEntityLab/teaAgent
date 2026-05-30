@@ -19,22 +19,19 @@ from teaagent.workspace_tools._config import (
     _load_gitignore_matcher,
 )
 from teaagent.workspace_tools._helpers import (
-    assert_shell_command_size_allowed,
     assert_write_size_allowed,
-    bounded_positive_int_arg,
     compute_line_hash,
     format_hash_line,
     non_negative_int_arg,
     object_schema,
     positive_int_arg,
     relative_path,
-    truncate_output,
+    resolve_workspace_path,
 )
 
 logger = logging.getLogger(__name__)
 
 from teaagent.workspace_tools._shell import (
-    run_shell,
     run_shell_inspect,
 )
 
@@ -44,33 +41,31 @@ def build_workspace_tool_registry(
     config_provider: Any = None,
 ) -> ToolRegistry:
     """Build tool registry with dependency injection support.
-    
+
     Args:
         root: Workspace root directory
         config_provider: Optional configuration provider for dependency injection
-        
+
     Returns:
         Tool registry with registered tools
     """
-    from teaagent.workspace_tools.factory import ToolFactory
     from teaagent.workspace_tools.config_provider import StaticConfigProvider
-    
+    from teaagent.workspace_tools.factory import ToolFactory
+
     config = WorkspaceToolConfig.from_root(root)
-    
+
     if config_provider is None:
         config_provider = StaticConfigProvider(config)
-    
+
     factory = ToolFactory(config)
     registry = ToolRegistry()
     register_workspace_tools(registry, factory)
     return registry
 
 
-def register_workspace_tools(
-    registry: ToolRegistry, factory: Any
-) -> None:
+def register_workspace_tools(registry: ToolRegistry, factory: Any) -> None:
     """Register workspace tools using factory for dependency injection.
-    
+
     Args:
         registry: Tool registry to register tools in
         factory: ToolFactory for creating tool handlers
@@ -341,7 +336,7 @@ def register_workspace_tools(
             required=['status', 'exit_code'],
         ),
         annotations=ToolAnnotations(read_only=True, idempotent=True),
-        handler=lambda _args: git_status(config),
+        handler=lambda _args: git_status(factory._config),
     )
     registry.register(
         name='workspace_run_shell_inspect',
@@ -403,15 +398,15 @@ def _register_browser_tools_if_available(registry: ToolRegistry) -> None:
 
 def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args['path'])
-    
+
     # Check for symlinks to prevent symlink attacks
     if path.is_symlink():
         raise ValueError('symlinks are not allowed')
-    
+
     # Validate path is within workspace root to prevent path traversal
     if not path.resolve().is_relative_to(config.root.resolve()):
         raise ValueError('Path outside workspace')
-    
+
     max_bytes = non_negative_int_arg(args, 'max_bytes', default=config.max_read_bytes)
     data = path.read_bytes()
     truncated = len(data) > max_bytes
@@ -436,33 +431,33 @@ def read_file_hashed(
 
 
 def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    import tempfile
     import os
-    
+    import tempfile
+
     path = resolve_workspace_path(config, args['path'])
-    
+
     # Check for symlinks to prevent symlink attacks
     if path.is_symlink():
         raise ValueError('symlinks are not allowed')
-    
+
     if args.get('create_dirs', False):
         path.parent.mkdir(parents=True, exist_ok=True)
     content = args['content']
     assert_write_size_allowed(config, content)
     expected_mtime = args.get('expected_mtime')
-    
+
     # Validate expected_mtime if provided
     if expected_mtime is not None:
         try:
             expected_mtime = float(expected_mtime)
         except (ValueError, TypeError):
             raise ValueError('expected_mtime must be a valid number')
-    
+
     # Write to temporary file first for atomic operation
     with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as tmp:
         tmp.write(content)
         tmp_path = tmp.name
-    
+
     try:
         # Verify mtime before atomic rename (TOCTOU-safe)
         if expected_mtime is not None and path.exists():
@@ -474,7 +469,7 @@ def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
                     f'(expected_mtime={expected_mtime}, actual_mtime={actual_mtime:.6f}). '
                     f'Re-read the file before writing.'
                 )
-        
+
         # Atomic rename
         os.replace(tmp_path, path)
     except Exception:
@@ -485,7 +480,7 @@ def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
             except OSError as exc:
                 logger.warning(f'Temp file cleanup failed: {tmp_path}: {exc}')
         raise
-    
+
     stat = path.stat()
     return {
         'path': relative_path(config, path),
@@ -514,23 +509,25 @@ def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
 def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args['path'])
     lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
-    
+
     # Check for empty file
     if not lines:
         raise ValueError('Cannot edit empty file')
-    
+
     # Validate line number type and range
     try:
         line_number = int(args['line'])
     except (ValueError, TypeError):
         raise ValueError('line must be an integer')
-    
+
     if line_number < 1:
         raise ValueError('line must be >= 1')
-    
+
     if line_number > len(lines):
-        raise ValueError(f'line {line_number} is outside file range (max: {len(lines)})')
-    
+        raise ValueError(
+            f'line {line_number} is outside file range (max: {len(lines)})'
+        )
+
     current = lines[line_number - 1]
     expected_hash = compute_line_hash(line_number, current)
     if expected_hash != args['hash']:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-from typing import Any
 
 from teaagent.cli._output import print_json
 from teaagent.memory import MemoryCatalog

@@ -55,11 +55,9 @@ class CodeEdge:
 class CodeOntologyGraph:
     """Manages code ontology graph with GraphQLite integration."""
 
-    def __init__(
-        self, root: str | Path, graph_store: Optional[Any] = None
-    ) -> None:
+    def __init__(self, root: str | Path, graph_store: Optional[Any] = None) -> None:
         """Initialize code ontology graph.
-        
+
         Args:
             root: Root directory for code analysis
             graph_store: Optional GraphQLite graph store instance for persistence.
@@ -179,7 +177,7 @@ class CodeOntologyBuilder:
 
     def __init__(self, root: str | Path) -> None:
         """Initialize code ontology builder.
-        
+
         Args:
             root: Root directory for code analysis
         """
@@ -258,7 +256,7 @@ class CodeOntologyVisitor(ast.NodeVisitor):
 
     def __init__(self, file_path: str, module_id: str) -> None:
         """Initialize AST visitor for code structure extraction.
-        
+
         Args:
             file_path: Path to the source file being analyzed
             module_id: Unique identifier for the module

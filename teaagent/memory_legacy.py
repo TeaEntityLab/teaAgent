@@ -143,6 +143,7 @@ class MemoryCatalog:
         with lock_path.open('w', encoding='utf-8') as handle:
             try:
                 import fcntl
+
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             except (ImportError, OSError):
                 # fcntl is Unix-specific; gracefully fall back to no locking on Windows or other platforms
@@ -152,6 +153,7 @@ class MemoryCatalog:
             finally:
                 try:
                     import fcntl
+
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
                 except (ImportError, OSError):
                     # fcntl is Unix-specific; gracefully fall back to no unlocking on Windows or other platforms

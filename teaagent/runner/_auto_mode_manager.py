@@ -47,9 +47,7 @@ class AutoModeManager:
     def validate_tool_allowed(self, tool_name: str) -> None:
         """Validate that a tool is allowed in auto mode, raise error if not."""
         if self.auto_mode_guard is not None and not self.is_tool_allowed(tool_name):
-            raise ToolPermissionError(
-                f"Auto mode: tool '{tool_name}' is not allowed"
-            )
+            raise ToolPermissionError(f"Auto mode: tool '{tool_name}' is not allowed")
 
     def get_auto_approve_policy(self) -> Optional[ApprovalPolicy]:
         """Get the approval policy modified for auto mode.

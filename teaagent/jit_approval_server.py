@@ -88,13 +88,13 @@ class JITApprovalServer:
                 addr = ipaddress.ip_address(socket.gethostbyname(self._host))
             except socket.gaierror as exc:
                 raise ValueError(
-                    f"JIT Approval Server host {self._host!r} could not be resolved"
+                    f'JIT Approval Server host {self._host!r} could not be resolved'
                 ) from exc
 
         if not addr.is_loopback:
             raise ValueError(
-                f"JIT Approval Server has no authentication — "
-                f"must bind to loopback (got {self._host}, resolved to {addr})"
+                f'JIT Approval Server has no authentication — '
+                f'must bind to loopback (got {self._host}, resolved to {addr})'
             )
         self._server = await asyncio.start_server(
             self._handle_connection, self._host, self._port
@@ -140,6 +140,7 @@ class JITApprovalServer:
                     return
                 client_token = parts[2]
                 import secrets
+
                 if not secrets.compare_digest(client_token, self._auth_token):
                     logger.warning('SSE client provided invalid auth token')
                     writer.close()

@@ -180,15 +180,19 @@ class SQLiteOAuthStore:
             ).fetchone()
         if row is None:
             return None
-        
+
         try:
             parsed_uris = json.loads(row[1])
         except (json.JSONDecodeError, TypeError) as e:
-            raise ValueError(f"Invalid JSON in redirect_uris for client '{client_id}': {e}") from e
-        
+            raise ValueError(
+                f"Invalid JSON in redirect_uris for client '{client_id}': {e}"
+            ) from e
+
         if not isinstance(parsed_uris, list):
-            raise ValueError(f"redirect_uris must be a list for client '{client_id}', got {type(parsed_uris).__name__}")
-        
+            raise ValueError(
+                f"redirect_uris must be a list for client '{client_id}', got {type(parsed_uris).__name__}"
+            )
+
         redirect_uris = set()
         for uri in parsed_uris:
             uri_str = str(uri)
@@ -200,7 +204,7 @@ class SQLiteOAuthStore:
             except Exception as e:
                 raise ValueError(f"Invalid URI format '{uri_str}': {e}") from e
             redirect_uris.add(uri_str)
-        
+
         return OAuth21Client(
             client_id=str(row[0]),
             client_secret='',

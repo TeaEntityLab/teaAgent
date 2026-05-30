@@ -12,9 +12,7 @@ from teaagent.cli.execution import (
     AgentExecutionFactory,
     CommandExecutor,
     DefaultCommandExecutor,
-    ExecutionContext,
 )
-from teaagent.chat_agent import ChatAgentConfig
 from teaagent.policy import PermissionMode
 from teaagent.runner import RunResult
 
