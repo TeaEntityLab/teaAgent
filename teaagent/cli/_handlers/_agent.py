@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import logging
 import os
 import signal
 import subprocess
@@ -28,11 +29,25 @@ from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
+
+logger = logging.getLogger(__name__)
+
+# Constants for pagination and display limits
+DEFAULT_DIFF_PREVIEW_LINES = 30
+DEFAULT_PAGINATION_LINES = 50
+DEFAULT_SESSION_GRANT_TTL_HOURS = 8.0
 from teaagent.sandbox import ParallelExperimentStack
 from teaagent.skill_candidates import SkillCandidateStore
 
 
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
+    """Resolve selected skills from args, returning frozenset or None.
+    
+    Returns:
+        - Empty frozenset if no_auto_skills is set
+        - Frozenset of skill names if provided
+        - None otherwise (to trigger auto-selection)
+    """
     if getattr(args, 'no_auto_skills', False):
         return frozenset()
     names = [
@@ -558,8 +573,9 @@ def _execute_agent_task(
                     print(diff_result.stdout)
                 else:
                     print('\n[TeaAgent] No changes made in sandbox branch.')
-            except Exception:
+            except Exception as exc:
                 print('\n[TeaAgent] Could not generate diff summary.')
+                logger.warning(f'Failed to generate diff summary: {exc}')
 
             # Prompt for resolution
             if result.status == 'completed':
@@ -833,10 +849,10 @@ def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
         if result.stdout:
             # Paginate output if it's long
             lines = result.stdout.split('\n')
-            if len(lines) > 50:
-                # Show first 30 lines
-                print('\n'.join(lines[:30]))
-                print(f'\n... ({len(lines) - 30} more lines)')
+            if len(lines) > DEFAULT_PAGINATION_LINES:
+                # Show first N lines
+                print('\n'.join(lines[:DEFAULT_DIFF_PREVIEW_LINES]))
+                print(f'\n... ({len(lines) - DEFAULT_DIFF_PREVIEW_LINES} more lines)')
                 print('Press Enter to see more, or q to quit: ', end='')
                 more = input().strip().lower()
                 if more != 'q':
@@ -1120,7 +1136,7 @@ def make_cli_approval_handler(
                     scope='session',
                     permission_mode=permission_mode,
                     path_globs=[str(path)],
-                    ttl_hours=8.0,
+                    ttl_hours=DEFAULT_SESSION_GRANT_TTL_HOURS,
                 )
                 print(
                     f'[TeaAgent] Registered session grant for {request.tool_name} matching path: {path}',
@@ -1131,7 +1147,7 @@ def make_cli_approval_handler(
                     request.tool_name,
                     scope='session',
                     permission_mode=permission_mode,
-                    ttl_hours=8.0,
+                    ttl_hours=DEFAULT_SESSION_GRANT_TTL_HOURS,
                 )
                 print(
                     f'[TeaAgent] No path found in tool arguments. Registered global session grant for {request.tool_name}',

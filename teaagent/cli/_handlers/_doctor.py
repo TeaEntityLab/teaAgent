@@ -5,7 +5,7 @@ import getpass
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.llm import available_providers
@@ -66,7 +66,7 @@ def _looks_like_sensitive_string(value: str) -> bool:
 
 
 def _redact_sensitive_fields(
-    value: Any, known_sensitive_values: set[str] | None = None
+    value: Any, known_sensitive_values: Optional[set[str]] = None
 ) -> Any:
     if known_sensitive_values is None:
         known_sensitive_values = set()

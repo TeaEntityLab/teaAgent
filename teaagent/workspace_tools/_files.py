@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from fnmatch import fnmatch
@@ -18,15 +19,20 @@ from teaagent.workspace_tools._config import (
     _load_gitignore_matcher,
 )
 from teaagent.workspace_tools._helpers import (
+    assert_shell_command_size_allowed,
     assert_write_size_allowed,
+    bounded_positive_int_arg,
     compute_line_hash,
     format_hash_line,
     non_negative_int_arg,
     object_schema,
     positive_int_arg,
     relative_path,
-    resolve_workspace_path,
+    truncate_output,
 )
+
+logger = logging.getLogger(__name__)
+
 from teaagent.workspace_tools._shell import (
     run_shell,
     run_shell_inspect,
@@ -365,7 +371,7 @@ def _register_browser_tools_if_available(registry: ToolRegistry) -> None:
             register_browser_tools(registry)
     except ImportError:
         # Browser tools module not available; skip registration gracefully
-        pass
+        logger.debug('Browser tools not available; Playwright not installed')
 
 
 def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
@@ -374,6 +380,10 @@ def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
     # Check for symlinks to prevent symlink attacks
     if path.is_symlink():
         raise ValueError('symlinks are not allowed')
+    
+    # Validate path is within workspace root to prevent path traversal
+    if not path.resolve().is_relative_to(config.root.resolve()):
+        raise ValueError('Path outside workspace')
     
     max_bytes = non_negative_int_arg(args, 'max_bytes', default=config.max_read_bytes)
     data = path.read_bytes()
@@ -474,6 +484,10 @@ def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
 def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args['path'])
     lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+    
+    # Check for empty file
+    if not lines:
+        raise ValueError('Cannot edit empty file')
     
     # Validate line number type and range
     try:

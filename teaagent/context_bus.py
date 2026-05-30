@@ -66,6 +66,11 @@ class ContextBus:
     """Manages real-time Delta sharing between parallel agents."""
 
     def __init__(self, config: ContextBusConfig) -> None:
+        if not config.workflow_id:
+            raise ValueError('workflow_id cannot be empty')
+        if config.max_delta_age_seconds <= 0:
+            raise ValueError('max_delta_age_seconds must be positive')
+        
         self._config = config
         self._db_path = config.db_path
         self._workflow_id = config.workflow_id

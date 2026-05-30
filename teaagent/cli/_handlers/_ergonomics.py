@@ -18,6 +18,13 @@ from teaagent.recipes.registry import list_recipes, run_recipe
 from teaagent.run_store import RunStore
 
 
+def _truncate_string(s: str, max_len: int = 40, suffix: str = '...') -> str:
+    """Truncate a string to max_len, adding suffix if truncated."""
+    if len(s) <= max_len:
+        return s
+    return s[:max_len - len(suffix)] + suffix
+
+
 def _wrap_approval_store_errors(func: Callable[[], int]) -> int:
     """Unified error boundary for approval store operations.
 
@@ -48,8 +55,7 @@ def yesterday_command(args: argparse.Namespace) -> int:
         for r in runs:
             tr = dict(r)
             task = tr.get('task', '')
-            if len(task) > 40:
-                tr['task'] = task[:37] + '...'
+            tr['task'] = _truncate_string(task, max_len=40)
             truncated.append(tr)
         print(format_ascii_table(headers, truncated, keys))
     else:
@@ -68,8 +74,7 @@ def recall_command(args: argparse.Namespace) -> int:
         for r in runs:
             tr = dict(r)
             task = tr.get('task', '')
-            if len(task) > 40:
-                tr['task'] = task[:37] + '...'
+            tr['task'] = _truncate_string(task, max_len=40)
             truncated.append(tr)
         print(format_ascii_table(headers, truncated, keys))
     else:
@@ -255,57 +260,63 @@ def approval_list_command(args: argparse.Namespace) -> int:
     return _wrap_approval_store_errors(_list)
 
 
-def approval_check_command(args: argparse.Namespace) -> int:
+def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None:
+    """Parse approval arguments from --arguments-json or --arg key=value pairs.
+    
+    Returns:
+        Parsed arguments dict, or None if no arguments provided.
+    
+    Raises:
+        ValueError: If argument parsing fails (error message included).
+    """
     import json
+    
+    arguments: dict[str, Any] = {}
+    
+    # Parse --arguments-json if provided (highest priority)
+    if args.arguments_json:
+        try:
+            arguments = json.loads(args.arguments_json)
+            if not isinstance(arguments, dict):
+                raise ValueError('--arguments-json must be a JSON object')
+        except json.JSONDecodeError as exc:
+            raise ValueError(f'Invalid JSON in --arguments-json: {exc}')
+    else:
+        # Parse --arg key=value pairs
+        for arg_pair in args.arg:
+            if '=' not in arg_pair:
+                raise ValueError(f'Invalid --arg format: {arg_pair} (expected key=value)')
+            key, value = arg_pair.split('=', 1)
+            arguments[key] = value
 
+        # Fall back to --path and --command for compatibility
+        if args.path and 'path' not in arguments:
+            arguments['path'] = args.path
+        if args.command and 'command' not in arguments:
+            arguments['command'] = args.command
+    
+    return arguments or None
+
+
+def approval_check_command(args: argparse.Namespace) -> int:
     def _check() -> int:
         store = ApprovalPresetStore(args.root, readonly=True)
-        arguments: dict[str, Any] = {}
-
-        # Parse --arguments-json if provided (highest priority)
-        if args.arguments_json:
-            try:
-                arguments = json.loads(args.arguments_json)
-                if not isinstance(arguments, dict):
-                    print_json(
-                        {
-                            'status': 'error',
-                            'message': '--arguments-json must be a JSON object',
-                        }
-                    )
-                    return 1
-            except json.JSONDecodeError as exc:
-                print_json(
-                    {
-                        'status': 'error',
-                        'message': f'Invalid JSON in --arguments-json: {exc}',
-                    }
-                )
-                return 1
-        else:
-            # Parse --arg key=value pairs
-            for arg_pair in args.arg:
-                if '=' not in arg_pair:
-                    print_json(
-                        {
-                            'status': 'error',
-                            'message': f'Invalid --arg format: {arg_pair} (expected key=value)',
-                        }
-                    )
-                    return 1
-                key, value = arg_pair.split('=', 1)
-                arguments[key] = value
-
-            # Fall back to --path and --command for compatibility
-            if args.path and 'path' not in arguments:
-                arguments['path'] = args.path
-            if args.command and 'command' not in arguments:
-                arguments['command'] = args.command
+        
+        try:
+            arguments = _parse_approval_arguments(args)
+        except ValueError as exc:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': str(exc),
+                }
+            )
+            return 1
 
         result = store.check(
             args.tool_name,
             permission_mode=args.permission_mode,
-            arguments=arguments or None,
+            arguments=arguments,
         )
         print_json(result)
         return 0
@@ -314,56 +325,24 @@ def approval_check_command(args: argparse.Namespace) -> int:
 
 
 def approval_explain_command(args: argparse.Namespace) -> int:
-    import json
-
     def _explain() -> int:
         store = ApprovalPresetStore(args.root, readonly=True)
-        arguments: dict[str, Any] = {}
-
-        # Parse --arguments-json if provided (highest priority)
-        if args.arguments_json:
-            try:
-                arguments = json.loads(args.arguments_json)
-                if not isinstance(arguments, dict):
-                    print_json(
-                        {
-                            'status': 'error',
-                            'message': '--arguments-json must be a JSON object',
-                        }
-                    )
-                    return 1
-            except json.JSONDecodeError as exc:
-                print_json(
-                    {
-                        'status': 'error',
-                        'message': f'Invalid JSON in --arguments-json: {exc}',
-                    }
-                )
-                return 1
-        else:
-            # Parse --arg key=value pairs
-            for arg_pair in args.arg:
-                if '=' not in arg_pair:
-                    print_json(
-                        {
-                            'status': 'error',
-                            'message': f'Invalid --arg format: {arg_pair} (expected key=value)',
-                        }
-                    )
-                    return 1
-                key, value = arg_pair.split('=', 1)
-                arguments[key] = value
-
-            # Fall back to --path and --command for compatibility
-            if args.path and 'path' not in arguments:
-                arguments['path'] = args.path
-            if args.command and 'command' not in arguments:
-                arguments['command'] = args.command
+        
+        try:
+            arguments = _parse_approval_arguments(args)
+        except ValueError as exc:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': str(exc),
+                }
+            )
+            return 1
 
         result = store.check(
             args.tool_name,
             permission_mode=args.permission_mode,
-            arguments=arguments or None,
+            arguments=arguments,
             include_inactive=True,
         )
         # Add explanation summary

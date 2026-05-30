@@ -132,9 +132,18 @@ class AuditLogger:
         """Apply tiered audit level filtering to payload.
 
         L0: Metrics only (minimal metadata)
+            - Keeps: event_type, timestamp
+            - Removes: all other fields
+
         L1: Metadata (event types, timestamps, no arguments)
+            - Keeps: event_type, timestamp, and other metadata
+            - Removes: arguments, result, content, output, input
+
         L2: Redacted payload (default, sensitive data redacted)
+            - Returns payload as-is (redaction handled by redact_audit_payload)
+
         L3: Full local trace (all data, encrypted at rest)
+            - Returns payload as-is with no additional filtering
         """
         if self._audit_level == 'L0':
             # Only keep basic metrics
@@ -252,7 +261,7 @@ class AuditLogger:
             try:
                 sink(event)
             except Exception as exc:
-                logger.error(f'Audit sink failed: {exc}', exc_info=True)
+                logger.error(f'Audit sink {sink.__class__.__name__} failed: {exc}', exc_info=True)
                 failed_sinks.append((sink, exc))
 
         if failed_sinks:
