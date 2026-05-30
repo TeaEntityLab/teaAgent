@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
-import random
+import secrets
 import sqlite3
 import threading
 import time
@@ -152,7 +152,7 @@ class ContextBus:
                         exc,
                     )
                     raise
-                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
                 logger.warning(
                     'SQLite database error (attempt %s/%s), reconnecting: %s',
                     attempt + 1,
@@ -175,7 +175,7 @@ class ContextBus:
                         exc,
                     )
                     raise
-                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
                 logger.warning(
                     'SQLite lock contention (attempt %s/%s), retrying in %.2fs',
                     attempt + 1,
@@ -262,7 +262,7 @@ class ContextBus:
                     conn.rollback()
                 if attempt == max_retries - 1:
                     raise
-                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
                 logger.warning(
                     'publish_delta failed (attempt %s/%s): %s, reconnecting in %.2fs',
                     attempt + 1,
@@ -377,7 +377,7 @@ class ContextBus:
                     conn.rollback()
                 if attempt == max_retries - 1:
                     raise
-                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
                 logger.warning(
                     '_clear_deltas failed (attempt %s/%s): %s, reconnecting in %.2fs',
                     attempt + 1,
@@ -414,7 +414,7 @@ class ContextBus:
                     conn.rollback()
                 if attempt == max_retries - 1:
                     raise
-                delay = base_delay * (2**attempt) + random.uniform(0, 0.05)
+                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
                 logger.warning(
                     'cleanup_old_deltas failed (attempt %s/%s): %s, reconnecting in %.2fs',
                     attempt + 1,

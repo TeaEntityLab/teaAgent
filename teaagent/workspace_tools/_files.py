@@ -370,6 +370,11 @@ def _register_browser_tools_if_available(registry: ToolRegistry) -> None:
 
 def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args['path'])
+    
+    # Check for symlinks to prevent symlink attacks
+    if path.is_symlink():
+        raise ValueError('symlinks are not allowed')
+    
     max_bytes = non_negative_int_arg(args, 'max_bytes', default=config.max_read_bytes)
     data = path.read_bytes()
     truncated = len(data) > max_bytes
@@ -394,21 +399,53 @@ def read_file_hashed(
 
 
 def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
+    import tempfile
+    import os
+    
     path = resolve_workspace_path(config, args['path'])
+    
+    # Check for symlinks to prevent symlink attacks
+    if path.is_symlink():
+        raise ValueError('symlinks are not allowed')
+    
     if args.get('create_dirs', False):
         path.parent.mkdir(parents=True, exist_ok=True)
     content = args['content']
     assert_write_size_allowed(config, content)
     expected_mtime = args.get('expected_mtime')
-    if expected_mtime is not None and path.exists():
-        actual_mtime = path.stat().st_mtime
-        if abs(actual_mtime - float(expected_mtime)) > 0.001:
-            raise ValueError(
-                f'file {relative_path(config, path)} was modified since last read '
-                f'(expected_mtime={expected_mtime}, actual_mtime={actual_mtime:.6f}). '
-                f'Re-read the file before writing.'
-            )
-    path.write_text(content, encoding='utf-8')
+    
+    # Validate expected_mtime if provided
+    if expected_mtime is not None:
+        try:
+            expected_mtime = float(expected_mtime)
+        except (ValueError, TypeError):
+            raise ValueError('expected_mtime must be a valid number')
+    
+    # Write to temporary file first for atomic operation
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+    
+    try:
+        # Verify mtime before atomic rename (TOCTOU-safe)
+        if expected_mtime is not None and path.exists():
+            actual_mtime = path.stat().st_mtime
+            if abs(actual_mtime - expected_mtime) > 0.001:
+                os.unlink(tmp_path)
+                raise ValueError(
+                    f'file {relative_path(config, path)} was modified since last read '
+                    f'(expected_mtime={expected_mtime}, actual_mtime={actual_mtime:.6f}). '
+                    f'Re-read the file before writing.'
+                )
+        
+        # Atomic rename
+        os.replace(tmp_path, path)
+    except Exception:
+        # Clean up temp file on error
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise
+    
     stat = path.stat()
     return {
         'path': relative_path(config, path),
@@ -437,9 +474,19 @@ def apply_patch(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, 
 def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args['path'])
     lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
-    line_number = args['line']
-    if line_number < 1 or line_number > len(lines):
-        raise ValueError('line is outside file range')
+    
+    # Validate line number type and range
+    try:
+        line_number = int(args['line'])
+    except (ValueError, TypeError):
+        raise ValueError('line must be an integer')
+    
+    if line_number < 1:
+        raise ValueError('line must be >= 1')
+    
+    if line_number > len(lines):
+        raise ValueError(f'line {line_number} is outside file range (max: {len(lines)})')
+    
     current = lines[line_number - 1]
     expected_hash = compute_line_hash(line_number, current)
     if expected_hash != args['hash']:
@@ -487,7 +534,13 @@ def list_files(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
 
 
 def search_text(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
-    regex = re.compile(args['pattern'])
+    pattern = args.get('pattern', '')
+    if not pattern:
+        raise ValueError('pattern is required and cannot be empty')
+    try:
+        regex = re.compile(pattern)
+    except re.error as e:
+        raise ValueError(f'Invalid regex pattern: {e}') from e
     include = args.get('include', '*')
     limit = positive_int_arg(args, 'limit', default=200)
     offset = non_negative_int_arg(args, 'offset', default=0)

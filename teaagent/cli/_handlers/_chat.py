@@ -244,27 +244,12 @@ def execute_shell_command(command: str, root: Path) -> None:
         command: The shell command to execute
         root: The workspace root directory
     """
-    # Security check: block destructive commands
-    destructive_patterns = [
-        'rm -rf /',
-        'rm -rf ~/',
-        'rm -rf .*',
-        'mkfs',
-        'dd if=',
-        ':(){:|:&};:',  # fork bomb
-        'chmod 777 /',
-        'chown -R',
-    ]
-
-    command_lower = command.lower()
-    for pattern in destructive_patterns:
-        if pattern in command_lower:
-            print(
-                '[TeaAgent] Error: Destructive command not allowed in shell escape. Use full terminal.'
-            )
-            return
-
-    # Parse command safely
+    # Security check: block destructive commands using proper parsing
+    DANGEROUS_EXECUTABLES = frozenset({
+        'rm', 'rmdir', 'mkfs', 'dd', 'format', 'fdisk', 'shred', 'wipe'
+    })
+    
+    # Parse command safely first
     try:
         # Use shlex to properly parse the command while preserving quoted arguments
         args = shlex.split(command)
@@ -272,6 +257,25 @@ def execute_shell_command(command: str, root: Path) -> None:
             print('[TeaAgent] Error: Empty command')
             return
     except ValueError as exc:
+        print(f'[TeaAgent] Error: Invalid command syntax: {exc}')
+        return
+    
+    # Check if the executable is dangerous
+    executable = args[0].lower()
+    if executable in DANGEROUS_EXECUTABLES:
+        print(
+            '[TeaAgent] Error: Destructive command not allowed in shell escape. Use full terminal.'
+        )
+        return
+    
+    # Additional checks for specific dangerous patterns
+    if executable == 'chmod' and '777' in args:
+        print('[TeaAgent] Error: chmod 777 not allowed in shell escape.')
+        return
+    
+    if executable == 'chown' and '-R' in args:
+        print('[TeaAgent] Error: chown -R not allowed in shell escape.')
+        return
         print(f'[TeaAgent] Error: Invalid command syntax: {exc}')
         return
 

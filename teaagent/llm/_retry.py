@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import random
+import secrets
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -18,7 +18,8 @@ class LLMRetryConfig:
 
     def delay(self, attempt: int) -> float:
         delay = self.base_delay_seconds * (2**attempt)
-        jitter = random.uniform(0, delay * 0.5)
+        max_jitter_ms = int(delay * 500)  # Convert to milliseconds
+        jitter = secrets.randbelow(max_jitter_ms) / 1000
         return min(delay + jitter, self.max_delay_seconds)
 
 

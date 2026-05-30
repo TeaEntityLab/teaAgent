@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import os
 import shlex
 import subprocess
@@ -23,21 +24,32 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
         default=config.command_timeout_seconds,
         maximum=config.max_shell_timeout_seconds,
     )
-    # Create a safe environment with sanitized pager settings and filtered secrets
-    sensitive_patterns = ['TOKEN', 'KEY', 'SECRET', 'PASSWORD', 'CREDENTIAL', 'AUTH']
+    # Parse command safely using shlex.split() to prevent shell injection
+    try:
+        argv = shlex.split(command)
+    except ValueError as e:
+        raise ValueError(f'Invalid command syntax: {e}') from e
+    
+    # Create a safe environment using allowlist approach
+    SAFE_ENV_PATTERNS = {
+        'PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'LC_*',
+        'PAGER', 'EDITOR', 'GIT_*', 'SSH_*', 'JAVA_HOME',
+        'PYTHON_*', 'NODE_*', 'RUST_*', 'GO_*', 'TERM',
+        'DISPLAY', 'XDG_*', 'TMPDIR', 'TEMP', 'TMP'
+    }
     env = {
         k: v
         for k, v in os.environ.items()
-        if not any(pattern in k.upper() for pattern in sensitive_patterns)
+        if any(fnmatch.fnmatch(k, pattern) for pattern in SAFE_ENV_PATTERNS)
     }
     env.update({
         'PAGER': 'cat',
         'GIT_PAGER': 'cat',
     })
     result = subprocess.run(
-        command,
+        argv,
         cwd=str(config.root),
-        shell=True,
+        shell=False,
         text=True,
         capture_output=True,
         timeout=timeout,
@@ -53,12 +65,17 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
 def run_shell_argv(
     config: WorkspaceToolConfig, argv: list[str], *, timeout_seconds: int
 ) -> dict[str, Any]:
-    # Create a safe environment with sanitized pager settings and filtered secrets
-    sensitive_patterns = ['TOKEN', 'KEY', 'SECRET', 'PASSWORD', 'CREDENTIAL', 'AUTH']
+    # Create a safe environment using allowlist approach
+    SAFE_ENV_PATTERNS = {
+        'PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'LC_*',
+        'PAGER', 'EDITOR', 'GIT_*', 'SSH_*', 'JAVA_HOME',
+        'PYTHON_*', 'NODE_*', 'RUST_*', 'GO_*', 'TERM',
+        'DISPLAY', 'XDG_*', 'TMPDIR', 'TEMP', 'TMP'
+    }
     env = {
         k: v
         for k, v in os.environ.items()
-        if not any(pattern in k.upper() for pattern in sensitive_patterns)
+        if any(fnmatch.fnmatch(k, pattern) for pattern in SAFE_ENV_PATTERNS)
     }
     env.update({
         'PAGER': 'cat',

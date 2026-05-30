@@ -128,10 +128,13 @@ def _save_git_sandbox_consent(root: str | Path, value: str) -> None:
     json_path = tea_dir / 'config.json'
     config = {}
     if json_path.is_file():
-        from contextlib import suppress
-
-        with suppress(Exception):
+        try:
             config = json.loads(json_path.read_text(encoding='utf-8'))
+        except (json.JSONDecodeError, ValueError, OSError) as exc:
+            print(f'Warning: Failed to read configuration: {exc}', file=sys.stderr)
+            config = {}
+    else:
+        config = {}
     config['git_sandbox_consent'] = value
     try:
         json_path.write_text(
