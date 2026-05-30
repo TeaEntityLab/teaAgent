@@ -276,6 +276,7 @@ def run_tests_hook(
         except subprocess.CalledProcessError as exc:
             raise HookError(f'Test run failed: {exc.stderr.strip()[:500]}') from exc
         except FileNotFoundError:
+            # Test runner (e.g., uv, pytest) not found; skip test execution gracefully
             pass
         return None
 
@@ -313,6 +314,7 @@ def format_check_hook(
         except subprocess.CalledProcessError as exc:
             raise HookError(f'Format check failed: {exc.stderr.strip()[:500]}') from exc
         except FileNotFoundError:
+            # Format tool (e.g., ruff) not found; skip format check gracefully
             pass
         return None
 

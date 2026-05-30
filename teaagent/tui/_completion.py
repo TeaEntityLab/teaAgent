@@ -47,6 +47,7 @@ def complete_file_paths(text: str, root: Path) -> list[str]:
             else:
                 completions.append(f'@{item.name}{suffix}')
     except OSError:
+        # Directory may not exist or be inaccessible; gracefully skip completion
         pass
 
     return sorted(completions)

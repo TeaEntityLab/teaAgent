@@ -174,7 +174,7 @@ class JITApprovalServer:
                 writer.close()
                 await writer.wait_closed()
             except Exception:
-                # Ignore errors during cleanup
+                # Ignore errors during cleanup - writer may already be closed or in an invalid state
                 pass
 
     async def _send_sse_event(

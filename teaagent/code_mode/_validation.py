@@ -5,6 +5,7 @@ from typing import Any
 
 
 class UnsafeCodeError(ValueError):
+    """Exception raised when code validation fails due to unsafe constructs."""
     pass
 
 

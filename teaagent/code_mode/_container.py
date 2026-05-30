@@ -228,6 +228,7 @@ def _communicate_with_output_limit(
                 process.stdin.write(stdin_payload)
                 process.stdin.close()
             except OSError:
+                # Process may have already terminated or stdin pipe is closed; ignore gracefully
                 pass
         process.wait(timeout=timeout_seconds)
     except subprocess.TimeoutExpired as exc:

@@ -281,6 +281,7 @@ class SignatureRelayServer:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
+            # Gracefully handle Ctrl+C to shut down the server
             pass
         finally:
             if self._httpd is httpd:

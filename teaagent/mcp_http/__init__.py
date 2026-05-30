@@ -119,6 +119,7 @@ def serve_mcp_http(
     try:
         server.serve_forever()
     except KeyboardInterrupt:
+        # Gracefully handle Ctrl+C to shut down the server
         pass
     finally:
         server.server_close()

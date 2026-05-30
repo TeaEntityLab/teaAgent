@@ -33,22 +33,27 @@ _PROOF_MAX_AGE_SECONDS = 60
 
 
 class OAuth21Error(Exception):
+    """Base exception for OAuth 2.1 errors."""
     pass
 
 
 class JWTError(OAuth21Error):
+    """Exception raised for JWT-related errors."""
     pass
 
 
 class InvalidClientError(OAuth21Error):
+    """Exception raised when client authentication fails."""
     pass
 
 
 class InvalidGrantError(OAuth21Error):
+    """Exception raised when a grant is invalid or expired."""
     pass
 
 
 class InvalidDPoPError(OAuth21Error):
+    """Exception raised when DPoP proof validation fails."""
     pass
 
 

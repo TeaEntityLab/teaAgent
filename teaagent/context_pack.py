@@ -230,6 +230,7 @@ def _knowledge_collection_name(root: Path) -> str:
                 if isinstance(name, str) and name.strip():
                     return name.strip()
         except (OSError, json.JSONDecodeError, TypeError):
+            # Marker file missing, unreadable, or invalid JSON; use default collection name
             pass
     return 'knowledge'
 

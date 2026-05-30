@@ -364,6 +364,7 @@ def _register_browser_tools_if_available(registry: ToolRegistry) -> None:
         if HAS_PLAYWRIGHT:
             register_browser_tools(registry)
     except ImportError:
+        # Browser tools module not available; skip registration gracefully
         pass
 
 

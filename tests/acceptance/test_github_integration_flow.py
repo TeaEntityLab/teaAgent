@@ -32,6 +32,7 @@ def test_github_create_pr_no_token() -> None:
             github_create_pr('owner/repo', 'title', 'branch')
             raise AssertionError('should have raised')
         except PermissionError:
+            # Expected: no GitHub token available, so PermissionError is raised
             pass
 
 

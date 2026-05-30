@@ -145,6 +145,7 @@ class MemoryCatalog:
                 import fcntl
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             except (ImportError, OSError):
+                # fcntl is Unix-specific; gracefully fall back to no locking on Windows or other platforms
                 pass
             try:
                 yield
@@ -153,6 +154,7 @@ class MemoryCatalog:
                     import fcntl
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
                 except (ImportError, OSError):
+                    # fcntl is Unix-specific; gracefully fall back to no unlocking on Windows or other platforms
                     pass
 
     def _read_entries(self) -> List[MemoryEntry]:

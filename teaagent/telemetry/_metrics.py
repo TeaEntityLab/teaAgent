@@ -18,6 +18,7 @@ try:
     )
     from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 except ImportError:  # pragma: no cover
+    # OpenTelemetry not installed; metrics features will be disabled
     pass
 
 

@@ -69,6 +69,7 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
         permission_ok = False
         permission_detail = 'read-only mode did not block destructive write'
     except ToolPermissionError:
+        # Expected: read-only mode correctly blocked the destructive tool
         pass
 
     sample_events = [

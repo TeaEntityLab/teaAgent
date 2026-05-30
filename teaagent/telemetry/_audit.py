@@ -17,6 +17,7 @@ try:
     )
     from opentelemetry.trace import Status, StatusCode
 except ImportError:  # pragma: no cover
+    # OpenTelemetry not installed; telemetry features will be disabled
     pass
 
 

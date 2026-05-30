@@ -194,7 +194,7 @@ class ValidationRunner:
                         else:
                             warnings.append(error)
                     except ValueError:
-                        # Not a line number, skip
+                        # Not a line number, skip this entry gracefully
                         pass
 
         return errors, warnings

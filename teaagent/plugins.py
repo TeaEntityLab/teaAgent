@@ -91,6 +91,7 @@ def _audit_plugin_source(ep: Any) -> bool:
                     )
                     return not plugins_strict_audit()
         except (ImportError, ValueError):
+            # Security module not available or invalid configuration; skip strict audit check
             pass
 
         from teaagent.security_env import plugins_strict_audit

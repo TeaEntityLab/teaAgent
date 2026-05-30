@@ -259,6 +259,7 @@ class ParallelExecutor:
                 )
                 return worktree_path
         except subprocess.CalledProcessError:
+            # Worktree creation failed; fall back to using execution_root directly
             pass
         return execution_root
 

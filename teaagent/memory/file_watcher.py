@@ -39,15 +39,19 @@ except ImportError:
         """Dummy Observer class when watchdog is not available."""
 
         def schedule(self, *args: object, **kwargs: object) -> None:
+            # Stub: no-op when watchdog is not available
             pass
 
         def start(self) -> None:
+            # Stub: no-op when watchdog is not available
             pass
 
         def stop(self) -> None:
+            # Stub: no-op when watchdog is not available
             pass
 
         def join(self, timeout: Optional[float] = None) -> None:
+            # Stub: no-op when watchdog is not available
             pass
 
 

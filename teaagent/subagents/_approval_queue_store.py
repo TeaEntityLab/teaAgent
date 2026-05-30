@@ -110,6 +110,7 @@ class ApprovalQueueStore:
                 lock_flag = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
                 fcntl.flock(handle.fileno(), lock_flag)
             except (ImportError, OSError):
+                # fcntl is Unix-specific; gracefully fall back to no locking on Windows or other platforms
                 pass
             try:
                 yield
@@ -119,6 +120,7 @@ class ApprovalQueueStore:
 
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
                 except (ImportError, OSError):
+                    # fcntl is Unix-specific; gracefully fall back to no unlocking on Windows or other platforms
                     pass
 
     def load(self, parent_run_id: str) -> QueueDiskSnapshot:

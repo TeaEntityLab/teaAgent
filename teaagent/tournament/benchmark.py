@@ -188,6 +188,7 @@ class BenchmarkRunner:
                                         break
                             return passed / total if total > 0 else 0.0
                         except ValueError:
+                            # Failed to parse test output; fall back to return code check
                             pass
 
             return 1.0 if result.returncode == 0 else 0.0
@@ -246,6 +247,7 @@ class BenchmarkRunner:
                             if part.isdigit():
                                 lines_changed += int(part)
                     except ValueError:
+                        # Failed to parse diff line; skip this line
                         pass
 
             # Run linter to count warnings
@@ -263,6 +265,7 @@ class BenchmarkRunner:
                     [line for line in lint_result.stdout.split('\n') if line.strip()]
                 )
             except (subprocess.TimeoutExpired, FileNotFoundError):
+                # Ruff not found or timed out; skip lint check gracefully
                 pass
 
             return lint_warnings, lines_changed

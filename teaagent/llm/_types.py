@@ -8,24 +8,29 @@ from typing import Any, Optional, Protocol
 
 
 class LLMAdapterError(RuntimeError):
+    """Base exception for LLM adapter errors."""
     pass
 
 
 class LLMConfigurationError(LLMAdapterError):
+    """Exception raised when LLM adapter configuration is invalid."""
     pass
 
 
 class LLMHTTPError(LLMAdapterError):
+    """Exception raised for HTTP-related errors from LLM providers."""
     def __init__(self, message: str, *, status_code: int = 0) -> None:
         super().__init__(message)
         self.status_code = status_code
 
 
 class LLMProviderError(LLMAdapterError):
+    """Exception raised when LLM provider returns an error."""
     pass
 
 
 class LLMResponseFormatError(LLMAdapterError):
+    """Exception raised when LLM response format is invalid."""
     pass
 
 

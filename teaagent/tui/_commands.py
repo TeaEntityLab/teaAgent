@@ -685,11 +685,11 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         tui.output_fn(
             f'parallel: started {success_count}/{len(args)} experiment branches'
         )
-        for option, result in sandbox_results.items():  # type: ignore[assignment]
-            if result.success:  # type: ignore[attr-defined]
-                tui.output_fn(f'  {option}: {result.branch_name}')  # type: ignore[attr-defined]
+        for option, result in sandbox_results.items():  # type: ignore[assignment]  # type checker can't infer result type from dict.items()
+            if result.success:  # type: ignore[attr-defined]  # success attribute exists on GitSandboxResult
+                tui.output_fn(f'  {option}: {result.branch_name}')  # type: ignore[attr-defined]  # branch_name attribute exists on GitSandboxResult
             else:
-                tui.output_fn(f'  {option}: failed - {result.error}')  # type: ignore[attr-defined]
+                tui.output_fn(f'  {option}: failed - {result.error}')  # type: ignore[attr-defined]  # error attribute exists on GitSandboxResult
         return True
     if action == 'select':
         if not tui._parallel_stack or not tui._parallel_options:
@@ -720,7 +720,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 tui.output_fn('error: original branch not set')
                 return True
             subprocess.run(
-                ['git', 'checkout', str(original_branch)],  # type: ignore[arg-type]
+                ['git', 'checkout', str(original_branch)],  # type: ignore[arg-type]  # str() ensures string conversion for subprocess
                 cwd=tui.root,
                 check=True,
                 capture_output=True,

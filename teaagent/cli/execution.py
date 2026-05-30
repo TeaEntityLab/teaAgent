@@ -48,7 +48,7 @@ class CommandExecutor(ABC):
     @abstractmethod
     def execute(self, context: ExecutionContext) -> RunResult:
         """Execute the agent task with the given context."""
-        pass
+        # Abstract method: implementation provided by subclasses
 
 
 class AgentExecutionFactory:

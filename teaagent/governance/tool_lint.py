@@ -176,7 +176,7 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
             elif isinstance(node, ast.AugAssign):
                 write_operations.append('augmented_assignment')
     except (SyntaxError, ValueError):
-        # If we can't parse the AST, skip this check
+        # If we can't parse the AST, skip this check gracefully
         pass
     return write_operations
 

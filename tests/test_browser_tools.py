@@ -22,6 +22,7 @@ def _playwright_runtime_available() -> bool:
         asyncio.get_running_loop()
         return False
     except RuntimeError:
+        # No running event loop; continue with sync playwright check
         pass
     try:
         from playwright.sync_api import sync_playwright

@@ -356,6 +356,7 @@ class GitBranchSandbox:
                         # Check if the failure was due to conflicts or other issues
                         if has_merge_conflicts(self._root):
                             # This is a conflict - proceed to conflict resolution
+                            # TODO: Implement automatic conflict resolution
                             pass
                         else:
                             # This is a different merge error (e.g., unrelated histories, local changes)
@@ -572,6 +573,7 @@ def find_orphaned_sandbox_branches(
                 except (json.JSONDecodeError, IOError):
                     continue
         except (OSError, AttributeError):
+            # Directory may not exist or be inaccessible; gracefully skip
             pass
 
     orphaned: list[dict[str, Any]] = []
@@ -1039,6 +1041,7 @@ def run_lsp_validation(root: Path, file_path: str) -> str:
             if result.returncode != 0:
                 return result.stdout or result.stderr
         except (subprocess.TimeoutExpired, FileNotFoundError):
+            # Ruff not found or timed out; skip ruff check gracefully
             pass
 
         try:
@@ -1052,6 +1055,7 @@ def run_lsp_validation(root: Path, file_path: str) -> str:
             if result.returncode != 0:
                 return result.stdout or result.stderr
         except (subprocess.TimeoutExpired, FileNotFoundError):
+            # MyPy not found or timed out; skip mypy check gracefully
             pass
 
     return ''

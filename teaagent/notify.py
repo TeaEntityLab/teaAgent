@@ -132,7 +132,7 @@ def _run_shell(command: str, payload: dict[str, Any]) -> None:
             args = shlex.split(command)
             subprocess.run(args, shell=False, env=env, timeout=10)
         except ValueError:
-            # If shlex.split fails, the command is malformed - skip execution
+            # If shlex.split fails, the command is malformed - skip execution gracefully
             pass
 
 

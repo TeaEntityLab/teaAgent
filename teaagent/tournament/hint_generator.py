@@ -49,7 +49,7 @@ class ApproachHintGenerator:
 
     def __init__(self) -> None:
         """Initialize approach hint generator."""
-        pass
+        # No initialization needed; hints are generated dynamically based on task
 
     def generate_hints(self, task: str, count: int) -> List[str]:
         """Generate approach hints for tournament.

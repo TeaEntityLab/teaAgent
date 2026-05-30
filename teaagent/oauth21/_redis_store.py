@@ -180,6 +180,7 @@ class RedisOAuthStore:
 
     def prune(self, *, now: float, code_ttl_cutoff: float, nonce_ttl: float) -> None:
         # Redis TTL handles expiration automatically; explicit prune is a no-op.
+        # This method exists for interface compatibility with other store implementations.
         pass
 
     def save_refresh_token(self, record: _RefreshToken) -> None:

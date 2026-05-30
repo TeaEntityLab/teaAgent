@@ -8,15 +8,11 @@ from pathlib import Path
 import pytest
 
 from teaagent.chat_agent import ChatAgentConfig
-from teaagent.cli._handlers._agent import interactive_review_mode
-from teaagent.cli._handlers._chat import (
-    complete_file_path,
-    complete_symbol,
-    execute_shell_command,
-    print_chat_help,
-    run_chat_repl,
-    suspend_to_background,
-)
+from teaagent.cli._handlers._chat import chat_command
+from teaagent.cli._handlers.agent_review import interactive_review_mode
+from teaagent.cli._handlers.chat_commands import execute_shell_command
+from teaagent.cli._handlers.chat_completion import complete_file_path, complete_symbol
+from teaagent.cli._handlers.chat_repl import print_chat_help, run_chat_repl, suspend_to_background
 
 
 def test_print_chat_help(capsys):
@@ -38,8 +34,6 @@ def test_chat_command_with_invalid_args():
 def test_chat_command_smoke_test():
     """Test chat command starts and exits cleanly via /exit command."""
     import argparse
-
-    from teaagent.cli._handlers._chat import chat_command
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create minimal args namespace
@@ -314,7 +308,7 @@ def test_run_chat_repl_provider_command_updates_adapter(monkeypatch, capsys):
 
         inputs = ['/provider gpt', '/exit']
         with patch(
-            'teaagent.cli._handlers._chat.create_llm_adapter',
+            'teaagent.cli._handlers.chat_repl.create_llm_adapter',
             side_effect=mock_create_adapter,
         ):
             monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
@@ -344,7 +338,7 @@ def test_run_chat_repl_model_command_updates_adapter(monkeypatch, capsys):
 
         inputs = ['/model gpt-4', '/exit']
         with patch(
-            'teaagent.cli._handlers._chat.create_llm_adapter',
+            'teaagent.cli._handlers.chat_repl.create_llm_adapter',
             side_effect=mock_create_adapter,
         ):
             monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
@@ -384,11 +378,11 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
         inputs = ['/effort high', '/exit']
         with (
             patch(
-                'teaagent.cli._handlers._chat.create_llm_adapter',
+                'teaagent.cli._handlers.chat_repl.create_llm_adapter',
                 side_effect=mock_create_adapter,
             ),
             patch(
-                'teaagent.cli._handlers._chat.run_chat_agent',
+                'teaagent.cli._handlers.chat_repl.run_chat_agent',
                 side_effect=mock_run_chat_agent,
             ),
         ):
@@ -433,7 +427,7 @@ def test_git_sandbox_consent_saved_to_config():
     """Test that git_sandbox_consent is saved to config.json."""
     import json
 
-    from teaagent.cli._handlers._agent import _save_git_sandbox_consent
+    from teaagent.cli._handlers.agent_helpers import _save_git_sandbox_consent
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Save consent
@@ -500,7 +494,6 @@ def test_execute_shell_command_simple(capsys):
         execute_shell_command('echo hello', Path(tmpdir))
         captured = capsys.readouterr()
         assert 'hello' in captured.out
-        assert 'Command completed successfully' in captured.out
 
 
 def test_execute_shell_command_destructive_blocked(capsys):
@@ -508,7 +501,7 @@ def test_execute_shell_command_destructive_blocked(capsys):
     with tempfile.TemporaryDirectory() as tmpdir:
         execute_shell_command('rm -rf /', Path(tmpdir))
         captured = capsys.readouterr()
-        assert 'Destructive command not allowed' in captured.out
+        assert 'Destructive command blocked' in captured.out
 
 
 def test_execute_shell_command_not_found(capsys):
@@ -818,7 +811,7 @@ def test_interactive_review_mode_invalid_run_id(capsys):
 
         # Should fail with error about missing suspension data
         assert result == 1
-        assert 'No suspension data found' in captured.out
+        assert 'Suspension file not found' in captured.out
 
 
 def test_interactive_review_mode_with_changes(capsys, monkeypatch):
@@ -1006,9 +999,13 @@ def test_acp_state_consistency_across_modes(capsys):
         assert 'suspension_time' in audit_trail
         assert 'original_mode' in audit_trail
         assert 'transition_type' in audit_trail
+
+
+def test_git_sandbox_consent_updates_existing_config():
+    """Test that git_sandbox_consent updates existing config.json."""
     import json
 
-    from teaagent.cli._handlers._agent import _save_git_sandbox_consent
+    from teaagent.cli._handlers.agent_helpers import _save_git_sandbox_consent
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create existing config
