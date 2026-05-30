@@ -846,6 +846,36 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: failed to abort merge')
         return True
 
+    if action == 'pin':
+        tui._handle_pin(args)
+        return True
+    if action == 'unpin':
+        tui._handle_unpin(args)
+        return True
+    if action == 'pinned':
+        tui._handle_pinned()
+        return True
+    if action == 'compact':
+        tui._handle_compact()
+        return True
+    if action == 'cost':
+        tui._handle_cost()
+        return True
+    if action == 'effort':
+        tui._handle_effort(args)
+        return True
+    if action == 'budget':
+        tui._handle_budget()
+        return True
+    if action == 'checkpoint':
+        tui._handle_checkpoint()
+        return True
+    if action == 'undo':
+        tui._handle_undo()
+        return True
+    if action in ('background', 'handoff'):
+        tui._handle_background()
+        return True
     if tui.chat:
         return _handle_tui_command(tui, f'ask {raw_command}')
     tui.output_fn(f"error: unknown command '{action}'. Type 'help'.")

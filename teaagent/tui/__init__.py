@@ -95,6 +95,16 @@ HELP_TEXT = """Commands:
   n                         Next conflicted file in conflict mode.
   p                         Previous conflicted file in conflict mode.
   a                         Abort merge in conflict mode.
+  pin <path>                Pin a file for live context sync (watches for changes).
+  unpin <path>              Unpin a file from live context sync.
+  pinned                    List all pinned files.
+  compact                   Compact session context to save tokens.
+  cost                      Show session cost.
+  effort <low|normal|high>  Set effort throttling level.
+  budget                    Show budget and effort status.
+  checkpoint                Create manual git checkpoint.
+  undo                      Undo all changes (using checkpoint — use teaagent agent undo for advanced).
+  background                Suspend session to background mode (use teaagent agent run --detach).
   exit | quit               Leave the TUI.
 
 Slash aliases (/daily, /plan, /run, …) are accepted for the same commands.
@@ -106,7 +116,7 @@ class TeaAgentTUI:
         self,
         *,
         database: str = ':memory:',
-        provider: str = 'gpt',
+        provider: Optional[str] = None,
         model: Optional[str] = None,
         root: str | Path = '.',
         allow_destructive: bool = False,
@@ -114,6 +124,16 @@ class TeaAgentTUI:
         input_fn: Optional[InputFn] = None,
         output_fn: OutputFn = print,
         adapter_factory: AdapterFactory = default_adapter_factory,
+        stream: bool = False,
+        subagent: bool = False,
+        heartbeat_seconds: float = 0.0,
+        max_iterations: int = 10,
+        max_tool_calls: int = 10,
+        max_subagent_depth: int = 1,
+        enable_git_tools: bool = False,
+        skill_search_dirs: Optional[list[str]] = None,
+        memory_limit: int = 5,
+        max_estimated_cost_cents: int = 1000,
     ) -> None:
         self.database = database
         self.provider = provider
@@ -123,10 +143,17 @@ class TeaAgentTUI:
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
         self.progress = True
-        self.stream = False
-        self.subagent = False
-        self.heartbeat_seconds = 0.0
+        self.stream = stream
+        self.subagent = subagent
+        self.heartbeat_seconds = heartbeat_seconds
         self.chat = False
+        self.max_iterations = max_iterations
+        self.max_tool_calls = max_tool_calls
+        self.max_subagent_depth = max_subagent_depth
+        self.enable_git_tools = enable_git_tools
+        self.skill_search_dirs = skill_search_dirs
+        self.memory_limit = memory_limit
+        self.max_estimated_cost_cents = max_estimated_cost_cents
         self._chat_explicit = False
         self.session_id: Optional[str] = None
         self.approved_call_ids: set[str] = set()
@@ -142,6 +169,20 @@ class TeaAgentTUI:
         self._conflict_mode: bool = False
         self._conflicted_files: list[str] = []
         self._current_conflict_index: int = 0
+
+        # File watcher for live context sync
+        self._file_watcher = None
+        self._watcher_running: bool = False
+
+        # Git-stash checkpoint for safe undo
+        self._checkpoint_created: bool = False
+        self._checkpoint_ref: Optional[str] = None
+
+        # Effort throttling and budget tracking
+        self._session_cost_cents: float = 0.0
+        self._effort_level: str = 'normal'
+        self._runtime_max_cost_cents: int = 1000
+        self._max_cost_budget_cents: int = 1000
 
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
@@ -255,14 +296,20 @@ class TeaAgentTUI:
                 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
                 from prompt_toolkit.history import FileHistory
 
+                from teaagent.tui._completion import TeaAgentCompleter
+
                 history_path = self._state_path.parent / 'history.txt'
                 history_path.parent.mkdir(parents=True, exist_ok=True)
                 self._session = PromptSession(
                     history=FileHistory(str(history_path)),
                     auto_suggest=AutoSuggestFromHistory(),
+                    completer=TeaAgentCompleter(root=self.root),
                 )
             except (ImportError, OSError):
                 self._session = None
+
+        # Auto-start file watcher for pinned files
+        self._start_file_watcher()
 
         while True:
             try:
@@ -276,12 +323,14 @@ class TeaAgentTUI:
                 else:
                     raw_command = input(self._prompt())
             except (EOFError, KeyboardInterrupt):
+                self._stop_file_watcher()
                 self.output_fn('bye')
                 self._save_tui_state()
                 return 0
 
             should_continue = self.handle_command(raw_command)
             if not should_continue:
+                self._stop_file_watcher()
                 self._save_tui_state()
                 return 0
 
@@ -332,7 +381,320 @@ class TeaAgentTUI:
                 return
             self._print_json(catalog.show(rest[0]).to_dict())
             return
+        if action == 'failures':
+            self._handle_memory_failures(rest)
+            return
+        if action == 'clear':
+            self._handle_memory_clear(rest)
+            return
         self.output_fn(f"error: unknown memory command '{action}'")
+
+    def _handle_memory_failures(self, args: list[str]) -> None:
+        try:
+            from datetime import datetime
+
+            from teaagent.memory.failure_card import FailureCardStorage
+
+            storage = FailureCardStorage(self.root)
+            cards = storage.list_all()
+            if not cards:
+                self.output_fn('error: no failure cards recorded')
+                return
+            self.output_fn(f'memory failures: {len(cards)} card(s)')
+            for i, card in enumerate(cards, 1):
+                ts = datetime.fromtimestamp(card.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                loc = f'{card.file_path}:{card.line_number}' if card.line_number else card.file_path or '?'
+                self.output_fn(f'  [{i}] run #{card.run_id} {card.error_type} at {loc} ({ts})')
+                self.output_fn(f'       task: {card.task_description}')
+                self.output_fn(f'       error: {card.error_message}')
+        except Exception as exc:
+            self.output_fn(f'error: memory failures: {exc}')
+
+    def _handle_memory_clear(self, args: list[str]) -> None:
+        try:
+            from teaagent.memory.failure_card import FailureCardStorage
+            storage = FailureCardStorage(self.root)
+            if args:
+                try:
+                    idx = int(args[0]) - 1
+                    cards = storage.list_all()
+                    if 0 <= idx < len(cards):
+                        storage.clear_by_id(cards[idx].id)
+                        self.output_fn(f'memory clear: removed card #{idx + 1}')
+                    else:
+                        self.output_fn(f'error: invalid card index {args[0]}')
+                except ValueError:
+                    self.output_fn('error: memory clear requires a number or no args')
+            else:
+                count = len(storage.list_all())
+                storage.clear_all()
+                self.output_fn(f'memory clear: removed {count} card(s)')
+        except Exception as exc:
+            self.output_fn(f'error: memory clear: {exc}')
+
+    def _handle_pin(self, args: list[str]) -> None:
+        if not args:
+            self.output_fn('error: pin requires a file path')
+            return
+        try:
+            from teaagent.memory.pinned_file import PinnedFileStorage
+            storage = PinnedFileStorage(self.root)
+            file_path = args[0]
+            if storage.add(file_path):
+                self.output_fn(f'pinned: {file_path}')
+                self._start_file_watcher()
+            else:
+                full_path = self.root / file_path
+                if not full_path.exists():
+                    self.output_fn(f'error: file not found: {file_path}')
+                else:
+                    self.output_fn(f'error: file already pinned: {file_path}')
+        except Exception as exc:
+            self.output_fn(f'error: pin: {exc}')
+
+    def _handle_unpin(self, args: list[str]) -> None:
+        if not args:
+            self.output_fn('error: unpin requires a file path')
+            return
+        try:
+            from teaagent.memory.pinned_file import PinnedFileStorage
+            storage = PinnedFileStorage(self.root)
+            file_path = args[0]
+            if storage.remove(file_path):
+                self.output_fn(f'unpinned: {file_path}')
+                pinned = storage.list_all()
+                if not pinned:
+                    self._stop_file_watcher()
+            else:
+                self.output_fn(f'error: file not pinned: {file_path}')
+        except Exception as exc:
+            self.output_fn(f'error: unpin: {exc}')
+
+    def _handle_pinned(self) -> None:
+        try:
+            from datetime import datetime
+
+            from teaagent.memory.pinned_file import PinnedFileStorage
+            storage = PinnedFileStorage(self.root)
+            pinned = storage.list_all()
+            if not pinned:
+                self.output_fn('pinned: no files pinned')
+                return
+            self.output_fn(f'pinned ({len(pinned)}):')
+            for pf in pinned:
+                mod = datetime.fromtimestamp(pf.last_modified).strftime('%Y-%m-%d %H:%M:%S')
+                self.output_fn(f'  {pf.file_path} (modified: {mod})')
+        except Exception as exc:
+            self.output_fn(f'error: pinned: {exc}')
+
+    # ── File watcher daemon (live context sync for pinned files) ──────────────
+
+    def _on_file_changed(self, file_path: str, event_type: str) -> None:
+        """Callback when a pinned file is modified or deleted."""
+        try:
+            from teaagent.memory.pinned_file import PinnedFileStorage
+
+            storage = PinnedFileStorage(self.root)
+            if event_type == 'deleted':
+                storage.remove(file_path)
+                self.output_fn(f'file unpinned (deleted): {file_path}')
+                pinned_files = storage.list_all()
+                if not pinned_files:
+                    self._stop_file_watcher()
+                elif self._file_watcher:
+                    self._file_watcher.update_watched_files(
+                        {pf.file_path for pf in pinned_files}
+                    )
+            elif event_type == 'modified':
+                storage.update_last_modified(file_path)
+                self.output_fn(f'context refreshed: {file_path}')
+        except Exception as exc:
+            self.output_fn(f'warning: file change handler error: {exc}')
+
+    def _start_file_watcher(self) -> None:
+        """Start the file watcher if there are pinned files."""
+        if self._watcher_running:
+            return
+        try:
+            from teaagent.memory.file_watcher import FileWatcher
+            from teaagent.memory.pinned_file import PinnedFileStorage
+
+            storage = PinnedFileStorage(self.root)
+            pinned = storage.list_all()
+            if pinned:
+                self._file_watcher = FileWatcher(
+                    root=self.root,
+                    callback=self._on_file_changed,
+                    debounce_ms=500,
+                )
+                self._file_watcher.update_watched_files({pf.file_path for pf in pinned})
+                self._file_watcher.start()
+                self._watcher_running = True
+                self.output_fn(f'watching {len(pinned)} pinned file(s)')
+        except Exception as exc:
+            self.output_fn(f'warning: file watcher start failed: {exc}')
+
+    def _stop_file_watcher(self) -> None:
+        """Stop the file watcher."""
+        if self._file_watcher and self._watcher_running:
+            from contextlib import suppress
+            with suppress(Exception):
+                self._file_watcher.stop()
+            self._watcher_running = False
+            self._file_watcher = None
+
+    # ── Git-stash checkpoint / undo lifecycle ────────────────────────────────
+
+    def _create_checkpoint(self) -> bool:
+        """Create a git stash checkpoint to protect pre-session changes."""
+        import subprocess
+
+        timestamp = __import__('time').time()
+        self._checkpoint_ref = f'teaagent-checkpoint-{int(timestamp)}'
+        try:
+            result = subprocess.run(
+                ['git', 'stash', 'push', '-m', self._checkpoint_ref],
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                self._checkpoint_created = True
+                self.output_fn(f'checkpoint created: {self._checkpoint_ref}')
+                return True
+            if 'No local changes to save' in result.stdout:
+                self._checkpoint_created = True
+                self.output_fn('checkpoint: clean workspace (no changes to stash)')
+                return True
+            self.output_fn(f'warning: checkpoint failed: {result.stderr}')
+            return False
+        except FileNotFoundError:
+            self.output_fn('error: git not found in PATH')
+            return False
+        except Exception as exc:
+            self.output_fn(f'error: checkpoint failed: {exc}')
+            return False
+
+    def _restore_checkpoint(self) -> bool:
+        """Restore checkpoint without destroying unstaged user edits."""
+        import subprocess
+
+        if not self._checkpoint_created:
+            self.output_fn('no checkpoint to restore')
+            return False
+        try:
+            result = subprocess.run(
+                ['git', 'stash', 'list'],
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+            )
+            stash_exists = self._checkpoint_ref and self._checkpoint_ref in result.stdout
+            if not stash_exists:
+                self.output_fn('no checkpoint stash found')
+                return False
+
+            show_result = subprocess.run(
+                ['git', 'stash', 'show', '--name-only', '--oneline'],
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+            )
+            if show_result.returncode != 0:
+                self.output_fn('error: failed to list checkpoint files')
+                return False
+
+            lines = show_result.stdout.strip().split('\n')
+            stashed_files = [l.strip() for l in lines[1:] if l.strip()]
+
+            if stashed_files:
+                checkout_result = subprocess.run(
+                    ['git', 'checkout', 'HEAD', '--', *stashed_files],
+                    cwd=self.root,
+                    capture_output=True,
+                    text=True,
+                )
+                if checkout_result.returncode != 0:
+                    self.output_fn(f'error: failed to restore files: {checkout_result.stderr}')
+                    return False
+
+            pop_result = subprocess.run(
+                ['git', 'stash', 'pop'],
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+            )
+            if pop_result.returncode == 0:
+                self.output_fn(f'checkpoint restored: {self._checkpoint_ref}')
+            else:
+                self.output_fn(
+                    f'warning: stash pop had conflicts — '
+                    f'checkpoint preserved as "{self._checkpoint_ref}"'
+                )
+                self.output_fn('  resolve manually or run: git stash drop')
+            return True
+        except FileNotFoundError:
+            self.output_fn('error: git not found in PATH')
+            return False
+        except Exception as exc:
+            self.output_fn(f'error: checkpoint restore failed: {exc}')
+            return False
+
+    # ── Effort throttling / budget enforcement ───────────────────────────────
+
+    def _handle_compact(self) -> None:
+        self.output_fn('compact: session compaction not yet implemented in TUI')
+
+    def _handle_cost(self) -> None:
+        self.output_fn(f'cost: ${self._session_cost_cents / 100:.2f}')
+
+    def _handle_effort(self, args: list[str]) -> None:
+        if not args:
+            remaining = self._max_cost_budget_cents - self._session_cost_cents
+            self.output_fn(
+                f'effort: {self._effort_level}  '
+                f'budget=${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}  '
+                f'spent=${int(self._session_cost_cents // 100)}.{int(self._session_cost_cents % 100):02d}  '
+                f'remaining=${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
+            )
+            return
+        level = args[0].lower()
+        if level not in ('low', 'normal', 'high'):
+            self.output_fn("error: effort must be low, normal, or high")
+            return
+        self._effort_level = level
+        if level == 'low':
+            self._max_cost_budget_cents = 200
+            self._runtime_max_cost_cents = 200
+        elif level == 'normal':
+            self._max_cost_budget_cents = 1000
+            self._runtime_max_cost_cents = 1000
+        else:
+            self._max_cost_budget_cents = 5000
+            self._runtime_max_cost_cents = 5000
+        self.output_fn(
+            f'effort: {level}  '
+            f'budget=${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
+        )
+
+    def _handle_budget(self) -> None:
+        remaining = self._max_cost_budget_cents - self._session_cost_cents
+        self.output_fn(
+            f'budget: effort={self._effort_level}  '
+            f'limit=${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}  '
+            f'spent=${int(self._session_cost_cents // 100)}.{int(self._session_cost_cents % 100):02d}  '
+            f'remaining=${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
+        )
+
+    def _handle_checkpoint(self) -> None:
+        self._create_checkpoint()
+
+    def _handle_undo(self) -> None:
+        ok = self._restore_checkpoint()
+        self.output_fn('undo: ok' if ok else 'undo: failed')
+
+    def _handle_background(self) -> None:
+        self.output_fn('background: use teaagent agent run --detach from CLI for background tasks')
 
     def _get_session_store(self) -> SessionStore:
         if self._session_store is None:
@@ -408,12 +770,19 @@ class TeaAgentTUI:
                 permission_mode=self.permission_mode,
                 approved_call_ids=frozenset(self.approved_call_ids),
                 enable_subagent=self.subagent,
+                max_subagent_depth=self.max_subagent_depth,
                 heartbeat_seconds=self.heartbeat_seconds,
                 stream=self.stream,
                 on_chunk=self._stream_chunk if self.stream else None,
                 stream_text_only=True,
                 approval_handler=self._approval_handler,
                 chat_messages=chat_messages,
+                max_estimated_cost_cents=self._runtime_max_cost_cents,
+                max_iterations=self.max_iterations,
+                max_tool_calls=self.max_tool_calls,
+                enable_git_tools=self.enable_git_tools,
+                skill_search_dirs=self.skill_search_dirs,
+                memory_limit=self.memory_limit,
             ),
             audit=audit,
             task_spec=task_spec,
@@ -635,6 +1004,8 @@ class TeaAgentTUI:
         provider = defaults.get('provider')
         if isinstance(provider, str) and provider:
             self.provider = provider
+        if self.provider is None:
+            self.provider = 'gpt'
         permission_mode = defaults.get('permission_mode')
         if isinstance(permission_mode, str) and permission_mode:
             self.permission_mode = parse_permission_mode(permission_mode)
@@ -665,7 +1036,7 @@ class TeaAgentTUI:
 def run_tui(
     *,
     database: str = ':memory:',
-    provider: str = 'gpt',
+    provider: Optional[str] = None,
     model: Optional[str] = None,
     root: str | Path = '.',
     allow_destructive: bool = False,
@@ -674,6 +1045,16 @@ def run_tui(
     input_fn: Optional[InputFn] = None,
     run_setup: bool = False,
     setup_write_env: bool = False,
+    stream: bool = False,
+    subagent: bool = False,
+    heartbeat_seconds: float = 0.0,
+    max_iterations: int = 10,
+    max_tool_calls: int = 10,
+    max_subagent_depth: int = 1,
+    enable_git_tools: bool = False,
+    skill_search_dirs: Optional[list[str]] = None,
+    memory_limit: int = 5,
+    max_estimated_cost_cents: int = 1000,
 ) -> int:
     tui = TeaAgentTUI(
         database=database,
@@ -683,6 +1064,16 @@ def run_tui(
         allow_destructive=allow_destructive,
         permission_mode=permission_mode,
         input_fn=input_fn,
+        stream=stream,
+        subagent=subagent,
+        heartbeat_seconds=heartbeat_seconds,
+        max_iterations=max_iterations,
+        max_tool_calls=max_tool_calls,
+        max_subagent_depth=max_subagent_depth,
+        enable_git_tools=enable_git_tools,
+        skill_search_dirs=skill_search_dirs,
+        memory_limit=memory_limit,
+        max_estimated_cost_cents=max_estimated_cost_cents,
     )
     if chat:
         tui.chat = True

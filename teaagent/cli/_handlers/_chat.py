@@ -534,41 +534,48 @@ def suspend_to_background(
 
 
 def chat_command(args: argparse.Namespace) -> int:
-    """Run the interactive chat REPL."""
-    root = Path(args.root).resolve()
+    """Run the interactive chat REPL (delegates to TUI with --chat-mode)."""
+    from teaagent.tui import run_tui
 
-    # Override with CLI arguments (config loading happens in ChatAgentConfig.from_root)
-    model = args.model
-    permission_mode = (
-        parse_permission_mode(args.permission_mode) if args.permission_mode else None
-    )
+    provider: str | None = getattr(args, 'provider', None) or None
+    model: str | None = getattr(args, 'model', None) or None
+    allow_destructive = getattr(args, 'allow_destructive', False)
+    permission_mode_str: str = getattr(args, 'permission_mode', 'prompt') or 'prompt'
+    max_iterations = getattr(args, 'max_iterations', 10)
+    max_tool_calls = getattr(args, 'max_tool_calls', 10)
+    max_estimated_cost_cents = getattr(args, 'max_estimated_cost_cents', 0)
+    enable_subagent = getattr(args, 'subagent', False)
+    max_subagent_depth = getattr(args, 'max_subagent_depth', 1)
+    heartbeat_seconds = getattr(args, 'heartbeat', 0.0)
+    stream = getattr(args, 'stream', False)
+    enable_git_tools = getattr(args, 'enable_git_tools', False)
+    skill_search_dirs = getattr(args, 'skill_search_dirs', None)
+    memory_limit_arg = getattr(args, 'memory_limit', None)
+    memory_limit = memory_limit_arg if memory_limit_arg is not None else 5
 
-    # Build chat agent config
-    # Only override memory_limit if explicitly provided by user
-    config_kwargs = {
-        'model': model,
-        'permission_mode': permission_mode,
-        'max_iterations': args.max_iterations,
-        'max_tool_calls': args.max_tool_calls,
-        'max_estimated_cost_cents': args.max_estimated_cost_cents,
-        'allow_destructive': args.allow_destructive,
-        'enable_subagent': args.subagent,
-        'max_subagent_depth': args.max_subagent_depth,
-        'heartbeat_seconds': args.heartbeat,
-        'stream': args.stream,
-        'enable_git_tools': getattr(args, 'enable_git_tools', False),
-        'skill_search_dirs': getattr(args, 'skill_search_dirs', None),
-    }
-
-    # Only add memory_limit if explicitly provided by user
-    if hasattr(args, 'memory_limit') and args.memory_limit is not None:
-        config_kwargs['memory_limit'] = args.memory_limit
-
-    chat_config = ChatAgentConfig.from_root(root, **config_kwargs)
-
-    # Run the chat REPL
     try:
-        return run_chat_repl(chat_config, args.task)
+        return run_tui(
+            database=':memory:',
+            provider=provider,
+            model=model,
+            root=args.root if hasattr(args, 'root') else '.',
+            allow_destructive=allow_destructive,
+            permission_mode=parse_permission_mode(permission_mode_str),
+            chat=True,
+            input_fn=None,
+            run_setup=False,
+            setup_write_env=False,
+            stream=stream,
+            subagent=enable_subagent,
+            max_iterations=max_iterations,
+            max_tool_calls=max_tool_calls,
+            max_subagent_depth=max_subagent_depth,
+            heartbeat_seconds=heartbeat_seconds,
+            enable_git_tools=enable_git_tools,
+            skill_search_dirs=skill_search_dirs,
+            memory_limit=memory_limit,
+            max_estimated_cost_cents=max_estimated_cost_cents,
+        )
     except KeyboardInterrupt:
         print('\n[TeaAgent] Chat interrupted by user')
         return 130

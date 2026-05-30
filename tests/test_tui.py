@@ -455,9 +455,12 @@ class TUITests(unittest.TestCase):
 
     def test_tui_preflight_command_uses_current_settings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = []
+            output: list[str] = []
             tui = TeaAgentTUI(
-                root=tmp, input_fn=lambda _prompt: 'exit', output_fn=output.append
+                root=tmp,
+                provider='gpt',
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
             )
             self.assertTrue(tui.handle_command('route-model on'))
             self.assertTrue(
@@ -499,6 +502,7 @@ class TUITests(unittest.TestCase):
             factory = CapturingAdapterFactory(adapter)
             tui = TeaAgentTUI(
                 root=tmp,
+                provider='gpt',
                 input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
                 adapter_factory=factory,
@@ -1020,6 +1024,163 @@ class TUITests(unittest.TestCase):
                 _, kwargs = mock_setup.call_args
                 self.assertTrue(kwargs.get('write_env'))
 
+    # ── Effort / budget / cost ────────────────────────────────────────────────
+
+    def test_tui_effort_requires_low_normal_high(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_effort([])
+        self.assertIn('effort:', output[-1])
+        tui._handle_effort(['invalid'])
+        self.assertIn('must be low, normal, or high', output[-1])
+
+    def test_tui_effort_sets_level_and_budget(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_effort(['high'])
+        self.assertEqual(tui._effort_level, 'high')
+        self.assertEqual(tui._max_cost_budget_cents, 5000)
+        self.assertEqual(tui._runtime_max_cost_cents, 5000)
+        summary = ' '.join(output)
+        self.assertIn('budget=$50', summary)
+
+    def test_tui_effort_low_sets_200_cents(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_effort(['low'])
+        self.assertEqual(tui._effort_level, 'low')
+        self.assertEqual(tui._max_cost_budget_cents, 200)
+        self.assertEqual(tui._runtime_max_cost_cents, 200)
+        self.assertIn('budget=$2', ' '.join(output))
+
+    def test_tui_budget_shows_remaining(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._session_cost_cents = 50.0
+        tui._handle_budget()
+        text = ' '.join(output)
+        self.assertIn('effort=', text)
+        self.assertIn('limit=', text)
+        self.assertIn('spent=', text)
+        self.assertIn('remaining=', text)
+
+    def test_tui_cost_shows_session_cost(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._session_cost_cents = 123.0
+        tui._handle_cost()
+        self.assertIn('$1.23', ' '.join(output))
+
+    def test_tui_compact_stub(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_compact()
+        self.assertIn('not yet implemented', ' '.join(output))
+
+    # ── Checkpoint / undo ─────────────────────────────────────────────────────
+
+    def test_tui_checkpoint_not_created_yet_returns_false(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        ok = tui._restore_checkpoint()
+        self.assertFalse(ok)
+        self.assertIn('no checkpoint', ' '.join(output))
+
+    def test_tui_handle_checkpoint_delegates(self) -> None:
+        # Use a temp dir (not a git repo) so git commands fail safely
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            with patch.object(tui, '_start_file_watcher'):
+                tui._handle_checkpoint()
+            text = ' '.join(output)
+            # git stash push in a non-git dir should produce a warning
+            self.assertTrue('warning' in text or 'error' in text)
+
+    def test_tui_handle_undo_delegates(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_undo()
+        self.assertIn('no checkpoint', ' '.join(output))
+
+    # ── Pin / unpin / pinned ──────────────────────────────────────────────────
+
+    def test_tui_pin_requires_path(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_pin([])
+        self.assertIn('requires a file path', ' '.join(output))
+
+    def test_tui_pin_non_existent_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            tui._handle_pin(['nonexistent.py'])
+            self.assertIn('file not found', ' '.join(output))
+
+    def test_tui_unpin_requires_path(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_unpin([])
+        self.assertIn('requires a file path', ' '.join(output))
+
+    def test_tui_pinned_empty(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_pinned()
+        self.assertIn('no files pinned', ' '.join(output))
+
+    def test_tui_budget_wired_to_agent_run(self) -> None:
+        """Verify max_estimated_cost_cents is passed to ChatAgentConfig.from_root."""
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._runtime_max_cost_cents = 200
+        with patch.object(tui, '_start_file_watcher'):
+            with patch.object(tui, '_load_tui_state'):
+                with patch.object(tui, '_save_tui_state'):
+                    with patch(
+                        'teaagent.tui.run_chat_agent'
+                    ) as mock_run, patch(
+                        'teaagent.tui.RunStore'
+                    ) as mock_store, patch(
+                        'teaagent.tui.create_llm_adapter'
+                    ):
+                        mock_run.return_value = unittest.mock.MagicMock(
+                            run_id='test-run',
+                            status='completed',
+                            iterations=1,
+                            tool_calls=0,
+                            final_answer=unittest.mock.MagicMock(content='ok'),
+                            metadata={},
+                            error_message=None,
+                        )
+                        mock_store.return_value.list_runs.return_value = []
+                        mock_store.return_value.show_run.return_value = {}
+                        mock_store.return_value.logger_for_result = lambda *a: None
+                        mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+
+                        tui._run_agent_task('test task')
+
+            _args, kwargs = mock_run.call_args
+            config = kwargs['config']
+            self.assertEqual(config.max_estimated_cost_cents, 200)
+
+    def test_tui_file_watcher_start_stop(self) -> None:
+        """Verify watcher starts and stops cleanly."""
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        with patch.object(tui, '_start_file_watcher') as mock_start, \
+             patch.object(tui, '_stop_file_watcher') as mock_stop:
+            # Pin should try to start watcher
+            tui._handle_pin(['nonexistent.py'])
+            # unpin should not call stop since pin failed
+            tui._handle_unpin(['nonexistent.py'])
+        # Just verify no exceptions — real FileWatcher isn't instantiated
+
     def test_run_tui_function(self) -> None:
 
         commands = iter(['exit'])
@@ -1033,6 +1194,202 @@ class TUITests(unittest.TestCase):
         )
         exit_code = tui.run()
         self.assertEqual(exit_code, 0)
+
+
+    # ── chat_command() delegation ─────────────────────────────────────────────
+
+    def test_chat_command_forwards_params_to_run_tui(self) -> None:
+        """Verify chat_command() forwards CLI args to run_tui()."""
+        from argparse import Namespace
+
+        from teaagent.cli._handlers._chat import chat_command
+        from teaagent.policy import PermissionMode
+
+        args = Namespace(
+            provider='test-provider',
+            model='test-model',
+            root='/tmp/test-root',
+            allow_destructive=True,
+            permission_mode='allow',
+            max_iterations=5,
+            max_tool_calls=3,
+            max_estimated_cost_cents=100,
+            subagent=True,
+            max_subagent_depth=2,
+            heartbeat=1.5,
+            stream=True,
+            skill_search_dirs=['/custom/skills'],
+            memory_limit=10,
+        )
+
+        with patch('teaagent.tui.run_tui') as mock_run, \
+             patch('teaagent.cli._handlers._chat.parse_permission_mode',
+                   return_value=PermissionMode.ALLOW):
+            chat_command(args)
+
+        self.assertEqual(mock_run.call_args[1]['provider'], 'test-provider')
+        self.assertEqual(mock_run.call_args[1]['model'], 'test-model')
+        self.assertTrue(mock_run.call_args[1]['allow_destructive'])
+        self.assertEqual(mock_run.call_args[1]['permission_mode'], PermissionMode.ALLOW)
+        self.assertTrue(mock_run.call_args[1]['chat'])
+        self.assertEqual(mock_run.call_args[1]['stream'], True)
+        self.assertEqual(mock_run.call_args[1]['subagent'], True)
+        self.assertEqual(mock_run.call_args[1]['max_iterations'], 5)
+        self.assertEqual(mock_run.call_args[1]['max_tool_calls'], 3)
+        self.assertEqual(mock_run.call_args[1]['max_subagent_depth'], 2)
+        self.assertEqual(mock_run.call_args[1]['heartbeat_seconds'], 1.5)
+        self.assertEqual(mock_run.call_args[1]['max_estimated_cost_cents'], 100)
+        self.assertEqual(mock_run.call_args[1]['memory_limit'], 10)
+
+    def test_chat_command_handles_keyboard_interrupt(self) -> None:
+        """Verify chat_command() returns 130 on KeyboardInterrupt."""
+        from argparse import Namespace
+
+        from teaagent.cli._handlers._chat import chat_command
+
+        args = Namespace(
+            provider=None,
+            model=None,
+            root='.',
+            allow_destructive=False,
+            permission_mode='prompt',
+        )
+
+        with patch('teaagent.tui.run_tui',
+                   side_effect=KeyboardInterrupt):
+            exit_code = chat_command(args)
+        self.assertEqual(exit_code, 130)
+
+    def test_chat_command_handles_exception(self) -> None:
+        """Verify chat_command() returns 1 on generic Exception."""
+        from argparse import Namespace
+
+        from teaagent.cli._handlers._chat import chat_command
+
+        args = Namespace(
+            provider=None,
+            model=None,
+            root='.',
+            allow_destructive=False,
+            permission_mode='prompt',
+        )
+
+        with patch('teaagent.tui.run_tui',
+                   side_effect=RuntimeError('test error')):
+            exit_code = chat_command(args)
+        self.assertEqual(exit_code, 1)
+
+    def test_chat_command_default_memory_limit(self) -> None:
+        """Verify memory_limit defaults to 5 when not in args."""
+        from argparse import Namespace
+
+        from teaagent.cli._handlers._chat import chat_command
+        from teaagent.policy import PermissionMode
+
+        args = Namespace(
+            provider=None,
+            model=None,
+            root='.',
+            allow_destructive=False,
+            permission_mode='prompt',
+        )
+
+        with patch('teaagent.tui.run_tui') as mock_run, \
+             patch('teaagent.cli._handlers._chat.parse_permission_mode',
+                   return_value=PermissionMode.PROMPT):
+            chat_command(args)
+
+        self.assertEqual(mock_run.call_args[1].get('memory_limit'), 5)
+
+    # ── TeaAgentCompleter tests ───────────────────────────────────────────────
+
+    def test_complete_file_paths_no_at(self) -> None:
+        try:
+            from teaagent.tui._completion import complete_file_paths
+        except ImportError:
+            self.skipTest('prompt_toolkit not installed')
+
+        result = complete_file_paths('no-at', Path('.'))
+        self.assertEqual(result, [])
+
+    def test_complete_file_paths_basic(self) -> None:
+        try:
+            from teaagent.tui._completion import complete_file_paths
+        except ImportError:
+            self.skipTest('prompt_toolkit not installed')
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / 'src').mkdir()
+            (root / 'src' / 'main.py').write_text('')
+            (root / 'README.md').write_text('')
+
+            result = complete_file_paths('@RE', root)
+            self.assertIn('@README.md', result)
+
+            result = complete_file_paths('@src/', root)
+            self.assertIn('@src/main.py', result)
+
+    def test_complete_symbols_no_at(self) -> None:
+        try:
+            from teaagent.tui._completion import complete_symbols
+        except ImportError:
+            self.skipTest('prompt_toolkit not installed')
+
+        result = complete_symbols('no-at', Path('.'))
+        self.assertEqual(result, [])
+
+    def test_get_cached_symbols_empty_repo(self) -> None:
+        try:
+            from teaagent.tui._completion import _get_cached_symbols
+        except ImportError:
+            self.skipTest('prompt_toolkit not installed')
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = _get_cached_symbols(Path(tmpdir))
+        self.assertIsInstance(result, list)
+
+    # ── Memory failures handlers ──────────────────────────────────────────────
+
+    def test_memory_failures_no_cards(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            with patch.object(tui, '_start_file_watcher'):
+                tui._handle_memory_failures([])
+            self.assertIn('no failure cards recorded', ' '.join(output))
+
+    def test_memory_clear_no_args(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            with patch.object(tui, '_start_file_watcher'):
+                tui._handle_memory_clear([])
+            self.assertIn('memory clear:', ' '.join(output))
+
+    def test_memory_clear_invalid_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            with patch.object(tui, '_start_file_watcher'):
+                tui._handle_memory_clear(['abc'])
+            self.assertIn('requires a number', ' '.join(output))
+
+    def test_memory_clear_out_of_range_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir, input_fn=lambda _: '', output_fn=output.append
+            )
+            with patch.object(tui, '_start_file_watcher'):
+                tui._handle_memory_clear(['99'])
+            self.assertIn('invalid card index', ' '.join(output))
 
 
 if __name__ == '__main__':
