@@ -31,6 +31,10 @@ from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
 from teaagent.sandbox import ParallelExperimentStack
 from teaagent.skill_candidates import SkillCandidateStore
+from teaagent.subagents._review import (
+    list_subagent_reviews,
+    load_subagent_review,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2335,8 +2339,6 @@ def agent_card_command(args: argparse.Namespace) -> int:
 
 
 def agent_subagent_review_list_command(args: argparse.Namespace) -> int:
-    from teaagent.subagents._review import list_subagent_reviews
-
     print_json(
         {
             'status': 'ok',
@@ -2349,8 +2351,6 @@ def agent_subagent_review_list_command(args: argparse.Namespace) -> int:
 
 
 def agent_subagent_review_show_command(args: argparse.Namespace) -> int:
-    from teaagent.subagents._review import load_subagent_review
-
     try:
         review = load_subagent_review(
             args.root,
