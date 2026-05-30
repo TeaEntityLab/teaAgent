@@ -29,6 +29,8 @@ from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
+from teaagent.sandbox import ParallelExperimentStack
+from teaagent.skill_candidates import SkillCandidateStore
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +38,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_DIFF_PREVIEW_LINES = 30
 DEFAULT_PAGINATION_LINES = 50
 DEFAULT_SESSION_GRANT_TTL_HOURS = 8.0
-from teaagent.sandbox import ParallelExperimentStack
-from teaagent.skill_candidates import SkillCandidateStore
 
 
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
