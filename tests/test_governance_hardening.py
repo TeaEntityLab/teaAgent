@@ -310,9 +310,9 @@ class MultiSigPlaceholderTests(unittest.TestCase):
     """Multi-sig SSH placeholder flag and warning."""
 
     def test_ssh_verification_implemented_flag(self) -> None:
-        from teaagent import policy as _policy
+        from teaagent.approval_manager import _SSH_VERIFICATION_IMPLEMENTED
 
-        self.assertTrue(_policy._SSH_VERIFICATION_IMPLEMENTED)
+        self.assertTrue(_SSH_VERIFICATION_IMPLEMENTED)
 
     def test_ssh_verification_dev_hash_when_allowed(self) -> None:
         import hashlib
