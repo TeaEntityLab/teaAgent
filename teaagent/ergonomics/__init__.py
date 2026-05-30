@@ -5,6 +5,7 @@ from teaagent.ergonomics.daily_journal import write_daily_journal
 from teaagent.ergonomics.dry_run import build_dry_run_payload
 from teaagent.ergonomics.human_output import (
     build_readiness_items,
+    format_preflight_summary,
     format_readiness_summary,
     format_setup_summary,
 )
@@ -21,6 +22,7 @@ __all__ = [
     'build_dry_run_payload',
     'build_readiness_items',
     'build_status_short',
+    'format_preflight_summary',
     'format_readiness_summary',
     'format_setup_summary',
     'list_recall_runs',

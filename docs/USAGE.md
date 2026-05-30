@@ -13,12 +13,14 @@ A beginner-friendly walkthrough from installation to your first agent run and ch
 
 ## Golden path
 
-Copy this sequence for a new repository (replace `gpt` with your provider):
+The canonical first-5-minutes flow is in [README.md](../README.md#golden-path-first-hour).
+
+This guide adds depth beyond the golden path: plan artifacts, plan-before-write
+enforcement, scoped approvals, and memory management.
+
+### Plan artifacts (beyond the golden path)
 
 ```bash
-pip install -e .
-teaagent setup --root . --provider gpt --permission-mode read-only --write-env
-teaagent daily "summarize this repo" --dry-run --root . --human
 teaagent plan gpt "summarize the test suite" --root . --permission-mode read-only
 # Use the plan_artifact path printed by plan (under .teaagent/plans/):
 teaagent run gpt --from-plan .teaagent/plans/20260526-120000-summarize-the-test-suite.md --permission-mode read-only --root .
@@ -30,21 +32,33 @@ teaagent run gpt "quick fix" --permission-mode workspace-write --skip-plan-check
 teaagent agent undo --last --root .
 ```
 
-- Use `--human` on `daily` and `setup` for readable summaries; omit it for JSON (automation default).
+### Scoped approvals
+
+Session grants expire after 8h by default; use separate grants per constraint:
+
+```bash
+teaagent approval grant workspace_write_file --path-glob 'src/**' --root .
+teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --root .
+teaagent approval list --root .
+teaagent approval check workspace_write_file --path src/foo.py --root .
+teaagent approval revoke <grant_id> --root .
+teaagent approval subagents list
+```
+
+### Memory management
+
+```bash
+teaagent memory failures
+teaagent memory failures auto-invalidate
+teaagent memory failures prune
+```
+
+### Key differences from the golden path
+
+- `--human` on `daily` and `setup` gives readable summaries; omit for JSON (automation default).
 - After setup, `provider` is optional on `daily`, `run`, and top-level shortcuts when `.teaagent/config.json` exists.
 - `plan` writes a reviewable artifact; `run --from-plan` binds execution to that artifact (task + content hash in the run audit log). Plans must live under `.teaagent/plans/` unless you pass `--allow-external-plan` (other paths must still be under `--root`).
-- **Plan-before-write enforcement**: `workspace-write` mode now requires a plan by default for safety. Use `--skip-plan-check` to override (not recommended for production workflows).
-- Scoped approvals (session grants expire after 8h by default; use separate grants per constraint):
-  - `teaagent approval grant workspace_write_file --path-glob 'src/**' --root .`
-  - `teaagent approval grant workspace_run_shell_mutate --command-prefix 'pytest ' --root .`
-  - `teaagent approval list --root .` shows grants and evaluation order (deny before allow); use `--grants-only` for the legacy grants array (`jq '.[0].grant_id'`)
-  - `teaagent approval check workspace_write_file --path src/foo.py --root .` explains allow/deny/prompt
-  - `teaagent approval revoke <grant_id> --root .` removes one rule
-  - `teaagent approval subagents list` shows pending parallel subagent destructive-tool requests (use `approve` / `deny` / `approve-all` with `--parent-run-id`)
-- **Memory management**: 
-  - `teaagent memory failures` lists failure cards
-  - `teaagent memory failures auto-invalidate` applies automated invalidation rules
-  - `teaagent memory failures prune` removes expired/invalidated cards
+- **Plan-before-write enforcement**: `workspace-write` mode requires a plan by default. Use `--skip-plan-check` to override.
 
 **Advanced paths** (not part of the golden path): `teaagent init`, `teaagent doctor providers --wizard`, manual `providers_env.zsh`, Keychain scripts, per-provider env exports — see [Recovery recipes](#recovery-recipes) and [API Key Setup](#api-key-setup).
 
@@ -120,26 +134,6 @@ teaagent tui --setup --root .
 - [Handling Approvals](#handling-approvals)
 - [Choosing a Model](#choosing-a-model)
 - [Common Problems](#common-problems)
-
-## Installation
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
-
-Optional: install richer TUI line editing/history support:
-
-```bash
-pip install -e ".[tui]"
-```
-
-Verify it works:
-
-```bash
-teaagent --help
-```
 
 ## API Key Setup
 

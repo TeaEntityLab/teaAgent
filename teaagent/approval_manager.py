@@ -137,19 +137,269 @@ class ApprovalRequest:
     signatures: list[PeerSignature] = field(default_factory=list)
 
 
+class PermissionModeEnforcer:
+    """Enforces permission mode rules for tool calls (ADR-002)."""
+
+    def __init__(
+        self,
+        permission_mode: PermissionMode = PermissionMode.PROMPT,
+        allow_all_destructive: bool = False,
+    ) -> None:
+        self.permission_mode = permission_mode
+        self.allow_all_destructive = allow_all_destructive
+
+    def check(
+        self,
+        *,
+        tool_name: str,
+        destructive: bool,
+        plan_contract: Any = None,
+        arguments: dict[str, Any] | None = None,
+        read_only: bool | None = None,
+        description: str = '',
+        handler: Any | None = None,
+    ) -> Optional[str]:
+        """Return ``None`` if allowed, or a block-reason string."""
+        if self.permission_mode == PermissionMode.READ_ONLY:
+            return read_only_runtime_block_reason(
+                tool_name=tool_name,
+                description=description,
+                read_only=read_only,
+                destructive=destructive,
+                handler=handler,
+            )
+
+        if not destructive:
+            return None
+
+        if self.permission_mode == PermissionMode.WORKSPACE_WRITE:
+            if tool_name in {
+                'workspace_write_file',
+                'workspace_apply_patch',
+                'workspace_edit_at_hash',
+            }:
+                if plan_contract and arguments:
+                    file_path = (
+                        arguments.get('path') if isinstance(arguments, dict) else None
+                    )
+                    if file_path and not plan_contract.allows_file_write(file_path):
+                        return (
+                            f"Tool '{tool_name}' targeting '{file_path}' is not in approved plan file targets. "
+                            f'Plan: {plan_contract.rel_path}'
+                        )
+                return None
+            return (
+                f"Tool '{tool_name}' requires prompt/allow/danger-full-access permission mode."
+            )
+
+        if self.permission_mode in {
+            PermissionMode.ALLOW,
+            PermissionMode.DANGER_FULL_ACCESS,
+        }:
+            return None
+
+        if destructive and self.allow_all_destructive:
+            return None
+
+        return '__continue__'
+
+
+class JITApprovalManager:
+    """Manages JIT (Just-In-Time) approval state and TTY prompting (ADR-002)."""
+
+    def __init__(self, enable_jit_prompt: bool = True) -> None:
+        self.jit_state = JITApprovalState()
+        self.enable_jit_prompt = enable_jit_prompt
+
+    def is_approved(self, *, tool_name: str, call_id: str) -> bool:
+        return (
+            self.jit_state.is_tool_session_approved(tool_name)
+            or self.jit_state.is_call_approved(call_id)
+        )
+
+    def prompt_and_resolve(
+        self,
+        *,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None = None,
+    ) -> Optional[bool]:
+        """Prompt via TTY. Returns True (approved), False (denied), None (no TTY)."""
+        if not self.enable_jit_prompt or not sys.stdin.isatty():
+            return None
+        choice = self._prompt(tool_name, call_id, arguments)
+        if choice == 'o':
+            self.jit_state.approve_once(call_id)
+            return True
+        if choice == 's':
+            self.jit_state.approve_session(tool_name)
+            return True
+        if choice == 'd':
+            raise ToolPermissionError(
+                f"Tool call '{call_id}' for '{tool_name}' was denied by user."
+            )
+        if choice == 'e':
+            raise ToolPermissionError(
+                f"Tool call '{call_id}' for '{tool_name}' requires approval. "
+                f'Tool: {tool_name}, Call ID: {call_id}, Arguments: {arguments}'
+            )
+        return None
+
+    def _prompt(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None = None,
+    ) -> str:
+        print(f'\n[TeaAgent] Permission required for tool: {tool_name}')
+        print(f'[TeaAgent] Call ID: {call_id}')
+        if arguments:
+            print(f'[TeaAgent] Arguments: {arguments}')
+        print('[TeaAgent] Approve this tool call?')
+        print('[TeaAgent]   [o] Once - approve this single call')
+        print('[TeaAgent]   [s] Session - approve for entire session')
+        print('[TeaAgent]   [d] Deny - block this call')
+        print('[TeaAgent]   [e] Explain - show details and deny')
+
+        while True:
+            try:
+                choice = input('[TeaAgent] Choice [o/s/d/e]: ').strip().lower()
+                if choice in ('o', 's', 'd', 'e'):
+                    return choice
+                print('[TeaAgent] Invalid choice. Please enter o, s, d, or e.')
+            except (EOFError, KeyboardInterrupt):
+                print('\n[TeaAgent] Interrupted. Denying permission.')
+                return 'd'
+
+
+class MultiSigQuorumManager:
+    """Manages multi-signature quorum for high-risk operations (ADR-002)."""
+
+    def __init__(
+        self,
+        config: MultiSigQuorumConfig | None = None,
+        agent_id: str = '',
+    ) -> None:
+        self.config = config or MultiSigQuorumConfig()
+        self.agent_id = agent_id
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=2, thread_name_prefix='sig-collect'
+        )
+
+    def is_high_risk(
+        self, tool_name: str, arguments: dict[str, Any] | None
+    ) -> bool:
+        if not self.config.high_risk_patterns:
+            return False
+        tool_lower = tool_name.lower()
+        for pattern in self.config.high_risk_patterns:
+            if pattern.lower() in tool_lower:
+                return True
+        if arguments:
+            for _key, value in arguments.items():
+                if isinstance(value, str):
+                    for pattern in self.config.high_risk_patterns:
+                        if pattern.lower() in value.lower():
+                            return True
+        return False
+
+    def check_quorum(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None,
+    ) -> bool:
+        return False
+
+    def shutdown(self) -> None:
+        self._executor.shutdown(wait=True)
+
+
+class ApprovalStoreManager:
+    """Manages approval store presets and scoped approvals (ADR-002)."""
+
+    def __init__(
+        self,
+        approval_store: ApprovalPresetStore | None = None,
+        approval_origin_run_id: str | None = None,
+    ) -> None:
+        self.approval_store = approval_store
+        self.approval_origin_run_id = approval_origin_run_id
+
+    def check_preset(
+        self,
+        *,
+        tool_name: str,
+        permission_mode: str,
+        arguments: dict[str, Any] | None = None,
+    ) -> bool:
+        if not self.approval_store:
+            return False
+        return self.approval_store.is_allowed(
+            tool_name,
+            permission_mode=permission_mode,
+            arguments=arguments,
+        )
+
+    def check_scoped(
+        self,
+        *,
+        call_id: str,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> bool:
+        if not self.approval_store or not self.approval_origin_run_id:
+            return False
+        return self.approval_store.try_consume_scoped_approval(
+            run_id=self.approval_origin_run_id,
+            call_id=call_id,
+            tool_name=tool_name,
+            arguments=arguments,
+        )
+
+    def handle_preapproved(
+        self,
+        *,
+        call_id: str,
+        preapproved_call_ids: frozenset[str],
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> bool:
+        if (
+            call_id not in preapproved_call_ids
+            or not self.approval_store
+            or not self.approval_origin_run_id
+        ):
+            return False
+        if (
+            self.approval_store.check_scoped_approval(
+                run_id=self.approval_origin_run_id,
+                call_id=call_id,
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+            is None
+        ):
+            self.approval_store.add_scoped_approval(
+                run_id=self.approval_origin_run_id,
+                call_id=call_id,
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+        return self.approval_store.try_consume_scoped_approval(
+            run_id=self.approval_origin_run_id,
+            call_id=call_id,
+            tool_name=tool_name,
+            arguments=arguments,
+        )
+
+
 class ApprovalManager:
-    """Unified manager for all approval concerns.
+    """Unified manager composing PermissionModeEnforcer, JITApprovalManager,
+    MultiSigQuorumManager, and ApprovalStoreManager (ADR-002).
 
-    This class coordinates:
-    - Permission mode enforcement
-    - JIT (Just-In-Time) approvals
-    - Preset grants and scoped approvals
-    - Multi-sig quorum for high-risk operations
-    - Approval store persistence
-
-    It provides a single interface for the runner and subagents to check
-    and manage approvals without needing to understand the internal
-    distribution of concerns across multiple modules.
+    Maintains full backward compatibility — existing callers interact with
+    this class exactly as before.
     """
 
     def __init__(
@@ -174,10 +424,22 @@ class ApprovalManager:
         self.workspace_root = workspace_root
         self.allow_all_destructive = allow_all_destructive
         self.preapproved_call_ids = preapproved_call_ids
-        self.jit_state = JITApprovalState()
-        self._signature_executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=2, thread_name_prefix='sig-collect'
+
+        self._permission_enforcer = PermissionModeEnforcer(
+            permission_mode=permission_mode,
+            allow_all_destructive=allow_all_destructive,
         )
+        self._jit_manager = JITApprovalManager(enable_jit_prompt=enable_jit_prompt)
+        self._multisig_manager = MultiSigQuorumManager(
+            config=self.multi_sig_config, agent_id=agent_id
+        )
+        self._store_manager = ApprovalStoreManager(
+            approval_store=approval_store,
+            approval_origin_run_id=approval_origin_run_id,
+        )
+
+        self.jit_state = self._jit_manager.jit_state
+        self._signature_executor = self._multisig_manager._executor
 
     def assert_allowed(
         self,
@@ -196,74 +458,33 @@ class ApprovalManager:
         Raises:
             ToolPermissionError: If the tool call is not allowed.
         """
-        if self.permission_mode == PermissionMode.READ_ONLY:
-            block_reason = read_only_runtime_block_reason(
-                tool_name=tool_name,
-                description=description,
-                read_only=read_only,
-                destructive=destructive,
-                handler=handler,
-            )
-            if block_reason is not None:
-                raise ToolPermissionError(block_reason)
+        mode_result = self._permission_enforcer.check(
+            tool_name=tool_name,
+            destructive=destructive,
+            plan_contract=plan_contract,
+            arguments=arguments,
+            read_only=read_only,
+            description=description,
+            handler=handler,
+        )
+        if mode_result is None:
+            return
+        if mode_result != '__continue__':
+            raise ToolPermissionError(mode_result)
+
+        if self._jit_manager.is_approved(tool_name=tool_name, call_id=call_id):
             return
 
-        if not destructive:
-            return
-
-        if self.permission_mode == PermissionMode.WORKSPACE_WRITE:
-            if tool_name in {
-                'workspace_write_file',
-                'workspace_apply_patch',
-                'workspace_edit_at_hash',
-            }:
-                # Check plan contract file target validation
-                if plan_contract and arguments:
-                    file_path = (
-                        arguments.get('path') if isinstance(arguments, dict) else None
-                    )
-                    if file_path and not plan_contract.allows_file_write(file_path):
-                        raise ToolPermissionError(
-                            f"Tool '{tool_name}' targeting '{file_path}' is not in approved plan file targets. "
-                            f'Plan: {plan_contract.rel_path}'
-                        )
-                return
-            raise ToolPermissionError(
-                f"Tool '{tool_name}' requires prompt/allow/danger-full-access permission mode."
-            )
-
-        if self.permission_mode in {
-            PermissionMode.ALLOW,
-            PermissionMode.DANGER_FULL_ACCESS,
-        }:
-            return
-
-        if destructive and self.allow_all_destructive:
-            return
-
-        # Check JIT state for session-approved tools
-        if self.jit_state.is_tool_session_approved(tool_name):
-            return
-
-        # Check JIT state for once-approved call IDs
-        if self.jit_state.is_call_approved(call_id):
-            return
-
-        # Check approval store presets before requiring explicit approval
-        if self.approval_store and self.approval_store.is_allowed(
-            tool_name,
+        if self._store_manager.check_preset(
+            tool_name=tool_name,
             permission_mode=self.permission_mode.value,
             arguments=arguments,
         ):
             return
 
-        # Check scoped approval for exact tool call matching (run-scoped)
         if (
-            self.approval_store
-            and self.approval_origin_run_id
-            and arguments is not None
-            and self.approval_store.try_consume_scoped_approval(
-                run_id=self.approval_origin_run_id,
+            arguments is not None
+            and self._store_manager.check_scoped(
                 call_id=call_id,
                 tool_name=tool_name,
                 arguments=arguments,
@@ -271,138 +492,32 @@ class ApprovalManager:
         ):
             return
 
-        # Handle preapproved call IDs with scoped approval creation
-        if (
-            call_id in self.preapproved_call_ids
-            and self.approval_store
-            and self.approval_origin_run_id
-            and arguments is not None
-        ):
-            if (
-                self.approval_store.check_scoped_approval(
-                    run_id=self.approval_origin_run_id,
-                    call_id=call_id,
-                    tool_name=tool_name,
-                    arguments=arguments,
-                )
-                is None
-            ):
-                self.approval_store.add_scoped_approval(
-                    run_id=self.approval_origin_run_id,
-                    call_id=call_id,
-                    tool_name=tool_name,
-                    arguments=arguments,
-                )
-            if self.approval_store.try_consume_scoped_approval(
-                run_id=self.approval_origin_run_id,
-                call_id=call_id,
-                tool_name=tool_name,
-                arguments=arguments,
-            ):
-                return
-
-        # Check multi-sig quorum if enabled and this is a high-risk operation
-        if (
-            self.multi_sig_config.enabled
-            and self._is_high_risk_operation(tool_name, arguments)
-            and self._check_multi_sig_quorum(tool_name, call_id, arguments)
+        if arguments is not None and self._store_manager.handle_preapproved(
+            call_id=call_id,
+            preapproved_call_ids=self.preapproved_call_ids,
+            tool_name=tool_name,
+            arguments=arguments,
         ):
             return
 
-        # Prompt for JIT approval if enabled, TTY is available, and jit_state is present
-        # Note: jit_state is always present in ApprovalManager (initialized in __init__)
-        # The external caller passes jit_state to ApprovalPolicy which syncs it
-        if self.enable_jit_prompt and sys.stdin.isatty():
-            choice = self._prompt_jit_approval(tool_name, call_id, arguments)
-            if choice == 'o':
-                self.jit_state.approve_once(call_id)
-                return
-            if choice == 's':
-                self.jit_state.approve_session(tool_name)
-                return
-            if choice == 'd':
-                raise ToolPermissionError(
-                    f"Tool call '{call_id}' for '{tool_name}' was denied by user."
-                )
-            if choice == 'e':
-                raise ToolPermissionError(
-                    f"Tool call '{call_id}' for '{tool_name}' requires approval. "
-                    f'Tool: {tool_name}, Call ID: {call_id}, Arguments: {arguments}'
-                )
+        if (
+            self.multi_sig_config.enabled
+            and self._multisig_manager.is_high_risk(tool_name, arguments)
+            and self._multisig_manager.check_quorum(tool_name, call_id, arguments)
+        ):
+            return
+
+        jit_result = self._jit_manager.prompt_and_resolve(
+            tool_name=tool_name,
+            call_id=call_id,
+            arguments=arguments,
+        )
+        if jit_result is True:
+            return
 
         raise ToolPermissionError(
             f"Tool call '{call_id}' for '{tool_name}' requires explicit approval."
         )
-
-    def _prompt_jit_approval(
-        self,
-        tool_name: str,
-        call_id: str,
-        arguments: dict[str, Any] | None = None,
-    ) -> str:
-        """Prompt user for JIT approval via TTY.
-
-        Returns:
-            User choice: 'o' (once), 's' (session), 'd' (deny), 'e' (explain)
-        """
-        print(f'\n[TeaAgent] Permission required for tool: {tool_name}')
-        print(f'[TeaAgent] Call ID: {call_id}')
-        if arguments:
-            print(f'[TeaAgent] Arguments: {arguments}')
-        print('[TeaAgent] Approve this tool call?')
-        print('[TeaAgent]   [o] Once - approve this single call')
-        print('[TeaAgent]   [s] Session - approve for entire session')
-        print('[TeaAgent]   [d] Deny - block this call')
-        print('[TeaAgent]   [e] Explain - show details and deny')
-
-        while True:
-            try:
-                choice = input('[TeaAgent] Choice [o/s/d/e]: ').strip().lower()
-                if choice in ('o', 's', 'd', 'e'):
-                    return choice
-                print('[TeaAgent] Invalid choice. Please enter o, s, d, or e.')
-            except (EOFError, KeyboardInterrupt):
-                print('\n[TeaAgent] Interrupted. Denying permission.')
-                return 'd'
-
-    def _is_high_risk_operation(
-        self, tool_name: str, arguments: dict[str, Any] | None
-    ) -> bool:
-        """Check if this operation matches high-risk patterns for multi-sig."""
-        if not self.multi_sig_config.high_risk_patterns:
-            return False
-
-        # Check tool name against patterns
-        tool_lower = tool_name.lower()
-        for pattern in self.multi_sig_config.high_risk_patterns:
-            if pattern.lower() in tool_lower:
-                return True
-
-        # Check arguments for high-risk commands (e.g., shell commands)
-        if arguments:
-            for key, value in arguments.items():
-                if isinstance(value, str):
-                    for pattern in self.multi_sig_config.high_risk_patterns:
-                        if pattern.lower() in value.lower():
-                            return True
-
-        return False
-
-    def _check_multi_sig_quorum(
-        self,
-        tool_name: str,
-        call_id: str,
-        arguments: dict[str, Any] | None,
-    ) -> bool:
-        """Check if multi-sig quorum is satisfied for this operation.
-
-        Returns:
-            True if quorum is satisfied, False otherwise.
-        """
-        # Placeholder for multi-sig quorum checking
-        # This would integrate with the actual multi-sig implementation
-        # For now, we return False to fall through to normal approval flow
-        return False
 
     def approve_once(self, call_id: str) -> None:
         """Approve a single tool call (one-time use)."""
@@ -418,7 +533,7 @@ class ApprovalManager:
 
     def shutdown(self) -> None:
         """Clean up resources (thread pool, etc.)."""
-        self._signature_executor.shutdown(wait=True)
+        self._multisig_manager.shutdown()
 
 
 # Sentinel: False until a real cryptography library is integrated.
@@ -457,9 +572,13 @@ def _verify_ssh_signature(
 __all__ = [
     'ApprovalManager',
     'ApprovalRequest',
+    'ApprovalStoreManager',
+    'JITApprovalManager',
     'JITApprovalState',
     'MultiSigQuorumConfig',
+    'MultiSigQuorumManager',
     'PeerSignature',
     'PermissionMode',
+    'PermissionModeEnforcer',
     '_verify_ssh_signature',
 ]

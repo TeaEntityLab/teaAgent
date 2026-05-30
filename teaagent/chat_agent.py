@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import contextlib
 import threading
+import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, overload
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
@@ -333,7 +334,83 @@ def _looks_like_plain_text_answer(answer: str) -> bool:
     return len(words) >= 4
 
 
+@overload
 def run_chat_agent(
+    config: ChatAgentConfig,
+    task: str,
+    *,
+    adapter: LLMAdapter | None = None,
+    audit: Optional[AuditLogger] = None,
+    registry: Optional[ToolRegistry] = None,
+    task_spec: Optional[str] = None,
+    depth: int = 0,
+    initial_observations: Optional[list[dict[str, Any]]] = None,
+    initial_context_extra: Optional[dict[str, Any]] = None,
+) -> RunResult: ...
+
+
+@overload
+def run_chat_agent(
+    *,
+    task: str,
+    adapter: LLMAdapter,
+    config: ChatAgentConfig,
+    audit: Optional[AuditLogger] = None,
+    registry: Optional[ToolRegistry] = None,
+    task_spec: Optional[str] = None,
+    depth: int = 0,
+    initial_observations: Optional[list[dict[str, Any]]] = None,
+    initial_context_extra: Optional[dict[str, Any]] = None,
+) -> RunResult: ...
+
+
+def run_chat_agent(*args: Any, **kwargs: Any) -> RunResult:
+    """Run the chat agent.
+
+    Primary (new) signature — positional ``config`` and ``task``::
+
+        run_chat_agent(config, task, *, adapter=None, ...)
+
+    Legacy (deprecated) signature — keyword-only::
+
+        run_chat_agent(*, task=..., adapter=..., config=...)
+
+    The keyword-only form emits a :class:`DeprecationWarning`.
+    """
+    if len(args) >= 2:
+        config, task = args[0], args[1]
+    elif len(args) == 1:
+        config = args[0]
+        task = kwargs.pop('task', None)
+        if task is None:
+            raise TypeError("run_chat_agent() missing required argument: 'task'")
+        warnings.warn(
+            'Calling run_chat_agent with keyword-only arguments is deprecated. '
+            'Use positional: run_chat_agent(config, task, ...)',
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    else:
+        warnings.warn(
+            'Calling run_chat_agent with keyword-only arguments is deprecated. '
+            'Use positional: run_chat_agent(config, task, ...)',
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        config = kwargs.pop('config', None)
+        task = kwargs.pop('task', None)
+        if config is None or task is None:
+            raise TypeError(
+                "run_chat_agent() requires 'config' and 'task'"
+            )
+    return _run_chat_agent_impl(
+        config=config,
+        task=task,
+        **kwargs,
+    )
+
+
+def _run_chat_agent_impl(
     *,
     task: str,
     adapter: LLMAdapter,

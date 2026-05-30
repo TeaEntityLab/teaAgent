@@ -197,7 +197,7 @@ class CLITests(unittest.TestCase):
                 )
             text = output.getvalue()
             self.assertEqual(exit_code, 0)
-            self.assertIn('TeaAgent setup', text)
+            self.assertIn('TeaAgent Setup', text)
             self.assertNotIn('"mode"', text)
 
     def test_setup_writes_workspace_and_redacts_stdout(self) -> None:

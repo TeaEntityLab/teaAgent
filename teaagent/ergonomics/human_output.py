@@ -6,6 +6,24 @@ from typing import Any, Literal
 
 ReadinessLevel = Literal['blocking', 'warning', 'info']
 
+# ANSI color codes (emoji-free)
+_STYLE_RESET = '\033[0m'
+_STYLE_BOLD = '\033[1m'
+_STYLE_DIM = '\033[2m'
+_COLOR_RED = '\033[31m'
+_COLOR_GREEN = '\033[32m'
+_COLOR_YELLOW = '\033[33m'
+_COLOR_CYAN = '\033[36m'
+_COLOR_MAGENTA = '\033[35m'
+
+
+def _label(text: str, color: str) -> str:
+    return f'{color}{_STYLE_BOLD}{text}{_STYLE_RESET}'
+
+
+def _cmd(text: str) -> str:
+    return f'{_COLOR_CYAN}{text}{_STYLE_RESET}'
+
 
 @dataclass(frozen=True)
 class ReadinessItem:
@@ -189,9 +207,11 @@ def format_readiness_summary(
 
 
 def format_setup_summary(payload: dict[str, Any], *, root: str = '.') -> str:
+    ok = bool(payload.get('ok'))
+    status_text = 'OK' if ok else 'NEEDS ATTENTION'
+    status_color = _COLOR_GREEN if ok else _COLOR_RED
     lines = [
-        'TeaAgent setup',
-        f'  Status: {"ok" if payload.get("ok") else "needs attention"}',
+        f'TeaAgent Setup  [{_label(status_text, status_color)}]',
         f'  Root: {payload.get("root", root)}',
     ]
     configured = payload.get('configured')
@@ -200,17 +220,145 @@ def format_setup_summary(payload: dict[str, Any], *, root: str = '.') -> str:
             lines.append(f'  Provider: {configured["provider"]}')
         if configured.get('permission_mode'):
             lines.append(f'  Permission mode: {configured["permission_mode"]}')
+            lines.append('')
+
+    # --- Blocking items ---
+    warnings = payload.get('warnings') or []
+    checks = payload.get('checks') or {}
+    blocking_items: list[str] = []
+    for check_name, check_value in checks.items():
+        if isinstance(check_value, dict) and check_value.get('ok') is False:
+            msg = check_value.get('message', '')
+            if msg:
+                blocking_items.append(f'    {_label("FAIL", _COLOR_RED)} {check_name}: {msg}')
+
+    for warning in warnings:
+        lowered = warning.lower()
+        if any(kw in lowered for kw in ('fail', 'error', 'missing', 'not found', 'denied')):
+            blocking_items.append(f'    {_label("FAIL", _COLOR_RED)} {warning}')
+
+    if blocking_items:
+        lines.append(f'  {_label("Blocking", _COLOR_RED)}:')
+        lines.extend(blocking_items)
+        for item in blocking_items:
+            if 'provider' in item.lower():
+                lines.append(f'           {_cmd("teaagent doctor model <provider>")}')
+            if 'key' in item.lower() or 'api_key' in item.lower():
+                lines.append(f'           {_cmd("teaagent setup --provider <name> --api-key <key>")}')
+        lines.append('')
+
+    # --- Warnings ---
+    warning_items = [w for w in warnings if not any(
+        kw in w.lower() for kw in ('fail', 'error', 'missing', 'not found', 'denied')
+    )]
+    if warning_items:
+        lines.append(f'  {_label("Warnings", _COLOR_YELLOW)}:')
+        for w in warning_items[:5]:
+            lines.append(f'    - {w}')
+        lines.append('')
+
+    # --- Next steps ---
     safe = payload.get('safe_command')
     if safe:
-        lines.append(f'  Try next: {safe}')
-    for step in (payload.get('next_steps') or [])[:3]:
-        if isinstance(step, str):
-            lines.append(f'    • {step}')
-    warnings = payload.get('warnings') or []
+        lines.append(f'  {_label("Next", _COLOR_GREEN)}: {_cmd(safe)}')
+    next_steps = payload.get('next_steps') or []
+    if next_steps:
+        for i, step in enumerate(next_steps[:5], 1):
+            if isinstance(step, str):
+                lines.append(f'    {i}. {_cmd(step)}')
+        lines.append('')
+
+    # --- Files written ---
+    files_written = payload.get('files_written') or []
+    if files_written:
+        lines.append(f'  {_label("Files written", _STYLE_DIM)}:')
+        for f in files_written[:5]:
+            lines.append(f'    - {f}')
+
+    return '\n'.join(lines)
+
+
+def format_preflight_summary(
+    payload: dict[str, Any], *, root: str = '.'
+) -> str:
+    """Format preflight readiness payload as a human-readable colored summary."""
+    preflight = payload.get('preflight') or payload
+    ready = bool(
+        payload.get('ready')
+        or preflight.get('ready')
+        or payload.get('would_invoke_model')
+    )
+    status_text = 'READY' if ready else 'BLOCKED'
+    status_color = _COLOR_GREEN if ready else _COLOR_RED
+    provider = payload.get('provider') or preflight.get('provider') or 'gpt'
+    lines = [
+        f'Preflight  [{_label(status_text, status_color)}]',
+        f'  Provider: {provider}',
+    ]
+
+    if payload.get('dry_run'):
+        lines.append('  Mode: dry-run (inspect only, no model call)')
+
+    # --- Token budget ---
+    token_budget = preflight.get('token_budget') or payload.get('token_budget')
+    if isinstance(token_budget, dict) and token_budget.get('usage_level'):
+        usage = token_budget['usage_level']
+        usage_color = _COLOR_GREEN if usage == 'low' else (_COLOR_YELLOW if usage == 'medium' else _COLOR_RED)
+        lines.append(f'  Token budget: {_label(usage, usage_color)}')
+
+    # --- Tasks requiring clarification ---
+    clarification = preflight.get('clarification')
+    if isinstance(clarification, dict) and clarification.get('needs_clarification'):
+        lines.append('')
+        lines.append(f'  {_label("Needs clarification", _COLOR_YELLOW)}:')
+        msg = clarification.get('message', '')
+        if msg:
+            lines.append(f'    {msg}')
+        clarify_cmd = "teaagent clarify '<your task>'"
+        lines.append(f'    -> {_cmd(clarify_cmd)}')
+
+    # --- Health failures ---
+    health = preflight.get('health') or payload.get('harness_health') or {}
+    failures = health.get('failures') or []
+    if failures:
+        lines.append('')
+        lines.append(f'  {_label("Blocking", _COLOR_RED)}:')
+        for failure in failures:
+            lines.append(f'    - {failure}')
+            remediation = _remediation_for_failure(failure, root=root)
+            if remediation:
+                lines.append(f'      -> {_cmd(remediation)}')
+
+    # --- Warnings ---
+    warnings = health.get('warnings') or payload.get('warnings') or []
     if warnings:
-        lines.append('  Warnings:')
+        lines.append('')
+        lines.append(f'  {_label("Warnings", _COLOR_YELLOW)}:')
         for warning in warnings[:5]:
             lines.append(f'    - {warning}')
+
+    # --- Recommendations ---
+    recommendations = payload.get('recommendations') or preflight.get('recommendations') or []
+    if recommendations:
+        lines.append('')
+        lines.append(f'  {_label("Recommendations", _COLOR_GREEN)}:')
+        for rec in recommendations[:3]:
+            if isinstance(rec, dict):
+                cmd = rec.get('command', '')
+                reason = rec.get('reason', '')
+                if cmd:
+                    lines.append(f'    {_cmd(cmd)}')
+                if reason:
+                    lines.append(f'    ({reason})')
+            elif isinstance(rec, str):
+                lines.append(f'    {rec}')
+
+    # --- Next command ---
+    if ready and not recommendations:
+        lines.append('')
+        next_cmd = 'teaagent run "<task>" --permission-mode read-only'
+        lines.append(f'  {_label("Next", _COLOR_GREEN)}: {_cmd(next_cmd)}')
+
     return '\n'.join(lines)
 
 

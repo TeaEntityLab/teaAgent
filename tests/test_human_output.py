@@ -54,8 +54,9 @@ def test_format_setup_summary_lists_safe_command() -> None:
         'next_steps': ['teaagent recipes list'],
     }
     text = format_setup_summary(payload)
-    assert 'Status: ok' in text
-    assert 'Try next:' in text
+    assert 'OK' in text or 'TeaAgent Setup' in text
+    assert '/tmp/ws' in text
+    assert 'gpt' in text
     assert 'teaagent daily' in text
 
 

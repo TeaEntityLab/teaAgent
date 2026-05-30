@@ -451,6 +451,11 @@ def _preflight(
         default='balanced',
         help='Read-only context budget profile for preflight evidence.',
     )
+    p.add_argument(
+        '--human',
+        action='store_true',
+        help='Print a beginner-friendly readiness summary instead of JSON.',
+    )
     defaults: dict[str, object] = {'func': handler, 'agent_command': 'preflight'}
     if top_level:
         defaults['command'] = 'agent'

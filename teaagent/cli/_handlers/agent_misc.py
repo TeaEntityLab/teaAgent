@@ -97,7 +97,13 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
 
     task = _prepare_task(args, args.task)
     result = preflight(task, root=args.root)
-    print_json(result.to_dict())
+    payload = result.to_dict()
+    if getattr(args, 'human', False):
+        from teaagent.ergonomics.human_output import format_preflight_summary
+
+        print(format_preflight_summary(payload, root=args.root))
+    else:
+        print_json(payload)
     return 0 if result.ready else 2
 
 

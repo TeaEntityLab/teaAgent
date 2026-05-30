@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
 import threading
 from collections.abc import Callable
@@ -12,7 +13,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 from uuid import uuid4
 
-from teaagent.storage import append_jsonl_line
+from teaagent.storage import append_jsonl_line, file_lock
 
 try:
     from teaagent.telemetry import TelemetryConfig, configure_telemetry
@@ -224,28 +225,37 @@ class AuditLogger:
             if self.path is not None and self._disk_error is None:
                 from teaagent.audit_chain import last_chain_hash
 
-                self._prev_hash = last_chain_hash(self.path)
-                prev = self._prev_hash
-                canonical = json.dumps(
-                    {
-                        'event_id': event.event_id,
-                        'event_type': event.event_type,
-                        'run_id': event.run_id,
-                        'created_at': event.created_at,
-                        'payload': event.payload,
-                        'prev_hash': prev,
-                    },
-                    sort_keys=True,
-                    separators=(',', ':'),
-                )
-                current_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
                 try:
-                    append_jsonl_line(
-                        self.path,
-                        event.to_json(prev_hash=prev, event_hash=current_hash),
-                    )
-                    self._prev_hash = current_hash
-                    secure_audit_file(self.path)
+                    with file_lock(self.path):
+                        self._prev_hash = last_chain_hash(self.path)
+                        prev = self._prev_hash
+                        canonical = json.dumps(
+                            {
+                                'event_id': event.event_id,
+                                'event_type': event.event_type,
+                                'run_id': event.run_id,
+                                'created_at': event.created_at,
+                                'payload': event.payload,
+                                'prev_hash': prev,
+                            },
+                            sort_keys=True,
+                            separators=(',', ':'),
+                        )
+                        current_hash = hashlib.sha256(
+                            canonical.encode('utf-8')
+                        ).hexdigest()
+                        self.path.parent.mkdir(parents=True, exist_ok=True)
+                        with self.path.open('a', encoding='utf-8') as handle:
+                            handle.write(
+                                event.to_json(
+                                    prev_hash=prev, event_hash=current_hash
+                                ).rstrip('\n')
+                                + '\n'
+                            )
+                            handle.flush()
+                            os.fsync(handle.fileno())
+                        self._prev_hash = current_hash
+                        secure_audit_file(self.path)
                 except OSError as exc:
                     self._disk_error = exc
                     err_event = AuditEvent(

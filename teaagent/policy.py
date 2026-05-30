@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import fcntl
 import hashlib
 import json
 import logging
 import re
 import shlex
 import time
+import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Iterator
 
 from teaagent.approval_manager import (
     ApprovalManager,
@@ -95,6 +99,14 @@ class ApprovalPolicy:
         description: str = '',
         handler: Any | None = None,
     ) -> None:
+        if self.preapproved_call_ids:
+            warnings.warn(
+                'preapproved_call_ids is deprecated; use full payload digest '
+                'verification via scoped approvals instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         # Sync external JIT state with manager's state
         if jit_state:
             manager_state = self._approval_manager.get_jit_state()
@@ -103,17 +115,17 @@ class ApprovalPolicy:
                 jit_state.session_approved_tools
             )
 
-        # Delegate to ApprovalManager
-        self._approval_manager.assert_allowed(
-            tool_name=tool_name,
-            call_id=call_id,
-            destructive=destructive,
-            arguments=arguments,
-            plan_contract=plan_contract,
-            read_only=read_only,
-            description=description,
-            handler=handler,
-        )
+        with self._flock_store():
+            self._approval_manager.assert_allowed(
+                tool_name=tool_name,
+                call_id=call_id,
+                destructive=destructive,
+                arguments=arguments,
+                plan_contract=plan_contract,
+                read_only=read_only,
+                description=description,
+                handler=handler,
+            )
 
         # Sync back JIT state in case it was modified by JIT prompting
         if jit_state:
@@ -190,6 +202,39 @@ class ApprovalPolicy:
             all_variants.append(content.lower())
 
         return ' | '.join(all_variants)
+
+    @staticmethod
+    def _compute_payload_digest(
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any] | None,
+    ) -> str:
+        canonical = json.dumps(
+            {
+                'tool_name': tool_name,
+                'call_id': call_id,
+                'arguments': arguments or {},
+            },
+            sort_keys=True,
+            separators=(',', ':'),
+        )
+        return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+
+    @contextmanager
+    def _flock_store(self) -> Iterator[None]:
+        if not self.approval_store:
+            yield
+            return
+        store_path = self.approval_store.path
+        lock_path = store_path.with_suffix(store_path.suffix + '.flock')
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        fd = open(lock_path, 'a+', encoding='utf-8')
+        try:
+            fcntl.flock(fd.fileno(), fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(fd.fileno(), fcntl.LOCK_UN)
+            fd.close()
 
     def _is_high_risk_operation(
         self, tool_name: str, arguments: dict[str, Any] | None

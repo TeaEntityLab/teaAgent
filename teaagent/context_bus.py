@@ -167,8 +167,7 @@ class ContextBus:
                 with suppress(Exception):
                     cursor.connection.rollback()
                 time.sleep(delay)
-                with self._lock:
-                    self._reconnect()
+                self._reconnect_self_thread()
                 cursor = self._get_connection().cursor()
             except sqlite3.OperationalError as exc:
                 if 'locked' not in str(exc).lower() and 'busy' not in str(exc).lower():
@@ -198,7 +197,9 @@ class ContextBus:
     def _reconnect(self) -> None:
         """Close the current thread's connection and bump generation.
 
-        Other threads refresh lazily on next ``_get_connection`` (P2.1).
+        Only the calling thread's connection is closed. Other threads
+        refresh lazily on next ``_get_connection`` when they detect a
+        stale generation or encounter an error.
         Caller must hold ``_lock``.
         """
         conn = getattr(self._thread_local, 'connection', None)
@@ -213,12 +214,35 @@ class ContextBus:
         self._connection_generation += 1
         logger.warning('Reconnected to context bus database')
 
+    def _reconnect_self_thread(self) -> None:
+        """Reconnect only the current thread without invalidating others.
+
+        Used under error storms to avoid global generation bumps that
+        force every thread to reconnect simultaneously.
+        """
+        conn = getattr(self._thread_local, 'connection', None)
+        if conn is not None:
+            with suppress(Exception):
+                conn.close()
+            with self._lock:
+                self._all_connections.discard(conn)
+        if hasattr(self._thread_local, 'connection'):
+            del self._thread_local.connection
+        if hasattr(self._thread_local, 'generation'):
+            del self._thread_local.generation
+        logger.debug('Reconnected current thread to context bus database')
+
     def _get_connection(self) -> sqlite3.Connection:
-        """Return a thread-local SQLite connection, refreshing after reconnect."""
-        with self._lock:
-            generation = self._connection_generation
+        """Return a thread-local SQLite connection, refreshing after reconnect.
+
+        Uses a scoped reconnect path that only invalidates the current
+        thread's connection, preventing global lock failures under error
+        storms where many threads would otherwise reconnect simultaneously.
+        """
         conn = getattr(self._thread_local, 'connection', None)
         local_gen = getattr(self._thread_local, 'generation', None)
+        with self._lock:
+            generation = self._connection_generation
         if conn is not None and local_gen == generation:
             return conn
         if conn is not None:
@@ -275,8 +299,7 @@ class ContextBus:
                     exc,
                     delay,
                 )
-                with self._lock:
-                    self._reconnect()
+                self._reconnect_self_thread()
                 time.sleep(delay)
 
     def subscribe_deltas(
@@ -325,35 +348,90 @@ class ContextBus:
         return deltas
 
     def archive_to_rag(self, rag_store: Any) -> None:
-        """Archive Delta cards to RAG long-term memory."""
-        deltas = self.subscribe_deltas()
-        max_timestamp = max((d.timestamp for d in deltas), default=None)
+        """Archive Delta cards to RAG long-term memory.
 
-        for delta in deltas:
-            rag_doc = {
-                'doc_id': delta.delta_id,
-                'source': delta.source_agent,
-                'content': delta.content,
-                'metadata': {
-                    **delta.metadata,
-                    'delta_type': delta.delta_type.value,
-                    'timestamp': delta.timestamp,
-                    'workflow_id': self._workflow_id,
-                },
-            }
+        The read and clear are wrapped in a single SQLite transaction to
+        prevent deltas from being lost if new ones are published between
+        the read and the clear.
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
 
+        max_retries = 5
+        base_delay = 0.1
+
+        for attempt in range(max_retries):
             try:
-                if hasattr(rag_store, 'add_document'):
-                    rag_store.add_document(rag_doc)
-                elif hasattr(rag_store, 'add'):
-                    rag_store.add(rag_doc)
-                else:
-                    logger.warning('RAG store does not support adding documents')
-            except Exception as exc:
-                logger.error('Failed to archive Delta to RAG: %s', exc)
+                cursor.execute('BEGIN IMMEDIATE')
+                cursor.execute(
+                    'SELECT * FROM delta_cards WHERE workflow_id = ? ORDER BY timestamp DESC',
+                    (self._workflow_id,),
+                )
+                rows = cursor.fetchall()
 
-        self._clear_deltas(max_timestamp=max_timestamp)
-        logger.info('Archived %s Delta cards to RAG', len(deltas))
+                deltas = []
+                for row in rows:
+                    deltas.append(
+                        DeltaCard(
+                            delta_id=row[0],
+                            delta_type=DeltaType(row[2]),
+                            source_agent=row[3],
+                            content=row[4],
+                            timestamp=row[5],
+                            metadata=json.loads(row[6]) if row[6] else {},
+                        )
+                    )
+
+                max_timestamp = max((d.timestamp for d in deltas), default=None)
+
+                for delta in deltas:
+                    rag_doc = {
+                        'doc_id': delta.delta_id,
+                        'source': delta.source_agent,
+                        'content': delta.content,
+                        'metadata': {
+                            **delta.metadata,
+                            'delta_type': delta.delta_type.value,
+                            'timestamp': delta.timestamp,
+                            'workflow_id': self._workflow_id,
+                        },
+                    }
+
+                    try:
+                        if hasattr(rag_store, 'add_document'):
+                            rag_store.add_document(rag_doc)
+                        elif hasattr(rag_store, 'add'):
+                            rag_store.add(rag_doc)
+                        else:
+                            logger.warning('RAG store does not support adding documents')
+                    except Exception as exc:
+                        logger.error('Failed to archive Delta to RAG: %s', exc)
+
+                if max_timestamp is not None:
+                    cursor.execute(
+                        'DELETE FROM delta_cards WHERE workflow_id = ? AND timestamp <= ?',
+                        (self._workflow_id, max_timestamp),
+                    )
+                conn.commit()
+                logger.info('Archived %s Delta cards to RAG', len(deltas))
+                return
+            except sqlite3.Error as exc:
+                with suppress(Exception):
+                    conn.rollback()
+                if attempt == max_retries - 1:
+                    raise
+                delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
+                logger.warning(
+                    'archive_to_rag failed (attempt %s/%s): %s, reconnecting in %.2fs',
+                    attempt + 1,
+                    max_retries,
+                    exc,
+                    delay,
+                )
+                self._reconnect_self_thread()
+                conn = self._get_connection()
+                cursor = conn.cursor()
+                time.sleep(delay)
 
     def _clear_deltas(self, max_timestamp: Optional[float] = None) -> None:
         """Clear Delta cards for the current workflow."""
@@ -390,8 +468,7 @@ class ContextBus:
                     exc,
                     delay,
                 )
-                with self._lock:
-                    self._reconnect()
+                self._reconnect_self_thread()
                 time.sleep(delay)
 
     def cleanup_old_deltas(self) -> None:
@@ -427,8 +504,7 @@ class ContextBus:
                     exc,
                     delay,
                 )
-                with self._lock:
-                    self._reconnect()
+                self._reconnect_self_thread()
                 time.sleep(delay)
 
     def get_delta_count(self) -> int:
