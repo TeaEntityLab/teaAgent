@@ -154,8 +154,70 @@ class CentralizedApprovalQueue:
 
         snapshot = self._store.load(self._parent_run_id)
         with self._sync_lock:
+            # Validate snapshot structure
+            if not isinstance(snapshot.requests, dict):
+                logger.warning(
+                    'Invalid snapshot structure: requests is not a dict, skipping reload'
+                )
+                return
+
             for request_id, raw in snapshot.requests.items():
-                loaded = request_from_dict(raw)
+                # Validate raw data structure
+                if not isinstance(raw, dict):
+                    logger.warning(
+                        'Skipping invalid request data for %s: not a dict', request_id
+                    )
+                    continue
+
+                # Validate required fields exist
+                required_fields = {
+                    'request_id',
+                    'subagent_id',
+                    'parent_run_id',
+                    'subagent_name',
+                    'tool_name',
+                }
+                missing_fields = required_fields - set(raw.keys())
+                if missing_fields:
+                    logger.warning(
+                        'Skipping invalid request %s: missing required fields %s',
+                        request_id,
+                        missing_fields,
+                    )
+                    continue
+
+                # Validate status enum value
+                status_value = raw.get('status')
+                if status_value is not None:
+                    try:
+                        ApprovalRequestStatus(status_value)
+                    except ValueError:
+                        logger.warning(
+                            'Skipping invalid request %s: invalid status value %s',
+                            request_id,
+                            status_value,
+                        )
+                        continue
+
+                # Safely deserialize request
+                try:
+                    loaded = request_from_dict(raw)
+                except (KeyError, ValueError, TypeError) as e:
+                    logger.warning(
+                        'Skipping invalid request %s: deserialization failed: %s',
+                        request_id,
+                        e,
+                    )
+                    continue
+
+                # Validate loaded object
+                if not isinstance(loaded, SubagentApprovalRequest):
+                    logger.warning(
+                        'Skipping invalid request %s: deserialization did not return SubagentApprovalRequest',
+                        request_id,
+                    )
+                    continue
+
                 existing = self._requests.get(request_id)
                 if existing is None:
                     self._requests[request_id] = loaded

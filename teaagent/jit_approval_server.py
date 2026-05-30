@@ -162,12 +162,20 @@ class JITApprovalServer:
                 await self._send_sse_event(writer, event['type'], event['data'])
         except asyncio.CancelledError:
             logger.info('SSE client disconnected')
-        except (ConnectionResetError, BrokenPipeError):
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError):
             logger.info('SSE client connection lost')
+        except OSError as exc:
+            logger.info(f'SSE client connection error: {exc}')
+        except Exception as exc:
+            logger.error(f'Unexpected error in SSE handler: {exc}')
         finally:
             self._clients.discard(queue)
-            writer.close()
-            await writer.wait_closed()
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                # Ignore errors during cleanup
+                pass
 
     async def _send_sse_event(
         self, writer: asyncio.StreamWriter, event_type: str, data: dict[str, Any]

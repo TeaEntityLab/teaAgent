@@ -283,21 +283,98 @@ def default_hmac_secret() -> Optional[str]:
 
 
 def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
+    """Deserialize a SubagentApprovalRequest from a dictionary with validation.
+
+    Args:
+        data: Dictionary containing request data.
+
+    Returns:
+        SubagentApprovalRequest instance.
+
+    Raises:
+        ValueError: If required fields are missing, invalid, or type mismatches occur.
+        KeyError: If required fields are missing from the dictionary.
+    """
     from datetime import datetime, timezone
 
-    status = ApprovalRequestStatus(
-        data.get('status', ApprovalRequestStatus.PENDING.value)
-    )
+    # Validate required fields
+    required_fields = [
+        'request_id',
+        'subagent_id',
+        'parent_run_id',
+        'subagent_name',
+        'tool_name',
+    ]
+    
+    for field in required_fields:
+        if field not in data:
+            raise ValueError(f"Missing required field: {field}")
+        if not data[field]:
+            raise ValueError(f"Required field '{field}' cannot be empty or None")
+
+    # Validate and convert status enum
+    status_value = data.get('status', ApprovalRequestStatus.PENDING.value)
+    try:
+        status = ApprovalRequestStatus(status_value)
+    except ValueError as e:
+        valid_statuses = [s.value for s in ApprovalRequestStatus]
+        raise ValueError(
+            f"Invalid status '{status_value}'. Must be one of: {valid_statuses}"
+        ) from e
+
+    # Validate and convert tool_arguments
+    tool_arguments = data.get('tool_arguments')
+    if tool_arguments is None:
+        tool_arguments = {}
+    elif not isinstance(tool_arguments, dict):
+        raise ValueError(
+            f"tool_arguments must be a dict, got {type(tool_arguments).__name__}"
+        )
+
+    # Validate timeout_seconds
+    timeout_seconds = data.get('timeout_seconds', 180)
+    try:
+        timeout_seconds = int(timeout_seconds)
+    except (ValueError, TypeError) as e:
+        raise ValueError(
+            f"Invalid timeout_seconds '{timeout_seconds}': must be a positive integer"
+        ) from e
+    
+    if timeout_seconds <= 0:
+        raise ValueError(f"timeout_seconds must be positive, got {timeout_seconds}")
+
+    # Validate optional integer fields
+    batch_index = data.get('batch_index')
+    if batch_index is not None:
+        try:
+            batch_index = int(batch_index)
+        except (ValueError, TypeError) as e:
+            raise ValueError(
+                f"Invalid batch_index '{batch_index}': must be a non-negative integer"
+            ) from e
+        
+        if batch_index < 0:
+            raise ValueError(f"batch_index must be non-negative, got {batch_index}")
+
+    # Validate timestamp fields (optional, but must be strings if present)
+    for field in ['created_at', 'approved_at', 'denied_at']:
+        value = data.get(field)
+        if value is not None and not isinstance(value, str):
+            raise ValueError(
+                f"Field '{field}' must be a string or None, got {type(value).__name__}"
+            )
+
+    # Build the request with validated data
     return SubagentApprovalRequest(
         request_id=str(data['request_id']),
         subagent_id=str(data['subagent_id']),
         parent_run_id=str(data['parent_run_id']),
         subagent_name=str(data['subagent_name']),
         tool_name=str(data['tool_name']),
-        tool_arguments=dict(data.get('tool_arguments') or {}),
+        tool_arguments=tool_arguments,
         permission_mode=str(data.get('permission_mode', '')),
         isolation=str(data.get('isolation', '')),
-        batch_index=data.get('batch_index'),
+        batch_index=batch_index,
         worktree_path=data.get('worktree_path'),
         created_at=str(
             data.get('created_at') or datetime.now(timezone.utc).isoformat()
@@ -306,7 +383,7 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
         approved_at=data.get('approved_at'),
         denied_at=data.get('denied_at'),
         denial_reason=data.get('denial_reason'),
-        timeout_seconds=int(data.get('timeout_seconds', 180)),
+        timeout_seconds=timeout_seconds,
     )
 
 

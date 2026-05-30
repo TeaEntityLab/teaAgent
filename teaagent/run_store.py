@@ -170,8 +170,17 @@ class RunStore:
     def pending_approval_for_run(self, run_id: str) -> Optional[dict[str, Any]]:
         pending: Optional[dict[str, Any]] = None
         for event in self.show_run(run_id):
+            # Validate event is a dictionary
+            if not isinstance(event, dict):
+                continue
+            
             event_type = event.get('event_type')
-            payload = event.get('payload') or {}
+            payload = event.get('payload')
+            
+            # Validate payload is a dictionary, default to empty dict
+            if not isinstance(payload, dict):
+                payload = {}
+            
             if event_type == 'tool_call_pending_approval':
                 call_id = payload.get('call_id')
                 tool_name = payload.get('tool_name')
@@ -192,8 +201,11 @@ class RunStore:
                 'run_completed',
                 'run_failed',
             }:
-                if pending and payload.get('call_id') == pending.get('call_id'):
-                    pending = None
+                if pending and isinstance(pending, dict):
+                    pending_call_id = pending.get('call_id')
+                    payload_call_id = payload.get('call_id')
+                    if pending_call_id is not None and pending_call_id == payload_call_id:
+                        pending = None
         return pending
 
     def heartbeat_for_run(self, run_id: str) -> dict[str, Any]:
