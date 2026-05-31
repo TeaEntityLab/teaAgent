@@ -7,7 +7,8 @@ from market-standard product gaps that still need acceptance tests.
 
 Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 
-Landscape survey (reviewed 2026-05-24, last refreshed 2026-05-31):
+Landscape survey (reviewed 2026-05-24)
+Last refreshed: 2026-05-31
 [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)
 
 ## Status Key
