@@ -10,7 +10,6 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator, Optional
 
-from test_support import skip_if_socket_bind_is_blocked
 from teaagent.mcp_http import (
     MAX_HTTP_BODY_BYTES,
     MCP_PATH,
@@ -18,6 +17,7 @@ from teaagent.mcp_http import (
     build_mcp_http_server,
 )
 from teaagent.workspace_tools import build_workspace_tool_registry
+from test_support import skip_if_socket_bind_is_blocked
 
 
 class _ServerFixture:

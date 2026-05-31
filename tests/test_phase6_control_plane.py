@@ -6,7 +6,6 @@ import threading
 import time
 import urllib.request
 
-from test_support import skip_if_socket_bind_is_blocked
 from teaagent.control_plane_api import (
     ControlPlaneServer,
     ControlPlaneState,
@@ -23,6 +22,7 @@ from teaagent.tool_permissions import (
     ToolPermissionManager,
     ToolSafetyLevel,
 )
+from test_support import skip_if_socket_bind_is_blocked
 
 
 def _pending_record(

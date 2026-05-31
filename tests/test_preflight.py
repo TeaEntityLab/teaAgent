@@ -6,9 +6,9 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 
-from test_support import can_bind_loopback
 from teaagent import MemoryCatalog, PermissionMode, preflight
 from teaagent.cli import main
+from test_support import can_bind_loopback
 
 
 class PreflightTests(unittest.TestCase):

@@ -10,11 +10,11 @@ from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
 
-from test_support import can_bind_loopback
 from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
 from teaagent.tui import TeaAgentTUI
+from test_support import can_bind_loopback
 
 
 class CapturingAdapterFactory:

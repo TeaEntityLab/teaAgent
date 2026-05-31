@@ -9,7 +9,6 @@ import time
 import urllib.request
 from dataclasses import asdict
 
-from test_support import skip_if_socket_bind_is_blocked
 from teaagent.federated_sync import (
     ApprovalRequestMessage,
     FederatedGraphSync,
@@ -21,6 +20,7 @@ from teaagent.signature_relay import (
     SignatureRelayServer,
 )
 from teaagent.surface_auth import SurfaceAuthPolicy
+from test_support import skip_if_socket_bind_is_blocked
 
 
 def _http_json(

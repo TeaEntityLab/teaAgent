@@ -49,3 +49,12 @@ def test_build_use_case_matrix_includes_canonical_markers(tmp_path: Path) -> Non
     text = output.read_text(encoding='utf-8')
     assert 'Landscape survey reviewed: **2026-05-31**' in text
     assert 'Open partial/planned gaps (P1/P2): **' in text
+    assert (
+        'Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.'
+        in text
+    )
+    assert (
+        '([../scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).'
+        in text
+    )
+    assert '(see [use-cases.md](use-cases.md#partial--planned-gaps)).' in text

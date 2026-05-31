@@ -8,8 +8,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from typing import Any
 
-from test_support import skip_if_socket_bind_is_blocked
 from teaagent.notify import NotifyConfig, fire_notification
+from test_support import skip_if_socket_bind_is_blocked
 
 
 class _MockWorker:

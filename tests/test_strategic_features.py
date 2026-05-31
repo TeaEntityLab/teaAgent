@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-from test_support import skip_if_socket_bind_is_blocked
 from teaagent.consensus import (
     ConsensusConfig,
     ConsensusEngine,
@@ -31,6 +30,7 @@ from teaagent.vote_relay import (
     verify_relay_vote,
 )
 from teaagent.wasm_skill import build_wasm_invoke_contract, write_wasm_manifest
+from test_support import skip_if_socket_bind_is_blocked
 
 
 def test_build_vote_signing_message_stable() -> None:

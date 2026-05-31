@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import functools
 import inspect
 from dataclasses import dataclass
 from typing import Literal
@@ -271,7 +272,10 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
                 )
             )
         try:
-            handler_source = inspect.getsource(tool.handler)
+            handler = tool.handler
+            if isinstance(handler, functools.partial):
+                handler = handler.func
+            handler_source = inspect.getsource(handler)
         except (OSError, TypeError):
             issues.append(
                 ToolLintIssue(

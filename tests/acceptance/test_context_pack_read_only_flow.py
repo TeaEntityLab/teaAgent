@@ -25,8 +25,8 @@ from teaagent.cli import main
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.hybrid_search import LocalHybridSearchBackend
 from teaagent.memory import MemoryCatalog
-from tests.test_graphqlite_store import FakeGraphQLiteGraph
 from test_support import can_bind_loopback
+from tests.test_graphqlite_store import FakeGraphQLiteGraph
 
 
 def test_preflight_includes_read_only_context_pack_evidence() -> None:

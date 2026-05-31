@@ -54,7 +54,9 @@ __all__ = [
 ]
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Skip network-binding tests when the environment forbids loopback listeners.
 
     Some sandboxed runners disallow `socket.bind()` entirely. Those tests are still

@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 from urllib.request import urlopen
 
-from test_support import skip_if_socket_bind_is_blocked
 from teaagent.audit import AuditLogger
 from teaagent.audit_viewer import make_audit_server
 from teaagent.run_store import RunStore
+from test_support import skip_if_socket_bind_is_blocked
 
 
 def _make_store_with_run(tmp: str) -> RunStore:

@@ -8,7 +8,6 @@ from threading import Thread
 
 import pytest
 
-from test_support import skip_if_socket_bind_is_blocked
 from teaagent.automation_delivery import (
     deliver_automation_tick,
     resolve_automation_webhook_secret,
@@ -17,6 +16,7 @@ from teaagent.automation_delivery import (
 )
 from teaagent.automation_ticket import validate_automation_spec
 from teaagent.automations import AutomationStore
+from test_support import skip_if_socket_bind_is_blocked
 
 
 class _CaptureHandler(BaseHTTPRequestHandler):

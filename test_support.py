@@ -21,4 +21,3 @@ def skip_if_socket_bind_is_blocked() -> None:
 
     if not can_bind_loopback():
         pytest.skip('sandbox forbids socket.bind() on loopback')
-

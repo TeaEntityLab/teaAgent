@@ -261,17 +261,20 @@ def build_matrix_markdown(
     *,
     survey_review_date: str = 'unknown',
     open_gap_count: int = 0,
+    acceptance_relpath: str = 'docs/acceptance.md',
+    survey_relpath: str = '../scripts/refresh_agent_readme_survey.md',
+    use_cases_relpath: str = 'use-cases.md',
     repo_root: Path | None = None,
 ) -> str:
     lines = [
         '# Use-case Coverage Matrix',
         '',
-        'Generated from `docs/acceptance.md` by `scripts/build_use_case_matrix.py`.',
+        f'Generated from `{acceptance_relpath}` by `scripts/build_use_case_matrix.py`.',
         '',
         f'Landscape survey reviewed: **{survey_review_date}** '
-        f'([scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)).',
+        f'([{survey_relpath}]({survey_relpath})).',
         f'Open partial/planned gaps (P1/P2): **{open_gap_count}** '
-        '(see [docs/use-cases.md](use-cases.md#partial--planned-gaps)).',
+        f'(see [{use_cases_relpath}]({use_cases_relpath}#partial--planned-gaps)).',
     ]
     if repo_root is not None:
         kpi = _ergonomics_kpi_line(repo_root)
@@ -323,6 +326,9 @@ def build_use_case_matrix(
             available,
             survey_review_date=survey_review_date,
             open_gap_count=_open_backlog_gap_count(use_cases_path),
+            acceptance_relpath='docs/acceptance.md',
+            survey_relpath='../scripts/refresh_agent_readme_survey.md',
+            use_cases_relpath='use-cases.md',
             repo_root=repo_root,
         ),
         encoding='utf-8',

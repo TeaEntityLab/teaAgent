@@ -7,8 +7,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from test_support import can_bind_loopback
 from teaagent.preflight import check_env_health
+from test_support import can_bind_loopback
 
 
 class TestPreflightEnvHealth(unittest.TestCase):
