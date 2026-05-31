@@ -311,10 +311,17 @@ def build_use_case_matrix(
 ) -> None:
     available = parse_acceptance_test_files(acceptance_path.read_text(encoding='utf-8'))
     repo_root = repo_root or Path(__file__).resolve().parents[1]
+    survey_review_date = _survey_review_date(survey_path)
+    if survey_review_date == 'unknown':
+        raise ValueError(
+            f'{survey_path} missing review date marker: Last reviewed: **YYYY-MM-DD**.'
+        )
+    if not use_cases_path.is_file():
+        raise ValueError(f'{use_cases_path} missing; cannot compute open gap count')
     output_path.write_text(
         build_matrix_markdown(
             available,
-            survey_review_date=_survey_review_date(survey_path),
+            survey_review_date=survey_review_date,
             open_gap_count=_open_backlog_gap_count(use_cases_path),
             repo_root=repo_root,
         ),

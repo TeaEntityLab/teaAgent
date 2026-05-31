@@ -21,6 +21,11 @@ from teaagent.file_policy import FilePolicy
 from teaagent.plugins import load_plugins
 from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
+from teaagent.tool_call_context import (
+    ToolCallContext,
+    bind_tool_call_context,
+    reset_tool_call_context,
+)
 from teaagent.tools import ToolRegistry
 
 from ._approval_manager import ApprovalManager
@@ -277,11 +282,19 @@ class AgentRunner:
                 )
                 try:
                     parent_token = bind_parent_run_id(current_run_id)
+                    tool_ctx_token = bind_tool_call_context(
+                        ToolCallContext(
+                            audit=self.audit,
+                            run_id=current_run_id,
+                            call_id=decision.call_id,
+                        )
+                    )
                     try:
                         result = self.registry.execute(
                             decision.tool_name, decision.arguments
                         )
                     finally:
+                        reset_tool_call_context(tool_ctx_token)
                         reset_parent_run_id(parent_token)
                 except ToolExecutionError as exc:
                     tool_calls += 1

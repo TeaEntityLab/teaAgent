@@ -11,6 +11,11 @@ from teaagent.hooks import (
     HookRegistry,
     shell_command_hook,
 )
+from teaagent.tool_call_context import (
+    ToolCallContext,
+    bind_tool_call_context,
+    reset_tool_call_context,
+)
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
 
@@ -145,6 +150,75 @@ class TestHookIntegration(unittest.TestCase):
         )
         result = tool_reg.execute('echo', {})
         self.assertEqual(result, {'value': 1, 'extra': 'added'})
+
+    def test_hook_mutations_are_audited_when_context_is_bound(self) -> None:
+        from teaagent.audit import AuditLogger
+
+        audit = AuditLogger(path=None)
+        token = bind_tool_call_context(
+            ToolCallContext(audit=audit, run_id='run', call_id='call')
+        )
+        try:
+            registry = HookRegistry()
+            registry.register_pre_hook(lambda tool_name, args: {**args, 'injected': 1})
+            registry.register_post_hook(
+                lambda tool_name, args, result: {**result, 'post': True}
+            )
+            tool_reg = ToolRegistry(hook_registry=registry)
+            tool_reg.register(
+                name='echo',
+                description='echo',
+                input_schema={
+                    'type': 'object',
+                    'properties': {'injected': {'type': 'integer'}},
+                },
+                output_schema={
+                    'type': 'object',
+                    'properties': {
+                        'value': {'type': 'integer'},
+                        'post': {'type': 'boolean'},
+                    },
+                    'required': ['value', 'post'],
+                },
+                annotations=ToolAnnotations(),
+                handler=lambda args: {'value': args.get('injected', 0)},
+            )
+            tool_reg.execute('echo', {})
+        finally:
+            reset_tool_call_context(token)
+
+        event_types = [e.event_type for e in audit.events]
+        self.assertIn('tool_hook_pre_mutation', event_types)
+        self.assertIn('tool_hook_post_mutation', event_types)
+
+    def test_hook_veto_is_audited_when_context_is_bound(self) -> None:
+        from teaagent.audit import AuditLogger
+
+        audit = AuditLogger(path=None)
+        token = bind_tool_call_context(
+            ToolCallContext(audit=audit, run_id='run', call_id='call')
+        )
+        try:
+            registry = HookRegistry()
+            registry.register_pre_hook(
+                lambda tool_name, args: (_ for _ in ()).throw(HookError('blocked'))
+            )
+            tool_reg = ToolRegistry(hook_registry=registry)
+            tool_reg.register(
+                name='echo',
+                description='echo',
+                input_schema={'type': 'object', 'properties': {}},
+                output_schema={'type': 'object', 'properties': {}},
+                annotations=ToolAnnotations(),
+                handler=lambda args: {'ok': True},
+            )
+            with self.assertRaises(HookError):
+                tool_reg.execute('echo', {})
+        finally:
+            reset_tool_call_context(token)
+
+        event_types = [e.event_type for e in audit.events]
+        self.assertIn('tool_hook_vetoed', event_types)
 
     def test_pre_hook_returning_none_preserves_original_args(self) -> None:
         received_args: list[dict] = []

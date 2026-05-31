@@ -213,17 +213,17 @@ external observability platforms like OpenTelemetry.</p>
             <span class="name">HAS_OTEL</span>        =
 <span class="default_value">True</span>
 
-
+        
     </div>
     <a class="headerlink" href="#HAS_OTEL"></a>
-
-
+    
+    
 
                 </section>
                 <section id="InMemoryMetricsSink">
                             <input id="InMemoryMetricsSink-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">InMemoryMetricsSink</span>:
 
@@ -284,7 +284,7 @@ external observability platforms like OpenTelemetry.</p>
                             <div id="InMemoryMetricsSink.handle_event" class="classattr">
                                         <input id="InMemoryMetricsSink.handle_event-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">handle_event</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">event</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -315,13 +315,13 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryMetricsSink.snapshot" class="classattr">
                                         <input id="InMemoryMetricsSink.snapshot-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">snapshot</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n"><a href="#MetricSnapshot">MetricSnapshot</a></span>:</span></span>
 
@@ -337,7 +337,7 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -360,47 +360,47 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="MetricSnapshot.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">MetricSnapshot</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">counters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>, </span><span class="param"><span class="n">histograms</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#MetricSnapshot.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="MetricSnapshot.counters" class="classattr">
                                 <div class="attr variable">
             <span class="name">counters</span><span class="annotation">: dict[str, int]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#MetricSnapshot.counters"></a>
-
-
+    
+    
 
                             </div>
                             <div id="MetricSnapshot.histograms" class="classattr">
                                 <div class="attr variable">
             <span class="name">histograms</span><span class="annotation">: dict[str, list[float]]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#MetricSnapshot.histograms"></a>
-
-
+    
+    
 
                             </div>
                 </section>
                 <section id="OTelAuditSink">
                             <input id="OTelAuditSink-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">OTelAuditSink</span>:
 
@@ -495,12 +495,12 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="OTelAuditSink.__init__" class="classattr">
                                         <input id="OTelAuditSink.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">OTelAuditSink</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">tracer_provider</span><span class="p">:</span> <span class="n">opentelemetry</span><span class="o">.</span><span class="n">trace</span><span class="o">.</span><span class="n">TracerProvider</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;teaagent&#39;</span></span>)</span>
 
                 <label class="view-source-button" for="OTelAuditSink.__init__-view-source"><span>View Source</span></label>
@@ -520,7 +520,7 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OTelAuditSink.tracer_provider" class="classattr">
@@ -538,13 +538,13 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OTelAuditSink.handle_event" class="classattr">
                                         <input id="OTelAuditSink.handle_event-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">handle_event</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">event</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -609,13 +609,13 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OTelAuditSink.shutdown" class="classattr">
                                         <input id="OTelAuditSink.shutdown-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">shutdown</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -636,13 +636,13 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OTelAuditSink.force_flush" class="classattr">
                                         <input id="OTelAuditSink.force_flush-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">force_flush</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">timeout_millis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5000</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -655,14 +655,14 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="OTelMetricsSink">
                             <input id="OTelMetricsSink-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">OTelMetricsSink</span>:
 
@@ -722,7 +722,7 @@ external observability platforms like OpenTelemetry.</p>
                             <div id="OTelMetricsSink.__init__" class="classattr">
                                         <input id="OTelMetricsSink.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">OTelMetricsSink</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">meter_provider</span><span class="p">:</span> <span class="n">opentelemetry</span><span class="o">.</span><span class="n">sdk</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">_internal</span><span class="o">.</span><span class="n">MeterProvider</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;teaagent&#39;</span></span>)</span>
 
                 <label class="view-source-button" for="OTelMetricsSink.__init__-view-source"><span>View Source</span></label>
@@ -748,13 +748,13 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OTelMetricsSink.handle_event" class="classattr">
                                         <input id="OTelMetricsSink.handle_event-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">handle_event</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">event</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -780,7 +780,7 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -816,14 +816,14 @@ external observability platforms like OpenTelemetry.</p>
 
                             <div id="TelemetryConfig.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">TelemetryConfig</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;teaagent&#39;</span>,</span><span class="param">	<span class="n">service_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;0.1.0&#39;</span>,</span><span class="param">	<span class="n">otlp_endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">metrics_otlp_endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">otlp_headers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">console</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">sample_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TelemetryConfig.service_name" class="classattr">
@@ -831,11 +831,11 @@ external observability platforms like OpenTelemetry.</p>
             <span class="name">service_name</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;teaagent&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.service_name"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TelemetryConfig.service_version" class="classattr">
@@ -843,11 +843,11 @@ external observability platforms like OpenTelemetry.</p>
             <span class="name">service_version</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;0.1.0&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.service_version"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TelemetryConfig.otlp_endpoint" class="classattr">
@@ -855,11 +855,11 @@ external observability platforms like OpenTelemetry.</p>
             <span class="name">otlp_endpoint</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.otlp_endpoint"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TelemetryConfig.metrics_otlp_endpoint" class="classattr">
@@ -867,22 +867,22 @@ external observability platforms like OpenTelemetry.</p>
             <span class="name">metrics_otlp_endpoint</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.metrics_otlp_endpoint"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TelemetryConfig.otlp_headers" class="classattr">
                                 <div class="attr variable">
             <span class="name">otlp_headers</span><span class="annotation">: dict[str, str]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.otlp_headers"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TelemetryConfig.console" class="classattr">
@@ -890,11 +890,11 @@ external observability platforms like OpenTelemetry.</p>
             <span class="name">console</span><span class="annotation">: bool</span>        =
 <span class="default_value">False</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.console"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TelemetryConfig.sample_rate" class="classattr">
@@ -902,18 +902,18 @@ external observability platforms like OpenTelemetry.</p>
             <span class="name">sample_rate</span><span class="annotation">: float</span>        =
 <span class="default_value">1.0</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TelemetryConfig.sample_rate"></a>
-
-
+    
+    
 
                             </div>
                 </section>
                 <section id="TelemetryNotAvailable">
                             <input id="TelemetryNotAvailable-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">TelemetryNotAvailable</span><wbr>(<span class="base">builtins.RuntimeError</span>):
 
@@ -934,7 +934,7 @@ external observability platforms like OpenTelemetry.</p>
                 <section id="TracingHTTPTransport">
                             <input id="TracingHTTPTransport-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">TracingHTTPTransport</span>:
 
@@ -989,7 +989,7 @@ external observability platforms like OpenTelemetry.</p>
                             <div id="TracingHTTPTransport.__init__" class="classattr">
                                         <input id="TracingHTTPTransport.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">TracingHTTPTransport</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span><span class="p">:</span> <span class="n">Any</span>, </span><span class="param"><span class="n">tracer</span><span class="p">:</span> <span class="n">opentelemetry</span><span class="o">.</span><span class="n">trace</span><span class="o">.</span><span class="n">Tracer</span></span>)</span>
 
                 <label class="view-source-button" for="TracingHTTPTransport.__init__-view-source"><span>View Source</span></label>
@@ -1006,13 +1006,13 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="TracingHTTPTransport.post_json" class="classattr">
                                         <input id="TracingHTTPTransport.post_json-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">post_json</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">url</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">headers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1049,14 +1049,14 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="configure_metrics">
                             <input id="configure_metrics-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">configure_metrics</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="#TelemetryConfig">TelemetryConfig</a></span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n"><a href="#OTelMetricsSink">OTelMetricsSink</a></span><span class="p">,</span> <span class="n">opentelemetry</span><span class="o">.</span><span class="n">sdk</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">_internal</span><span class="o">.</span><span class="n">MeterProvider</span><span class="p">]</span>:</span></span>
 
@@ -1108,7 +1108,7 @@ external observability platforms like OpenTelemetry.</p>
                 <section id="configure_telemetry">
                             <input id="configure_telemetry-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">configure_telemetry</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="#TelemetryConfig">TelemetryConfig</a></span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n"><a href="#OTelAuditSink">OTelAuditSink</a></span><span class="p">,</span> <span class="n">opentelemetry</span><span class="o">.</span><span class="n">trace</span><span class="o">.</span><span class="n">Tracer</span><span class="p">]</span>:</span></span>
 
@@ -1155,7 +1155,7 @@ external observability platforms like OpenTelemetry.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
     </main>

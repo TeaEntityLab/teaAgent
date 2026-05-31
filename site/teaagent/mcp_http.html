@@ -82,7 +82,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.mcp_http    </h1>
 
-
+                
                         <input id="mod-mcp_http-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-mcp_http-view-source"><span>View Source</span></label>
@@ -528,11 +528,11 @@
             <span class="name">MCP_PATH</span>        =
 <span class="default_value">&#39;/mcp&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#MCP_PATH"></a>
-
-
+    
+    
 
                 </section>
                 <section id="SESSION_HEADER">
@@ -540,11 +540,11 @@
             <span class="name">SESSION_HEADER</span>        =
 <span class="default_value">&#39;Mcp-Session-Id&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SESSION_HEADER"></a>
-
-
+    
+    
 
                 </section>
                 <section id="DEFAULT_PORT">
@@ -552,11 +552,11 @@
             <span class="name">DEFAULT_PORT</span>        =
 <span class="default_value">7330</span>
 
-
+        
     </div>
     <a class="headerlink" href="#DEFAULT_PORT"></a>
-
-
+    
+    
 
                 </section>
                 <section id="MAX_HTTP_BODY_BYTES">
@@ -564,17 +564,17 @@
             <span class="name">MAX_HTTP_BODY_BYTES</span>        =
 <span class="default_value">1000000</span>
 
-
+        
     </div>
     <a class="headerlink" href="#MAX_HTTP_BODY_BYTES"></a>
-
-
+    
+    
 
                 </section>
                 <section id="is_loopback_host">
                             <input id="is_loopback_host-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">is_loopback_host</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">host</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -594,13 +594,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="MCPSessionStore">
                             <input id="MCPSessionStore-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">MCPSessionStore</span>:
 
@@ -641,7 +641,7 @@
                             <div id="MCPSessionStore.create" class="classattr">
                                         <input id="MCPSessionStore.create-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">create</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -657,13 +657,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="MCPSessionStore.has" class="classattr">
                                         <input id="MCPSessionStore.has-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">has</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -677,13 +677,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="MCPSessionStore.remove" class="classattr">
                                         <input id="MCPSessionStore.remove-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">remove</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -700,14 +700,14 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="build_mcp_http_server">
                             <input id="build_mcp_http_server-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">build_mcp_http_server</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">registry</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#ToolRegistry">teaagent.ToolRegistry</a></span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;127.0.0.1&#39;</span>,</span><span class="param">	<span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7330</span>,</span><span class="param">	<span class="n">auth_token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">allowed_origins</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">oauth_server</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#OAuth21AuthorizationServer">teaagent.OAuth21AuthorizationServer</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n">http</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">ThreadingHTTPServer</span><span class="p">,</span> <span class="n"><a href="#MCPSessionStore">MCPSessionStore</a></span><span class="p">]</span>:</span></span>
 
@@ -748,13 +748,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="serve_mcp_http">
                             <input id="serve_mcp_http-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">serve_mcp_http</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">registry</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#ToolRegistry">teaagent.ToolRegistry</a></span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;127.0.0.1&#39;</span>,</span><span class="param">	<span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7330</span>,</span><span class="param">	<span class="n">auth_token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">allowed_origins</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">oauth_server</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#OAuth21AuthorizationServer">teaagent.OAuth21AuthorizationServer</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
 
@@ -790,7 +790,7 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
     </main>

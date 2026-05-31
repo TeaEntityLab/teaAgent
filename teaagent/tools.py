@@ -8,8 +8,9 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from teaagent.errors import ToolExecutionError
-from teaagent.hooks import HookRegistry
+from teaagent.hooks import HookError, HookRegistry
 from teaagent.schema import validate_object_schema
+from teaagent.tool_call_context import get_tool_call_context
 
 logger = logging.getLogger(__name__)
 
@@ -189,9 +190,38 @@ class ToolRegistry:
         if state is not None:
             state.check_and_record(name)
         if self.hook_registry is not None:
-            modified_args = self.hook_registry.run_pre_hooks(name, arguments)
+            ctx = get_tool_call_context()
+            original_args = arguments
+            try:
+                modified_args = self.hook_registry.run_pre_hooks(name, arguments)
+            except HookError as exc:
+                if ctx is not None:
+                    ctx.audit.record(
+                        'tool_hook_vetoed',
+                        ctx.run_id,
+                        call_id=ctx.call_id,
+                        tool_name=name,
+                        error=str(exc),
+                    )
+                raise
             if modified_args is not None:
                 arguments = modified_args
+            if ctx is not None and arguments != original_args:
+                before_keys = set(original_args)
+                after_keys = set(arguments)
+                ctx.audit.record(
+                    'tool_hook_pre_mutation',
+                    ctx.run_id,
+                    call_id=ctx.call_id,
+                    tool_name=name,
+                    added_keys=sorted(after_keys - before_keys),
+                    removed_keys=sorted(before_keys - after_keys),
+                    modified_keys=sorted(
+                        k
+                        for k in (before_keys & after_keys)
+                        if original_args.get(k) != arguments.get(k)
+                    ),
+                )
         try:
             result = tool.handler(arguments)
         except ToolExecutionError:
@@ -201,9 +231,40 @@ class ToolRegistry:
         ) as exc:  # pragma: no cover - preserves original detail in message
             raise ToolExecutionError(f"tool '{name}' failed: {exc}") from exc
         if self.hook_registry is not None:
-            modified_result = self.hook_registry.run_post_hooks(name, arguments, result)
+            ctx = get_tool_call_context()
+            original_result = result
+            try:
+                modified_result = self.hook_registry.run_post_hooks(
+                    name, arguments, result
+                )
+            except HookError as exc:
+                if ctx is not None:
+                    ctx.audit.record(
+                        'tool_hook_post_failed',
+                        ctx.run_id,
+                        call_id=ctx.call_id,
+                        tool_name=name,
+                        error=str(exc),
+                    )
+                raise
             if modified_result is not None:
                 result = modified_result
+            if ctx is not None and result != original_result:
+                before_keys = set(original_result)
+                after_keys = set(result)
+                ctx.audit.record(
+                    'tool_hook_post_mutation',
+                    ctx.run_id,
+                    call_id=ctx.call_id,
+                    tool_name=name,
+                    added_keys=sorted(after_keys - before_keys),
+                    removed_keys=sorted(before_keys - after_keys),
+                    modified_keys=sorted(
+                        k
+                        for k in (before_keys & after_keys)
+                        if original_result.get(k) != result.get(k)
+                    ),
+                )
         validate_object_schema(tool.output_schema, result, label=f'tool.{name}.output')
         return result
 

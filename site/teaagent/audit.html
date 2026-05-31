@@ -172,7 +172,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.audit    </h1>
 
-
+                
                         <input id="mod-audit-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-audit-view-source"><span>View Source</span></label>
@@ -714,11 +714,11 @@
             <span class="name">logger</span>        =
 <span class="default_value">&lt;Logger <a href="">teaagent.audit</a> (WARNING)&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#logger"></a>
-
-
+    
+    
 
                 </section>
                 <section id="AUDIT_REDACTED">
@@ -726,11 +726,11 @@
             <span class="name">AUDIT_REDACTED</span>        =
 <span class="default_value">&#39;[redacted]&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AUDIT_REDACTED"></a>
-
-
+    
+    
 
                 </section>
                 <section id="AUDIT_TRUNCATED">
@@ -738,11 +738,11 @@
             <span class="name">AUDIT_TRUNCATED</span>        =
 <span class="default_value">&#39;[truncated]&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AUDIT_TRUNCATED"></a>
-
-
+    
+    
 
                 </section>
                 <section id="AuditLevel">
@@ -750,11 +750,11 @@
             <span class="name">AuditLevel</span>        =
 <span class="default_value">typing.Literal[&#39;L0&#39;, &#39;L1&#39;, &#39;L2&#39;, &#39;L3&#39;]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditLevel"></a>
-
-
+    
+    
 
                 </section>
                 <section id="MAX_AUDIT_STRING_LENGTH">
@@ -762,11 +762,11 @@
             <span class="name">MAX_AUDIT_STRING_LENGTH</span>        =
 <span class="default_value">20000</span>
 
-
+        
     </div>
     <a class="headerlink" href="#MAX_AUDIT_STRING_LENGTH"></a>
-
-
+    
+    
 
                 </section>
                 <section id="AUDIT_DIR_MODE">
@@ -774,11 +774,11 @@
             <span class="name">AUDIT_DIR_MODE</span>        =
 <span class="default_value">448</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AUDIT_DIR_MODE"></a>
-
-
+    
+    
 
                 </section>
                 <section id="AUDIT_FILE_MODE">
@@ -786,11 +786,11 @@
             <span class="name">AUDIT_FILE_MODE</span>        =
 <span class="default_value">384</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AUDIT_FILE_MODE"></a>
-
-
+    
+    
 
                 </section>
                 <section id="SENSITIVE_KEY_PARTS">
@@ -798,35 +798,35 @@
             <span class="name">SENSITIVE_KEY_PARTS</span>        =
 <span class="default_value">(&#39;api_key&#39;, &#39;authorization&#39;, &#39;credential&#39;, &#39;password&#39;, &#39;secret&#39;, &#39;token&#39;)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SENSITIVE_KEY_PARTS"></a>
-
-
+    
+    
 
                 </section>
                 <section id="SENSITIVE_ARGUMENT_KEYS">
                     <div class="attr variable">
             <span class="name">SENSITIVE_ARGUMENT_KEYS</span>        =
-<span class="default_value">frozenset({&#39;old&#39;, &#39;content&#39;, &#39;command&#39;, &#39;new&#39;})</span>
+<span class="default_value">frozenset({&#39;command&#39;, &#39;new&#39;, &#39;content&#39;, &#39;old&#39;})</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SENSITIVE_ARGUMENT_KEYS"></a>
-
-
+    
+    
 
                 </section>
                 <section id="SENSITIVE_RESULT_KEYS">
                     <div class="attr variable">
             <span class="name">SENSITIVE_RESULT_KEYS</span>        =
-<span class="default_value">frozenset({&#39;text&#39;, &#39;stderr&#39;, &#39;stdout&#39;, &#39;content&#39;})</span>
+<span class="default_value">frozenset({&#39;text&#39;, &#39;content&#39;, &#39;stderr&#39;, &#39;stdout&#39;})</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SENSITIVE_RESULT_KEYS"></a>
-
-
+    
+    
 
                 </section>
                 <section id="SENSITIVE_STRING_PATTERNS">
@@ -835,17 +835,17 @@
 <input id="SENSITIVE_STRING_PATTERNS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
             <label class="view-value-button pdoc-button" for="SENSITIVE_STRING_PATTERNS-view-value"></label><span class="default_value">((re.compile(&#39;\\bBearer\\s+[A-Za-z0-9._~+/=-]{8,}&#39;), &#39;Bearer [redacted]&#39;), (re.compile(&#39;\\bsk-[A-Za-z0-9][A-Za-z0-9_-]{8,}\\b&#39;), &#39;[redacted]&#39;), (re.compile(&#39;(?i)\\b(api[_-]?key|token|secret|password)=([^\\s&amp;;]{4,})&#39;, re.IGNORECASE), &#39;\\1=[redacted]&#39;), (re.compile(&#39;\\b[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{20,}\\b&#39;), &#39;[redacted-JWT]&#39;), (re.compile(&#39;\\bAKIA[0-9A-Z]{16}\\b&#39;), &#39;[redacted]&#39;), (re.compile(&#39;\\b(ghp_|github_pat_)[A-Za-z0-9_]{20,}\\b&#39;), &#39;[redacted]&#39;))</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SENSITIVE_STRING_PATTERNS"></a>
-
-
+    
+    
 
                 </section>
                 <section id="utc_now">
                             <input id="utc_now-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">utc_now</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -858,7 +858,7 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="AuditEvent">
@@ -904,79 +904,79 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="AuditEvent.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">AuditEvent</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">event_type</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">run_id</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">event_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">created_at</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditEvent.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditEvent.event_type" class="classattr">
                                 <div class="attr variable">
             <span class="name">event_type</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditEvent.event_type"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditEvent.run_id" class="classattr">
                                 <div class="attr variable">
             <span class="name">run_id</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditEvent.run_id"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditEvent.payload" class="classattr">
                                 <div class="attr variable">
             <span class="name">payload</span><span class="annotation">: dict[str, typing.Any]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditEvent.payload"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditEvent.event_id" class="classattr">
                                 <div class="attr variable">
             <span class="name">event_id</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditEvent.event_id"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditEvent.created_at" class="classattr">
                                 <div class="attr variable">
             <span class="name">created_at</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditEvent.created_at"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditEvent.to_json" class="classattr">
                                         <input id="AuditEvent.to_json-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">to_json</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">prev_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">event_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">chain_hmac</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -1007,14 +1007,14 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="AuditLogger">
                             <input id="AuditLogger-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">AuditLogger</span>:
 
@@ -1310,7 +1310,7 @@
                             <div id="AuditLogger.__init__" class="classattr">
                                         <input id="AuditLogger.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">AuditLogger</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">path</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">redaction_config</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">audit_level</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;L0&#39;</span><span class="p">,</span> <span class="s1">&#39;L1&#39;</span><span class="p">,</span> <span class="s1">&#39;L2&#39;</span><span class="p">,</span> <span class="s1">&#39;L3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;L2&#39;</span></span>)</span>
 
                 <label class="view-source-button" for="AuditLogger.__init__-view-source"><span>View Source</span></label>
@@ -1345,29 +1345,29 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="AuditLogger.path" class="classattr">
                                 <div class="attr variable">
             <span class="name">path</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditLogger.path"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditLogger.events" class="classattr">
                                 <div class="attr variable">
             <span class="name">events</span><span class="annotation">: list[<a href="#AuditEvent">AuditEvent</a>]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AuditLogger.events"></a>
-
-
+    
+    
 
                             </div>
                             <div id="AuditLogger.disk_error" class="classattr">
@@ -1407,7 +1407,7 @@ silence.  After the cooldown expires disk writes are retried.</p>
                             <div id="AuditLogger.get_chain_key" class="classattr">
                                         <input id="AuditLogger.get_chain_key-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_chain_key</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">bytes</span>:</span></span>
 
@@ -1429,7 +1429,7 @@ silence.  After the cooldown expires disk writes are retried.</p>
                             <div id="AuditLogger.add_sink" class="classattr">
                                         <input id="AuditLogger.add_sink-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">add_sink</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">sink</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n"><a href="#AuditEvent">AuditEvent</a></span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -1442,13 +1442,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="AuditLogger.enable_opentelemetry" class="classattr">
                                         <input id="AuditLogger.enable_opentelemetry-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">enable_opentelemetry</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;teaagent&#39;</span>,</span><span class="param">	<span class="n">service_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;1.0.0&#39;</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -1509,7 +1509,7 @@ silence.  After the cooldown expires disk writes are retried.</p>
                             <div id="AuditLogger.record" class="classattr">
                                         <input id="AuditLogger.record-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">record</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">event_type</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">run_id</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">**</span><span class="n">payload</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="n"><a href="#AuditEvent">AuditEvent</a></span>:</span></span>
 
@@ -1600,13 +1600,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="AuditLogger.verify_chain_integrity" class="classattr">
                                         <input id="AuditLogger.verify_chain_integrity-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">verify_chain_integrity</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1696,7 +1696,7 @@ silence.  After the cooldown expires disk writes are retried.</p>
                 <section id="redact_audit_payload">
                             <input id="redact_audit_payload-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">redact_audit_payload</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">string_patterns</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1724,13 +1724,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="secure_audit_dir">
                             <input id="secure_audit_dir-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">secure_audit_dir</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">path</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -1743,13 +1743,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="secure_audit_file">
                             <input id="secure_audit_file-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">secure_audit_file</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">path</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -1762,13 +1762,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="redact_tool_arguments">
                             <input id="redact_tool_arguments-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">redact_tool_arguments</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">arguments</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">string_patterns</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1788,13 +1788,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="redact_tool_argument_value">
                             <input id="redact_tool_argument_value-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">redact_tool_argument_value</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">key</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">value</span><span class="p">:</span> <span class="n">Any</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">string_patterns</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n">Any</span>:</span></span>
 
@@ -1828,13 +1828,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="redact_tool_result">
                             <input id="redact_tool_result-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">redact_tool_result</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">string_patterns</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1854,13 +1854,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="redact_tool_result_value">
                             <input id="redact_tool_result_value-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">redact_tool_result_value</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">key</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">value</span><span class="p">:</span> <span class="n">Any</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">string_patterns</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n">Any</span>:</span></span>
 
@@ -1894,13 +1894,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="redact_audit_value">
                             <input id="redact_audit_value-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">redact_audit_value</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">key</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">value</span><span class="p">:</span> <span class="n">Any</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">string_patterns</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n">Any</span>:</span></span>
 
@@ -1944,13 +1944,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="redact_sensitive_string">
                             <input id="redact_sensitive_string-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">redact_sensitive_string</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">value</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">patterns</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -1967,13 +1967,13 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="is_sensitive_key">
                             <input id="is_sensitive_key-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">is_sensitive_key</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">key</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -1987,7 +1987,7 @@ silence.  After the cooldown expires disk writes are retried.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
     </main>
