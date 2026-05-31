@@ -155,8 +155,8 @@ class ContextPackTests(unittest.TestCase):
             db_path.write_text('', encoding='utf-8')
 
             class RecordingGraph(FakeGraphQLiteGraph):
-                def query(self, cypher: str):
-                    self.queries.append(cypher)
+                def query(self, cypher: str, params: dict | None = None):
+                    self.queries.append((cypher, params))
                     return [
                         {
                             'doc_id': 'doc-runner',

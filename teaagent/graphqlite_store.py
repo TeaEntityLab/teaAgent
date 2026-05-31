@@ -81,7 +81,9 @@ class GraphQLiteGraphStore:
             rel_type=edge.relation.upper(),
         )
 
-    def query(self, cypher: str) -> Any:
+    def query(self, cypher: str, params: Optional[dict[str, Any]] = None) -> Any:
+        if params is not None:
+            return self.graph.query(cypher, params=params)
         return self.graph.query(cypher)
 
     def sync_from_knowledge_graph(self, graph: KnowledgeGraph) -> None:

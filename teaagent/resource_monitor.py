@@ -111,6 +111,7 @@ class ResourceMonitor:
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=30,
             )
 
             if result.returncode != 0:
@@ -136,6 +137,10 @@ class ResourceMonitor:
             else:
                 memory_mb = self._parse_memory_string(memory_str.strip())
 
+            if memory_mb is None:
+                logger.warning('Failed to parse memory string: %s', memory_str)
+                return None
+
             return ResourceUsage(
                 timestamp=datetime.now(timezone.utc),
                 cpu_percent=cpu_percent,
@@ -143,7 +148,7 @@ class ResourceMonitor:
                 memory_limit_mb=self.memory_limit_mb,
                 cpu_limit_cores=self.cpu_limit_cores,
             )
-        except Exception as exc:
+        except (ValueError, OSError, subprocess.TimeoutExpired) as exc:
             logger.error(f'Error getting resource usage: {exc}')
             return None
 
@@ -198,7 +203,7 @@ class ResourceMonitor:
         """Clear recorded violations."""
         self._violations = []
 
-    def _parse_memory_string(self, memory_str: str) -> float:
+    def _parse_memory_string(self, memory_str: str) -> Optional[float]:
         import re
 
         memory_str = memory_str.strip().upper()
@@ -228,7 +233,7 @@ class ResourceMonitor:
             return float(memory_str) / (1024 * 1024)
         except ValueError:
             logger.warning('Unable to parse memory string: %s', memory_str)
-            return 0.0
+            return None
 
     def is_monitoring(self) -> bool:
         """Check if monitoring is active.

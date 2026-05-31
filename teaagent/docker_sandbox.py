@@ -134,10 +134,12 @@ class DockerSandbox:
 
         resolved_mount = self.workspace_mount.resolve()
         resolved_root = self.workspace_root.resolve()
-        if not str(resolved_mount).startswith(str(resolved_root)):
+        try:
+            resolved_mount.relative_to(resolved_root)
+        except ValueError:
             raise ValueError(
                 f'Workspace mount path {resolved_mount} is outside workspace root {resolved_root}'
-            )
+            ) from None
         mount_spec = f'{resolved_mount}:/workspace'
         result = subprocess.run(
             [

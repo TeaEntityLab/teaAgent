@@ -120,8 +120,8 @@ def test_preflight_graph_rag_includes_graphqlite_hits_when_db_exists() -> None:
         db_path.write_text('', encoding='utf-8')
 
         class RecordingGraph(FakeGraphQLiteGraph):
-            def query(self, cypher: str):
-                self.queries.append(cypher)
+            def query(self, cypher: str, params: dict | None = None):
+                self.queries.append((cypher, params))
                 return [
                     {
                         'doc_id': 'doc-runner',

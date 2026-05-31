@@ -108,19 +108,20 @@ class CodeOntologyGraph:
         if not self.graph_store:
             return []
 
+        params: dict[str, Any] = {'entity_name': entity_name}
         if direction == 'upstream':
-            cypher = f"""
-            MATCH (e {{name: '{entity_name}'}})<-[:CALLS]-(caller)
+            cypher = """
+            MATCH (e {name: $entity_name})<-[:CALLS]-(caller)
             RETURN caller.name, caller.node_type, caller.file_path
             """
         elif direction == 'downstream':
-            cypher = f"""
-            MATCH (e {{name: '{entity_name}'}})-[:CALLS]->(callee)
+            cypher = """
+            MATCH (e {name: $entity_name})-[:CALLS]->(callee)
             RETURN callee.name, callee.node_type, callee.file_path
             """
         else:  # both
-            cypher = f"""
-            MATCH (e {{name: '{entity_name}'}})
+            cypher = """
+            MATCH (e {name: $entity_name})
             OPTIONAL MATCH (e)<-[:CALLS]-(caller)
             OPTIONAL MATCH (e)-[:CALLS]->(callee)
             RETURN
@@ -129,7 +130,7 @@ class CodeOntologyGraph:
                 COALESCE(caller.file_path, callee.file_path) as file_path
             """
 
-        return self.graph_store.query(cypher)
+        return self.graph_store.query(cypher, params=params)
 
     def query_inheritance_chain(self, class_name: str) -> list[dict[str, Any]]:
         """Query inheritance hierarchy for a class.
@@ -143,13 +144,13 @@ class CodeOntologyGraph:
         if not self.graph_store:
             return []
 
-        cypher = f"""
-        MATCH (c:Class {{name: '{class_name}'}})
+        cypher = """
+        MATCH (c:Class {name: $class_name})
         MATCH path = (c)-[:INHERITS*]->(ancestor:Class)
         RETURN ancestor.name, ancestor.file_path
         """
 
-        return self.graph_store.query(cypher)
+        return self.graph_store.query(cypher, params={'class_name': class_name})
 
     def query_module_structure(self, file_path: str) -> list[dict[str, Any]]:
         """Query all entities in a module.
@@ -163,13 +164,13 @@ class CodeOntologyGraph:
         if not self.graph_store:
             return []
 
-        cypher = f"""
-        MATCH (m:Module {{file_path: '{file_path}'}})-[:CONTAINS]->(entity)
+        cypher = """
+        MATCH (m:Module {file_path: $file_path})-[:CONTAINS]->(entity)
         RETURN entity.name, entity.node_type, entity.line_number
         ORDER BY entity.line_number
         """
 
-        return self.graph_store.query(cypher)
+        return self.graph_store.query(cypher, params={'file_path': file_path})
 
 
 class CodeOntologyBuilder:
