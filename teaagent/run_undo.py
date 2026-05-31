@@ -241,6 +241,28 @@ class UndoJournal:
     def has_entries(self) -> bool:
         return bool(self._entries)
 
+    def changed_paths(self) -> list[str]:
+        """Return unique relative paths captured by this journal, in order."""
+        seen: set[str] = set()
+        paths: list[str] = []
+        for entry in self._entries:
+            if entry.path in seen:
+                continue
+            seen.add(entry.path)
+            paths.append(entry.path)
+        return paths
+
+    def iter_entries(self) -> list[dict[str, Any]]:
+        """Return a JSON-serializable view of committed journal entries."""
+        return [
+            {
+                'path': entry.path,
+                'existed_before': entry.existed_before,
+                'content_b64': entry.content_b64,
+            }
+            for entry in self._entries
+        ]
+
     def check_health(self) -> dict[str, Any]:
         """Perform health check on the journal and return diagnostic information.
 

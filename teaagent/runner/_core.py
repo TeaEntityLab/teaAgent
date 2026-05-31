@@ -31,7 +31,13 @@ from teaagent.tools import ToolRegistry
 from ._approval_manager import ApprovalManager
 from ._auto_mode_manager import AutoModeManager
 from ._plan_validator import PlanValidator
-from ._types import ApprovalHandler, DecisionFn, FinalAnswer, RunResult
+from ._types import (
+    ApprovalHandler,
+    BudgetPromptHandler,
+    DecisionFn,
+    FinalAnswer,
+    RunResult,
+)
 
 
 class AgentRunner:
@@ -53,6 +59,7 @@ class AgentRunner:
         budget: Optional[RunBudget] = None,
         approval_policy: Optional[ApprovalPolicy] = None,
         approval_handler: Optional[ApprovalHandler] = None,
+        budget_prompt_handler: Optional[BudgetPromptHandler] = None,
         compactor: Optional[ContextCompactor] = None,
         compact_after_observations: int = 20,
         checkpoint_store: Any = None,
@@ -81,6 +88,9 @@ class AgentRunner:
             approval_handler=approval_handler,
             jit_state=jit_state,
         )
+        self._budget_prompt_handler = budget_prompt_handler
+        self._budget_warning_levels_emitted: set[int] = set()
+        self._budget_prompted = False
         self.plan_validator = PlanValidator(
             approval_policy=self.approval_policy,
             require_plan=require_plan,
@@ -113,6 +123,45 @@ class AgentRunner:
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
             raise BudgetExceededError('cost budget exceeded')
+
+    def _check_budget_warnings(self, *, run_id: str, cost_cents: float) -> None:
+        max_cost = float(self.budget.max_estimated_cost_cents)
+        if max_cost <= 0:
+            return
+        percent = (cost_cents / max_cost) * 100.0
+        for level in (50, 80, 90):
+            if percent < level or level in self._budget_warning_levels_emitted:
+                continue
+            self._budget_warning_levels_emitted.add(level)
+            self.audit.record(
+                'budget_warning',
+                run_id,
+                level=level,
+                percent=percent,
+                cost_cents=cost_cents,
+                max_cost_cents=max_cost,
+            )
+
+        if percent >= 90 and not self._budget_prompted and self._budget_prompt_handler:
+            self._budget_prompted = True
+            approved = self._budget_prompt_handler(
+                {
+                    'run_id': run_id,
+                    'percent': percent,
+                    'cost_cents': cost_cents,
+                    'max_cost_cents': max_cost,
+                }
+            )
+            self.audit.record(
+                'budget_prompt',
+                run_id,
+                percent=percent,
+                cost_cents=cost_cents,
+                max_cost_cents=max_cost,
+                approved=bool(approved),
+            )
+            if not approved:
+                raise RunCancelledError('run cancelled: budget at 90%')
 
     def run(
         self,
@@ -158,6 +207,9 @@ class AgentRunner:
                 cost_cents = context.get('_cost_cents', cost_cents)
                 input_tokens = context.get('_input_tokens', input_tokens)
                 output_tokens = context.get('_output_tokens', output_tokens)
+                self._check_budget_warnings(
+                    run_id=current_run_id, cost_cents=cost_cents
+                )
                 self._assert_cost_budget(cost_cents)
                 if isinstance(decision, FinalAnswer):
                     self.audit.record(

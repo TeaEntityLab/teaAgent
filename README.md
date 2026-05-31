@@ -2,6 +2,18 @@
 
 Governance-first agent harness for autonomous coding tasks. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
 
+## What makes it different
+
+| | TeaAgent | Most agents |
+|---|---|---|
+| Permission gates | ✅ prompt/read-only/workspace-write/allow/danger-full-access | ❌ binary or none |
+| Audit trail | ✅ hash-chained JSONL run logs | ❌ chat history |
+| Undo | ✅ `teaagent agent undo --last` (or git sandbox rollback) | ❌ manual revert |
+| Cost cap | ✅ hard budget via `--max-estimated-cost-cents` | ❌ surprise bills |
+| Model/provider choice | ✅ multiple adapters | ❌ vendor locked |
+
+Enterprise evaluation artifact: `docs/security-whitepaper.md`.
+
 ## Golden path (first hour)
 
 One canonical flow for new users. Everything else in this README is **advanced** — see [docs/USAGE.md](docs/USAGE.md) for the full walkthrough and recovery recipes.

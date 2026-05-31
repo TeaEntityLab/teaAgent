@@ -302,6 +302,11 @@ def add_agent_run_arguments(
         help='Disable progress lines even on a TTY.',
     )
     p.add_argument(
+        '--no-summary',
+        action='store_true',
+        help='Suppress the post-run summary payload fields.',
+    )
+    p.add_argument(
         '--stream',
         action='store_true',
         help=(
@@ -779,6 +784,11 @@ def _undo(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type:
         '--last',
         action='store_true',
         help='Undo the most recent run with an undo journal (default when run_id is omitted).',
+    )
+    p.add_argument(
+        '--preview',
+        action='store_true',
+        help='Show a unified diff of what would be restored, without applying changes.',
     )
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'

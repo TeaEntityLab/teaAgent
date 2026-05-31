@@ -60,6 +60,7 @@ class ApprovalRequest:
 
 
 ApprovalHandler = Callable[[ApprovalRequest], bool]
+BudgetPromptHandler = Callable[[dict[str, Any]], bool]
 
 
 @dataclass(frozen=True)

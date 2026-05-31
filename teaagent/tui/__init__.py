@@ -776,6 +776,10 @@ class TeaAgentTUI:
         audit = store.audit_logger()
         if self.progress:
             audit.add_sink(self._progress_sink)
+        from teaagent.run_undo import UndoJournal
+
+        undo_journal = UndoJournal(self.root)
+        audit.add_sink(undo_journal)
 
         chat_messages = None
         if self.chat:
@@ -800,6 +804,9 @@ class TeaAgentTUI:
                 on_chunk=self._stream_chunk if self.stream else None,
                 stream_text_only=True,
                 approval_handler=self._approval_handler,
+                budget_prompt_handler=self._budget_prompt_handler
+                if (self.input_fn is not None)
+                else None,
                 chat_messages=chat_messages,
                 max_estimated_cost_cents=self._runtime_max_cost_cents,
                 max_iterations=self.max_iterations,
@@ -816,8 +823,24 @@ class TeaAgentTUI:
             else None,
         )
         store.logger_for_result(result, audit)
+        if undo_journal.has_entries:
+            undo_journal.save_to(store.undo_path(result.run_id))
         self.last_run_id = result.run_id
-        audit_summary = summarize_audit_events(store.show_run(result.run_id))
+        events = store.show_run(result.run_id)
+        if not isinstance(events, list):
+            events = []
+        audit_summary = summarize_audit_events(events)
+        from teaagent.ergonomics.run_summary import format_run_summary, summarize_run
+
+        run_summary = summarize_run(
+            root=self.root,
+            run_id=result.run_id,
+            events=events,
+            cost_cents=result.cost_cents,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            budget_cap_cents=self._runtime_max_cost_cents,
+        )
 
         if self.chat:
             chat_session: Optional[ChatSession] = self._current_session()
@@ -835,15 +858,28 @@ class TeaAgentTUI:
 
         if self.chat and result.status == 'completed' and result.final_answer:
             self.output_fn(result.final_answer.content)
+            self.output_fn(format_run_summary(run_summary).rstrip())
         else:
             payload = self._run_result_payload(
                 result,
                 routing=routing.to_dict() if routing else None,
                 audit_summary=audit_summary,
             )
+            payload['run_summary'] = run_summary
             if initial_observations:
                 payload['replayed_observations'] = len(initial_observations)
             self._print_json(payload)
+
+    def _budget_prompt_handler(self, payload: dict[str, Any]) -> bool:
+        percent = float(payload.get('percent', 0.0))
+        cost_cents = float(payload.get('cost_cents', 0.0))
+        max_cost_cents = float(payload.get('max_cost_cents', 0.0))
+        spent = cost_cents / 100.0
+        cap = max_cost_cents / 100.0
+        self.output_fn(f'budget: at {percent:.0f}% (${spent:.2f} / ${cap:.2f})')
+        fn = self.input_fn or input
+        answer = fn('Continue? [y/N]: ').strip().lower()
+        return answer in {'y', 'yes'}
 
     def _approval_handler(self, request: ApprovalRequest) -> bool:
         from teaagent.ergonomics.approval_store import ApprovalPresetStore

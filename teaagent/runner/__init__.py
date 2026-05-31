@@ -2,6 +2,7 @@ from ._core import AgentRunner
 from ._types import (
     ApprovalHandler,
     ApprovalRequest,
+    BudgetPromptHandler,
     Decision,
     DecisionFn,
     FinalAnswer,
@@ -13,6 +14,7 @@ __all__ = [
     'AgentRunner',
     'ApprovalHandler',
     'ApprovalRequest',
+    'BudgetPromptHandler',
     'Decision',
     'DecisionFn',
     'FinalAnswer',

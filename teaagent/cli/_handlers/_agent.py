@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Optional
 
@@ -493,6 +494,13 @@ def _execute_agent_task(
         if args.hitl_approval
         else None
     )
+    budget_prompt_handler = None
+    if (
+        sys.stdin.isatty()
+        and not getattr(args, 'background', False)
+        and not getattr(args, 'json_stream', False)
+    ):
+        budget_prompt_handler = make_cli_budget_prompt_handler()
     checkpoint_store = None
     checkpoint_path = getattr(args, 'checkpoint_store', None)
     if checkpoint_path:
@@ -524,6 +532,7 @@ def _execute_agent_task(
             max_subagent_depth=args.max_subagent_depth,
             heartbeat_seconds=args.heartbeat,
             approval_handler=approval_handler,
+            budget_prompt_handler=budget_prompt_handler,
             checkpoint_store=checkpoint_store,
             stream=use_stream,
             on_chunk=stream_handlers.on_chunk,
@@ -775,6 +784,24 @@ def _execute_agent_task(
         audit_summary=summarize_audit_events(events),
         permission_mode=resolved_permission_mode.value,
     )
+    if not getattr(args, 'no_summary', False):
+        from teaagent.budget import RunBudget
+        from teaagent.ergonomics.run_summary import summarize_run
+
+        cap = (
+            int(args.max_estimated_cost_cents)
+            if int(getattr(args, 'max_estimated_cost_cents', 0) or 0) > 0
+            else RunBudget().max_estimated_cost_cents
+        )
+        payload['run_summary'] = summarize_run(
+            root=args.root,
+            run_id=result.run_id,
+            events=events,
+            cost_cents=result.cost_cents,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            budget_cap_cents=cap,
+        )
     if plan_contract is not None:
         payload['plan_contract'] = plan_contract.to_dict()
     if resumed_from:
@@ -1293,6 +1320,36 @@ def make_cli_approval_handler(
             )
             return True
         return False
+
+    return _handler
+
+
+def make_cli_budget_prompt_handler() -> Callable[[dict[str, Any]], bool]:
+    def _handler(payload: dict[str, Any]) -> bool:
+        percent = float(payload.get('percent', 0.0))
+        cost_cents = float(payload.get('cost_cents', 0.0))
+        max_cost_cents = float(payload.get('max_cost_cents', 0.0))
+        spent = cost_cents / 100.0
+        cap = max_cost_cents / 100.0
+        print(
+            json.dumps(
+                {
+                    'status': 'budget_prompt',
+                    'percent': percent,
+                    'spent_usd': spent,
+                    'cap_usd': cap,
+                },
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        print(
+            f'[TeaAgent] Budget at {percent:.0f}% (${spent:.2f} / ${cap:.2f}). Continue? [y/N]: ',
+            end='',
+            file=sys.stderr,
+        )
+        answer = input().strip().lower()
+        return answer in {'y', 'yes'}
 
     return _handler
 
