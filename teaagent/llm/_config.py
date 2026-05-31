@@ -6,6 +6,7 @@ from teaagent.llm._adapters import (
     ClaudeAdapter,
     GeminiAdapter,
     OpenAICompatibleAdapter,
+    WorkersAIAdapter,
 )
 from teaagent.llm._types import (
     HTTPTransport,
@@ -141,6 +142,8 @@ def create_llm_adapter(
         return ClaudeAdapter(config, transport=transport)
     if normalized == 'gemini':
         return GeminiAdapter(config, transport=transport)
+    if normalized == 'workers-ai':
+        return WorkersAIAdapter(config, transport=transport)
     return OpenAICompatibleAdapter(config, transport=transport)
 
 

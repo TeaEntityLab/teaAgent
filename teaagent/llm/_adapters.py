@@ -130,8 +130,7 @@ class OpenAICompatibleAdapter:
         self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
         self._streaming_lines = streaming_lines
 
-    def complete(self, request: LLMRequest) -> LLMResponse:
-        model = request.model or self.config.resolved_model()
+    def _prepare_payload(self, request: LLMRequest, model: str) -> dict[str, Any]:
         messages = []
         if request.system:
             messages.append({'role': 'system', 'content': request.system})
@@ -161,6 +160,12 @@ class OpenAICompatibleAdapter:
             payload['response_format'] = request.response_format
         if request.stream:
             payload['stream'] = True
+        return payload
+
+    def complete(self, request: LLMRequest) -> LLMResponse:
+        model = request.model or self.config.resolved_model()
+        payload = self._prepare_payload(request, model)
+        if request.stream:
             return self._complete_streaming(request, model, payload)
         try:
             response = self._post_chat_completions(payload)
@@ -276,6 +281,80 @@ class OpenAICompatibleAdapter:
                 headers['X-Title'] = os.environ['OPENROUTER_APP_TITLE']
         headers.update(_provider_extra_headers(self.provider))
         return headers
+
+
+class WorkersAIAdapter(OpenAICompatibleAdapter):
+    """Adapter for Cloudflare Workers AI / AI Gateway.
+
+    Workers AI has several quirks vs standard OpenAI-compatible endpoints:
+    - AI Gateway's workers-ai provider route strips the ``@cf/`` model prefix.
+    - Structured output (``json_schema``) is unstable and often 500s.
+    - Streaming + response_format may not mix.
+    """
+
+    def __init__(
+        self,
+        config: ProviderConfig,
+        *,
+        transport: Optional[HTTPTransport] = None,
+        timeout: int = 60,
+        retry_config: Optional[LLMRetryConfig] = None,
+        streaming_lines: Optional[list[bytes]] = None,
+        disable_tools: bool = False,
+    ) -> None:
+        super().__init__(
+            config,
+            transport=transport,
+            timeout=timeout,
+            retry_config=retry_config,
+            streaming_lines=streaming_lines,
+        )
+        self.disable_tools = disable_tools
+
+    def _prepare_payload(self, request: LLMRequest, model: str) -> dict[str, Any]:
+        # AI Gateway's workers-ai provider endpoint often expects @cf/ to be
+        # stripped, otherwise it returns "Invalid provider" (HTTP 400).
+        # Direct Workers AI API DOES require @cf/.
+        base_url = self.config.resolved_base_url()
+        if 'gateway.ai.cloudflare.com' in base_url and model.startswith('@cf/'):
+            model = model[4:]
+
+        # Workers AI structured output (json_schema) is extremely unstable
+        # and often 500s. Default to removing it and relying on prompt
+        # instructions, unless forced via env var.
+        force_json_object = (
+            os.environ.get('TEAAGENT_WORKERS_AI_FORCE_JSON_OBJECT') == '1'
+        )
+
+        if request.response_format and not force_json_object:
+            request = LLMRequest(
+                messages=request.messages,
+                model=request.model,
+                system=(
+                    request.system or ''
+                ) + "\n\nIMPORTANT: You must respond with a valid JSON object matching the requested schema. No prose.",
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                stream=request.stream,
+                on_chunk=request.on_chunk,
+                tools=request.tools,
+                response_format=None,  # Strip it
+            )
+
+        payload = super()._prepare_payload(request, model)
+
+        if force_json_object:
+            payload['response_format'] = {'type': 'json_object'}
+
+        # Ensure stream and response_format never mix in Workers AI
+        if payload.get('stream') and 'response_format' in payload:
+            del payload['response_format']
+
+        # If tools cause 500s, allow disabling them entirely.
+        if self.disable_tools and 'tools' in payload:
+            del payload['tools']
+
+        return payload
 
 
 def _provider_extra_headers(provider: str) -> dict[str, str]:
