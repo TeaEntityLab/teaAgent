@@ -72,6 +72,7 @@ teaagent status                    # one-line token/approval/run status
 teaagent yesterday                 # runs from the previous calendar day
 teaagent recall --limit 5
 teaagent session list
+teaagent session switch <session_id>   # switch active session (with fuzzy matching on partial IDs)
 teaagent recipes list
 teaagent recipes run review-staged --print-only
 teaagent background list
@@ -887,6 +888,16 @@ Show one run record:
 teaagent agent show <run_id> --root /path/to/repo
 ```
 
+Export a compliance audit bundle with hash-chain verification for a completed run:
+
+```bash
+teaagent audit export --audit-log <run_id> --output compliance.json
+```
+
+The compliance bundle includes a signed digest of all audit events, chain verification
+status, and a summary of tool calls. Use `verify_bundle_integrity()` from
+`teaagent.audit_export` to validate the bundle's authenticity.
+
 Resume the original task from a persisted run id with optional new settings:
 
 ```bash
@@ -906,6 +917,7 @@ approvals               # list approved call IDs
 approvals check workspace_write_file path=src/foo.py
 approvals revoke <grant_id>
 approvals pending
+approvals diff <call_id> # show git diff for a pending approval
 unapprove write-todo-1
 runs
 show <run_id>

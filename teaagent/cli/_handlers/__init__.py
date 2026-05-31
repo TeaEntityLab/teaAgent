@@ -40,6 +40,7 @@ from ._approval_subagents import (
     approval_subagents_prune_command,
 )
 from ._audit import (
+    audit_export_command,
     audit_list_command,
     audit_prune_command,
     audit_serve_command,
@@ -293,6 +294,7 @@ __all__ = [
     'automation_template_command',
     'automation_tick_command',
     'audit_list_command',
+    'audit_export_command',
     'audit_prune_command',
     'audit_show_command',
     'audit_verify_command',

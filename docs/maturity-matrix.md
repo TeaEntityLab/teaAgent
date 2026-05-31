@@ -47,11 +47,23 @@ Scale reference (internal engineering, not market validation):
 | Phase 5 sandbox routing + execution | Beta | `wasm-skill-build.yml`, `sandbox wasm-contract` | Org-wide WASM signing in CI |
 | Phase 6 skill writer / control plane | Beta | `gateway_oauth`, path tenant routes, OAuth templates | External IdP automation |
 
+### TUI Evolution (Phase A–C)
+
+| Feature | Status | Evidence | Next step |
+|---------|--------|----------|-----------|
+| Async autocomplete (background index) | Stable | `teaagent/tui/_completion.py` — threading + lock/event, 10s cache refresh | Configurable refresh interval |
+| Fuzzy session switch | Stable | `teaagent/tui/_commands.py` — `difflib.get_close_matches` fallback | Configurable cutoff/limit |
+| Secret filename prevention | Stable | `teaagent/memory/pinned_file.py` — suffix/path-pattern heuristics on `add()` | User-configurable blocklist |
+| Subagent approval tree view | Stable | `teaagent/tui/_approval_subagents.py` — Unicode tree rendering by `parent_run_id`/depth | Collapsible tree nodes |
+| Approval diff preview | Stable | `teaagent/tui/_commands.py` — `approvals diff <call_id>` subcommand | Side-by-side diff view |
+| Headless pty TUI tests | Stable | `tests/acceptance/test_headless_tui.py` — 12 tests covering help, exit, toggle, session, pin, permission, split, state, unknown commands | Expand to cover diff and tree views |
+| Compliance audit exporter | Beta | `teaagent/audit_export.py`, `tests/test_audit_export.py` — signed JSON bundle, chain verification, integrity check | Wire into CI/release gate |
+
 ## Surfaces (summary)
 
 | Surface | Status | Primary test |
 |---------|--------|--------------|
-| CLI / TUI | Stable | `test_daily_cli.py`, `test_cli_tui_surface_parity_flow.py` |
+| CLI / TUI | Stable | `test_daily_cli.py`, `test_cli_tui_surface_parity_flow.py`, `test_headless_tui.py` |
 | First-hour onboarding | Stable | `test_first_hour_e2e_flow.py` |
 | VS Code extension | Stable | `test_vscode_extension_mcp_boot_flow.py` |
 | Plugin install gate | Beta | `test_plugin_install_security_flow.py` |

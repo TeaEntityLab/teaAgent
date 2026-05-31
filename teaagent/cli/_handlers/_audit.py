@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from teaagent.audit_chain import verify_audit_chain
+from teaagent.audit_export import export_compliance_bundle, write_compliance_bundle
 from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
 
@@ -197,4 +198,31 @@ def audit_verify_command(args: argparse.Namespace) -> int:
             else None,
         }
     )
+    return 0
+
+
+def audit_export_command(args: argparse.Namespace) -> int:
+    store = RunStore(args.root, readonly=True)
+    try:
+        events = store.show_run(args.run_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+
+    log_path = store.run_path(args.run_id)
+    bundle = export_compliance_bundle(
+        events,
+        run_id=args.run_id,
+        include_chain_verification=not args.skip_chain_verify,
+        log_path=log_path if not args.skip_chain_verify else None,
+    )
+
+    output_path = getattr(args, 'output', None)
+    if output_path:
+        written = write_compliance_bundle(
+            bundle, Path(output_path), pretty=not args.compact
+        )
+        print_json({'status': 'ok', 'output': str(written), 'event_count': len(events)})
+    else:
+        print_json(bundle)
     return 0

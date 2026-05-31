@@ -14,6 +14,43 @@ from teaagent.subagents._approval_queue import (
 )
 
 
+def _build_approval_tree(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build a tree from a flat list using *batch_index* as nesting depth."""
+    roots: list[dict[str, Any]] = []
+    stack: dict[int, dict[str, Any]] = {}
+    for item in items:
+        raw = item.get("batch_index", None)
+        depth = raw if isinstance(raw, int) and raw > 0 else 1
+        node: dict[str, Any] = {"item": item, "children": []}
+        if depth == 1 or not any(d < depth for d in stack):
+            roots.append(node)
+        else:
+            parent_depth = max(d for d in stack if d < depth)
+            stack[parent_depth]["children"].append(node)
+        stack[depth] = node
+    return roots
+
+
+def _render_approval_tree(
+    nodes: list[dict[str, Any]],
+    lines: list[str],
+    prefix: str = "",
+) -> None:
+    """Render tree *nodes* with Unicode box-drawing characters."""
+    for idx, node in enumerate(nodes):
+        is_last = idx == len(nodes) - 1
+        item = node["item"]
+        rid = item.get("request_id", "unknown")[:8]
+        sname = item.get("subagent_name", "unknown")
+        tname = item.get("tool_name", "unknown")
+        batch = item.get("batch_index", "")
+        connector = "└── " if is_last else "├── "
+        lines.append(f"{prefix}{connector}[{rid}] {sname}  {tname}  (batch {batch})")
+        child_prefix = prefix + ("    " if is_last else "│   ")
+        if node["children"]:
+            _render_approval_tree(node["children"], lines, prefix=child_prefix)
+
+
 def format_subagent_approval_batch(
     *,
     parent_run_id: Optional[str] = None,
@@ -36,21 +73,28 @@ def format_subagent_approval_batch(
         lines.append('  (no pending destructive tool requests)')
     else:
         lines.append('')
-        lines.append(
-            f'{"#":>3}  {"request_id":<14}  {"subagent":<12}  {"tool":<28}  {"batch":>5}  {"isolation"}'
+        has_batch = any(
+            isinstance(it.get('batch_index'), int) and it['batch_index'] > 0
+            for it in pending
         )
-        for index, item in enumerate(pending, start=1):
-            request_id = item.get('request_id', 'unknown')[:14]
-            subagent_name = item.get('subagent_name', 'unknown')[:12]
-            tool_name = item.get('tool_name', 'unknown')[:28]
-            lines.append(
-                f'{index:>3}  {request_id:<14}  '
-                f'{subagent_name:<12}  '
-                f'{tool_name:<28}  '
-                f'{str(item.get("batch_index", "")):>5}  '
-                f'{item.get("isolation", "")}'
-            )
-        lines.append('')
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for it in pending:
+            pid = it.get('parent_run_id', 'root')
+            groups.setdefault(pid, []).append(it)
+        for pid, items in groups.items():
+            sep_label = f'── {pid} '
+            sep_width = max(40, len(sep_label) + 10)
+            lines.append(f'  {sep_label}{"─" * (sep_width - len(sep_label))}')
+            if not has_batch:
+                for it in items:
+                    rid = it.get('request_id', 'unknown')[:8]
+                    sname = it.get('subagent_name', 'unknown')
+                    tname = it.get('tool_name', 'unknown')
+                    lines.append(f'    • [{rid}] {sname}  {tname}')
+            else:
+                tree = _build_approval_tree(items)
+                _render_approval_tree(tree, lines, prefix='    ')
+            lines.append('')
         lines.append(
             '  approve one:  approvals subagents approve <request_id> [--parent-run-id ID]'
         )

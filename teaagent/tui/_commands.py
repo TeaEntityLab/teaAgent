@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import logging
 import shlex
 import subprocess
@@ -217,7 +218,16 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             sid = args[1]
             switched_session: Optional[ChatSession] = tui._get_session_store().load(sid)
             if switched_session is None:
-                tui.output_fn(f'error: session {sid[:8]} not found')
+                sessions = tui._get_session_store().list_sessions()
+                all_ids = [s['id'] for s in sessions]
+                matches = difflib.get_close_matches(sid, all_ids, n=5, cutoff=0.3)
+                if matches:
+                    tui.output_fn(
+                        f"session '{sid}' not found. Did you mean:\n  "
+                        + '\n  '.join(matches)
+                    )
+                else:
+                    tui.output_fn(f'error: session {sid[:8]} not found')
                 return True
             tui.chat = True
             tui.session_id = switched_session.id
@@ -423,6 +433,43 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 tui.output_fn(message if ok else f'error: {message}')
                 return True
             tui.output_fn(f"error: unknown approvals subagents action '{action}'")
+            return True
+        if sub == 'diff':
+            if len(args) < 2:
+                tui.output_fn('error: approvals diff requires a call_id')
+                return True
+            call_id = args[1]
+            store = RunStore(tui.root)
+            pending = (
+                store.pending_approval_for_run(tui.last_run_id)
+                if tui.last_run_id
+                else None
+            )
+            if not pending or pending.get('call_id') != call_id:
+                tui.output_fn(f'error: pending approval {call_id} not found')
+                return True
+            arguments = pending.get('arguments', {})
+            path = arguments.get('path') or arguments.get('file_path') or ''
+            if not path:
+                tui.output_fn('error: no file path in approval request')
+                return True
+            try:
+                result = subprocess.run(
+                    ['git', 'diff', '--', path],
+                    cwd=tui.root,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                diff_output = (
+                    result.stdout
+                    or '(no diff — file unchanged or not tracked by git)'
+                )
+                tui.output_fn(f'diff for {path}:')
+                for line in diff_output.splitlines():
+                    tui.output_fn(line)
+            except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
+                tui.output_fn(f'error: diff failed: {exc}')
             return True
         tui.output_fn(f"error: unknown approvals subcommand '{sub}'")
         return True

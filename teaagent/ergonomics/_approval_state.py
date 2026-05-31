@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional, Sequence, Union
@@ -25,6 +26,23 @@ from teaagent.ergonomics._approval_persistence import ApprovalPersistence
 from teaagent.storage import file_lock
 
 _RootType = Union[ApprovalPersistence, str, Path]
+
+
+@dataclass
+class SessionGrant:
+    """In-memory, time-bound, directory-scoped approval grant.
+
+    Not persisted to disk — lives only for the lifetime of the store instance.
+    """
+
+    grant_id: str
+    tool_name: str  # e.g. "workspace_write_file" or "*" for all
+    path_pattern: str  # glob pattern, e.g. "src/components/**" or "*" for all
+    permission_mode: str  # which permission mode this applies in
+    expires_at: float  # unix timestamp
+    created_at: float  # unix timestamp
+    used_count: int = 0
+    max_uses: int = 0  # 0 means unlimited
 
 
 class ApprovalPresetStore:

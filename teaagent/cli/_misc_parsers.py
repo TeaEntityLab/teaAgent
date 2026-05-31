@@ -45,6 +45,7 @@ def register(
         handlers['audit_prune'],
         serve_handler=handlers.get('audit_serve'),
         verify_handler=handlers.get('audit_verify'),
+        export_handler=handlers.get('audit_export'),
     )
     _env(
         subparsers,
@@ -506,12 +507,13 @@ def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> No
 
 
 def _audit(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
     list_handler: Callable,
     show_handler: Callable,
     prune_handler: Callable,
     serve_handler: Optional[Callable] = None,
     verify_handler: Optional[Callable] = None,
+    export_handler: Optional[Callable] = None,
 ) -> None:
     audit = subparsers.add_parser('audit', help='Inspect and prune run audit logs.')
     subs = audit.add_subparsers(dest='audit_command', required=True)
@@ -568,6 +570,26 @@ def _audit(
             help='Path to SSH/GPG key for signing attestation (e.g., ~/.ssh/id_ed25519).',
         )
         verify_cmd.set_defaults(func=verify_handler)
+
+    if export_handler is not None:
+        export_cmd = subs.add_parser(
+            'export',
+            help='Export a signed compliance bundle for a run.',
+        )
+        export_cmd.add_argument('run_id', help='Run id to export.')
+        export_cmd.add_argument('--root', default='.', help='Workspace root.')
+        export_cmd.add_argument(
+            '--output', '-o', default=None, help='Output file path. Prints to stdout if omitted.'
+        )
+        export_cmd.add_argument(
+            '--compact', action='store_true', help='Compact JSON output (no indentation).'
+        )
+        export_cmd.add_argument(
+            '--skip-chain-verify',
+            action='store_true',
+            help='Skip hash-chain verification.',
+        )
+        export_cmd.set_defaults(func=export_handler)
 
 
 def _graphqlite(

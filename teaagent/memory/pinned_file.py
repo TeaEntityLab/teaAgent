@@ -16,6 +16,30 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+_SECRET_FILENAMES: frozenset[str] = frozenset({
+    # Environment files
+    '.env', '.env.local', '.env.production', '.env.development',
+    # SSH keys
+    'id_rsa', 'id_rsa.pub', 'id_ecdsa', 'id_ed25519',
+    # Certificate / key extensions (exact match for bare names)
+    '.pem', '.p12', '.key', '.cert', '.crt',
+    # Credential files
+    'credentials', 'credentials.json', 'credentials.yaml',
+    # Secret config files
+    'secrets.yml', 'secrets.yaml', 'secret.yml', 'secret.yaml',
+    # Netrc
+    '.netrc', '_netrc',
+})
+
+_SECRET_SUFFIXES: tuple[str, ...] = ('.pem', '.p12', '.key')
+
+_SECRET_DIR_NAMES: frozenset[str] = frozenset({'.ssh', '.gnupg'})
+
+_SECRET_PATH_PATTERNS: tuple[str, ...] = (
+    '.git/config',
+    '.git/credentials',
+)
+
 
 @dataclass
 class PinnedFile:
@@ -117,6 +141,43 @@ class PinnedFileStorage:
         except OSError as exc:
             logger.warning('Failed to write pinned files: %s', exc)
 
+    @staticmethod
+    def _is_secret_filename(file_path: str) -> bool:
+        """Check if a file path matches known secret/credential file patterns.
+
+        Uses filename-only heuristics — never reads file contents.
+
+        Args:
+            file_path: Path to check (relative or absolute)
+
+        Returns:
+            True if the path matches a known secret file pattern
+        """
+        normalized = file_path.replace('\\', '/')
+        filename = normalized.rsplit('/', 1)[-1]
+        filename_lower = filename.lower()
+
+        if filename in _SECRET_FILENAMES:
+            return True
+
+        if any(filename_lower.endswith(suffix) for suffix in _SECRET_SUFFIXES):
+            return True
+
+        for pattern in _SECRET_PATH_PATTERNS:
+            if normalized.endswith(pattern):
+                return True
+
+        parts = normalized.split('/')
+        for i, part in enumerate(parts[:-1]):
+            if part in _SECRET_DIR_NAMES:
+                return True
+            if part == '.ssh' and i < len(parts) - 1:
+                next_name = parts[i + 1]
+                if next_name in ('config.json', 'config.yaml'):
+                    return True
+
+        return False
+
     def add(self, file_path: str) -> bool:
         """Add a file to the pinned list.
 
@@ -126,6 +187,10 @@ class PinnedFileStorage:
         Returns:
             True if file was added, False if file doesn't exist or already pinned
         """
+        if self._is_secret_filename(file_path):
+            logger.warning("Refusing to pin potential secret file: %s", file_path)
+            return False
+
         # Validate file exists
         full_path = self.root / file_path
         if not full_path.exists():
