@@ -3,7 +3,7 @@ type: documentation
 audience: user, agent
 status: stable
 version: 1.0.0
-last_audit: 2026-05-17
+last_audit: 2026-05-31
 ---
 # TeaAgent Quick Start Guide
 

@@ -7,7 +7,7 @@ from market-standard product gaps that still need acceptance tests.
 
 Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 
-Landscape survey (reviewed 2026-05-24):
+Landscape survey (reviewed 2026-05-24, last refreshed 2026-05-31):
 [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)
 
 ## Status Key
@@ -33,7 +33,7 @@ governance, audit, and portable protocol surfaces.
 | Read-only planning | Implemented | `test_plan_mode_read_only_flow.py` |
 | Edit/test/diff loop + undo | Implemented | `test_workspace_edit_flow.py`, `test_run_undo_acceptance_flow.py` |
 | Permission modes + policy | Implemented | `test_policy_as_code_flow.py`, `test_cancel_flow.py` |
-| MCP + skills/plugins + hooks | Implemented | `test_remote_mcp_consumption_flow.py`, `test_skill_install_flow.py`, `test_hooks.py` |
+| MCP + skills/plugins + hooks | Implemented | `test_remote_mcp_consumption_flow.py`, `test_skill_install_flow.py`, `test_hook_lifecycle_flow.py` |
 | Memory + session continuity | Implemented | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` |
 | IDE surface (VS Code) | Implemented | `test_vscode_extension_mcp_boot_flow.py` |
 | Federation (A2A, ANP) | Implemented | `test_anp_adapter_flow.py`, A2A acceptance flows |
@@ -70,10 +70,10 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Multi-surface operation | Codex and Claude Code support IDE surfaces; Hermes supports messaging gateways; OpenCode supports desktop/client-server surfaces. | Implemented (VSCode surface). | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` |
 | Session continuity and memory | Hermes foregrounds learning loops and memory; terminal agents need resumable sessions. | Implemented. | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` |
 | Reversible change recovery | Production-grade autonomous edit tools need rollback/undo stories. | Implemented. | `test_run_undo_acceptance_flow.py` |
-| Hook lifecycle system | Claude Code and Hermes implement 8-event hooks for extensibility. | Implemented. | `test_hooks.py` |
-| Three-tier memory hierarchy | Claude Code implements Project/Personal/Auto-Memory tiers. | Implemented. | `test_memory.py` |
-| Context compaction | Claude Code triggers auto-compaction at 75-92% token usage. | Implemented. | `test_preflight.py` |
-| Plugin system | Claude Code supports Commands/Agents/Hooks/MCP extension points. | Implemented. | `test_plugins.py` |
+| Hook lifecycle system | Claude Code and Hermes implement 8-event hooks for extensibility. | Implemented. | `test_hook_lifecycle_flow.py` |
+| Three-tier memory hierarchy | Claude Code implements Project/Personal/Auto-Memory tiers. | Implemented. | `test_memory_auto_curation_flow.py` |
+| Context compaction | Claude Code triggers auto-compaction at 75-92% token usage. | Implemented. | `test_context_compaction_slo_flow.py` |
+| Plugin system | Claude Code supports Commands/Agents/Hooks/MCP extension points. | Implemented. | `test_external_tool_manifest_compatibility_flow.py, test_skill_install_flow.py, test_plugin_install_security_flow.py` |
 | ACP IDE integration | Protocol for VS Code, Zed, JetBrains integration. | Implemented. | `test_vscode_*_flow.py` |
 | Read-before-write mtime guard | OpenCode and Codex enforce concurrent modification detection on writes. | Implemented. | `test_mtime_read_before_write_flow.py` |
 | Protected path enforcement | Codex automatically protects `.git`/`.codex`/`.agents` directories. | Implemented. | `test_protected_paths_flow.py` |
@@ -93,11 +93,11 @@ hygiene, drift checks, and periodic review rather than feature buildout.
 | Reliability and forensics | Preserve run history, webhook delivery, and audit integrity. | high | N/A (read-only verification) | critical | `test_audit_chain_integrity_flow.py`, `test_webhook_audit_flow.py`, `test_cost_tracking_flow.py` | Implemented baseline |
 | Memory continuity | Reuse successful outcomes across runs without manual logging. | low | clear .teaagent/memory/ | low | `test_memory_auto_curation_flow.py`, `test_session_resume_continuity_flow.py` | Implemented |
 | IDE-assisted workflows | Operate MCP flows and commands from VSCode extension. | low | restart VSCode | low | `test_vscode_extension_mcp_boot_flow.py`, `test_vscode_mcp_runtime_smoke_flow.py` | Implemented |
-| Hook lifecycle management | Execute custom logic on tool events (PreToolUse, PostToolUse, etc.). | medium | disable hooks config | medium | `test_hooks.py` | Implemented |
-| Three-tier memory system | Use Project/Personal/Auto-Memory for context persistence. | low | clear memory files | low | `test_memory.py` | Implemented |
-| Context auto-compaction | Automatically compress context when approaching token limits. | low | N/A | low | `test_preflight.py` | Implemented |
+| Hook lifecycle management | Execute custom logic on tool events (PreToolUse, PostToolUse, etc.). | medium | disable hooks config | medium | `test_hook_lifecycle_flow.py` | Implemented |
+| Three-tier memory system | Use Project/Personal/Auto-Memory for context persistence. | low | clear memory files | low | `test_memory_auto_curation_flow.py` | Implemented |
+| Context auto-compaction | Automatically compress context when approaching token limits. | low | N/A | low | `test_context_compaction_slo_flow.py` | Implemented |
 | Plan mode exploration | Explore codebases in read-only mode without modifications. | low | N/A | low | `test_plan_mode_read_only_flow.py` | Implemented |
-| Plugin extensibility | Add custom Commands, Agents, or MCP integrations. | medium | remove plugin | low | `test_plugins.py` | Implemented |
+| Plugin extensibility | Add custom Commands, Agents, or MCP integrations. | medium | remove plugin | low | `test_external_tool_manifest_compatibility_flow.py, test_skill_install_flow.py, test_plugin_install_security_flow.py` | Implemented |
 | LSP code analysis | Navigate codebases with semantic tools (definitions, references, diagnostics, symbols). | low | N/A | low | `test_code_analysis_lsp_flow.py`, `test_code_analysis_prompt_injection_flow.py` | Implemented |
 | Declarative sub-agent management | Define sub-agents via YAML/JSON/Markdown files with isolation, background, and tool restrictions. | medium | remove .teaagent/subagents/ | medium | `test_subagent_definitions_flow.py`, `test_subagent_lineage_flow.py` | Implemented |
 | Concurrent modification safety | Prevent silent data loss when files are modified between read and write. | high | N/A | medium | `test_mtime_read_before_write_flow.py` | Implemented |

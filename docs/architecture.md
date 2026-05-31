@@ -467,7 +467,7 @@ last refreshed 2026-05-24.
 | Three-tier memory | ✅ Project/Personal/Auto | ✅ CLAUDE.md files | ✅ 2-phase extraction | — |
 | Audit / governance | ✅ JSONL hash chain | — | — | — |
 | Undo / rollback | ✅ Undo journal | — | — | ✅ File history |
-| Read-before-write mtime guard | ✅ since v0.2 | — | ✅ (via Edit tool) | ✅ mtime check |
+| Read-before-write mtime guard | ✅ since v0.1.0 | — | ✅ (via Edit tool) | ✅ mtime check |
 | Protected paths (.git/.teaagent) | ✅ default deny rules | — | ✅ .git/.codex/.agents | — |
 | IDE integration | ✅ ACP + VS Code ext | ✅ VS Code ext | ✅ App Server (Zed/VS Code) | — |
 | Session resume | ✅ RunStore JSONL | ✅ rollout files | ✅ rollout + fork | ✅ SQLite |

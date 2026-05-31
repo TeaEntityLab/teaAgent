@@ -4,6 +4,12 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **TUI Evolution Phase A-C** (fb59e41):
+  - **Phase A — TUI responsiveness**: Async autocomplete with background ontology cache refresh (`_completion.py`), fuzzy session switch via `difflib.get_close_matches` (`_commands.py`), secret filename heuristics on pinned file `add()` to block env/SSH/cert/credential paths (`pinned_file.py`).
+  - **Phase B — Approval UX**: Unicode tree view for subagent approval queue grouped by `parent_run_id` (`_approval_subagents.py`), `approvals diff <call_id>` git-diff preview subcommand (`_commands.py`).
+  - **Phase C — Quality & compliance**: 12 headless pty TUI acceptance tests (`test_headless_tui.py`), compliance audit exporter with signed JSON bundle and chain verification (`audit_export.py`, 13 tests). Session grants cancelled — existing `ApprovalGrant(scope='session')` already covers it.
+  - **Docs**: Updated acceptance count to 273, documented new features in cli.md and maturity-matrix.md.
+
 - **Vote Relay OOM Fix**: Added `MAX_HTTP_BODY_BYTES=1_048_576` guard to `vote_relay.py::_read_json()` — rejects oversized payloads with `ValueError('body too large')` instead of unbounded `rfile.read()` (DoS vector; matches `signature_relay.py` pattern)
 
 - **Verification-Driven Hardening (12 fixes)**:

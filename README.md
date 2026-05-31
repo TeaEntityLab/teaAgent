@@ -132,15 +132,11 @@ security-weighted scoring, and centralized approval queue integration:
 
 **Status:** Beta — shipped in harness with governance gates; hosted tournament dashboards remain future work. See [maturity-matrix.md](docs/maturity-matrix.md).
 
-### 10. Cognitive Swarm Evolution (Phase 5)
+### 10. Cognitive Swarm Evolution
 
 TeaAgent includes cognitive evolution features for adaptive multi-agent systems:
 
-**Self-Healing Validation:**
-- Automatic ruff, mypy, and pytest validation after code changes
-- Hot-reload agents with self-correction prompts on validation failure
-- Configurable max self-healing attempts (default: 3)
-- Graceful fallback when validation tools are unavailable
+Self-healing validation is described in [section 8](#8-self-healing-validation-beta) above.
 
 **Cross-Sandbox Context Bus:**
 - Real-time Delta sharing between parallel agents via WAL-mode SQLite (per-thread connections; see `docs/context-bus-and-federated-sync.md`)
@@ -294,16 +290,6 @@ source .teaagent/env
 - For AI Gateway unified OpenAI-compatible routing, set `AIGATEWAY_BASE_URL=https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/compat` and use model names like `dynamic/default`.
 
 ## Features
-
-### Permission Modes
-
-| Mode | Behavior |
-|------|----------|
-| `read-only` | Blocks all destructive tools |
-| `workspace-write` | Allows file writes; blocks shell mutation |
-| `prompt` | Destructive tools pause for HITL approval or require an approval token |
-| `allow` | Allows destructive tools for the session |
-| `danger-full-access` | Full access; reserve for trusted automation |
 
 ### Plan Mode
 
