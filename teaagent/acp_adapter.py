@@ -12,12 +12,15 @@ Reference: https://agentclientprotocol.org
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from dataclasses import dataclass, field
 from typing import Any, Optional
 from uuid import uuid4
 
 ACP_VERSION = '1.0.0'
+
+logger = logging.getLogger(__name__)
 
 
 class ACPError(Exception):
@@ -335,6 +338,7 @@ def run_acp_server(tool_registry: Any, agent_runner: Any) -> None:
     server = ACPServer(tool_registry, agent_runner, notify=notify)
 
     for line in sys.stdin:
+        request_data: dict[str, Any] | None = None
         try:
             request_data = json.loads(line.strip())
             if 'method' in request_data and 'id' not in request_data:
@@ -346,8 +350,18 @@ def run_acp_server(tool_registry: Any, agent_runner: Any) -> None:
             sys.stdout.flush()
         except json.JSONDecodeError:
             continue
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.exception('ACP handler error: %s', exc)
+            request_id = (
+                request_data.get('id') if isinstance(request_data, dict) else None
+            )
+            error_response = {
+                'jsonrpc': '2.0',
+                'id': request_id,
+                'error': {'code': -32603, 'message': str(exc)},
+            }
+            print(json.dumps(error_response, ensure_ascii=False), file=sys.stdout)
+            sys.stdout.flush()
 
 
 # --- ACP Integration with VS Code / Zed / JetBrains ---

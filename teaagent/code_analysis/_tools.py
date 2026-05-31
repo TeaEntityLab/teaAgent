@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import OrderedDict
+
 from teaagent.code_analysis._config import CodeAnalysisConfig
 from teaagent.code_analysis._graph_rag import ingest_code_relations_to_graph
 from teaagent.code_analysis._manager import LSPServerManager
@@ -282,6 +284,14 @@ def register_code_analysis_tools(
     )
 
 
+_MAX_GRAPH_CACHE = 8
+
+
+def clear_graph_cache() -> None:
+    """Clear in-memory code-analysis graphs (for tests and long-running processes)."""
+    _GRAPH_BY_ROOT.clear()
+
+
 def _ingest_graph(
     args: dict[str, str], scope_key: str = '__default__'
 ) -> dict[str, int]:
@@ -289,6 +299,10 @@ def _ingest_graph(
     if graph is None:
         graph = KnowledgeGraph()
         _GRAPH_BY_ROOT[scope_key] = graph
+    else:
+        _GRAPH_BY_ROOT.move_to_end(scope_key)
+    while len(_GRAPH_BY_ROOT) > _MAX_GRAPH_CACHE:
+        _GRAPH_BY_ROOT.popitem(last=False)
     relations = ingest_code_relations_to_graph(
         args['path'],
         graph,
@@ -302,4 +316,4 @@ def _ingest_graph(
     }
 
 
-_GRAPH_BY_ROOT: dict[str, KnowledgeGraph] = {}
+_GRAPH_BY_ROOT: OrderedDict[str, KnowledgeGraph] = OrderedDict()

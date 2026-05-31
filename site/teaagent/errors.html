@@ -31,6 +31,39 @@
             <h2>API Documentation</h2>
                 <ul class="memberlist">
             <li>
+                    <a class="class" href="#DenialReasonCode">DenialReasonCode</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.READ_ONLY_MODE">READ_ONLY_MODE</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.WORKSPACE_WRITE_MODE">WORKSPACE_WRITE_MODE</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.FILE_POLICY_DENIED">FILE_POLICY_DENIED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.PLAN_CONTRACT_DENIED">PLAN_CONTRACT_DENIED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.JIT_USER_DENIED">JIT_USER_DENIED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.JIT_NO_APPROVAL">JIT_NO_APPROVAL</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.MULTISIG_NO_QUORUM">MULTISIG_NO_QUORUM</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.AUTO_MODE_BLOCKED">AUTO_MODE_BLOCKED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DenialReasonCode.MISSING_STATE">MISSING_STATE</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
                     <a class="class" href="#ErrorCategory">ErrorCategory</a>
                             <ul class="memberlist">
                         <li>
@@ -96,6 +129,9 @@
                         <li>
                                 <a class="variable" href="#ToolPermissionError.category">category</a>
                         </li>
+                        <li>
+                                <a class="variable" href="#ToolPermissionError.reason_code">reason_code</a>
+                        </li>
                 </ul>
 
             </li>
@@ -139,7 +175,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.errors    </h1>
 
-                
+
                         <input id="mod-errors-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-errors-view-source"><span>View Source</span></label>
@@ -150,114 +186,282 @@
 </span><span id="L-4"><a href="#L-4"><span class="linenos">  4</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
 </span><span id="L-5"><a href="#L-5"><span class="linenos">  5</span></a>
 </span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a>
-</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ErrorCategory</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a>    <span class="n">TRANSIENT</span> <span class="o">=</span> <span class="s1">&#39;transient&#39;</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a>    <span class="n">MODEL_LOGIC</span> <span class="o">=</span> <span class="s1">&#39;model_logic&#39;</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a>    <span class="n">PERMISSION</span> <span class="o">=</span> <span class="s1">&#39;permission&#39;</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a>    <span class="n">SYSTEM</span> <span class="o">=</span> <span class="s1">&#39;system&#39;</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="k">class</span><span class="w"> </span><span class="nc">DenialReasonCode</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Categorised reason codes for tool-call denials.</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="sd">    Each value maps to a specific denial path in the approval pipeline.</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="sd">    &quot;&quot;&quot;</span>
 </span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a>
-</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="k">class</span><span class="w"> </span><span class="nc">AgentHarnessError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for all TeaAgent harness errors.</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
-</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="sd">    Attributes</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="sd">    ----------</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="sd">    hint:</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">        A short, actionable remediation message shown to the user.  When set,</span>
-</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">        CLI error formatters should append it after the primary message so the</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">        user knows what to try next.</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a>
-</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a>    <span class="n">READ_ONLY_MODE</span> <span class="o">=</span> <span class="s1">&#39;read_only_mode&#39;</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a>    <span class="n">WORKSPACE_WRITE_MODE</span> <span class="o">=</span> <span class="s1">&#39;workspace_write_mode&#39;</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>    <span class="n">FILE_POLICY_DENIED</span> <span class="o">=</span> <span class="s1">&#39;file_policy_denied&#39;</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a>    <span class="n">PLAN_CONTRACT_DENIED</span> <span class="o">=</span> <span class="s1">&#39;plan_contract_denied&#39;</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a>    <span class="n">JIT_USER_DENIED</span> <span class="o">=</span> <span class="s1">&#39;jit_user_denied&#39;</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a>    <span class="n">JIT_NO_APPROVAL</span> <span class="o">=</span> <span class="s1">&#39;jit_no_approval&#39;</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>    <span class="n">MULTISIG_NO_QUORUM</span> <span class="o">=</span> <span class="s1">&#39;multisig_no_quorum&#39;</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a>    <span class="n">AUTO_MODE_BLOCKED</span> <span class="o">=</span> <span class="s1">&#39;auto_mode_blocked&#39;</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a>    <span class="n">MISSING_STATE</span> <span class="o">=</span> <span class="s1">&#39;missing_state&#39;</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a>
+</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ErrorCategory</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a>    <span class="n">TRANSIENT</span> <span class="o">=</span> <span class="s1">&#39;transient&#39;</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a>    <span class="n">MODEL_LOGIC</span> <span class="o">=</span> <span class="s1">&#39;model_logic&#39;</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a>    <span class="n">PERMISSION</span> <span class="o">=</span> <span class="s1">&#39;permission&#39;</span>
+</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>    <span class="n">SYSTEM</span> <span class="o">=</span> <span class="s1">&#39;system&#39;</span>
 </span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a>
-</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">hint</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a>
 </span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a>
-</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a>        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
-</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span>
-</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a>            <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="se">\n</span><span class="s1">  → </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="si">}</span><span class="s1">&#39;</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a>        <span class="k">return</span> <span class="n">base</span>
-</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a>
-</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a>
-</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a><span class="k">class</span><span class="w"> </span><span class="nc">BudgetExceededError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
-</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a>
-</span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a>                <span class="s1">&#39;Increase max_iterations / max_tool_calls / max_estimated_cost_cents &#39;</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a>                <span class="s1">&#39;in RunBudget, or break the task into smaller subtasks.&#39;</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a>            <span class="p">),</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a>        <span class="p">)</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a>
-</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a>
-</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolValidationError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a><span class="k">class</span><span class="w"> </span><span class="nc">AgentHarnessError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for all TeaAgent harness errors.</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>
+</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="sd">    Attributes</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a><span class="sd">    ----------</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a><span class="sd">    hint:</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a><span class="sd">        A short, actionable remediation message shown to the user.  When set,</span>
+</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a><span class="sd">        CLI error formatters should append it after the primary message so the</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="sd">        user knows what to try next.</span>
+</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a>
+</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a>
+</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">hint</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a>
+</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a>        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a>            <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="se">\n</span><span class="s1">  → </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="si">}</span><span class="s1">&#39;</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a>        <span class="k">return</span> <span class="n">base</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a>
 </span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a>
-</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a>                <span class="s1">&#39;The model returned a malformed decision.  &#39;</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a>                <span class="s1">&#39;Try re-running with a more capable model or a clearer task description.&#39;</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a>            <span class="p">),</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a>        <span class="p">)</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a>
-</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a>
-</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolPermissionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">PERMISSION</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a><span class="k">class</span><span class="w"> </span><span class="nc">BudgetExceededError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
+</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a>
+</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a>                <span class="s1">&#39;Increase max_iterations / max_tool_calls / max_estimated_cost_cents &#39;</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a>                <span class="s1">&#39;in RunBudget, or break the task into smaller subtasks.&#39;</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a>            <span class="p">),</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a>        <span class="p">)</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>
 </span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a>
-</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>                <span class="s1">&#39;Use --permission-mode allow (or prompt/approve the call) &#39;</span>
-</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>                <span class="s1">&#39;to permit this operation.&#39;</span>
-</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>            <span class="p">),</span>
-</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>        <span class="p">)</span>
-</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>
-</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>
-</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolExecutionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolValidationError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>                <span class="s1">&#39;The model returned a malformed decision.  &#39;</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>                <span class="s1">&#39;Try re-running with a more capable model or a clearer task description.&#39;</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>            <span class="p">),</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>        <span class="p">)</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>
 </span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>
-</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>            <span class="ow">or</span> <span class="s1">&#39;Check that the workspace path is writable and the command is valid.&#39;</span><span class="p">,</span>
-</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>        <span class="p">)</span>
-</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>
-</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>
-</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a><span class="k">class</span><span class="w"> </span><span class="nc">RunCancelledError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a run is cancelled via a cancel token.&quot;&quot;&quot;</span>
-</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>
-</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
-</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>
-</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run cancelled&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>            <span class="ow">or</span> <span class="s1">&#39;Use `teaagent agent resume &lt;run_id&gt;` to continue from the last checkpoint.&#39;</span><span class="p">,</span>
-</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>        <span class="p">)</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolPermissionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">PERMISSION</span>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>        <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>        <span class="o">*</span><span class="p">,</span>
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>        <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>        <span class="n">reason_code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DenialReasonCode</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>                <span class="s1">&#39;Use --permission-mode allow (or prompt/approve the call) &#39;</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>                <span class="s1">&#39;to permit this operation.&#39;</span>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>            <span class="p">),</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>        <span class="p">)</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">reason_code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DenialReasonCode</span><span class="p">]</span> <span class="o">=</span> <span class="n">reason_code</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolExecutionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>            <span class="ow">or</span> <span class="s1">&#39;Check that the workspace path is writable and the command is valid.&#39;</span><span class="p">,</span>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>        <span class="p">)</span>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a><span class="k">class</span><span class="w"> </span><span class="nc">RunCancelledError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a run is cancelled via a cancel token.&quot;&quot;&quot;</span>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run cancelled&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>            <span class="ow">or</span> <span class="s1">&#39;Use `teaagent agent resume &lt;run_id&gt;` to continue from the last checkpoint.&#39;</span><span class="p">,</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
             </section>
+                <section id="DenialReasonCode">
+                            <input id="DenialReasonCode-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+
+    <span class="def">class</span>
+    <span class="name">DenialReasonCode</span><wbr>(<span class="base">builtins.str</span>, <span class="base">enum.Enum</span>):
+
+                <label class="view-source-button" for="DenialReasonCode-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="DenialReasonCode-8"><a href="#DenialReasonCode-8"><span class="linenos"> 8</span></a><span class="k">class</span><span class="w"> </span><span class="nc">DenialReasonCode</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+</span><span id="DenialReasonCode-9"><a href="#DenialReasonCode-9"><span class="linenos"> 9</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Categorised reason codes for tool-call denials.</span>
+</span><span id="DenialReasonCode-10"><a href="#DenialReasonCode-10"><span class="linenos">10</span></a>
+</span><span id="DenialReasonCode-11"><a href="#DenialReasonCode-11"><span class="linenos">11</span></a><span class="sd">    Each value maps to a specific denial path in the approval pipeline.</span>
+</span><span id="DenialReasonCode-12"><a href="#DenialReasonCode-12"><span class="linenos">12</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="DenialReasonCode-13"><a href="#DenialReasonCode-13"><span class="linenos">13</span></a>
+</span><span id="DenialReasonCode-14"><a href="#DenialReasonCode-14"><span class="linenos">14</span></a>    <span class="n">READ_ONLY_MODE</span> <span class="o">=</span> <span class="s1">&#39;read_only_mode&#39;</span>
+</span><span id="DenialReasonCode-15"><a href="#DenialReasonCode-15"><span class="linenos">15</span></a>    <span class="n">WORKSPACE_WRITE_MODE</span> <span class="o">=</span> <span class="s1">&#39;workspace_write_mode&#39;</span>
+</span><span id="DenialReasonCode-16"><a href="#DenialReasonCode-16"><span class="linenos">16</span></a>    <span class="n">FILE_POLICY_DENIED</span> <span class="o">=</span> <span class="s1">&#39;file_policy_denied&#39;</span>
+</span><span id="DenialReasonCode-17"><a href="#DenialReasonCode-17"><span class="linenos">17</span></a>    <span class="n">PLAN_CONTRACT_DENIED</span> <span class="o">=</span> <span class="s1">&#39;plan_contract_denied&#39;</span>
+</span><span id="DenialReasonCode-18"><a href="#DenialReasonCode-18"><span class="linenos">18</span></a>    <span class="n">JIT_USER_DENIED</span> <span class="o">=</span> <span class="s1">&#39;jit_user_denied&#39;</span>
+</span><span id="DenialReasonCode-19"><a href="#DenialReasonCode-19"><span class="linenos">19</span></a>    <span class="n">JIT_NO_APPROVAL</span> <span class="o">=</span> <span class="s1">&#39;jit_no_approval&#39;</span>
+</span><span id="DenialReasonCode-20"><a href="#DenialReasonCode-20"><span class="linenos">20</span></a>    <span class="n">MULTISIG_NO_QUORUM</span> <span class="o">=</span> <span class="s1">&#39;multisig_no_quorum&#39;</span>
+</span><span id="DenialReasonCode-21"><a href="#DenialReasonCode-21"><span class="linenos">21</span></a>    <span class="n">AUTO_MODE_BLOCKED</span> <span class="o">=</span> <span class="s1">&#39;auto_mode_blocked&#39;</span>
+</span><span id="DenialReasonCode-22"><a href="#DenialReasonCode-22"><span class="linenos">22</span></a>    <span class="n">MISSING_STATE</span> <span class="o">=</span> <span class="s1">&#39;missing_state&#39;</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Categorised reason codes for tool-call denials.</p>
+
+<p>Each value maps to a specific denial path in the approval pipeline.</p>
+</div>
+
+
+                            <div id="DenialReasonCode.READ_ONLY_MODE" class="classattr">
+                                <div class="attr variable">
+            <span class="name">READ_ONLY_MODE</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.READ_ONLY_MODE">DenialReasonCode.READ_ONLY_MODE</a>: &#39;read_only_mode&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.READ_ONLY_MODE"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.WORKSPACE_WRITE_MODE" class="classattr">
+                                <div class="attr variable">
+            <span class="name">WORKSPACE_WRITE_MODE</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.WORKSPACE_WRITE_MODE">DenialReasonCode.WORKSPACE_WRITE_MODE</a>: &#39;workspace_write_mode&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.WORKSPACE_WRITE_MODE"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.FILE_POLICY_DENIED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">FILE_POLICY_DENIED</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.FILE_POLICY_DENIED">DenialReasonCode.FILE_POLICY_DENIED</a>: &#39;file_policy_denied&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.FILE_POLICY_DENIED"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.PLAN_CONTRACT_DENIED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PLAN_CONTRACT_DENIED</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.PLAN_CONTRACT_DENIED">DenialReasonCode.PLAN_CONTRACT_DENIED</a>: &#39;plan_contract_denied&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.PLAN_CONTRACT_DENIED"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.JIT_USER_DENIED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">JIT_USER_DENIED</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.JIT_USER_DENIED">DenialReasonCode.JIT_USER_DENIED</a>: &#39;jit_user_denied&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.JIT_USER_DENIED"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.JIT_NO_APPROVAL" class="classattr">
+                                <div class="attr variable">
+            <span class="name">JIT_NO_APPROVAL</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.JIT_NO_APPROVAL">DenialReasonCode.JIT_NO_APPROVAL</a>: &#39;jit_no_approval&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.JIT_NO_APPROVAL"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.MULTISIG_NO_QUORUM" class="classattr">
+                                <div class="attr variable">
+            <span class="name">MULTISIG_NO_QUORUM</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.MULTISIG_NO_QUORUM">DenialReasonCode.MULTISIG_NO_QUORUM</a>: &#39;multisig_no_quorum&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.MULTISIG_NO_QUORUM"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.AUTO_MODE_BLOCKED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">AUTO_MODE_BLOCKED</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.AUTO_MODE_BLOCKED">DenialReasonCode.AUTO_MODE_BLOCKED</a>: &#39;auto_mode_blocked&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.AUTO_MODE_BLOCKED"></a>
+
+
+
+                            </div>
+                            <div id="DenialReasonCode.MISSING_STATE" class="classattr">
+                                <div class="attr variable">
+            <span class="name">MISSING_STATE</span>        =
+<span class="default_value">&lt;<a href="#DenialReasonCode.MISSING_STATE">DenialReasonCode.MISSING_STATE</a>: &#39;missing_state&#39;&gt;</span>
+
+
+    </div>
+    <a class="headerlink" href="#DenialReasonCode.MISSING_STATE"></a>
+
+
+
+                            </div>
+                </section>
                 <section id="ErrorCategory">
                             <input id="ErrorCategory-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">ErrorCategory</span><wbr>(<span class="base">builtins.str</span>, <span class="base">enum.Enum</span>):
 
@@ -265,14 +469,14 @@
 
     </div>
     <a class="headerlink" href="#ErrorCategory"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ErrorCategory-8"><a href="#ErrorCategory-8"><span class="linenos"> 8</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ErrorCategory</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
-</span><span id="ErrorCategory-9"><a href="#ErrorCategory-9"><span class="linenos"> 9</span></a>    <span class="n">TRANSIENT</span> <span class="o">=</span> <span class="s1">&#39;transient&#39;</span>
-</span><span id="ErrorCategory-10"><a href="#ErrorCategory-10"><span class="linenos">10</span></a>    <span class="n">MODEL_LOGIC</span> <span class="o">=</span> <span class="s1">&#39;model_logic&#39;</span>
-</span><span id="ErrorCategory-11"><a href="#ErrorCategory-11"><span class="linenos">11</span></a>    <span class="n">PERMISSION</span> <span class="o">=</span> <span class="s1">&#39;permission&#39;</span>
-</span><span id="ErrorCategory-12"><a href="#ErrorCategory-12"><span class="linenos">12</span></a>    <span class="n">SYSTEM</span> <span class="o">=</span> <span class="s1">&#39;system&#39;</span>
-</span><span id="ErrorCategory-13"><a href="#ErrorCategory-13"><span class="linenos">13</span></a>
-</span><span id="ErrorCategory-14"><a href="#ErrorCategory-14"><span class="linenos">14</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="ErrorCategory-15"><a href="#ErrorCategory-15"><span class="linenos">15</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ErrorCategory-25"><a href="#ErrorCategory-25"><span class="linenos">25</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ErrorCategory</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+</span><span id="ErrorCategory-26"><a href="#ErrorCategory-26"><span class="linenos">26</span></a>    <span class="n">TRANSIENT</span> <span class="o">=</span> <span class="s1">&#39;transient&#39;</span>
+</span><span id="ErrorCategory-27"><a href="#ErrorCategory-27"><span class="linenos">27</span></a>    <span class="n">MODEL_LOGIC</span> <span class="o">=</span> <span class="s1">&#39;model_logic&#39;</span>
+</span><span id="ErrorCategory-28"><a href="#ErrorCategory-28"><span class="linenos">28</span></a>    <span class="n">PERMISSION</span> <span class="o">=</span> <span class="s1">&#39;permission&#39;</span>
+</span><span id="ErrorCategory-29"><a href="#ErrorCategory-29"><span class="linenos">29</span></a>    <span class="n">SYSTEM</span> <span class="o">=</span> <span class="s1">&#39;system&#39;</span>
+</span><span id="ErrorCategory-30"><a href="#ErrorCategory-30"><span class="linenos">30</span></a>
+</span><span id="ErrorCategory-31"><a href="#ErrorCategory-31"><span class="linenos">31</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="ErrorCategory-32"><a href="#ErrorCategory-32"><span class="linenos">32</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
 </span></pre></div>
 
 
@@ -294,11 +498,11 @@ errors defaults to 'strict'.</p>
             <span class="name">TRANSIENT</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.TRANSIENT">ErrorCategory.TRANSIENT</a>: &#39;transient&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ErrorCategory.TRANSIENT"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ErrorCategory.MODEL_LOGIC" class="classattr">
@@ -306,11 +510,11 @@ errors defaults to 'strict'.</p>
             <span class="name">MODEL_LOGIC</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.MODEL_LOGIC">ErrorCategory.MODEL_LOGIC</a>: &#39;model_logic&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ErrorCategory.MODEL_LOGIC"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ErrorCategory.PERMISSION" class="classattr">
@@ -318,11 +522,11 @@ errors defaults to 'strict'.</p>
             <span class="name">PERMISSION</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.PERMISSION">ErrorCategory.PERMISSION</a>: &#39;permission&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ErrorCategory.PERMISSION"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ErrorCategory.SYSTEM" class="classattr">
@@ -330,18 +534,18 @@ errors defaults to 'strict'.</p>
             <span class="name">SYSTEM</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.SYSTEM">ErrorCategory.SYSTEM</a>: &#39;system&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ErrorCategory.SYSTEM"></a>
-    
-    
+
+
 
                             </div>
                 </section>
                 <section id="AgentHarnessError">
                             <input id="AgentHarnessError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">AgentHarnessError</span><wbr>(<span class="base">builtins.Exception</span>):
 
@@ -349,28 +553,28 @@ errors defaults to 'strict'.</p>
 
     </div>
     <a class="headerlink" href="#AgentHarnessError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="AgentHarnessError-18"><a href="#AgentHarnessError-18"><span class="linenos">18</span></a><span class="k">class</span><span class="w"> </span><span class="nc">AgentHarnessError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-</span><span id="AgentHarnessError-19"><a href="#AgentHarnessError-19"><span class="linenos">19</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for all TeaAgent harness errors.</span>
-</span><span id="AgentHarnessError-20"><a href="#AgentHarnessError-20"><span class="linenos">20</span></a>
-</span><span id="AgentHarnessError-21"><a href="#AgentHarnessError-21"><span class="linenos">21</span></a><span class="sd">    Attributes</span>
-</span><span id="AgentHarnessError-22"><a href="#AgentHarnessError-22"><span class="linenos">22</span></a><span class="sd">    ----------</span>
-</span><span id="AgentHarnessError-23"><a href="#AgentHarnessError-23"><span class="linenos">23</span></a><span class="sd">    hint:</span>
-</span><span id="AgentHarnessError-24"><a href="#AgentHarnessError-24"><span class="linenos">24</span></a><span class="sd">        A short, actionable remediation message shown to the user.  When set,</span>
-</span><span id="AgentHarnessError-25"><a href="#AgentHarnessError-25"><span class="linenos">25</span></a><span class="sd">        CLI error formatters should append it after the primary message so the</span>
-</span><span id="AgentHarnessError-26"><a href="#AgentHarnessError-26"><span class="linenos">26</span></a><span class="sd">        user knows what to try next.</span>
-</span><span id="AgentHarnessError-27"><a href="#AgentHarnessError-27"><span class="linenos">27</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="AgentHarnessError-28"><a href="#AgentHarnessError-28"><span class="linenos">28</span></a>
-</span><span id="AgentHarnessError-29"><a href="#AgentHarnessError-29"><span class="linenos">29</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
-</span><span id="AgentHarnessError-30"><a href="#AgentHarnessError-30"><span class="linenos">30</span></a>
-</span><span id="AgentHarnessError-31"><a href="#AgentHarnessError-31"><span class="linenos">31</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="AgentHarnessError-32"><a href="#AgentHarnessError-32"><span class="linenos">32</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
-</span><span id="AgentHarnessError-33"><a href="#AgentHarnessError-33"><span class="linenos">33</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">hint</span>
-</span><span id="AgentHarnessError-34"><a href="#AgentHarnessError-34"><span class="linenos">34</span></a>
-</span><span id="AgentHarnessError-35"><a href="#AgentHarnessError-35"><span class="linenos">35</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="AgentHarnessError-36"><a href="#AgentHarnessError-36"><span class="linenos">36</span></a>        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
-</span><span id="AgentHarnessError-37"><a href="#AgentHarnessError-37"><span class="linenos">37</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span>
-</span><span id="AgentHarnessError-38"><a href="#AgentHarnessError-38"><span class="linenos">38</span></a>            <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="se">\n</span><span class="s1">  → </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="si">}</span><span class="s1">&#39;</span>
-</span><span id="AgentHarnessError-39"><a href="#AgentHarnessError-39"><span class="linenos">39</span></a>        <span class="k">return</span> <span class="n">base</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="AgentHarnessError-35"><a href="#AgentHarnessError-35"><span class="linenos">35</span></a><span class="k">class</span><span class="w"> </span><span class="nc">AgentHarnessError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+</span><span id="AgentHarnessError-36"><a href="#AgentHarnessError-36"><span class="linenos">36</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for all TeaAgent harness errors.</span>
+</span><span id="AgentHarnessError-37"><a href="#AgentHarnessError-37"><span class="linenos">37</span></a>
+</span><span id="AgentHarnessError-38"><a href="#AgentHarnessError-38"><span class="linenos">38</span></a><span class="sd">    Attributes</span>
+</span><span id="AgentHarnessError-39"><a href="#AgentHarnessError-39"><span class="linenos">39</span></a><span class="sd">    ----------</span>
+</span><span id="AgentHarnessError-40"><a href="#AgentHarnessError-40"><span class="linenos">40</span></a><span class="sd">    hint:</span>
+</span><span id="AgentHarnessError-41"><a href="#AgentHarnessError-41"><span class="linenos">41</span></a><span class="sd">        A short, actionable remediation message shown to the user.  When set,</span>
+</span><span id="AgentHarnessError-42"><a href="#AgentHarnessError-42"><span class="linenos">42</span></a><span class="sd">        CLI error formatters should append it after the primary message so the</span>
+</span><span id="AgentHarnessError-43"><a href="#AgentHarnessError-43"><span class="linenos">43</span></a><span class="sd">        user knows what to try next.</span>
+</span><span id="AgentHarnessError-44"><a href="#AgentHarnessError-44"><span class="linenos">44</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="AgentHarnessError-45"><a href="#AgentHarnessError-45"><span class="linenos">45</span></a>
+</span><span id="AgentHarnessError-46"><a href="#AgentHarnessError-46"><span class="linenos">46</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="AgentHarnessError-47"><a href="#AgentHarnessError-47"><span class="linenos">47</span></a>
+</span><span id="AgentHarnessError-48"><a href="#AgentHarnessError-48"><span class="linenos">48</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="AgentHarnessError-49"><a href="#AgentHarnessError-49"><span class="linenos">49</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</span><span id="AgentHarnessError-50"><a href="#AgentHarnessError-50"><span class="linenos">50</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">hint</span>
+</span><span id="AgentHarnessError-51"><a href="#AgentHarnessError-51"><span class="linenos">51</span></a>
+</span><span id="AgentHarnessError-52"><a href="#AgentHarnessError-52"><span class="linenos">52</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="AgentHarnessError-53"><a href="#AgentHarnessError-53"><span class="linenos">53</span></a>        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+</span><span id="AgentHarnessError-54"><a href="#AgentHarnessError-54"><span class="linenos">54</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span>
+</span><span id="AgentHarnessError-55"><a href="#AgentHarnessError-55"><span class="linenos">55</span></a>            <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="se">\n</span><span class="s1">  → </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="si">}</span><span class="s1">&#39;</span>
+</span><span id="AgentHarnessError-56"><a href="#AgentHarnessError-56"><span class="linenos">56</span></a>        <span class="k">return</span> <span class="n">base</span>
 </span></pre></div>
 
 
@@ -388,20 +592,20 @@ errors defaults to 'strict'.</p>
                             <div id="AgentHarnessError.__init__" class="classattr">
                                         <input id="AgentHarnessError.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="name">AgentHarnessError</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">message</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="AgentHarnessError.__init__-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#AgentHarnessError.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="AgentHarnessError.__init__-31"><a href="#AgentHarnessError.__init__-31"><span class="linenos">31</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="AgentHarnessError.__init__-32"><a href="#AgentHarnessError.__init__-32"><span class="linenos">32</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
-</span><span id="AgentHarnessError.__init__-33"><a href="#AgentHarnessError.__init__-33"><span class="linenos">33</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">hint</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="AgentHarnessError.__init__-48"><a href="#AgentHarnessError.__init__-48"><span class="linenos">48</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="AgentHarnessError.__init__-49"><a href="#AgentHarnessError.__init__-49"><span class="linenos">49</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</span><span id="AgentHarnessError.__init__-50"><a href="#AgentHarnessError.__init__-50"><span class="linenos">50</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">hint</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="AgentHarnessError.category" class="classattr">
@@ -409,29 +613,29 @@ errors defaults to 'strict'.</p>
             <span class="name">category</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.SYSTEM">ErrorCategory.SYSTEM</a>: &#39;system&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#AgentHarnessError.category"></a>
-    
-    
+
+
 
                             </div>
                             <div id="AgentHarnessError.hint" class="classattr">
                                 <div class="attr variable">
             <span class="name">hint</span><span class="annotation">: str | None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#AgentHarnessError.hint"></a>
-    
-    
+
+
 
                             </div>
                 </section>
                 <section id="BudgetExceededError">
                             <input id="BudgetExceededError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">BudgetExceededError</span><wbr>(<span class="base"><a href="#AgentHarnessError">AgentHarnessError</a></span>):
 
@@ -439,18 +643,18 @@ errors defaults to 'strict'.</p>
 
     </div>
     <a class="headerlink" href="#BudgetExceededError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="BudgetExceededError-42"><a href="#BudgetExceededError-42"><span class="linenos">42</span></a><span class="k">class</span><span class="w"> </span><span class="nc">BudgetExceededError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="BudgetExceededError-43"><a href="#BudgetExceededError-43"><span class="linenos">43</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
-</span><span id="BudgetExceededError-44"><a href="#BudgetExceededError-44"><span class="linenos">44</span></a>
-</span><span id="BudgetExceededError-45"><a href="#BudgetExceededError-45"><span class="linenos">45</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="BudgetExceededError-46"><a href="#BudgetExceededError-46"><span class="linenos">46</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="BudgetExceededError-47"><a href="#BudgetExceededError-47"><span class="linenos">47</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="BudgetExceededError-48"><a href="#BudgetExceededError-48"><span class="linenos">48</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="BudgetExceededError-49"><a href="#BudgetExceededError-49"><span class="linenos">49</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="BudgetExceededError-50"><a href="#BudgetExceededError-50"><span class="linenos">50</span></a>                <span class="s1">&#39;Increase max_iterations / max_tool_calls / max_estimated_cost_cents &#39;</span>
-</span><span id="BudgetExceededError-51"><a href="#BudgetExceededError-51"><span class="linenos">51</span></a>                <span class="s1">&#39;in RunBudget, or break the task into smaller subtasks.&#39;</span>
-</span><span id="BudgetExceededError-52"><a href="#BudgetExceededError-52"><span class="linenos">52</span></a>            <span class="p">),</span>
-</span><span id="BudgetExceededError-53"><a href="#BudgetExceededError-53"><span class="linenos">53</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="BudgetExceededError-59"><a href="#BudgetExceededError-59"><span class="linenos">59</span></a><span class="k">class</span><span class="w"> </span><span class="nc">BudgetExceededError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="BudgetExceededError-60"><a href="#BudgetExceededError-60"><span class="linenos">60</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
+</span><span id="BudgetExceededError-61"><a href="#BudgetExceededError-61"><span class="linenos">61</span></a>
+</span><span id="BudgetExceededError-62"><a href="#BudgetExceededError-62"><span class="linenos">62</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="BudgetExceededError-63"><a href="#BudgetExceededError-63"><span class="linenos">63</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="BudgetExceededError-64"><a href="#BudgetExceededError-64"><span class="linenos">64</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="BudgetExceededError-65"><a href="#BudgetExceededError-65"><span class="linenos">65</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="BudgetExceededError-66"><a href="#BudgetExceededError-66"><span class="linenos">66</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="BudgetExceededError-67"><a href="#BudgetExceededError-67"><span class="linenos">67</span></a>                <span class="s1">&#39;Increase max_iterations / max_tool_calls / max_estimated_cost_cents &#39;</span>
+</span><span id="BudgetExceededError-68"><a href="#BudgetExceededError-68"><span class="linenos">68</span></a>                <span class="s1">&#39;in RunBudget, or break the task into smaller subtasks.&#39;</span>
+</span><span id="BudgetExceededError-69"><a href="#BudgetExceededError-69"><span class="linenos">69</span></a>            <span class="p">),</span>
+</span><span id="BudgetExceededError-70"><a href="#BudgetExceededError-70"><span class="linenos">70</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
@@ -468,26 +672,26 @@ errors defaults to 'strict'.</p>
                             <div id="BudgetExceededError.__init__" class="classattr">
                                         <input id="BudgetExceededError.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="name">BudgetExceededError</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">message</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="BudgetExceededError.__init__-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#BudgetExceededError.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="BudgetExceededError.__init__-45"><a href="#BudgetExceededError.__init__-45"><span class="linenos">45</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="BudgetExceededError.__init__-46"><a href="#BudgetExceededError.__init__-46"><span class="linenos">46</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="BudgetExceededError.__init__-47"><a href="#BudgetExceededError.__init__-47"><span class="linenos">47</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="BudgetExceededError.__init__-48"><a href="#BudgetExceededError.__init__-48"><span class="linenos">48</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="BudgetExceededError.__init__-49"><a href="#BudgetExceededError.__init__-49"><span class="linenos">49</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="BudgetExceededError.__init__-50"><a href="#BudgetExceededError.__init__-50"><span class="linenos">50</span></a>                <span class="s1">&#39;Increase max_iterations / max_tool_calls / max_estimated_cost_cents &#39;</span>
-</span><span id="BudgetExceededError.__init__-51"><a href="#BudgetExceededError.__init__-51"><span class="linenos">51</span></a>                <span class="s1">&#39;in RunBudget, or break the task into smaller subtasks.&#39;</span>
-</span><span id="BudgetExceededError.__init__-52"><a href="#BudgetExceededError.__init__-52"><span class="linenos">52</span></a>            <span class="p">),</span>
-</span><span id="BudgetExceededError.__init__-53"><a href="#BudgetExceededError.__init__-53"><span class="linenos">53</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="BudgetExceededError.__init__-62"><a href="#BudgetExceededError.__init__-62"><span class="linenos">62</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="BudgetExceededError.__init__-63"><a href="#BudgetExceededError.__init__-63"><span class="linenos">63</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="BudgetExceededError.__init__-64"><a href="#BudgetExceededError.__init__-64"><span class="linenos">64</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="BudgetExceededError.__init__-65"><a href="#BudgetExceededError.__init__-65"><span class="linenos">65</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="BudgetExceededError.__init__-66"><a href="#BudgetExceededError.__init__-66"><span class="linenos">66</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="BudgetExceededError.__init__-67"><a href="#BudgetExceededError.__init__-67"><span class="linenos">67</span></a>                <span class="s1">&#39;Increase max_iterations / max_tool_calls / max_estimated_cost_cents &#39;</span>
+</span><span id="BudgetExceededError.__init__-68"><a href="#BudgetExceededError.__init__-68"><span class="linenos">68</span></a>                <span class="s1">&#39;in RunBudget, or break the task into smaller subtasks.&#39;</span>
+</span><span id="BudgetExceededError.__init__-69"><a href="#BudgetExceededError.__init__-69"><span class="linenos">69</span></a>            <span class="p">),</span>
+</span><span id="BudgetExceededError.__init__-70"><a href="#BudgetExceededError.__init__-70"><span class="linenos">70</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="BudgetExceededError.category" class="classattr">
@@ -495,11 +699,11 @@ errors defaults to 'strict'.</p>
             <span class="name">category</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.MODEL_LOGIC">ErrorCategory.MODEL_LOGIC</a>: &#39;model_logic&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#BudgetExceededError.category"></a>
-    
-    
+
+
 
                             </div>
                             <div class="inherited">
@@ -515,7 +719,7 @@ errors defaults to 'strict'.</p>
                 <section id="ToolValidationError">
                             <input id="ToolValidationError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">ToolValidationError</span><wbr>(<span class="base"><a href="#AgentHarnessError">AgentHarnessError</a></span>):
 
@@ -523,18 +727,18 @@ errors defaults to 'strict'.</p>
 
     </div>
     <a class="headerlink" href="#ToolValidationError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolValidationError-56"><a href="#ToolValidationError-56"><span class="linenos">56</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolValidationError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="ToolValidationError-57"><a href="#ToolValidationError-57"><span class="linenos">57</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
-</span><span id="ToolValidationError-58"><a href="#ToolValidationError-58"><span class="linenos">58</span></a>
-</span><span id="ToolValidationError-59"><a href="#ToolValidationError-59"><span class="linenos">59</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ToolValidationError-60"><a href="#ToolValidationError-60"><span class="linenos">60</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="ToolValidationError-61"><a href="#ToolValidationError-61"><span class="linenos">61</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="ToolValidationError-62"><a href="#ToolValidationError-62"><span class="linenos">62</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="ToolValidationError-63"><a href="#ToolValidationError-63"><span class="linenos">63</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="ToolValidationError-64"><a href="#ToolValidationError-64"><span class="linenos">64</span></a>                <span class="s1">&#39;The model returned a malformed decision.  &#39;</span>
-</span><span id="ToolValidationError-65"><a href="#ToolValidationError-65"><span class="linenos">65</span></a>                <span class="s1">&#39;Try re-running with a more capable model or a clearer task description.&#39;</span>
-</span><span id="ToolValidationError-66"><a href="#ToolValidationError-66"><span class="linenos">66</span></a>            <span class="p">),</span>
-</span><span id="ToolValidationError-67"><a href="#ToolValidationError-67"><span class="linenos">67</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolValidationError-73"><a href="#ToolValidationError-73"><span class="linenos">73</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolValidationError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="ToolValidationError-74"><a href="#ToolValidationError-74"><span class="linenos">74</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">MODEL_LOGIC</span>
+</span><span id="ToolValidationError-75"><a href="#ToolValidationError-75"><span class="linenos">75</span></a>
+</span><span id="ToolValidationError-76"><a href="#ToolValidationError-76"><span class="linenos">76</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ToolValidationError-77"><a href="#ToolValidationError-77"><span class="linenos">77</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolValidationError-78"><a href="#ToolValidationError-78"><span class="linenos">78</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="ToolValidationError-79"><a href="#ToolValidationError-79"><span class="linenos">79</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="ToolValidationError-80"><a href="#ToolValidationError-80"><span class="linenos">80</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="ToolValidationError-81"><a href="#ToolValidationError-81"><span class="linenos">81</span></a>                <span class="s1">&#39;The model returned a malformed decision.  &#39;</span>
+</span><span id="ToolValidationError-82"><a href="#ToolValidationError-82"><span class="linenos">82</span></a>                <span class="s1">&#39;Try re-running with a more capable model or a clearer task description.&#39;</span>
+</span><span id="ToolValidationError-83"><a href="#ToolValidationError-83"><span class="linenos">83</span></a>            <span class="p">),</span>
+</span><span id="ToolValidationError-84"><a href="#ToolValidationError-84"><span class="linenos">84</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
@@ -552,26 +756,26 @@ errors defaults to 'strict'.</p>
                             <div id="ToolValidationError.__init__" class="classattr">
                                         <input id="ToolValidationError.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="name">ToolValidationError</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">message</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="ToolValidationError.__init__-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#ToolValidationError.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolValidationError.__init__-59"><a href="#ToolValidationError.__init__-59"><span class="linenos">59</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ToolValidationError.__init__-60"><a href="#ToolValidationError.__init__-60"><span class="linenos">60</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="ToolValidationError.__init__-61"><a href="#ToolValidationError.__init__-61"><span class="linenos">61</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="ToolValidationError.__init__-62"><a href="#ToolValidationError.__init__-62"><span class="linenos">62</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="ToolValidationError.__init__-63"><a href="#ToolValidationError.__init__-63"><span class="linenos">63</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="ToolValidationError.__init__-64"><a href="#ToolValidationError.__init__-64"><span class="linenos">64</span></a>                <span class="s1">&#39;The model returned a malformed decision.  &#39;</span>
-</span><span id="ToolValidationError.__init__-65"><a href="#ToolValidationError.__init__-65"><span class="linenos">65</span></a>                <span class="s1">&#39;Try re-running with a more capable model or a clearer task description.&#39;</span>
-</span><span id="ToolValidationError.__init__-66"><a href="#ToolValidationError.__init__-66"><span class="linenos">66</span></a>            <span class="p">),</span>
-</span><span id="ToolValidationError.__init__-67"><a href="#ToolValidationError.__init__-67"><span class="linenos">67</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolValidationError.__init__-76"><a href="#ToolValidationError.__init__-76"><span class="linenos">76</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ToolValidationError.__init__-77"><a href="#ToolValidationError.__init__-77"><span class="linenos">77</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolValidationError.__init__-78"><a href="#ToolValidationError.__init__-78"><span class="linenos">78</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="ToolValidationError.__init__-79"><a href="#ToolValidationError.__init__-79"><span class="linenos">79</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="ToolValidationError.__init__-80"><a href="#ToolValidationError.__init__-80"><span class="linenos">80</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="ToolValidationError.__init__-81"><a href="#ToolValidationError.__init__-81"><span class="linenos">81</span></a>                <span class="s1">&#39;The model returned a malformed decision.  &#39;</span>
+</span><span id="ToolValidationError.__init__-82"><a href="#ToolValidationError.__init__-82"><span class="linenos">82</span></a>                <span class="s1">&#39;Try re-running with a more capable model or a clearer task description.&#39;</span>
+</span><span id="ToolValidationError.__init__-83"><a href="#ToolValidationError.__init__-83"><span class="linenos">83</span></a>            <span class="p">),</span>
+</span><span id="ToolValidationError.__init__-84"><a href="#ToolValidationError.__init__-84"><span class="linenos">84</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="ToolValidationError.category" class="classattr">
@@ -579,11 +783,11 @@ errors defaults to 'strict'.</p>
             <span class="name">category</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.MODEL_LOGIC">ErrorCategory.MODEL_LOGIC</a>: &#39;model_logic&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ToolValidationError.category"></a>
-    
-    
+
+
 
                             </div>
                             <div class="inherited">
@@ -599,7 +803,7 @@ errors defaults to 'strict'.</p>
                 <section id="ToolPermissionError">
                             <input id="ToolPermissionError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">ToolPermissionError</span><wbr>(<span class="base"><a href="#AgentHarnessError">AgentHarnessError</a></span>):
 
@@ -607,18 +811,25 @@ errors defaults to 'strict'.</p>
 
     </div>
     <a class="headerlink" href="#ToolPermissionError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolPermissionError-70"><a href="#ToolPermissionError-70"><span class="linenos">70</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolPermissionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="ToolPermissionError-71"><a href="#ToolPermissionError-71"><span class="linenos">71</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">PERMISSION</span>
-</span><span id="ToolPermissionError-72"><a href="#ToolPermissionError-72"><span class="linenos">72</span></a>
-</span><span id="ToolPermissionError-73"><a href="#ToolPermissionError-73"><span class="linenos">73</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ToolPermissionError-74"><a href="#ToolPermissionError-74"><span class="linenos">74</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="ToolPermissionError-75"><a href="#ToolPermissionError-75"><span class="linenos">75</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="ToolPermissionError-76"><a href="#ToolPermissionError-76"><span class="linenos">76</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="ToolPermissionError-77"><a href="#ToolPermissionError-77"><span class="linenos">77</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="ToolPermissionError-78"><a href="#ToolPermissionError-78"><span class="linenos">78</span></a>                <span class="s1">&#39;Use --permission-mode allow (or prompt/approve the call) &#39;</span>
-</span><span id="ToolPermissionError-79"><a href="#ToolPermissionError-79"><span class="linenos">79</span></a>                <span class="s1">&#39;to permit this operation.&#39;</span>
-</span><span id="ToolPermissionError-80"><a href="#ToolPermissionError-80"><span class="linenos">80</span></a>            <span class="p">),</span>
-</span><span id="ToolPermissionError-81"><a href="#ToolPermissionError-81"><span class="linenos">81</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolPermissionError-87"><a href="#ToolPermissionError-87"><span class="linenos"> 87</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolPermissionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="ToolPermissionError-88"><a href="#ToolPermissionError-88"><span class="linenos"> 88</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">PERMISSION</span>
+</span><span id="ToolPermissionError-89"><a href="#ToolPermissionError-89"><span class="linenos"> 89</span></a>
+</span><span id="ToolPermissionError-90"><a href="#ToolPermissionError-90"><span class="linenos"> 90</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolPermissionError-91"><a href="#ToolPermissionError-91"><span class="linenos"> 91</span></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="ToolPermissionError-92"><a href="#ToolPermissionError-92"><span class="linenos"> 92</span></a>        <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="ToolPermissionError-93"><a href="#ToolPermissionError-93"><span class="linenos"> 93</span></a>        <span class="o">*</span><span class="p">,</span>
+</span><span id="ToolPermissionError-94"><a href="#ToolPermissionError-94"><span class="linenos"> 94</span></a>        <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="ToolPermissionError-95"><a href="#ToolPermissionError-95"><span class="linenos"> 95</span></a>        <span class="n">reason_code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DenialReasonCode</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="ToolPermissionError-96"><a href="#ToolPermissionError-96"><span class="linenos"> 96</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ToolPermissionError-97"><a href="#ToolPermissionError-97"><span class="linenos"> 97</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolPermissionError-98"><a href="#ToolPermissionError-98"><span class="linenos"> 98</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="ToolPermissionError-99"><a href="#ToolPermissionError-99"><span class="linenos"> 99</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="ToolPermissionError-100"><a href="#ToolPermissionError-100"><span class="linenos">100</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="ToolPermissionError-101"><a href="#ToolPermissionError-101"><span class="linenos">101</span></a>                <span class="s1">&#39;Use --permission-mode allow (or prompt/approve the call) &#39;</span>
+</span><span id="ToolPermissionError-102"><a href="#ToolPermissionError-102"><span class="linenos">102</span></a>                <span class="s1">&#39;to permit this operation.&#39;</span>
+</span><span id="ToolPermissionError-103"><a href="#ToolPermissionError-103"><span class="linenos">103</span></a>            <span class="p">),</span>
+</span><span id="ToolPermissionError-104"><a href="#ToolPermissionError-104"><span class="linenos">104</span></a>        <span class="p">)</span>
+</span><span id="ToolPermissionError-105"><a href="#ToolPermissionError-105"><span class="linenos">105</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">reason_code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DenialReasonCode</span><span class="p">]</span> <span class="o">=</span> <span class="n">reason_code</span>
 </span></pre></div>
 
 
@@ -636,26 +847,33 @@ errors defaults to 'strict'.</p>
                             <div id="ToolPermissionError.__init__" class="classattr">
                                         <input id="ToolPermissionError.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
-        <span class="name">ToolPermissionError</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">message</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+
+        <span class="name">ToolPermissionError</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">message</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">reason_code</span><span class="p">:</span> <span class="n"><a href="#DenialReasonCode">DenialReasonCode</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="ToolPermissionError.__init__-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#ToolPermissionError.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolPermissionError.__init__-73"><a href="#ToolPermissionError.__init__-73"><span class="linenos">73</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ToolPermissionError.__init__-74"><a href="#ToolPermissionError.__init__-74"><span class="linenos">74</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="ToolPermissionError.__init__-75"><a href="#ToolPermissionError.__init__-75"><span class="linenos">75</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="ToolPermissionError.__init__-76"><a href="#ToolPermissionError.__init__-76"><span class="linenos">76</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="ToolPermissionError.__init__-77"><a href="#ToolPermissionError.__init__-77"><span class="linenos">77</span></a>            <span class="ow">or</span> <span class="p">(</span>
-</span><span id="ToolPermissionError.__init__-78"><a href="#ToolPermissionError.__init__-78"><span class="linenos">78</span></a>                <span class="s1">&#39;Use --permission-mode allow (or prompt/approve the call) &#39;</span>
-</span><span id="ToolPermissionError.__init__-79"><a href="#ToolPermissionError.__init__-79"><span class="linenos">79</span></a>                <span class="s1">&#39;to permit this operation.&#39;</span>
-</span><span id="ToolPermissionError.__init__-80"><a href="#ToolPermissionError.__init__-80"><span class="linenos">80</span></a>            <span class="p">),</span>
-</span><span id="ToolPermissionError.__init__-81"><a href="#ToolPermissionError.__init__-81"><span class="linenos">81</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolPermissionError.__init__-90"><a href="#ToolPermissionError.__init__-90"><span class="linenos"> 90</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolPermissionError.__init__-91"><a href="#ToolPermissionError.__init__-91"><span class="linenos"> 91</span></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="ToolPermissionError.__init__-92"><a href="#ToolPermissionError.__init__-92"><span class="linenos"> 92</span></a>        <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="ToolPermissionError.__init__-93"><a href="#ToolPermissionError.__init__-93"><span class="linenos"> 93</span></a>        <span class="o">*</span><span class="p">,</span>
+</span><span id="ToolPermissionError.__init__-94"><a href="#ToolPermissionError.__init__-94"><span class="linenos"> 94</span></a>        <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="ToolPermissionError.__init__-95"><a href="#ToolPermissionError.__init__-95"><span class="linenos"> 95</span></a>        <span class="n">reason_code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DenialReasonCode</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="ToolPermissionError.__init__-96"><a href="#ToolPermissionError.__init__-96"><span class="linenos"> 96</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ToolPermissionError.__init__-97"><a href="#ToolPermissionError.__init__-97"><span class="linenos"> 97</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolPermissionError.__init__-98"><a href="#ToolPermissionError.__init__-98"><span class="linenos"> 98</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="ToolPermissionError.__init__-99"><a href="#ToolPermissionError.__init__-99"><span class="linenos"> 99</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="ToolPermissionError.__init__-100"><a href="#ToolPermissionError.__init__-100"><span class="linenos">100</span></a>            <span class="ow">or</span> <span class="p">(</span>
+</span><span id="ToolPermissionError.__init__-101"><a href="#ToolPermissionError.__init__-101"><span class="linenos">101</span></a>                <span class="s1">&#39;Use --permission-mode allow (or prompt/approve the call) &#39;</span>
+</span><span id="ToolPermissionError.__init__-102"><a href="#ToolPermissionError.__init__-102"><span class="linenos">102</span></a>                <span class="s1">&#39;to permit this operation.&#39;</span>
+</span><span id="ToolPermissionError.__init__-103"><a href="#ToolPermissionError.__init__-103"><span class="linenos">103</span></a>            <span class="p">),</span>
+</span><span id="ToolPermissionError.__init__-104"><a href="#ToolPermissionError.__init__-104"><span class="linenos">104</span></a>        <span class="p">)</span>
+</span><span id="ToolPermissionError.__init__-105"><a href="#ToolPermissionError.__init__-105"><span class="linenos">105</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">reason_code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DenialReasonCode</span><span class="p">]</span> <span class="o">=</span> <span class="n">reason_code</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="ToolPermissionError.category" class="classattr">
@@ -663,11 +881,22 @@ errors defaults to 'strict'.</p>
             <span class="name">category</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.PERMISSION">ErrorCategory.PERMISSION</a>: &#39;permission&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ToolPermissionError.category"></a>
-    
-    
+
+
+
+                            </div>
+                            <div id="ToolPermissionError.reason_code" class="classattr">
+                                <div class="attr variable">
+            <span class="name">reason_code</span><span class="annotation">: <a href="#DenialReasonCode">DenialReasonCode</a> | None</span>
+
+
+    </div>
+    <a class="headerlink" href="#ToolPermissionError.reason_code"></a>
+
+
 
                             </div>
                             <div class="inherited">
@@ -683,7 +912,7 @@ errors defaults to 'strict'.</p>
                 <section id="ToolExecutionError">
                             <input id="ToolExecutionError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">ToolExecutionError</span><wbr>(<span class="base"><a href="#AgentHarnessError">AgentHarnessError</a></span>):
 
@@ -691,15 +920,15 @@ errors defaults to 'strict'.</p>
 
     </div>
     <a class="headerlink" href="#ToolExecutionError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolExecutionError-84"><a href="#ToolExecutionError-84"><span class="linenos">84</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolExecutionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="ToolExecutionError-85"><a href="#ToolExecutionError-85"><span class="linenos">85</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
-</span><span id="ToolExecutionError-86"><a href="#ToolExecutionError-86"><span class="linenos">86</span></a>
-</span><span id="ToolExecutionError-87"><a href="#ToolExecutionError-87"><span class="linenos">87</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ToolExecutionError-88"><a href="#ToolExecutionError-88"><span class="linenos">88</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="ToolExecutionError-89"><a href="#ToolExecutionError-89"><span class="linenos">89</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="ToolExecutionError-90"><a href="#ToolExecutionError-90"><span class="linenos">90</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="ToolExecutionError-91"><a href="#ToolExecutionError-91"><span class="linenos">91</span></a>            <span class="ow">or</span> <span class="s1">&#39;Check that the workspace path is writable and the command is valid.&#39;</span><span class="p">,</span>
-</span><span id="ToolExecutionError-92"><a href="#ToolExecutionError-92"><span class="linenos">92</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolExecutionError-108"><a href="#ToolExecutionError-108"><span class="linenos">108</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolExecutionError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="ToolExecutionError-109"><a href="#ToolExecutionError-109"><span class="linenos">109</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="ToolExecutionError-110"><a href="#ToolExecutionError-110"><span class="linenos">110</span></a>
+</span><span id="ToolExecutionError-111"><a href="#ToolExecutionError-111"><span class="linenos">111</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ToolExecutionError-112"><a href="#ToolExecutionError-112"><span class="linenos">112</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolExecutionError-113"><a href="#ToolExecutionError-113"><span class="linenos">113</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="ToolExecutionError-114"><a href="#ToolExecutionError-114"><span class="linenos">114</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="ToolExecutionError-115"><a href="#ToolExecutionError-115"><span class="linenos">115</span></a>            <span class="ow">or</span> <span class="s1">&#39;Check that the workspace path is writable and the command is valid.&#39;</span><span class="p">,</span>
+</span><span id="ToolExecutionError-116"><a href="#ToolExecutionError-116"><span class="linenos">116</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
@@ -717,23 +946,23 @@ errors defaults to 'strict'.</p>
                             <div id="ToolExecutionError.__init__" class="classattr">
                                         <input id="ToolExecutionError.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="name">ToolExecutionError</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">message</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="ToolExecutionError.__init__-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#ToolExecutionError.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolExecutionError.__init__-87"><a href="#ToolExecutionError.__init__-87"><span class="linenos">87</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ToolExecutionError.__init__-88"><a href="#ToolExecutionError.__init__-88"><span class="linenos">88</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="ToolExecutionError.__init__-89"><a href="#ToolExecutionError.__init__-89"><span class="linenos">89</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="ToolExecutionError.__init__-90"><a href="#ToolExecutionError.__init__-90"><span class="linenos">90</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="ToolExecutionError.__init__-91"><a href="#ToolExecutionError.__init__-91"><span class="linenos">91</span></a>            <span class="ow">or</span> <span class="s1">&#39;Check that the workspace path is writable and the command is valid.&#39;</span><span class="p">,</span>
-</span><span id="ToolExecutionError.__init__-92"><a href="#ToolExecutionError.__init__-92"><span class="linenos">92</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ToolExecutionError.__init__-111"><a href="#ToolExecutionError.__init__-111"><span class="linenos">111</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ToolExecutionError.__init__-112"><a href="#ToolExecutionError.__init__-112"><span class="linenos">112</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ToolExecutionError.__init__-113"><a href="#ToolExecutionError.__init__-113"><span class="linenos">113</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="ToolExecutionError.__init__-114"><a href="#ToolExecutionError.__init__-114"><span class="linenos">114</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="ToolExecutionError.__init__-115"><a href="#ToolExecutionError.__init__-115"><span class="linenos">115</span></a>            <span class="ow">or</span> <span class="s1">&#39;Check that the workspace path is writable and the command is valid.&#39;</span><span class="p">,</span>
+</span><span id="ToolExecutionError.__init__-116"><a href="#ToolExecutionError.__init__-116"><span class="linenos">116</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="ToolExecutionError.category" class="classattr">
@@ -741,11 +970,11 @@ errors defaults to 'strict'.</p>
             <span class="name">category</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.SYSTEM">ErrorCategory.SYSTEM</a>: &#39;system&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ToolExecutionError.category"></a>
-    
-    
+
+
 
                             </div>
                             <div class="inherited">
@@ -761,7 +990,7 @@ errors defaults to 'strict'.</p>
                 <section id="RunCancelledError">
                             <input id="RunCancelledError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">RunCancelledError</span><wbr>(<span class="base"><a href="#AgentHarnessError">AgentHarnessError</a></span>):
 
@@ -769,19 +998,19 @@ errors defaults to 'strict'.</p>
 
     </div>
     <a class="headerlink" href="#RunCancelledError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="RunCancelledError-95"><a href="#RunCancelledError-95"><span class="linenos"> 95</span></a><span class="k">class</span><span class="w"> </span><span class="nc">RunCancelledError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
-</span><span id="RunCancelledError-96"><a href="#RunCancelledError-96"><span class="linenos"> 96</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a run is cancelled via a cancel token.&quot;&quot;&quot;</span>
-</span><span id="RunCancelledError-97"><a href="#RunCancelledError-97"><span class="linenos"> 97</span></a>
-</span><span id="RunCancelledError-98"><a href="#RunCancelledError-98"><span class="linenos"> 98</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
-</span><span id="RunCancelledError-99"><a href="#RunCancelledError-99"><span class="linenos"> 99</span></a>
-</span><span id="RunCancelledError-100"><a href="#RunCancelledError-100"><span class="linenos">100</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="RunCancelledError-101"><a href="#RunCancelledError-101"><span class="linenos">101</span></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run cancelled&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="RunCancelledError-102"><a href="#RunCancelledError-102"><span class="linenos">102</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="RunCancelledError-103"><a href="#RunCancelledError-103"><span class="linenos">103</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="RunCancelledError-104"><a href="#RunCancelledError-104"><span class="linenos">104</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="RunCancelledError-105"><a href="#RunCancelledError-105"><span class="linenos">105</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="RunCancelledError-106"><a href="#RunCancelledError-106"><span class="linenos">106</span></a>            <span class="ow">or</span> <span class="s1">&#39;Use `teaagent agent resume &lt;run_id&gt;` to continue from the last checkpoint.&#39;</span><span class="p">,</span>
-</span><span id="RunCancelledError-107"><a href="#RunCancelledError-107"><span class="linenos">107</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="RunCancelledError-119"><a href="#RunCancelledError-119"><span class="linenos">119</span></a><span class="k">class</span><span class="w"> </span><span class="nc">RunCancelledError</span><span class="p">(</span><span class="n">AgentHarnessError</span><span class="p">):</span>
+</span><span id="RunCancelledError-120"><a href="#RunCancelledError-120"><span class="linenos">120</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a run is cancelled via a cancel token.&quot;&quot;&quot;</span>
+</span><span id="RunCancelledError-121"><a href="#RunCancelledError-121"><span class="linenos">121</span></a>
+</span><span id="RunCancelledError-122"><a href="#RunCancelledError-122"><span class="linenos">122</span></a>    <span class="n">category</span> <span class="o">=</span> <span class="n">ErrorCategory</span><span class="o">.</span><span class="n">SYSTEM</span>
+</span><span id="RunCancelledError-123"><a href="#RunCancelledError-123"><span class="linenos">123</span></a>
+</span><span id="RunCancelledError-124"><a href="#RunCancelledError-124"><span class="linenos">124</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="RunCancelledError-125"><a href="#RunCancelledError-125"><span class="linenos">125</span></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run cancelled&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="RunCancelledError-126"><a href="#RunCancelledError-126"><span class="linenos">126</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="RunCancelledError-127"><a href="#RunCancelledError-127"><span class="linenos">127</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="RunCancelledError-128"><a href="#RunCancelledError-128"><span class="linenos">128</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="RunCancelledError-129"><a href="#RunCancelledError-129"><span class="linenos">129</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="RunCancelledError-130"><a href="#RunCancelledError-130"><span class="linenos">130</span></a>            <span class="ow">or</span> <span class="s1">&#39;Use `teaagent agent resume &lt;run_id&gt;` to continue from the last checkpoint.&#39;</span><span class="p">,</span>
+</span><span id="RunCancelledError-131"><a href="#RunCancelledError-131"><span class="linenos">131</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
@@ -792,25 +1021,25 @@ errors defaults to 'strict'.</p>
                             <div id="RunCancelledError.__init__" class="classattr">
                                         <input id="RunCancelledError.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="name">RunCancelledError</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run cancelled&#39;</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="RunCancelledError.__init__-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#RunCancelledError.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="RunCancelledError.__init__-100"><a href="#RunCancelledError.__init__-100"><span class="linenos">100</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="RunCancelledError.__init__-101"><a href="#RunCancelledError.__init__-101"><span class="linenos">101</span></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run cancelled&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="RunCancelledError.__init__-102"><a href="#RunCancelledError.__init__-102"><span class="linenos">102</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="RunCancelledError.__init__-103"><a href="#RunCancelledError.__init__-103"><span class="linenos">103</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="RunCancelledError.__init__-104"><a href="#RunCancelledError.__init__-104"><span class="linenos">104</span></a>            <span class="n">message</span><span class="p">,</span>
-</span><span id="RunCancelledError.__init__-105"><a href="#RunCancelledError.__init__-105"><span class="linenos">105</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
-</span><span id="RunCancelledError.__init__-106"><a href="#RunCancelledError.__init__-106"><span class="linenos">106</span></a>            <span class="ow">or</span> <span class="s1">&#39;Use `teaagent agent resume &lt;run_id&gt;` to continue from the last checkpoint.&#39;</span><span class="p">,</span>
-</span><span id="RunCancelledError.__init__-107"><a href="#RunCancelledError.__init__-107"><span class="linenos">107</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="RunCancelledError.__init__-124"><a href="#RunCancelledError.__init__-124"><span class="linenos">124</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="RunCancelledError.__init__-125"><a href="#RunCancelledError.__init__-125"><span class="linenos">125</span></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run cancelled&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="RunCancelledError.__init__-126"><a href="#RunCancelledError.__init__-126"><span class="linenos">126</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="RunCancelledError.__init__-127"><a href="#RunCancelledError.__init__-127"><span class="linenos">127</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="RunCancelledError.__init__-128"><a href="#RunCancelledError.__init__-128"><span class="linenos">128</span></a>            <span class="n">message</span><span class="p">,</span>
+</span><span id="RunCancelledError.__init__-129"><a href="#RunCancelledError.__init__-129"><span class="linenos">129</span></a>            <span class="n">hint</span><span class="o">=</span><span class="n">hint</span>
+</span><span id="RunCancelledError.__init__-130"><a href="#RunCancelledError.__init__-130"><span class="linenos">130</span></a>            <span class="ow">or</span> <span class="s1">&#39;Use `teaagent agent resume &lt;run_id&gt;` to continue from the last checkpoint.&#39;</span><span class="p">,</span>
+</span><span id="RunCancelledError.__init__-131"><a href="#RunCancelledError.__init__-131"><span class="linenos">131</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="RunCancelledError.category" class="classattr">
@@ -818,11 +1047,11 @@ errors defaults to 'strict'.</p>
             <span class="name">category</span>        =
 <span class="default_value">&lt;<a href="#ErrorCategory.SYSTEM">ErrorCategory.SYSTEM</a>: &#39;system&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#RunCancelledError.category"></a>
-    
-    
+
+
 
                             </div>
                             <div class="inherited">

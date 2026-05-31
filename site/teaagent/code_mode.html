@@ -43,6 +43,12 @@
                     <a class="class" href="#ChildProcessCodeModeBackend">ChildProcessCodeModeBackend</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#ChildProcessCodeModeBackend.__init__">ChildProcessCodeModeBackend</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ChildProcessCodeModeBackend.trusted_only">trusted_only</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#ChildProcessCodeModeBackend.execute">execute</a>
                         </li>
                 </ul>
@@ -241,7 +247,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.code_mode    </h1>
 
-                
+
                         <input id="mod-code_mode-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-code_mode-view-source"><span>View Source</span></label>
@@ -383,13 +389,13 @@
                     <div class="attr variable">
             <span class="name">ALLOWED_NODES</span>        =
 <input id="ALLOWED_NODES-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="ALLOWED_NODES-view-value"></label><span class="default_value">{&lt;class &#39;ast.Assign&#39;&gt;, &lt;class &#39;ast.Call&#39;&gt;, &lt;class &#39;ast.BinOp&#39;&gt;, &lt;class &#39;ast.Dict&#39;&gt;, &lt;class &#39;ast.Eq&#39;&gt;, &lt;class &#39;ast.List&#39;&gt;, &lt;class &#39;ast.Lt&#39;&gt;, &lt;class &#39;ast.For&#39;&gt;, &lt;class &#39;ast.Gt&#39;&gt;, &lt;class &#39;ast.Load&#39;&gt;, &lt;class &#39;ast.NotEq&#39;&gt;, &lt;class &#39;ast.UnaryOp&#39;&gt;, &lt;class &#39;ast.Compare&#39;&gt;, &lt;class &#39;ast.Add&#39;&gt;, &lt;class &#39;ast.Constant&#39;&gt;, &lt;class &#39;ast.Div&#39;&gt;, &lt;class &#39;ast.Expr&#39;&gt;, &lt;class &#39;ast.LtE&#39;&gt;, &lt;class &#39;ast.GtE&#39;&gt;, &lt;class &#39;ast.If&#39;&gt;, &lt;class &#39;ast.Module&#39;&gt;, &lt;class &#39;ast.Mult&#39;&gt;, &lt;class &#39;ast.Sub&#39;&gt;, &lt;class &#39;ast.Mod&#39;&gt;, &lt;class &#39;ast.USub&#39;&gt;, &lt;class &#39;ast.Subscript&#39;&gt;, &lt;class &#39;ast.Name&#39;&gt;, &lt;class &#39;ast.Tuple&#39;&gt;, &lt;class &#39;ast.Store&#39;&gt;, &lt;class &#39;ast.In&#39;&gt;}</span>
+            <label class="view-value-button pdoc-button" for="ALLOWED_NODES-view-value"></label><span class="default_value">{&lt;class &#39;ast.Call&#39;&gt;, &lt;class &#39;ast.Assign&#39;&gt;, &lt;class &#39;ast.BinOp&#39;&gt;, &lt;class &#39;ast.Dict&#39;&gt;, &lt;class &#39;ast.Eq&#39;&gt;, &lt;class &#39;ast.List&#39;&gt;, &lt;class &#39;ast.Lt&#39;&gt;, &lt;class &#39;ast.For&#39;&gt;, &lt;class &#39;ast.Gt&#39;&gt;, &lt;class &#39;ast.Load&#39;&gt;, &lt;class &#39;ast.Subscript&#39;&gt;, &lt;class &#39;ast.USub&#39;&gt;, &lt;class &#39;ast.Tuple&#39;&gt;, &lt;class &#39;ast.Store&#39;&gt;, &lt;class &#39;ast.In&#39;&gt;, &lt;class &#39;ast.UnaryOp&#39;&gt;, &lt;class &#39;ast.Add&#39;&gt;, &lt;class &#39;ast.Compare&#39;&gt;, &lt;class &#39;ast.Constant&#39;&gt;, &lt;class &#39;ast.Div&#39;&gt;, &lt;class &#39;ast.Expr&#39;&gt;, &lt;class &#39;ast.LtE&#39;&gt;, &lt;class &#39;ast.GtE&#39;&gt;, &lt;class &#39;ast.If&#39;&gt;, &lt;class &#39;ast.Mult&#39;&gt;, &lt;class &#39;ast.Name&#39;&gt;, &lt;class &#39;ast.NotEq&#39;&gt;, &lt;class &#39;ast.Module&#39;&gt;, &lt;class &#39;ast.Sub&#39;&gt;, &lt;class &#39;ast.Mod&#39;&gt;}</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ALLOWED_NODES"></a>
-    
-    
+
+
 
                 </section>
                 <section id="CONTAINER_CODE_MODE_SCRIPT">
@@ -398,11 +404,11 @@
 <input id="CONTAINER_CODE_MODE_SCRIPT-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
             <label class="view-value-button pdoc-button" for="CONTAINER_CODE_MODE_SCRIPT-view-value"></label><span class="default_value">&#34;\nimport json\nimport sys\nimport traceback\n\nSAFE_BUILTINS = {\n    &#39;abs&#39;: abs,\n    &#39;dict&#39;: dict,\n    &#39;enumerate&#39;: enumerate,\n    &#39;len&#39;: len,\n    &#39;list&#39;: list,\n    &#39;max&#39;: max,\n    &#39;min&#39;: min,\n    &#39;range&#39;: range,\n    &#39;round&#39;: round,\n    &#39;sorted&#39;: sorted,\n    &#39;str&#39;: str,\n    &#39;sum&#39;: sum,\n}\n\ndef validate(value, label):\n    if value is None or isinstance(value, (bool, int, float, str)):\n        return\n    if isinstance(value, (list, tuple)):\n        for index, item in enumerate(value):\n            validate(item, f&#39;{label}[{index}]&#39;)\n        return\n    if isinstance(value, dict):\n        for key, item in value.items():\n            if not isinstance(key, str):\n                raise ValueError(f&#39;{label} contains a non-string key&#39;)\n            validate(item, f&#39;{label}.{key}&#39;)\n        return\n    raise ValueError(f&#39;{label} contains unsupported value type: {type(value).__name__}&#39;)\n\ntry:\n    payload = json.loads(sys.stdin.read())\n    namespace = {&#39;__builtins__&#39;: SAFE_BUILTINS}\n    namespace.update(payload[&#39;inputs&#39;])\n    exec(compile(payload[&#39;code&#39;], &#39;&lt;teaagent-code-mode&gt;&#39;, &#39;exec&#39;), namespace, namespace)\n    variables = {\n        key: value\n        for key, value in namespace.items()\n        if key != &#39;__builtins__&#39; and not key.startswith(&#39;_&#39;)\n    }\n    validate(variables, &#39;variables&#39;)\nexcept Exception as exc:\n    print(json.dumps({&#39;status&#39;: &#39;error&#39;, &#39;error&#39;: f&#39;{type(exc).__name__}: {exc}&#39;, &#39;traceback&#39;: traceback.format_exc()}))\nelse:\n    print(json.dumps({&#39;status&#39;: &#39;ok&#39;, &#39;variables&#39;: variables}))\n&#34;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CONTAINER_CODE_MODE_SCRIPT"></a>
-    
-    
+
+
 
                 </section>
                 <section id="SAFE_BUILTINS">
@@ -411,11 +417,11 @@
 <input id="SAFE_BUILTINS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
             <label class="view-value-button pdoc-button" for="SAFE_BUILTINS-view-value"></label><span class="default_value">{&#39;abs&#39;: &lt;built-in function abs&gt;, &#39;dict&#39;: &lt;class &#39;dict&#39;&gt;, &#39;enumerate&#39;: &lt;class &#39;enumerate&#39;&gt;, &#39;len&#39;: &lt;built-in function len&gt;, &#39;list&#39;: &lt;class &#39;list&#39;&gt;, &#39;max&#39;: &lt;built-in function max&gt;, &#39;min&#39;: &lt;built-in function min&gt;, &#39;range&#39;: &lt;class &#39;range&#39;&gt;, &#39;round&#39;: &lt;built-in function round&gt;, &#39;sorted&#39;: &lt;built-in function sorted&gt;, &#39;str&#39;: &lt;class &#39;str&#39;&gt;, &#39;sum&#39;: &lt;built-in function sum&gt;}</span>
 
-        
+
     </div>
     <a class="headerlink" href="#SAFE_BUILTINS"></a>
-    
-    
+
+
 
                 </section>
                 <section id="ChildProcessCodeModeBackend">
@@ -432,47 +438,87 @@
     <a class="headerlink" href="#ChildProcessCodeModeBackend"></a>
             <div class="pdoc-code codehilite"><pre><span></span><span id="ChildProcessCodeModeBackend-20"><a href="#ChildProcessCodeModeBackend-20"><span class="linenos">20</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="ChildProcessCodeModeBackend-21"><a href="#ChildProcessCodeModeBackend-21"><span class="linenos">21</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ChildProcessCodeModeBackend</span><span class="p">:</span>
-</span><span id="ChildProcessCodeModeBackend-22"><a href="#ChildProcessCodeModeBackend-22"><span class="linenos">22</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span>
-</span><span id="ChildProcessCodeModeBackend-23"><a href="#ChildProcessCodeModeBackend-23"><span class="linenos">23</span></a>        <span class="bp">self</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend-24"><a href="#ChildProcessCodeModeBackend-24"><span class="linenos">24</span></a>        <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend-25"><a href="#ChildProcessCodeModeBackend-25"><span class="linenos">25</span></a>        <span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-</span><span id="ChildProcessCodeModeBackend-26"><a href="#ChildProcessCodeModeBackend-26"><span class="linenos">26</span></a>        <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend-27"><a href="#ChildProcessCodeModeBackend-27"><span class="linenos">27</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CodeModeResult</span><span class="p">:</span>
-</span><span id="ChildProcessCodeModeBackend-28"><a href="#ChildProcessCodeModeBackend-28"><span class="linenos">28</span></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">multiprocessing</span>
-</span><span id="ChildProcessCodeModeBackend-29"><a href="#ChildProcessCodeModeBackend-29"><span class="linenos">29</span></a>        <span class="k">with</span> <span class="n">suppress</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-</span><span id="ChildProcessCodeModeBackend-30"><a href="#ChildProcessCodeModeBackend-30"><span class="linenos">30</span></a>            <span class="c1"># Prefer fork on POSIX to avoid spawn startup overhead in short timeouts.</span>
-</span><span id="ChildProcessCodeModeBackend-31"><a href="#ChildProcessCodeModeBackend-31"><span class="linenos">31</span></a>            <span class="n">ctx</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend-32"><a href="#ChildProcessCodeModeBackend-32"><span class="linenos">32</span></a>        <span class="n">parent_conn</span><span class="p">,</span> <span class="n">child_conn</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Pipe</span><span class="p">(</span><span class="n">duplex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend-33"><a href="#ChildProcessCodeModeBackend-33"><span class="linenos">33</span></a>        <span class="n">process</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span>
-</span><span id="ChildProcessCodeModeBackend-34"><a href="#ChildProcessCodeModeBackend-34"><span class="linenos">34</span></a>            <span class="n">target</span><span class="o">=</span><span class="n">_execute_code_mode_child</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend-35"><a href="#ChildProcessCodeModeBackend-35"><span class="linenos">35</span></a>            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">sandbox</span><span class="p">,</span> <span class="n">child_conn</span><span class="p">),</span>
-</span><span id="ChildProcessCodeModeBackend-36"><a href="#ChildProcessCodeModeBackend-36"><span class="linenos">36</span></a>        <span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend-37"><a href="#ChildProcessCodeModeBackend-37"><span class="linenos">37</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend-38"><a href="#ChildProcessCodeModeBackend-38"><span class="linenos">38</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend-39"><a href="#ChildProcessCodeModeBackend-39"><span class="linenos">39</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
-</span><span id="ChildProcessCodeModeBackend-40"><a href="#ChildProcessCodeModeBackend-40"><span class="linenos">40</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend-41"><a href="#ChildProcessCodeModeBackend-41"><span class="linenos">41</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend-42"><a href="#ChildProcessCodeModeBackend-42"><span class="linenos">42</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode timed out&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend-43"><a href="#ChildProcessCodeModeBackend-43"><span class="linenos">43</span></a>
-</span><span id="ChildProcessCodeModeBackend-44"><a href="#ChildProcessCodeModeBackend-44"><span class="linenos">44</span></a>        <span class="k">if</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">poll</span><span class="p">():</span>
-</span><span id="ChildProcessCodeModeBackend-45"><a href="#ChildProcessCodeModeBackend-45"><span class="linenos">45</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend-46"><a href="#ChildProcessCodeModeBackend-46"><span class="linenos">46</span></a>        <span class="k">else</span><span class="p">:</span>
-</span><span id="ChildProcessCodeModeBackend-47"><a href="#ChildProcessCodeModeBackend-47"><span class="linenos">47</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode sandbox exited without a result&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend-48"><a href="#ChildProcessCodeModeBackend-48"><span class="linenos">48</span></a>
-</span><span id="ChildProcessCodeModeBackend-49"><a href="#ChildProcessCodeModeBackend-49"><span class="linenos">49</span></a>        <span class="k">if</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
-</span><span id="ChildProcessCodeModeBackend-50"><a href="#ChildProcessCodeModeBackend-50"><span class="linenos">50</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;error&#39;</span><span class="p">])</span>
-</span><span id="ChildProcessCodeModeBackend-51"><a href="#ChildProcessCodeModeBackend-51"><span class="linenos">51</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;variables&#39;</span><span class="p">]</span>
-</span><span id="ChildProcessCodeModeBackend-52"><a href="#ChildProcessCodeModeBackend-52"><span class="linenos">52</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend-53"><a href="#ChildProcessCodeModeBackend-53"><span class="linenos">53</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-22"><a href="#ChildProcessCodeModeBackend-22"><span class="linenos">22</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fork-based Code Mode for trusted-user inputs only.</span>
+</span><span id="ChildProcessCodeModeBackend-23"><a href="#ChildProcessCodeModeBackend-23"><span class="linenos">23</span></a>
+</span><span id="ChildProcessCodeModeBackend-24"><a href="#ChildProcessCodeModeBackend-24"><span class="linenos">24</span></a><span class="sd">    For untrusted or multi-tenant workloads, use ``ContainerCodeModeBackend``.</span>
+</span><span id="ChildProcessCodeModeBackend-25"><a href="#ChildProcessCodeModeBackend-25"><span class="linenos">25</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="ChildProcessCodeModeBackend-26"><a href="#ChildProcessCodeModeBackend-26"><span class="linenos">26</span></a>
+</span><span id="ChildProcessCodeModeBackend-27"><a href="#ChildProcessCodeModeBackend-27"><span class="linenos">27</span></a>    <span class="n">trusted_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span id="ChildProcessCodeModeBackend-28"><a href="#ChildProcessCodeModeBackend-28"><span class="linenos">28</span></a>
+</span><span id="ChildProcessCodeModeBackend-29"><a href="#ChildProcessCodeModeBackend-29"><span class="linenos">29</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span>
+</span><span id="ChildProcessCodeModeBackend-30"><a href="#ChildProcessCodeModeBackend-30"><span class="linenos">30</span></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend-31"><a href="#ChildProcessCodeModeBackend-31"><span class="linenos">31</span></a>        <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend-32"><a href="#ChildProcessCodeModeBackend-32"><span class="linenos">32</span></a>        <span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+</span><span id="ChildProcessCodeModeBackend-33"><a href="#ChildProcessCodeModeBackend-33"><span class="linenos">33</span></a>        <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend-34"><a href="#ChildProcessCodeModeBackend-34"><span class="linenos">34</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CodeModeResult</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend-35"><a href="#ChildProcessCodeModeBackend-35"><span class="linenos">35</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">trusted_only</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend-36"><a href="#ChildProcessCodeModeBackend-36"><span class="linenos">36</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="ChildProcessCodeModeBackend-37"><a href="#ChildProcessCodeModeBackend-37"><span class="linenos">37</span></a>                <span class="s1">&#39;ChildProcessCodeModeBackend is for trusted inputs only; &#39;</span>
+</span><span id="ChildProcessCodeModeBackend-38"><a href="#ChildProcessCodeModeBackend-38"><span class="linenos">38</span></a>                <span class="s1">&#39;use ContainerCodeModeBackend for untrusted workloads&#39;</span>
+</span><span id="ChildProcessCodeModeBackend-39"><a href="#ChildProcessCodeModeBackend-39"><span class="linenos">39</span></a>            <span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-40"><a href="#ChildProcessCodeModeBackend-40"><span class="linenos">40</span></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">multiprocessing</span>
+</span><span id="ChildProcessCodeModeBackend-41"><a href="#ChildProcessCodeModeBackend-41"><span class="linenos">41</span></a>        <span class="k">with</span> <span class="n">suppress</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+</span><span id="ChildProcessCodeModeBackend-42"><a href="#ChildProcessCodeModeBackend-42"><span class="linenos">42</span></a>            <span class="c1"># Prefer fork on POSIX to avoid spawn startup overhead in short timeouts.</span>
+</span><span id="ChildProcessCodeModeBackend-43"><a href="#ChildProcessCodeModeBackend-43"><span class="linenos">43</span></a>            <span class="n">ctx</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-44"><a href="#ChildProcessCodeModeBackend-44"><span class="linenos">44</span></a>        <span class="n">parent_conn</span><span class="p">,</span> <span class="n">child_conn</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Pipe</span><span class="p">(</span><span class="n">duplex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-45"><a href="#ChildProcessCodeModeBackend-45"><span class="linenos">45</span></a>        <span class="n">process</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span>
+</span><span id="ChildProcessCodeModeBackend-46"><a href="#ChildProcessCodeModeBackend-46"><span class="linenos">46</span></a>            <span class="n">target</span><span class="o">=</span><span class="n">_execute_code_mode_child</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend-47"><a href="#ChildProcessCodeModeBackend-47"><span class="linenos">47</span></a>            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">sandbox</span><span class="p">,</span> <span class="n">child_conn</span><span class="p">),</span>
+</span><span id="ChildProcessCodeModeBackend-48"><a href="#ChildProcessCodeModeBackend-48"><span class="linenos">48</span></a>        <span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-49"><a href="#ChildProcessCodeModeBackend-49"><span class="linenos">49</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend-50"><a href="#ChildProcessCodeModeBackend-50"><span class="linenos">50</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-51"><a href="#ChildProcessCodeModeBackend-51"><span class="linenos">51</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
+</span><span id="ChildProcessCodeModeBackend-52"><a href="#ChildProcessCodeModeBackend-52"><span class="linenos">52</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend-53"><a href="#ChildProcessCodeModeBackend-53"><span class="linenos">53</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend-54"><a href="#ChildProcessCodeModeBackend-54"><span class="linenos">54</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode timed out&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-55"><a href="#ChildProcessCodeModeBackend-55"><span class="linenos">55</span></a>
+</span><span id="ChildProcessCodeModeBackend-56"><a href="#ChildProcessCodeModeBackend-56"><span class="linenos">56</span></a>        <span class="k">if</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">poll</span><span class="p">():</span>
+</span><span id="ChildProcessCodeModeBackend-57"><a href="#ChildProcessCodeModeBackend-57"><span class="linenos">57</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend-58"><a href="#ChildProcessCodeModeBackend-58"><span class="linenos">58</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend-59"><a href="#ChildProcessCodeModeBackend-59"><span class="linenos">59</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode sandbox exited without a result&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-60"><a href="#ChildProcessCodeModeBackend-60"><span class="linenos">60</span></a>
+</span><span id="ChildProcessCodeModeBackend-61"><a href="#ChildProcessCodeModeBackend-61"><span class="linenos">61</span></a>        <span class="k">if</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend-62"><a href="#ChildProcessCodeModeBackend-62"><span class="linenos">62</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;error&#39;</span><span class="p">])</span>
+</span><span id="ChildProcessCodeModeBackend-63"><a href="#ChildProcessCodeModeBackend-63"><span class="linenos">63</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;variables&#39;</span><span class="p">]</span>
+</span><span id="ChildProcessCodeModeBackend-64"><a href="#ChildProcessCodeModeBackend-64"><span class="linenos">64</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend-65"><a href="#ChildProcessCodeModeBackend-65"><span class="linenos">65</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
 </span></pre></div>
 
 
-    
+            <div class="docstring"><p>Fork-based Code Mode for trusted-user inputs only.</p>
 
+<p>For untrusted or multi-tenant workloads, use <code><a href="#ContainerCodeModeBackend">ContainerCodeModeBackend</a></code>.</p>
+</div>
+
+
+                            <div id="ChildProcessCodeModeBackend.__init__" class="classattr">
+                                <div class="attr function">
+
+        <span class="name">ChildProcessCodeModeBackend</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">trusted_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></span>)</span>
+
+
+    </div>
+    <a class="headerlink" href="#ChildProcessCodeModeBackend.__init__"></a>
+
+
+
+                            </div>
+                            <div id="ChildProcessCodeModeBackend.trusted_only" class="classattr">
+                                <div class="attr variable">
+            <span class="name">trusted_only</span><span class="annotation">: bool</span>        =
+<span class="default_value">True</span>
+
+
+    </div>
+    <a class="headerlink" href="#ChildProcessCodeModeBackend.trusted_only"></a>
+
+
+
+                            </div>
                             <div id="ChildProcessCodeModeBackend.execute" class="classattr">
                                         <input id="ChildProcessCodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -480,49 +526,54 @@
 
     </div>
     <a class="headerlink" href="#ChildProcessCodeModeBackend.execute"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ChildProcessCodeModeBackend.execute-22"><a href="#ChildProcessCodeModeBackend.execute-22"><span class="linenos">22</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span>
-</span><span id="ChildProcessCodeModeBackend.execute-23"><a href="#ChildProcessCodeModeBackend.execute-23"><span class="linenos">23</span></a>        <span class="bp">self</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend.execute-24"><a href="#ChildProcessCodeModeBackend.execute-24"><span class="linenos">24</span></a>        <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend.execute-25"><a href="#ChildProcessCodeModeBackend.execute-25"><span class="linenos">25</span></a>        <span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-</span><span id="ChildProcessCodeModeBackend.execute-26"><a href="#ChildProcessCodeModeBackend.execute-26"><span class="linenos">26</span></a>        <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend.execute-27"><a href="#ChildProcessCodeModeBackend.execute-27"><span class="linenos">27</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CodeModeResult</span><span class="p">:</span>
-</span><span id="ChildProcessCodeModeBackend.execute-28"><a href="#ChildProcessCodeModeBackend.execute-28"><span class="linenos">28</span></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">multiprocessing</span>
-</span><span id="ChildProcessCodeModeBackend.execute-29"><a href="#ChildProcessCodeModeBackend.execute-29"><span class="linenos">29</span></a>        <span class="k">with</span> <span class="n">suppress</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-</span><span id="ChildProcessCodeModeBackend.execute-30"><a href="#ChildProcessCodeModeBackend.execute-30"><span class="linenos">30</span></a>            <span class="c1"># Prefer fork on POSIX to avoid spawn startup overhead in short timeouts.</span>
-</span><span id="ChildProcessCodeModeBackend.execute-31"><a href="#ChildProcessCodeModeBackend.execute-31"><span class="linenos">31</span></a>            <span class="n">ctx</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend.execute-32"><a href="#ChildProcessCodeModeBackend.execute-32"><span class="linenos">32</span></a>        <span class="n">parent_conn</span><span class="p">,</span> <span class="n">child_conn</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Pipe</span><span class="p">(</span><span class="n">duplex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend.execute-33"><a href="#ChildProcessCodeModeBackend.execute-33"><span class="linenos">33</span></a>        <span class="n">process</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span>
-</span><span id="ChildProcessCodeModeBackend.execute-34"><a href="#ChildProcessCodeModeBackend.execute-34"><span class="linenos">34</span></a>            <span class="n">target</span><span class="o">=</span><span class="n">_execute_code_mode_child</span><span class="p">,</span>
-</span><span id="ChildProcessCodeModeBackend.execute-35"><a href="#ChildProcessCodeModeBackend.execute-35"><span class="linenos">35</span></a>            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">sandbox</span><span class="p">,</span> <span class="n">child_conn</span><span class="p">),</span>
-</span><span id="ChildProcessCodeModeBackend.execute-36"><a href="#ChildProcessCodeModeBackend.execute-36"><span class="linenos">36</span></a>        <span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend.execute-37"><a href="#ChildProcessCodeModeBackend.execute-37"><span class="linenos">37</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend.execute-38"><a href="#ChildProcessCodeModeBackend.execute-38"><span class="linenos">38</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend.execute-39"><a href="#ChildProcessCodeModeBackend.execute-39"><span class="linenos">39</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
-</span><span id="ChildProcessCodeModeBackend.execute-40"><a href="#ChildProcessCodeModeBackend.execute-40"><span class="linenos">40</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend.execute-41"><a href="#ChildProcessCodeModeBackend.execute-41"><span class="linenos">41</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend.execute-42"><a href="#ChildProcessCodeModeBackend.execute-42"><span class="linenos">42</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode timed out&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend.execute-43"><a href="#ChildProcessCodeModeBackend.execute-43"><span class="linenos">43</span></a>
-</span><span id="ChildProcessCodeModeBackend.execute-44"><a href="#ChildProcessCodeModeBackend.execute-44"><span class="linenos">44</span></a>        <span class="k">if</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">poll</span><span class="p">():</span>
-</span><span id="ChildProcessCodeModeBackend.execute-45"><a href="#ChildProcessCodeModeBackend.execute-45"><span class="linenos">45</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
-</span><span id="ChildProcessCodeModeBackend.execute-46"><a href="#ChildProcessCodeModeBackend.execute-46"><span class="linenos">46</span></a>        <span class="k">else</span><span class="p">:</span>
-</span><span id="ChildProcessCodeModeBackend.execute-47"><a href="#ChildProcessCodeModeBackend.execute-47"><span class="linenos">47</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode sandbox exited without a result&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend.execute-48"><a href="#ChildProcessCodeModeBackend.execute-48"><span class="linenos">48</span></a>
-</span><span id="ChildProcessCodeModeBackend.execute-49"><a href="#ChildProcessCodeModeBackend.execute-49"><span class="linenos">49</span></a>        <span class="k">if</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
-</span><span id="ChildProcessCodeModeBackend.execute-50"><a href="#ChildProcessCodeModeBackend.execute-50"><span class="linenos">50</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;error&#39;</span><span class="p">])</span>
-</span><span id="ChildProcessCodeModeBackend.execute-51"><a href="#ChildProcessCodeModeBackend.execute-51"><span class="linenos">51</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;variables&#39;</span><span class="p">]</span>
-</span><span id="ChildProcessCodeModeBackend.execute-52"><a href="#ChildProcessCodeModeBackend.execute-52"><span class="linenos">52</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
-</span><span id="ChildProcessCodeModeBackend.execute-53"><a href="#ChildProcessCodeModeBackend.execute-53"><span class="linenos">53</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ChildProcessCodeModeBackend.execute-29"><a href="#ChildProcessCodeModeBackend.execute-29"><span class="linenos">29</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span>
+</span><span id="ChildProcessCodeModeBackend.execute-30"><a href="#ChildProcessCodeModeBackend.execute-30"><span class="linenos">30</span></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend.execute-31"><a href="#ChildProcessCodeModeBackend.execute-31"><span class="linenos">31</span></a>        <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend.execute-32"><a href="#ChildProcessCodeModeBackend.execute-32"><span class="linenos">32</span></a>        <span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+</span><span id="ChildProcessCodeModeBackend.execute-33"><a href="#ChildProcessCodeModeBackend.execute-33"><span class="linenos">33</span></a>        <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend.execute-34"><a href="#ChildProcessCodeModeBackend.execute-34"><span class="linenos">34</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CodeModeResult</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend.execute-35"><a href="#ChildProcessCodeModeBackend.execute-35"><span class="linenos">35</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">trusted_only</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend.execute-36"><a href="#ChildProcessCodeModeBackend.execute-36"><span class="linenos">36</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="ChildProcessCodeModeBackend.execute-37"><a href="#ChildProcessCodeModeBackend.execute-37"><span class="linenos">37</span></a>                <span class="s1">&#39;ChildProcessCodeModeBackend is for trusted inputs only; &#39;</span>
+</span><span id="ChildProcessCodeModeBackend.execute-38"><a href="#ChildProcessCodeModeBackend.execute-38"><span class="linenos">38</span></a>                <span class="s1">&#39;use ContainerCodeModeBackend for untrusted workloads&#39;</span>
+</span><span id="ChildProcessCodeModeBackend.execute-39"><a href="#ChildProcessCodeModeBackend.execute-39"><span class="linenos">39</span></a>            <span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-40"><a href="#ChildProcessCodeModeBackend.execute-40"><span class="linenos">40</span></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">multiprocessing</span>
+</span><span id="ChildProcessCodeModeBackend.execute-41"><a href="#ChildProcessCodeModeBackend.execute-41"><span class="linenos">41</span></a>        <span class="k">with</span> <span class="n">suppress</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+</span><span id="ChildProcessCodeModeBackend.execute-42"><a href="#ChildProcessCodeModeBackend.execute-42"><span class="linenos">42</span></a>            <span class="c1"># Prefer fork on POSIX to avoid spawn startup overhead in short timeouts.</span>
+</span><span id="ChildProcessCodeModeBackend.execute-43"><a href="#ChildProcessCodeModeBackend.execute-43"><span class="linenos">43</span></a>            <span class="n">ctx</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-44"><a href="#ChildProcessCodeModeBackend.execute-44"><span class="linenos">44</span></a>        <span class="n">parent_conn</span><span class="p">,</span> <span class="n">child_conn</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Pipe</span><span class="p">(</span><span class="n">duplex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-45"><a href="#ChildProcessCodeModeBackend.execute-45"><span class="linenos">45</span></a>        <span class="n">process</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span>
+</span><span id="ChildProcessCodeModeBackend.execute-46"><a href="#ChildProcessCodeModeBackend.execute-46"><span class="linenos">46</span></a>            <span class="n">target</span><span class="o">=</span><span class="n">_execute_code_mode_child</span><span class="p">,</span>
+</span><span id="ChildProcessCodeModeBackend.execute-47"><a href="#ChildProcessCodeModeBackend.execute-47"><span class="linenos">47</span></a>            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">sandbox</span><span class="p">,</span> <span class="n">child_conn</span><span class="p">),</span>
+</span><span id="ChildProcessCodeModeBackend.execute-48"><a href="#ChildProcessCodeModeBackend.execute-48"><span class="linenos">48</span></a>        <span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-49"><a href="#ChildProcessCodeModeBackend.execute-49"><span class="linenos">49</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend.execute-50"><a href="#ChildProcessCodeModeBackend.execute-50"><span class="linenos">50</span></a>        <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-51"><a href="#ChildProcessCodeModeBackend.execute-51"><span class="linenos">51</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
+</span><span id="ChildProcessCodeModeBackend.execute-52"><a href="#ChildProcessCodeModeBackend.execute-52"><span class="linenos">52</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend.execute-53"><a href="#ChildProcessCodeModeBackend.execute-53"><span class="linenos">53</span></a>            <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend.execute-54"><a href="#ChildProcessCodeModeBackend.execute-54"><span class="linenos">54</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode timed out&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-55"><a href="#ChildProcessCodeModeBackend.execute-55"><span class="linenos">55</span></a>
+</span><span id="ChildProcessCodeModeBackend.execute-56"><a href="#ChildProcessCodeModeBackend.execute-56"><span class="linenos">56</span></a>        <span class="k">if</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">poll</span><span class="p">():</span>
+</span><span id="ChildProcessCodeModeBackend.execute-57"><a href="#ChildProcessCodeModeBackend.execute-57"><span class="linenos">57</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">parent_conn</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+</span><span id="ChildProcessCodeModeBackend.execute-58"><a href="#ChildProcessCodeModeBackend.execute-58"><span class="linenos">58</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend.execute-59"><a href="#ChildProcessCodeModeBackend.execute-59"><span class="linenos">59</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode sandbox exited without a result&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-60"><a href="#ChildProcessCodeModeBackend.execute-60"><span class="linenos">60</span></a>
+</span><span id="ChildProcessCodeModeBackend.execute-61"><a href="#ChildProcessCodeModeBackend.execute-61"><span class="linenos">61</span></a>        <span class="k">if</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
+</span><span id="ChildProcessCodeModeBackend.execute-62"><a href="#ChildProcessCodeModeBackend.execute-62"><span class="linenos">62</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;error&#39;</span><span class="p">])</span>
+</span><span id="ChildProcessCodeModeBackend.execute-63"><a href="#ChildProcessCodeModeBackend.execute-63"><span class="linenos">63</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="p">[</span><span class="s1">&#39;variables&#39;</span><span class="p">]</span>
+</span><span id="ChildProcessCodeModeBackend.execute-64"><a href="#ChildProcessCodeModeBackend.execute-64"><span class="linenos">64</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
+</span><span id="ChildProcessCodeModeBackend.execute-65"><a href="#ChildProcessCodeModeBackend.execute-65"><span class="linenos">65</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                 </section>
                 <section id="CodeModeBackend">
                             <input id="CodeModeBackend-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">CodeModeBackend</span><wbr>(<span class="base">typing.Protocol</span>):
 
@@ -579,7 +630,7 @@ Protocol classes can be generic, they are defined as::</p>
                             <div id="CodeModeBackend.__init__" class="classattr">
                                         <input id="CodeModeBackend.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="name">CodeModeBackend</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span>)</span>
 
                 <label class="view-source-button" for="CodeModeBackend.__init__-view-source"><span>View Source</span></label>
@@ -616,13 +667,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="CodeModeBackend.execute" class="classattr">
                                         <input id="CodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -639,7 +690,7 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                 </section>
@@ -661,29 +712,29 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-    
+
 
                             <div id="CodeModeResult.__init__" class="classattr">
                                 <div class="attr function">
-            
+
         <span class="name">CodeModeResult</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">variables</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span>)</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CodeModeResult.__init__"></a>
-    
-    
+
+
 
                             </div>
                             <div id="CodeModeResult.variables" class="classattr">
                                 <div class="attr variable">
             <span class="name">variables</span><span class="annotation">: dict[str, typing.Any]</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CodeModeResult.variables"></a>
-    
-    
+
+
 
                             </div>
                 </section>
@@ -708,18 +759,18 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-    
+
 
                             <div id="CodeModeSandbox.__init__" class="classattr">
                                 <div class="attr function">
-            
+
         <span class="name">CodeModeSandbox</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">timeout_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span>,</span><span class="param">	<span class="n">cpu_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>,</span><span class="param">	<span class="n">memory_bytes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">67108864</span>,</span><span class="param">	<span class="n">max_output_bytes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1048576</span></span>)</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CodeModeSandbox.__init__"></a>
-    
-    
+
+
 
                             </div>
                             <div id="CodeModeSandbox.timeout_seconds" class="classattr">
@@ -727,11 +778,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">timeout_seconds</span><span class="annotation">: float</span>        =
 <span class="default_value">2.0</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CodeModeSandbox.timeout_seconds"></a>
-    
-    
+
+
 
                             </div>
                             <div id="CodeModeSandbox.cpu_seconds" class="classattr">
@@ -739,11 +790,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">cpu_seconds</span><span class="annotation">: int</span>        =
 <span class="default_value">2</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CodeModeSandbox.cpu_seconds"></a>
-    
-    
+
+
 
                             </div>
                             <div id="CodeModeSandbox.memory_bytes" class="classattr">
@@ -751,11 +802,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">memory_bytes</span><span class="annotation">: int</span>        =
 <span class="default_value">67108864</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CodeModeSandbox.memory_bytes"></a>
-    
-    
+
+
 
                             </div>
                             <div id="CodeModeSandbox.max_output_bytes" class="classattr">
@@ -763,11 +814,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">max_output_bytes</span><span class="annotation">: int</span>        =
 <span class="default_value">1048576</span>
 
-        
+
     </div>
     <a class="headerlink" href="#CodeModeSandbox.max_output_bytes"></a>
-    
-    
+
+
 
                             </div>
                 </section>
@@ -818,102 +869,113 @@ Protocol classes can be generic, they are defined as::</p>
 </span><span id="ContainerCodeModeBackend-102"><a href="#ContainerCodeModeBackend-102"><span class="linenos">102</span></a>        <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">,</span>
 </span><span id="ContainerCodeModeBackend-103"><a href="#ContainerCodeModeBackend-103"><span class="linenos">103</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CodeModeResult</span><span class="p">:</span>
 </span><span id="ContainerCodeModeBackend-104"><a href="#ContainerCodeModeBackend-104"><span class="linenos">104</span></a>        <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;code&#39;</span><span class="p">:</span> <span class="n">code</span><span class="p">,</span> <span class="s1">&#39;inputs&#39;</span><span class="p">:</span> <span class="n">inputs</span><span class="p">})</span>
-</span><span id="ContainerCodeModeBackend-105"><a href="#ContainerCodeModeBackend-105"><span class="linenos">105</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-106"><a href="#ContainerCodeModeBackend-106"><span class="linenos">106</span></a>            <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
-</span><span id="ContainerCodeModeBackend-107"><a href="#ContainerCodeModeBackend-107"><span class="linenos">107</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_build_command</span><span class="p">(</span><span class="n">sandbox</span><span class="p">),</span>
-</span><span id="ContainerCodeModeBackend-108"><a href="#ContainerCodeModeBackend-108"><span class="linenos">108</span></a>                <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-109"><a href="#ContainerCodeModeBackend-109"><span class="linenos">109</span></a>                <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-110"><a href="#ContainerCodeModeBackend-110"><span class="linenos">110</span></a>                <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-111"><a href="#ContainerCodeModeBackend-111"><span class="linenos">111</span></a>            <span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-112"><a href="#ContainerCodeModeBackend-112"><span class="linenos">112</span></a>        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-113"><a href="#ContainerCodeModeBackend-113"><span class="linenos">113</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container runtime failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="ContainerCodeModeBackend-114"><a href="#ContainerCodeModeBackend-114"><span class="linenos">114</span></a>        <span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span> <span class="o">=</span> <span class="n">_communicate_with_output_limit</span><span class="p">(</span>
-</span><span id="ContainerCodeModeBackend-115"><a href="#ContainerCodeModeBackend-115"><span class="linenos">115</span></a>            <span class="n">process</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-116"><a href="#ContainerCodeModeBackend-116"><span class="linenos">116</span></a>            <span class="n">payload</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">),</span>
-</span><span id="ContainerCodeModeBackend-117"><a href="#ContainerCodeModeBackend-117"><span class="linenos">117</span></a>            <span class="n">timeout_seconds</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-118"><a href="#ContainerCodeModeBackend-118"><span class="linenos">118</span></a>            <span class="n">max_output_bytes</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">max_output_bytes</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-119"><a href="#ContainerCodeModeBackend-119"><span class="linenos">119</span></a>        <span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-120"><a href="#ContainerCodeModeBackend-120"><span class="linenos">120</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-121"><a href="#ContainerCodeModeBackend-121"><span class="linenos">121</span></a>            <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span><span class="n">stderr</span> <span class="ow">or</span> <span class="n">stdout</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-</span><span id="ContainerCodeModeBackend-122"><a href="#ContainerCodeModeBackend-122"><span class="linenos">122</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container failed: </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-123"><a href="#ContainerCodeModeBackend-123"><span class="linenos">123</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-124"><a href="#ContainerCodeModeBackend-124"><span class="linenos">124</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-125"><a href="#ContainerCodeModeBackend-125"><span class="linenos">125</span></a>        <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-126"><a href="#ContainerCodeModeBackend-126"><span class="linenos">126</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode container returned invalid JSON&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="ContainerCodeModeBackend-127"><a href="#ContainerCodeModeBackend-127"><span class="linenos">127</span></a>        <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-128"><a href="#ContainerCodeModeBackend-128"><span class="linenos">128</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown error&#39;</span><span class="p">)))</span>
-</span><span id="ContainerCodeModeBackend-129"><a href="#ContainerCodeModeBackend-129"><span class="linenos">129</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;variables&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-130"><a href="#ContainerCodeModeBackend-130"><span class="linenos">130</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-131"><a href="#ContainerCodeModeBackend-131"><span class="linenos">131</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-132"><a href="#ContainerCodeModeBackend-132"><span class="linenos">132</span></a>
-</span><span id="ContainerCodeModeBackend-133"><a href="#ContainerCodeModeBackend-133"><span class="linenos">133</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_build_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="ContainerCodeModeBackend-134"><a href="#ContainerCodeModeBackend-134"><span class="linenos">134</span></a>        <span class="n">memory_mb</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">sandbox</span><span class="o">.</span><span class="n">memory_bytes</span> <span class="o">//</span> <span class="p">(</span><span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">))</span>
-</span><span id="ContainerCodeModeBackend-135"><a href="#ContainerCodeModeBackend-135"><span class="linenos">135</span></a>        <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="ContainerCodeModeBackend-136"><a href="#ContainerCodeModeBackend-136"><span class="linenos">136</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">runtime</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-137"><a href="#ContainerCodeModeBackend-137"><span class="linenos">137</span></a>            <span class="s1">&#39;run&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-138"><a href="#ContainerCodeModeBackend-138"><span class="linenos">138</span></a>            <span class="s1">&#39;--rm&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-139"><a href="#ContainerCodeModeBackend-139"><span class="linenos">139</span></a>            <span class="s1">&#39;--network&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-140"><a href="#ContainerCodeModeBackend-140"><span class="linenos">140</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-141"><a href="#ContainerCodeModeBackend-141"><span class="linenos">141</span></a>            <span class="s1">&#39;--read-only&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-142"><a href="#ContainerCodeModeBackend-142"><span class="linenos">142</span></a>            <span class="s1">&#39;--cap-drop=ALL&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-143"><a href="#ContainerCodeModeBackend-143"><span class="linenos">143</span></a>            <span class="s1">&#39;--security-opt=no-new-privileges&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-144"><a href="#ContainerCodeModeBackend-144"><span class="linenos">144</span></a>            <span class="sa">f</span><span class="s1">&#39;--user=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-145"><a href="#ContainerCodeModeBackend-145"><span class="linenos">145</span></a>            <span class="sa">f</span><span class="s1">&#39;--tmpfs=/tmp:rw,size=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tmpfs_size_mb</span><span class="si">}</span><span class="s1">m&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-146"><a href="#ContainerCodeModeBackend-146"><span class="linenos">146</span></a>            <span class="s1">&#39;--memory&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-147"><a href="#ContainerCodeModeBackend-147"><span class="linenos">147</span></a>            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">memory_mb</span><span class="si">}</span><span class="s1">m&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-148"><a href="#ContainerCodeModeBackend-148"><span class="linenos">148</span></a>            <span class="s1">&#39;--memory-swap&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-149"><a href="#ContainerCodeModeBackend-149"><span class="linenos">149</span></a>            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">memory_mb</span><span class="si">}</span><span class="s1">m&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-150"><a href="#ContainerCodeModeBackend-150"><span class="linenos">150</span></a>            <span class="s1">&#39;--cpus&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-151"><a href="#ContainerCodeModeBackend-151"><span class="linenos">151</span></a>            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cpus</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-152"><a href="#ContainerCodeModeBackend-152"><span class="linenos">152</span></a>            <span class="s1">&#39;--ulimit&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-153"><a href="#ContainerCodeModeBackend-153"><span class="linenos">153</span></a>            <span class="sa">f</span><span class="s1">&#39;cpu=</span><span class="si">{</span><span class="n">sandbox</span><span class="o">.</span><span class="n">cpu_seconds</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">sandbox</span><span class="o">.</span><span class="n">cpu_seconds</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-154"><a href="#ContainerCodeModeBackend-154"><span class="linenos">154</span></a>            <span class="s1">&#39;--pids-limit&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-155"><a href="#ContainerCodeModeBackend-155"><span class="linenos">155</span></a>            <span class="s1">&#39;64&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-156"><a href="#ContainerCodeModeBackend-156"><span class="linenos">156</span></a>        <span class="p">]</span>
-</span><span id="ContainerCodeModeBackend-157"><a href="#ContainerCodeModeBackend-157"><span class="linenos">157</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">oci_runtime</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-158"><a href="#ContainerCodeModeBackend-158"><span class="linenos">158</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;--runtime&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">oci_runtime</span><span class="p">])</span>
-</span><span id="ContainerCodeModeBackend-159"><a href="#ContainerCodeModeBackend-159"><span class="linenos">159</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">seccomp_profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-160"><a href="#ContainerCodeModeBackend-160"><span class="linenos">160</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;--security-opt=seccomp=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seccomp_profile</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-161"><a href="#ContainerCodeModeBackend-161"><span class="linenos">161</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">apparmor_profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-162"><a href="#ContainerCodeModeBackend-162"><span class="linenos">162</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;--security-opt=apparmor=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">apparmor_profile</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-163"><a href="#ContainerCodeModeBackend-163"><span class="linenos">163</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selinux_label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend-164"><a href="#ContainerCodeModeBackend-164"><span class="linenos">164</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;--security-opt=label=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">selinux_label</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-165"><a href="#ContainerCodeModeBackend-165"><span class="linenos">165</span></a>        <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-</span><span id="ContainerCodeModeBackend-166"><a href="#ContainerCodeModeBackend-166"><span class="linenos">166</span></a>            <span class="p">[</span>
-</span><span id="ContainerCodeModeBackend-167"><a href="#ContainerCodeModeBackend-167"><span class="linenos">167</span></a>                <span class="s1">&#39;-i&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-168"><a href="#ContainerCodeModeBackend-168"><span class="linenos">168</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-169"><a href="#ContainerCodeModeBackend-169"><span class="linenos">169</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">python_executable</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-170"><a href="#ContainerCodeModeBackend-170"><span class="linenos">170</span></a>                <span class="s1">&#39;-c&#39;</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-171"><a href="#ContainerCodeModeBackend-171"><span class="linenos">171</span></a>                <span class="n">CONTAINER_CODE_MODE_SCRIPT</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend-172"><a href="#ContainerCodeModeBackend-172"><span class="linenos">172</span></a>            <span class="p">]</span>
-</span><span id="ContainerCodeModeBackend-173"><a href="#ContainerCodeModeBackend-173"><span class="linenos">173</span></a>        <span class="p">)</span>
-</span><span id="ContainerCodeModeBackend-174"><a href="#ContainerCodeModeBackend-174"><span class="linenos">174</span></a>        <span class="k">return</span> <span class="n">cmd</span>
+</span><span id="ContainerCodeModeBackend-105"><a href="#ContainerCodeModeBackend-105"><span class="linenos">105</span></a>        <span class="n">process</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="ContainerCodeModeBackend-106"><a href="#ContainerCodeModeBackend-106"><span class="linenos">106</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-107"><a href="#ContainerCodeModeBackend-107"><span class="linenos">107</span></a>            <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+</span><span id="ContainerCodeModeBackend-108"><a href="#ContainerCodeModeBackend-108"><span class="linenos">108</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_build_command</span><span class="p">(</span><span class="n">sandbox</span><span class="p">),</span>
+</span><span id="ContainerCodeModeBackend-109"><a href="#ContainerCodeModeBackend-109"><span class="linenos">109</span></a>                <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-110"><a href="#ContainerCodeModeBackend-110"><span class="linenos">110</span></a>                <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-111"><a href="#ContainerCodeModeBackend-111"><span class="linenos">111</span></a>                <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-112"><a href="#ContainerCodeModeBackend-112"><span class="linenos">112</span></a>            <span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-113"><a href="#ContainerCodeModeBackend-113"><span class="linenos">113</span></a>        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-114"><a href="#ContainerCodeModeBackend-114"><span class="linenos">114</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container runtime failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="ContainerCodeModeBackend-115"><a href="#ContainerCodeModeBackend-115"><span class="linenos">115</span></a>
+</span><span id="ContainerCodeModeBackend-116"><a href="#ContainerCodeModeBackend-116"><span class="linenos">116</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-117"><a href="#ContainerCodeModeBackend-117"><span class="linenos">117</span></a>            <span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span> <span class="o">=</span> <span class="n">_communicate_with_output_limit</span><span class="p">(</span>
+</span><span id="ContainerCodeModeBackend-118"><a href="#ContainerCodeModeBackend-118"><span class="linenos">118</span></a>                <span class="n">process</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-119"><a href="#ContainerCodeModeBackend-119"><span class="linenos">119</span></a>                <span class="n">payload</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">),</span>
+</span><span id="ContainerCodeModeBackend-120"><a href="#ContainerCodeModeBackend-120"><span class="linenos">120</span></a>                <span class="n">timeout_seconds</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-121"><a href="#ContainerCodeModeBackend-121"><span class="linenos">121</span></a>                <span class="n">max_output_bytes</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">max_output_bytes</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-122"><a href="#ContainerCodeModeBackend-122"><span class="linenos">122</span></a>            <span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-123"><a href="#ContainerCodeModeBackend-123"><span class="linenos">123</span></a>        <span class="k">finally</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-124"><a href="#ContainerCodeModeBackend-124"><span class="linenos">124</span></a>            <span class="c1"># Ensure process is terminated even if communication fails</span>
+</span><span id="ContainerCodeModeBackend-125"><a href="#ContainerCodeModeBackend-125"><span class="linenos">125</span></a>            <span class="k">if</span> <span class="n">process</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">process</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-126"><a href="#ContainerCodeModeBackend-126"><span class="linenos">126</span></a>                <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+</span><span id="ContainerCodeModeBackend-127"><a href="#ContainerCodeModeBackend-127"><span class="linenos">127</span></a>                <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-128"><a href="#ContainerCodeModeBackend-128"><span class="linenos">128</span></a>                    <span class="n">process</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-129"><a href="#ContainerCodeModeBackend-129"><span class="linenos">129</span></a>                <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-130"><a href="#ContainerCodeModeBackend-130"><span class="linenos">130</span></a>                    <span class="n">process</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+</span><span id="ContainerCodeModeBackend-131"><a href="#ContainerCodeModeBackend-131"><span class="linenos">131</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-132"><a href="#ContainerCodeModeBackend-132"><span class="linenos">132</span></a>            <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span><span class="n">stderr</span> <span class="ow">or</span> <span class="n">stdout</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="ContainerCodeModeBackend-133"><a href="#ContainerCodeModeBackend-133"><span class="linenos">133</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container failed: </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-134"><a href="#ContainerCodeModeBackend-134"><span class="linenos">134</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-135"><a href="#ContainerCodeModeBackend-135"><span class="linenos">135</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-136"><a href="#ContainerCodeModeBackend-136"><span class="linenos">136</span></a>        <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-137"><a href="#ContainerCodeModeBackend-137"><span class="linenos">137</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode container returned invalid JSON&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="ContainerCodeModeBackend-138"><a href="#ContainerCodeModeBackend-138"><span class="linenos">138</span></a>        <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-139"><a href="#ContainerCodeModeBackend-139"><span class="linenos">139</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown error&#39;</span><span class="p">)))</span>
+</span><span id="ContainerCodeModeBackend-140"><a href="#ContainerCodeModeBackend-140"><span class="linenos">140</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;variables&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-141"><a href="#ContainerCodeModeBackend-141"><span class="linenos">141</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-142"><a href="#ContainerCodeModeBackend-142"><span class="linenos">142</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-143"><a href="#ContainerCodeModeBackend-143"><span class="linenos">143</span></a>
+</span><span id="ContainerCodeModeBackend-144"><a href="#ContainerCodeModeBackend-144"><span class="linenos">144</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_build_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="ContainerCodeModeBackend-145"><a href="#ContainerCodeModeBackend-145"><span class="linenos">145</span></a>        <span class="n">memory_mb</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">sandbox</span><span class="o">.</span><span class="n">memory_bytes</span> <span class="o">//</span> <span class="p">(</span><span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">))</span>
+</span><span id="ContainerCodeModeBackend-146"><a href="#ContainerCodeModeBackend-146"><span class="linenos">146</span></a>        <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="ContainerCodeModeBackend-147"><a href="#ContainerCodeModeBackend-147"><span class="linenos">147</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">runtime</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-148"><a href="#ContainerCodeModeBackend-148"><span class="linenos">148</span></a>            <span class="s1">&#39;run&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-149"><a href="#ContainerCodeModeBackend-149"><span class="linenos">149</span></a>            <span class="s1">&#39;--rm&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-150"><a href="#ContainerCodeModeBackend-150"><span class="linenos">150</span></a>            <span class="s1">&#39;--network&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-151"><a href="#ContainerCodeModeBackend-151"><span class="linenos">151</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-152"><a href="#ContainerCodeModeBackend-152"><span class="linenos">152</span></a>            <span class="s1">&#39;--read-only&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-153"><a href="#ContainerCodeModeBackend-153"><span class="linenos">153</span></a>            <span class="s1">&#39;--cap-drop=ALL&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-154"><a href="#ContainerCodeModeBackend-154"><span class="linenos">154</span></a>            <span class="s1">&#39;--security-opt=no-new-privileges&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-155"><a href="#ContainerCodeModeBackend-155"><span class="linenos">155</span></a>            <span class="sa">f</span><span class="s1">&#39;--user=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-156"><a href="#ContainerCodeModeBackend-156"><span class="linenos">156</span></a>            <span class="sa">f</span><span class="s1">&#39;--tmpfs=/tmp:rw,size=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tmpfs_size_mb</span><span class="si">}</span><span class="s1">m&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-157"><a href="#ContainerCodeModeBackend-157"><span class="linenos">157</span></a>            <span class="s1">&#39;--memory&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-158"><a href="#ContainerCodeModeBackend-158"><span class="linenos">158</span></a>            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">memory_mb</span><span class="si">}</span><span class="s1">m&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-159"><a href="#ContainerCodeModeBackend-159"><span class="linenos">159</span></a>            <span class="s1">&#39;--memory-swap&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-160"><a href="#ContainerCodeModeBackend-160"><span class="linenos">160</span></a>            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">memory_mb</span><span class="si">}</span><span class="s1">m&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-161"><a href="#ContainerCodeModeBackend-161"><span class="linenos">161</span></a>            <span class="s1">&#39;--cpus&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-162"><a href="#ContainerCodeModeBackend-162"><span class="linenos">162</span></a>            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cpus</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-163"><a href="#ContainerCodeModeBackend-163"><span class="linenos">163</span></a>            <span class="s1">&#39;--ulimit&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-164"><a href="#ContainerCodeModeBackend-164"><span class="linenos">164</span></a>            <span class="sa">f</span><span class="s1">&#39;cpu=</span><span class="si">{</span><span class="n">sandbox</span><span class="o">.</span><span class="n">cpu_seconds</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">sandbox</span><span class="o">.</span><span class="n">cpu_seconds</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-165"><a href="#ContainerCodeModeBackend-165"><span class="linenos">165</span></a>            <span class="s1">&#39;--pids-limit&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-166"><a href="#ContainerCodeModeBackend-166"><span class="linenos">166</span></a>            <span class="s1">&#39;64&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-167"><a href="#ContainerCodeModeBackend-167"><span class="linenos">167</span></a>        <span class="p">]</span>
+</span><span id="ContainerCodeModeBackend-168"><a href="#ContainerCodeModeBackend-168"><span class="linenos">168</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">oci_runtime</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-169"><a href="#ContainerCodeModeBackend-169"><span class="linenos">169</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;--runtime&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">oci_runtime</span><span class="p">])</span>
+</span><span id="ContainerCodeModeBackend-170"><a href="#ContainerCodeModeBackend-170"><span class="linenos">170</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">seccomp_profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-171"><a href="#ContainerCodeModeBackend-171"><span class="linenos">171</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;--security-opt=seccomp=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seccomp_profile</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-172"><a href="#ContainerCodeModeBackend-172"><span class="linenos">172</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">apparmor_profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-173"><a href="#ContainerCodeModeBackend-173"><span class="linenos">173</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;--security-opt=apparmor=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">apparmor_profile</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-174"><a href="#ContainerCodeModeBackend-174"><span class="linenos">174</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selinux_label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend-175"><a href="#ContainerCodeModeBackend-175"><span class="linenos">175</span></a>            <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;--security-opt=label=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">selinux_label</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-176"><a href="#ContainerCodeModeBackend-176"><span class="linenos">176</span></a>        <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+</span><span id="ContainerCodeModeBackend-177"><a href="#ContainerCodeModeBackend-177"><span class="linenos">177</span></a>            <span class="p">[</span>
+</span><span id="ContainerCodeModeBackend-178"><a href="#ContainerCodeModeBackend-178"><span class="linenos">178</span></a>                <span class="s1">&#39;-i&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-179"><a href="#ContainerCodeModeBackend-179"><span class="linenos">179</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-180"><a href="#ContainerCodeModeBackend-180"><span class="linenos">180</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">python_executable</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-181"><a href="#ContainerCodeModeBackend-181"><span class="linenos">181</span></a>                <span class="s1">&#39;-c&#39;</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-182"><a href="#ContainerCodeModeBackend-182"><span class="linenos">182</span></a>                <span class="n">CONTAINER_CODE_MODE_SCRIPT</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend-183"><a href="#ContainerCodeModeBackend-183"><span class="linenos">183</span></a>            <span class="p">]</span>
+</span><span id="ContainerCodeModeBackend-184"><a href="#ContainerCodeModeBackend-184"><span class="linenos">184</span></a>        <span class="p">)</span>
+</span><span id="ContainerCodeModeBackend-185"><a href="#ContainerCodeModeBackend-185"><span class="linenos">185</span></a>        <span class="k">return</span> <span class="n">cmd</span>
 </span></pre></div>
 
 
-    
+
 
                             <div id="ContainerCodeModeBackend.__init__" class="classattr">
                                 <div class="attr function">
-            
+
         <span class="name">ContainerCodeModeBackend</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">image</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;docker&#39;</span>,</span><span class="param">	<span class="n">python_executable</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;python3&#39;</span>,</span><span class="param">	<span class="n">network</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>,</span><span class="param">	<span class="n">cpus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>,</span><span class="param">	<span class="n">user</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;65534:65534&#39;</span>,</span><span class="param">	<span class="n">tmpfs_size_mb</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span>,</span><span class="param">	<span class="n">require_image_digest</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">allowed_images</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">seccomp_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">apparmor_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">selinux_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">oci_runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.__init__"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.image" class="classattr">
                                 <div class="attr variable">
             <span class="name">image</span><span class="annotation">: str</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.image"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.runtime" class="classattr">
@@ -921,11 +983,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">runtime</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;docker&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.runtime"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.python_executable" class="classattr">
@@ -933,11 +995,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">python_executable</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;python3&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.python_executable"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.network" class="classattr">
@@ -945,11 +1007,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">network</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;none&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.network"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.cpus" class="classattr">
@@ -957,11 +1019,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">cpus</span><span class="annotation">: float</span>        =
 <span class="default_value">1.0</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.cpus"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.user" class="classattr">
@@ -969,11 +1031,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">user</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;65534:65534&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.user"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.tmpfs_size_mb" class="classattr">
@@ -981,11 +1043,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">tmpfs_size_mb</span><span class="annotation">: int</span>        =
 <span class="default_value">16</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.tmpfs_size_mb"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.require_image_digest" class="classattr">
@@ -993,11 +1055,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">require_image_digest</span><span class="annotation">: bool</span>        =
 <span class="default_value">False</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.require_image_digest"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.allowed_images" class="classattr">
@@ -1005,11 +1067,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">allowed_images</span><span class="annotation">: frozenset[str] | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.allowed_images"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.seccomp_profile" class="classattr">
@@ -1017,11 +1079,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">seccomp_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.seccomp_profile"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.apparmor_profile" class="classattr">
@@ -1029,11 +1091,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">apparmor_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.apparmor_profile"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.selinux_label" class="classattr">
@@ -1041,11 +1103,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">selinux_label</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.selinux_label"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.oci_runtime" class="classattr">
@@ -1053,17 +1115,17 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">oci_runtime</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.oci_runtime"></a>
-    
-    
+
+
 
                             </div>
                             <div id="ContainerCodeModeBackend.execute" class="classattr">
                                         <input id="ContainerCodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -1078,37 +1140,48 @@ Protocol classes can be generic, they are defined as::</p>
 </span><span id="ContainerCodeModeBackend.execute-102"><a href="#ContainerCodeModeBackend.execute-102"><span class="linenos">102</span></a>        <span class="n">sandbox</span><span class="p">:</span> <span class="n">CodeModeSandbox</span><span class="p">,</span>
 </span><span id="ContainerCodeModeBackend.execute-103"><a href="#ContainerCodeModeBackend.execute-103"><span class="linenos">103</span></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CodeModeResult</span><span class="p">:</span>
 </span><span id="ContainerCodeModeBackend.execute-104"><a href="#ContainerCodeModeBackend.execute-104"><span class="linenos">104</span></a>        <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;code&#39;</span><span class="p">:</span> <span class="n">code</span><span class="p">,</span> <span class="s1">&#39;inputs&#39;</span><span class="p">:</span> <span class="n">inputs</span><span class="p">})</span>
-</span><span id="ContainerCodeModeBackend.execute-105"><a href="#ContainerCodeModeBackend.execute-105"><span class="linenos">105</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend.execute-106"><a href="#ContainerCodeModeBackend.execute-106"><span class="linenos">106</span></a>            <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
-</span><span id="ContainerCodeModeBackend.execute-107"><a href="#ContainerCodeModeBackend.execute-107"><span class="linenos">107</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_build_command</span><span class="p">(</span><span class="n">sandbox</span><span class="p">),</span>
-</span><span id="ContainerCodeModeBackend.execute-108"><a href="#ContainerCodeModeBackend.execute-108"><span class="linenos">108</span></a>                <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend.execute-109"><a href="#ContainerCodeModeBackend.execute-109"><span class="linenos">109</span></a>                <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend.execute-110"><a href="#ContainerCodeModeBackend.execute-110"><span class="linenos">110</span></a>                <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend.execute-111"><a href="#ContainerCodeModeBackend.execute-111"><span class="linenos">111</span></a>            <span class="p">)</span>
-</span><span id="ContainerCodeModeBackend.execute-112"><a href="#ContainerCodeModeBackend.execute-112"><span class="linenos">112</span></a>        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend.execute-113"><a href="#ContainerCodeModeBackend.execute-113"><span class="linenos">113</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container runtime failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="ContainerCodeModeBackend.execute-114"><a href="#ContainerCodeModeBackend.execute-114"><span class="linenos">114</span></a>        <span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span> <span class="o">=</span> <span class="n">_communicate_with_output_limit</span><span class="p">(</span>
-</span><span id="ContainerCodeModeBackend.execute-115"><a href="#ContainerCodeModeBackend.execute-115"><span class="linenos">115</span></a>            <span class="n">process</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend.execute-116"><a href="#ContainerCodeModeBackend.execute-116"><span class="linenos">116</span></a>            <span class="n">payload</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">),</span>
-</span><span id="ContainerCodeModeBackend.execute-117"><a href="#ContainerCodeModeBackend.execute-117"><span class="linenos">117</span></a>            <span class="n">timeout_seconds</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend.execute-118"><a href="#ContainerCodeModeBackend.execute-118"><span class="linenos">118</span></a>            <span class="n">max_output_bytes</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">max_output_bytes</span><span class="p">,</span>
-</span><span id="ContainerCodeModeBackend.execute-119"><a href="#ContainerCodeModeBackend.execute-119"><span class="linenos">119</span></a>        <span class="p">)</span>
-</span><span id="ContainerCodeModeBackend.execute-120"><a href="#ContainerCodeModeBackend.execute-120"><span class="linenos">120</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend.execute-121"><a href="#ContainerCodeModeBackend.execute-121"><span class="linenos">121</span></a>            <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span><span class="n">stderr</span> <span class="ow">or</span> <span class="n">stdout</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-</span><span id="ContainerCodeModeBackend.execute-122"><a href="#ContainerCodeModeBackend.execute-122"><span class="linenos">122</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container failed: </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend.execute-123"><a href="#ContainerCodeModeBackend.execute-123"><span class="linenos">123</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend.execute-124"><a href="#ContainerCodeModeBackend.execute-124"><span class="linenos">124</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend.execute-125"><a href="#ContainerCodeModeBackend.execute-125"><span class="linenos">125</span></a>        <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend.execute-126"><a href="#ContainerCodeModeBackend.execute-126"><span class="linenos">126</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode container returned invalid JSON&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="ContainerCodeModeBackend.execute-127"><a href="#ContainerCodeModeBackend.execute-127"><span class="linenos">127</span></a>        <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
-</span><span id="ContainerCodeModeBackend.execute-128"><a href="#ContainerCodeModeBackend.execute-128"><span class="linenos">128</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown error&#39;</span><span class="p">)))</span>
-</span><span id="ContainerCodeModeBackend.execute-129"><a href="#ContainerCodeModeBackend.execute-129"><span class="linenos">129</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;variables&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend.execute-130"><a href="#ContainerCodeModeBackend.execute-130"><span class="linenos">130</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
-</span><span id="ContainerCodeModeBackend.execute-131"><a href="#ContainerCodeModeBackend.execute-131"><span class="linenos">131</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-105"><a href="#ContainerCodeModeBackend.execute-105"><span class="linenos">105</span></a>        <span class="n">process</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="ContainerCodeModeBackend.execute-106"><a href="#ContainerCodeModeBackend.execute-106"><span class="linenos">106</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-107"><a href="#ContainerCodeModeBackend.execute-107"><span class="linenos">107</span></a>            <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+</span><span id="ContainerCodeModeBackend.execute-108"><a href="#ContainerCodeModeBackend.execute-108"><span class="linenos">108</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_build_command</span><span class="p">(</span><span class="n">sandbox</span><span class="p">),</span>
+</span><span id="ContainerCodeModeBackend.execute-109"><a href="#ContainerCodeModeBackend.execute-109"><span class="linenos">109</span></a>                <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend.execute-110"><a href="#ContainerCodeModeBackend.execute-110"><span class="linenos">110</span></a>                <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend.execute-111"><a href="#ContainerCodeModeBackend.execute-111"><span class="linenos">111</span></a>                <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend.execute-112"><a href="#ContainerCodeModeBackend.execute-112"><span class="linenos">112</span></a>            <span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-113"><a href="#ContainerCodeModeBackend.execute-113"><span class="linenos">113</span></a>        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-114"><a href="#ContainerCodeModeBackend.execute-114"><span class="linenos">114</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container runtime failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="ContainerCodeModeBackend.execute-115"><a href="#ContainerCodeModeBackend.execute-115"><span class="linenos">115</span></a>
+</span><span id="ContainerCodeModeBackend.execute-116"><a href="#ContainerCodeModeBackend.execute-116"><span class="linenos">116</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-117"><a href="#ContainerCodeModeBackend.execute-117"><span class="linenos">117</span></a>            <span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span> <span class="o">=</span> <span class="n">_communicate_with_output_limit</span><span class="p">(</span>
+</span><span id="ContainerCodeModeBackend.execute-118"><a href="#ContainerCodeModeBackend.execute-118"><span class="linenos">118</span></a>                <span class="n">process</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend.execute-119"><a href="#ContainerCodeModeBackend.execute-119"><span class="linenos">119</span></a>                <span class="n">payload</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">),</span>
+</span><span id="ContainerCodeModeBackend.execute-120"><a href="#ContainerCodeModeBackend.execute-120"><span class="linenos">120</span></a>                <span class="n">timeout_seconds</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">timeout_seconds</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend.execute-121"><a href="#ContainerCodeModeBackend.execute-121"><span class="linenos">121</span></a>                <span class="n">max_output_bytes</span><span class="o">=</span><span class="n">sandbox</span><span class="o">.</span><span class="n">max_output_bytes</span><span class="p">,</span>
+</span><span id="ContainerCodeModeBackend.execute-122"><a href="#ContainerCodeModeBackend.execute-122"><span class="linenos">122</span></a>            <span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-123"><a href="#ContainerCodeModeBackend.execute-123"><span class="linenos">123</span></a>        <span class="k">finally</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-124"><a href="#ContainerCodeModeBackend.execute-124"><span class="linenos">124</span></a>            <span class="c1"># Ensure process is terminated even if communication fails</span>
+</span><span id="ContainerCodeModeBackend.execute-125"><a href="#ContainerCodeModeBackend.execute-125"><span class="linenos">125</span></a>            <span class="k">if</span> <span class="n">process</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">process</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-126"><a href="#ContainerCodeModeBackend.execute-126"><span class="linenos">126</span></a>                <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+</span><span id="ContainerCodeModeBackend.execute-127"><a href="#ContainerCodeModeBackend.execute-127"><span class="linenos">127</span></a>                <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-128"><a href="#ContainerCodeModeBackend.execute-128"><span class="linenos">128</span></a>                    <span class="n">process</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-129"><a href="#ContainerCodeModeBackend.execute-129"><span class="linenos">129</span></a>                <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-130"><a href="#ContainerCodeModeBackend.execute-130"><span class="linenos">130</span></a>                    <span class="n">process</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+</span><span id="ContainerCodeModeBackend.execute-131"><a href="#ContainerCodeModeBackend.execute-131"><span class="linenos">131</span></a>        <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-132"><a href="#ContainerCodeModeBackend.execute-132"><span class="linenos">132</span></a>            <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span><span class="n">stderr</span> <span class="ow">or</span> <span class="n">stdout</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="ContainerCodeModeBackend.execute-133"><a href="#ContainerCodeModeBackend.execute-133"><span class="linenos">133</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Code Mode container failed: </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-134"><a href="#ContainerCodeModeBackend.execute-134"><span class="linenos">134</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-135"><a href="#ContainerCodeModeBackend.execute-135"><span class="linenos">135</span></a>            <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stdout</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-136"><a href="#ContainerCodeModeBackend.execute-136"><span class="linenos">136</span></a>        <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-137"><a href="#ContainerCodeModeBackend.execute-137"><span class="linenos">137</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="s1">&#39;Code Mode container returned invalid JSON&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="ContainerCodeModeBackend.execute-138"><a href="#ContainerCodeModeBackend.execute-138"><span class="linenos">138</span></a>        <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span>
+</span><span id="ContainerCodeModeBackend.execute-139"><a href="#ContainerCodeModeBackend.execute-139"><span class="linenos">139</span></a>            <span class="k">raise</span> <span class="n">UnsafeCodeError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown error&#39;</span><span class="p">)))</span>
+</span><span id="ContainerCodeModeBackend.execute-140"><a href="#ContainerCodeModeBackend.execute-140"><span class="linenos">140</span></a>        <span class="n">variables</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;variables&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-141"><a href="#ContainerCodeModeBackend.execute-141"><span class="linenos">141</span></a>        <span class="n">validate_plain_data</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">)</span>
+</span><span id="ContainerCodeModeBackend.execute-142"><a href="#ContainerCodeModeBackend.execute-142"><span class="linenos">142</span></a>        <span class="k">return</span> <span class="n">CodeModeResult</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">variables</span><span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                 </section>
@@ -1191,25 +1264,25 @@ required by default and seccomp profile set to 'default'.</p>
 
                             <div id="IsolateCodeModeBackend.__init__" class="classattr">
                                 <div class="attr function">
-            
+
         <span class="name">IsolateCodeModeBackend</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">image</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;docker&#39;</span>,</span><span class="param">	<span class="n">python_executable</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;python3&#39;</span>,</span><span class="param">	<span class="n">network</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>,</span><span class="param">	<span class="n">cpus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>,</span><span class="param">	<span class="n">user</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;65534:65534&#39;</span>,</span><span class="param">	<span class="n">tmpfs_size_mb</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span>,</span><span class="param">	<span class="n">require_image_digest</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>,</span><span class="param">	<span class="n">allowed_images</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">seccomp_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s1">&#39;default&#39;</span>,</span><span class="param">	<span class="n">apparmor_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">selinux_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.__init__"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.image" class="classattr">
                                 <div class="attr variable">
             <span class="name">image</span><span class="annotation">: str</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.image"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.runtime" class="classattr">
@@ -1217,11 +1290,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">runtime</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;docker&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.runtime"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.python_executable" class="classattr">
@@ -1229,11 +1302,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">python_executable</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;python3&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.python_executable"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.network" class="classattr">
@@ -1241,11 +1314,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">network</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;none&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.network"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.cpus" class="classattr">
@@ -1253,11 +1326,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">cpus</span><span class="annotation">: float</span>        =
 <span class="default_value">1.0</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.cpus"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.user" class="classattr">
@@ -1265,11 +1338,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">user</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;65534:65534&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.user"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.tmpfs_size_mb" class="classattr">
@@ -1277,11 +1350,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">tmpfs_size_mb</span><span class="annotation">: int</span>        =
 <span class="default_value">16</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.tmpfs_size_mb"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.require_image_digest" class="classattr">
@@ -1289,11 +1362,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">require_image_digest</span><span class="annotation">: bool</span>        =
 <span class="default_value">True</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.require_image_digest"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.allowed_images" class="classattr">
@@ -1301,11 +1374,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">allowed_images</span><span class="annotation">: frozenset[str] | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.allowed_images"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.seccomp_profile" class="classattr">
@@ -1313,11 +1386,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">seccomp_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">&#39;default&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.seccomp_profile"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.apparmor_profile" class="classattr">
@@ -1325,11 +1398,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">apparmor_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.apparmor_profile"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.selinux_label" class="classattr">
@@ -1337,11 +1410,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">selinux_label</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-        
+
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.selinux_label"></a>
-    
-    
+
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.is_vm_isolated" class="classattr">
@@ -1359,13 +1432,13 @@ required by default and seccomp profile set to 'default'.</p>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="IsolateCodeModeBackend.execute" class="classattr">
                                         <input id="IsolateCodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -1398,14 +1471,14 @@ required by default and seccomp profile set to 'default'.</p>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                 </section>
                 <section id="UnsafeCodeError">
                             <input id="UnsafeCodeError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">UnsafeCodeError</span><wbr>(<span class="base">builtins.ValueError</span>):
 
@@ -1413,12 +1486,14 @@ required by default and seccomp profile set to 'default'.</p>
 
     </div>
     <a class="headerlink" href="#UnsafeCodeError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="UnsafeCodeError-8"><a href="#UnsafeCodeError-8"><span class="linenos">8</span></a><span class="k">class</span><span class="w"> </span><span class="nc">UnsafeCodeError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-</span><span id="UnsafeCodeError-9"><a href="#UnsafeCodeError-9"><span class="linenos">9</span></a>    <span class="k">pass</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="UnsafeCodeError-8"><a href="#UnsafeCodeError-8"><span class="linenos"> 8</span></a><span class="k">class</span><span class="w"> </span><span class="nc">UnsafeCodeError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+</span><span id="UnsafeCodeError-9"><a href="#UnsafeCodeError-9"><span class="linenos"> 9</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception raised when code validation fails due to unsafe constructs.&quot;&quot;&quot;</span>
+</span><span id="UnsafeCodeError-10"><a href="#UnsafeCodeError-10"><span class="linenos">10</span></a>
+</span><span id="UnsafeCodeError-11"><a href="#UnsafeCodeError-11"><span class="linenos">11</span></a>    <span class="k">pass</span>
 </span></pre></div>
 
 
-            <div class="docstring"><p>Inappropriate argument value (of correct type).</p>
+            <div class="docstring"><p>Exception raised when code validation fails due to unsafe constructs.</p>
 </div>
 
 
@@ -1426,7 +1501,7 @@ required by default and seccomp profile set to 'default'.</p>
                 <section id="execute_code_mode">
                             <input id="execute_code_mode-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">execute_code_mode</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">backend</span><span class="p">:</span> <span class="n"><a href="#CodeModeBackend">CodeModeBackend</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">profile</span><span class="p">:</span> <span class="n"><a href="#SandboxProfile">SandboxProfile</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">audit_logger</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">run_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -1490,13 +1565,13 @@ required by default and seccomp profile set to 'default'.</p>
 </span></pre></div>
 
 
-    
+
 
                 </section>
                 <section id="SandboxProfile">
                             <input id="SandboxProfile-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">SandboxProfile</span><wbr>(<span class="base">builtins.str</span>, <span class="base">enum.Enum</span>):
 
@@ -1574,11 +1649,11 @@ errors defaults to 'strict'.</p>
             <span class="name">LOCAL</span>        =
 <span class="default_value">&lt;<a href="#SandboxProfile.LOCAL">SandboxProfile.LOCAL</a>: &#39;local&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#SandboxProfile.LOCAL"></a>
-    
-    
+
+
 
                             </div>
                             <div id="SandboxProfile.CI" class="classattr">
@@ -1586,11 +1661,11 @@ errors defaults to 'strict'.</p>
             <span class="name">CI</span>        =
 <span class="default_value">&lt;<a href="#SandboxProfile.CI">SandboxProfile.CI</a>: &#39;ci&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#SandboxProfile.CI"></a>
-    
-    
+
+
 
                             </div>
                             <div id="SandboxProfile.PRODUCTION" class="classattr">
@@ -1598,17 +1673,17 @@ errors defaults to 'strict'.</p>
             <span class="name">PRODUCTION</span>        =
 <span class="default_value">&lt;<a href="#SandboxProfile.PRODUCTION">SandboxProfile.PRODUCTION</a>: &#39;production&#39;&gt;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#SandboxProfile.PRODUCTION"></a>
-    
-    
+
+
 
                             </div>
                             <div id="SandboxProfile.default_sandbox" class="classattr">
                                         <input id="SandboxProfile.default_sandbox-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">default_sandbox</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span>:</span></span>
 
@@ -1641,13 +1716,13 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="SandboxProfile.validate_runtime_support" class="classattr">
                                         <input id="SandboxProfile.validate_runtime_support-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">validate_runtime_support</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
 
@@ -1679,7 +1754,7 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                 </section>

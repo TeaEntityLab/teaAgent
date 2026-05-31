@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import tempfile
 from pathlib import Path
 
@@ -37,8 +38,6 @@ def test_chat_command_with_invalid_args():
 
 def test_chat_command_smoke_test():
     """Test chat command starts and exits cleanly via /exit command."""
-    import argparse
-
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create minimal args namespace
         args = argparse.Namespace(
@@ -58,16 +57,11 @@ def test_chat_command_smoke_test():
         )
 
         # Mock input to return /exit immediately
-        import builtins
+        from unittest.mock import patch
 
-        original_input = builtins.input
-        builtins.input = lambda _: '/exit'
-
-        try:
+        with patch('builtins.input', lambda _: '/exit'):
             result = chat_command(args)
-            assert result == 0, f'Expected exit code 0, got {result}'
-        finally:
-            builtins.input = original_input
+        assert result == 0, f'Expected exit code 0, got {result}'
 
 
 def test_run_chat_repl_exit_command(monkeypatch):

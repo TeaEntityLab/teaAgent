@@ -137,7 +137,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`273 passed` (includes TUI evolution Phase A-C features: async autocomplete, fuzzy session switch, secret filename prevention, subagent tree view, approval diff preview, headless pty tests, and compliance audit exporter).
+`276 passed` (includes TUI evolution Phase A-C features, denial reason-code flow, and compliance audit exporter).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

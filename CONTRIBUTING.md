@@ -30,6 +30,12 @@ Pre-commit runs a smoke subset by default. For the full test suite locally:
 TEAAGENT_PRECOMMIT_FULL=1 pre-commit run --all-files
 ```
 
+Docs consistency (same check as CI):
+
+```bash
+./scripts/verify_docs.sh
+```
+
 ### CI jobs
 
 | Job | Blocks merge? | Purpose |

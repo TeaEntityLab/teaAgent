@@ -517,19 +517,14 @@ class ApprovalPolicy:
             loop = None
 
         if loop is not None and loop.is_running():
-            # We are on the event loop thread — offload to a worker thread
-            # that creates its own event loop to run the coroutine.
-            def _run_in_thread() -> Any:
-                new_loop = asyncio.new_event_loop()
-                try:
-                    asyncio.set_event_loop(new_loop)
-                    return new_loop.run_until_complete(coro)
-                finally:
-                    new_loop.close()
+            from teaagent.async_bridge import run_coroutine_sync
 
             timeout = self.multi_sig_config.timeout_seconds + 5
-            future = self._signature_executor.submit(_run_in_thread)
-            return future.result(timeout=timeout)
+            return run_coroutine_sync(
+                coro,
+                executor=self._signature_executor,
+                timeout_seconds=timeout,
+            )
         return asyncio.run(coro)
 
 

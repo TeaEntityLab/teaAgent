@@ -90,18 +90,24 @@ def test_documented_smoke_commands_run_locally_without_network() -> None:
     ]
     for argv, verify in cases:
         result = _run_local(argv, cwd=root)
-        # Allow preflight to fail in sandbox environments with restricted git/network access
-        if (
-            'preflight' in argv
-            and result.returncode != 0
-            and (
-                'git' in result.stderr.lower()
-                or 'network' in result.stderr.lower()
-                or 'permission' in result.stderr.lower()
-            )
-        ):
-            # Expected failure in restricted environments
-            continue
+        if 'preflight' in argv:
+            # Preflight uses process exit codes to communicate readiness:
+            # - 0: ready
+            # - non-zero: not-ready due to clarify/health failures
+            #
+            # In restricted sandboxes, network binding and repo `.git` writability
+            # checks can legitimately fail, but the command should still return a
+            # well-formed JSON report rather than crash.
+            payload = json.loads(result.stdout.strip() or '{}')
+            assert 'ready' in payload
+            assert 'health' in payload
+            assert 'healthy' in payload['health']
+            assert 'failures' in payload['health']
+            if result.returncode != 0:
+                assert payload['ready'] is False
+                assert payload['health']['healthy'] is False
+                assert payload['health']['failures']
+                continue
         assert result.returncode == 0, (
             f'command failed: {" ".join(argv)}\nstdout={result.stdout}\nstderr={result.stderr}'
         )

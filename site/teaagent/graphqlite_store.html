@@ -121,7 +121,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.graphqlite_store    </h1>
 
-                
+
                         <input id="mod-graphqlite_store-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-graphqlite_store-view-source"><span>View Source</span></label>
@@ -209,66 +209,68 @@
 </span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>            <span class="n">rel_type</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
 </span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>        <span class="p">)</span>
 </span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>
-</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">)</span>
-</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>
-</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">sync_from_knowledge_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="n">KnowledgeGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>        <span class="k">for</span> <span class="n">document</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_documents</span><span class="p">():</span>
-</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_document</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_edges</span><span class="p">():</span>
-</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
-</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>
-</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>
-</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>    <span class="n">ensure_sqlite_extension_loading</span><span class="p">()</span>
-</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">graphqlite</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
-</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - depends on optional runtime package</span>
-</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteUnavailableError</span><span class="p">(</span>
-</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>            <span class="s1">&#39;graphqlite is required for GraphQLiteGraphStore. Install requirements.txt or pyproject dependencies.&#39;</span>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>        <span class="k">return</span> <span class="n">Graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
-</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>    <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
-</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>            <span class="s1">&#39;graphqlite is installed, but the current Python sqlite3 runtime cannot load SQLite extensions. &#39;</span>
-</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>            <span class="s1">&#39;Use a Python build with sqlite3.enable_load_extension support, such as a Homebrew Python on macOS.&#39;</span>
-</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>
-</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>
-</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a><span class="k">def</span><span class="w"> </span><span class="nf">ensure_sqlite_extension_loading</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Use pysqlite3 when the platform sqlite3 lacks extension loading.&quot;&quot;&quot;</span>
-</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>
-</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>        <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">)</span>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">sync_from_knowledge_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="n">KnowledgeGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>        <span class="k">for</span> <span class="n">document</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_documents</span><span class="p">():</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_document</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_edges</span><span class="p">():</span>
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>
+</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>    <span class="n">ensure_sqlite_extension_loading</span><span class="p">()</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">graphqlite</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - depends on optional runtime package</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteUnavailableError</span><span class="p">(</span>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>            <span class="s1">&#39;graphqlite is required for GraphQLiteGraphStore. Install requirements.txt or pyproject dependencies.&#39;</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>        <span class="k">return</span> <span class="n">Graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>    <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>            <span class="s1">&#39;graphqlite is installed, but the current Python sqlite3 runtime cannot load SQLite extensions. &#39;</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>            <span class="s1">&#39;Use a Python build with sqlite3.enable_load_extension support, such as a Homebrew Python on macOS.&#39;</span>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a><span class="k">def</span><span class="w"> </span><span class="nf">ensure_sqlite_extension_loading</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Use pysqlite3 when the platform sqlite3 lacks extension loading.&quot;&quot;&quot;</span>
 </span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>
-</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;:memory:&#39;</span><span class="p">)</span>
-</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="s1">&#39;enable_load_extension&#39;</span><span class="p">):</span>
-</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>            <span class="k">return</span>
-</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>    <span class="k">finally</span><span class="p">:</span>
-</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>
-</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>        <span class="kn">import</span><span class="w"> </span><span class="nn">pysqlite3</span>
-</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>    <span class="k">except</span> <span class="p">(</span>
-</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>        <span class="ne">ImportError</span>
-</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - dependency/runtime environment specific</span>
-</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
-</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>            <span class="s1">&#39;graphqlite requires sqlite extension loading, but the current sqlite3 runtime does not support it. &#39;</span>
-</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>            <span class="s1">&#39;Install pysqlite3 or use a Python build with sqlite3.enable_load_extension support.&#39;</span>
-</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>
-</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s1">&#39;sqlite3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pysqlite3</span>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;:memory:&#39;</span><span class="p">)</span>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="s1">&#39;enable_load_extension&#39;</span><span class="p">):</span>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>            <span class="k">return</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>    <span class="k">finally</span><span class="p">:</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>        <span class="kn">import</span><span class="w"> </span><span class="nn">pysqlite3</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>    <span class="k">except</span> <span class="p">(</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>        <span class="ne">ImportError</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - dependency/runtime environment specific</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>            <span class="s1">&#39;graphqlite requires sqlite extension loading, but the current sqlite3 runtime does not support it. &#39;</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>            <span class="s1">&#39;Install pysqlite3 or use a Python build with sqlite3.enable_load_extension support.&#39;</span>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 </span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>
-</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>
-</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_graphqlite_runtime</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>        <span class="n">graph</span> <span class="o">=</span> <span class="n">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
-</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">upsert_node</span><span class="p">(</span><span class="s1">&#39;teaagent_smoke&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TeaAgent&#39;</span><span class="p">},</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;SmokeTest&#39;</span><span class="p">)</span>
-</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;MATCH (n:SmokeTest) RETURN n.name&#39;</span><span class="p">)</span>
-</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>    <span class="k">except</span> <span class="p">(</span><span class="n">GraphQLiteUnavailableError</span><span class="p">,</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>    <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;graphqlite runtime is available&#39;</span>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s1">&#39;sqlite3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pysqlite3</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_graphqlite_runtime</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>        <span class="n">graph</span> <span class="o">=</span> <span class="n">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">upsert_node</span><span class="p">(</span><span class="s1">&#39;teaagent_smoke&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TeaAgent&#39;</span><span class="p">},</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;SmokeTest&#39;</span><span class="p">)</span>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;MATCH (n:SmokeTest) RETURN n.name&#39;</span><span class="p">)</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>    <span class="k">except</span> <span class="p">(</span><span class="n">GraphQLiteUnavailableError</span><span class="p">,</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>    <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;graphqlite runtime is available&#39;</span>
 </span></pre></div>
 
 
@@ -276,7 +278,7 @@
                 <section id="GraphQLiteUnavailableError">
                             <input id="GraphQLiteUnavailableError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">GraphQLiteUnavailableError</span><wbr>(<span class="base">builtins.ImportError</span>):
 
@@ -297,7 +299,7 @@
                 <section id="GraphQLiteRuntimeError">
                             <input id="GraphQLiteRuntimeError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">GraphQLiteRuntimeError</span><wbr>(<span class="base">builtins.RuntimeError</span>):
 
@@ -320,11 +322,11 @@
             <span class="name">GraphFactory</span>        =
 <span class="default_value">typing.Callable[[str], typing.Any]</span>
 
-        
+
     </div>
     <a class="headerlink" href="#GraphFactory"></a>
-    
-    
+
+
 
                 </section>
                 <section id="GraphQLiteConfig">
@@ -345,18 +347,18 @@
 </span></pre></div>
 
 
-    
+
 
                             <div id="GraphQLiteConfig.__init__" class="classattr">
                                 <div class="attr function">
-            
+
         <span class="name">GraphQLiteConfig</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span></span>)</span>
 
-        
+
     </div>
     <a class="headerlink" href="#GraphQLiteConfig.__init__"></a>
-    
-    
+
+
 
                             </div>
                             <div id="GraphQLiteConfig.database" class="classattr">
@@ -364,18 +366,18 @@
             <span class="name">database</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;:memory:&#39;</span>
 
-        
+
     </div>
     <a class="headerlink" href="#GraphQLiteConfig.database"></a>
-    
-    
+
+
 
                             </div>
                 </section>
                 <section id="DummyKnowledgeGraph">
                             <input id="DummyKnowledgeGraph-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">DummyKnowledgeGraph</span>:
 
@@ -404,7 +406,7 @@
                             <div id="DummyKnowledgeGraph.upsert_node" class="classattr">
                                         <input id="DummyKnowledgeGraph.upsert_node-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">upsert_node</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -417,13 +419,13 @@
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="DummyKnowledgeGraph.upsert_edge" class="classattr">
                                         <input id="DummyKnowledgeGraph.upsert_edge-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">upsert_edge</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -436,13 +438,13 @@
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="DummyKnowledgeGraph.query" class="classattr">
                                         <input id="DummyKnowledgeGraph.query-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">query</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -455,14 +457,14 @@
 </span></pre></div>
 
 
-    
+
 
                             </div>
                 </section>
                 <section id="GraphQLiteGraphStore">
                             <input id="GraphQLiteGraphStore-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-            
+
     <span class="def">class</span>
     <span class="name">GraphQLiteGraphStore</span>:
 
@@ -514,14 +516,16 @@
 </span><span id="GraphQLiteGraphStore-82"><a href="#GraphQLiteGraphStore-82"><span class="linenos">82</span></a>            <span class="n">rel_type</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
 </span><span id="GraphQLiteGraphStore-83"><a href="#GraphQLiteGraphStore-83"><span class="linenos">83</span></a>        <span class="p">)</span>
 </span><span id="GraphQLiteGraphStore-84"><a href="#GraphQLiteGraphStore-84"><span class="linenos">84</span></a>
-</span><span id="GraphQLiteGraphStore-85"><a href="#GraphQLiteGraphStore-85"><span class="linenos">85</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="GraphQLiteGraphStore-86"><a href="#GraphQLiteGraphStore-86"><span class="linenos">86</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">)</span>
-</span><span id="GraphQLiteGraphStore-87"><a href="#GraphQLiteGraphStore-87"><span class="linenos">87</span></a>
-</span><span id="GraphQLiteGraphStore-88"><a href="#GraphQLiteGraphStore-88"><span class="linenos">88</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">sync_from_knowledge_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="n">KnowledgeGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="GraphQLiteGraphStore-89"><a href="#GraphQLiteGraphStore-89"><span class="linenos">89</span></a>        <span class="k">for</span> <span class="n">document</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_documents</span><span class="p">():</span>
-</span><span id="GraphQLiteGraphStore-90"><a href="#GraphQLiteGraphStore-90"><span class="linenos">90</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_document</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
-</span><span id="GraphQLiteGraphStore-91"><a href="#GraphQLiteGraphStore-91"><span class="linenos">91</span></a>        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_edges</span><span class="p">():</span>
-</span><span id="GraphQLiteGraphStore-92"><a href="#GraphQLiteGraphStore-92"><span class="linenos">92</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+</span><span id="GraphQLiteGraphStore-85"><a href="#GraphQLiteGraphStore-85"><span class="linenos">85</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="GraphQLiteGraphStore-86"><a href="#GraphQLiteGraphStore-86"><span class="linenos">86</span></a>        <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="GraphQLiteGraphStore-87"><a href="#GraphQLiteGraphStore-87"><span class="linenos">87</span></a>            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+</span><span id="GraphQLiteGraphStore-88"><a href="#GraphQLiteGraphStore-88"><span class="linenos">88</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">)</span>
+</span><span id="GraphQLiteGraphStore-89"><a href="#GraphQLiteGraphStore-89"><span class="linenos">89</span></a>
+</span><span id="GraphQLiteGraphStore-90"><a href="#GraphQLiteGraphStore-90"><span class="linenos">90</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">sync_from_knowledge_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="n">KnowledgeGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="GraphQLiteGraphStore-91"><a href="#GraphQLiteGraphStore-91"><span class="linenos">91</span></a>        <span class="k">for</span> <span class="n">document</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_documents</span><span class="p">():</span>
+</span><span id="GraphQLiteGraphStore-92"><a href="#GraphQLiteGraphStore-92"><span class="linenos">92</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_document</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
+</span><span id="GraphQLiteGraphStore-93"><a href="#GraphQLiteGraphStore-93"><span class="linenos">93</span></a>        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_edges</span><span class="p">():</span>
+</span><span id="GraphQLiteGraphStore-94"><a href="#GraphQLiteGraphStore-94"><span class="linenos">94</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -532,7 +536,7 @@
                             <div id="GraphQLiteGraphStore.__init__" class="classattr">
                                         <input id="GraphQLiteGraphStore.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="name">GraphQLiteGraphStore</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="#GraphQLiteConfig">GraphQLiteConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">graph_factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="GraphQLiteGraphStore.__init__-view-source"><span>View Source</span></label>
@@ -560,24 +564,24 @@
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="GraphQLiteGraphStore.config" class="classattr">
                                 <div class="attr variable">
             <span class="name">config</span>
 
-        
+
     </div>
     <a class="headerlink" href="#GraphQLiteGraphStore.config"></a>
-    
-    
+
+
 
                             </div>
                             <div id="GraphQLiteGraphStore.upsert_document" class="classattr">
                                         <input id="GraphQLiteGraphStore.upsert_document-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">upsert_document</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">document</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#Document">teaagent.Document</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -599,13 +603,13 @@
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="GraphQLiteGraphStore.upsert_edge" class="classattr">
                                         <input id="GraphQLiteGraphStore.upsert_edge-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">upsert_edge</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">edge</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#GraphEdge">teaagent.GraphEdge</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -625,32 +629,34 @@
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="GraphQLiteGraphStore.query" class="classattr">
                                         <input id="GraphQLiteGraphStore.query-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
-        <span class="name">query</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">Any</span>:</span></span>
+        <span class="name">query</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n">Any</span>:</span></span>
 
                 <label class="view-source-button" for="GraphQLiteGraphStore.query-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#GraphQLiteGraphStore.query"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="GraphQLiteGraphStore.query-85"><a href="#GraphQLiteGraphStore.query-85"><span class="linenos">85</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="GraphQLiteGraphStore.query-86"><a href="#GraphQLiteGraphStore.query-86"><span class="linenos">86</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="GraphQLiteGraphStore.query-85"><a href="#GraphQLiteGraphStore.query-85"><span class="linenos">85</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cypher</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="GraphQLiteGraphStore.query-86"><a href="#GraphQLiteGraphStore.query-86"><span class="linenos">86</span></a>        <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="GraphQLiteGraphStore.query-87"><a href="#GraphQLiteGraphStore.query-87"><span class="linenos">87</span></a>            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+</span><span id="GraphQLiteGraphStore.query-88"><a href="#GraphQLiteGraphStore.query-88"><span class="linenos">88</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">cypher</span><span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                             <div id="GraphQLiteGraphStore.sync_from_knowledge_graph" class="classattr">
                                         <input id="GraphQLiteGraphStore.sync_from_knowledge_graph-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">sync_from_knowledge_graph</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">graph</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#KnowledgeGraph">teaagent.KnowledgeGraph</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -658,22 +664,22 @@
 
     </div>
     <a class="headerlink" href="#GraphQLiteGraphStore.sync_from_knowledge_graph"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-88"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-88"><span class="linenos">88</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">sync_from_knowledge_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="n">KnowledgeGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-89"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-89"><span class="linenos">89</span></a>        <span class="k">for</span> <span class="n">document</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_documents</span><span class="p">():</span>
-</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-90"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-90"><span class="linenos">90</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_document</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
-</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-91"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-91"><span class="linenos">91</span></a>        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_edges</span><span class="p">():</span>
-</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-92"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-92"><span class="linenos">92</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-90"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-90"><span class="linenos">90</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">sync_from_knowledge_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="n">KnowledgeGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-91"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-91"><span class="linenos">91</span></a>        <span class="k">for</span> <span class="n">document</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_documents</span><span class="p">():</span>
+</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-92"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-92"><span class="linenos">92</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_document</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
+</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-93"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-93"><span class="linenos">93</span></a>        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">all_edges</span><span class="p">():</span>
+</span><span id="GraphQLiteGraphStore.sync_from_knowledge_graph-94"><a href="#GraphQLiteGraphStore.sync_from_knowledge_graph-94"><span class="linenos">94</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">upsert_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
 </span></pre></div>
 
 
-    
+
 
                             </div>
                 </section>
                 <section id="load_graphqlite_graph">
                             <input id="load_graphqlite_graph-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">load_graphqlite_graph</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">database</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">Any</span>:</span></span>
 
@@ -681,31 +687,31 @@
 
     </div>
     <a class="headerlink" href="#load_graphqlite_graph"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="load_graphqlite_graph-95"><a href="#load_graphqlite_graph-95"><span class="linenos"> 95</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="load_graphqlite_graph-96"><a href="#load_graphqlite_graph-96"><span class="linenos"> 96</span></a>    <span class="n">ensure_sqlite_extension_loading</span><span class="p">()</span>
-</span><span id="load_graphqlite_graph-97"><a href="#load_graphqlite_graph-97"><span class="linenos"> 97</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="load_graphqlite_graph-98"><a href="#load_graphqlite_graph-98"><span class="linenos"> 98</span></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">graphqlite</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
-</span><span id="load_graphqlite_graph-99"><a href="#load_graphqlite_graph-99"><span class="linenos"> 99</span></a>    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - depends on optional runtime package</span>
-</span><span id="load_graphqlite_graph-100"><a href="#load_graphqlite_graph-100"><span class="linenos">100</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteUnavailableError</span><span class="p">(</span>
-</span><span id="load_graphqlite_graph-101"><a href="#load_graphqlite_graph-101"><span class="linenos">101</span></a>            <span class="s1">&#39;graphqlite is required for GraphQLiteGraphStore. Install requirements.txt or pyproject dependencies.&#39;</span>
-</span><span id="load_graphqlite_graph-102"><a href="#load_graphqlite_graph-102"><span class="linenos">102</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="load_graphqlite_graph-103"><a href="#load_graphqlite_graph-103"><span class="linenos">103</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="load_graphqlite_graph-104"><a href="#load_graphqlite_graph-104"><span class="linenos">104</span></a>        <span class="k">return</span> <span class="n">Graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
-</span><span id="load_graphqlite_graph-105"><a href="#load_graphqlite_graph-105"><span class="linenos">105</span></a>    <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="load_graphqlite_graph-106"><a href="#load_graphqlite_graph-106"><span class="linenos">106</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
-</span><span id="load_graphqlite_graph-107"><a href="#load_graphqlite_graph-107"><span class="linenos">107</span></a>            <span class="s1">&#39;graphqlite is installed, but the current Python sqlite3 runtime cannot load SQLite extensions. &#39;</span>
-</span><span id="load_graphqlite_graph-108"><a href="#load_graphqlite_graph-108"><span class="linenos">108</span></a>            <span class="s1">&#39;Use a Python build with sqlite3.enable_load_extension support, such as a Homebrew Python on macOS.&#39;</span>
-</span><span id="load_graphqlite_graph-109"><a href="#load_graphqlite_graph-109"><span class="linenos">109</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="load_graphqlite_graph-97"><a href="#load_graphqlite_graph-97"><span class="linenos"> 97</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="load_graphqlite_graph-98"><a href="#load_graphqlite_graph-98"><span class="linenos"> 98</span></a>    <span class="n">ensure_sqlite_extension_loading</span><span class="p">()</span>
+</span><span id="load_graphqlite_graph-99"><a href="#load_graphqlite_graph-99"><span class="linenos"> 99</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="load_graphqlite_graph-100"><a href="#load_graphqlite_graph-100"><span class="linenos">100</span></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">graphqlite</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
+</span><span id="load_graphqlite_graph-101"><a href="#load_graphqlite_graph-101"><span class="linenos">101</span></a>    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - depends on optional runtime package</span>
+</span><span id="load_graphqlite_graph-102"><a href="#load_graphqlite_graph-102"><span class="linenos">102</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteUnavailableError</span><span class="p">(</span>
+</span><span id="load_graphqlite_graph-103"><a href="#load_graphqlite_graph-103"><span class="linenos">103</span></a>            <span class="s1">&#39;graphqlite is required for GraphQLiteGraphStore. Install requirements.txt or pyproject dependencies.&#39;</span>
+</span><span id="load_graphqlite_graph-104"><a href="#load_graphqlite_graph-104"><span class="linenos">104</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="load_graphqlite_graph-105"><a href="#load_graphqlite_graph-105"><span class="linenos">105</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="load_graphqlite_graph-106"><a href="#load_graphqlite_graph-106"><span class="linenos">106</span></a>        <span class="k">return</span> <span class="n">Graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+</span><span id="load_graphqlite_graph-107"><a href="#load_graphqlite_graph-107"><span class="linenos">107</span></a>    <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="load_graphqlite_graph-108"><a href="#load_graphqlite_graph-108"><span class="linenos">108</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
+</span><span id="load_graphqlite_graph-109"><a href="#load_graphqlite_graph-109"><span class="linenos">109</span></a>            <span class="s1">&#39;graphqlite is installed, but the current Python sqlite3 runtime cannot load SQLite extensions. &#39;</span>
+</span><span id="load_graphqlite_graph-110"><a href="#load_graphqlite_graph-110"><span class="linenos">110</span></a>            <span class="s1">&#39;Use a Python build with sqlite3.enable_load_extension support, such as a Homebrew Python on macOS.&#39;</span>
+</span><span id="load_graphqlite_graph-111"><a href="#load_graphqlite_graph-111"><span class="linenos">111</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 </span></pre></div>
 
 
-    
+
 
                 </section>
                 <section id="ensure_sqlite_extension_loading">
                             <input id="ensure_sqlite_extension_loading-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">ensure_sqlite_extension_loading</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -713,29 +719,29 @@
 
     </div>
     <a class="headerlink" href="#ensure_sqlite_extension_loading"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ensure_sqlite_extension_loading-112"><a href="#ensure_sqlite_extension_loading-112"><span class="linenos">112</span></a><span class="k">def</span><span class="w"> </span><span class="nf">ensure_sqlite_extension_loading</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="ensure_sqlite_extension_loading-113"><a href="#ensure_sqlite_extension_loading-113"><span class="linenos">113</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Use pysqlite3 when the platform sqlite3 lacks extension loading.&quot;&quot;&quot;</span>
-</span><span id="ensure_sqlite_extension_loading-114"><a href="#ensure_sqlite_extension_loading-114"><span class="linenos">114</span></a>
-</span><span id="ensure_sqlite_extension_loading-115"><a href="#ensure_sqlite_extension_loading-115"><span class="linenos">115</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ensure_sqlite_extension_loading-114"><a href="#ensure_sqlite_extension_loading-114"><span class="linenos">114</span></a><span class="k">def</span><span class="w"> </span><span class="nf">ensure_sqlite_extension_loading</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="ensure_sqlite_extension_loading-115"><a href="#ensure_sqlite_extension_loading-115"><span class="linenos">115</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Use pysqlite3 when the platform sqlite3 lacks extension loading.&quot;&quot;&quot;</span>
 </span><span id="ensure_sqlite_extension_loading-116"><a href="#ensure_sqlite_extension_loading-116"><span class="linenos">116</span></a>
-</span><span id="ensure_sqlite_extension_loading-117"><a href="#ensure_sqlite_extension_loading-117"><span class="linenos">117</span></a>    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;:memory:&#39;</span><span class="p">)</span>
-</span><span id="ensure_sqlite_extension_loading-118"><a href="#ensure_sqlite_extension_loading-118"><span class="linenos">118</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="ensure_sqlite_extension_loading-119"><a href="#ensure_sqlite_extension_loading-119"><span class="linenos">119</span></a>        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="s1">&#39;enable_load_extension&#39;</span><span class="p">):</span>
-</span><span id="ensure_sqlite_extension_loading-120"><a href="#ensure_sqlite_extension_loading-120"><span class="linenos">120</span></a>            <span class="k">return</span>
-</span><span id="ensure_sqlite_extension_loading-121"><a href="#ensure_sqlite_extension_loading-121"><span class="linenos">121</span></a>    <span class="k">finally</span><span class="p">:</span>
-</span><span id="ensure_sqlite_extension_loading-122"><a href="#ensure_sqlite_extension_loading-122"><span class="linenos">122</span></a>        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="ensure_sqlite_extension_loading-123"><a href="#ensure_sqlite_extension_loading-123"><span class="linenos">123</span></a>
-</span><span id="ensure_sqlite_extension_loading-124"><a href="#ensure_sqlite_extension_loading-124"><span class="linenos">124</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="ensure_sqlite_extension_loading-125"><a href="#ensure_sqlite_extension_loading-125"><span class="linenos">125</span></a>        <span class="kn">import</span><span class="w"> </span><span class="nn">pysqlite3</span>
-</span><span id="ensure_sqlite_extension_loading-126"><a href="#ensure_sqlite_extension_loading-126"><span class="linenos">126</span></a>    <span class="k">except</span> <span class="p">(</span>
-</span><span id="ensure_sqlite_extension_loading-127"><a href="#ensure_sqlite_extension_loading-127"><span class="linenos">127</span></a>        <span class="ne">ImportError</span>
-</span><span id="ensure_sqlite_extension_loading-128"><a href="#ensure_sqlite_extension_loading-128"><span class="linenos">128</span></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - dependency/runtime environment specific</span>
-</span><span id="ensure_sqlite_extension_loading-129"><a href="#ensure_sqlite_extension_loading-129"><span class="linenos">129</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
-</span><span id="ensure_sqlite_extension_loading-130"><a href="#ensure_sqlite_extension_loading-130"><span class="linenos">130</span></a>            <span class="s1">&#39;graphqlite requires sqlite extension loading, but the current sqlite3 runtime does not support it. &#39;</span>
-</span><span id="ensure_sqlite_extension_loading-131"><a href="#ensure_sqlite_extension_loading-131"><span class="linenos">131</span></a>            <span class="s1">&#39;Install pysqlite3 or use a Python build with sqlite3.enable_load_extension support.&#39;</span>
-</span><span id="ensure_sqlite_extension_loading-132"><a href="#ensure_sqlite_extension_loading-132"><span class="linenos">132</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
-</span><span id="ensure_sqlite_extension_loading-133"><a href="#ensure_sqlite_extension_loading-133"><span class="linenos">133</span></a>
-</span><span id="ensure_sqlite_extension_loading-134"><a href="#ensure_sqlite_extension_loading-134"><span class="linenos">134</span></a>    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s1">&#39;sqlite3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pysqlite3</span>
+</span><span id="ensure_sqlite_extension_loading-117"><a href="#ensure_sqlite_extension_loading-117"><span class="linenos">117</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+</span><span id="ensure_sqlite_extension_loading-118"><a href="#ensure_sqlite_extension_loading-118"><span class="linenos">118</span></a>
+</span><span id="ensure_sqlite_extension_loading-119"><a href="#ensure_sqlite_extension_loading-119"><span class="linenos">119</span></a>    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;:memory:&#39;</span><span class="p">)</span>
+</span><span id="ensure_sqlite_extension_loading-120"><a href="#ensure_sqlite_extension_loading-120"><span class="linenos">120</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="ensure_sqlite_extension_loading-121"><a href="#ensure_sqlite_extension_loading-121"><span class="linenos">121</span></a>        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="s1">&#39;enable_load_extension&#39;</span><span class="p">):</span>
+</span><span id="ensure_sqlite_extension_loading-122"><a href="#ensure_sqlite_extension_loading-122"><span class="linenos">122</span></a>            <span class="k">return</span>
+</span><span id="ensure_sqlite_extension_loading-123"><a href="#ensure_sqlite_extension_loading-123"><span class="linenos">123</span></a>    <span class="k">finally</span><span class="p">:</span>
+</span><span id="ensure_sqlite_extension_loading-124"><a href="#ensure_sqlite_extension_loading-124"><span class="linenos">124</span></a>        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="ensure_sqlite_extension_loading-125"><a href="#ensure_sqlite_extension_loading-125"><span class="linenos">125</span></a>
+</span><span id="ensure_sqlite_extension_loading-126"><a href="#ensure_sqlite_extension_loading-126"><span class="linenos">126</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="ensure_sqlite_extension_loading-127"><a href="#ensure_sqlite_extension_loading-127"><span class="linenos">127</span></a>        <span class="kn">import</span><span class="w"> </span><span class="nn">pysqlite3</span>
+</span><span id="ensure_sqlite_extension_loading-128"><a href="#ensure_sqlite_extension_loading-128"><span class="linenos">128</span></a>    <span class="k">except</span> <span class="p">(</span>
+</span><span id="ensure_sqlite_extension_loading-129"><a href="#ensure_sqlite_extension_loading-129"><span class="linenos">129</span></a>        <span class="ne">ImportError</span>
+</span><span id="ensure_sqlite_extension_loading-130"><a href="#ensure_sqlite_extension_loading-130"><span class="linenos">130</span></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - dependency/runtime environment specific</span>
+</span><span id="ensure_sqlite_extension_loading-131"><a href="#ensure_sqlite_extension_loading-131"><span class="linenos">131</span></a>        <span class="k">raise</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">(</span>
+</span><span id="ensure_sqlite_extension_loading-132"><a href="#ensure_sqlite_extension_loading-132"><span class="linenos">132</span></a>            <span class="s1">&#39;graphqlite requires sqlite extension loading, but the current sqlite3 runtime does not support it. &#39;</span>
+</span><span id="ensure_sqlite_extension_loading-133"><a href="#ensure_sqlite_extension_loading-133"><span class="linenos">133</span></a>            <span class="s1">&#39;Install pysqlite3 or use a Python build with sqlite3.enable_load_extension support.&#39;</span>
+</span><span id="ensure_sqlite_extension_loading-134"><a href="#ensure_sqlite_extension_loading-134"><span class="linenos">134</span></a>        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</span><span id="ensure_sqlite_extension_loading-135"><a href="#ensure_sqlite_extension_loading-135"><span class="linenos">135</span></a>
+</span><span id="ensure_sqlite_extension_loading-136"><a href="#ensure_sqlite_extension_loading-136"><span class="linenos">136</span></a>    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s1">&#39;sqlite3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pysqlite3</span>
 </span></pre></div>
 
 
@@ -747,7 +753,7 @@
                 <section id="check_graphqlite_runtime">
                             <input id="check_graphqlite_runtime-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-            
+
         <span class="def">def</span>
         <span class="name">check_graphqlite_runtime</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>:</span></span>
 
@@ -755,18 +761,18 @@
 
     </div>
     <a class="headerlink" href="#check_graphqlite_runtime"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="check_graphqlite_runtime-137"><a href="#check_graphqlite_runtime-137"><span class="linenos">137</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_graphqlite_runtime</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="check_graphqlite_runtime-138"><a href="#check_graphqlite_runtime-138"><span class="linenos">138</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="check_graphqlite_runtime-139"><a href="#check_graphqlite_runtime-139"><span class="linenos">139</span></a>        <span class="n">graph</span> <span class="o">=</span> <span class="n">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
-</span><span id="check_graphqlite_runtime-140"><a href="#check_graphqlite_runtime-140"><span class="linenos">140</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">upsert_node</span><span class="p">(</span><span class="s1">&#39;teaagent_smoke&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TeaAgent&#39;</span><span class="p">},</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;SmokeTest&#39;</span><span class="p">)</span>
-</span><span id="check_graphqlite_runtime-141"><a href="#check_graphqlite_runtime-141"><span class="linenos">141</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;MATCH (n:SmokeTest) RETURN n.name&#39;</span><span class="p">)</span>
-</span><span id="check_graphqlite_runtime-142"><a href="#check_graphqlite_runtime-142"><span class="linenos">142</span></a>    <span class="k">except</span> <span class="p">(</span><span class="n">GraphQLiteUnavailableError</span><span class="p">,</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="check_graphqlite_runtime-143"><a href="#check_graphqlite_runtime-143"><span class="linenos">143</span></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-</span><span id="check_graphqlite_runtime-144"><a href="#check_graphqlite_runtime-144"><span class="linenos">144</span></a>    <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;graphqlite runtime is available&#39;</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="check_graphqlite_runtime-139"><a href="#check_graphqlite_runtime-139"><span class="linenos">139</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_graphqlite_runtime</span><span class="p">(</span><span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="check_graphqlite_runtime-140"><a href="#check_graphqlite_runtime-140"><span class="linenos">140</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="check_graphqlite_runtime-141"><a href="#check_graphqlite_runtime-141"><span class="linenos">141</span></a>        <span class="n">graph</span> <span class="o">=</span> <span class="n">load_graphqlite_graph</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+</span><span id="check_graphqlite_runtime-142"><a href="#check_graphqlite_runtime-142"><span class="linenos">142</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">upsert_node</span><span class="p">(</span><span class="s1">&#39;teaagent_smoke&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TeaAgent&#39;</span><span class="p">},</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;SmokeTest&#39;</span><span class="p">)</span>
+</span><span id="check_graphqlite_runtime-143"><a href="#check_graphqlite_runtime-143"><span class="linenos">143</span></a>        <span class="n">graph</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;MATCH (n:SmokeTest) RETURN n.name&#39;</span><span class="p">)</span>
+</span><span id="check_graphqlite_runtime-144"><a href="#check_graphqlite_runtime-144"><span class="linenos">144</span></a>    <span class="k">except</span> <span class="p">(</span><span class="n">GraphQLiteUnavailableError</span><span class="p">,</span> <span class="n">GraphQLiteRuntimeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="check_graphqlite_runtime-145"><a href="#check_graphqlite_runtime-145"><span class="linenos">145</span></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+</span><span id="check_graphqlite_runtime-146"><a href="#check_graphqlite_runtime-146"><span class="linenos">146</span></a>    <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;graphqlite runtime is available&#39;</span>
 </span></pre></div>
 
 
-    
+
 
                 </section>
     </main>

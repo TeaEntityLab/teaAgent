@@ -22,7 +22,7 @@ engineered.
 
 | Check | Result | Notes |
 | --- | --- | --- |
-| `python3 -m pytest tests/acceptance --collect-only -q` | Pass | 273 acceptance tests collected. |
+| `python3 -m pytest tests/acceptance --collect-only -q` | Pass | 276 acceptance tests collected. |
 | `teaagent tool lint --root .` | Pass with warnings | Two warnings remain around workspace read tool metadata. |
 | `python3 scripts/validate_docs_consistency.py` | Failed before this audit patch | `docs/use-cases.md` survey marker did not match the script regex. |
 | `python3 scripts/refresh_competitive_docs.py --check` | Failed before this audit patch | Same survey marker issue blocked the check. |
@@ -32,11 +32,11 @@ engineered.
 
 | Evidence | Source | Risk Signal |
 | --- | --- | --- |
-| Hook registry supports argument and result mutation, but registry execution ignored returned values. | `teaagent/hooks.py`, `teaagent/tools.py` | Hook lifecycle may appear to work in direct tests while not affecting real tool execution. |
+| Hook registry mutation is wired through `ToolRegistry.execute` (verified 2026-05-31). | `teaagent/hooks.py`, `teaagent/tools.py` | Pre/post hook return values are applied; audit hook fields remain a follow-up (TASK-005). |
 | Code-analysis graph ingestion was keyed to a process-global `__default__` graph (mitigated 2026-05-31: per-root `scope_key`). | `teaagent/code_analysis/_tools.py` | Cross-workspace contamination risk reduced; unbounded dict growth remains (see O-NEW1). |
-| External `cx` and `qmd` subprocess adapters run without an explicit timeout. | `teaagent/external_backends.py` | Long-running or wedged external tools can stall an agent run. |
+| External `cx` and `qmd` subprocess adapters use configurable timeouts (default 30s). | `teaagent/external_backends.py` | Wedged backends still fail the run, but with classified timeout errors. |
 | Code-parse actions rely on action-specific keys after generic schema acceptance. | `teaagent/external_backends.py` | Missing fields can become implementation exceptions instead of classified, actionable tool errors. |
-| `AuditLevel.L3` is documented as encrypted at rest in code comments, while the implementation stores payloads as-is. | `teaagent/audit.py` | Evidence claim and privacy behavior are misaligned. |
+| `AuditLevel.L3` stores full payloads in plaintext (docstring corrected 2026-05-31). | `teaagent/audit.py` | Operators must not use L3 where residency requires encryption without the optional encryption extra. |
 | Remote MCP annotations are trusted when present; unknown destructive intent is not fail-closed by default. | `teaagent/mcp_tool_adapter.py` | Unannotated remote tools can be treated as non-destructive depending on policy mode. |
 | Plugin source audit strict mode is opt-in through `TEAAGENT_PLUGINS_STRICT=1`. | `teaagent/plugins.py` | Development convenience can leak into release posture unless the runtime profile forces strict mode. |
 | Package classifier says Alpha while docs describe multiple stable surfaces. | `pyproject.toml`, `docs/maturity-matrix.md`, `README.md` | External maturity messaging can drift and overpromise or undercut trust. |
@@ -46,16 +46,10 @@ engineered.
 
 ### F-001 - Hook mutation contract is not wired through `ToolRegistry.execute`
 
-Severity: High
+Severity: High (mitigated 2026-05-31)
 
-`HookRegistry.run_pre_hooks` returns possibly modified arguments, and
-`HookRegistry.run_post_hooks` returns a possibly modified result. `ToolRegistry`
-currently calls both methods but continues with the original arguments and
-result. This creates a split-brain contract: hook unit tests can pass while real
-tool execution ignores hook transformations.
-
-Required outcome: real tool execution must use the pre-hook arguments, return
-the post-hook result, and record hook changes in audit-friendly form.
+`ToolRegistry.execute` applies pre-hook arguments and post-hook results. Remaining
+work: audit fields for hook veto/mutation (TASK-005 in the engineering plan).
 
 ### F-002 - Documentation consistency gate was red
 

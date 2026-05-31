@@ -115,6 +115,24 @@ TeaAgent should be able to answer four operator questions with evidence:
 | TASK-034 | Add docs pre-commit or local verification target. | RSK-002, RSK-014 | AC-011 | Make/script smoke test. |
 | TASK-035 | Run release-candidate verification and publish residual risks. | All | AC-020 | Full profile gates. |
 
+## Implementation status (2026-05-31)
+
+| ID | Status |
+| --- | --- |
+| TASK-001 | Done (docs validators green) |
+| TASK-002–004 | Done (`ToolRegistry.execute` + `tests/test_hooks.py`) |
+| TASK-005 | Open (audit hook mutation fields) |
+| TASK-006–008 | Done (per-root graph, `stateful`, lint) |
+| TASK-009–011 | Done (code_parse validation, backend timeouts) |
+| TASK-012–013 | Open (cx doctor CLI) |
+| TASK-014–016 | Open (remote MCP trust defaults) |
+| TASK-017 | Done Phase A (L3 docfix; encryption optional) |
+| TASK-018–030 | Open |
+| TASK-031–032 | Done (denial `reason_code`, `approval why-denied`) |
+| TASK-033 | Open |
+| TASK-034 | Done (`scripts/verify_docs.sh`) |
+| TASK-035 | Open |
+
 ## Suggested Sequencing
 
 ### Phase 0 - Restore green documentation gates

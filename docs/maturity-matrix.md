@@ -73,7 +73,7 @@ Scale reference (internal engineering, not market validation):
 ## Honest External Posture
 
 - Public repo activity ≠ production validation.
-- **Internal acceptance coverage is strong** (87 test files across `tests/acceptance/`, 273 collected tests).
+- **Internal acceptance coverage is strong** (88 test files across `tests/acceptance/`, 276 collected tests).
 - External adoption signals (stars, forks, production references) remain early — do not infer enterprise readiness from architecture alone.
 
 ## Related Docs

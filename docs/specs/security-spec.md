@@ -13,7 +13,7 @@ This document describes the security specifications for the TeaAgent codebase, i
 
 ### 2. Input Validation
 - **Requirement**: All user inputs must be validated before processing
-- **Implementation**: 
+- **Implementation**:
   - Regex pattern validation with error handling
   - Line number bounds checking
   - Path traversal prevention
@@ -72,6 +72,22 @@ This document describes the security specifications for the TeaAgent codebase, i
 - Integration tests for command execution
 - Fuzzing tests for input validation
 - Penetration testing for common vulnerabilities
+
+## Audit Levels
+
+- **L2 (default):** Redacted payloads suitable for routine operator review.
+- **L3:** Full payloads written **without redaction and without encryption at rest**.
+  Do not enable L3 on shared or compliance-sensitive storage unless a future
+  audit-encryption extra is enabled and reviewed.
+
+## Code Mode Trust Boundary
+
+| Backend | Isolation | Use when |
+| --- | --- | --- |
+| `ChildProcessCodeModeBackend` | Fork + `SAFE_BUILTINS` + resource limits | Trusted user inputs only (`trusted_only=True`, default) |
+| `ContainerCodeModeBackend` | Docker with network isolation | Untrusted or multi-tenant workloads |
+
+Setting `ChildProcessCodeModeBackend(trusted_only=False)` raises at execute time.
 
 ## Security Monitoring
 - Audit logging for all security-relevant operations

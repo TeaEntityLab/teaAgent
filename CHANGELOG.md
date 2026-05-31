@@ -4,6 +4,15 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Plan execution batch (system-transparency / comprehensive plans)**:
+  - `teaagent.async_bridge.run_coroutine_sync` — approval/multisig paths no longer call `asyncio.set_event_loop` (ADR 009).
+  - ACP stdio loop emits JSON-RPC errors instead of swallowing exceptions.
+  - Audit L3 docstring corrected (plaintext, not encrypted at rest).
+  - Code-analysis graph LRU cache (`_MAX_GRAPH_CACHE=8`) and `clear_graph_cache()`.
+  - `ChildProcessCodeModeBackend.trusted_only` gate for untrusted workloads.
+  - `scripts/verify_docs.sh` local docs gate; plan status table in engineering plan.
+  - Tests: `test_acp_adapter_error_response`, `test_approval_async_from_sync`, `test_code_analysis_graph_cache`, `test_code_mode_trusted_only`, `test_policy_denial_reason_code_flow`.
+
 - **Denial reason codes and transparency CLI**:
   - `DenialReasonCode` enum and optional `reason_code` on `ToolPermissionError` — maps denials to read-only mode, workspace-write mode, plan contract, JIT, multi-sig quorum, and related paths.
   - Audit events `tool_call_denied`, `tool_call_blocked`, and `tool_call_pending_approval` may include `reason_code` in the payload.

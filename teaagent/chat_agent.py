@@ -104,6 +104,11 @@ class ChatAgentConfig:
         resolved_root = Path(root).resolve()
         rc = ConfigResolver(workspace_root=resolved_root).resolve()
 
+        # Treat explicit None as "not provided" for optional overrides so callers
+        # don't accidentally clobber dataclass defaults (e.g. memory_limit=5).
+        if kwargs.get('memory_limit', 0) is None:
+            kwargs.pop('memory_limit', None)
+
         # Apply workspace profile values only for keys NOT already in kwargs
         profile_overrides: dict[str, Any] = {}
         if 'permission_mode' not in kwargs:

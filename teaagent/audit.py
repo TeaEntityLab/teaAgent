@@ -163,8 +163,9 @@ class AuditLogger:
         L2: Redacted payload (default, sensitive data redacted)
             - Returns payload as-is (redaction handled by redact_audit_payload)
 
-        L3: Full local trace (all data, encrypted at rest)
-            - Returns payload as-is with no additional filtering
+        L3: Full local trace (all data, no redaction)
+            - Returns payload as-is with no additional filtering.
+            - Encryption at rest is NOT implemented; payloads are stored in plaintext.
         """
         if self._audit_level == 'L0':
             # Only keep basic metrics

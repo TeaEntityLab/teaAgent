@@ -452,10 +452,10 @@ unclear. Long-running agents without resource caps can exhaust memory or CPU.
 
 | Priority | Plans | Target |
 |---|---|---|
-| **P0 — This week** | S1-A (audit docfix), D1 (stale claims), R2 (ACP silent errors) | Correctness + trust |
-| **P1 — Next 2 weeks** | R1 (async loop), T1 (adversarial tests), S2 (code_mode docs), M2-Sprint1 | Security hardening |
-| **P2 — Next month** | R3 open items, M2-Sprint2, T3 (audit level tests), D2, D3 | Reliability + test coverage |
-| **P3 — Quarter** | M2-Sprint3, M3, M4, D4, O3, O4, O5, S1-B (encryption) | Maintainability + ops |
+| **P0 — This week** | S1-A (audit docfix), D1 (stale claims), R2 (ACP silent errors) | Correctness + trust — **shipped 2026-05-31** |
+| **P1 — Next 2 weeks** | R1 (async loop), T1 (adversarial tests), S2 (code_mode docs), M2-Sprint1 | Security hardening — **R1/S2 partial shipped** |
+| **P2 — Next month** | R3 open items, M2-Sprint2, T3 (audit level tests), D2, D3 | Reliability + test coverage — **M3/D3 shipped** |
+| **P3 — Quarter** | M2-Sprint3, M3, M4, D4, O3, O4, O5, S1-B (encryption) | Maintainability + ops — **M3 shipped** |
 
 ---
 

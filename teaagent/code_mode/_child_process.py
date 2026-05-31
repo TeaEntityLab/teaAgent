@@ -18,12 +18,24 @@ except ImportError:  # pragma: no cover - resource is Unix-only.
 
 @dataclass(frozen=True)
 class ChildProcessCodeModeBackend:
+    """Fork-based Code Mode for trusted-user inputs only.
+
+    For untrusted or multi-tenant workloads, use ``ContainerCodeModeBackend``.
+    """
+
+    trusted_only: bool = True
+
     def execute(
         self,
         code: str,
         inputs: dict[str, Any],
         sandbox: CodeModeSandbox,
     ) -> CodeModeResult:
+        if not self.trusted_only:
+            raise ValueError(
+                'ChildProcessCodeModeBackend is for trusted inputs only; '
+                'use ContainerCodeModeBackend for untrusted workloads'
+            )
         ctx: Any = multiprocessing
         with suppress(ValueError):
             # Prefer fork on POSIX to avoid spawn startup overhead in short timeouts.

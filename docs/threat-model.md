@@ -12,6 +12,8 @@ This document maps threats to mitigations and verification. It complements [tool
 | Shell mutation in workspace-write mode | High | `ApprovalPolicy` blocks non-file destructive tools in workspace-write | `tests/policy/test_permission_matrix.py` | Dangerous flag lists in shell classifier — maintain with tests |
 | Shell command obfuscation bypass | High | Multi-pass `_normalize_shell_arg` (quotes, escapes, backticks, `$()`, shlex); list-argument normalization | `tests/test_policy.py` (MultiSigQuorumTests) | Catches `rm -r"f" /prod`, backtick injection, list-based bypass |
 | Secret leakage in audit logs | Medium | Audit redaction keys and truncation | `test_audit_chain_integrity_flow.py` | Over-redaction reduces debuggability — export tiers future work |
+| AuditLevel.L3 plaintext storage | Medium | L3 docstring states no encryption at rest; use L2/default for shared disks | `tests/test_audit_levels.py` (when added), operator docs | Optional `audit-encryption` extra planned for compliance deployments |
+| Code Mode fork backend on untrusted input | Medium | `ChildProcessCodeModeBackend(trusted_only=False)` raises; Docker backend for untrusted code | `tests/test_code_mode_trusted_only.py` | Fork shares FDs with parent — document trust boundary |
 | Audit log tampering | Medium | Hash chain (`audit verify`); fsync | `test_audit_chain_integrity_flow.py` | Local-only unless signed export |
 | Plugin supply-chain execution | High | Plugin verify/install gates; entry-point audit | `test_plugin_install_security_flow.py` | Capability manifest formalization in progress |
 | MCP server tool explosion / exfiltration | High | MCP tool filter hook; HTTP auth for remote MCP | `test_remote_mcp_consumption_flow.py` | MCP trust CLI implemented — per-server defaults |
