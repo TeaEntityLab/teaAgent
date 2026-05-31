@@ -276,17 +276,19 @@ def register_code_analysis_tools(
             'required': ['relations', 'edges', 'documents'],
         },
         annotations=ToolAnnotations(
-            read_only=False, destructive=False, idempotent=False
+            read_only=False, destructive=False, idempotent=False, stateful=True
         ),
-        handler=lambda args: _ingest_graph(args),
+        handler=lambda args: _ingest_graph(args, scope_key=str(config.root)),
     )
 
 
-def _ingest_graph(args: dict[str, str]) -> dict[str, int]:
-    graph = _GRAPH_BY_ROOT.get('__default__')
+def _ingest_graph(
+    args: dict[str, str], scope_key: str = '__default__'
+) -> dict[str, int]:
+    graph = _GRAPH_BY_ROOT.get(scope_key)
     if graph is None:
         graph = KnowledgeGraph()
-        _GRAPH_BY_ROOT['__default__'] = graph
+        _GRAPH_BY_ROOT[scope_key] = graph
     relations = ingest_code_relations_to_graph(
         args['path'],
         graph,

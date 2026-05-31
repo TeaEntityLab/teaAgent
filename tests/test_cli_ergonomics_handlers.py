@@ -1310,3 +1310,133 @@ def test_black_box_cli_zero_footprint_commands(tmp_path: Path) -> None:
         assert not teaagent_dir.exists(), (
             f'{name} should not create .teaagent directory'
         )
+
+
+def test_approval_why_denied_returns_denials(tmp_path: Path) -> None:
+    """approval why-denied should list denial events from audit log."""
+    store = RunStore(tmp_path)
+    run_id = 'run-why-denied'
+    audit = store.audit_logger(run_id)
+
+    # Record a denied event with reason_code
+    audit.record(
+        'tool_call_denied',
+        run_id,
+        call_id='call-001',
+        tool_name='workspace_write_file',
+        reason_code='read_only_mode',
+    )
+    # Record a blocked event with reason_code
+    audit.record(
+        'tool_call_blocked',
+        run_id,
+        call_id='call-002',
+        tool_name='workspace_run_shell_mutate',
+        reason_code='workspace_write_mode',
+    )
+    # Record an unrelated event (should not show up)
+    audit.record('tool_call_completed', run_id, call_id='call-003')
+    store.logger_for_result(
+        RunResult(
+            run_id=run_id,
+            final_answer=None,
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+        ),
+        audit,
+    )
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(['approval', 'why-denied', run_id, '--root', str(tmp_path)])
+    assert code == 0
+    output = out.getvalue()
+    assert 'call-001' in output
+    assert 'call-002' in output
+    assert 'read_only_mode' in output
+    assert 'workspace_write_mode' in output
+    assert 'call-003' not in output
+
+
+def test_approval_why_denied_filter_by_call_id(tmp_path: Path) -> None:
+    """approval why-denied --call-id should filter to one call."""
+    store = RunStore(tmp_path)
+    run_id = 'run-why-denied-filter'
+    audit = store.audit_logger(run_id)
+    audit.record(
+        'tool_call_denied',
+        run_id,
+        call_id='call-001',
+        tool_name='workspace_write_file',
+        reason_code='read_only_mode',
+    )
+    audit.record(
+        'tool_call_denied',
+        run_id,
+        call_id='call-002',
+        tool_name='workspace_run_shell_mutate',
+        reason_code='workspace_write_mode',
+    )
+    store.logger_for_result(
+        RunResult(
+            run_id=run_id,
+            final_answer=None,
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+        ),
+        audit,
+    )
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(
+            [
+                'approval',
+                'why-denied',
+                run_id,
+                '--root',
+                str(tmp_path),
+                '--call-id',
+                'call-001',
+            ]
+        )
+    assert code == 0
+    output = out.getvalue()
+    assert 'call-001' in output
+    assert 'call-002' not in output
+
+
+def test_approval_why_denied_no_denials(tmp_path: Path) -> None:
+    """approval why-denied should report no denials for a clean run."""
+    store = RunStore(tmp_path)
+    run_id = 'run-no-denials'
+    audit = store.audit_logger(run_id)
+    audit.record('run_started', run_id, task='no-op')
+    audit.record('run_completed', run_id, answer='ok')
+    store.logger_for_result(
+        RunResult(
+            run_id=run_id,
+            final_answer=None,
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+        ),
+        audit,
+    )
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(['approval', 'why-denied', run_id, '--root', str(tmp_path)])
+    assert code == 0
+    assert 'No denials found' in out.getvalue()
+
+
+def test_approval_why_denied_run_not_found(tmp_path: Path) -> None:
+    """approval why-denied should error on missing run."""
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = main(['approval', 'why-denied', 'missing-run', '--root', str(tmp_path)])
+    assert code == 1
+    assert 'not found' in out.getvalue()

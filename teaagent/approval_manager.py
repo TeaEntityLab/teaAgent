@@ -19,7 +19,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
-from teaagent.errors import ToolPermissionError
+from teaagent.errors import DenialReasonCode, ToolPermissionError
 from teaagent.read_only_gate import read_only_runtime_block_reason
 
 if TYPE_CHECKING:
@@ -237,12 +237,14 @@ class JITApprovalManager:
             return True
         if choice == 'd':
             raise ToolPermissionError(
-                f"Tool call '{call_id}' for '{tool_name}' was denied by user."
+                f"Tool call '{call_id}' for '{tool_name}' was denied by user.",
+                reason_code=DenialReasonCode.JIT_USER_DENIED,
             )
         if choice == 'e':
             raise ToolPermissionError(
                 f"Tool call '{call_id}' for '{tool_name}' requires approval. "
-                f'Tool: {tool_name}, Call ID: {call_id}, Arguments: {arguments}'
+                f'Tool: {tool_name}, Call ID: {call_id}, Arguments: {arguments}',
+                reason_code=DenialReasonCode.JIT_USER_DENIED,
             )
         return None
 
@@ -680,7 +682,17 @@ class ApprovalManager:
         if mode_result is None:
             return
         if mode_result != '__continue__':
-            raise ToolPermissionError(mode_result)
+            # Map the block reason to a DenialReasonCode based on permission mode.
+            if self.permission_mode == PermissionMode.READ_ONLY:
+                reason_code = DenialReasonCode.READ_ONLY_MODE
+            elif self.permission_mode == PermissionMode.WORKSPACE_WRITE:
+                if 'plan' in mode_result.lower():
+                    reason_code = DenialReasonCode.PLAN_CONTRACT_DENIED
+                else:
+                    reason_code = DenialReasonCode.WORKSPACE_WRITE_MODE
+            else:
+                reason_code = DenialReasonCode.MISSING_STATE
+            raise ToolPermissionError(mode_result, reason_code=reason_code)
 
         if self._jit_manager.is_approved(tool_name=tool_name, call_id=call_id):
             return
@@ -707,10 +719,14 @@ class ApprovalManager:
         ):
             return
 
-        if (
+        # Track whether multi-sig was attempted but failed so we can report
+        # the appropriate reason code.
+        multisig_attempted = (
             self.multi_sig_config.enabled
             and self._multisig_manager.is_high_risk(tool_name, arguments)
-            and self._multisig_manager.check_quorum(tool_name, call_id, arguments)
+        )
+        if multisig_attempted and self._multisig_manager.check_quorum(
+            tool_name, call_id, arguments
         ):
             return
 
@@ -722,8 +738,15 @@ class ApprovalManager:
         if jit_result is True:
             return
 
+        # If multi-sig was attempted and fell through, report quorum failure.
+        reason_code = (
+            DenialReasonCode.MULTISIG_NO_QUORUM
+            if multisig_attempted
+            else DenialReasonCode.JIT_NO_APPROVAL
+        )
         raise ToolPermissionError(
-            f"Tool call '{call_id}' for '{tool_name}' requires explicit approval."
+            f"Tool call '{call_id}' for '{tool_name}' requires explicit approval.",
+            reason_code=reason_code,
         )
 
     def approve_once(self, call_id: str) -> None:

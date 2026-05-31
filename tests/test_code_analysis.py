@@ -72,6 +72,32 @@ def test_ingest_code_relations_to_graph(tmp_path, monkeypatch):
     assert graph.all_documents()[0].doc_id == 'doc-code-1'
 
 
+def test_graph_isolation_by_root(tmp_path):
+    root1 = tmp_path / 'proj_a'
+    root2 = tmp_path / 'proj_b'
+    root1.mkdir()
+    root2.mkdir()
+
+    reg1 = ToolRegistry()
+    reg2 = ToolRegistry()
+    cfg1 = CodeAnalysisConfig.from_root(root1, enabled=True)
+    cfg2 = CodeAnalysisConfig.from_root(root2, enabled=True)
+    register_code_analysis_tools(reg1, cfg1)
+    register_code_analysis_tools(reg2, cfg2)
+
+    out1 = reg1.execute('code_relations_to_graph', {'path': 'README.md'})
+    out2 = reg2.execute('code_relations_to_graph', {'path': 'README.md'})
+
+    assert out1['relations'] == 0
+    assert out2['relations'] == 0
+
+    from teaagent.code_analysis._tools import _GRAPH_BY_ROOT
+
+    graph1 = _GRAPH_BY_ROOT[str(root1)]
+    graph2 = _GRAPH_BY_ROOT[str(root2)]
+    assert graph1 is not graph2
+
+
 def test_extract_tree_sitter_relations_unknown_extension_returns_empty(tmp_path):
     sample = tmp_path / 'sample.txt'
     sample.write_text('hello', encoding='utf-8')

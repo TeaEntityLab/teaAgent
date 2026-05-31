@@ -23,6 +23,7 @@ class ToolAnnotations:
     read_only: bool = False
     destructive: bool = False
     idempotent: bool = False
+    stateful: bool = False
     security_tier: str = 'Medium'  # Low, Medium, High, Critical
 
 
@@ -217,6 +218,7 @@ class ToolRegistry:
                     'readOnlyHint': tool.annotations.read_only,
                     'destructiveHint': tool.annotations.destructive,
                     'idempotentHint': tool.annotations.idempotent,
+                    'statefulHint': tool.annotations.stateful,
                 },
             }
             for tool in self._tools.values()

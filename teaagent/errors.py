@@ -4,6 +4,23 @@ from enum import Enum
 from typing import Optional
 
 
+class DenialReasonCode(str, Enum):
+    """Categorised reason codes for tool-call denials.
+
+    Each value maps to a specific denial path in the approval pipeline.
+    """
+
+    READ_ONLY_MODE = 'read_only_mode'
+    WORKSPACE_WRITE_MODE = 'workspace_write_mode'
+    FILE_POLICY_DENIED = 'file_policy_denied'
+    PLAN_CONTRACT_DENIED = 'plan_contract_denied'
+    JIT_USER_DENIED = 'jit_user_denied'
+    JIT_NO_APPROVAL = 'jit_no_approval'
+    MULTISIG_NO_QUORUM = 'multisig_no_quorum'
+    AUTO_MODE_BLOCKED = 'auto_mode_blocked'
+    MISSING_STATE = 'missing_state'
+
+
 class ErrorCategory(str, Enum):
     TRANSIENT = 'transient'
     MODEL_LOGIC = 'model_logic'
@@ -69,7 +86,13 @@ class ToolValidationError(AgentHarnessError):
 class ToolPermissionError(AgentHarnessError):
     category = ErrorCategory.PERMISSION
 
-    def __init__(self, message: str, *, hint: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        hint: Optional[str] = None,
+        reason_code: Optional[DenialReasonCode] = None,
+    ) -> None:
         super().__init__(
             message,
             hint=hint
@@ -78,6 +101,7 @@ class ToolPermissionError(AgentHarnessError):
                 'to permit this operation.'
             ),
         )
+        self.reason_code: Optional[DenialReasonCode] = reason_code
 
 
 class ToolExecutionError(AgentHarnessError):

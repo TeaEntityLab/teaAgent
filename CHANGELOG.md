@@ -4,6 +4,18 @@ All notable changes to TeaAgent are tracked here.
 
 ## Unreleased
 
+- **Denial reason codes and transparency CLI**:
+  - `DenialReasonCode` enum and optional `reason_code` on `ToolPermissionError` — maps denials to read-only mode, workspace-write mode, plan contract, JIT, multi-sig quorum, and related paths.
+  - Audit events `tool_call_denied`, `tool_call_blocked`, and `tool_call_pending_approval` may include `reason_code` in the payload.
+  - `teaagent approval why-denied <run_id>` lists denial/block events from a run's audit log with human-readable explanations.
+  - Code-analysis `code_relations_to_graph` scopes in-memory graphs per workspace root (`stateful=True` annotation).
+  - Tool lint warns on `stateful_without_governance` when stateful tools lack destructive or idempotent governance signals.
+  - Docs: `docs/cli.md`, `docs/audit-events.md`.
+
+- **Analysis and planning artifacts** (2026-05-31):
+  - Competitive, enterprise security, market UX, and risk findings under `docs/analysis/`.
+  - Positioning, comprehensive, and UX improvement plans under `docs/plans/`.
+
 - **TUI Evolution Phase A-C** (fb59e41):
   - **Phase A — TUI responsiveness**: Async autocomplete with background ontology cache refresh (`_completion.py`), fuzzy session switch via `difflib.get_close_matches` (`_commands.py`), secret filename heuristics on pinned file `add()` to block env/SSH/cert/credential paths (`pinned_file.py`).
   - **Phase B — Approval UX**: Unicode tree view for subagent approval queue grouped by `parent_run_id` (`_approval_subagents.py`), `approvals diff <call_id>` git-diff preview subcommand (`_commands.py`).

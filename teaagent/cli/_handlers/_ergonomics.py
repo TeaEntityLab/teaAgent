@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any, Callable
 
 from teaagent.cli._handlers._misc import print_json
@@ -391,6 +392,78 @@ def _build_explanation_summary(check_result: dict[str, Any]) -> str:
             return f'Prompt required. No matching grant. Reasons: {"; ".join(reasons)}'
         return 'Prompt required. No matching grant found'
     return f'Unknown decision: {decision}'
+
+
+_DENIAL_REASON_DESCRIPTIONS: dict[str, str] = {
+    'read_only_mode': 'Blocked by read-only permission mode — all destructive tools are disabled.',
+    'workspace_write_mode': 'Blocked by workspace-write permission mode — shell mutation tools require prompt/allow mode.',
+    'file_policy_denied': 'Blocked by file policy rules in policy.yaml.',
+    'plan_contract_denied': 'Blocked by plan-before-write enforcement — target is not in the approved plan.',
+    'jit_user_denied': 'Denied by user via the JIT approval prompt.',
+    'jit_no_approval': 'No explicit approval received — tool call requires approval.',
+    'multisig_no_quorum': 'Blocked by multi-signature quorum — not enough peer approvals.',
+    'auto_mode_blocked': 'Blocked by auto-mode tool restrictions.',
+    'missing_state': 'Blocked — no matching approval state found.',
+}
+
+
+def approval_why_denied_command(args: argparse.Namespace) -> int:
+    """Explain why tool calls were denied for a given run."""
+    store = RunStore(Path(args.root), readonly=True)
+    try:
+        events = store.show_run(args.run_id)
+    except FileNotFoundError:
+        print_json(
+            {
+                'status': 'error',
+                'message': f"run '{args.run_id}' not found",
+            }
+        )
+        return 1
+
+    denial_events = [
+        e
+        for e in events
+        if isinstance(e, dict)
+        and e.get('event_type') in ('tool_call_denied', 'tool_call_blocked')
+    ]
+
+    if args.call_id:
+        denial_events = [
+            e
+            for e in denial_events
+            if e.get('payload', {}).get('call_id') == args.call_id
+        ]
+
+    if not denial_events:
+        print(f'No denials found for run {args.run_id}')
+        return 0
+
+    for event in denial_events:
+        payload = event.get('payload', {})
+        reason_code = payload.get('reason_code', 'unknown')
+        description = _DENIAL_REASON_DESCRIPTIONS.get(
+            reason_code, 'Unknown denial reason.'
+        )
+        tool_name = payload.get('tool_name', 'unknown')
+        call_id = payload.get('call_id', 'unknown')
+        created_at = event.get('created_at', 'unknown')
+
+        print(
+            f'--- Denial at {created_at} ---\n'
+            f'  Tool:     {tool_name}\n'
+            f'  Call ID:  {call_id}\n'
+            f'  Reason:   {reason_code}\n'
+            f'  Detail:   {description}'
+        )
+
+        if args.verbose:
+            import json
+
+            print(f'  Full payload:\n    {json.dumps(payload, indent=4)}')
+        print()
+
+    return 0
 
 
 def approval_revoke_command(args: argparse.Namespace) -> int:

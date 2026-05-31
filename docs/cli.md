@@ -798,6 +798,19 @@ teaagent approval check workspace_write_file --arg path=src/foo.py --arg content
 teaagent approval check workspace_write_file --arguments-json '{"path": "src/foo.py", "content": "bar"}' --root .
 ```
 
+#### Approval why-denied (audit-backed)
+
+After a run completes, inspect denials and blocks recorded in the audit log:
+
+```bash
+teaagent approval why-denied <run_id> --root .
+teaagent approval why-denied <run_id> --call-id <call_id> --verbose --root .
+```
+
+Each denial prints a `reason_code` (for example `read_only_mode`, `jit_no_approval`,
+`multisig_no_quorum`) and a short human-readable explanation. Use `--verbose` to dump
+the full redacted payload.
+
 #### Approval explain with mismatch diagnostics
 
 Understand why a tool call matches or fails to match approval rules:

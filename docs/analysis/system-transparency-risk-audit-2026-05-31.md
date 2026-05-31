@@ -33,7 +33,7 @@ engineered.
 | Evidence | Source | Risk Signal |
 | --- | --- | --- |
 | Hook registry supports argument and result mutation, but registry execution ignored returned values. | `teaagent/hooks.py`, `teaagent/tools.py` | Hook lifecycle may appear to work in direct tests while not affecting real tool execution. |
-| Code-analysis graph ingestion writes to a process-global `__default__` graph. | `teaagent/code_analysis/_tools.py` | Cross-workspace or cross-session contamination risk. |
+| Code-analysis graph ingestion was keyed to a process-global `__default__` graph (mitigated 2026-05-31: per-root `scope_key`). | `teaagent/code_analysis/_tools.py` | Cross-workspace contamination risk reduced; unbounded dict growth remains (see O-NEW1). |
 | External `cx` and `qmd` subprocess adapters run without an explicit timeout. | `teaagent/external_backends.py` | Long-running or wedged external tools can stall an agent run. |
 | Code-parse actions rely on action-specific keys after generic schema acceptance. | `teaagent/external_backends.py` | Missing fields can become implementation exceptions instead of classified, actionable tool errors. |
 | `AuditLevel.L3` is documented as encrypted at rest in code comments, while the implementation stores payloads as-is. | `teaagent/audit.py` | Evidence claim and privacy behavior are misaligned. |
@@ -71,15 +71,19 @@ and the docs validator should report the exact expected pattern.
 
 ### F-003 - Code-analysis graph state is global and underspecified
 
-Severity: High
+Severity: High (partially mitigated 2026-05-31)
 
 `code_relations_to_graph` ingests data into an in-memory graph keyed through
 `__default__`. The tool is stateful and non-idempotent but is not classified as
 destructive. The main risk is not file damage; it is hidden shared state that can
 pollute later answers.
 
-Required outcome: graph state must be root-scoped or run-scoped, and stateful
-mutation must be reflected in tool annotations and acceptance tests.
+**Mitigation shipped:** graphs are keyed by workspace `scope_key` (config root),
+`stateful=True` on the tool, `stateful_without_governance` lint, and
+`test_graph_isolation_by_root`.
+
+**Remaining:** LRU eviction for `_GRAPH_BY_ROOT` (see O-NEW1 in
+`new-risk-findings-2026-05-31.md`).
 
 ### F-004 - External code-analysis backends need timeouts and classified errors
 

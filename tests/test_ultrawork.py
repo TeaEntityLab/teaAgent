@@ -44,7 +44,11 @@ class UltraworkStoreTests(unittest.TestCase):
             alive = store.list()
             self.assertTrue(alive[0]['alive'])
 
-            time.sleep(0.4)
+            deadline = time.monotonic() + 2.0
+            while time.monotonic() < deadline:
+                if not store.list()[0]['alive']:
+                    break
+                time.sleep(0.05)
 
             dead = store.list()
             self.assertFalse(dead[0]['alive'])

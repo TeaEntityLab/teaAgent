@@ -223,6 +223,8 @@ class AgentRunner:
                         handler=tool.handler,
                     )
                 except ToolPermissionError as exc:
+                    reason_code = getattr(exc, 'reason_code', None)
+                    reason_code_str = reason_code.value if reason_code else None
                     approval_request = self.approval_manager.create_approval_request(
                         call_id=decision.call_id,
                         tool_name=decision.tool_name,
@@ -241,6 +243,7 @@ class AgentRunner:
                             checkpoint_store=self.checkpoint_store,
                             context=context,
                             cost_cents=cost_cents,
+                            reason_code=reason_code_str,
                         )
                         if not approved:
                             if self.approval_manager.approval_handler is None:
@@ -261,6 +264,7 @@ class AgentRunner:
                             approval_request=approval_request,
                             audit=self.audit,
                             run_id=current_run_id,
+                            reason_code=reason_code_str,
                         )
                         raise
                 self.audit.record(

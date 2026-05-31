@@ -71,6 +71,7 @@ class ApprovalManager:
         checkpoint_store: Any = None,
         context: Optional[dict[str, Any]] = None,
         cost_cents: float = 0.0,
+        reason_code: Optional[str] = None,
     ) -> bool:
         """Handle an approval request through the approval handler.
 
@@ -78,6 +79,8 @@ class ApprovalManager:
         """
         pending_payload = approval_request.to_dict()
         pending_payload.pop('run_id', None)
+        if reason_code is not None:
+            pending_payload['reason_code'] = reason_code
         audit.record(
             'tool_call_pending_approval',
             run_id,
@@ -105,11 +108,16 @@ class ApprovalManager:
             )
             return True
         else:
+            denied_payload: dict[str, Any] = {
+                'call_id': approval_request.call_id,
+                'tool_name': approval_request.tool_name,
+            }
+            if reason_code is not None:
+                denied_payload['reason_code'] = reason_code
             audit.record(
                 'tool_call_denied',
                 run_id,
-                call_id=approval_request.call_id,
-                tool_name=approval_request.tool_name,
+                **denied_payload,
             )
             return False
 
@@ -118,10 +126,13 @@ class ApprovalManager:
         approval_request: ApprovalRequest,
         audit: AuditLogger,
         run_id: str,
+        reason_code: Optional[str] = None,
     ) -> None:
         """Record a blocked tool call in the audit log."""
         blocked_payload = approval_request.to_dict()
         blocked_payload.pop('run_id', None)
+        if reason_code is not None:
+            blocked_payload['reason_code'] = reason_code
         audit.record(
             'tool_call_blocked',
             run_id,

@@ -10,7 +10,7 @@ Each tool requires:
 - `description`: concise behavior summary for model prompts and MCP metadata.
 - `input_schema`: JSON-schema-like object schema.
 - `output_schema`: JSON-schema-like object schema.
-- `annotations`: `ToolAnnotations(read_only, destructive, idempotent)`.
+- `annotations`: `ToolAnnotations(read_only, destructive, idempotent, stateful)`.
 - `handler`: pure Python callable accepting `dict[str, Any]` and returning JSON-serializable data.
 
 ## Minimal Example
@@ -40,6 +40,7 @@ registry.register(
 ## Rules
 
 - Mark any filesystem write, network mutation, shell mutation, or state change as `destructive=True`.
+- Stateful tools that mutate process-local caches must set `stateful=True` and either `destructive=True` or `idempotent=True`; otherwise `tool_lint` emits `stateful_without_governance`.
 - Keep tool errors actionable. Raise `ValueError` with a corrective message for model-correctable errors.
 - Return only JSON-serializable values.
 - Bound all external work with timeouts and byte limits.

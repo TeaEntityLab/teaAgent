@@ -319,6 +319,17 @@ def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
                 )
             )
 
+    # Stateful tools with side effects should declare governance annotations
+    if ann.stateful and not ann.destructive and not ann.idempotent:
+        issues.append(
+            ToolLintIssue(
+                name,
+                'warning',
+                'stateful_without_governance',
+                f'Stateful tool with side effects: should declare explicit destructive=True or add capability-governance annotation. Tool: {name}',
+            )
+        )
+
     return issues
 
 

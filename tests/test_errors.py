@@ -5,6 +5,7 @@ import unittest
 from teaagent.errors import (
     AgentHarnessError,
     BudgetExceededError,
+    DenialReasonCode,
     ErrorCategory,
     ToolExecutionError,
     ToolPermissionError,
@@ -74,6 +75,82 @@ class ErrorCategoryMatchingTests(unittest.TestCase):
     def test_model_logic_errors_create_failed_model_logic_status(self) -> None:
         exc = BudgetExceededError('budget')
         self.assertEqual(f'failed:{exc.category}', 'failed:model_logic')
+
+
+class DenialReasonCodeTests(unittest.TestCase):
+    def test_all_reason_codes_are_strings(self) -> None:
+        for code in DenialReasonCode:
+            self.assertIsInstance(code, str)
+
+    def test_read_only_mode_code(self) -> None:
+        self.assertEqual(DenialReasonCode.READ_ONLY_MODE, 'read_only_mode')
+
+    def test_workspace_write_mode_code(self) -> None:
+        self.assertEqual(DenialReasonCode.WORKSPACE_WRITE_MODE, 'workspace_write_mode')
+
+    def test_file_policy_denied_code(self) -> None:
+        self.assertEqual(DenialReasonCode.FILE_POLICY_DENIED, 'file_policy_denied')
+
+    def test_plan_contract_denied_code(self) -> None:
+        self.assertEqual(DenialReasonCode.PLAN_CONTRACT_DENIED, 'plan_contract_denied')
+
+    def test_jit_user_denied_code(self) -> None:
+        self.assertEqual(DenialReasonCode.JIT_USER_DENIED, 'jit_user_denied')
+
+    def test_jit_no_approval_code(self) -> None:
+        self.assertEqual(DenialReasonCode.JIT_NO_APPROVAL, 'jit_no_approval')
+
+    def test_multisig_no_quorum_code(self) -> None:
+        self.assertEqual(DenialReasonCode.MULTISIG_NO_QUORUM, 'multisig_no_quorum')
+
+    def test_auto_mode_blocked_code(self) -> None:
+        self.assertEqual(DenialReasonCode.AUTO_MODE_BLOCKED, 'auto_mode_blocked')
+
+    def test_missing_state_code(self) -> None:
+        self.assertEqual(DenialReasonCode.MISSING_STATE, 'missing_state')
+
+    def test_enum_values_distinct(self) -> None:
+        values = [code.value for code in DenialReasonCode]
+        self.assertEqual(len(values), len(set(values)))
+
+
+class ToolPermissionErrorReasonCodeTests(unittest.TestCase):
+    def test_default_reason_code_is_none(self) -> None:
+        exc = ToolPermissionError('blocked')
+        self.assertIsNone(exc.reason_code)
+
+    def test_can_set_reason_code(self) -> None:
+        exc = ToolPermissionError(
+            'blocked', reason_code=DenialReasonCode.READ_ONLY_MODE
+        )
+        self.assertEqual(exc.reason_code, DenialReasonCode.READ_ONLY_MODE)
+
+    def test_reason_code_in_error_hierarchy(self) -> None:
+        exc = ToolPermissionError(
+            'blocked', reason_code=DenialReasonCode.JIT_USER_DENIED
+        )
+        self.assertIsInstance(exc, AgentHarnessError)
+        self.assertEqual(exc.category, ErrorCategory.PERMISSION)
+        self.assertEqual(exc.reason_code, DenialReasonCode.JIT_USER_DENIED)
+
+    def test_hint_still_defaults_when_no_reason_code(self) -> None:
+        exc = ToolPermissionError('blocked')
+        self.assertIn('--permission-mode', str(exc))
+
+    def test_hint_still_defaults_with_reason_code(self) -> None:
+        exc = ToolPermissionError(
+            'blocked', reason_code=DenialReasonCode.READ_ONLY_MODE
+        )
+        self.assertIn('--permission-mode', str(exc))
+
+    def test_custom_hint_with_reason_code(self) -> None:
+        exc = ToolPermissionError(
+            'blocked',
+            hint='custom hint',
+            reason_code=DenialReasonCode.AUTO_MODE_BLOCKED,
+        )
+        self.assertEqual(exc.hint, 'custom hint')
+        self.assertEqual(exc.reason_code, DenialReasonCode.AUTO_MODE_BLOCKED)
 
 
 if __name__ == '__main__':

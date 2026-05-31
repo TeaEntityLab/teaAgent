@@ -394,6 +394,24 @@ def _approval(
         func=handlers['approval_subagents_prune'], command='approval'
     )
 
+    why_denied = subs.add_parser(
+        'why-denied',
+        help='Explain why a tool call was denied for a given run.',
+    )
+    why_denied.add_argument('run_id')
+    why_denied.add_argument('--root', default='.')
+    why_denied.add_argument(
+        '--call-id',
+        default=None,
+        help='Filter to a specific call ID.',
+    )
+    why_denied.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Show full audit event payload.',
+    )
+    why_denied.set_defaults(func=handlers['approval_why_denied'], command='approval')
+
 
 def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
     p = subparsers.add_parser(

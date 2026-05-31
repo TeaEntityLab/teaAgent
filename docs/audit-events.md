@@ -39,10 +39,10 @@ Each line has this envelope:
 |---|---|---|
 | `run_started` | `AgentRunner.run` | `task`, `replayed_observations` |
 | `iteration_started` | `AgentRunner.run` | `iteration` |
-| `tool_call_pending_approval` | `AgentRunner.run` | `call_id`, `tool_name`, redacted `arguments`, `reason`, `annotations` |
+| `tool_call_pending_approval` | `AgentRunner.run` | `call_id`, `tool_name`, redacted `arguments`, `reason`, `annotations`, optional `reason_code` |
 | `tool_call_approved` | `AgentRunner.run` | `call_id`, `tool_name` |
-| `tool_call_denied` | `AgentRunner.run` | `call_id`, `tool_name` |
-| `tool_call_blocked` | `AgentRunner.run` | `call_id`, `tool_name`, redacted `arguments`, `reason`, `annotations` |
+| `tool_call_denied` | `AgentRunner.run` | `call_id`, `tool_name`, optional `reason_code` |
+| `tool_call_blocked` | `AgentRunner.run` | `call_id`, `tool_name`, redacted `arguments`, `reason`, `annotations`, optional `reason_code` |
 | `tool_call_started` | `AgentRunner.run` | `call_id`, `tool_name`, redacted `arguments`, `annotations` |
 | `tool_call_completed` | `AgentRunner.run` | `call_id`, `tool_name`, redacted `result` |
 | `context_compacted` | `AgentRunner.run` | `summary` |

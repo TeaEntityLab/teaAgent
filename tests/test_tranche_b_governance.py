@@ -131,3 +131,50 @@ def test_validation_profile_fast_skips_missing_tools(tmp_path) -> None:
     report = run_profile_validation(tmp_path, 'fast')
     assert report.profile == 'fast'
     assert all(r.skipped or r.exit_code == 0 for r in report.results)
+
+
+def test_stateful_non_idempotent_tools_require_governance_annotation() -> None:
+    """Stateful + non-idempotent + non-destructive should produce stateful_without_governance warning."""
+    registry = ToolRegistry()
+
+    # Should warn: stateful=True, destructive=False, idempotent=False
+    registry.register(
+        name='test_stateful_tool',
+        description='a stateful tool without governance',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(
+            read_only=False, destructive=False, idempotent=False, stateful=True
+        ),
+        handler=lambda _: {},
+    )
+
+    # Should NOT warn: stateful=True, destructive=True (has governance)
+    registry.register(
+        name='test_destructive_stateful_tool',
+        description='a destructive stateful tool with governance',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(
+            read_only=False, destructive=True, idempotent=False, stateful=True
+        ),
+        handler=lambda _: {},
+    )
+
+    # Should NOT warn: stateful=True, idempotent=True (safe)
+    registry.register(
+        name='test_idempotent_stateful_tool',
+        description='an idempotent stateful tool',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(
+            read_only=False, destructive=False, idempotent=True, stateful=True
+        ),
+        handler=lambda _: {},
+    )
+
+    issues = lint_registry(registry)
+    stateful_issues = [i for i in issues if i.code == 'stateful_without_governance']
+    assert len(stateful_issues) == 1
+    assert stateful_issues[0].tool_name == 'test_stateful_tool'
+    assert stateful_issues[0].level == 'warning'
