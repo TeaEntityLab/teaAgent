@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator, Optional
 
+from test_support import skip_if_socket_bind_is_blocked
 from teaagent.mcp_http import (
     MAX_HTTP_BODY_BYTES,
     MCP_PATH,
@@ -77,6 +78,7 @@ class _ServerFixture:
 
 @contextmanager
 def server_fixture(**kwargs) -> Iterator[_ServerFixture]:
+    skip_if_socket_bind_is_blocked()
     with tempfile.TemporaryDirectory() as tmp:
         fixture = _ServerFixture(root=tmp, **kwargs)
         try:
@@ -394,6 +396,7 @@ class MCPHTTPOAuthIntegrationTests(unittest.TestCase):
     @staticmethod
     def _build_oauth_fixture(**oauth_kwargs):
         """Create a server fixture with OAuth enabled."""
+        skip_if_socket_bind_is_blocked()
         from teaagent.oauth21 import OAuth21AuthorizationServer
 
         oauth_server = OAuth21AuthorizationServer(

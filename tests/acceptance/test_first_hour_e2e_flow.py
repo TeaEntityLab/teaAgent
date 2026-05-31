@@ -14,6 +14,7 @@ from unittest.mock import patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from test_support import can_bind_loopback
 
 _GIT_ENV = {
     'GIT_AUTHOR_NAME': 'TeaAgent Acceptance',
@@ -96,8 +97,14 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
                 'read-only',
             ]
         )
+    plan_payload = json.loads(plan_out.getvalue())
+    if not can_bind_loopback():
+        assert plan_code == 2
+        assert plan_payload['ready'] is False
+        return
+
     assert plan_code == 0
-    assert json.loads(plan_out.getvalue())['context_pack']['read_only'] is True
+    assert plan_payload['context_pack']['read_only'] is True
 
     adapter = FakeAdapter(
         [

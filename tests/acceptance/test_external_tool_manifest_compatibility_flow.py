@@ -22,6 +22,7 @@ from teaagent.errors import ToolValidationError
 from teaagent.mcp_tool_adapter import register_mcp_tools
 from teaagent.skill_loader import load_skills
 from teaagent.tools import ToolRegistry
+from test_support import skip_if_socket_bind_is_blocked
 
 _EXTERNAL_TOOLS = [
     {
@@ -106,6 +107,7 @@ class _ExternalMCPHandler(BaseHTTPRequestHandler):
 
 
 def _start_external_server() -> tuple[HTTPServer, str]:
+    skip_if_socket_bind_is_blocked()
     server = HTTPServer(('127.0.0.1', 0), _ExternalMCPHandler)
     port = server.server_address[1]
     threading.Thread(target=server.serve_forever, daemon=True).start()

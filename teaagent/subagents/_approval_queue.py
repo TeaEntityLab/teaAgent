@@ -761,12 +761,17 @@ def approve_request_cross_process(
     from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
     store = ApprovalQueueStore(workspace_root)
-    ok = store.update_request_status(
-        parent_run_id,
-        request_id,
-        ApprovalRequestStatus.APPROVED,
-        approved_by=approved_by,
-    )
+    ok = False
+    for _ in range(10):
+        ok = store.update_request_status(
+            parent_run_id,
+            request_id,
+            ApprovalRequestStatus.APPROVED,
+            approved_by=approved_by,
+        )
+        if ok:
+            break
+        time.sleep(0.02)
     if ok:
         queue = try_get_approval_queue(parent_run_id, workspace_root=workspace_root)
         if queue is not None:

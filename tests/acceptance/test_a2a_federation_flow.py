@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from test_support import skip_if_socket_bind_is_blocked
 from teaagent.agentcard import (
     A2AClient,
     A2ADiscoveryServer,
@@ -13,6 +14,7 @@ from teaagent.agentcard import (
 
 class A2AFederationFlowAcceptanceTests(unittest.TestCase):
     def test_federated_discovery_routes_by_capability_and_delegates(self) -> None:
+        skip_if_socket_bind_is_blocked()
         calls: list[tuple[str, dict]] = []
 
         def handler(task: str, context: dict) -> str:

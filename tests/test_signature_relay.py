@@ -9,6 +9,7 @@ import time
 import urllib.request
 from dataclasses import asdict
 
+from test_support import skip_if_socket_bind_is_blocked
 from teaagent.federated_sync import (
     ApprovalRequestMessage,
     FederatedGraphSync,
@@ -39,6 +40,7 @@ def _http_json(
 
 
 def test_signature_relay_store_roundtrip():
+    skip_if_socket_bind_is_blocked()
     policy = SurfaceAuthPolicy.from_single_token('relay-secret')
     relay = SignatureRelayServer(
         host='127.0.0.1',
@@ -102,6 +104,7 @@ def test_signature_relay_requires_auth_on_wan_bind():
 
 
 def test_federated_http_broadcast_and_collect():
+    skip_if_socket_bind_is_blocked()
     policy = SurfaceAuthPolicy.from_single_token('test-token')
     collector = SignatureRelayServer(host='127.0.0.1', port=0, auth_policy=policy)
     peer = SignatureRelayServer(host='127.0.0.1', port=0, auth_policy=policy)
@@ -162,6 +165,7 @@ def test_federated_http_broadcast_and_collect():
 
 
 def test_signature_relay_rate_limit():
+    skip_if_socket_bind_is_blocked()
     from teaagent.http_rate_limit import TokenRateLimiter
 
     policy = SurfaceAuthPolicy.from_single_token('tok')

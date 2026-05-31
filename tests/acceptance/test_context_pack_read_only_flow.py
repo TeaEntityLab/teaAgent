@@ -26,6 +26,7 @@ from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.hybrid_search import LocalHybridSearchBackend
 from teaagent.memory import MemoryCatalog
 from tests.test_graphqlite_store import FakeGraphQLiteGraph
+from test_support import can_bind_loopback
 
 
 def test_preflight_includes_read_only_context_pack_evidence() -> None:
@@ -50,6 +51,11 @@ def test_preflight_includes_read_only_context_pack_evidence() -> None:
                 ]
             )
         payload = json.loads(output.getvalue())
+
+        if not can_bind_loopback():
+            assert code == 2
+            assert payload['ready'] is False
+            return
 
         assert code == 0
         context_pack = payload['context_pack']
@@ -76,6 +82,11 @@ def test_preflight_graph_rag_includes_hybrid_hits_when_indexed() -> None:
         with redirect_stdout(output):
             code = main(['agent', 'preflight', 'gpt', task, '--root', tmp])
         payload = json.loads(output.getvalue())
+
+        if not can_bind_loopback():
+            assert code == 2
+            assert payload['ready'] is False
+            return
 
         assert code == 0
         graph = payload['context_pack']['graph_rag']
@@ -104,6 +115,11 @@ def test_preflight_graph_rag_includes_knowledge_hits_when_marker_exists() -> Non
         with redirect_stdout(output):
             code = main(['agent', 'preflight', 'gpt', task, '--root', tmp])
         payload = json.loads(output.getvalue())
+
+        if not can_bind_loopback():
+            assert code == 2
+            assert payload['ready'] is False
+            return
 
         assert code == 0
         graph = payload['context_pack']['graph_rag']
@@ -142,6 +158,11 @@ def test_preflight_graph_rag_includes_graphqlite_hits_when_db_exists() -> None:
         ):
             code = main(['agent', 'preflight', 'gpt', task, '--root', tmp])
         payload = json.loads(output.getvalue())
+
+        if not can_bind_loopback():
+            assert code == 2
+            assert payload['ready'] is False
+            return
 
         assert code == 0
         graph = payload['context_pack']['graph_rag']

@@ -3,21 +3,21 @@ repos:
     hooks:
       - id: ruff-format
         name: ruff-format
-        entry: uv run ruff format
+        entry: env UV_CACHE_DIR=.uv-cache uv run ruff format
         language: system
         pass_filenames: false
       - id: ruff
         name: ruff
-        entry: uv run ruff check --fix --exit-non-zero-on-fix .
+        entry: env UV_CACHE_DIR=.uv-cache uv run ruff check --fix --exit-non-zero-on-fix .
         language: system
         pass_filenames: false
       - id: mypy
         name: mypy
-        entry: uv run mypy teaagent/
+        entry: env UV_CACHE_DIR=.uv-cache uv run mypy teaagent/
         language: system
         pass_filenames: false
       - id: pytest
         name: pytest
-        entry: bash -c 'if [ "${TEAAGENT_PRECOMMIT_FULL:-0}" = 1 ]; then uv run pytest -q; else uv run pytest tests/test_p0_harness.py tests/test_surface_auth_hardening.py tests/test_policy.py tests/test_phase5_context_bus.py tests/test_governance_hardening.py -q; fi'
+        entry: bash -c 'if [ "${TEAAGENT_PRECOMMIT_FULL:-0}" = 1 ]; then env UV_CACHE_DIR=.uv-cache uv run pytest -q; else env UV_CACHE_DIR=.uv-cache uv run pytest tests/test_p0_harness.py tests/test_surface_auth_hardening.py tests/test_policy.py tests/test_phase5_context_bus.py tests/test_governance_hardening.py -q; fi'
         language: system
         pass_filenames: false

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from test_support import skip_if_socket_bind_is_blocked
 from teaagent.consensus import (
     ConsensusConfig,
     ConsensusEngine,
@@ -69,6 +70,7 @@ def test_control_plane_registry_isolates_tenants() -> None:
 
 
 def test_control_plane_server_lists_tenants(tmp_path: Path) -> None:
+    skip_if_socket_bind_is_blocked()
     registry = ControlPlaneRegistry()
     server = ControlPlaneServer(host='127.0.0.1', port=0, tenant_registry=registry)
     server.start()
@@ -124,6 +126,7 @@ def test_vote_relay_dev_signature(tmp_path: Path) -> None:
 
 
 def test_vote_relay_server_health(tmp_path: Path) -> None:
+    skip_if_socket_bind_is_blocked()
     registry = PeerRegistry(storage_path=tmp_path / 'peers.json')
     engine = ConsensusEngine(
         peer_registry=registry,

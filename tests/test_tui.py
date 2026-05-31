@@ -10,6 +10,7 @@ from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
 
+from test_support import can_bind_loopback
 from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
@@ -469,6 +470,10 @@ class TUITests(unittest.TestCase):
             )
 
             payload = json.loads(output[-1])
+            if not can_bind_loopback():
+                self.assertFalse(payload['ready'])
+                return
+
             self.assertTrue(payload['ready'])
             self.assertEqual(payload['routing']['category'], 'review')
             # With complexity-based routing, review tasks (medium complexity) use gpt-4o-mini
