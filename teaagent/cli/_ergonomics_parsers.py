@@ -25,6 +25,7 @@ def register(
     _recipes(subparsers, handlers)
     _approval(subparsers, handlers)
     _guidance(subparsers, handlers['guidance'])
+    _permission(subparsers, handlers['permission_explain'])
     _ci(subparsers, handlers['ci_review'])
     _watch(subparsers, handlers['watch'])
     _journal(subparsers, handlers['daily_journal'])
@@ -444,3 +445,32 @@ def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
         default='balanced',
     )
     p.set_defaults(func=handler, command='journal')
+
+
+def _permission(
+    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    explain_handler: Callable,
+) -> None:
+    permission = subparsers.add_parser(
+        'permission',
+        help='Permission mode decision guide and reference.',
+        description='Explore TeaAgent permission modes, their capabilities, and when to use each one.',
+    )
+    subs = permission.add_subparsers(dest='permission_command', required=True)
+    explain = subs.add_parser(
+        'explain',
+        help='Explain one or all permission modes.',
+        description=(
+            'Print a detailed explanation of permission modes. '
+            'With a mode argument, show details for that mode only. '
+            'Without an argument, show the full decision matrix.'
+        ),
+    )
+    explain.add_argument(
+        'mode',
+        nargs='?',
+        default=None,
+        choices=[mode.value for mode in PermissionMode],
+        help='Permission mode to explain (omit for all modes).',
+    )
+    explain.set_defaults(func=explain_handler, command='permission')

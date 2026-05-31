@@ -249,3 +249,113 @@ class TestContextBus:
 
         assert delta.metadata['file'] == 'foo.py'
         assert delta.metadata['line'] == 42
+
+
+class FakeRagStore:
+    """In-memory RAG store for testing archive_to_rag."""
+
+    def __init__(self) -> None:
+        self.documents: list[dict] = []
+
+    def add_document(self, doc: dict) -> None:
+        self.documents.append(doc)
+
+
+class TestArchiveToRag:
+    """Tests for archive_to_rag ID-based deletion fix."""
+
+    def test_archive_to_rag_basic(self):
+        """Publish a delta, archive, verify count drops to zero."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / 'context_bus.db'
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
+            bus = ContextBus(config)
+
+            bus.publish_delta(
+                DeltaCard(
+                    delta_id='delta-1',
+                    delta_type=DeltaType.CODE_CHANGE,
+                    source_agent='agent-1',
+                    content='Change 1',
+                )
+            )
+            assert bus.get_delta_count() == 1
+
+            rag = FakeRagStore()
+            bus.archive_to_rag(rag)
+
+            assert bus.get_delta_count() == 0
+            assert len(rag.documents) == 1
+            assert rag.documents[0]['doc_id'] == 'delta-1'
+            bus.close()
+
+    def test_archive_to_rag_with_concurrent_publish(self):
+        """Concurrently published delta survives archive (no timestamp collision)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / 'context_bus.db'
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
+            bus = ContextBus(config)
+
+            bus.publish_delta(
+                DeltaCard(
+                    delta_id='delta-1',
+                    delta_type=DeltaType.CODE_CHANGE,
+                    source_agent='agent-1',
+                    content='Change 1',
+                )
+            )
+
+            class ConcurrentRagStore:
+                def __init__(self, bus):
+                    self.bus = bus
+                    self.call_count = 0
+
+                def add_document(self, doc):
+                    self.call_count += 1
+                    if self.call_count == 1:
+                        # Simulate a concurrent publish during the RAG archive
+                        # window (Phase 2 — no DB lock held).
+                        self.bus.publish_delta(
+                            DeltaCard(
+                                delta_id='concurrent-delta',
+                                delta_type=DeltaType.DISCOVERY,
+                                source_agent='concurrent',
+                                content='Concurrent publish!',
+                            )
+                        )
+
+            bus.archive_to_rag(ConcurrentRagStore(bus))
+
+            # The concurrently published delta has a different ID, so it
+            # should NOT be in archived_ids and must survive deletion.
+            assert bus.get_delta_count() == 1
+            remaining = bus.subscribe_deltas()
+            assert remaining[0].delta_id == 'concurrent-delta'
+            bus.close()
+
+    def test_archive_to_rag_rag_store_failure(self):
+        """RAG store failure does NOT delete deltas (no data loss)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / 'context_bus.db'
+            config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')
+            bus = ContextBus(config)
+
+            bus.publish_delta(
+                DeltaCard(
+                    delta_id='delta-1',
+                    delta_type=DeltaType.CODE_CHANGE,
+                    source_agent='agent-1',
+                    content='Change 1',
+                )
+            )
+            assert bus.get_delta_count() == 1
+
+            class FailingRagStore:
+                def add_document(self, doc):  # type: ignore[no-untyped-def]
+                    raise RuntimeError('RAG store unavailable')
+
+            bus.archive_to_rag(FailingRagStore())
+
+            # Delta survives because archive failed — no archived_ids → no delete.
+            assert bus.get_delta_count() == 1
+            bus.close()

@@ -17,7 +17,7 @@ from teaagent import (
     register_workspace_tools,
 )
 from teaagent.cli import main
-from teaagent.errors import ToolExecutionError
+from teaagent.errors import ToolExecutionError, ToolValidationError
 from teaagent.workspace_tools import classify_shell_command_policy
 from teaagent.workspace_tools.factory import ToolFactory
 
@@ -561,6 +561,55 @@ class WorkspaceToolTests(unittest.TestCase):
             )
 
             self.assertEqual(result['backend'], 'fake_code_parse_ws')
+            self.assertEqual(result['action'], 'definition')
+            self.assertEqual(result['result']['kind'], 'definition')
+
+    def test_workspace_code_parse_validates_required_fields_per_action(self) -> None:
+        from teaagent.workspace_tools._files import code_parse
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config = WorkspaceToolConfig(root=Path(tmp))
+
+            class FakeCodeParse2:
+                def health(self, *, root: Path):
+                    return {'ok': True}
+
+                def overview(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'overview'}
+
+                def symbols(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'symbols'}
+
+                def definition(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'definition', 'name': args.get('name')}
+
+                def references(self, *, root: Path, args: dict[str, object]):
+                    return {'kind': 'references', 'name': args.get('name')}
+
+            register_code_parse_backend('fake_code_parse_val', FakeCodeParse2())
+
+            with self.assertRaises(ToolValidationError) as ctx:
+                code_parse(
+                    config,
+                    {'backend': 'fake_code_parse_val', 'action': 'definition'},
+                )
+            self.assertIn('name', str(ctx.exception))
+
+            with self.assertRaises(ToolValidationError) as ctx:
+                code_parse(
+                    config,
+                    {'backend': 'fake_code_parse_val', 'action': 'overview'},
+                )
+            self.assertIn('path', str(ctx.exception))
+
+            result = code_parse(
+                config,
+                {
+                    'backend': 'fake_code_parse_val',
+                    'action': 'definition',
+                    'name': 'Foo.bar',
+                },
+            )
             self.assertEqual(result['action'], 'definition')
             self.assertEqual(result['result']['kind'], 'definition')
 

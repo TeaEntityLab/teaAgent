@@ -402,7 +402,7 @@ class ContextBus:
         if not deltas:
             return
 
-        max_timestamp = max(d.timestamp for d in deltas)
+        archived_ids: list[str] = []
         archived_count = 0
         for delta in deltas:
             rag_doc = {
@@ -424,17 +424,28 @@ class ContextBus:
                 else:
                     logger.warning('RAG store does not support adding documents')
                 archived_count += 1
+                archived_ids.append(delta.delta_id)
             except Exception as exc:
                 logger.error(
                     'Failed to archive Delta (id=%s) to RAG: %s', delta.delta_id, exc
                 )
 
-        self._clear_deltas(max_timestamp)
+        if archived_ids:
+            self._clear_deltas(delta_ids=archived_ids)
 
         logger.info('Archived %s/%s Delta cards to RAG', archived_count, len(deltas))
 
-    def _clear_deltas(self, max_timestamp: Optional[float] = None) -> None:
-        """Clear Delta cards for the current workflow."""
+    def _clear_deltas(
+        self,
+        max_timestamp: float | None = None,
+        delta_ids: list[str] | None = None,
+    ) -> None:
+        """Clear Delta cards for the current workflow.
+
+        If *delta_ids* is provided it is used in preference (precise ID-based
+        deletion). Falls back to *max_timestamp* for backward compatibility.
+        If neither is provided, all deltas for the current workflow are deleted.
+        """
         max_retries = 5
         base_delay = 0.1
 
@@ -443,7 +454,13 @@ class ContextBus:
             cursor = conn.cursor()
 
             try:
-                if max_timestamp is not None:
+                if delta_ids is not None:
+                    placeholders = ','.join('?' for _ in delta_ids)
+                    cursor.execute(
+                        f'DELETE FROM delta_cards WHERE delta_id IN ({placeholders})',
+                        delta_ids,
+                    )
+                elif max_timestamp is not None:
                     cursor.execute(
                         'DELETE FROM delta_cards WHERE workflow_id = ? AND timestamp <= ?',
                         (self._workflow_id, max_timestamp),

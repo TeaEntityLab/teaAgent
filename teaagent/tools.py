@@ -188,7 +188,9 @@ class ToolRegistry:
         if state is not None:
             state.check_and_record(name)
         if self.hook_registry is not None:
-            self.hook_registry.run_pre_hooks(name, arguments)
+            modified_args = self.hook_registry.run_pre_hooks(name, arguments)
+            if modified_args is not None:
+                arguments = modified_args
         try:
             result = tool.handler(arguments)
         except ToolExecutionError:
@@ -198,7 +200,9 @@ class ToolRegistry:
         ) as exc:  # pragma: no cover - preserves original detail in message
             raise ToolExecutionError(f"tool '{name}' failed: {exc}") from exc
         if self.hook_registry is not None:
-            self.hook_registry.run_post_hooks(name, arguments, result)
+            modified_result = self.hook_registry.run_post_hooks(name, arguments, result)
+            if modified_result is not None:
+                result = modified_result
         validate_object_schema(tool.output_schema, result, label=f'tool.{name}.output')
         return result
 

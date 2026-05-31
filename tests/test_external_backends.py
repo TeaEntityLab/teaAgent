@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -7,9 +8,11 @@ import pytest
 
 from teaagent.external_backends import (
     BackendConfig,
+    BackendExecutionError,
     CxCliAdapter,
     FallbackKnowledgeBackend,
     LocalKnowledgeAdapter,
+    QmdCliAdapter,
     get_code_parse_backend,
     get_knowledge_backend,
     register_code_parse_backend,
@@ -152,3 +155,72 @@ def test_local_knowledge_adapter_reads_file(tmp_path: Path) -> None:
     payload = adapter.get(root=tmp_path, args={'path': 'note.txt'})
     assert payload['content'] == 'local knowledge'
     assert adapter.health(root=tmp_path)['ok'] is True
+
+
+def test_cx_cli_adapter_timeout_raises_backend_execution_error(
+    tmp_path: Path,
+) -> None:
+    adapter = CxCliAdapter(binary='cx', timeout=5)
+    with patch('teaagent.external_backends.subprocess.run') as run:
+        run.side_effect = subprocess.TimeoutExpired(
+            cmd=['cx', 'lang', 'list'], timeout=5
+        )
+        with pytest.raises(BackendExecutionError) as exc_info:
+            adapter.health(root=tmp_path)
+        err = exc_info.value
+        assert err.details['reason'] == 'timeout'
+        assert err.details['timeout_seconds'] == 5
+        assert err.backend_name == 'cx_cli'
+
+
+def test_cx_cli_adapter_non_zero_exit_raises_backend_execution_error(
+    tmp_path: Path,
+) -> None:
+    adapter = CxCliAdapter(binary='cx', timeout=10)
+    with patch('teaagent.external_backends.subprocess.run') as run:
+        run.return_value = MagicMock(returncode=1, stdout='', stderr='not found')
+        with pytest.raises(BackendExecutionError) as exc_info:
+            adapter.health(root=tmp_path)
+        err = exc_info.value
+        assert err.details['reason'] == 'non_zero_exit'
+        assert err.details['exit_code'] == 1
+        assert err.details['stderr'] == 'not found'
+
+
+def test_cx_cli_adapter_success_passes_timeout(tmp_path: Path) -> None:
+    adapter = CxCliAdapter(binary='echo', timeout=15)
+    with patch('teaagent.external_backends.subprocess.run') as run:
+        run.return_value = MagicMock(returncode=0, stdout='{"ok": true}', stderr='')
+        adapter.health(root=tmp_path)
+        _, kwargs = run.call_args
+        assert kwargs['timeout'] == 15
+
+
+def test_qmd_cli_adapter_timeout_raises_backend_execution_error(
+    tmp_path: Path,
+) -> None:
+    adapter = QmdCliAdapter(binary='qmd', timeout=8)
+    with patch('teaagent.external_backends.subprocess.run') as run:
+        run.side_effect = subprocess.TimeoutExpired(
+            cmd=['qmd', 'status', '--json'], timeout=8
+        )
+        with pytest.raises(BackendExecutionError) as exc_info:
+            adapter.health(root=tmp_path)
+        err = exc_info.value
+        assert err.details['reason'] == 'timeout'
+        assert err.details['timeout_seconds'] == 8
+        assert err.backend_name == 'qmd_cli'
+
+
+def test_qmd_cli_adapter_non_zero_exit_raises_backend_execution_error(
+    tmp_path: Path,
+) -> None:
+    adapter = QmdCliAdapter(binary='qmd', timeout=10)
+    with patch('teaagent.external_backends.subprocess.run') as run:
+        run.return_value = MagicMock(returncode=2, stdout='', stderr='fatal error')
+        with pytest.raises(BackendExecutionError) as exc_info:
+            adapter.health(root=tmp_path)
+        err = exc_info.value
+        assert err.details['reason'] == 'non_zero_exit'
+        assert err.details['exit_code'] == 2
+        assert err.details['stderr'] == 'fatal error'

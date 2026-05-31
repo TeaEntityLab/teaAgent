@@ -422,6 +422,7 @@ class QmdMcpAdapter(BackendAdapter):
 @dataclass(frozen=True)
 class QmdCliAdapter:
     binary: str = 'qmd'
+    timeout: int = 30
 
     def health(self, *, root: Path) -> dict[str, Any]:
         out = self._run(root, [self.binary, 'status', '--json'])
@@ -460,11 +461,35 @@ class QmdCliAdapter:
         }
 
     def _run(self, root: Path, cmd: list[str]) -> str:
-        result = subprocess.run(
-            cmd, cwd=str(root), capture_output=True, text=True, check=False
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=self.timeout,
+            )
+        except subprocess.TimeoutExpired:
+            raise BackendExecutionError(
+                f'qmd command timed out after {self.timeout}s',
+                backend_name='qmd_cli',
+                details={
+                    'reason': 'timeout',
+                    'timeout_seconds': self.timeout,
+                    'command': cmd,
+                },
+            ) from None
         if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or 'qmd command failed')
+            raise BackendExecutionError(
+                result.stderr.strip() or 'qmd command failed',
+                backend_name='qmd_cli',
+                details={
+                    'reason': 'non_zero_exit',
+                    'exit_code': result.returncode,
+                    'stderr': result.stderr.strip(),
+                },
+            )
         return result.stdout.strip()
 
     def _parse(self, text: str) -> Any:
@@ -477,6 +502,7 @@ class QmdCliAdapter:
 @dataclass(frozen=True)
 class CxCliAdapter:
     binary: str = 'cx'
+    timeout: int = 30
 
     def health(self, *, root: Path) -> dict[str, Any]:
         out = self._run(root, [self.binary, 'lang', 'list'])
@@ -513,11 +539,35 @@ class CxCliAdapter:
         return {'backend': 'cx_cli', 'raw': self._run(root, cmd)}
 
     def _run(self, root: Path, cmd: list[str]) -> str:
-        result = subprocess.run(
-            cmd, cwd=str(root), capture_output=True, text=True, check=False
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=self.timeout,
+            )
+        except subprocess.TimeoutExpired:
+            raise BackendExecutionError(
+                f'cx command timed out after {self.timeout}s',
+                backend_name='cx_cli',
+                details={
+                    'reason': 'timeout',
+                    'timeout_seconds': self.timeout,
+                    'command': cmd,
+                },
+            ) from None
         if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or 'cx command failed')
+            raise BackendExecutionError(
+                result.stderr.strip() or 'cx command failed',
+                backend_name='cx_cli',
+                details={
+                    'reason': 'non_zero_exit',
+                    'exit_code': result.returncode,
+                    'stderr': result.stderr.strip(),
+                },
+            )
         return result.stdout.strip()
 
 

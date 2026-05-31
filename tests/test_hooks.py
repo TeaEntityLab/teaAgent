@@ -104,6 +104,85 @@ class TestHookIntegration(unittest.TestCase):
         self.assertEqual(result, {'value': 42})
         self.assertEqual(results, [{'value': 42}])
 
+    def test_pre_hook_mutates_arguments_passed_to_handler(self) -> None:
+        received_args: list[dict] = []
+        registry = HookRegistry()
+        registry.register_pre_hook(lambda tool_name, args: {**args, 'injected': True})
+        tool_reg = ToolRegistry(hook_registry=registry)
+        tool_reg.register(
+            name='echo',
+            description='echo',
+            input_schema={
+                'type': 'object',
+                'properties': {'injected': {'type': 'boolean'}},
+            },
+            output_schema={'type': 'object', 'properties': {}},
+            annotations=ToolAnnotations(),
+            handler=lambda args: received_args.append(args) or {},
+        )
+        tool_reg.execute('echo', {})
+        self.assertEqual(received_args, [{'injected': True}])
+
+    def test_post_hook_mutates_result_returned_by_execute(self) -> None:
+        registry = HookRegistry()
+        registry.register_post_hook(
+            lambda tool_name, args, result: {**result, 'extra': 'added'}
+        )
+        tool_reg = ToolRegistry(hook_registry=registry)
+        tool_reg.register(
+            name='echo',
+            description='echo',
+            input_schema={'type': 'object', 'properties': {}},
+            output_schema={
+                'type': 'object',
+                'properties': {
+                    'value': {'type': 'integer'},
+                    'extra': {'type': 'string'},
+                },
+            },
+            annotations=ToolAnnotations(),
+            handler=lambda args: {'value': 1},
+        )
+        result = tool_reg.execute('echo', {})
+        self.assertEqual(result, {'value': 1, 'extra': 'added'})
+
+    def test_pre_hook_returning_none_preserves_original_args(self) -> None:
+        received_args: list[dict] = []
+        registry = HookRegistry()
+        registry.register_pre_hook(lambda tool_name, args: None)
+        tool_reg = ToolRegistry(hook_registry=registry)
+        tool_reg.register(
+            name='echo',
+            description='echo',
+            input_schema={
+                'type': 'object',
+                'properties': {'x': {'type': 'integer'}},
+            },
+            output_schema={'type': 'object', 'properties': {}},
+            annotations=ToolAnnotations(),
+            handler=lambda args: received_args.append(args) or {},
+        )
+        tool_reg.execute('echo', {'x': 99})
+        self.assertEqual(received_args, [{'x': 99}])
+
+    def test_post_hook_returning_none_preserves_original_result(self) -> None:
+        registry = HookRegistry()
+        registry.register_post_hook(lambda tool_name, args, result: None)
+        tool_reg = ToolRegistry(hook_registry=registry)
+        tool_reg.register(
+            name='echo',
+            description='echo',
+            input_schema={'type': 'object', 'properties': {}},
+            output_schema={
+                'type': 'object',
+                'properties': {'value': {'type': 'integer'}},
+            },
+            annotations=ToolAnnotations(),
+            handler=lambda args: {'value': 42},
+        )
+        result = tool_reg.execute('echo', {})
+        self.assertEqual(result, {'value': 42})
+
 
 class TestBuiltInHooks(unittest.TestCase):
     def test_shell_command_hook_runs_on_matching_tool(self) -> None:

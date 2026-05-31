@@ -7,6 +7,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
+from teaagent.errors import ToolValidationError
 from teaagent.external_backends import (
     FallbackKnowledgeBackend,
     get_code_parse_backend,
@@ -672,6 +673,20 @@ def knowledge_search(
 def code_parse(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     backend_name = str(args.get('backend', 'cx_cli'))
     action = str(args['action'])
+    _ACTION_REQUIRED_FIELDS: dict[str, list[str]] = {
+        'overview': ['path'],
+        'definition': ['name'],
+        'references': ['name'],
+        'symbols': [],
+        'health': [],
+    }
+    required = _ACTION_REQUIRED_FIELDS.get(action, [])
+    missing = [f for f in required if not args.get(f)]
+    if missing:
+        raise ToolValidationError(
+            f"code_parse action '{action}' is missing required field(s): {', '.join(missing)}",
+            hint=f"Provide the following fields for action '{action}': {', '.join(missing)}",
+        )
     backend = get_code_parse_backend(backend_name)
     payload = dict(args)
     if action == 'health':
