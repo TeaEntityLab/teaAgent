@@ -223,7 +223,9 @@ class Subagent:
 
         # Background daemon thread ticks heartbeat during long execution
         # to prevent false-positive hang detection by the heartbeat monitor.
-        HEARTBEAT_TICK_INTERVAL = 30  # seconds; must be < lock_timeout_seconds (default 60)
+        HEARTBEAT_TICK_INTERVAL = (
+            30  # seconds; must be < lock_timeout_seconds (default 60)
+        )
 
         def _heartbeat_ticker() -> None:
             while self.is_running:
@@ -621,7 +623,9 @@ class SwarmManager:
                 },
             )
 
-            total_cost_cents = sum(getattr(r, 'cost_cents', 0.0) or 0.0 for r in results)
+            total_cost_cents = sum(
+                getattr(r, 'cost_cents', 0.0) or 0.0 for r in results
+            )
             return SwarmReport(
                 total_subagents=len(self._subagents),
                 successful_subagents=successful,

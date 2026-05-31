@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import socket
+import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -14,6 +15,7 @@ from teaagent.daily import (
     resolve_context_profile,
 )
 from teaagent.intent import ClarificationResult, clarify_task
+from teaagent.llm._config import PROVIDER_CONFIGS, is_local_provider
 from teaagent.memory import MemoryCatalog, MemoryEntry
 from teaagent.model_routing import ModelRoute, route_model
 from teaagent.policy import PermissionMode
@@ -54,8 +56,53 @@ class PreflightReport:
         }
 
 
+def check_provider_connectivity(provider: str | None) -> tuple[bool, str]:
+    """Check whether the provider endpoint is reachable.
+
+    For local providers (e.g. Ollama, vLLM) this verifies the local server
+    port is open.  For remote providers it resolves the hostname to confirm
+    DNS is working — the actual API call fails fast and enters the normal
+    retry path if the endpoint is down.
+    """
+    if not provider:
+        return True, 'no provider specified — skipping connectivity check'
+    normalized = provider.lower()
+    if normalized not in PROVIDER_CONFIGS:
+        return True, f'unknown provider {provider!r} — skipping connectivity check'
+
+    base_url = PROVIDER_CONFIGS[normalized].base_url
+    parsed = urllib.parse.urlparse(base_url)
+    host = parsed.hostname or 'localhost'
+    port = parsed.port
+
+    if is_local_provider(provider):
+        local_port = port or (443 if parsed.scheme == 'https' else 80)
+        try:
+            with socket.create_connection((host, local_port), timeout=3):
+                pass
+        except (socket.timeout, ConnectionRefusedError, OSError) as exc:
+            return False, (
+                f'Local provider {provider!r} ({host}:{local_port}) is not '
+                f'reachable: {exc}. Make sure the server is running.'
+            )
+        return True, f'Local provider {provider!r} is reachable on {host}:{local_port}'
+    else:
+        try:
+            socket.getaddrinfo(host, port or 443)
+        except socket.gaierror as exc:
+            return False, (
+                f'Remote provider {provider!r} hostname {host!r} could not be '
+                f'resolved: {exc}. Check your network connection.'
+            )
+        return True, f'Remote provider {provider!r} hostname resolves ({host})'
+
+
 def check_env_health(
-    root: Path, critical_paths: list[Path] | None = None, *, readonly: bool = False
+    root: Path,
+    critical_paths: list[Path] | None = None,
+    *,
+    readonly: bool = False,
+    provider: str | None = None,
 ) -> dict[str, Any]:
     """Check for common environment bottlenecks (permissions, network)."""
     failures = []
@@ -74,15 +121,18 @@ def check_env_health(
                 except Exception as exc:
                     failures.append(f'Disk error on {p}: {exc}')
 
-    # 2. Check network binding ability (important for MCP/TUI)
-    with contextlib.suppress(Exception):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.bind(('127.0.0.1', 0))
-        except socket.error as exc:
-            failures.append(f'Network binding restricted: {exc}')
-        finally:
-            s.close()
+    # 2. Check network binding ability (important for MCP/TUI).
+    #    Local providers communicate over loopback only, so the binding
+    #    check is always expected to succeed for them.
+    if not (provider and is_local_provider(provider)):
+        with contextlib.suppress(Exception):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.bind(('127.0.0.1', 0))
+            except socket.error as exc:
+                failures.append(f'Network binding restricted: {exc}')
+            finally:
+                s.close()
 
     return {'healthy': len(failures) == 0, 'failures': failures}
 
@@ -120,8 +170,14 @@ def preflight(
         root_path,
         critical_paths=[root_path / '.teaagent', root_path / '.git'],
         readonly=readonly,
+        provider=provider,
     )
+    provider_ok, provider_msg = check_provider_connectivity(provider)
+    if not provider_ok:
+        health['failures'].append(provider_msg)
+        health['healthy'] = False
     health['warnings'] = build_harness_health_report(root_path, health).warnings
+    health['provider_connectivity'] = provider_msg
     token_budget = build_token_budget_report(
         task=task,
         provider=provider,

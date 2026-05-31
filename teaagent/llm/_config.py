@@ -112,6 +112,19 @@ PROVIDER_CONFIGS = {
 }
 
 
+def is_local_provider(name: str) -> bool:
+    """Return True if the provider's default base_url points to localhost.
+
+    Local providers (Ollama, vLLM) run a server on the local machine and
+    communicate over loopback — they don't need outbound internet connectivity.
+    """
+    normalized = name.lower()
+    if normalized not in PROVIDER_CONFIGS:
+        return False
+    base_url = PROVIDER_CONFIGS[normalized].base_url
+    return 'localhost' in base_url or '127.0.0.1' in base_url
+
+
 def available_providers() -> list[str]:
     return sorted(PROVIDER_CONFIGS)
 
@@ -209,9 +222,7 @@ _MODEL_COST_OVERRIDES: dict[str, tuple[float, float]] = {
 }
 
 
-def _model_specific_cost(
-    provider: str, model: str
-) -> tuple[float, float] | None:
+def _model_specific_cost(provider: str, model: str) -> tuple[float, float] | None:
     """Look up model-specific cost override if available."""
     model_lower = model.lower()
     for prefix, (cost_in, cost_out) in _MODEL_COST_OVERRIDES.items():

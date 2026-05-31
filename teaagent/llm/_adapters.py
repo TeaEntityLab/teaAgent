@@ -330,9 +330,8 @@ class WorkersAIAdapter(OpenAICompatibleAdapter):
             request = LLMRequest(
                 messages=request.messages,
                 model=request.model,
-                system=(
-                    request.system or ''
-                ) + "\n\nIMPORTANT: You must respond with a valid JSON object matching the requested schema. No prose.",
+                system=(request.system or '')
+                + '\n\nIMPORTANT: You must respond with a valid JSON object matching the requested schema. No prose.',
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 stream=request.stream,

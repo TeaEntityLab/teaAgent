@@ -103,7 +103,6 @@ class CodeParseBackend(Protocol):
     def references(self, *, root: Path, args: dict[str, Any]) -> dict[str, Any]: ...
 
 
-
 def register_knowledge_backend(name: str, backend: KnowledgeSearchBackend) -> None:
     _get_registry().register_knowledge_backend(name, backend)
 

@@ -93,9 +93,7 @@ def _ensure_background_indexer(root: Path) -> None:
         if _background_indexer_started:
             return
         _background_indexer_started = True
-    t = threading.Thread(
-        target=_cache_refresher_worker, args=(root,), daemon=True
-    )
+    t = threading.Thread(target=_cache_refresher_worker, args=(root,), daemon=True)
     t.start()
 
 

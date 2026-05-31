@@ -328,9 +328,7 @@ class TestPathTraversalFix:
 
             # Try to read file outside workspace using path traversal
             with pytest.raises(ToolExecutionError, match='path escapes workspace root'):
-                registry.invoke(
-                    'workspace_read_file', {'path': '../../../etc/passwd'}
-                )
+                registry.invoke('workspace_read_file', {'path': '../../../etc/passwd'})
 
 
 class TestEmptyFileValidationFix:

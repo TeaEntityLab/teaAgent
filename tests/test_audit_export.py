@@ -59,9 +59,7 @@ def test_export_chain_verification_with_log_path():
             'hash': 'abc',
         },
     ]
-    with tempfile.NamedTemporaryFile(
-        mode='w', suffix='.jsonl', delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
         f.write(json.dumps(events[0]) + '\n')
         log_path = Path(f.name)
 
@@ -148,11 +146,41 @@ def test_verify_bundle_missing_digest():
 
 def test_export_summary_tool_call_counts():
     events = [
-        {'event_id': 'e1', 'event_type': 'tool_call_started', 'run_id': 'r1', 'created_at': '2026-01-01T00:00:00Z', 'payload': {}},
-        {'event_id': 'e2', 'event_type': 'tool_call_completed', 'run_id': 'r1', 'created_at': '2026-01-01T00:00:01Z', 'payload': {}},
-        {'event_id': 'e3', 'event_type': 'tool_call_started', 'run_id': 'r1', 'created_at': '2026-01-01T00:00:02Z', 'payload': {}},
-        {'event_id': 'e4', 'event_type': 'tool_call_failed', 'run_id': 'r1', 'created_at': '2026-01-01T00:00:03Z', 'payload': {}},
-        {'event_id': 'e5', 'event_type': 'tool_call_blocked', 'run_id': 'r1', 'created_at': '2026-01-01T00:00:04Z', 'payload': {}},
+        {
+            'event_id': 'e1',
+            'event_type': 'tool_call_started',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:00:00Z',
+            'payload': {},
+        },
+        {
+            'event_id': 'e2',
+            'event_type': 'tool_call_completed',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:00:01Z',
+            'payload': {},
+        },
+        {
+            'event_id': 'e3',
+            'event_type': 'tool_call_started',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:00:02Z',
+            'payload': {},
+        },
+        {
+            'event_id': 'e4',
+            'event_type': 'tool_call_failed',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:00:03Z',
+            'payload': {},
+        },
+        {
+            'event_id': 'e5',
+            'event_type': 'tool_call_blocked',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:00:04Z',
+            'payload': {},
+        },
     ]
     bundle = export_compliance_bundle(events)
     assert bundle['summary']['tool_calls_started'] == 2
@@ -163,8 +191,20 @@ def test_export_summary_tool_call_counts():
 
 def test_export_summary_time_range():
     events = [
-        {'event_id': 'e1', 'event_type': 'run_started', 'run_id': 'r1', 'created_at': '2026-01-01T00:00:00Z', 'payload': {}},
-        {'event_id': 'e2', 'event_type': 'run_completed', 'run_id': 'r1', 'created_at': '2026-01-01T00:05:00Z', 'payload': {}},
+        {
+            'event_id': 'e1',
+            'event_type': 'run_started',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:00:00Z',
+            'payload': {},
+        },
+        {
+            'event_id': 'e2',
+            'event_type': 'run_completed',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:05:00Z',
+            'payload': {},
+        },
     ]
     bundle = export_compliance_bundle(events)
     assert bundle['summary']['time_range']['earliest'] == '2026-01-01T00:00:00Z'
@@ -173,7 +213,13 @@ def test_export_summary_time_range():
 
 def test_export_summary_time_range_single_event():
     events = [
-        {'event_id': 'e1', 'event_type': 'run_started', 'run_id': 'r1', 'created_at': '2026-01-01T00:00:00Z', 'payload': {}},
+        {
+            'event_id': 'e1',
+            'event_type': 'run_started',
+            'run_id': 'r1',
+            'created_at': '2026-01-01T00:00:00Z',
+            'payload': {},
+        },
     ]
     bundle = export_compliance_bundle(events)
     assert bundle['summary']['time_range']['earliest'] == '2026-01-01T00:00:00Z'

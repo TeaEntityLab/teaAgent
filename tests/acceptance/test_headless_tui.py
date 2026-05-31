@@ -1,4 +1,5 @@
 """Headless TUI acceptance tests using pty-based interaction simulation."""
+
 from __future__ import annotations
 
 import os

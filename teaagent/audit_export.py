@@ -66,9 +66,7 @@ def export_compliance_bundle(
     tool_failed = event_types.count('tool_call_failed')
     tool_blocked = event_types.count('tool_call_blocked')
 
-    timestamps = [
-        e.get('created_at', '') for e in events if e.get('created_at')
-    ]
+    timestamps = [e.get('created_at', '') for e in events if e.get('created_at')]
     time_range = None
     if len(timestamps) >= 2:
         time_range = {'earliest': timestamps[0], 'latest': timestamps[-1]}

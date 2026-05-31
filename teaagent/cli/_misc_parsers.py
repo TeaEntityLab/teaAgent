@@ -579,10 +579,15 @@ def _audit(
         export_cmd.add_argument('run_id', help='Run id to export.')
         export_cmd.add_argument('--root', default='.', help='Workspace root.')
         export_cmd.add_argument(
-            '--output', '-o', default=None, help='Output file path. Prints to stdout if omitted.'
+            '--output',
+            '-o',
+            default=None,
+            help='Output file path. Prints to stdout if omitted.',
         )
         export_cmd.add_argument(
-            '--compact', action='store_true', help='Compact JSON output (no indentation).'
+            '--compact',
+            action='store_true',
+            help='Compact JSON output (no indentation).',
         )
         export_cmd.add_argument(
             '--skip-chain-verify',

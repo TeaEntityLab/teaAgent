@@ -41,7 +41,9 @@ class DockerSandbox:
         self.memory_limit_mb = memory_limit_mb
         self.workspace_mount = Path(workspace_mount_path)
         self.workspace_root = (
-            Path(workspace_root).resolve() if workspace_root is not None else Path.cwd().resolve()
+            Path(workspace_root).resolve()
+            if workspace_root is not None
+            else Path.cwd().resolve()
         )
         self.audit_logger = audit_logger
         self.run_id = run_id

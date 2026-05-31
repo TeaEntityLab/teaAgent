@@ -434,16 +434,16 @@ def _make_signature_relay_handler(
                 )
 
                 if is_ssh_signature_blob(sig.signature) and not verify_message_ssh(
-                        pubkey,
-                        message,
-                        sig.signature,
-                        namespace=_APPROVAL_SIGNATURE_NAMESPACE,
-                    ):
-                        self._json(
-                            HTTPStatus.FORBIDDEN,
-                            {'ok': False, 'error': 'SSH signature verification failed'},
-                        )
-                        return
+                    pubkey,
+                    message,
+                    sig.signature,
+                    namespace=_APPROVAL_SIGNATURE_NAMESPACE,
+                ):
+                    self._json(
+                        HTTPStatus.FORBIDDEN,
+                        {'ok': False, 'error': 'SSH signature verification failed'},
+                    )
+                    return
             added = self.server.relay.store.add_signature(sig)
             status = HTTPStatus.OK if added else HTTPStatus.CONFLICT
             self._json(

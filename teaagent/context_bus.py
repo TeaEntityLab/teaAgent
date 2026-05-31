@@ -425,13 +425,13 @@ class ContextBus:
                     logger.warning('RAG store does not support adding documents')
                 archived_count += 1
             except Exception as exc:
-                logger.error('Failed to archive Delta (id=%s) to RAG: %s', delta.delta_id, exc)
+                logger.error(
+                    'Failed to archive Delta (id=%s) to RAG: %s', delta.delta_id, exc
+                )
 
         self._clear_deltas(max_timestamp)
 
-        logger.info(
-            'Archived %s/%s Delta cards to RAG', archived_count, len(deltas)
-        )
+        logger.info('Archived %s/%s Delta cards to RAG', archived_count, len(deltas))
 
     def _clear_deltas(self, max_timestamp: Optional[float] = None) -> None:
         """Clear Delta cards for the current workflow."""

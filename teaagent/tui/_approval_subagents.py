@@ -19,14 +19,14 @@ def _build_approval_tree(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     roots: list[dict[str, Any]] = []
     stack: dict[int, dict[str, Any]] = {}
     for item in items:
-        raw = item.get("batch_index", None)
+        raw = item.get('batch_index', None)
         depth = raw if isinstance(raw, int) and raw > 0 else 1
-        node: dict[str, Any] = {"item": item, "children": []}
+        node: dict[str, Any] = {'item': item, 'children': []}
         if depth == 1 or not any(d < depth for d in stack):
             roots.append(node)
         else:
             parent_depth = max(d for d in stack if d < depth)
-            stack[parent_depth]["children"].append(node)
+            stack[parent_depth]['children'].append(node)
         stack[depth] = node
     return roots
 
@@ -34,21 +34,21 @@ def _build_approval_tree(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _render_approval_tree(
     nodes: list[dict[str, Any]],
     lines: list[str],
-    prefix: str = "",
+    prefix: str = '',
 ) -> None:
     """Render tree *nodes* with Unicode box-drawing characters."""
     for idx, node in enumerate(nodes):
         is_last = idx == len(nodes) - 1
-        item = node["item"]
-        rid = item.get("request_id", "unknown")[:8]
-        sname = item.get("subagent_name", "unknown")
-        tname = item.get("tool_name", "unknown")
-        batch = item.get("batch_index", "")
-        connector = "└── " if is_last else "├── "
-        lines.append(f"{prefix}{connector}[{rid}] {sname}  {tname}  (batch {batch})")
-        child_prefix = prefix + ("    " if is_last else "│   ")
-        if node["children"]:
-            _render_approval_tree(node["children"], lines, prefix=child_prefix)
+        item = node['item']
+        rid = item.get('request_id', 'unknown')[:8]
+        sname = item.get('subagent_name', 'unknown')
+        tname = item.get('tool_name', 'unknown')
+        batch = item.get('batch_index', '')
+        connector = '└── ' if is_last else '├── '
+        lines.append(f'{prefix}{connector}[{rid}] {sname}  {tname}  (batch {batch})')
+        child_prefix = prefix + ('    ' if is_last else '│   ')
+        if node['children']:
+            _render_approval_tree(node['children'], lines, prefix=child_prefix)
 
 
 def format_subagent_approval_batch(

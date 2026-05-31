@@ -400,9 +400,7 @@ def run_chat_agent(*args: Any, **kwargs: Any) -> RunResult:
         config = kwargs.pop('config', None)
         task = kwargs.pop('task', None)
         if config is None or task is None:
-            raise TypeError(
-                "run_chat_agent() requires 'config' and 'task'"
-            )
+            raise TypeError("run_chat_agent() requires 'config' and 'task'")
     return _run_chat_agent_impl(
         config=config,
         task=task,

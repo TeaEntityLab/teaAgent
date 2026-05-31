@@ -69,16 +69,12 @@ class ShellObfuscationChainingTests(unittest.TestCase):
     """&& and || chaining must preserve all segments in normalized output."""
 
     def test_and_chain(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'echo safe && rm -rf /prod'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('echo safe && rm -rf /prod')
         self.assertIn('rm', normalized)
         self.assertIn('/prod', normalized)
 
     def test_or_chain(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'false || rm -rf /production'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('false || rm -rf /production')
         self.assertIn('rm', normalized)
         self.assertIn('/production', normalized)
 
@@ -118,9 +114,7 @@ class ShellObfuscationBraceExpansionTests(unittest.TestCase):
         self.assertIn('/database', normalized)
 
     def test_brace_prefix_expansion(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'rm -rf /prod{uction,}/data'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('rm -rf /prod{uction,}/data')
         self.assertIn('/production/data', normalized)
         self.assertIn('/prod/data', normalized)
 
@@ -152,9 +146,7 @@ class ShellObfuscationSemicolonTests(unittest.TestCase):
     """Semicolons must preserve all command segments."""
 
     def test_simple_semicolon(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'echo safe; rm -rf /prod'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('echo safe; rm -rf /prod')
         self.assertIn('rm', normalized)
         self.assertIn('/prod', normalized)
 
@@ -166,9 +158,7 @@ class ShellObfuscationSemicolonTests(unittest.TestCase):
         self.assertIn('/production', normalized)
 
     def test_semicolon_with_cd(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'cd /prod; rm -rf data'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('cd /prod; rm -rf data')
         self.assertIn('/prod', normalized)
         self.assertIn('rm', normalized)
 
@@ -190,9 +180,7 @@ class ShellObfuscationUnquotedVarTests(unittest.TestCase):
         self.assertIn('production', normalized)
 
     def test_env_var_expansion_attempt(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'rm -rf $PROD_PATH/data'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('rm -rf $PROD_PATH/data')
         self.assertIn('rm', normalized)
 
 
@@ -217,9 +205,7 @@ class ShellObfuscationCombinedTechniquesTests(unittest.TestCase):
     """Combined obfuscation techniques must all be defeated."""
 
     def test_backtick_and_brace(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'echo `echo /pr{od,oduction}`'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('echo `echo /pr{od,oduction}`')
         self.assertIn('/prod', normalized)
 
     def test_dollar_sub_and_chain(self) -> None:
@@ -237,9 +223,7 @@ class ShellObfuscationCombinedTechniquesTests(unittest.TestCase):
         self.assertIn('/prod', normalized)
 
     def test_escape_and_substitution(self) -> None:
-        normalized = ApprovalPolicy._normalize_shell_arg(
-            'r\\m -rf $(echo /prod)'
-        )
+        normalized = ApprovalPolicy._normalize_shell_arg('r\\m -rf $(echo /prod)')
         self.assertIn('rm', normalized)
         self.assertIn('/prod', normalized)
 

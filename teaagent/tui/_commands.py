@@ -462,8 +462,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                     timeout=10,
                 )
                 diff_output = (
-                    result.stdout
-                    or '(no diff — file unchanged or not tracked by git)'
+                    result.stdout or '(no diff — file unchanged or not tracked by git)'
                 )
                 tui.output_fn(f'diff for {path}:')
                 for line in diff_output.splitlines():

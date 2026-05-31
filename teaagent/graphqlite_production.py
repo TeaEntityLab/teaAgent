@@ -138,9 +138,7 @@ class GraphQLitePersistentStore(GraphQLiteGraphStore):
             logger.warning('Invalid max_depth %r, falling back to default 2', max_depth)
             max_depth = 2
         if max_depth < 1 or max_depth > 10:
-            logger.warning(
-                'max_depth %d out of range [1,10], clamping', max_depth
-            )
+            logger.warning('max_depth %d out of range [1,10], clamping', max_depth)
             max_depth = max(1, min(max_depth, 10))
 
         query_terms = set(tokenize(query))

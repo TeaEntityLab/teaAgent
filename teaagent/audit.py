@@ -268,9 +268,7 @@ class AuditLogger:
                         sort_keys=True,
                         separators=(',', ':'),
                     )
-                    current_hash = hashlib.sha256(
-                        canonical.encode('utf-8')
-                    ).hexdigest()
+                    current_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
                     chain_hmac = compute_chain_hmac(current_hash, self._chain_key)
                     path.parent.mkdir(parents=True, exist_ok=True)
                     with path.open('a', encoding='utf-8') as handle:

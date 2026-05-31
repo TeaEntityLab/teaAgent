@@ -113,7 +113,9 @@ class WorkspaceToolTests(unittest.TestCase):
             registry = ToolRegistry()
             register_workspace_tools(
                 registry,
-                ToolFactory(WorkspaceToolConfig(root=Path(tmp).resolve(), max_write_bytes=3)),
+                ToolFactory(
+                    WorkspaceToolConfig(root=Path(tmp).resolve(), max_write_bytes=3)
+                ),
             )
 
             with self.assertRaises(ToolExecutionError) as ctx:
@@ -131,7 +133,9 @@ class WorkspaceToolTests(unittest.TestCase):
             registry = ToolRegistry()
             register_workspace_tools(
                 registry,
-                ToolFactory(WorkspaceToolConfig(root=root.resolve(), max_write_bytes=3)),
+                ToolFactory(
+                    WorkspaceToolConfig(root=root.resolve(), max_write_bytes=3)
+                ),
             )
 
             with self.assertRaises(ToolExecutionError) as ctx:
@@ -150,7 +154,9 @@ class WorkspaceToolTests(unittest.TestCase):
             registry = ToolRegistry()
             register_workspace_tools(
                 registry,
-                ToolFactory(WorkspaceToolConfig(root=root.resolve(), max_write_bytes=3)),
+                ToolFactory(
+                    WorkspaceToolConfig(root=root.resolve(), max_write_bytes=3)
+                ),
             )
             hashed = registry.execute(
                 'workspace_read_file_hashed', {'path': 'file.txt'}
@@ -266,9 +272,11 @@ class WorkspaceToolTests(unittest.TestCase):
             registry = ToolRegistry()
             register_workspace_tools(
                 registry,
-                ToolFactory(WorkspaceToolConfig(
-                    root=Path(tmp).resolve(), max_shell_timeout_seconds=2
-                )),
+                ToolFactory(
+                    WorkspaceToolConfig(
+                        root=Path(tmp).resolve(), max_shell_timeout_seconds=2
+                    )
+                ),
             )
 
             with self.assertRaises(ToolExecutionError) as ctx:
@@ -284,9 +292,11 @@ class WorkspaceToolTests(unittest.TestCase):
             registry = ToolRegistry()
             register_workspace_tools(
                 registry,
-                ToolFactory(WorkspaceToolConfig(
-                    root=Path(tmp).resolve(), max_shell_command_bytes=3
-                )),
+                ToolFactory(
+                    WorkspaceToolConfig(
+                        root=Path(tmp).resolve(), max_shell_command_bytes=3
+                    )
+                ),
             )
 
             with self.assertRaises(ToolExecutionError) as ctx:
@@ -299,9 +309,11 @@ class WorkspaceToolTests(unittest.TestCase):
             registry = ToolRegistry()
             register_workspace_tools(
                 registry,
-                ToolFactory(WorkspaceToolConfig(
-                    root=Path(tmp).resolve(), max_shell_timeout_seconds=2
-                )),
+                ToolFactory(
+                    WorkspaceToolConfig(
+                        root=Path(tmp).resolve(), max_shell_timeout_seconds=2
+                    )
+                ),
             )
 
             with self.assertRaises(ToolExecutionError) as ctx:

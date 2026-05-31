@@ -1158,9 +1158,7 @@ class TUITests(unittest.TestCase):
             mock_store.return_value.list_runs.return_value = []
             mock_store.return_value.show_run.return_value = {}
             mock_store.return_value.logger_for_result = lambda *a: None
-            mock_store.return_value.audit_logger = lambda: (
-                unittest.mock.MagicMock()
-            )
+            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
 
             tui._run_agent_task('test task')
 

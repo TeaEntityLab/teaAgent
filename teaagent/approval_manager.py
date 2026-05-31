@@ -192,9 +192,7 @@ class PermissionModeEnforcer:
                             f'Plan: {plan_contract.rel_path}'
                         )
                 return None
-            return (
-                f"Tool '{tool_name}' requires prompt/allow/danger-full-access permission mode."
-            )
+            return f"Tool '{tool_name}' requires prompt/allow/danger-full-access permission mode."
 
         if self.permission_mode in {
             PermissionMode.ALLOW,
@@ -216,10 +214,9 @@ class JITApprovalManager:
         self.enable_jit_prompt = enable_jit_prompt
 
     def is_approved(self, *, tool_name: str, call_id: str) -> bool:
-        return (
-            self.jit_state.is_tool_session_approved(tool_name)
-            or self.jit_state.is_call_approved(call_id)
-        )
+        return self.jit_state.is_tool_session_approved(
+            tool_name
+        ) or self.jit_state.is_call_approved(call_id)
 
     def prompt_and_resolve(
         self,
@@ -290,9 +287,7 @@ class MultiSigQuorumManager:
             max_workers=2, thread_name_prefix='sig-collect'
         )
 
-    def is_high_risk(
-        self, tool_name: str, arguments: dict[str, Any] | None
-    ) -> bool:
+    def is_high_risk(self, tool_name: str, arguments: dict[str, Any] | None) -> bool:
         if not self.config.high_risk_patterns:
             return False
         tool_lower = tool_name.lower()
@@ -400,9 +395,7 @@ class MultiSigQuorumManager:
         )
         return hashlib.sha256(content.encode()).hexdigest()
 
-    def _collect_peer_signatures(
-        self, request: ApprovalRequest
-    ) -> list[PeerSignature]:
+    def _collect_peer_signatures(self, request: ApprovalRequest) -> list[PeerSignature]:
         """Collect peer signatures for approval request.
 
         Integrates with federated_sync to broadcast the request via P2P sync,
@@ -472,8 +465,7 @@ class MultiSigQuorumManager:
 
             if not is_valid:
                 print(
-                    f'[Security] Rejected invalid signature from peer '
-                    f'{sig_msg.peer_id}'
+                    f'[Security] Rejected invalid signature from peer {sig_msg.peer_id}'
                 )
                 continue
 
@@ -515,6 +507,7 @@ class MultiSigQuorumManager:
             loop = None
 
         if loop is not None and loop.is_running():
+
             def _run_in_thread() -> Any:
                 new_loop = asyncio.new_event_loop()
                 try:
@@ -699,13 +692,10 @@ class ApprovalManager:
         ):
             return
 
-        if (
-            arguments is not None
-            and self._store_manager.check_scoped(
-                call_id=call_id,
-                tool_name=tool_name,
-                arguments=arguments,
-            )
+        if arguments is not None and self._store_manager.check_scoped(
+            call_id=call_id,
+            tool_name=tool_name,
+            arguments=arguments,
         ):
             return
 

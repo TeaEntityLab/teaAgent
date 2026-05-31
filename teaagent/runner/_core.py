@@ -314,10 +314,12 @@ class AgentRunner:
                     context['compacted_summary'] = compacted.summary
                     context['memory_keys'] = compacted.pinned
                     omitted_count = pre_compact_count - len(context['observations'])
-                    context['observations'].append({
-                        'role': 'system',
-                        'content': f'[System: Context compaction completed. {omitted_count} observations compressed to preserve token budget. Key context preserved in recent observations.]',
-                    })
+                    context['observations'].append(
+                        {
+                            'role': 'system',
+                            'content': f'[System: Context compaction completed. {omitted_count} observations compressed to preserve token budget. Key context preserved in recent observations.]',
+                        }
+                    )
                     self.audit.record(
                         'context_compacted', current_run_id, summary=compacted.summary
                     )

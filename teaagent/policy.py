@@ -202,7 +202,12 @@ class ApprovalPolicy:
                 if tok.startswith('-') and len(tok) == 2 and tok != '--':
                     merged = tok
                     i += 1
-                    while i < len(tokens) and tokens[i].startswith('-') and len(tokens[i]) == 2 and tokens[i] != '--':
+                    while (
+                        i < len(tokens)
+                        and tokens[i].startswith('-')
+                        and len(tokens[i]) == 2
+                        and tokens[i] != '--'
+                    ):
                         merged += tokens[i][1:]
                         i += 1
                     collapsed.append(merged)

@@ -230,11 +230,15 @@ def format_setup_summary(payload: dict[str, Any], *, root: str = '.') -> str:
         if isinstance(check_value, dict) and check_value.get('ok') is False:
             msg = check_value.get('message', '')
             if msg:
-                blocking_items.append(f'    {_label("FAIL", _COLOR_RED)} {check_name}: {msg}')
+                blocking_items.append(
+                    f'    {_label("FAIL", _COLOR_RED)} {check_name}: {msg}'
+                )
 
     for warning in warnings:
         lowered = warning.lower()
-        if any(kw in lowered for kw in ('fail', 'error', 'missing', 'not found', 'denied')):
+        if any(
+            kw in lowered for kw in ('fail', 'error', 'missing', 'not found', 'denied')
+        ):
             blocking_items.append(f'    {_label("FAIL", _COLOR_RED)} {warning}')
 
     if blocking_items:
@@ -244,13 +248,20 @@ def format_setup_summary(payload: dict[str, Any], *, root: str = '.') -> str:
             if 'provider' in item.lower():
                 lines.append(f'           {_cmd("teaagent doctor model <provider>")}')
             if 'key' in item.lower() or 'api_key' in item.lower():
-                lines.append(f'           {_cmd("teaagent setup --provider <name> --api-key <key>")}')
+                lines.append(
+                    f'           {_cmd("teaagent setup --provider <name> --api-key <key>")}'
+                )
         lines.append('')
 
     # --- Warnings ---
-    warning_items = [w for w in warnings if not any(
-        kw in w.lower() for kw in ('fail', 'error', 'missing', 'not found', 'denied')
-    )]
+    warning_items = [
+        w
+        for w in warnings
+        if not any(
+            kw in w.lower()
+            for kw in ('fail', 'error', 'missing', 'not found', 'denied')
+        )
+    ]
     if warning_items:
         lines.append(f'  {_label("Warnings", _COLOR_YELLOW)}:')
         for w in warning_items[:5]:
@@ -278,9 +289,7 @@ def format_setup_summary(payload: dict[str, Any], *, root: str = '.') -> str:
     return '\n'.join(lines)
 
 
-def format_preflight_summary(
-    payload: dict[str, Any], *, root: str = '.'
-) -> str:
+def format_preflight_summary(payload: dict[str, Any], *, root: str = '.') -> str:
     """Format preflight readiness payload as a human-readable colored summary."""
     preflight = payload.get('preflight') or payload
     ready = bool(
@@ -303,7 +312,11 @@ def format_preflight_summary(
     token_budget = preflight.get('token_budget') or payload.get('token_budget')
     if isinstance(token_budget, dict) and token_budget.get('usage_level'):
         usage = token_budget['usage_level']
-        usage_color = _COLOR_GREEN if usage == 'low' else (_COLOR_YELLOW if usage == 'medium' else _COLOR_RED)
+        usage_color = (
+            _COLOR_GREEN
+            if usage == 'low'
+            else (_COLOR_YELLOW if usage == 'medium' else _COLOR_RED)
+        )
         lines.append(f'  Token budget: {_label(usage, usage_color)}')
 
     # --- Tasks requiring clarification ---
@@ -338,7 +351,9 @@ def format_preflight_summary(
             lines.append(f'    - {warning}')
 
     # --- Recommendations ---
-    recommendations = payload.get('recommendations') or preflight.get('recommendations') or []
+    recommendations = (
+        payload.get('recommendations') or preflight.get('recommendations') or []
+    )
     if recommendations:
         lines.append('')
         lines.append(f'  {_label("Recommendations", _COLOR_GREEN)}:')

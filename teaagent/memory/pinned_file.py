@@ -16,20 +16,38 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-_SECRET_FILENAMES: frozenset[str] = frozenset({
-    # Environment files
-    '.env', '.env.local', '.env.production', '.env.development',
-    # SSH keys
-    'id_rsa', 'id_rsa.pub', 'id_ecdsa', 'id_ed25519',
-    # Certificate / key extensions (exact match for bare names)
-    '.pem', '.p12', '.key', '.cert', '.crt',
-    # Credential files
-    'credentials', 'credentials.json', 'credentials.yaml',
-    # Secret config files
-    'secrets.yml', 'secrets.yaml', 'secret.yml', 'secret.yaml',
-    # Netrc
-    '.netrc', '_netrc',
-})
+_SECRET_FILENAMES: frozenset[str] = frozenset(
+    {
+        # Environment files
+        '.env',
+        '.env.local',
+        '.env.production',
+        '.env.development',
+        # SSH keys
+        'id_rsa',
+        'id_rsa.pub',
+        'id_ecdsa',
+        'id_ed25519',
+        # Certificate / key extensions (exact match for bare names)
+        '.pem',
+        '.p12',
+        '.key',
+        '.cert',
+        '.crt',
+        # Credential files
+        'credentials',
+        'credentials.json',
+        'credentials.yaml',
+        # Secret config files
+        'secrets.yml',
+        'secrets.yaml',
+        'secret.yml',
+        'secret.yaml',
+        # Netrc
+        '.netrc',
+        '_netrc',
+    }
+)
 
 _SECRET_SUFFIXES: tuple[str, ...] = ('.pem', '.p12', '.key')
 
@@ -188,7 +206,7 @@ class PinnedFileStorage:
             True if file was added, False if file doesn't exist or already pinned
         """
         if self._is_secret_filename(file_path):
-            logger.warning("Refusing to pin potential secret file: %s", file_path)
+            logger.warning('Refusing to pin potential secret file: %s', file_path)
             return False
 
         # Validate file exists
