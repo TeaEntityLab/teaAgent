@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import inspect
 from collections.abc import Callable
 from typing import Any
@@ -28,6 +29,9 @@ def read_only_handler_block_reason(
     """Block read-only tools whose handler source suggests mutation."""
     if handler is None:
         return None
+    # Unwrap functools.partial to get the underlying function for source inspection
+    if isinstance(handler, functools.partial):
+        handler = handler.func  # type: ignore[assignment]
     try:
         source = inspect.getsource(handler)
     except (OSError, TypeError):

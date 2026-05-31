@@ -622,7 +622,7 @@ class TeaAgentTUI:
                 return False
 
             lines = show_result.stdout.strip().split('\n')
-            stashed_files = [l.strip() for l in lines[1:] if l.strip()]
+            stashed_files = [ln.strip() for ln in lines[1:] if ln.strip()]
 
             if stashed_files:
                 checkout_result = subprocess.run(

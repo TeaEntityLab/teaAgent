@@ -13,6 +13,7 @@ from teaagent.audit_viewer import _status_class
 from teaagent.cli._handlers._agent import _resolve_selected_skills
 from teaagent.cli._handlers._doctor import _redact_sensitive_fields
 from teaagent.cli._handlers._ergonomics import _parse_approval_arguments
+from teaagent.errors import ToolExecutionError
 from teaagent.llm._retry import LLMRetryConfig
 from teaagent.workspace_tools._files import (
     WorkspaceToolConfig,
@@ -26,7 +27,7 @@ class TestIndexOutOfBoundsFixes:
     def test_jit_approval_auth_header_bounds_checking(self):
         """Verify that auth header parsing has bounds checking."""
         # Test with insufficient parts
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match='Invalid auth header format'):
             # Simulate auth header with insufficient parts
             parts = ['Bearer', 'token']
             if len(parts) < 3:
@@ -35,7 +36,7 @@ class TestIndexOutOfBoundsFixes:
     def test_plan_backtick_split_bounds_checking(self):
         """Verify that backtick split has bounds checking."""
         # Test with single backtick
-        text = 'test`'
+        text = '`test'
         if '`' in text:
             parts = text.split('`')
             cleaned = parts[1] if len(parts) > 1 else parts[0]
@@ -157,16 +158,7 @@ class TestAssertionFailureFixes:
     def test_llm_retry_no_assert(self):
         """Verify that llm retry doesn't use assert for error checking."""
         config = LLMRetryConfig()
-
-        # Test that last_exc is checked without assert
-        try:
-            raise ValueError('test error')
-        except ValueError as exc:
-            # Should use explicit check instead of assert
-            if exc is None:
-                raise RuntimeError('No exception captured')
-            # Should not reach here
-            assert False, 'Should not reach here'
+        assert config.max_retries > 0
 
     def test_code_analysis_client_no_assert(self):
         """Verify that code analysis client doesn't use assert for state checks."""
@@ -188,19 +180,13 @@ class TestContentLengthValidationFix:
         """Verify that Content-Length parsing has validation."""
         # Test with valid number
         raw = '123'
-        try:
-            length = int(raw)
-            assert length == 123
-        except ValueError:
-            raise RuntimeError(f'Invalid Content-Length header: {raw}')
+        length = int(raw)
+        assert length == 123
 
         # Test with invalid number
         raw_invalid = 'invalid'
-        try:
-            length = int(raw_invalid)
-            assert False, 'Should not reach here'
-        except ValueError:
-            raise RuntimeError(f'Invalid Content-Length header: {raw_invalid}')
+        with pytest.raises(ValueError, match='invalid literal'):
+            int(raw_invalid)
 
 
 class TestSkillRouterIndexBoundsFix:
@@ -397,24 +383,24 @@ class TestErrorRecoveryImprovement:
     def test_temp_file_cleanup_logging(self):
         """Test that temp file cleanup is logged."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
+            WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
-
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('original')
 
             # Write with error to test cleanup logging
-            result = registry.invoke(
-                'workspace_write_file',
-                {
-                    'path': 'test.txt',
-                    'content': 'updated',
-                    'expected_mtime': 0.0,  # Will cause error
-                },
-            )
-
-            # Should handle error and log cleanup attempt
-            assert 'error' in result
+            with pytest.raises(
+                ToolExecutionError,
+                match='file test.txt was modified since last read',
+            ):
+                registry.invoke(
+                    'workspace_write_file',
+                    {
+                        'path': 'test.txt',
+                        'content': 'updated',
+                        'expected_mtime': 0.0,  # Will cause error
+                    },
+                )
 
 
 if __name__ == '__main__':

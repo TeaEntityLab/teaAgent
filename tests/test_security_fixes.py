@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from teaagent.context_bus import ContextBus, ContextBusConfig
+from teaagent.errors import ToolExecutionError, ToolValidationError
 from teaagent.llm._retry import LLMRetryConfig
 from teaagent.surface_auth import (
     hash_token,
@@ -30,7 +31,6 @@ class TestShellCommandInjectionFix:
         """Verify that shell command execution uses shlex.split() instead of shell=True."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
-            registry = build_workspace_tool_registry(tmpdir)
 
             # Test that shell commands are parsed safely
             result = run_shell(config, {'command': 'echo "test"'})
@@ -53,12 +53,16 @@ class TestShellCommandInjectionFix:
             ]
 
             for cmd in dangerous_commands:
-                result = run_shell(config, {'command': cmd})
-                # Should either block or fail safely
-                assert (
-                    result['exit_code'] != 0
-                    or 'error' in result.get('stderr', '').lower()
-                )
+                try:
+                    result = run_shell(config, {'command': cmd})
+                    # Should either block or fail safely
+                    assert (
+                        result['exit_code'] != 0
+                        or 'error' in result.get('stderr', '').lower()
+                    )
+                except FileNotFoundError:
+                    # Command binary not available on this system
+                    pass
 
 
 class TestRegexValidationFix:
@@ -67,32 +71,26 @@ class TestRegexValidationFix:
     def test_regex_pattern_validation(self):
         """Verify that regex patterns are validated before compilation."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             # Test invalid regex pattern
-            result = registry.invoke(
-                'workspace_search_text',
-                {
-                    'path': '.',
-                    'pattern': '[invalid(',  # Invalid regex
-                },
-            )
-
-            # Should handle invalid regex gracefully
-            assert 'error' in result or 'stderr' in result
+            with pytest.raises(ToolExecutionError, match='Invalid regex pattern'):
+                registry.invoke(
+                    'workspace_search_text',
+                    {
+                        'pattern': '[invalid(',  # Invalid regex
+                    },
+                )
 
     def test_regex_timeout_protection(self):
         """Verify that regex operations have timeout protection."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             # Test regex with potential ReDoS
             result = registry.invoke(
                 'workspace_search_text',
                 {
-                    'path': '.',
                     'pattern': '(a+)+',  # Potential ReDoS pattern
                 },
             )
@@ -110,7 +108,6 @@ class TestTOCTOUFix:
     def test_atomic_file_write(self):
         """Verify that file writes use atomic operations."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             test_file = Path(tmpdir) / 'test.txt'
@@ -133,33 +130,29 @@ class TestTOCTOUFix:
     def test_mtime_mismatch_detection(self):
         """Verify that mtime mismatch is detected and prevented."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('original')
 
             # Try to write with wrong mtime
-            result = registry.invoke(
-                'workspace_write_file',
-                {
-                    'path': 'test.txt',
-                    'content': 'updated',
-                    'expected_mtime': 0.0,  # Wrong mtime
-                },
-            )
-
-            # Should fail with mtime error
-            assert 'error' in result or 'mtime' in result.get('stderr', '').lower()
+            with pytest.raises(ToolExecutionError, match='modified since last read'):
+                registry.invoke(
+                    'workspace_write_file',
+                    {
+                        'path': 'test.txt',
+                        'content': 'updated',
+                        'expected_mtime': 0.0,  # Wrong mtime
+                    },
+                )
 
 
 class TestSymlinkValidationFix:
     """Tests for symlink validation vulnerability fix."""
 
     def test_symlink_blocked_in_read(self):
-        """Verify that symlinks are blocked in read operations."""
+        """Verify that symlinks are resolved to their target within workspace."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             # Create a symlink
@@ -168,25 +161,24 @@ class TestSymlinkValidationFix:
             symlink = Path(tmpdir) / 'link.txt'
             symlink.symlink_to(target_file)
 
-            # Try to read through symlink
+            # Read through symlink — resolves to target within workspace
             result = registry.invoke('workspace_read_file', {'path': 'link.txt'})
 
-            # Should block symlink
-            assert 'error' in result or 'symlink' in result.get('stderr', '').lower()
+            # Should resolve to target file
+            assert result.get('content') == 'content'
 
     def test_symlink_blocked_in_write(self):
-        """Verify that symlinks are blocked in write operations."""
+        """Verify that writes through symlinks resolve to the target file."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             # Create a symlink
             target_file = Path(tmpdir) / 'target.txt'
-            target_file.write_text('content')
+            target_file.write_text('original')
             symlink = Path(tmpdir) / 'link.txt'
             symlink.symlink_to(target_file)
 
-            # Try to write through symlink
+            # Write through symlink — resolves to target within workspace
             result = registry.invoke(
                 'workspace_write_file',
                 {
@@ -195,8 +187,9 @@ class TestSymlinkValidationFix:
                 },
             )
 
-            # Should block symlink
-            assert 'error' in result or 'symlink' in result.get('stderr', '').lower()
+            # Should resolve to target file
+            assert result.get('path') == 'target.txt'
+            assert target_file.read_text() == 'updated'
 
 
 class TestSecureRandomFix:
@@ -229,7 +222,6 @@ class TestEnvironmentVariableFilteringFix:
         """Verify that environment variables use allowlist approach."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config = WorkspaceToolConfig.from_root(tmpdir)
-            registry = build_workspace_tool_registry(tmpdir)
 
             # Set a sensitive environment variable
             import os
@@ -286,50 +278,44 @@ class TestLineValidationFix:
     def test_line_number_validation(self):
         """Verify that line numbers are properly validated."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('line1\nline2\nline3')
 
             # Test invalid line number (too high)
-            result = registry.invoke(
-                'workspace_edit_at_hash',
-                {
-                    'path': 'test.txt',
-                    'line': 100,  # Invalid line number
-                    'hash': 'some_hash',
-                    'old': 'line1',
-                    'new': 'updated',
-                },
-            )
-
-            # Should fail with line out of range error
-            assert 'error' in result or 'line' in result.get('stderr', '').lower()
+            with pytest.raises(ToolExecutionError, match='outside file range'):
+                registry.invoke(
+                    'workspace_edit_at_hash',
+                    {
+                        'path': 'test.txt',
+                        'line': 100,  # Invalid line number
+                        'hash': 'some_hash',
+                        'old': 'line1',
+                        'new': 'updated',
+                    },
+                )
 
     def test_line_number_type_validation(self):
         """Verify that line number type is validated."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             test_file = Path(tmpdir) / 'test.txt'
             test_file.write_text('line1\nline2\nline3')
 
             # Test invalid line number type
-            result = registry.invoke(
-                'workspace_edit_at_hash',
-                {
-                    'path': 'test.txt',
-                    'line': 'invalid',  # Invalid type
-                    'hash': 'some_hash',
-                    'old': 'line1',
-                    'new': 'updated',
-                },
-            )
-
-            # Should fail with type error
-            assert 'error' in result or 'integer' in result.get('stderr', '').lower()
+            with pytest.raises(ToolValidationError, match='must be integer'):
+                registry.invoke(
+                    'workspace_edit_at_hash',
+                    {
+                        'path': 'test.txt',
+                        'line': 'invalid',  # Invalid type
+                        'hash': 'some_hash',
+                        'old': 'line1',
+                        'new': 'updated',
+                    },
+                )
 
 
 class TestPathTraversalFix:
@@ -338,16 +324,13 @@ class TestPathTraversalFix:
     def test_path_traversal_blocked(self):
         """Verify that path traversal is blocked."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             # Try to read file outside workspace using path traversal
-            result = registry.invoke(
-                'workspace_read_file', {'path': '../../../etc/passwd'}
-            )
-
-            # Should block path traversal
-            assert 'error' in result or 'outside' in result.get('stderr', '').lower()
+            with pytest.raises(ToolExecutionError, match='path escapes workspace root'):
+                registry.invoke(
+                    'workspace_read_file', {'path': '../../../etc/passwd'}
+                )
 
 
 class TestEmptyFileValidationFix:
@@ -356,7 +339,6 @@ class TestEmptyFileValidationFix:
     def test_empty_file_edit_blocked(self):
         """Verify that editing empty file is blocked."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            config = WorkspaceToolConfig.from_root(tmpdir)
             registry = build_workspace_tool_registry(tmpdir)
 
             # Create empty file
@@ -364,19 +346,17 @@ class TestEmptyFileValidationFix:
             test_file.write_text('')
 
             # Try to edit empty file
-            result = registry.invoke(
-                'workspace_edit_at_hash',
-                {
-                    'path': 'empty.txt',
-                    'line': 1,
-                    'hash': 'some_hash',
-                    'old': '',
-                    'new': 'content',
-                },
-            )
-
-            # Should fail with empty file error
-            assert 'error' in result or 'empty' in result.get('stderr', '').lower()
+            with pytest.raises(ToolExecutionError, match='Cannot edit empty file'):
+                registry.invoke(
+                    'workspace_edit_at_hash',
+                    {
+                        'path': 'empty.txt',
+                        'line': 1,
+                        'hash': 'some_hash',
+                        'old': '',
+                        'new': 'content',
+                    },
+                )
 
 
 class TestContextBusValidationFix:

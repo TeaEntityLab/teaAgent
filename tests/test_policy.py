@@ -513,7 +513,7 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
         """check_security_health reports error when .teaagent/ is owned by wrong user."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            teaagent_dir = store.root / '.teaagent'
+            _ = store.root / '.teaagent'
             # Simulate wrong ownership by checking against a different uid
             # We can't actually change ownership without sudo, so we test the logic
             # by verifying the check exists and passes for current user

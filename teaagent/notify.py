@@ -111,7 +111,7 @@ def _deliver_webhook(url: str, payload: dict[str, Any], *, timeout: float) -> No
             method='POST',
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as response:
+            with urllib.request.urlopen(req, timeout=timeout):
                 pass  # Connection automatically closed
         except (urllib.error.URLError, OSError):
             pass  # Already wrapped in contextlib.suppress
@@ -166,7 +166,7 @@ def _deliver_slack(url: str, payload: dict[str, Any], *, timeout: float) -> None
             method='POST',
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as response:
+            with urllib.request.urlopen(req, timeout=timeout):
                 pass  # Connection automatically closed
         except (urllib.error.URLError, OSError):
             pass  # Already wrapped in contextlib.suppress
@@ -200,7 +200,7 @@ def _deliver_discord(url: str, payload: dict[str, Any], *, timeout: float) -> No
             method='POST',
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as response:
+            with urllib.request.urlopen(req, timeout=timeout):
                 pass  # Connection automatically closed
         except (urllib.error.URLError, OSError):
             pass  # Already wrapped in contextlib.suppress

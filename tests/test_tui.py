@@ -1138,31 +1138,31 @@ class TUITests(unittest.TestCase):
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._runtime_max_cost_cents = 200
-        with patch.object(tui, '_start_file_watcher'):
-            with patch.object(tui, '_load_tui_state'):
-                with patch.object(tui, '_save_tui_state'):
-                    with (
-                        patch('teaagent.tui.run_chat_agent') as mock_run,
-                        patch('teaagent.tui.RunStore') as mock_store,
-                        patch('teaagent.tui.create_llm_adapter'),
-                    ):
-                        mock_run.return_value = unittest.mock.MagicMock(
-                            run_id='test-run',
-                            status='completed',
-                            iterations=1,
-                            tool_calls=0,
-                            final_answer=unittest.mock.MagicMock(content='ok'),
-                            metadata={},
-                            error_message=None,
-                        )
-                        mock_store.return_value.list_runs.return_value = []
-                        mock_store.return_value.show_run.return_value = {}
-                        mock_store.return_value.logger_for_result = lambda *a: None
-                        mock_store.return_value.audit_logger = lambda: (
-                            unittest.mock.MagicMock()
-                        )
+        with (
+            patch.object(tui, '_start_file_watcher'),
+            patch.object(tui, '_load_tui_state'),
+            patch.object(tui, '_save_tui_state'),
+            patch('teaagent.tui.run_chat_agent') as mock_run,
+            patch('teaagent.tui.RunStore') as mock_store,
+            patch('teaagent.tui.create_llm_adapter'),
+        ):
+            mock_run.return_value = unittest.mock.MagicMock(
+                run_id='test-run',
+                status='completed',
+                iterations=1,
+                tool_calls=0,
+                final_answer=unittest.mock.MagicMock(content='ok'),
+                metadata={},
+                error_message=None,
+            )
+            mock_store.return_value.list_runs.return_value = []
+            mock_store.return_value.show_run.return_value = {}
+            mock_store.return_value.logger_for_result = lambda *a: None
+            mock_store.return_value.audit_logger = lambda: (
+                unittest.mock.MagicMock()
+            )
 
-                        tui._run_agent_task('test task')
+            tui._run_agent_task('test task')
 
             _args, kwargs = mock_run.call_args
             config = kwargs['config']
@@ -1173,8 +1173,8 @@ class TUITests(unittest.TestCase):
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         with (
-            patch.object(tui, '_start_file_watcher') as mock_start,
-            patch.object(tui, '_stop_file_watcher') as mock_stop,
+            patch.object(tui, '_start_file_watcher'),
+            patch.object(tui, '_stop_file_watcher'),
         ):
             # Pin should try to start watcher
             tui._handle_pin(['nonexistent.py'])

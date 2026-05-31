@@ -28,12 +28,11 @@ from teaagent.workspace_tools._helpers import (
     relative_path,
     resolve_workspace_path,
 )
-
-logger = logging.getLogger(__name__)
-
 from teaagent.workspace_tools._shell import (
     run_shell_inspect,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def build_workspace_tool_registry(
@@ -451,7 +450,7 @@ def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
         try:
             expected_mtime = float(expected_mtime)
         except (ValueError, TypeError):
-            raise ValueError('expected_mtime must be a valid number')
+            raise ValueError('expected_mtime must be a valid number') from None
 
     # Write to temporary file first for atomic operation
     with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as tmp:
@@ -518,7 +517,7 @@ def edit_at_hash(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str,
     try:
         line_number = int(args['line'])
     except (ValueError, TypeError):
-        raise ValueError('line must be an integer')
+        raise ValueError('line must be an integer') from None
 
     if line_number < 1:
         raise ValueError('line must be >= 1')

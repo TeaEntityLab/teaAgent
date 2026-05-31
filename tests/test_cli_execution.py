@@ -108,10 +108,12 @@ def test_default_command_executor_execute(tmp_path: Path) -> None:
         status='completed',
     )
 
-    with patch('teaagent.cli.execution.run_chat_agent', return_value=mock_result):
-        with patch.object(context.store, 'logger_for_result'):
-            executor = DefaultCommandExecutor()
-            result = executor.execute(context)
+    with (
+        patch('teaagent.cli.execution.run_chat_agent', return_value=mock_result),
+        patch.object(context.store, 'logger_for_result'),
+    ):
+        executor = DefaultCommandExecutor()
+        result = executor.execute(context)
 
     assert result == mock_result
     assert result.run_id == 'test-run-id'

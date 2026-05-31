@@ -280,7 +280,7 @@ def _parse_approval_arguments(args: argparse.Namespace) -> dict[str, Any] | None
             if not isinstance(arguments, dict):
                 raise ValueError('--arguments-json must be a JSON object')
         except json.JSONDecodeError as exc:
-            raise ValueError(f'Invalid JSON in --arguments-json: {exc}')
+            raise ValueError(f'Invalid JSON in --arguments-json: {exc}') from exc
     else:
         # Parse --arg key=value pairs
         for arg_pair in args.arg:

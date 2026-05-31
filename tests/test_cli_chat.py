@@ -447,10 +447,6 @@ def test_git_sandbox_consent_saved_to_config():
         assert config.get('git_sandbox_consent') == 'always'
 
 
-def test_git_sandbox_consent_updates_existing_config():
-    """Test that git_sandbox_consent updates existing config.json."""
-
-
 def test_chat_parser_initial_task(monkeypatch, capsys):
     """Test that chat command correctly parses initial task argument."""
     import argparse

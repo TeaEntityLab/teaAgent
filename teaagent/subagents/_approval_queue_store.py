@@ -308,11 +308,11 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
         'tool_name',
     ]
 
-    for field in required_fields:
-        if field not in data:
-            raise ValueError(f'Missing required field: {field}')
-        if not data[field]:
-            raise ValueError(f"Required field '{field}' cannot be empty or None")
+    for req_field in required_fields:
+        if req_field not in data:
+            raise ValueError(f'Missing required field: {req_field}')
+        if not data[req_field]:
+            raise ValueError(f"Required field '{req_field}' cannot be empty or None")
 
     # Validate and convert status enum
     status_value = data.get('status', ApprovalRequestStatus.PENDING.value)
@@ -359,11 +359,11 @@ def request_from_dict(data: dict[str, Any]) -> SubagentApprovalRequest:
             raise ValueError(f'batch_index must be non-negative, got {batch_index}')
 
     # Validate timestamp fields (optional, but must be strings if present)
-    for field in ['created_at', 'approved_at', 'denied_at']:
-        value = data.get(field)
+    for ts_field in ('created_at', 'approved_at', 'denied_at'):
+        value = data.get(ts_field)
         if value is not None and not isinstance(value, str):
             raise ValueError(
-                f"Field '{field}' must be a string or None, got {type(value).__name__}"
+                f"Field '{ts_field}' must be a string or None, got {type(value).__name__}"
             )
 
     # Build the request with validated data

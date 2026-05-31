@@ -96,7 +96,7 @@ def deliver_automation_tick(
             headers=headers,
             method='POST',
         )
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=5):
             pass  # Connection automatically closed
     except (urllib.error.URLError, OSError, ValueError):
         if raise_on_error:

@@ -213,7 +213,7 @@ def _read_content_length(stream: Any) -> int:
             try:
                 length = int(raw)
             except ValueError:
-                raise RuntimeError(f'Invalid Content-Length header: {raw}')
+                raise RuntimeError(f'Invalid Content-Length header: {raw}') from None
     if length is None:
         raise RuntimeError('missing Content-Length header in LSP response')
     return length

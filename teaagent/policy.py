@@ -12,7 +12,6 @@ import time
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator
 
 from teaagent.approval_manager import (
@@ -249,7 +248,7 @@ class ApprovalPolicy:
         store_path = self.approval_store.path
         lock_path = store_path.with_suffix(store_path.suffix + '.flock')
         lock_path.parent.mkdir(parents=True, exist_ok=True)
-        fd = open(lock_path, 'a+', encoding='utf-8')
+        fd = open(lock_path, 'a+', encoding='utf-8')  # noqa: SIM115 — need raw fd for flock
         try:
             fcntl.flock(fd.fileno(), fcntl.LOCK_EX)
             yield
