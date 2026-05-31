@@ -139,7 +139,7 @@ def automation_show_command(args: argparse.Namespace) -> int:
 def automation_pause_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
     try:
-        spec = store.get(args.automation_id)
+        spec = store.show(args.automation_id)
         updated = store.update(AutomationSpec(**{**spec.to_dict(), 'enabled': False}))
     except (FileNotFoundError, ValueError) as exc:
         print_json({'status': 'error', 'message': str(exc)})
@@ -151,7 +151,7 @@ def automation_pause_command(args: argparse.Namespace) -> int:
 def automation_resume_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
     try:
-        spec = store.get(args.automation_id)
+        spec = store.show(args.automation_id)
         updated = store.update(AutomationSpec(**{**spec.to_dict(), 'enabled': True}))
     except (FileNotFoundError, ValueError) as exc:
         print_json({'status': 'error', 'message': str(exc)})
@@ -163,7 +163,7 @@ def automation_resume_command(args: argparse.Namespace) -> int:
 def automation_run_command(args: argparse.Namespace) -> int:
     store = AutomationStore(args.root)
     try:
-        spec = store.get(args.automation_id)
+        spec = store.show(args.automation_id)
     except (FileNotFoundError, ValueError) as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -516,9 +516,9 @@ def _run_automation_once(root: str, spec: AutomationSpec) -> dict[str, Any]:
             'collector': collector_payload,
             'next_run_at': updated.next_run_at,
         }
-    _handoff = resolve_chained_task(root, spec)
+    chained_task, _handoff = resolve_chained_task(root, spec)
     task = compose_self_contained_automation_task(
-        spec, collector_summary=collector_summary, handoff=_handoff
+        spec, task=chained_task, collector_summary=collector_summary
     )
     record = _start_automation_background_run(root=root, spec=spec, task=task)
     updated = store.update(

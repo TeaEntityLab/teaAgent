@@ -582,12 +582,16 @@ def _run_chat_agent_impl(
             from teaagent.plan import PlanContract
 
             # Reconstruct PlanContract from dict for runner use
-            runner._plan_contract = PlanContract(
-                path=Path(plan_contract.get('path', '')),
-                rel_path=plan_contract.get('rel_path', ''),
-                content_hash=plan_contract.get('content_hash', ''),
-                task=plan_contract.get('task', ''),
-                file_targets=frozenset(plan_contract.get('file_targets', [])),
+            object.__setattr__(
+                runner,
+                '_plan_contract',
+                PlanContract(
+                    path=Path(plan_contract.get('path', '')),
+                    rel_path=plan_contract.get('rel_path', ''),
+                    content_hash=plan_contract.get('content_hash', ''),
+                    task=plan_contract.get('task', ''),
+                    file_targets=frozenset(plan_contract.get('file_targets', [])),
+                ),
             )
 
         result = runner.run(

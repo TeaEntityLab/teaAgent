@@ -118,14 +118,14 @@ class JITApprovalServer:
         # Authentication handshake
         if self._auth_token:
             try:
-                auth_line = await reader.readline()
-                if not auth_line:
+                raw_line = await reader.readline()
+                if not raw_line:
                     logger.warning('SSE client disconnected during auth handshake')
                     writer.close()
                     await writer.wait_closed()
                     return
 
-                auth_line = auth_line.decode('utf-8').strip()
+                auth_line: str = raw_line.decode('utf-8').strip()
                 if not auth_line.startswith('Authorization: Bearer '):
                     logger.warning('SSE client missing auth token')
                     writer.close()

@@ -669,14 +669,14 @@ def run_chat_repl(
             # Handle diff command
             if user_input == '/diff':
                 try:
-                    result = subprocess.run(
+                    proc = subprocess.run(
                         ['git', 'diff'],
                         cwd=config.root,
                         capture_output=True,
                         text=True,
                     )
-                    if result.stdout:
-                        print(result.stdout)
+                    if proc.stdout:
+                        print(proc.stdout)
                     else:
                         print('[TeaAgent] No changes to show')
                 except FileNotFoundError:

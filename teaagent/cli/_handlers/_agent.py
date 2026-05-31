@@ -1147,7 +1147,7 @@ def interactive_review_mode(root: str | Path, run_id: str) -> int:
 
     # Interactive review loop
     current_index = 0
-    review_decisions = {}
+    review_decisions: dict[str, str] = {}
 
     while current_index < len(changed_files):
         file_path = changed_files[current_index]

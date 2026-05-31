@@ -159,7 +159,8 @@ class RunShellArgvTool:
         """
         from teaagent.workspace_tools._shell import run_shell_argv
 
-        return run_shell_argv(self._config, args)
+        argv = args.get('argv', []) if isinstance(args, dict) else (args or [])
+        return run_shell_argv(self._config, argv, timeout_seconds=30)
 
     def update_config(self, config: WorkspaceToolConfig) -> None:
         """Update configuration.

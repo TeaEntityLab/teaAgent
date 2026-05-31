@@ -25,7 +25,7 @@ def agent_plan_command(args: argparse.Namespace) -> int:
         return 1
 
     if getattr(args, 'validate', False):
-        errors = contract.validate()
+        errors = contract.validate()  # type: ignore[attr-defined]
         if errors:
             print_json({'status': 'invalid', 'errors': errors})
             return 1
@@ -96,7 +96,7 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
     from teaagent.preflight import preflight
 
     task = _prepare_task(args, args.task)
-    result = preflight(task, root=args.root)
+    result = preflight(task, root=args.root, provider=args.provider)
     payload = result.to_dict()
     if getattr(args, 'human', False):
         from teaagent.ergonomics.human_output import format_preflight_summary
@@ -104,13 +104,18 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
         print(format_preflight_summary(payload, root=args.root))
     else:
         print_json(payload)
-    return 0 if result.ready else 2
+    return 0 if result.to_dict()['ready'] else 2
 
 
 def agent_daily_command(args: argparse.Namespace) -> int:
     from teaagent.daily import build_daily_brief
 
-    brief = build_daily_brief(args.root)
+    brief = build_daily_brief(
+        task=getattr(args, 'task', None),
+        root=args.root,
+        provider=getattr(args, 'provider', 'gpt'),
+        model=getattr(args, 'model', None),
+    )
     banner = None
     if getattr(args, 'whats_new', False):
         from teaagent.whats_new import get_whats_new_banner
@@ -203,16 +208,15 @@ def agent_attach_command(args: argparse.Namespace) -> int:
                     'pending_approval': pending,
                 }
             )
-        stream_run_events(
-            args.root,
+        for raw_event in stream_run_events(
             args.run_id,
-            on_event=lambda event: (
-                emit_stream_event(audit_dict_to_stream_event(event))
-                if getattr(args, 'json_stream', False)
-                else None
-            ),
-            on_text=lambda text: print(text, end=''),
-        )
+            root=args.root,
+            follow=True,
+        ):
+            if getattr(args, 'json_stream', False):
+                event = audit_dict_to_stream_event(raw_event)
+                if event is not None:
+                    emit_stream_event(event)
         return 0
     print_json(
         {

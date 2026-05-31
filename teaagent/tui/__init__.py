@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any, Callable, Optional
 if TYPE_CHECKING:
     from prompt_toolkit import PromptSession
 
+    from teaagent.memory.file_watcher import FileWatcher
+
 from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
@@ -171,7 +173,7 @@ class TeaAgentTUI:
         self._current_conflict_index: int = 0
 
         # File watcher for live context sync
-        self._file_watcher = None
+        self._file_watcher: Optional[FileWatcher] = None
         self._watcher_running: bool = False
 
         # Git-stash checkpoint for safe undo
@@ -761,14 +763,15 @@ class TeaAgentTUI:
                 )
                 return
             task_spec = build_task_spec(task, clarification)
+        provider: str = self.provider or 'gpt'
         routing = (
-            route_model(task, provider=self.provider, model=self.model)
+            route_model(task, provider=provider, model=self.model)
             if self.route_model_enabled
             else None
         )
         selected_model = routing.model if routing else self.model
-        self.output_fn(f'agent: provider={self.provider} root={self.root}')
-        adapter = self.adapter_factory(self.provider, selected_model)
+        self.output_fn(f'agent: provider={provider} root={self.root}')
+        adapter = self.adapter_factory(provider, selected_model)
         store = RunStore(self.root)
         audit = store.audit_logger()
         if self.progress:

@@ -105,7 +105,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         tui._print_json(
             route_model(
-                ' '.join(args), provider=tui.provider, model=tui.model
+                ' '.join(args), provider=tui.provider or 'gpt', model=tui.model
             ).to_dict()
         )
         return True
@@ -454,7 +454,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 tui.output_fn('error: no file path in approval request')
                 return True
             try:
-                result = subprocess.run(
+                proc = subprocess.run(
                     ['git', 'diff', '--', path],
                     cwd=tui.root,
                     capture_output=True,
@@ -462,7 +462,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                     timeout=10,
                 )
                 diff_output = (
-                    result.stdout or '(no diff — file unchanged or not tracked by git)'
+                    proc.stdout or '(no diff — file unchanged or not tracked by git)'
                 )
                 tui.output_fn(f'diff for {path}:')
                 for line in diff_output.splitlines():
@@ -510,7 +510,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         report = preflight(
             task,
             root=tui.root,
-            provider=tui.provider,
+            provider=tui.provider or 'gpt',
             model=tui.model,
             permission_mode=tui.permission_mode,
             route=tui.route_model_enabled,
@@ -528,7 +528,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         report = preflight(
             plan_task,
             root=tui.root,
-            provider=tui.provider,
+            provider=tui.provider or 'gpt',
             model=tui.model,
             permission_mode=tui.permission_mode,
             route=tui.route_model_enabled,
@@ -607,7 +607,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         brief = build_daily_brief(
             task=daily_task,
             root=tui.root,
-            provider=tui.provider,
+            provider=tui.provider or 'gpt',
             model=tui.model,
             permission_mode=tui.permission_mode,
             route=tui.route_model_enabled,
