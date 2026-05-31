@@ -210,6 +210,7 @@ class Subagent:
 
     def execute(self) -> SubagentResult:
         """Execute the subagent task in isolated sandbox with centralized approval lineage."""
+        import threading
         import time
 
         self.is_running = True
@@ -220,9 +221,22 @@ class Subagent:
                 self._task.task_id, self
             )
 
+        # Background daemon thread ticks heartbeat during long execution
+        # to prevent false-positive hang detection by the heartbeat monitor.
+        HEARTBEAT_TICK_INTERVAL = 30  # seconds; must be < lock_timeout_seconds (default 60)
+
+        def _heartbeat_ticker() -> None:
+            while self.is_running:
+                self.tick_heartbeat()
+                time.sleep(HEARTBEAT_TICK_INTERVAL)
+
+        ticker = threading.Thread(target=_heartbeat_ticker, daemon=True)
+        ticker.start()
+
         start_time = time.perf_counter()
 
         if not self._sandbox.is_available():
+            self.is_running = False
             return SubagentResult(
                 task_id=self._task.task_id,
                 success=False,
@@ -232,6 +246,7 @@ class Subagent:
         # Start sandbox branch
         sandbox_result = self._sandbox.start(auto_stash=True)
         if not sandbox_result.success:
+            self.is_running = False
             return SubagentResult(
                 task_id=self._task.task_id,
                 success=False,

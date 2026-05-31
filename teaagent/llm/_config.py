@@ -153,6 +153,7 @@ def check_llm_configuration(provider: str) -> tuple[bool, str]:
     return True, f'{provider} configuration is available'
 
 
+# Base per-provider rates (used when no model-specific rate exists).
 PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
     'claude': 0.003,
     'gpt': 0.00015,
@@ -185,12 +186,59 @@ PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
     'aigateway': 0.0015,
 }
 
+# Model-specific overrides for high-cost models.
+# Keyed by model-name prefix (case-insensitive match).
+# Values are (input_per_1k, output_per_1k) tuples.
+_MODEL_COST_OVERRIDES: dict[str, tuple[float, float]] = {
+    'claude-3-opus': (0.015, 0.075),
+    'claude-3.5-opus': (0.015, 0.075),
+    'claude-3.5-sonnet': (0.003, 0.015),
+    'claude-3-haiku': (0.00025, 0.00125),
+    'claude-3.5-haiku': (0.00025, 0.00125),
+    'gpt-4-turbo': (0.01, 0.03),
+    'gpt-4o': (0.0025, 0.01),
+    'gpt-4o-mini': (0.00015, 0.0006),
+    'o1': (0.015, 0.06),
+    'o3': (0.01, 0.04),
+    'deepseek-reasoner': (0.00055, 0.00219),
+    'gemini-2.0-flash': (0.0001, 0.0004),
+    'gemini-1.5-pro': (0.0035, 0.0105),
+}
+
+
+def _model_specific_cost(
+    provider: str, model: str
+) -> tuple[float, float] | None:
+    """Look up model-specific cost override if available."""
+    model_lower = model.lower()
+    for prefix, (cost_in, cost_out) in _MODEL_COST_OVERRIDES.items():
+        if model_lower.startswith(prefix):
+            return cost_in, cost_out
+    return None
+
+
+def _lookup_cost_rates(provider: str | None, model: str) -> tuple[float, float]:
+    """Look up input/output cost per 1K tokens, checking model-specific overrides first."""
+    if not provider:
+        return 0.001, 0.001
+
+    normalized_provider = provider.lower()
+
+    # Check model-specific override first
+    model_rates = _model_specific_cost(normalized_provider, model)
+    if model_rates is not None:
+        return model_rates
+
+    # Fall back to provider-level rates
+    cost_1k_in = PROVIDER_COST_PER_1K_INPUT.get(normalized_provider, 0.001)
+    cost_1k_out = PROVIDER_COST_PER_1K_OUTPUT.get(normalized_provider, 0.001)
+    return cost_1k_in, cost_1k_out
+
 
 def _estimate_cost(
     provider: str, model: str, input_tokens: int, output_tokens: int
 ) -> float:
-    cost_1k_in = PROVIDER_COST_PER_1K_INPUT.get(provider, 0.001)
-    cost_1k_out = PROVIDER_COST_PER_1K_OUTPUT.get(provider, 0.001)
+    cost_1k_in, cost_1k_out = _lookup_cost_rates(provider, model)
     cost = (input_tokens * cost_1k_in + output_tokens * cost_1k_out) / 1000.0
     return round(cost * 100, 4)
 
@@ -202,7 +250,6 @@ def estimate_cost_preflight(
     max_output_tokens: int,
 ) -> float:
     approx_input_tokens = max(1, approx_input_chars // 3)
-    cost_1k_in = PROVIDER_COST_PER_1K_INPUT.get(provider, 0.001)
-    cost_1k_out = PROVIDER_COST_PER_1K_OUTPUT.get(provider, 0.001)
+    cost_1k_in, cost_1k_out = _lookup_cost_rates(provider, model)
     cost = (approx_input_tokens * cost_1k_in + max_output_tokens * cost_1k_out) / 1000.0
     return round(cost * 100, 4)
