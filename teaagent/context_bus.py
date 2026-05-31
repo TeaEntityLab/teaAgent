@@ -350,17 +350,19 @@ class ContextBus:
     def archive_to_rag(self, rag_store: Any) -> None:
         """Archive Delta cards to RAG long-term memory.
 
-        The read and clear are wrapped in a single SQLite transaction to
-        prevent deltas from being lost if new ones are published between
-        the read and the clear.
+        Split into two phases to avoid holding a SQLite transaction across
+        external RAG calls, which would block concurrent Delta publishers:
+          1. Read deltas under ``BEGIN IMMEDIATE`` → commit immediately.
+          2. Archive to external RAG store (no DB lock held).
+          3. Delete archived deltas under a fresh ``BEGIN IMMEDIATE``.
         """
-        conn = self._get_connection()
-        cursor = conn.cursor()
-
-        max_retries = 5
         base_delay = 0.1
+        max_retries = 5
 
+        deltas: list[DeltaCard] = []
         for attempt in range(max_retries):
+            conn = self._get_connection()
+            cursor = conn.cursor()
             try:
                 cursor.execute('BEGIN IMMEDIATE')
                 cursor.execute(
@@ -368,8 +370,6 @@ class ContextBus:
                     (self._workflow_id,),
                 )
                 rows = cursor.fetchall()
-
-                deltas = []
                 for row in rows:
                     deltas.append(
                         DeltaCard(
@@ -381,40 +381,8 @@ class ContextBus:
                             metadata=json.loads(row[6]) if row[6] else {},
                         )
                     )
-
-                max_timestamp = max((d.timestamp for d in deltas), default=None)
-
-                for delta in deltas:
-                    rag_doc = {
-                        'doc_id': delta.delta_id,
-                        'source': delta.source_agent,
-                        'content': delta.content,
-                        'metadata': {
-                            **delta.metadata,
-                            'delta_type': delta.delta_type.value,
-                            'timestamp': delta.timestamp,
-                            'workflow_id': self._workflow_id,
-                        },
-                    }
-
-                    try:
-                        if hasattr(rag_store, 'add_document'):
-                            rag_store.add_document(rag_doc)
-                        elif hasattr(rag_store, 'add'):
-                            rag_store.add(rag_doc)
-                        else:
-                            logger.warning('RAG store does not support adding documents')
-                    except Exception as exc:
-                        logger.error('Failed to archive Delta to RAG: %s', exc)
-
-                if max_timestamp is not None:
-                    cursor.execute(
-                        'DELETE FROM delta_cards WHERE workflow_id = ? AND timestamp <= ?',
-                        (self._workflow_id, max_timestamp),
-                    )
                 conn.commit()
-                logger.info('Archived %s Delta cards to RAG', len(deltas))
-                return
+                break
             except sqlite3.Error as exc:
                 with suppress(Exception):
                     conn.rollback()
@@ -422,16 +390,48 @@ class ContextBus:
                     raise
                 delay = base_delay * (2**attempt) + secrets.randbelow(50) / 1000
                 logger.warning(
-                    'archive_to_rag failed (attempt %s/%s): %s, reconnecting in %.2fs',
+                    'archive_to_rag read failed (attempt %s/%s): %s, reconnecting in %.2fs',
                     attempt + 1,
                     max_retries,
                     exc,
                     delay,
                 )
                 self._reconnect_self_thread()
-                conn = self._get_connection()
-                cursor = conn.cursor()
                 time.sleep(delay)
+
+        if not deltas:
+            return
+
+        max_timestamp = max(d.timestamp for d in deltas)
+        archived_count = 0
+        for delta in deltas:
+            rag_doc = {
+                'doc_id': delta.delta_id,
+                'source': delta.source_agent,
+                'content': delta.content,
+                'metadata': {
+                    **delta.metadata,
+                    'delta_type': delta.delta_type.value,
+                    'timestamp': delta.timestamp,
+                    'workflow_id': self._workflow_id,
+                },
+            }
+            try:
+                if hasattr(rag_store, 'add_document'):
+                    rag_store.add_document(rag_doc)
+                elif hasattr(rag_store, 'add'):
+                    rag_store.add(rag_doc)
+                else:
+                    logger.warning('RAG store does not support adding documents')
+                archived_count += 1
+            except Exception as exc:
+                logger.error('Failed to archive Delta (id=%s) to RAG: %s', delta.delta_id, exc)
+
+        self._clear_deltas(max_timestamp)
+
+        logger.info(
+            'Archived %s/%s Delta cards to RAG', archived_count, len(deltas)
+        )
 
     def _clear_deltas(self, max_timestamp: Optional[float] = None) -> None:
         """Clear Delta cards for the current workflow."""
