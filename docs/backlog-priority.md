@@ -260,7 +260,7 @@ The following plans are marked as complete and are retained for reference:
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-5 — Model Capability Matrix [P2]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Create model capability matrix document mapping features to models (extended thinking, tool use, streaming, multi-sig, cost tracking)
 **Acceptance criteria:** Matrix exists and updated with provider adapter changes, README links to matrix
 **Size:** Small (2 days)

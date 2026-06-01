@@ -100,6 +100,7 @@ Same as the [golden path](#golden-path-first-hour) above. Prefer `--human` on `d
 - Acceptance coverage: [docs/acceptance.md](docs/acceptance.md)
 - Use-case traceability: [docs/use-cases.md](docs/use-cases.md)
 - Architecture decisions: [docs/adr](docs/adr) (including ANP adapter boundary in ADR 0007)
+- Model capability matrix: [docs/model-capability-matrix.md](docs/model-capability-matrix.md)
 
 ### 7. Memory & Context Features
 
