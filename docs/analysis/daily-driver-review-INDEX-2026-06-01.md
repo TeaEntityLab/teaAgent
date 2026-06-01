@@ -4,6 +4,30 @@
 A single entry point to the 2026-06-01 review of teaagent's daily surfaces
 (TUI, `teaagent chat`, agent mode). Read in this order.
 
+## 2026-06-01 late refresh: read these first
+
+The files below supersede stale parts of the earlier same-day package. Some earlier
+findings were fixed or shifted to different runtime paths; the current risks now center
+on chat task entry, TUI cost accounting, git-sandbox defaults, lifecycle wording, and
+runtime/test path divergence.
+
+1. **`daily-driver-current-truth-audit-2026-06-01.md`** *(analysis)*
+   Current code truth table: active, fixed, stale, and shifted findings.
+2. **`daily-driver-risk-register-refresh-2026-06-01.md`** *(analysis)*
+   Updated risk register based on current code review and parallel UX/repo audits.
+3. **`daily-driver-popular-agent-feedback-survey-2026-06-01.md`** *(analysis)*
+   Current market/forum feedback survey and competitive daily-use lessons.
+4. **`daily-driver-agent-market-source-map-2026-06-01.md`** *(analysis)*
+   Source map for official docs, issue/forum signals, volatile facts, and product notes.
+5. **`daily-driver-ux-survey-tui-chat-agent-2026-06-01.md`** *(analysis)*
+   UX journey and severity survey for TUI, TUI chat, CLI chat, and agent mode.
+6. **`daily-driver-defeat-modes-2026-06-01.md`** *(analysis)*
+   Failure modes where TeaAgent can technically work but lose daily-user trust.
+7. **`../plans/daily-driver-usefulness-master-plan-2026-06-01.md`** *(plans)*
+   Phased plan for making the project daily-useful.
+8. **`../plans/daily-driver-stability-test-plan-2026-06-01.md`** *(plans)*
+   Test strategy and readiness gates.
+
 ## Read order
 
 1. **`daily-driver-code-grounded-ux-findings-2026-06-01.md`** *(analysis)*
@@ -73,12 +97,10 @@ The May-31 work was **doc-level**; this package is **code-level + consolidation*
 
 ## One-paragraph executive summary
 
-teaagent's governance foundation is strong and remains its differentiator, but its
-daily-driver surfaces carry two P0 correctness defects — the chat REPL reports every
-task as failed and never shows the answer (CG-01), and its `/undo` can destroy
-unrelated uncommitted work (CG-02) — plus fabricated cost displays (CG-03) on a theme
-competitors now win on. Root cause is two divergent chat implementations (CG-05). Fix
-Phase 0 first (small, high-impact), unify behind a shared controller, then deliver the
-four design specs that close the still-open ecosystem gaps (journeys, cockpit, evidence
-bundle, risk-mode table).
-</content>
+teaagent's governance foundation is strong and remains its differentiator, but the
+current daily-driver risks have shifted. Controller-backed chat fixed several earlier
+defects, while the active high-risk queue is now: `teaagent chat <task>` can accept and
+drop the task, TUI cost/budget state is not wired to real run cost, agent mode can
+auto-start a git sandbox despite `--git-sandbox` reading as opt-in, background/suspend
+copy is contradictory, and tests/docs can cover stale paths. Fix the command grammar and
+shared state model first, then harden the TUI cockpit and permission/recovery stories.
