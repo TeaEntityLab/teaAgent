@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.cockpit import CockpitState
 from teaagent.context import ContextCompactor as _ContextCompactor
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
@@ -187,6 +188,9 @@ class TeaAgentTUI:
         self._runtime_max_cost_cents: int = 1000
         self._max_cost_budget_cents: int = 1000
 
+        # Cockpit state for operator dashboard
+        self._cockpit_state: Optional[CockpitState] = None
+
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
         try:
@@ -202,8 +206,7 @@ class TeaAgentTUI:
         except (OSError, ValueError):
             return
 
-        # Clear screen and print header
-        print('\033[2J\033[H', end='')  # Clear screen
+        # Print header (no clear screen - CG-06 fix)
         print('=' * columns)
         print(f'TeaAgent TUI {__version__} - State Panel')
         print('=' * columns)
@@ -235,6 +238,48 @@ class TeaAgentTUI:
         print(f'Permission Mode: {self.permission_mode.value}')
         print(f'Destructive: {"allowed" if self.allow_destructive else "blocked"}')
         print(f'Chat: {"enabled" if self.chat else "disabled"}')
+
+        # Cockpit state (blocked approvals, harness health, budget, recoverable)
+        print('\n[Cockpit]')
+        if self._cockpit_state:
+            # Blocked approvals
+            if self._cockpit_state.approvals.blocked_count > 0:
+                print(
+                    f'  Blocked Approvals: {self._cockpit_state.approvals.blocked_count}'
+                )
+            if self._cockpit_state.approvals.pending_count > 0:
+                print(
+                    f'  Pending Approvals: {self._cockpit_state.approvals.pending_count}'
+                )
+
+            # Harness health
+            if self._cockpit_state.harness_health.overall != 'unknown':
+                health = self._cockpit_state.harness_health.overall
+                print(f'  Harness Health: {health.upper()}')
+                if self._cockpit_state.harness_health.errors:
+                    print(
+                        f'    Errors: {len(self._cockpit_state.harness_health.errors)}'
+                    )
+
+            # Budget
+            if self._cockpit_state.budget.status != 'unknown':
+                budget = self._cockpit_state.budget
+                print(f'  Budget: {budget.status.upper()}')
+                print(f'    Spent: ${budget.spent_cents / 100:.2f}')
+                if budget.limit_cents:
+                    print(f'    Limit: ${budget.limit_cents / 100:.2f}')
+                if budget.remaining_cents is not None:
+                    print(f'    Remaining: ${budget.remaining_cents / 100:.2f}')
+
+            # Recoverable
+            if self._cockpit_state.recoverable.has_undo_journal:
+                print(
+                    f'  Undo: Available (run_id: {self._cockpit_state.recoverable.last_run_id})'
+                )
+            if self._cockpit_state.recoverable.has_checkpoint:
+                print('  Checkpoint: Available')
+            if self._cockpit_state.recoverable.has_suspended_session:
+                print('  Suspended Session: Available')
 
         # Parallel experiments panel
         if self._parallel_stack and self._parallel_options:
@@ -681,9 +726,7 @@ class TeaAgentTUI:
         compacted = compactor.compact_chat_history(messages_dicts, max_tokens)
         post_count = len(compacted)
 
-        session.messages = [
-            ChatMessage.from_dict(m) for m in compacted
-        ]
+        session.messages = [ChatMessage.from_dict(m) for m in compacted]
         omitted = pre_count - post_count
         if omitted > 0:
             session.messages.append(
@@ -747,7 +790,7 @@ class TeaAgentTUI:
 
     def _handle_background(self) -> None:
         self.output_fn(
-            'background: use teaagent agent run --detach from CLI for background tasks'
+            'background: /background is not implemented in TUI. Use "teaagent agent run --detach" from CLI for background tasks.'
         )
 
     def _get_session_store(self) -> SessionStore:

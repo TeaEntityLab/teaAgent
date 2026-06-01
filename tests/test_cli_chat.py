@@ -244,6 +244,324 @@ def test_run_chat_repl_provider_command(monkeypatch, capsys):
         assert result == 0
 
 
+def test_chat_repl_displays_answer(monkeypatch, capsys):
+    """Test REPL displays final answer on success and error message on failure."""
+    from unittest.mock import MagicMock, patch
+
+    from teaagent.runner._types import FinalAnswer, RunResult
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+
+        # Mock run_chat_agent to return a successful result
+        success_result = RunResult(
+            run_id='test-run-1',
+            final_answer=FinalAnswer(content='Test answer'),
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+            cost_cents=15.0,
+            input_tokens=100,
+            output_tokens=50,
+        )
+
+        # Mock run_chat_agent to return a failed result
+        failure_result = RunResult(
+            run_id='test-run-2',
+            final_answer=None,
+            iterations=1,
+            tool_calls=0,
+            status='failed',
+            error_message='Test error message',
+            cost_cents=5.0,
+            input_tokens=50,
+            output_tokens=25,
+        )
+
+        call_count = [0]
+
+        def mock_run_chat_agent(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return success_result
+            else:
+                return failure_result
+
+        inputs = ['test task 1', 'test task 2', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
+
+        # Mock RunStore and UndoJournal to avoid file system issues
+        with (
+            patch('teaagent.cli._handlers.chat_repl.RunStore') as mock_store_class,
+            patch('teaagent.cli._handlers.chat_repl.UndoJournal') as mock_journal_class,
+            patch(
+                'teaagent.chat_session_controller.run_chat_agent',
+                side_effect=mock_run_chat_agent,
+            ),
+        ):
+            mock_store = MagicMock()
+            mock_store_class.return_value = mock_store
+            mock_audit = MagicMock()
+            mock_audit.add_sink = MagicMock()
+            mock_store.audit_logger.return_value = mock_audit
+            mock_store.logger_for_result = MagicMock()
+            mock_store.undo_path = MagicMock(return_value=tmpdir + '/undo.jsonl')
+
+            mock_journal = MagicMock()
+            mock_journal_class.return_value = mock_journal
+            mock_journal.has_entries = False
+            mock_journal.save_to = MagicMock()
+
+            result = run_chat_repl(config)
+            captured = capsys.readouterr()
+
+            # Should print answer on success
+            assert 'Test answer' in captured.out
+            # Should print error message on failure
+            assert 'Test error message' in captured.out
+            # Should not print generic "Task failed" message
+            assert 'Task failed with exit code' not in captured.out
+            assert result == 0
+
+
+def test_chat_repl_undo_no_git_checkout_fallback(monkeypatch, capsys):
+    """Test REPL undo does not use git checkout fallback when no journal exists."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+
+        inputs = ['/undo', '/exit']
+        monkeypatch.setattr('builtins.input', lambda _: inputs.pop(0))
+
+        run_chat_repl(config)
+        captured = capsys.readouterr()
+
+        # Should print "Nothing to undo" when no journal exists
+        assert 'Nothing to undo' in captured.out
+        # Should not contain git checkout fallback message
+        assert 'git checkout' not in captured.out
+        assert 'fallback' not in captured.out.lower()
+
+
+def test_suspend_to_background_no_branch_switch(monkeypatch, capsys):
+    """Test /background does not silently switch branches and clarifies it's not background execution."""
+    from teaagent.cli._handlers.chat_repl import suspend_to_background
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {'observations': [], 'compaction_count': 0}
+        targeted_files = set()
+
+        suspend_to_background(config, session_context, targeted_files)
+        captured = capsys.readouterr()
+
+        # Should not create a branch
+        assert 'Created sandbox branch' not in captured.out
+        # Message should clarify this is not background execution
+        assert 'suspension checkpoint' in captured.out
+        assert 'not background execution' in captured.out
+        # Should mention the correct command for background tasks
+        assert 'teaagent agent run --detach' in captured.out
+
+
+def test_chat_session_controller_execute_task(monkeypatch, capsys):
+    """Test ChatSessionController executes tasks with consistent behavior (CG-01, CG-03)."""
+    from unittest.mock import MagicMock, patch
+
+    from teaagent.chat_session_controller import ChatSessionController, SessionState
+    from teaagent.runner._types import FinalAnswer, RunResult
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        session_state = SessionState()
+        output_messages = []
+
+        def mock_output_fn(msg: str):
+            output_messages.append(msg)
+
+        controller = ChatSessionController(
+            root=tmpdir,
+            output_fn=mock_output_fn,
+            session_state=session_state,
+        )
+
+        # Mock run_chat_agent to return a successful result
+        success_result = RunResult(
+            run_id='test-run-1',
+            final_answer=FinalAnswer(content='Test answer'),
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+            cost_cents=15.0,
+            input_tokens=100,
+            output_tokens=50,
+        )
+
+        # Mock RunStore, AuditLogger, and UndoJournal
+        with (
+            patch('teaagent.chat_session_controller.RunStore') as mock_store_class,
+            patch('teaagent.chat_session_controller.UndoJournal') as mock_journal_class,
+            patch(
+                'teaagent.chat_session_controller.run_chat_agent'
+            ) as mock_run_chat_agent,
+        ):
+            mock_store = MagicMock()
+            mock_store_class.return_value = mock_store
+            mock_audit = MagicMock()
+            mock_store.audit_logger.return_value = mock_audit
+            mock_store.logger_for_result = MagicMock()
+            mock_store.undo_path = MagicMock(return_value=tmpdir + '/undo.jsonl')
+
+            mock_journal = MagicMock()
+            mock_journal_class.return_value = mock_journal
+            mock_journal.has_entries = False
+            mock_journal.save_to = MagicMock()
+
+            mock_run_chat_agent.return_value = success_result
+
+            config = ChatAgentConfig.from_root(tmpdir, model='gpt/gpt-4')
+            controller.execute_task('test task', config)
+
+            # Should print answer (CG-01)
+            assert 'Test answer' in output_messages
+            # Should update session cost (CG-03)
+            assert session_state.session_cost_cents == 15.0
+            # Should append observation
+            assert len(session_state.observations) == 1
+            assert session_state.observations[0]['cost_cents'] == 15.0
+
+
+def test_chat_session_controller_undo(monkeypatch, capsys):
+    """Test ChatSessionController undo uses UndoJournal (CG-02)."""
+    from unittest.mock import MagicMock, patch
+
+    from teaagent.chat_session_controller import ChatSessionController, SessionState
+    from teaagent.run_undo import UndoResult
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        session_state = SessionState()
+        output_messages = []
+
+        def mock_output_fn(msg: str):
+            output_messages.append(msg)
+
+        controller = ChatSessionController(
+            root=tmpdir,
+            output_fn=mock_output_fn,
+            session_state=session_state,
+        )
+
+        # Mock RunStore and UndoJournal
+        with (
+            patch('teaagent.chat_session_controller.RunStore') as mock_store_class,
+            patch('teaagent.chat_session_controller.UndoJournal') as mock_journal_class,
+        ):
+            mock_store = MagicMock()
+            mock_store_class.return_value = mock_store
+            mock_store.latest_run_with_undo.return_value = 'test-run-id'
+            undo_path = Path(tmpdir) / 'undo.jsonl'
+            undo_path.touch()  # Create file
+            mock_store.undo_path.return_value = undo_path
+
+            mock_journal = MagicMock()
+            mock_journal_class.return_value = mock_journal
+            mock_journal.restore.return_value = UndoResult(
+                restored=['file1.txt'],
+                deleted=[],
+                errors=[],
+            )
+
+            result = controller.undo_last_run()
+
+            # Should succeed
+            assert result is True
+            # Should print success message
+            assert any('Undo completed' in msg for msg in output_messages)
+            # Should clean up journal
+            assert undo_path.exists() is False  # File should be unlinked
+
+
+def test_chat_surface_parity(monkeypatch, capsys):
+    """Test that CLI and TUI surfaces use the same controller for consistent behavior (CG-05)."""
+    from unittest.mock import MagicMock, patch
+
+    from teaagent.chat_session_controller import ChatSessionController, SessionState
+    from teaagent.runner._types import FinalAnswer, RunResult
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create two controllers (simulating CLI and TUI)
+        cli_output = []
+        tui_output = []
+
+        def cli_output_fn(msg: str):
+            cli_output.append(msg)
+
+        def tui_output_fn(msg: str):
+            tui_output.append(msg)
+
+        cli_state = SessionState()
+        tui_state = SessionState()
+
+        cli_controller = ChatSessionController(
+            root=tmpdir,
+            output_fn=cli_output_fn,
+            session_state=cli_state,
+        )
+
+        tui_controller = ChatSessionController(
+            root=tmpdir,
+            output_fn=tui_output_fn,
+            session_state=tui_state,
+        )
+
+        # Mock run_chat_agent
+        success_result = RunResult(
+            run_id='test-run',
+            final_answer=FinalAnswer(content='Test answer'),
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+            cost_cents=10.0,
+            input_tokens=50,
+            output_tokens=25,
+        )
+
+        with (
+            patch('teaagent.chat_session_controller.RunStore') as mock_store_class,
+            patch('teaagent.chat_session_controller.UndoJournal') as mock_journal_class,
+            patch(
+                'teaagent.chat_session_controller.run_chat_agent'
+            ) as mock_run_chat_agent,
+        ):
+            mock_store = MagicMock()
+            mock_store_class.return_value = mock_store
+            mock_audit = MagicMock()
+            mock_store.audit_logger.return_value = mock_audit
+            mock_store.logger_for_result = MagicMock()
+            mock_store.undo_path = MagicMock(return_value=tmpdir + '/undo.jsonl')
+
+            mock_journal = MagicMock()
+            mock_journal_class.return_value = mock_journal
+            mock_journal.has_entries = False
+            mock_journal.save_to = MagicMock()
+
+            mock_run_chat_agent.return_value = success_result
+
+            config = ChatAgentConfig.from_root(tmpdir, model='gpt/gpt-4')
+
+            # Execute same task on both surfaces
+            cli_controller.execute_task('test task', config)
+            tui_controller.execute_task('test task', config)
+
+            # Both should print the same answer (CG-01 parity)
+            assert cli_output == tui_output
+            assert 'Test answer' in cli_output[0]
+
+            # Both should track cost identically (CG-03 parity)
+            assert cli_state.session_cost_cents == tui_state.session_cost_cents == 10.0
+
+            # Both should have identical observations
+            assert len(cli_state.observations) == len(tui_state.observations) == 1
+
+
 def test_run_chat_repl_model_command(monkeypatch, capsys):
     """Test REPL /model command switches model."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -380,7 +698,7 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
                 side_effect=mock_create_adapter,
             ),
             patch(
-                'teaagent.cli._handlers.chat_repl.run_chat_agent',
+                'teaagent.chat_session_controller.run_chat_agent',
                 side_effect=mock_run_chat_agent,
             ),
         ):
@@ -648,7 +966,8 @@ def test_suspend_to_background_basic(capsys):
 
 
 def test_suspend_to_background_with_dirty_workspace(capsys):
-    """Test suspension with dirty workspace creates sandbox branch."""
+    """Test suspension with dirty workspace does NOT create sandbox branch (CG-09/CG-10 fix)."""
+    import json
     import subprocess
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -681,16 +1000,21 @@ def test_suspend_to_background_with_dirty_workspace(capsys):
         captured = capsys.readouterr()
 
         assert run_id
-        assert 'creating sandbox branch' in captured.out.lower()
+        # Should NOT create a branch (CG-09/CG-10 fix)
+        assert 'creating sandbox branch' not in captured.out.lower()
+        # Should warn about uncommitted changes
+        assert 'uncommitted changes' in captured.out.lower()
+        # Should clarify it's a suspension checkpoint
+        assert 'suspension checkpoint' in captured.out.lower()
 
-        # Verify suspension data includes sandbox branch
+        # Verify suspension data does NOT include sandbox branch
         tea_dir = Path(tmpdir) / '.teaagent'
         suspension_file = tea_dir / f'suspension-{run_id}.json'
-        import json
 
         with open(suspension_file) as f:
             data = json.load(f)
-        assert 'sandbox_branch' in data
+        # Should NOT include sandbox branch (CG-09/CG-10 fix)
+        assert 'sandbox_branch' not in data
 
 
 def test_suspend_to_background_preserves_context(capsys):
