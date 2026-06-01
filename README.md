@@ -4,11 +4,11 @@ Governance-first agent harness for autonomous coding tasks. Thin orchestration l
 
 ## What makes it different
 
-| | TeaAgent | Most agents |
+| Feature | TeaAgent | Most agents |
 |---|---|---|
 | Permission gates | ✅ prompt/read-only/workspace-write/allow/danger-full-access | ❌ binary or none |
 | Audit trail | ✅ hash-chained JSONL run logs | ❌ chat history |
-| Undo | ✅ `teaagent agent undo --last` (or git sandbox rollback) | ❌ manual revert |
+| Undo | ✅ `teaagent undo --last` (or git sandbox rollback) | ❌ manual revert |
 | Cost cap | ✅ hard budget via `--max-estimated-cost-cents` | ❌ surprise bills |
 | Model/provider choice | ✅ multiple adapters | ❌ vendor locked |
 

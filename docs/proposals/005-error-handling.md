@@ -378,6 +378,6 @@ class ErrorMetrics:
 - **Decision**: Rejected - insufficient for needs
 
 ## References
-- ADR-005: Standardize error handling across modules
+- ADR-0014: Standardize error handling across modules
 - Current implementation in `errors.py`, `approval_manager.py`, `runner/_core.py`
 - Error handling best practices

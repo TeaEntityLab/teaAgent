@@ -240,6 +240,6 @@ class ApprovalPolicy:
 - **Decision**: Rejected - simpler solution available
 
 ## References
-- ADR-001: Resolve circular dependencies between approval_manager.py and policy.py
+- ADR-0010: Resolve circular dependencies between approval_manager.py and policy.py
 - Current implementation in `approval_manager.py` and `policy.py`
 - Duplicate implementation in `runner/_approval_manager.py`

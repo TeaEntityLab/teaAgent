@@ -548,6 +548,6 @@ for backend_name, (healthy, message) in health_status.items():
 - **Decision**: Rejected - custom solution better suited
 
 ## References
-- ADR-008: Standardize backend adapter interfaces
+- ADR-0017: Standardize backend adapter interfaces
 - Current implementation in `external_backends.py`
 - Adapter pattern best practices

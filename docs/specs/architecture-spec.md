@@ -195,6 +195,6 @@ Error Propagation → User Notification
 - Alerting for critical failures
 
 ## References
-- ADR-001 through ADR-008 for detailed refactoring plans
+- ADR-0010 through ADR-0018 for detailed refactoring plans
 - Component-specific documentation in respective modules
 - Architecture decision records in docs/adr/

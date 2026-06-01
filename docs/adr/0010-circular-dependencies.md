@@ -1,4 +1,4 @@
-# ADR-001: Resolve Circular Dependencies Between approval_manager.py and policy.py
+# ADR-0010: Resolve Circular Dependencies Between approval_manager.py and policy.py
 
 ## Status
 Proposed

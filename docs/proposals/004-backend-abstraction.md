@@ -353,6 +353,6 @@ def get_default_registry() -> BackendRegistry:
 - **Decision**: Rejected - simpler solution available
 
 ## References
-- ADR-004: Add abstraction layer for backend systems
+- ADR-0013: Add abstraction layer for backend systems
 - Current implementation in `external_backends.py`
 - Backend system best practices

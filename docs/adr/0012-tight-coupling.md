@@ -1,4 +1,4 @@
-# ADR-003: Reduce Tight Coupling in chat_agent.py
+# ADR-0012: Reduce Tight Coupling in chat_agent.py
 
 ## Status
 Proposed

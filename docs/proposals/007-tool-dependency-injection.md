@@ -412,6 +412,6 @@ factory.update_config(new_config)
 - **Decision**: Rejected - simpler solution available
 
 ## References
-- ADR-007: Add dependency injection for tool registration
+- ADR-0016: Add dependency injection for tool registration
 - Current implementation in `workspace_tools/_files.py`
 - Dependency injection best practices

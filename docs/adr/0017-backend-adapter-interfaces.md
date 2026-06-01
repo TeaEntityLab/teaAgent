@@ -1,4 +1,4 @@
-# ADR-008: Standardize Backend Adapter Interfaces
+# ADR-0017: Standardize Backend Adapter Interfaces
 
 ## Status
 Proposed

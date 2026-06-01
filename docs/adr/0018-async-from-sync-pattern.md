@@ -1,4 +1,4 @@
-# ADR 009: Async-from-sync bridge for approval paths
+# ADR-0018: Async-from-sync bridge for approval paths
 
 ## Status
 

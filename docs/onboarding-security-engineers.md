@@ -69,7 +69,7 @@ High-risk experiments run in isolated Git branches:
 
 **Parallel Experiments:**
 ```bash
-teaagent agent run --parallel "strategy-a,strategy-b" --task "Optimize algorithm"
+teaagent run --parallel "strategy-a,strategy-b" "Optimize algorithm"
 ```
 
 ## Security Best Practices
@@ -99,10 +99,10 @@ teaagent skill verify-tsb skill.tsb \
 **Start restrictive, upgrade selectively:**
 ```bash
 # Default to prompt mode
-teaagent agent chat --permission-mode prompt
+teaagent chat --permission-mode prompt
 
 # Only upgrade for trusted tasks
-teaagent agent run --permission-mode workspace-write --task "Update documentation"
+teaagent run --permission-mode workspace-write "Update documentation"
 ```
 
 **Use approval presets for common workflows:**
@@ -177,8 +177,8 @@ teaagent skill verify-tsb vendor-skill.tsb \
 teaagent audit verify --audit-log vendor-skill-audit.jsonl
 
 # 3. Test in isolated environment
-teaagent agent run --permission-mode read-only \
-  --task "Test vendor skill functionality"
+teaagent run --permission-mode read-only \
+  "Test vendor skill functionality"
 
 # 4. Deploy if verification passes
 teaagent skill install vendor-skill.tsb
@@ -198,7 +198,7 @@ teaagent audit analyze --audit-log audit.jsonl \
 teaagent skill verify-tsb suspicious-skill.tsb
 
 # 3. Revert changes using git
-teaagent agent undo --last
+teaagent undo --last
 
 # 4. Report incident with audit evidence
 teaagent audit export --audit-log audit.jsonl \
@@ -273,8 +273,8 @@ teaagent skill verify-tsb critical-skill.tsb \
 ## Resources
 
 - **Architecture**: [docs/architecture.md](architecture.md)
-- **TSB Format**: [docs/tsb-format.md](tsb-format.md)
-- **Audit Chain**: [docs/audit-chain.md](audit-chain.md)
+- **Security Model**: [docs/threat-model.md](threat-model.md)
+- **Audit Log**: [docs/architecture.md#audit-log](architecture.md#audit-log)
 - **Security ADRs**: [docs/adr/](adr/)
 
 ## Support

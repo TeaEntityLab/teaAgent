@@ -449,6 +449,6 @@ class PluginManager:
 - **Decision**: Rejected - custom solution better suited
 
 ## References
-- ADR-006: Replace hard-coded configuration with plugin system
+- ADR-0015: Replace hard-coded configuration with plugin system
 - Current implementation in `config_loader.py`
 - Configuration management best practices

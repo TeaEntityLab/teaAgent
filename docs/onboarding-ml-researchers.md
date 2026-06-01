@@ -20,12 +20,12 @@ TeaAgent's parallel experiment capabilities are ideal for ML research:
 **Basic Usage:**
 ```bash
 # Test multiple optimization strategies in parallel
-teaagent agent run --parallel "adam,sgd,rmsprop" \
-  --task "Optimize the neural network training loop"
+teaagent run --parallel "adam,sgd,rmsprop" \
+  "Optimize the neural network training loop"
 
 # Test different hyperparameter configurations
-teaagent agent run --parallel "lr-0.001,lr-0.01,lr-0.1" \
-  --task "Experiment with learning rates"
+teaagent run --parallel "lr-0.001,lr-0.01,lr-0.1" \
+  "Experiment with learning rates"
 ```
 
 ### 2. Context Management
@@ -38,7 +38,7 @@ Research projects accumulate context over time. TeaAgent provides:
 
 **REPL Commands:**
 ```bash
-teaagent agent chat
+teaagent chat
 # In chat:
 /compact  # Show compression metrics
 /cost     # Show session cost
@@ -68,14 +68,14 @@ Organize research-specific rules in `.teaagent/rules/`:
 
 **Define your hypothesis:**
 ```bash
-teaagent agent chat
+teaagent chat
 > Design an experiment to compare transformer architectures for time series forecasting
 ```
 
 **Create experiment branches:**
 ```bash
-teaagent agent run --parallel "vanilla,attention-only,hybrid" \
-  --task "Implement three transformer variants for time series"
+teaagent run --parallel "vanilla,attention-only,hybrid" \
+  "Implement three transformer variants for time series"
 ```
 
 ### Phase 2: Parallel Execution
@@ -83,17 +83,17 @@ teaagent agent run --parallel "vanilla,attention-only,hybrid" \
 **Run experiments concurrently:**
 ```bash
 # Each branch runs independently
-teaagent agent run --parallel "variant-a,variant-b,variant-c" \
-  --task "Train models with different architectures"
+teaagent run --parallel "variant-a,variant-b,variant-c" \
+  "Train models with different architectures"
 ```
 
 **Monitor progress:**
 ```bash
 # Check experiment status
-teaagent agent status --show-branches
+teaagent status --show-branches
 
 # View quality matrix
-teaagent agent compare --branches "variant-a,variant-b,variant-c"
+teaagent compare --branches "variant-a,variant-b,variant-c"
 ```
 
 ### Phase 3: Analysis
@@ -112,12 +112,12 @@ teaagent agent analyze --branch variant-b --output analysis.md
 
 **Refine based on results:**
 ```bash
-teaagent agent run --task "Improve variant-b based on analysis"
+teaagent run "Improve variant-b based on analysis"
 ```
 
 **Document findings:**
 ```bash
-teaagent agent chat
+teaagent chat
 > Summarize the experiment results and write a methods section
 ```
 
@@ -156,15 +156,15 @@ teaagent agent run --task "Validate the dataset and report statistics"
 
 **Model comparison:**
 ```bash
-teaagent agent run --parallel "baseline,improved,experimental" \
-  --task "Compare model architectures on the benchmark"
+teaagent run --parallel "baseline,improved,experimental" \
+  "Compare model architectures on the benchmark"
 ```
 
 ### 3. Experiment Tracking
 
 **Automatic experiment logging:**
 ```bash
-teaagent agent run --task "Train model and log metrics" \
+teaagent run "Train model and log metrics" \
   --log-experiment experiment-001
 ```
 
@@ -198,14 +198,14 @@ teaagent agent chat
 **Use parallel experiments for hyperparameter search:**
 ```bash
 # Grid search over learning rates and batch sizes
-teaagent agent run --parallel \
+teaagent run --parallel \
   "lr-0.001-bs-32,lr-0.001-bs-64,lr-0.01-bs-32,lr-0.01-bs-64" \
-  --task "Run hyperparameter grid search"
+  "Run hyperparameter grid search"
 ```
 
 **Track experiment lineage:**
 ```bash
-teaagent agent lineage --experiment experiment-001
+teaagent lineage --experiment experiment-001
 ```
 
 ### 3. Collaboration
@@ -250,17 +250,17 @@ teaagent agent chat
 
 ```bash
 # Define search space
-teaagent agent run --parallel \
+teaagent run --parallel \
   "lr-0.0001,lr-0.001,lr-0.01,lr-0.1" \
-  --task "Test different learning rates"
+  "Test different learning rates"
 
 # Analyze results
-teaagent agent compare --metric "validation_loss"
+teaagent compare --metric "validation_loss"
 
 # Refine around best result
-teaagent agent run --parallel \
+teaagent run --parallel \
   "lr-0.005,lr-0.0075,lr-0.01" \
-  --task "Fine-tune learning rate around best result"
+  "Fine-tune learning rate around best result"
 ```
 
 ### Scenario 2: Architecture Search
@@ -269,15 +269,15 @@ teaagent agent run --parallel \
 
 ```bash
 # Implement variants in parallel
-teaagent agent run --parallel \
+teaagent run --parallel \
   "transformer,lstm,gru,hybrid" \
-  --task "Implement four sequence model architectures"
+  "Implement four sequence model architectures"
 
 # Train and evaluate
 teaagent agent run --task "Train all variants on the dataset"
 
 # Select best based on multiple metrics
-teaagent agent select hybrid --metrics "accuracy,efficiency,memory"
+teaagent select hybrid --metrics "accuracy,efficiency,memory"
 ```
 
 ### Scenario 3: Ablation Studies
@@ -286,12 +286,12 @@ teaagent agent select hybrid --metrics "accuracy,efficiency,memory"
 
 ```bash
 # Create ablation variants
-teaagent agent run --parallel \
+teaagent run --parallel \
   "full,no-attention,no-positional-encoding,no-layer-norm" \
-  --task "Create ablation study variants"
+  "Create ablation study variants"
 
 # Compare performance
-teaagent agent compare --all-branches --output ablation-results.csv
+teaagent compare --all-branches --output ablation-results.csv
 ```
 
 ### Scenario 4: Reproducing Published Results
@@ -304,7 +304,7 @@ teaagent skill verify-tsb paper-skill.tsb --identity "authors@university.edu"
 teaagent skill install paper-skill.tsb
 
 # Run the experiment
-teaagent agent run --task "Run the paper's experiment"
+teaagent run "Run the paper's experiment"
 
 # Compare results
 teaagent agent compare --baseline paper-results --output reproduction-report.md
@@ -331,7 +331,7 @@ result = runner.run("my-experiment-skill")
 
 **Log experiments to W&B:**
 ```bash
-teaagent agent run --task "Train model" \
+teaagent run "Train model" \
   --wandb-project my-research \
   --wandb-entity my-lab
 ```
@@ -340,7 +340,7 @@ teaagent agent run --task "Train model" \
 
 **Track experiments with MLflow:**
 ```bash
-teaagent agent run --task "Train model" \
+teaagent run "Train model" \
   --mlflow-tracking-uri mlflow-server \
   --mlflow-experiment my-experiment
 ```
@@ -374,15 +374,15 @@ teaagent agent run --parallel "variant-1,variant-2,...,variant-10" \
 
 **Cache intermediate results:**
 ```bash
-teaagent agent run --task "Preprocess data" --cache preprocessed-data
-teaagent agent run --task "Train model" --use-cache preprocessed-data
+teaagent run "Preprocess data" --cache preprocessed-data
+teaagent run "Train model" --use-cache preprocessed-data
 ```
 
 ## Resources
 
-- **Parallel Experiments**: [docs/parallel-experiments.md](parallel-experiments.md)
-- **Context Management**: [docs/context-management.md](context-management.md)
-- **Modular Rules**: [docs/modular-rules.md](modular-rules.md)
+- **Architecture**: [docs/architecture.md](architecture.md)
+- **Context Bus**: [docs/architecture.md#context-bus](architecture.md#context-bus)
+- **Skills**: [docs/skill-governance.md](skill-governance.md)
 - **Research Examples**: [examples/research/](../examples/research/)
 
 ## Support

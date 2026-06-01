@@ -1,4 +1,4 @@
-# ADR-002: Refactor ApprovalManager to Follow Single Responsibility Principle
+# ADR-0011: Refactor ApprovalManager to Follow Single Responsibility Principle
 
 ## Status
 Proposed
