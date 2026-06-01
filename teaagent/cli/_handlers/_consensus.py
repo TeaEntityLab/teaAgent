@@ -216,7 +216,11 @@ def consensus_request_command(args: argparse.Namespace) -> int:
                 print('Proposal not found after wait.')
                 return 1
             print(f'Final status: {final.status.value}')
-            print(json.dumps(final.to_dict(), indent=2, default=str))
+            print(
+                json.dumps(
+                    final.to_dict(), indent=2, default=lambda o: f'[{type(o).__name__}]'
+                )
+            )
             if final.status not in {ConsensusStatus.APPROVED, ConsensusStatus.REJECTED}:
                 return 1
         else:
@@ -249,7 +253,9 @@ def consensus_wait_command(args: argparse.Namespace) -> int:
         print(f'Proposal "{args.proposal_id}" not found.')
         return 1
     print(f'Status: {final.status.value}')
-    print(json.dumps(final.to_dict(), indent=2, default=str))
+    print(
+        json.dumps(final.to_dict(), indent=2, default=lambda o: f'[{type(o).__name__}]')
+    )
     if final.status in {ConsensusStatus.APPROVED, ConsensusStatus.REJECTED}:
         return 0
     return 1

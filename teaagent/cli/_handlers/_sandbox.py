@@ -141,7 +141,11 @@ def sandbox_execute_command(args: argparse.Namespace) -> int:
     if result.error:
         print(f'Error: {result.error}')
     if result.success:
-        print(json.dumps(result.output, indent=2, default=str))
+        print(
+            json.dumps(
+                result.output, indent=2, default=lambda o: f'[{type(o).__name__}]'
+            )
+        )
         return 0
     return 1
 

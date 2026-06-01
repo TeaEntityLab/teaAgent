@@ -104,6 +104,9 @@ teaagent = "teaagent.cli:main"
 constraint-dependencies = [
     "jaraco-context>=6.1.0",
 ]
+override-dependencies = [
+    "tuf>=7.0.0,<8",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

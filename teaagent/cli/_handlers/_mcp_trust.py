@@ -62,6 +62,7 @@ def _print_json(value: Any) -> None:
             ensure_ascii=False,
             indent=2,
             sort_keys=True,
+            default=lambda o: f'[{type(o).__name__}]',
         )
     )
 
