@@ -2,6 +2,8 @@
 
 **Status:** Partially implemented - See `docs/analysis/agent-ecosystem-roadmap-cross-reference-2026-05-31.md` for detailed status
 
+**Update 2026-06-01:** P0 acceptance tests created for Issue-to-Plan Intake, Plan Review and Revision, Guided Recovery, Execution evidence summary, and Daily cockpit parity.
+
 This roadmap expands TeaAgent's acceptance backlog from component stories into
 ecosystem and daily-use journeys.
 
@@ -26,11 +28,11 @@ background work, integrations, recovery, and reporting.
 
 | Journey | Priority | Required Outcome | New Acceptance File | Status |
 | --- | --- | --- | --- | --- |
-| Daily cockpit parity | P0 | CLI, TUI, and dashboard expose the same core run, approval, cost, and warning state. | `test_daily_cockpit_parity_flow.py` | 🔄 Unit test exists (`test_cockpit.py`), acceptance test with different name (`test_daily_cli.py`, `test_daily_tui.py`) |
-| First-task from issue text | P0 | User pastes an issue, gets ambiguity score, plan artifact, safe command, and acceptance checklist. | `test_issue_to_plan_acceptance_flow.py` | 📋 Not implemented |
-| Plan review and revision | P0 | User can compare two plan revisions before execution and bind run to the accepted plan hash. | `test_plan_review_revision_flow.py` | 📋 Not implemented |
-| Execution evidence summary | P0 | Completed run emits changed files, tests, approvals, costs, failures, and rollback path. | `test_run_evidence_summary_flow.py` | 🔄 Unit test exists (`test_run_evidence.py`), acceptance test not yet created |
-| Guided recovery | P0 | Failed/partial run suggests resume, undo, inspect audit, or retry with safer mode. | `test_guided_recovery_flow.py` | 📋 Not implemented |
+| Daily cockpit parity | P0 | CLI, TUI, and dashboard expose the same core run, approval, cost, and warning state. | `test_daily_cockpit_parity_flow.py` | ✅ Acceptance test created (2026-06-01) |
+| First-task from issue text | P0 | User pastes an issue, gets ambiguity score, plan artifact, safe command, and acceptance checklist. | `test_issue_to_plan_acceptance_flow.py` | ✅ Acceptance test created (2026-06-01) |
+| Plan review and revision | P0 | User can compare two plan revisions before execution and bind run to the accepted plan hash. | `test_plan_review_revision_flow.py` | ✅ Acceptance test created (2026-06-01) |
+| Execution evidence summary | P0 | Completed run emits changed files, tests, approvals, costs, failures, and rollback path. | `test_run_evidence_summary_flow.py` | ✅ Acceptance test created (2026-06-01) |
+| Guided recovery | P0 | Failed/partial run suggests resume, undo, inspect audit, or retry with safer mode. | `test_guided_recovery_flow.py` | ✅ Acceptance test exists (2026-06-01) |
 | Background attach lifecycle | P1 | User starts, detaches, receives notify, attaches, approves, resumes, cancels, and exports evidence. | `test_background_full_lifecycle_flow.py` | 🔄 Similar test exists (`test_background_attach_resume_notify_flow.py`) |
 | Cloud/background parity | P1 | Cloud task and local background run preserve permission, audit, status, and cancellation semantics. | `test_cloud_background_parity_flow.py` | 📋 Not implemented |
 | Slack/message intake | P1 | Gateway task becomes a scoped run ticket with provenance, approval, and audit lineage. | `test_gateway_task_intake_flow.py` | 📋 Not implemented |

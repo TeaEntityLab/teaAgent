@@ -1,6 +1,8 @@
 # Run Evidence Bundle Specification
 # 2026-06-01
 
+**Status:** ✅ Implemented (acceptance test created 2026-06-01)
+
 **Fills:** Gap **F-ECO-011** — *"create a run completion evidence summary that includes
 changed files, commands run, tests passed/failed, approvals, known gaps, and rollback
 path."* The May-31 survey's #1 wishlist item is a *visible, actionable audit trail*,

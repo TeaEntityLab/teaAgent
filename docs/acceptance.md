@@ -21,7 +21,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: 390 passed, 7 skipped/failed**
+**Current acceptance test count: 432 tests collected**
 
 ## Acceptance Flows
 
@@ -41,6 +41,7 @@ directory.
 | `test_automation_foreground_parity_flow.py` | Automation vs foreground argv parity | Cron/background `build_agent_run_command` matches manual run for skills, subagent, caps, and permission flags |
 | `test_background_attach_resume_notify_flow.py` | Background attach and notify | `BackgroundRunStore` lifecycle, log `run_id`, session stream, `agent attach --notify` desktop hook |
 | `test_cli_tui_surface_parity_flow.py` | CLI/TUI daily parity | `agent daily` JSON matches TUI `daily` payload fields; `session list` after setup |
+| `test_daily_cockpit_parity_flow.py` | Daily cockpit parity | Cockpit state serialization stability, pending approvals, last run status, token pressure, harness warnings, next safest command, blockers before warnings |
 | `test_daily_cli.py` | Daily CLI workflow | `agent daily`, `agent preflight`, `agent run`, `agent show`, token budget, harness health, audit persistence, run-level audit summary |
 | `test_daily_tui.py` | Daily TUI workflow | Daily cockpit command, chat mode, memory injection, progress streaming, answer persistence in session history |
 | `test_desktop_client_server_session_flow.py` | Desktop client-server session | MCP HTTP initialize/list/call/close plus CLI `session list` after setup |
@@ -68,6 +69,9 @@ directory.
 | `test_run_undo_acceptance_flow.py` | Reversible change recovery | Undo journal captures pre-write state and restores modified/new files to pre-run workspace state |
 | `test_session_resume_continuity_flow.py` | Session resume continuity | Pending-approval resume replays observations from checkpoint/store, preserves audit lineage, and auto-curates memory on completion |
 | `test_hook_lifecycle_flow.py` | Hook lifecycle acceptance (elevated from integration) | PreToolUse veto via HookError, PostToolUse result chaining, multi-hook ordering, permission_check_hook deny/allow/patterns, registry enabled flag, all 8 Claude Code hook events |
+| `test_issue_to_plan_acceptance_flow.py` | Issue-to-plan intake | Issue text parsing, ambiguity detection, plan artifact generation, safe command suggestion, acceptance checklist generation |
+| `test_plan_review_revision_flow.py` | Plan review and revision | Plan storage with versioning, plan diff generation, run-to-plan binding, hash verification to prevent execution of modified plans |
+| `test_run_evidence_summary_flow.py` | Run evidence summary | Evidence bundle includes changed files, commands, tests, approvals, denied actions, costs, known failures, and rollback path for successful, failed, cancelled, and pending-approval runs with sensitive value redaction |
 | `test_surface_launch_recipes_flow.py` | Multi-surface launch recipes | USAGE surface table covers CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed runtime; documented local smoke commands run without network |
 | `test_subagent_lineage_flow.py` | Subagent lineage and isolation | Child runs record parent lineage metadata; batch returns ordered lineage; default shared-workspace isolation documented |
 | `test_subagent_parallel_worktree_merge_flow.py` | Parallel subagent worktree merge | Two worktree-isolated children expose lineage for parent review before merge |

@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-31 (Phase 4–6 Beta hardening shipped; VS Code extension removed - does not exist in repo)
+Last updated: 2026-06-01 (P0 acceptance tests created for Issue-to-Plan Intake, Plan Review and Revision, Guided Recovery, and Execution evidence summary)
 
 ---
 
@@ -49,7 +49,7 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — High (P0)
 
-**Note:** All P0 items below have been implemented. See `docs/specs/` for technical specifications.
+**Note:** All P0 items below have been implemented with acceptance tests. See `docs/specs/` for technical specifications.
 
 ### Issue-to-Plan Intake
 **Status:** ✅ Implemented
@@ -77,6 +77,24 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Size:** Medium (1-2 weeks)
 **Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 **Files:** `teaagent/guided_recovery.py`, `tests/test_guided_recovery.py`, `tests/acceptance/test_guided_recovery_flow.py`, `docs/specs/guided-recovery-spec-2026-05-31.md`
+
+### Execution Evidence Summary
+**Status:** ✅ Implemented
+**Journey:** Completed run emits changed files, commands, tests, approvals, costs, failures, and rollback path.
+**Acceptance test:** `test_run_evidence_summary_flow.py`
+**Dependencies:** Audit event extraction, evidence bundle serialization, sensitive value redaction
+**Size:** Medium (1-2 weeks)
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Files:** `teaagent/run_evidence.py`, `tests/test_run_evidence.py`, `tests/acceptance/test_run_evidence_summary_flow.py`, `docs/specs/run-evidence-bundle-spec-2026-06-01.md`
+
+### Daily Cockpit Parity
+**Status:** ✅ Implemented
+**Journey:** CLI, TUI, and dashboard expose the same core run, approval, cost, and warning state.
+**Acceptance test:** `test_daily_cockpit_parity_flow.py`
+**Dependencies:** Cockpit state model, serialization, run store integration
+**Size:** Medium (1-2 weeks)
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Files:** `teaagent/cockpit.py`, `tests/test_cockpit.py`, `tests/acceptance/test_daily_cockpit_parity_flow.py`
 
 ---
 

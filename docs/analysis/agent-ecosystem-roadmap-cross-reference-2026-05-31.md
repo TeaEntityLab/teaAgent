@@ -2,11 +2,17 @@
 
 **Purpose:** Cross-reference agent-ecosystem-acceptance-roadmap-2026-05-31.md with acceptance.md to identify completed items.
 
+**Last Updated:** 2026-06-01 (P0 acceptance tests created)
+
 ---
 
 ## Summary
 
 Reviewed 18 journey items from the agent-ecosystem roadmap. Found that some functionality exists (unit tests) but the specific acceptance tests named in the roadmap do not exist in acceptance.md.
+
+**Update 2026-06-01:** All 5 P0 acceptance tests now created (Issue-to-Plan Intake, Plan Review and Revision, Guided Recovery, Execution evidence summary, Daily cockpit parity).
+
+**Update 2026-06-01:** P0 acceptance tests created for Issue-to-Plan Intake, Plan Review and Revision, Guided Recovery, Execution evidence summary, and Daily cockpit parity.
 
 ---
 
@@ -16,11 +22,11 @@ Reviewed 18 journey items from the agent-ecosystem roadmap. Found that some func
 
 | Journey | Required Acceptance Test | Status in acceptance.md | Unit Tests Exist | Notes |
 |---------|------------------------|------------------------|------------------|-------|
-| Daily cockpit parity | `test_daily_cockpit_parity_flow.py` | ❌ Not found | ✅ `test_cockpit.py` | Unit test exists, not acceptance test |
-| First-task from issue text | `test_issue_to_plan_acceptance_flow.py` | ❌ Not found | ❌ No | Not implemented |
-| Plan review and revision | `test_plan_review_revision_flow.py` | ❌ Not found | ❌ No | Not implemented |
-| Execution evidence summary | `test_run_evidence_summary_flow.py` | ❌ Not found | ✅ `test_run_evidence.py` | Unit test exists, not acceptance test |
-| Guided recovery | `test_guided_recovery_flow.py` | ❌ Not found | ❌ No | Not implemented |
+| Daily cockpit parity | `test_daily_cockpit_parity_flow.py` | ✅ Added 2026-06-01 | ✅ `test_cockpit.py` | Acceptance test created |
+| First-task from issue text | `test_issue_to_plan_acceptance_flow.py` | ✅ Added 2026-06-01 | ✅ Yes | Acceptance test created |
+| Plan review and revision | `test_plan_review_revision_flow.py` | ✅ Added 2026-06-01 | ✅ Yes | Acceptance test created |
+| Execution evidence summary | `test_run_evidence_summary_flow.py` | ✅ Added 2026-06-01 | ✅ `test_run_evidence.py` | Acceptance test created |
+| Guided recovery | `test_guided_recovery_flow.py` | ✅ Added 2026-06-01 | ✅ Yes | Acceptance test created |
 
 **Related existing tests:**
 - `test_daily_cli.py` - Daily CLI workflow (includes cockpit command)
