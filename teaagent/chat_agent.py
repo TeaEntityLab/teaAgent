@@ -195,6 +195,7 @@ class ModelDecisionEngine:
             task_spec=self.task_spec,
             skills=self.skills,
             skill_index=self.skill_index,
+            decision_summary=context.get('decision_summary', ''),
         )
 
         if self.budget is not None and self.model:

@@ -28,13 +28,13 @@
 <claude-mem-context>
 # Memory Context
 
-# [teaagent] recent context, 2026-05-31 9:08pm GMT+8
+# [teaagent] recent context, 2026-05-31 10:11pm GMT+8
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (13,204t read) | 918,908t work | 99% savings
+Stats: 50 obs (12,994t read) | 945,584t work | 99% savings
 
 ### May 8, 2026
 S4 Generate commit message for staged changes adding interactive TUI to teaagent CLI (May 8 at 1:01 AM)
@@ -48,11 +48,7 @@ S14 User continues to explore project instructions and configuration context for
 S15 Benchmark TeaAgent against Hermes/OpenCode/ClaudeCode/Codex via DeepWiki analysis, identify gaps, and design LSP + sub-agent implementation plans (May 14 at 4:13 PM)
 S13 User asked "What instructions are you following for this project?" to understand project-specific conventions and guidelines. (May 14 at 4:13 PM)
 ### May 28, 2026
-1250 9:52a 🟣 Implement Git Diff and Review for Commit Range
-1251 " 🔵 Code Review Skill Configuration Details
-1252 " ✅ Modified AGENTS.md file detected
-1254 " 🔵 Commit History for Code Review Range
-1256 " ✅ Summary of Changes Between Commits
+1256 9:52a ✅ Summary of Changes Between Commits
 1260 9:53a ✅ Project Configuration in pyproject.toml
 1266 " 🔵 TeaAgent CLI Command Structure and Handlers
 1273 " ✅ List of Modified Files in Commit Range
@@ -100,6 +96,10 @@ S19 Reflective Dispatch Mechanism Implementation (May 31 at 4:46 PM)
 1564 4:53p 🟣 Implemented reflective dispatch mechanism
 1565 " 🔵 Verified audit level and scope key usage
 1566 6:41p ✅ Git diff review and CLI smoke tests requested
+1567 10:09p 🔴 Fix undefined names in agent CLI handlers
+1568 " 🔴 Correct handling of audit events and run summaries
+1569 " 🔴 Fix TUI budget wiring and JSON serialization
+1570 " ✅ Discard uncommitted changes in AGENTS.md
 
-Access 919k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 946k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

@@ -4,6 +4,7 @@ import argparse
 import subprocess
 import time
 from pathlib import Path
+from typing import Any
 
 from teaagent.audit_chain import verify_audit_chain
 from teaagent.audit_export import export_compliance_bundle, write_compliance_bundle
@@ -20,10 +21,31 @@ def audit_list_command(args: argparse.Namespace) -> int:
 def audit_show_command(args: argparse.Namespace) -> int:
     store = RunStore(args.root, readonly=True)
     try:
-        print_json(store.show_run(args.run_id))
+        events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
+
+    with_reasoning = getattr(args, 'with_reasoning', False)
+    if with_reasoning:
+        reasoning_entries: list[dict[str, Any]] = []
+        for evt in events:
+            payload = evt.get('payload', {})
+            reasoning = payload.get('reasoning')
+            if reasoning is not None:
+                reasoning_entries.append({
+                    'event_type': evt.get('event_type'),
+                    'tool_name': payload.get('tool_name'),
+                    'call_id': payload.get('call_id'),
+                    'reasoning': reasoning,
+                })
+        print_json({
+            'run_id': args.run_id,
+            'events': events,
+            'reasoning_entries': reasoning_entries,
+        })
+    else:
+        print_json(events)
     return 0
 
 

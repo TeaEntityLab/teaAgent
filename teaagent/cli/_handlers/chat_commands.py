@@ -1,4 +1,4 @@
-"""Chat REPL command handlers for memory, pinning, and shell operations."""
+"""Chat REPL command handlers for memory, pinning, compaction, and shell operations."""
 
 from __future__ import annotations
 
@@ -7,10 +7,48 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
+from teaagent.context import ContextCompactor
 from teaagent.memory.failure_card import FailureCardStorage
 from teaagent.memory.pinned_file import PinnedFileStorage
+
+
+def handle_compact(
+    compactor: ContextCompactor,
+    session_context: dict[str, Any],
+    max_tokens: int = 160000,
+) -> dict[str, Any]:
+    """Compact the session context and return the result with status.
+
+    Args:
+        compactor: The context compactor instance.
+        session_context: The current session context dictionary.
+        max_tokens: Maximum tokens to retain after compaction.
+
+    Returns:
+        Dict with compaction result details suitable for display.
+    """
+    pre_count = len(session_context.get('observations', []))
+    compaction_result = compactor.compact(session_context)
+    post_count = len(compaction_result.context.get('observations', []))
+
+    if post_count > 0:
+        compaction_result.context['observations'].append(
+            {
+                'role': 'system',
+                'content': f'[System: Session compacted. Summary: {compaction_result.summary}]',
+            }
+        )
+
+    return {
+        'tokens_saved': compaction_result.tokens_saved,
+        'compression_ratio': compaction_result.compression_ratio,
+        'compaction_count': session_context.get('compaction_count', 0),
+        'pre_count': pre_count,
+        'post_count': post_count,
+        'summary': compaction_result.summary,
+    }
 
 
 def handle_memory_failures(root: Path) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 
 from teaagent.cli._output import print_json
-from teaagent.memory import MemoryCatalog
+from teaagent.memory import MemoryCatalog, TeamMemory
 from teaagent.memory.failure_card import FailureCard
 from teaagent.provenance_gate import (
     PersistenceSubstrate,
@@ -189,6 +189,34 @@ def memory_failures_review_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def memory_decisions_list_command(args: argparse.Namespace) -> int:
+    from teaagent.decision_log import DecisionLog
+
+    log = DecisionLog(args.root)
+    decisions = log.recent(limit=args.limit) if args.limit else log.list()
+    print_json(decisions)
+    return 0
+
+
+def memory_decisions_add_command(args: argparse.Namespace) -> int:
+    from teaagent.decision_log import DecisionLog
+
+    log = DecisionLog(args.root)
+    log.add(
+        decision=args.decision,
+        reason=args.reason,
+        do_not_reverse=getattr(args, 'dont_reverse', ''),
+    )
+    print_json(
+        {
+            'status': 'created',
+            'decision': args.decision,
+            'reason': args.reason,
+        }
+    )
+    return 0
+
+
 def _get_review_recommendation(card: FailureCard) -> str:
     """Generate curation recommendation for a failure card."""
     if not card.is_active():
@@ -210,3 +238,16 @@ def _get_review_recommendation(card: FailureCard) -> str:
         return 'keep'  # High confidence cards are valuable
 
     return 'review_manually'
+
+
+def team_memory_list_command(args: argparse.Namespace) -> int:
+    memory = TeamMemory(args.root)
+    print_json(memory.list())
+    return 0
+
+
+def team_memory_add_command(args: argparse.Namespace) -> int:
+    memory = TeamMemory(args.root)
+    line = memory.add(args.entry)
+    print_json({'status': 'created', 'entry': line})
+    return 0

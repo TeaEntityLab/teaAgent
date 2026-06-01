@@ -1075,11 +1075,11 @@ class TUITests(unittest.TestCase):
         tui._handle_cost()
         self.assertIn('$1.23', ' '.join(output))
 
-    def test_tui_compact_stub(self) -> None:
+    def test_tui_compact_no_session(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._handle_compact()
-        self.assertIn('not yet implemented', ' '.join(output))
+        self.assertIn('no active chat session', ' '.join(output))
 
     # ── Checkpoint / undo ─────────────────────────────────────────────────────
 

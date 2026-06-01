@@ -20,6 +20,7 @@ from teaagent.memory.pinned_file import PinnedFileStorage
 
 from .chat_commands import (
     get_failure_warnings,
+    handle_compact,
     handle_memory_clear,
     handle_memory_failures,
     handle_pin,
@@ -609,19 +610,12 @@ def run_chat_repl(
 
             # Handle compact command
             if user_input == '/compact':
-                print('[TeaAgent] Compacting session context...')
-                compaction_result = compactor.compact(session_context)
+                result = handle_compact(compactor, session_context)
                 print('[TeaAgent] Compaction complete:')
-                print(f'  - Tokens saved: ~{compaction_result.tokens_saved}')
-                print(
-                    f'  - Compression ratio: {compaction_result.compression_ratio:.2%}'
-                )
-                print(
-                    f'  - Total compactions: {session_context.get("compaction_count", 0)}'
-                )
-                print(
-                    f'  - Observations retained: {len(session_context.get("observations", []))}'
-                )
+                print(f'  - Tokens saved: ~{result["tokens_saved"]}')
+                print(f'  - Compression ratio: {result["compression_ratio"]:.2%}')
+                print(f'  - Total compactions: {result["compaction_count"]}')
+                print(f'  - Observations: {result["pre_count"]} → {result["post_count"]}')
                 continue
 
             # Handle clear command

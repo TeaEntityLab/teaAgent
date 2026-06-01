@@ -97,7 +97,7 @@ def summarize_run(
         'budget_cap_usd': budget_cap_cents / 100.0,
         'budget_remaining_usd': max(0.0, remaining_cents / 100.0),
         'audit_log': f'.teaagent/runs/{run_id}.jsonl',
-        'undo_command': f'teaagent agent undo {run_id}',
+        'undo_command': f'teaagent undo {run_id}',
         'input_tokens': input_tokens_value,
         'output_tokens': output_tokens_value,
     }
@@ -114,6 +114,9 @@ def format_run_summary(summary: dict[str, Any]) -> str:
     remaining = summary.get('budget_remaining_usd')
     audit_log = summary.get('audit_log', '')
     undo_cmd = summary.get('undo_command', '')
+    input_tokens = summary.get('input_tokens', 0)
+    output_tokens = summary.get('output_tokens', 0)
+    total_tokens = input_tokens + output_tokens
     cap_str = (
         f'  Budget remaining: ${remaining:.2f} / ${cap:.2f}\n'
         if isinstance(cap, (int, float)) and isinstance(remaining, (int, float))
@@ -123,7 +126,7 @@ def format_run_summary(summary: dict[str, Any]) -> str:
         'Run summary:\n'
         f'  Tools called:     {tool_calls} ({tool_read} read, {tool_write} write)\n'
         f'  Files changed:    {files_changed}\n'
-        f'  Cost:             ${cost:.2f}\n'
+        f'  Cost:             ${cost:.3f} ({total_tokens:,} tokens)\n'
         f'{cap_str}'
         f'  Audit log:        {audit_log}\n'
         f'  Undo:             {undo_cmd}\n'

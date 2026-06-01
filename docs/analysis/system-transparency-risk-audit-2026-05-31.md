@@ -44,12 +44,15 @@ engineered.
 
 ## Ranked Findings
 
-### F-001 - Hook mutation contract is not wired through `ToolRegistry.execute`
+### F-001 - Hook mutation contract wiring (CLOSED — verified in code)
 
-Severity: High (mitigated 2026-05-31)
+Severity: ~~High~~ Closed
 
-`ToolRegistry.execute` applies pre-hook arguments and post-hook results. Remaining
-work: audit fields for hook veto/mutation (TASK-005 in the engineering plan).
+`ToolRegistry.execute` applies pre-hook arguments and post-hook results. Return
+values are used — `run_pre_hooks` returns modified args; `tools.py` assigns
+`arguments = modified_args` when non-None. No longer a risk.
+
+_Retracted per new-risk-findings-2026-05-31.md correction._
 
 ### F-002 - Documentation consistency gate was red
 
@@ -79,16 +82,15 @@ pollute later answers.
 **Remaining:** LRU eviction for `_GRAPH_BY_ROOT` (see O-NEW1 in
 `new-risk-findings-2026-05-31.md`).
 
-### F-004 - External code-analysis backends need timeouts and classified errors
+### F-004 - External code-analysis backends need timeouts and classified errors (CLOSED)
 
-Severity: High
+Severity: ~~High~~ Closed
 
-The `cx` and `qmd` adapters call subprocesses without explicit timeouts. Several
-actions also assume required action-specific keys after a broad input schema has
-accepted the request.
+The `cx` and `qmd` adapters both have configurable `timeout: int = 30` parameters
+and handle `subprocess.TimeoutExpired`. Actions validate required keys before
+execution. No longer a risk.
 
-Required outcome: every external backend invocation has a bounded timeout,
-classified failure, and action-specific validation before execution.
+_Retracted per new-risk-findings-2026-05-31.md correction._
 
 ### F-005 - Remote MCP tool trust policy should fail closed for unknown mutation
 
@@ -101,16 +103,16 @@ when the name or schema suggests mutation.
 Required outcome: unknown remote tools need explicit trust profile approval,
 capability manifest review, or conservative mutation classification.
 
-### F-006 - Audit privacy claim is stronger than implementation
+### F-006 - Audit privacy claim is stronger than implementation (CLOSED)
 
-Severity: Medium
+Severity: ~~Medium~~ Closed
 
-The code describes `AuditLevel.L3` as encrypted at rest. The current
-implementation stores the payload directly with HMAC chaining and file
-permission controls, but no encryption layer.
+The docstring was corrected on 2026-05-31 to state: "Encryption at rest is NOT
+implemented; payloads are stored in plaintext." L3 is now documented as "Full
+local trace (all data, no redaction)" with no encryption claims.
 
-Required outcome: either implement encryption for L3, or rename/reword the level
-so operators understand the actual privacy property.
+Required outcome: met — docstring corrected. Additional encryption can be added
+as a separate feature if compliance requirements emerge.
 
 ### F-007 - Release maturity claims need one canonical source
 

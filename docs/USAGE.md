@@ -129,6 +129,7 @@ teaagent tui --setup --root .
 - [Verify Your Setup](#verify-your-setup)
 - [Daily Use](#daily-use)
 - [Choose Your Surface](#choose-your-surface)
+- [Desktop Packaging](#desktop-packaging)
 - [Agent Mode (CLI)](#agent-mode-cli)
 - [Chat Mode (TUI)](#chat-mode-tui)
 - [Handling Approvals](#handling-approvals)
@@ -459,6 +460,111 @@ cd vscode && npm install && npm run compile
 See also: [CLI reference](cli.md), [architecture](architecture.md), [examples/README.md](../examples/README.md).
 
 <!-- SURFACE_RECIPES:END -->
+
+## Desktop Packaging
+
+### Running as a Desktop App
+
+TeaAgent can be used with desktop IDEs and editors through these surfaces:
+
+#### ACP Mode (VS Code, Zed, JetBrains)
+
+```bash
+teaagent acp serve
+```
+
+Connects to ACP-compatible editors over stdio JSON-RPC. The adapter emits
+`session/update` progress events (tool calls, text chunks) during `session/prompt`.
+No additional configuration needed — start the server and connect from your editor's
+ACP client.
+
+#### MCP Mode (any MCP client)
+
+```bash
+teaagent mcp serve --http --port 7330 --auth-token "$TOKEN"
+```
+
+Exposes the full workspace tool pack to any MCP-compatible client over Streamable HTTP.
+IDE plugins, CI/CD pipelines, and custom web UIs can all connect. Use `--allowed-origin`
+to restrict browser callers.
+
+#### TUI Mode
+
+```bash
+teaagent tui --setup --root .
+```
+
+Full interactive terminal UI with multi-turn chat, memory management, approval handling,
+and run resumption. Install `prompt-toolkit` for enhanced history and autosuggest:
+
+```bash
+pip install -e ".[tui]"
+```
+
+### Packaging for Distribution
+
+#### pip install in venv (current, recommended)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+This is the primary distribution path. All surfaces (CLI, TUI, MCP, ACP) work from a venv.
+
+#### Docker Image (experimental)
+
+A minimal `Dockerfile` for headless/CI use:
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY . .
+RUN pip install -e .
+ENTRYPOINT ["teaagent"]
+```
+
+Build and run:
+
+```bash
+docker build -t teaagent .
+docker run --rm -e OPENAI_API_KEY teaagent agent run gpt "summarize the repo" \
+  --permission-mode read-only --root /app
+```
+
+For MCP HTTP mode in a container:
+
+```bash
+docker run --rm -p 7330:7330 \
+  -e OPENAI_API_KEY \
+  -e MCP_TOKEN \
+  teaagent mcp serve --http --host 0.0.0.0 --port 7330 \
+  --auth-token "$MCP_TOKEN" --root /app
+```
+
+#### Nix Flake (community)
+
+A community-maintained Nix flake provides reproducible builds:
+
+```nix
+# flake.nix (community contribution)
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  outputs = { self, nixpkgs }: {
+    packages.x86_64-linux.teaagent = nixpkgs.legacyPackages.x86_64-linux.python3Packages.buildPythonPackage {
+      pname = "teaagent";
+      version = "0.1.0";
+      src = self;
+      propagatedBuildInputs = with nixpkgs.legacyPackages.x86_64-linux.python3Packages; [
+        # core dependencies
+      ];
+    };
+  };
+}
+```
+
+See the community flake repository for the maintained version.
 
 ## Agent Mode (CLI)
 
@@ -820,5 +926,6 @@ note read
 
 - Full CLI reference: [docs/cli.md](cli.md)
 - Architecture: [docs/architecture.md](architecture.md)
+- Cloud / background deployment: [docs/cloud-deployment.md](cloud-deployment.md)
 - Tool authoring: [docs/tool-authoring.md](tool-authoring.md)
 - Provider authoring: [docs/provider-authoring.md](provider-authoring.md)

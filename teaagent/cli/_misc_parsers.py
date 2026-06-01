@@ -526,6 +526,11 @@ def _audit(
     show_cmd = subs.add_parser('show', help='Show one audit JSONL run.')
     show_cmd.add_argument('run_id', help='Run id to show.')
     show_cmd.add_argument('--root', default='.', help='Workspace root.')
+    show_cmd.add_argument(
+        '--with-reasoning',
+        action='store_true',
+        help='Include model reasoning alongside tool call events.',
+    )
     show_cmd.set_defaults(func=show_handler)
 
     prune_cmd = subs.add_parser('prune', help='Delete old audit JSONL runs.')

@@ -185,6 +185,7 @@ def assemble_agent_prompt(
     skill_index: Optional[list[SkillIndexEntry]] = None,
     aci_retriever: Optional[Any] = None,
     aci_cache_db: Optional[str] = None,
+    decision_summary: str = '',
 ) -> PromptBundle:
     system_parts = [
         DECISION_INSTRUCTIONS,
@@ -200,6 +201,8 @@ def assemble_agent_prompt(
     if project_instructions:
         system_parts.append('Project instructions:')
         system_parts.append(project_instructions)
+    if decision_summary:
+        system_parts.append(decision_summary)
     if skill_index:
         index_section = skill_index_to_prompt_section(skill_index)
         if index_section:

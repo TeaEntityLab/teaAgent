@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.context import ContextCompactor as _ContextCompactor
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
@@ -664,7 +665,37 @@ class TeaAgentTUI:
     # ── Effort throttling / budget enforcement ───────────────────────────────
 
     def _handle_compact(self) -> None:
-        self.output_fn('compact: session compaction not yet implemented in TUI')
+        session = self._current_session()
+        if session is None or not session.messages:
+            self.output_fn('compact: no active chat session to compact')
+            return
+
+        compactor = _ContextCompactor(
+            recent_observations=3,
+            enable_semantic_compression=True,
+        )
+        max_tokens = 160000  # conservative default for most model context windows
+
+        messages_dicts = [m.to_dict() for m in session.messages]
+        pre_count = len(messages_dicts)
+        compacted = compactor.compact_chat_history(messages_dicts, max_tokens)
+        post_count = len(compacted)
+
+        session.messages = [
+            ChatMessage.from_dict(m) for m in compacted
+        ]
+        omitted = pre_count - post_count
+        if omitted > 0:
+            session.messages.append(
+                ChatMessage(
+                    role='system',
+                    content=f'[System: Session compacted. {omitted} earlier messages compressed to preserve context.]',
+                )
+            )
+        self._get_session_store().save(session)
+        self.output_fn(
+            f'compact: session compacted ({pre_count} → {post_count} messages, {omitted} omitted)'
+        )
 
     def _handle_cost(self) -> None:
         self.output_fn(f'cost: ${self._session_cost_cents / 100:.2f}')

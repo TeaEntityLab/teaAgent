@@ -355,8 +355,9 @@ class GitBranchSandbox:
                         # Merge failed, check for conflicts
                         # Check if the failure was due to conflicts or other issues
                         if has_merge_conflicts(self._root):
-                            # This is a conflict - proceed to conflict resolution
-                            # TODO: Implement automatic conflict resolution
+                            # This is a conflict - proceed to conflict resolution.
+                            # LLM-based conflict resolution is handled below via
+                            # resolve_conflicts_with_llm when enable_self_healing is set.
                             pass
                         else:
                             # This is a different merge error (e.g., unrelated histories, local changes)

@@ -330,6 +330,10 @@ def _execute_agent_task(
     auto_approved_call_id: Optional[str] = None,
     plan_contract: Optional[Any] = None,
 ) -> int:
+    # First-run orientation (shown once per workspace)
+    from teaagent.cli._handlers._misc import handle_first_run
+
+    handle_first_run(Path(args.root), quiet=getattr(args, 'quiet', False))
     # Handle parallel experiments
     parallel_value = getattr(args, 'parallel', None)
     if parallel_value:
@@ -383,6 +387,65 @@ def _execute_agent_task(
         return gate_exit
     store = RunStore(args.root)
     audit = store.audit_logger()
+
+    from teaagent.scratchpad import Scratchpad
+
+    scratchpad = Scratchpad(Path(args.root))
+
+    _sp_state: dict[str, object] = {
+        'written': False,
+    }
+
+    def _write_scratchpad_on_exit() -> None:
+        if _sp_state['written']:
+            return
+        try:
+            scratchpad.write(
+                goal=task,
+                progress='Session interrupted before completion.',
+                open_questions=[],
+                next_step='Resume from previous session.',
+            )
+            _sp_state['written'] = True
+        except Exception:
+            pass
+
+    import atexit
+
+    atexit.register(_write_scratchpad_on_exit)
+
+    previous = signal.signal(signal.SIGINT, lambda sig, frame: _write_scratchpad_on_exit())
+    _sp_sigint_restore: Callable[..., Any] = previous
+
+    # Resume offer on session start
+    if scratchpad.exists() and not resumed_from:
+        content = scratchpad.read()
+        if content:
+            is_interactive = sys.stdin.isatty()
+            if is_interactive:
+                print(
+                    '\nFound scratchpad from previous session.',
+                    file=sys.stderr,
+                )
+                print(
+                    f'Last goal: {content.get("last_goal", "(none)")}',
+                    file=sys.stderr,
+                )
+                progress = content.get('progress', '')
+                if progress:
+                    print(f'Progress: {progress}', file=sys.stderr)
+                print('Resume? (y/n): ', end='', file=sys.stderr)
+                choice = input().strip().lower()
+                if choice in ('y', 'yes'):
+                    resume_prompt = scratchpad.resume_prompt()
+                    if resume_prompt:
+                        merged_context_extra['scratchpad_resume'] = resume_prompt
+                        task = f'{task}\n\n{resume_prompt}'
+                else:
+                    scratchpad.clear()
+            else:
+                scratchpad.clear()
+
     from teaagent.run_undo import UndoJournal
     from teaagent.sandbox import GitBranchSandbox
 
@@ -558,6 +621,33 @@ def _execute_agent_task(
     store.logger_for_result(result, audit)
     if undo_journal.has_entries:
         undo_journal.save_to(store.undo_path(result.run_id))
+
+    if 'scratchpad' in dir():
+        _sp_state['written'] = True
+        error_msg = result.error_message or ''
+        if result.status == 'completed':
+            final_answer = (
+                result.final_answer.content
+                if result.final_answer
+                else 'Task completed.'
+            )
+            scratchpad.write(
+                goal=task,
+                progress=f'Completed: {final_answer[:500]}',
+                open_questions=[],
+                next_step='',
+                session_id=result.run_id,
+            )
+        else:
+            scratchpad.write(
+                goal=task,
+                progress=f'Ended ({result.status})' + (
+                    f': {error_msg[:200]}' if error_msg else ''),
+                open_questions=[],
+                next_step='Review errors and retry.',
+                session_id=result.run_id,
+            )
+
 
     validation_profile = _resolve_validation_profile(args)
     if validation_profile and result.status == 'completed':
@@ -1406,6 +1496,9 @@ def agent_plan_command(args: argparse.Namespace) -> int:
 
 
 def agent_undo_command(args: argparse.Namespace) -> int:
+    import base64
+    import difflib
+
     from teaagent.run_undo import UndoJournal
     from teaagent.sandbox import GitBranchSandbox
 
@@ -1422,9 +1515,33 @@ def agent_undo_command(args: argparse.Namespace) -> int:
             )
             return 1
 
+    preview = getattr(args, 'preview', False)
+
     # Try git sandbox rollback first
     git_sandbox = GitBranchSandbox(args.root, run_id=run_id)
     if git_sandbox.is_available():
+        if preview:
+            root_path = Path(args.root).resolve()
+            try:
+                diff_result = subprocess.run(
+                    [
+                        'git',
+                        'diff',
+                        git_sandbox._branch_name,
+                        git_sandbox._original_branch or 'HEAD',
+                    ],
+                    cwd=root_path,
+                    capture_output=True,
+                    text=True,
+                )
+                if diff_result.stdout.strip():
+                    print(diff_result.stdout)
+                else:
+                    print('(no undo diff available)')
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                print('(unable to generate git diff preview)')
+            return 0
+
         rollback_result = git_sandbox.rollback()
         if rollback_result.success:
             print_json(
@@ -1454,6 +1571,53 @@ def agent_undo_command(args: argparse.Namespace) -> int:
         )
         return 1
     journal = UndoJournal(args.root, path=undo_path)
+
+    if preview:
+        root_path = Path(args.root).resolve()
+        out: list[str] = []
+        for entry in journal.iter_entries():
+            rel_path = entry.get('path')
+            if not isinstance(rel_path, str) or not rel_path:
+                continue
+            existed_before = bool(entry.get('existed_before'))
+            abs_path = (root_path / rel_path).resolve()
+            if not str(abs_path).startswith(str(root_path)):
+                continue
+            if not existed_before:
+                out.append(f'--- {rel_path} (would be deleted)')
+                continue
+            before_b64 = entry.get('content_b64')
+            if not isinstance(before_b64, str) or not before_b64:
+                continue
+            try:
+                before_bytes = base64.b64decode(before_b64)
+            except Exception:
+                continue
+            try:
+                before_text = before_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                out.append(f'--- {rel_path} (binary restore)')
+                continue
+            try:
+                after_text = (
+                    abs_path.read_text(encoding='utf-8') if abs_path.is_file() else ''
+                )
+            except UnicodeDecodeError:
+                out.append(f'--- {rel_path} (binary current)')
+                continue
+            before_lines = before_text.splitlines(keepends=True)
+            after_lines = after_text.splitlines(keepends=True)
+            out.extend(
+                difflib.unified_diff(
+                    after_lines,
+                    before_lines,
+                    fromfile=f'a/{rel_path}',
+                    tofile=f'b/{rel_path}',
+                )
+            )
+        print(''.join(out) if out else '(no undo diff available)')
+        return 0
+
     result = journal.restore()
     status = 'restored' if result.ok else 'partial'
     rel_undo = undo_path.resolve().relative_to(store.root).as_posix()
@@ -2326,7 +2490,15 @@ def agent_status_command(args: argparse.Namespace) -> int:
 
 def agent_runs_list(args: argparse.Namespace) -> int:
     store = RunStore(args.root, readonly=True)
-    print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
+    payload = [summary.to_dict() for summary in store.list_runs(limit=args.limit)]
+    from teaagent.scratchpad import Scratchpad
+
+    scratchpad = Scratchpad(Path(args.root))
+    if scratchpad.exists():
+        content = scratchpad.read()
+        if content and content.get('last_goal'):
+            payload.append({'scratchpad_last_goal': content['last_goal']})
+    print_json(payload)
     return 0
 
 
