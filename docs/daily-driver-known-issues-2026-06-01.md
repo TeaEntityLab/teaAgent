@@ -22,6 +22,9 @@ If you used an older build, these are now corrected in `teaagent chat`:
 ### 1. TUI `/cost` and the budget bar show $0.00 (cosmetic, not a spend cap)
 In `teaagent tui`, the session cost counter is not yet wired to real run cost, so
 `/cost` and the budget display read `$0.00` regardless of actual usage.
+- **2026-06-02 code note:** the working tree now includes a stop-gap that adds
+  `result.cost_cents` to the TUI session counter. Keep this issue open until the
+  active TUI path and full controller parity are tested.
 - **Impact:** display only — your provider still bills normally; the budget *cap*
   (`--max-estimated-cost-cents`) still enforces.
 - **Workaround:** use `teaagent chat` if you need an accurate live session-cost readout,

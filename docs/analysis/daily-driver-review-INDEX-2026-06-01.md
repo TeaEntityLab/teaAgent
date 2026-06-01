@@ -4,6 +4,54 @@
 A single entry point to the 2026-06-01 review of teaagent's daily surfaces
 (TUI, `teaagent chat`, agent mode). Read in this order.
 
+## 2026-06-02 expansion after further code improvements
+
+These files are the newest layer. They preserve the June 1 evidence but reclassify
+newly patched behavior as verify/close where appropriate, and add fresh risk items from
+the June 2 review.
+
+1. **`../daily-driver-current-status.md`** *(user guide)*
+   Short daily-use front door for TUI, TUI chat, and agent mode.
+2. **`daily-driver-new-code-facts-and-risks-2026-06-02.md`** *(analysis)*
+   New working-tree facts: chat positional task forwarding and TUI cost stop-gap are
+   partially fixed; root, controller parity, lifecycle wording, and new RL risks remain.
+3. **`daily-driver-new-risk-log-2026-06-02.md`** *(analysis)*
+   RL-NEW-01..05: dry-run writes, context-pack truth label, pinned-file containment,
+   corrupt state visibility, and failure-card matching.
+4. **`daily-driver-advice-and-recommendation-ledger-2026-06-02.md`** *(analysis)*
+   June 2 advice/recommendation/thought ledger.
+5. **`daily-driver-decision-log-2026-06-02.md`** *(analysis)*
+   Decisions DQ-2026-001..018 for root, cost, lifecycle, approval, and cleanup.
+6. **`../plans/daily-driver-implementation-sequencing-board-2026-06-02.md`** *(plans)*
+   Current implementation order and parallel lanes.
+7. **`../plans/daily-driver-regression-test-matrix-2026-06-02.md`** *(plans)*
+   Test matrix for trust-sensitive daily-driver behavior.
+8. **`../plans/ticket-plans/index.md`** *(plans)*
+   Ticket index now includes TASK-DD2-003..014.
+9. **`../architecture/daily-driver-state-and-lifecycle-map-2026-06-02.md`** *(architecture)*
+   State/lifecycle map for root, cost, approvals, run records, undo, and audit evidence.
+10. **`../reviews/daily-driver-docs-package-review-2026-06-02.md`** *(review)*
+    Review of the documentation package itself and its saturation risk.
+
+## 2026-06-02 additional guide/module supplement
+
+This supplement makes the June 2 findings easier to use day to day.
+
+1. **`../guides/daily-driver-guide-index-2026-06-02.md`** *(guides)*
+   Entry point for command cookbook, TUI/chat recipes, approval recipes, and recovery.
+2. **`../modules/daily-driver-module-map-2026-06-02.md`** *(modules)*
+   Maps daily risks to TUI, run store, git sandbox, context pack, and pinned-file docs.
+3. **`daily-driver-more-docs-log-2026-06-02.md`** *(analysis)*
+   Logs the extra docs pass, advice MD-001..010, and docs-expansion risks.
+4. **`../plans/daily-driver-verification-backlog-2026-06-02.md`** *(plans)*
+   Backlog of the highest-value verification work created by the June 2 docs.
+5. **`../governance/daily-driver-release-gates-2026-06-02.md`** *(governance)*
+   Release blockers and proof requirements for daily-driver claims.
+6. **`../reliability/daily-driver-reliability-scorecard-2026-06-02.md`** *(reliability)*
+   Conservative readiness scores by area.
+7. **`../security/daily-driver-safety-boundaries-2026-06-02.md`** *(security)*
+   Safety boundaries for root, approval, pinned files, cost, undo, evidence, and sandbox.
+
 ## 2026-06-01 second-pass after improvements: read these first
 
 These files are the newest layer of the daily-driver review. They incorporate the
@@ -148,9 +196,14 @@ The May-31 work was **doc-level**; this package is **code-level + consolidation*
 | SPEC-* | design spec | recommendation log §3 |
 | J-# | judgment | recommendation log §4 |
 | DQ-# | decision needed | open-decisions |
+| DQ-2026-### | June 2 decision needed | daily-driver-decision-log-2026-06-02 |
 | AS-# / NG-# | assumption / non-goal | assumptions-and-nongoals |
 | UX-F# | survey theme | May-31 survey |
 | F-ECO-### | ecosystem gap | May-31 gap review |
+| CF-### | June 2 code fact | daily-driver-new-code-facts-and-risks-2026-06-02 |
+| RL-NEW-## | June 2 new risk | daily-driver-new-risk-log-2026-06-02 |
+| ADV-### | June 2 advice item | daily-driver-advice-and-recommendation-ledger-2026-06-02 |
+| MD-### | June 2 more-docs advice item | daily-driver-more-docs-log-2026-06-02 |
 
 ## One-paragraph executive summary
 

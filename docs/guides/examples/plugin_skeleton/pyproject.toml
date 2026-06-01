@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "teaagent-my-plugin"
+version = "0.1.0"
+description = "Example TeaAgent plugin that registers a greeting tool."
+requires-python = ">=3.11"
+dependencies = ["teaagent>=0.1"]
+
+[project.entry-points."teaagent.tools"]
+my_plugin = "my_plugin.tools:register"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/my_plugin"]

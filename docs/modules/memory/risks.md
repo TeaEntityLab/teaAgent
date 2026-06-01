@@ -1,0 +1,147 @@
+# Memory Module — Risks, Failure Modes, and Edge Cases
+
+---
+
+## Risk Vectors
+
+### R1 — Duplicate `MemoryCatalog` Implementation
+
+**File:** `memory/catalog.py` vs `memory_legacy.py`
+
+Both files define `MemoryEntry`, `MemoryCatalog`, `normalize_tags`, `memory_matches`, `memory_relevance_score`, `memory_entry_from_payload`, `memory_entries_to_prompt`.
+
+- `memory/__init__.py` (line 18–23) re-exports from `memory_legacy`, making it the authoritative version.
+- `memory/catalog.py` diverges in behavior: `memory_matches()` at line 252–258 uses `normalized in content_lower` (substring, single-token). `memory_legacy.py` line 314–316 uses `all(token in haystack ...)` (all-token AND over content+tags).
+- **Risk:** A caller that imports directly from `memory.catalog` (bypassing `__init__`) gets the weaker substring matcher and lacks cross-process locking and atomic writes. Silent behavioral divergence.
+
+---
+
+### R2 — Cross-Process Lock is Unix-Only
+
+**File:** `memory_legacy.py`, lines 133–160
+
+`_cross_process_lock()` uses `fcntl.flock`. On Windows or platforms without `fcntl`:
+
+```python
+except (ImportError, OSError):
+    pass  # gracefully fall back to no locking
+```
+
+This means concurrent sub-agent processes on Windows can corrupt `memory.jsonl` via torn read-modify-write cycles. The `catalog.py` version has no cross-process locking at all.
+
+---
+
+### R3 — `catalog.py` Uses Non-Atomic Rewrites
+
+**File:** `memory/catalog.py`, lines 160–166, 190–196
+
+`delete_by_branch()` and `delete_by_run_id()` call `self.path.write_text(...)` directly. This is not atomic — a crash between the `write_text` open and close will truncate the file to empty or partial content. The `memory_legacy.py` version uses `_atomic_write_entries()` (`os.replace()`) to avoid this.
+
+---
+
+### R4 — `FailureCardStorage` Reads/Writes Full JSON Array
+
+**File:** `memory/failure_card.py`, lines 256–277
+
+Every call to `append()`, `invalidate()`, or `prune_expired()` reads the entire `failures.json` into memory, modifies it, and writes it back. For large failure histories this is O(n) I/O per operation and can be slow. There is no streaming or JSONL format here.
+
+---
+
+### R5 — `FailureCardStorage._write_cards()` Silently Swallows `OSError`
+
+**File:** `memory/failure_card.py`, lines 268–277
+
+```python
+except OSError as exc:
+    logger.warning('Failed to write failure cards: %s', exc)
+```
+
+A disk-full or permission error causes a write to silently fail. The caller receives no error, and the in-memory mutation is lost. Same for `PinnedFileStorage._write_pinned_files()` at line 159.
+
+---
+
+### R6 — `FileWatcher` Is Optional but Raises on Construction
+
+**File:** `memory/file_watcher.py`, lines 165–169
+
+If `watchdog` is not installed, constructing a `FileWatcher` raises `ImportError`. However, at import time `WATCHDOG_AVAILABLE = False` is set and dummy types are defined. Any code that unconditionally constructs `FileWatcher(...)` without checking `WATCHDOG_AVAILABLE` first will raise at runtime.
+
+---
+
+### R7 — Debounce Uses Wall Clock and `threading.Lock`, Not Process-Safe
+
+**File:** `memory/file_watcher.py`, lines 108–113
+
+Debounce logic in `FileChangeHandler.on_modified()` uses `time.time()` and a thread lock. If two rapid events arrive on different threads but within the debounce window, the second is silently dropped. The suppressed callback invocation at line 116 (`with suppress(Exception)`) means any exception in the user's callback is silently lost.
+
+---
+
+### R8 — Secret File Detection is Filename-Only, Not Content-Based
+
+**File:** `memory/pinned_file.py`, lines 162–197
+
+`_is_secret_filename()` only checks filename patterns, not file contents. A secret stored in a file named `config.txt` or `settings.py` will not be caught. The docstring explicitly notes this ("Uses filename-only heuristics — never reads file contents").
+
+---
+
+### R9 — `PinnedFile.from_dict()` Has No Validation
+
+**File:** `memory/pinned_file.py`, line 110
+
+```python
+return cls(**data)
+```
+
+If the stored JSON is missing `file_path`, `pinned_at`, or `last_modified`, this raises `TypeError`. Unlike `FailureCard.from_dict()` (line 225) which filters to known fields, `PinnedFile.from_dict()` passes the full dict directly.
+
+---
+
+### R10 — `TeamMemory.inject_prompt()` Token Estimate is a 4:1 Char Heuristic
+
+**File:** `memory/team_memory.py`, line 54
+
+```python
+char_budget = limit_tokens * 4
+```
+
+This approximation will over-include for CJK or emoji-heavy content (1–2 chars per token) and under-include for whitespace-heavy prose. The actual injected prompt may significantly exceed `limit_tokens`.
+
+---
+
+### R11 — `MemoryHierarchy.search_all()` `auto_memory` Match is Substring-Only
+
+**File:** `memory_legacy.py`, lines 421–430
+
+```python
+if query.lower() in auto_content.lower():
+    results['auto_memory'] = [MemoryEntry(memory_id='auto-memory-1', content=auto_content[:500], ...)]
+```
+
+Only the first 500 chars of the auto-memory file are returned as a single synthetic entry, regardless of document size. If the query matches late in a long file, the returned content may not contain the relevant section.
+
+---
+
+### R12 — `apply_auto_invalidation()` Key `file_signature` Not in `FailureCard` Dataclass
+
+**File:** `memory/failure_card.py`, lines 406–419
+
+`item['file_signature'] = current_sig` stores extra keys directly in the raw dict. These keys are not part of the `FailureCard` dataclass fields. `FailureCard.from_dict()` at line 225 filters only known fields, so file signatures survive serialization in the raw JSON but are invisible after deserialization via `from_dict()`. This means `apply_auto_invalidation()` always re-stores signatures on each invocation for already-signature-stored cards.
+
+---
+
+## Known Issues Summary Table
+
+| ID | File | Line | Severity | Description |
+|---|---|---|---|---|
+| R1 | `memory/catalog.py` | 252–258 | High | Divergent `memory_matches()` from `memory_legacy.py` |
+| R2 | `memory_legacy.py` | 133–160 | Medium | No cross-process locking on Windows |
+| R3 | `memory/catalog.py` | 160–196 | High | Non-atomic file rewrite on delete operations |
+| R4 | `memory/failure_card.py` | 247–277 | Low | Full JSON array read-write O(n) per operation |
+| R5 | `memory/failure_card.py` | 268–277 | Medium | OSError on write silently swallowed |
+| R6 | `memory/file_watcher.py` | 165–169 | Low | ImportError if watchdog absent and FileWatcher constructed |
+| R7 | `memory/file_watcher.py` | 116 | Low | Callback exceptions silently suppressed |
+| R8 | `memory/pinned_file.py` | 162–197 | Medium | Filename-only secret detection |
+| R9 | `memory/pinned_file.py` | 110 | Medium | `PinnedFile.from_dict()` no field validation |
+| R10 | `memory/team_memory.py` | 54 | Low | Inaccurate token estimate for inject_prompt |
+| R11 | `memory_legacy.py` | 421–430 | Low | Auto-memory search returns truncated content |
+| R12 | `memory/failure_card.py` | 406–419 | Low | `file_signature` key invisible after deserialization |
