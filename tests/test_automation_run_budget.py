@@ -112,3 +112,9 @@ def test_background_command_preserves_run_surface_flags() -> None:
 def test_chat_agent_config_cost_cap_defaults_to_runner_budget() -> None:
     config = ChatAgentConfig.from_root('.', max_estimated_cost_cents=25)
     assert config.max_estimated_cost_cents == 25
+
+
+def test_chat_agent_config_cost_cap_zero_passes_through() -> None:
+    """0 should pass through as-is (unlimited / no cap)."""
+    config = ChatAgentConfig.from_root('.', max_estimated_cost_cents=0)
+    assert config.max_estimated_cost_cents == 0

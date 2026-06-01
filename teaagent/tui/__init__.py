@@ -104,7 +104,7 @@ HELP_TEXT = """Commands:
   pinned                    List all pinned files.
   compact                   Compact session context to save tokens.
   cost                      Show session cost.
-  effort <low|normal|high>  Set effort throttling level.
+  effort <low|normal|high|unlimited>  Set effort throttling level. Default is unlimited (no cost cap).
   budget                    Show budget and effort status.
   checkpoint                Create manual git checkpoint.
   undo                      Undo all changes (using checkpoint — use teaagent agent undo for advanced).
@@ -137,7 +137,7 @@ class TeaAgentTUI:
         enable_git_tools: bool = False,
         skill_search_dirs: Optional[list[str]] = None,
         memory_limit: int = 5,
-        max_estimated_cost_cents: int = 1000,
+        max_estimated_cost_cents: int = 0,
     ) -> None:
         self.database = database
         self.provider = provider
@@ -184,9 +184,9 @@ class TeaAgentTUI:
 
         # Effort throttling and budget tracking
         self._session_cost_cents: float = 0.0
-        self._effort_level: str = 'normal'
-        self._runtime_max_cost_cents: int = 1000
-        self._max_cost_budget_cents: int = 1000
+        self._effort_level: str = 'unlimited'
+        self._runtime_max_cost_cents: int = 0
+        self._max_cost_budget_cents: int = 0
 
         # Cockpit state for operator dashboard
         self._cockpit_state: Optional[CockpitState] = None
@@ -746,16 +746,26 @@ class TeaAgentTUI:
     def _handle_effort(self, args: list[str]) -> None:
         if not args:
             remaining = self._max_cost_budget_cents - self._session_cost_cents
+            budget_str = (
+                'unlimited'
+                if self._max_cost_budget_cents == 0
+                else f'${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
+            )
+            remaining_str = (
+                'unlimited'
+                if self._max_cost_budget_cents == 0
+                else f'${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
+            )
             self.output_fn(
                 f'effort: {self._effort_level}  '
-                f'budget=${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}  '
+                f'budget={budget_str}  '
                 f'spent=${int(self._session_cost_cents // 100)}.{int(self._session_cost_cents % 100):02d}  '
-                f'remaining=${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
+                f'remaining={remaining_str}'
             )
             return
         level = args[0].lower()
-        if level not in ('low', 'normal', 'high'):
-            self.output_fn('error: effort must be low, normal, or high')
+        if level not in ('low', 'normal', 'high', 'unlimited'):
+            self.output_fn('error: effort must be low, normal, high, or unlimited')
             return
         self._effort_level = level
         if level == 'low':
@@ -764,21 +774,39 @@ class TeaAgentTUI:
         elif level == 'normal':
             self._max_cost_budget_cents = 1000
             self._runtime_max_cost_cents = 1000
-        else:
+        elif level == 'high':
             self._max_cost_budget_cents = 5000
             self._runtime_max_cost_cents = 5000
+        else:
+            self._max_cost_budget_cents = 0
+            self._runtime_max_cost_cents = 0
+        budget_str = (
+            'unlimited'
+            if self._max_cost_budget_cents == 0
+            else f'${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
+        )
         self.output_fn(
             f'effort: {level}  '
-            f'budget=${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
+            f'budget={budget_str}'
         )
 
     def _handle_budget(self) -> None:
         remaining = self._max_cost_budget_cents - self._session_cost_cents
+        limit_str = (
+            'unlimited'
+            if self._max_cost_budget_cents == 0
+            else f'${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
+        )
+        remaining_str = (
+            'unlimited'
+            if self._max_cost_budget_cents == 0
+            else f'${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
+        )
         self.output_fn(
             f'budget: effort={self._effort_level}  '
-            f'limit=${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}  '
+            f'limit={limit_str}  '
             f'spent=${int(self._session_cost_cents // 100)}.{int(self._session_cost_cents % 100):02d}  '
-            f'remaining=${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
+            f'remaining={remaining_str}'
         )
 
     def _handle_checkpoint(self) -> None:
@@ -1188,7 +1216,7 @@ def run_tui(
     enable_git_tools: bool = False,
     skill_search_dirs: Optional[list[str]] = None,
     memory_limit: int = 5,
-    max_estimated_cost_cents: int = 1000,
+    max_estimated_cost_cents: int = 0,
 ) -> int:
     tui = TeaAgentTUI(
         database=database,

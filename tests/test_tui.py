@@ -1030,13 +1030,13 @@ class TUITests(unittest.TestCase):
 
     # ── Effort / budget / cost ────────────────────────────────────────────────
 
-    def test_tui_effort_requires_low_normal_high(self) -> None:
+    def test_tui_effort_requires_valid_level(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._handle_effort([])
         self.assertIn('effort:', output[-1])
         tui._handle_effort(['invalid'])
-        self.assertIn('must be low, normal, or high', output[-1])
+        self.assertIn('must be low, normal, high, or unlimited', output[-1])
 
     def test_tui_effort_sets_level_and_budget(self) -> None:
         output: list[str] = []
@@ -1057,9 +1057,78 @@ class TUITests(unittest.TestCase):
         self.assertEqual(tui._runtime_max_cost_cents, 200)
         self.assertIn('budget=$2', ' '.join(output))
 
+    def test_tui_effort_default_is_unlimited(self) -> None:
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=list.append)
+        self.assertEqual(tui._effort_level, 'unlimited')
+        self.assertEqual(tui._max_cost_budget_cents, 0)
+        self.assertEqual(tui._runtime_max_cost_cents, 0)
+
+    def test_tui_effort_unlimited_sets_zero_cents(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        # Switch to low first to change from default unlimited
+        tui._handle_effort(['low'])
+        tui._handle_effort(['unlimited'])
+        self.assertEqual(tui._effort_level, 'unlimited')
+        self.assertEqual(tui._max_cost_budget_cents, 0)
+        self.assertEqual(tui._runtime_max_cost_cents, 0)
+
+    def test_tui_effort_unlimited_shows_unlimited_text(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._handle_effort(['unlimited'])
+        text = ' '.join(output)
+        self.assertIn('unlimited', text)
+        self.assertNotIn('$0.00', text)
+
+    def test_tui_budget_unlimited_shows_unlimited_text(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._session_cost_cents = 50.0
+        tui._handle_budget()
+        text = ' '.join(output)
+        self.assertIn('unlimited', text)
+        self.assertIn('spent=', text)
+        self.assertNotIn('$0.00', text)
+
+    def test_tui_budget_unlimited_wired_to_agent_run(self) -> None:
+        """Verify unlimited (0) is passed as max_estimated_cost_cents."""
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._runtime_max_cost_cents = 0
+        with (
+            patch.object(tui, '_start_file_watcher'),
+            patch.object(tui, '_load_tui_state'),
+            patch.object(tui, '_save_tui_state'),
+            patch('teaagent.tui.run_chat_agent') as mock_run,
+            patch('teaagent.tui.RunStore') as mock_store,
+            patch('teaagent.tui.create_llm_adapter'),
+        ):
+            mock_run.return_value = unittest.mock.MagicMock(
+                run_id='test-run',
+                status='completed',
+                iterations=1,
+                tool_calls=0,
+                final_answer=unittest.mock.MagicMock(content='ok'),
+                metadata={},
+                error_message=None,
+            )
+            mock_store.return_value.list_runs.return_value = []
+            mock_store.return_value.show_run.return_value = {}
+            mock_store.return_value.logger_for_result = lambda *a: None
+            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+
+            tui._run_agent_task('test task')
+
+            _args, kwargs = mock_run.call_args
+            config = kwargs['config']
+            self.assertEqual(config.max_estimated_cost_cents, 0)
+
     def test_tui_budget_shows_remaining(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        # Switch to normal so budget has a finite limit
+        tui._handle_effort(['normal'])
         tui._session_cost_cents = 50.0
         tui._handle_budget()
         text = ' '.join(output)

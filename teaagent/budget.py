@@ -33,6 +33,8 @@ class RunBudget:
         approx_input_chars: int,
         max_output_tokens: int,
     ) -> None:
+        if self.max_estimated_cost_cents <= 0:
+            return
         estimated = estimate_cost_preflight(
             provider, model, approx_input_chars, max_output_tokens
         )

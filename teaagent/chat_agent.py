@@ -522,7 +522,7 @@ def _run_chat_agent_impl(
     )
     cost_cap = (
         config.max_estimated_cost_cents
-        if config.max_estimated_cost_cents > 0
+        if config.max_estimated_cost_cents >= 0
         else RunBudget().max_estimated_cost_cents
     )
     runner_budget = RunBudget(
