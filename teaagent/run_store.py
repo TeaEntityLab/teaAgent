@@ -43,6 +43,10 @@ class RunStore:
             self.store_dir.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.root / '.teaagent')
             secure_audit_dir(self.store_dir)
+        elif not self.store_dir.exists():
+            # Read-only mode but directory doesn't exist - this is expected for first use
+            # No warning needed since we're not creating anything
+            pass
 
     def audit_logger(self, run_id: Optional[str] = None) -> AuditLogger:
         if self.readonly:

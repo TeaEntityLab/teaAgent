@@ -120,6 +120,16 @@ def check_env_health(
                     failures.append(f'Permission denied: Cannot write to {p}')
                 except Exception as exc:
                     failures.append(f'Disk error on {p}: {exc}')
+    else:
+        # In readonly mode, check if .teaagent would be created by other operations
+        tea_dir = root / '.teaagent'
+        if not tea_dir.exists():
+            # This is good - no hidden writes in readonly mode
+            pass
+        else:
+            # .teaagent exists but we're in readonly mode - this is acceptable
+            # as long as we don't create new state
+            pass
 
     # 2. Check network binding ability (important for MCP/TUI).
     #    Local providers communicate over loopback only, so the binding

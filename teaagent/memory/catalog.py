@@ -43,6 +43,10 @@ class MemoryCatalog:
         self._corrupt_count = 0  # Track corrupt entries for health reporting
         if not readonly:
             self.path.parent.mkdir(parents=True, exist_ok=True)
+        elif not self.path.parent.exists():
+            # Read-only mode but directory doesn't exist - this is expected for first use
+            # No warning needed since we're not creating anything
+            pass
 
     def add(
         self,
