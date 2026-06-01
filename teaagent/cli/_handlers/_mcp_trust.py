@@ -14,6 +14,19 @@ from teaagent.mcp_trust import (
 )
 
 
+def _strip_sensitive_fields(value: Any) -> Any:
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for key, item in value.items():
+            if isinstance(key, str) and key.strip().lower() == 'trusted':
+                continue
+            sanitized[key] = _strip_sensitive_fields(item)
+        return sanitized
+    if isinstance(value, list):
+        return [_strip_sensitive_fields(item) for item in value]
+    return value
+
+
 def _redact_sensitive(value: Any) -> Any:
     def _is_sensitive_key(key: Any) -> bool:
         if not isinstance(key, str):
@@ -45,7 +58,10 @@ def _redact_sensitive(value: Any) -> Any:
 def _print_json(value: Any) -> None:
     print(
         json.dumps(
-            _redact_sensitive(value), ensure_ascii=False, indent=2, sort_keys=True
+            _redact_sensitive(_strip_sensitive_fields(value)),
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
         )
     )
 
