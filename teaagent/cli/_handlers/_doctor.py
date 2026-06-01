@@ -865,6 +865,42 @@ def _json_default(obj: Any) -> str:
     return f'[{type(obj).__name__}]'
 
 
+def _looks_like_sensitive_env_name(value: str) -> bool:
+    upper = value.strip().upper()
+    if not upper or ' ' in upper:
+        return False
+    sensitive_markers = (
+        'KEY',
+        'TOKEN',
+        'SECRET',
+        'PASSWORD',
+        'PASSWD',
+        'PASS',
+        'AUTH',
+        'CREDENTIAL',
+        'PRIVATE',
+    )
+    return upper.endswith(tuple(f'_{marker}' for marker in sensitive_markers))
+
+
+def _ensure_log_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        safe: dict[Any, Any] = {}
+        for key, item in value.items():
+            if _is_sensitive_key(key):
+                safe[key] = _REDACTED
+                continue
+            safe[key] = _ensure_log_safe(item)
+        return safe
+    if isinstance(value, list):
+        return [_ensure_log_safe(item) for item in value]
+    if isinstance(value, str) and (
+        _looks_like_sensitive_string(value) or _looks_like_sensitive_env_name(value)
+    ):
+        return _REDACTED
+    return value
+
+
 def print_json(value: Any) -> None:
     if isinstance(value, dict) and value.get('mode') in {'wizard', 'setup'}:
         value = redact_wizard_payload(value)
@@ -872,6 +908,7 @@ def print_json(value: Any) -> None:
     safe_value = _redact_sensitive_fields(value)
     # Final defense-in-depth pass at the logging sink.
     safe_value = _redact_sensitive_fields(_sanitize_doctor_payload(safe_value))
+    safe_value = _ensure_log_safe(safe_value)
     print(
         json.dumps(
             safe_value, ensure_ascii=False, sort_keys=True, default=_json_default
