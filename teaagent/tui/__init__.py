@@ -321,7 +321,14 @@ class TeaAgentTUI:
         print('=' * columns)
         print()
 
-    def run(self, *, run_setup: bool = False, setup_write_env: bool = False) -> int:
+    def run(
+        self,
+        *,
+        run_setup: bool = False,
+        setup_write_env: bool = False,
+        # TASK-DD2-001: task passed via `teaagent chat "<task>"` positional arg
+        initial_task: Optional[str] = None,
+    ) -> int:
         self._load_workspace_defaults()
         self._load_tui_state()
         self._print_header()
@@ -358,6 +365,16 @@ class TeaAgentTUI:
 
         # Auto-start file watcher for pinned files
         self._start_file_watcher()
+
+        # TASK-DD2-001: execute the CLI-supplied initial task before entering
+        # the interactive loop.  Previously this arg was parsed by the CLI parser
+        # (add_agent_run_arguments include_task_positional=True) but silently
+        # dropped because chat_command never forwarded it to run_tui.
+        if initial_task:
+            try:
+                self._run_agent_task(initial_task)
+            except (OSError, ValueError, TypeError, RuntimeError) as exc:
+                self.output_fn(f'error running initial task: {exc}')
 
         while True:
             try:
@@ -1217,6 +1234,8 @@ def run_tui(
     skill_search_dirs: Optional[list[str]] = None,
     memory_limit: int = 5,
     max_estimated_cost_cents: int = 0,
+    # TASK-DD2-001: initial task from `teaagent chat "task"` positional arg
+    initial_task: Optional[str] = None,
 ) -> int:
     tui = TeaAgentTUI(
         database=database,
@@ -1240,4 +1259,8 @@ def run_tui(
     if chat:
         tui.chat = True
         tui._chat_explicit = True
-    return tui.run(run_setup=run_setup, setup_write_env=setup_write_env)
+    return tui.run(
+        run_setup=run_setup,
+        setup_write_env=setup_write_env,
+        initial_task=initial_task,
+    )

@@ -554,6 +554,11 @@ def chat_command(args: argparse.Namespace) -> int:
     skill_search_dirs = getattr(args, 'skill_search_dirs', None)
     memory_limit_arg = getattr(args, 'memory_limit', None)
     memory_limit = memory_limit_arg if memory_limit_arg is not None else 5
+    # TASK-DD2-001: the chat parser registers `task` as a positional optional
+    # (add_agent_run_arguments include_task_positional=True in _agent_parsers.py).
+    # Previously this value was never read here, so `teaagent chat "my task"`
+    # silently dropped the task and opened an empty REPL instead.
+    initial_task: str | None = getattr(args, 'task', None) or None
 
     try:
         return run_tui(
@@ -577,6 +582,7 @@ def chat_command(args: argparse.Namespace) -> int:
             skill_search_dirs=skill_search_dirs,
             memory_limit=memory_limit,
             max_estimated_cost_cents=max_estimated_cost_cents,
+            initial_task=initial_task,
         )
     except KeyboardInterrupt:
         print('\n[TeaAgent] Chat interrupted by user')

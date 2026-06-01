@@ -1361,6 +1361,76 @@ class TUITests(unittest.TestCase):
         self.assertEqual(mock_run.call_args[1]['heartbeat_seconds'], 1.5)
         self.assertEqual(mock_run.call_args[1]['max_estimated_cost_cents'], 100)
         self.assertEqual(mock_run.call_args[1]['memory_limit'], 10)
+        # When no task positional arg is present, initial_task must be None
+        self.assertIsNone(mock_run.call_args[1].get('initial_task'))
+
+    def test_chat_command_forwards_initial_task_to_run_tui(self) -> None:
+        """TASK-DD2-001: chat_command must forward the positional task arg.
+
+        `teaagent chat "my task"` parses `my task` into args.task via
+        add_agent_run_arguments(include_task_positional=True).  Previously
+        chat_command never read args.task, so the task was silently dropped
+        and the user got an empty interactive REPL.
+        """
+        from argparse import Namespace
+
+        from teaagent.cli._handlers._chat import chat_command
+        from teaagent.policy import PermissionMode
+
+        args = Namespace(
+            task='fix the bug in auth.py',
+            provider=None,
+            model=None,
+            root='.',
+            allow_destructive=False,
+            permission_mode='prompt',
+            max_iterations=10,
+            max_tool_calls=10,
+            max_estimated_cost_cents=0,
+            subagent=False,
+            max_subagent_depth=1,
+            heartbeat=0.0,
+            stream=False,
+            enable_git_tools=False,
+            skill_search_dirs=None,
+            memory_limit=5,
+        )
+
+        with (
+            patch('teaagent.tui.run_tui') as mock_run,
+            patch('teaagent.cli._handlers._chat.parse_permission_mode',
+                  return_value=PermissionMode.PROMPT),
+        ):
+            chat_command(args)
+
+        self.assertEqual(
+            mock_run.call_args[1]['initial_task'], 'fix the bug in auth.py'
+        )
+
+    def test_run_tui_initial_task_executed_before_repl(self) -> None:
+        """TASK-DD2-001: run_tui initial_task must be dispatched before the loop.
+
+        The REPL loop should only start after the initial task completes.
+        Verified by confirming _run_agent_task is called with the initial_task
+        string before any interactive input is read.
+        """
+        calls: list[str] = []
+        tui = TeaAgentTUI(
+            input_fn=lambda _: (_ for _ in ()).throw(EOFError),  # exits immediately
+            output_fn=lambda msg: calls.append(str(msg)),
+        )
+        with (
+            patch.object(tui, '_run_agent_task') as mock_task,
+            patch.object(tui, '_load_workspace_defaults'),
+            patch.object(tui, '_load_tui_state'),
+            patch.object(tui, '_print_header'),
+            patch.object(tui, '_start_file_watcher'),
+            patch.object(tui, '_stop_file_watcher'),
+            patch.object(tui, '_save_tui_state'),
+        ):
+            tui.run(initial_task='the initial task')
+
+        mock_task.assert_called_once_with('the initial task')
 
     def test_chat_command_handles_keyboard_interrupt(self) -> None:
         """Verify chat_command() returns 130 on KeyboardInterrupt."""
