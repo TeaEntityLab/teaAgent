@@ -154,8 +154,8 @@ def read_keychain_secret(env_var: str) -> str:
             text=True,
             check=False,
         )
-    except (OSError, subprocess.SubprocessError) as exc:
-        logger.debug('Keychain lookup failed for %s: %s', service, exc)
+    except (OSError, subprocess.SubprocessError):
+        logger.debug('Keychain lookup failed')
         return ''
     if proc.returncode != 0:
         return ''

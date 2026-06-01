@@ -860,6 +860,11 @@ def _sanitize_doctor_payload(value: Any) -> Any:
     return value
 
 
+def _json_default(obj: Any) -> str:
+    """Safe fallback for JSON serialization — never expose raw __str__."""
+    return f'[{type(obj).__name__}]'
+
+
 def print_json(value: Any) -> None:
     if isinstance(value, dict) and value.get('mode') in {'wizard', 'setup'}:
         value = redact_wizard_payload(value)
@@ -867,4 +872,8 @@ def print_json(value: Any) -> None:
     safe_value = _redact_sensitive_fields(value)
     # Final defense-in-depth pass at the logging sink.
     safe_value = _redact_sensitive_fields(_sanitize_doctor_payload(safe_value))
-    print(json.dumps(safe_value, ensure_ascii=False, sort_keys=True, default=str))
+    print(
+        json.dumps(
+            safe_value, ensure_ascii=False, sort_keys=True, default=_json_default
+        )
+    )

@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from typing import Any, Optional
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 
 from teaagent.llm._extract import (
     _extract_claude_content,
@@ -318,7 +319,8 @@ class WorkersAIAdapter(OpenAICompatibleAdapter):
         # stripped, otherwise it returns "Invalid provider" (HTTP 400).
         # Direct Workers AI API DOES require @cf/.
         base_url = self.config.resolved_base_url()
-        if 'gateway.ai.cloudflare.com' in base_url and model.startswith('@cf/'):
+        parsed = urlparse(base_url)
+        if parsed.hostname == 'gateway.ai.cloudflare.com' and model.startswith('@cf/'):
             model = model[4:]
 
         # Workers AI structured output (json_schema) is extremely unstable
