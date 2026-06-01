@@ -104,14 +104,14 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Acceptance criteria:** `teaagent show --diff` works without git knowledge, commit message includes run metadata, `teaagent commit` is idempotent
 **Size:** Medium (1 week)
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Note:** Not yet implemented - no `teaagent commit` or `teaagent show --diff` commands exist
 
 ### UX1.1 — Post-Run Summary [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Emit structured summary at end of every run (tools called, files changed, cost, budget remaining, audit log location, undo command)
 **Acceptance criteria:** Run summary always emitted at session end, `--no-summary` flag suppresses it, summary includes files changed/cost/undo command
 **Size:** Small (3 days)
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
-**Note:** Partially implemented - cost tracking exists but full summary not yet emitted
 
 ### UX1.2 — Proactive Budget Warnings [P1]
 **Status:** ✅ Complete
@@ -121,42 +121,42 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX1.3 — One-Command Undo with Diff Preview [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Add `--preview` flag to undo command, add `--last` shortcut, show unified diff of what will be reverted
 **Acceptance criteria:** `teaagent undo --last --preview` shows readable diff without executing, `teaagent undo --last` reverts all writes, post-run summary includes undo command
 **Size:** Small (3 days)
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX3.1 — teaagent init < 2 Minutes to First Useful Output [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Implement guided init flow (provider selection, permission mode, config write) that completes in < 2 minutes
 **Acceptance criteria:** Init completes in < 2 minutes with guided prompts, after init `teaagent "hello"` produces useful response, init is documented first step in README
 **Size:** Medium (1 week)
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX3.2 — First-Run Orientation Message [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** On first run (no `.teaagent/`), show orientation message explaining governance features (approval gates, audit log, undo, budget cap)
 **Acceptance criteria:** Orientation message shown on first run, explains key governance features, includes next steps
 **Size:** Small (2 days)
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX2.1 — Persistent Decision Log [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Implement DecisionLog stored in `.teaagent/decisions.md`, inject into system prompt, CLI commands to list/add decisions
 **Acceptance criteria:** `teaagent memory decisions list` shows all decisions, `teaagent memory decisions add` appends entry, system prompt includes 10 most recent decisions
 **Size:** Medium (1 week)
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX2.2 — Proactive Context Compaction Warning [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Track context window usage, warn at 60% with `/compact` suggestion, implement one-command summary-and-continue
 **Acceptance criteria:** Warning triggers at configurable threshold (default 60%), `/compact` summarizes conversation and replaces with compressed version
 **Size:** Medium (1 week)
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
 
 ### UX2.3 — Cross-Session Scratchpad [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Write structured scratchpad on session end (goal, progress, open questions, next step), offer resumption on next session start
 **Acceptance criteria:** Scratchpad written on clean exit/ctrl+c/crash, offered for resumption on next session start, `teaagent sessions list` shows recent sessions
 **Size:** Medium (1 week)
