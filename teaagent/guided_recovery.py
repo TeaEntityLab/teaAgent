@@ -12,8 +12,8 @@ from enum import Enum
 from typing import Any, Optional
 
 from teaagent.audit import AuditLogger
-from teaagent.runner._types import RunResult
 from teaagent.run_undo import UndoJournal
+from teaagent.runner._types import RunResult
 
 logger = logging.getLogger(__name__)
 
@@ -494,7 +494,7 @@ class RecoveryAdviceFormatter:
             for i, alt in enumerate(advice.alternatives, 1):
                 lines.append(f"  {i}. {alt.name}: {self._format_command(alt, run_id)}")
                 if alt.destructive:
-                    lines.append(f"     (destructive)")
+                    lines.append("     (destructive)")
             lines.append("")
 
         lines.append("═══════════════════════════════════════════════════════════════")

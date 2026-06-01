@@ -258,6 +258,7 @@ The following plans are marked as complete and are retained for reference:
 **Acceptance criteria:** Monthly checks performed, escalation trigger defined (50+ votes on governance issues)
 **Size:** Ongoing
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Process document:** `docs/processes/opencode-gap-watch.md`
 
 ### CP-5 — Model Capability Matrix [P2]
 **Status:** ✅ Complete
@@ -272,6 +273,7 @@ The following plans are marked as complete and are retained for reference:
 **Acceptance criteria:** Track metrics monthly, respond to governance-related competitor issues
 **Size:** Ongoing
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Process document:** `docs/processes/community-presence.md`
 
 ---
 

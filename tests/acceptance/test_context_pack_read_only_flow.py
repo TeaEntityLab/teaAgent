@@ -14,8 +14,9 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 import tempfile
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 

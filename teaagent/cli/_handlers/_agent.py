@@ -377,9 +377,13 @@ def _execute_agent_task(
     plan_contract: Optional[Any] = None,
 ) -> int:
     # First-run orientation (shown once per workspace)
+    import os as _os
+
     from teaagent.cli._handlers._misc import handle_first_run
 
-    handle_first_run(Path(args.root), quiet=getattr(args, 'quiet', False))
+    # Suppress welcome message in test environment
+    quiet = getattr(args, 'quiet', False) or _os.environ.get('TEAAGENT_QUIET') == '1'
+    handle_first_run(Path(args.root), quiet=quiet)
     # Handle parallel experiments
     parallel_value = getattr(args, 'parallel', None)
     if parallel_value:
@@ -2671,7 +2675,6 @@ def _show_run_diff(args: argparse.Namespace) -> int:
 
 def agent_runs_commit_command(args: argparse.Namespace) -> int:
     """Commit changes from a run with metadata."""
-    import json
     import subprocess
     from pathlib import Path
 
