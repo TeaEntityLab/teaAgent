@@ -96,6 +96,7 @@ Update metrics monthly in the table below:
 | Month | GitHub Stars | Reddit Mentions | HN Upvotes | Dev.to Views | Notes |
 |-------|--------------|-----------------|------------|--------------|-------|
 | 2026-06 | TBD | TBD | TBD | TBD | Initial baseline |
+| 2026-06 | TBD | TBD | TBD | TBD | Automated monitoring cycle completed (no external API integration yet) |
 
 ## Governance-Related Competitor Response
 
@@ -136,6 +137,20 @@ Happy to answer questions about our approach!
 - [ ] Respond to relevant discussions
 - [ ] Plan content for next month
 - [ ] Update metrics tracking table
+
+### Automation
+
+Run the automated monitoring script:
+
+```bash
+python3 scripts/community_presence_monitor.py --update-docs
+```
+
+For a dry run (without updating docs):
+
+```bash
+python3 scripts/community_presence_monitor.py
+```
 
 ## Content Calendar
 

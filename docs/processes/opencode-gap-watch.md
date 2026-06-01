@@ -25,6 +25,20 @@ Monitor OpenCode GitHub releases and community activity for governance-related f
 - [ ] Check OpenCode community posts (Reddit, Discord, etc.) for governance requests
 - [ ] Document findings in this file
 
+### Automation
+
+Run the automated monitoring script:
+
+```bash
+python3 scripts/opencode_gap_watch.py --update-docs
+```
+
+For a dry run (without updating docs):
+
+```bash
+python3 scripts/opencode_gap_watch.py
+```
+
 ## Escalation Triggers
 
 Escalate to product/strategy review if any of the following occur:
@@ -57,6 +71,7 @@ When an escalation trigger is met:
 | Date | Review Type | Findings | Escalation Required? | Action Taken |
 |------|-------------|----------|---------------------|--------------|
 | 2026-06-01 | Initial setup | Process established | No | Document created |
+| 2026-06-01 | Automated monitoring cycle | No new releases, no governance issues, no community governance requests | No | Monitoring cycle completed via automation script |
 
 ## Resources
 

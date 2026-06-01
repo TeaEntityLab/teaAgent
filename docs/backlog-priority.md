@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-06-01 (P0 acceptance tests created for Issue-to-Plan Intake, Plan Review and Revision, Guided Recovery, and Execution evidence summary)
+Last updated: 2026-06-01 (P0 acceptance tests complete, strategic P2 research initiated, monitoring automation scripts created, first monitoring cycle executed)
 
 ---
 
@@ -271,12 +271,13 @@ The following plans are marked as complete and are retained for reference:
 ## Open — Medium (P2)
 
 ### CP-4 — OpenCode Gap Watch [P2]
-**Status:** 📋 Ongoing monitoring
+**Status:** 📋 Ongoing monitoring (automation script created)
 **Journey:** Monitor OpenCode GitHub releases monthly for governance-related features, escalate if approval gates added
 **Acceptance criteria:** Monthly checks performed, escalation trigger defined (50+ votes on governance issues)
 **Size:** Ongoing
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
 **Process document:** `docs/processes/opencode-gap-watch.md`
+**Automation script:** `scripts/opencode_gap_watch.py`
 
 ### CP-5 — Model Capability Matrix [P2]
 **Status:** ✅ Complete
@@ -286,12 +287,13 @@ The following plans are marked as complete and are retained for reference:
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-6 — Community Presence / Developer Relations [P3]
-**Status:** 📋 Process (not binary)
+**Status:** 📋 Process (not binary) (automation script created)
 **Journey:** Post on r/LocalLLaMA, Hacker News, GitHub, Dev.to; track GitHub stars, Reddit mentions, HN upvotes
 **Acceptance criteria:** Track metrics monthly, respond to governance-related competitor issues
 **Size:** Ongoing
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
 **Process document:** `docs/processes/community-presence.md`
+**Automation script:** `scripts/community_presence_monitor.py`
 
 ---
 
