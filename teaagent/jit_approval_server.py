@@ -49,9 +49,12 @@ class ApprovalRequestRecord:
 class JITApprovalServer:
     """SSE server for remote JIT tool approval.
 
-    NOTE: Only 127.0.0.1 is supported as the bind address for security
-    (no auth handshake exists). Do not bind to 0.0.0.0 or any non-loopback
-    interface.
+    Supports optional Bearer token authentication via the ``auth_token``
+    parameter. When ``auth_token`` is set, clients must present a valid
+    ``Authorization: Bearer <token>`` header during connection handshake.
+
+    Only 127.0.0.1 is supported as the bind address when no auth token is
+    configured. Do not bind to 0.0.0.0 or any non-loopback interface.
     """
 
     def __init__(
@@ -76,7 +79,7 @@ class JITApprovalServer:
 
     async def start(self) -> None:
         """Start the SSE server."""
-        # Security: server has no auth handshake — must bind to loopback only
+        # Security: must bind to loopback when no auth token is configured
         import ipaddress
         import socket
 

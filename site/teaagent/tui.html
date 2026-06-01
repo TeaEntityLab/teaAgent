@@ -160,7 +160,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.tui    </h1>
 
-
+                
                         <input id="mod-tui-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-tui-view-source"><span>View Source</span></label>
@@ -1279,11 +1279,11 @@
             <span class="name">InputFn</span>        =
 <span class="default_value">typing.Callable[[str], str]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#InputFn"></a>
-
-
+    
+    
 
                 </section>
                 <section id="OutputFn">
@@ -1291,11 +1291,11 @@
             <span class="name">OutputFn</span>        =
 <span class="default_value">typing.Callable[..., NoneType]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OutputFn"></a>
-
-
+    
+    
 
                 </section>
                 <section id="AdapterFactory">
@@ -1303,17 +1303,17 @@
             <span class="name">AdapterFactory</span>        =
 <span class="default_value">typing.Callable[[str, str | None], <a href="llm/_types.html#LLMAdapter">teaagent.llm._types.LLMAdapter</a>]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#AdapterFactory"></a>
-
-
+    
+    
 
                 </section>
                 <section id="default_adapter_factory">
                             <input id="default_adapter_factory-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">default_adapter_factory</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="llm/_types.html#LLMAdapter">teaagent.llm._types.LLMAdapter</a></span>:</span></span>
 
@@ -1326,7 +1326,7 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="HELP_TEXT">
@@ -1335,17 +1335,17 @@
 <input id="HELP_TEXT-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
             <label class="view-value-button pdoc-button" for="HELP_TEXT-view-value"></label><span class="default_value">&#34;Commands:\n  help                      Show this help.\n  setup [write-env]         Guided first-session workspace setup (same as teaagent setup).\n  doctor                    Check GraphQLite runtime.\n  provider &lt;name&gt;           Set model provider: claude, gpt, gemini, openrouter, ollama, vllm, opencodezen-go, workers-ai, aigateway.\n  model &lt;name|default&gt;      Set or clear model override.\n  route-model &lt;on|off&gt;      Enable or disable task-based model routing.\n  route &lt;task&gt;              Preview model route for a task.\n  complexity &lt;task&gt;         Analyze task complexity (high/medium/low).\n  estimate &lt;task&gt;           Estimate token budget for a task.\n  root &lt;path&gt;               Set workspace root for agent tasks.\n  destructive &lt;on|off&gt;      Allow or block destructive workspace tools.\n  progress &lt;on|off&gt;         Stream brief audit-event progress lines during ask runs.\n  stream &lt;on|off&gt;           Stream model output token-by-token during ask runs.\n  subagent &lt;on|off&gt;         Expose the &#39;subagent&#39; tool so the model can delegate sub-tasks.\n  chat &lt;on|off&gt;             Enable or disable multi-turn chat mode with session history.\n  session new               Create a new chat session.\n  session list              List saved chat sessions.\n  session switch &lt;id&gt;       Switch to another chat session.\n  session clear             Clear messages in the current chat session.\n  session show              Show the current chat session details.\n  heartbeat &lt;seconds&gt;       Set heartbeat interval for ask runs. 0 disables.\n  status &lt;run_id&gt;           Show heartbeat liveness for a persisted run.\n  permission &lt;mode&gt;         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.\n  approve &lt;call_id&gt;         Approve one exact destructive tool call id.\n  unapprove &lt;call_id&gt;       Remove one approved call id.\n  approvals                 List approved call ids for this session.\n  approvals subagents       Batch view of parallel subagent destructive-tool queue.\n  approvals subagents approve|deny|approve-all|deny-all\n  clarify &lt;task&gt;            Score task ambiguity without calling a model.\n  preflight &lt;task&gt;          Show clarify, routing, memory, and tool plan without calling a model.\n  plan &lt;task&gt;               Write a read-only plan artifact under .teaagent/plans.\n  daily [task]              Show readiness, recent runs, harness health, and token budget.\n  run &lt;task&gt;                Run a model-driven agent task (alias for ask).\n  ask &lt;task&gt;                Run a model-driven agent task with workspace tools.\n  undo [run_id]             Restore workspace files from the last undo journal (or a run id).\n  permissions               List destructive-tool approval presets for this workspace.\n  mcp                       Hint for MCP doctor / serve commands (run from a shell).\n  ask --clarify &lt;task&gt;      Clarify first; stop if key details are missing.\n  memory add &lt;text&gt;         Add a workspace memory entry.\n  memory list               List recent workspace memories.\n  memory search &lt;query&gt;     Search workspace memories.\n  memory show &lt;id&gt;          Show one workspace memory.\n  runs                      List recent persisted agent runs.\n  show &lt;run_id&gt;             Show one persisted run record.\n  resume &lt;run_id&gt;           Re-run the original task from a persisted run id.\n  context list [prefix]     List workspace files for @-mentions in tasks.\n  use &lt;database&gt;            Switch database path. Use :memory: for in-memory.\n  smoke                     Create a SmokeTest node and query it.\n  query &lt;cypher&gt;            Execute a Cypher query.\n  parallel &lt;optA&gt; &lt;optB&gt;... Start parallel experiment branches for comparison.\n  select &lt;option&gt;           Merge selected parallel experiment branch.\n  cancel                    Cancel and cleanup all parallel experiment branches.\n  conflict                  Enter conflict resolution mode for merge conflicts.\n  o                         Accept Our version (current branch) in conflict mode.\n  t                         Accept Their version (incoming branch) in conflict mode.\n  n                         Next conflicted file in conflict mode.\n  p                         Previous conflicted file in conflict mode.\n  a                         Abort merge in conflict mode.\n  pin &lt;path&gt;                Pin a file for live context sync (watches for changes).\n  unpin &lt;path&gt;              Unpin a file from live context sync.\n  pinned                    List all pinned files.\n  compact                   Compact session context to save tokens.\n  cost                      Show session cost.\n  effort &lt;low|normal|high&gt;  Set effort throttling level.\n  budget                    Show budget and effort status.\n  checkpoint                Create manual git checkpoint.\n  undo                      Undo all changes (using checkpoint — use teaagent agent undo for advanced).\n  background                Suspend session to background mode (use teaagent agent run --detach).\n  exit | quit               Leave the TUI.\n\nSlash aliases (/daily, /plan, /run, …) are accepted for the same commands.\n&#34;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#HELP_TEXT"></a>
-
-
+    
+    
 
                 </section>
                 <section id="TeaAgentTUI">
                             <input id="TeaAgentTUI-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">TeaAgentTUI</span>:
 
@@ -2298,12 +2298,12 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="TeaAgentTUI.__init__" class="classattr">
                                         <input id="TeaAgentTUI.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">TeaAgentTUI</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span>,</span><span class="param">	<span class="n">provider</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>,</span><span class="param">	<span class="n">allow_destructive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">permission_mode</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#PermissionMode">teaagent.PermissionMode</a></span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">PermissionMode</span><span class="o">.</span><span class="n">PROMPT</span><span class="p">:</span> <span class="s1">&#39;prompt&#39;</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">input_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">output_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">NoneType</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">built</span><span class="o">-</span><span class="ow">in</span> <span class="n">function</span> <span class="nb">print</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">adapter_factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="n"><a href="llm/_types.html#LLMAdapter">teaagent.llm._types.LLMAdapter</a></span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">function</span> <span class="n">default_adapter_factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">stream</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">subagent</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">heartbeat_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>,</span><span class="param">	<span class="n">max_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>,</span><span class="param">	<span class="n">max_tool_calls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>,</span><span class="param">	<span class="n">max_subagent_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>,</span><span class="param">	<span class="n">enable_git_tools</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">skill_search_dirs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">memory_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">max_estimated_cost_cents</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span></span>)</span>
 
                 <label class="view-source-button" for="TeaAgentTUI.__init__-view-source"><span>View Source</span></label>
@@ -2384,288 +2384,288 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="TeaAgentTUI.database" class="classattr">
                                 <div class="attr variable">
             <span class="name">database</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.database"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.provider" class="classattr">
                                 <div class="attr variable">
             <span class="name">provider</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.provider"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.model" class="classattr">
                                 <div class="attr variable">
             <span class="name">model</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.model"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.route_model_enabled" class="classattr">
                                 <div class="attr variable">
             <span class="name">route_model_enabled</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.route_model_enabled"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.root" class="classattr">
                                 <div class="attr variable">
             <span class="name">root</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.root"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.allow_destructive" class="classattr">
                                 <div class="attr variable">
             <span class="name">allow_destructive</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.allow_destructive"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.permission_mode" class="classattr">
                                 <div class="attr variable">
             <span class="name">permission_mode</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.permission_mode"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.progress" class="classattr">
                                 <div class="attr variable">
             <span class="name">progress</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.progress"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.stream" class="classattr">
                                 <div class="attr variable">
             <span class="name">stream</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.stream"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.subagent" class="classattr">
                                 <div class="attr variable">
             <span class="name">subagent</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.subagent"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.heartbeat_seconds" class="classattr">
                                 <div class="attr variable">
             <span class="name">heartbeat_seconds</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.heartbeat_seconds"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.chat" class="classattr">
                                 <div class="attr variable">
             <span class="name">chat</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.chat"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.max_iterations" class="classattr">
                                 <div class="attr variable">
             <span class="name">max_iterations</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.max_iterations"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.max_tool_calls" class="classattr">
                                 <div class="attr variable">
             <span class="name">max_tool_calls</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.max_tool_calls"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.max_subagent_depth" class="classattr">
                                 <div class="attr variable">
             <span class="name">max_subagent_depth</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.max_subagent_depth"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.enable_git_tools" class="classattr">
                                 <div class="attr variable">
             <span class="name">enable_git_tools</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.enable_git_tools"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.skill_search_dirs" class="classattr">
                                 <div class="attr variable">
             <span class="name">skill_search_dirs</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.skill_search_dirs"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.memory_limit" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_limit</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.memory_limit"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.max_estimated_cost_cents" class="classattr">
                                 <div class="attr variable">
             <span class="name">max_estimated_cost_cents</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.max_estimated_cost_cents"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.session_id" class="classattr">
                                 <div class="attr variable">
             <span class="name">session_id</span><span class="annotation">: str | None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.session_id"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.approved_call_ids" class="classattr">
                                 <div class="attr variable">
             <span class="name">approved_call_ids</span><span class="annotation">: set[str]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.approved_call_ids"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.last_run_id" class="classattr">
                                 <div class="attr variable">
             <span class="name">last_run_id</span><span class="annotation">: str | None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.last_run_id"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.input_fn" class="classattr">
                                 <div class="attr variable">
             <span class="name">input_fn</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.input_fn"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.output_fn" class="classattr">
                                 <div class="attr variable">
             <span class="name">output_fn</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.output_fn"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.adapter_factory" class="classattr">
                                 <div class="attr variable">
             <span class="name">adapter_factory</span>
 
-
+        
     </div>
     <a class="headerlink" href="#TeaAgentTUI.adapter_factory"></a>
-
-
+    
+    
 
                             </div>
                             <div id="TeaAgentTUI.run" class="classattr">
                                         <input id="TeaAgentTUI.run-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">run</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">run_setup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>, </span><span class="param"><span class="n">setup_write_env</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
 
@@ -2736,7 +2736,7 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="TeaAgentTUI.help_text" class="classattr">
@@ -2754,7 +2754,7 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="TeaAgentTUI.route_model" class="classattr">
@@ -2772,13 +2772,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="TeaAgentTUI.handle_command" class="classattr">
                                         <input id="TeaAgentTUI.handle_command-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">handle_command</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">raw_command</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -2793,14 +2793,14 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="run_tui">
                             <input id="run_tui-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">run_tui</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;:memory:&#39;</span>,</span><span class="param">	<span class="n">provider</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>,</span><span class="param">	<span class="n">allow_destructive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">permission_mode</span><span class="p">:</span> <span class="n"><a href="../teaagent.html#PermissionMode">teaagent.PermissionMode</a></span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">PermissionMode</span><span class="o">.</span><span class="n">PROMPT</span><span class="p">:</span> <span class="s1">&#39;prompt&#39;</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">chat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">input_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">run_setup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">setup_write_env</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">stream</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">subagent</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">heartbeat_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>,</span><span class="param">	<span class="n">max_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>,</span><span class="param">	<span class="n">max_tool_calls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>,</span><span class="param">	<span class="n">max_subagent_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>,</span><span class="param">	<span class="n">enable_git_tools</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">skill_search_dirs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">memory_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">max_estimated_cost_cents</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
 
@@ -2857,7 +2857,7 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
     </main>

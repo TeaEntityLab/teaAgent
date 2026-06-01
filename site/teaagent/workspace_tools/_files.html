@@ -94,7 +94,7 @@
                     <h1 class="modulename">
 <a href="./../../teaagent.html">teaagent</a><wbr>.<a href="./../workspace_tools.html">workspace_tools</a><wbr>._files    </h1>
 
-
+                
                         <input id="mod-_files-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-_files-view-source"><span>View Source</span></label>
@@ -215,7 +215,7 @@
 </span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>    <span class="p">)</span>
 </span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>    <span class="n">registry</span><span class="o">.</span><span class="n">register</span><span class="p">(</span>
 </span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;workspace_read_file_hashed&#39;</span><span class="p">,</span>
-</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Read a UTF-8 text file with stable LINE#HASH anchors for safer edits.&#39;</span><span class="p">,</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Read a UTF-8 text file with stable LINE#HASH anchors for safer patching.&#39;</span><span class="p">,</span>
 </span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>        <span class="n">input_schema</span><span class="o">=</span><span class="n">object_schema</span><span class="p">(</span>
 </span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>            <span class="p">{</span><span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;max_bytes&#39;</span><span class="p">:</span> <span class="s1">&#39;integer&#39;</span><span class="p">},</span>
 </span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>            <span class="n">required</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span>
@@ -833,17 +833,17 @@
             <span class="name">logger</span>        =
 <span class="default_value">&lt;Logger <a href="">teaagent.workspace_tools._files</a> (WARNING)&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#logger"></a>
-
-
+    
+    
 
                 </section>
                 <section id="build_workspace_tool_registry">
                             <input id="build_workspace_tool_registry-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">build_workspace_tool_registry</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>,</span><span class="param">	<span class="n">config_provider</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="../../teaagent.html#ToolRegistry">teaagent.ToolRegistry</a></span>:</span></span>
 
@@ -894,7 +894,7 @@
                 <section id="register_workspace_tools">
                             <input id="register_workspace_tools-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">register_workspace_tools</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">registry</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#ToolRegistry">teaagent.ToolRegistry</a></span>, </span><span class="param"><span class="n">factory</span><span class="p">:</span> <span class="n">Any</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -953,7 +953,7 @@
 </span><span id="register_workspace_tools-115"><a href="#register_workspace_tools-115"><span class="linenos">115</span></a>    <span class="p">)</span>
 </span><span id="register_workspace_tools-116"><a href="#register_workspace_tools-116"><span class="linenos">116</span></a>    <span class="n">registry</span><span class="o">.</span><span class="n">register</span><span class="p">(</span>
 </span><span id="register_workspace_tools-117"><a href="#register_workspace_tools-117"><span class="linenos">117</span></a>        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;workspace_read_file_hashed&#39;</span><span class="p">,</span>
-</span><span id="register_workspace_tools-118"><a href="#register_workspace_tools-118"><span class="linenos">118</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Read a UTF-8 text file with stable LINE#HASH anchors for safer edits.&#39;</span><span class="p">,</span>
+</span><span id="register_workspace_tools-118"><a href="#register_workspace_tools-118"><span class="linenos">118</span></a>        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Read a UTF-8 text file with stable LINE#HASH anchors for safer patching.&#39;</span><span class="p">,</span>
 </span><span id="register_workspace_tools-119"><a href="#register_workspace_tools-119"><span class="linenos">119</span></a>        <span class="n">input_schema</span><span class="o">=</span><span class="n">object_schema</span><span class="p">(</span>
 </span><span id="register_workspace_tools-120"><a href="#register_workspace_tools-120"><span class="linenos">120</span></a>            <span class="p">{</span><span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;max_bytes&#39;</span><span class="p">:</span> <span class="s1">&#39;integer&#39;</span><span class="p">},</span>
 </span><span id="register_workspace_tools-121"><a href="#register_workspace_tools-121"><span class="linenos">121</span></a>            <span class="n">required</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span>
@@ -1236,7 +1236,7 @@
                 <section id="read_file">
                             <input id="read_file-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">read_file</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1268,13 +1268,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="read_file_hashed">
                             <input id="read_file_hashed-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">read_file_hashed</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1294,13 +1294,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="write_file">
                             <input id="write_file-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">write_file</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1368,13 +1368,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="apply_patch">
                             <input id="apply_patch-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">apply_patch</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1400,13 +1400,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="edit_at_hash">
                             <input id="edit_at_hash-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">edit_at_hash</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1453,13 +1453,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="list_files">
                             <input id="list_files-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">list_files</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1498,13 +1498,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="search_text">
                             <input id="search_text-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">search_text</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1566,13 +1566,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="hybrid_index">
                             <input id="hybrid_index-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">hybrid_index</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1591,13 +1591,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="hybrid_search">
                             <input id="hybrid_search-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">hybrid_search</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1618,13 +1618,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="knowledge_index">
                             <input id="knowledge_index-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">knowledge_index</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1643,13 +1643,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="knowledge_search">
                             <input id="knowledge_search-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">knowledge_search</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1669,13 +1669,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="code_parse">
                             <input id="code_parse-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">code_parse</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span>,</span><span class="param">	<span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1720,13 +1720,13 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="git_status">
                             <input id="git_status-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">git_status</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="../../teaagent.html#WorkspaceToolConfig">teaagent.WorkspaceToolConfig</a></span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1746,7 +1746,7 @@
 </span></pre></div>
 
 
-
+    
 
                 </section>
     </main>

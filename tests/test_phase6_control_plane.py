@@ -22,6 +22,7 @@ from teaagent.tool_permissions import (
     ToolPermissionManager,
     ToolSafetyLevel,
 )
+from test_support import skip_if_socket_bind_is_blocked
 
 
 def _pending_record(
@@ -50,6 +51,7 @@ def test_format_sse_event() -> None:
 
 
 def test_control_plane_serve_blocking_binds_port() -> None:
+    skip_if_socket_bind_is_blocked()
     state = ControlPlaneState()
     server = ControlPlaneServer(host='127.0.0.1', port=0, state=state)
     thread = threading.Thread(target=lambda: server.serve_blocking(announce=False))
@@ -64,6 +66,7 @@ def test_control_plane_serve_blocking_binds_port() -> None:
 
 
 def test_control_plane_serves_dashboard_and_sse() -> None:
+    skip_if_socket_bind_is_blocked()
     state = ControlPlaneState()
     state.set_workflow({'state': 'in_progress', 'current_step': 2})
     state.set_focus({'frames': [{'topic': 'auth', 'state': 'kept'}]})
@@ -117,6 +120,7 @@ def test_control_plane_serves_dashboard_and_sse() -> None:
 
 
 def test_jit_approve_invalid_json_returns_400() -> None:
+    skip_if_socket_bind_is_blocked()
     state = ControlPlaneState()
     manager = ToolPermissionManager(approval_callback=lambda req: True)
     jit = JITApprovalServer(manager, timeout_seconds=60)
@@ -141,6 +145,7 @@ def test_jit_approve_invalid_json_returns_400() -> None:
 
 def test_jit_approve_with_approval_callback_grants_tool_access() -> None:
     """Mirror CLI wiring: dashboard approve must grant JIT tool access."""
+    skip_if_socket_bind_is_blocked()
     manager = ToolPermissionManager(approval_callback=lambda req: True)
     manager.register_tool_permission(
         ToolPermission(

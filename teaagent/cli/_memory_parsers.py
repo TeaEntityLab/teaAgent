@@ -102,3 +102,41 @@ def register(
         '--limit', type=int, default=10, help='Maximum cards to review.'
     )
     fail_review.set_defaults(func=handlers['failures_review'])
+
+    decisions = subs.add_parser(
+        'decisions', help='Persistent decision log.'
+    )
+    dec_subs = decisions.add_subparsers(dest='decisions_command', required=True)
+
+    dec_list = dec_subs.add_parser('list', help='List all decisions.')
+    dec_list.add_argument('--root', default='.', help='Workspace root.')
+    dec_list.add_argument(
+        '--limit', type=int, default=0, help='Limit to N most recent (0 = all).'
+    )
+    dec_list.set_defaults(func=handlers['decisions_list'])
+
+    dec_add = dec_subs.add_parser('add', help='Add a decision entry.')
+    dec_add.add_argument('decision', help='Decision text.')
+    dec_add.add_argument('--reason', required=True, help='Reason for the decision.')
+    dec_add.add_argument(
+        '--dont-reverse', default='',
+        help='Context for when not to reverse this decision.'
+    )
+    dec_add.add_argument('--root', default='.', help='Workspace root.')
+    dec_add.set_defaults(func=handlers['decisions_add'])
+
+    team = subs.add_parser('team', help='Team-shared memory.')
+    team_subs = team.add_subparsers(dest='team_command', required=True)
+
+    team_list = team_subs.add_parser('list', help='List team memory entries.')
+    team_list.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    team_list.set_defaults(func=handlers['team_memory_list'])
+
+    team_add = team_subs.add_parser('add', help='Add a team memory entry.')
+    team_add.add_argument('entry', help='Memory entry text.')
+    team_add.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    team_add.set_defaults(func=handlers['team_memory_add'])

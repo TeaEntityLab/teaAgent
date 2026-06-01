@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import socket
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,23 @@ from teaagent.surface_auth import (
     load_surface_auth_policy,
 )
 from teaagent.vote_relay import VoteRelayServer, require_relay_bind_auth
+
+
+def _skip_if_socket_bind_is_blocked() -> None:
+    """Skip tests that require a loopback TCP listener when the environment forbids it.
+
+    Some sandboxed execution environments disallow `socket.bind()` entirely, even on
+    127.0.0.1 with an ephemeral port. These tests still provide value in normal
+    developer/CI environments, so we skip only when binding is blocked.
+    """
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(('127.0.0.1', 0))
+    except PermissionError as exc:
+        pytest.skip(f'sandbox forbids socket.bind() on loopback: {exc}')
+    finally:
+        sock.close()
 
 
 def test_extract_bearer_token() -> None:
@@ -62,6 +80,7 @@ def test_relay_requires_auth_on_wan_bind() -> None:
 
 
 def test_relay_rejects_missing_token(tmp_path: Path) -> None:
+    _skip_if_socket_bind_is_blocked()
     engine = ConsensusEngine(
         peer_registry=PeerRegistry(storage_path=tmp_path / 'peers.json'),
         config=ConsensusConfig(),
@@ -103,6 +122,7 @@ def test_relay_rejects_missing_token(tmp_path: Path) -> None:
 
 
 def test_control_plane_tenant_authz(tmp_path: Path) -> None:
+    _skip_if_socket_bind_is_blocked()
     token_path = tmp_path / 'tokens.json'
     token_path.write_text(
         json.dumps(

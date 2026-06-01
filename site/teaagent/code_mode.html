@@ -247,7 +247,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.code_mode    </h1>
 
-
+                
                         <input id="mod-code_mode-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-code_mode-view-source"><span>View Source</span></label>
@@ -389,13 +389,13 @@
                     <div class="attr variable">
             <span class="name">ALLOWED_NODES</span>        =
 <input id="ALLOWED_NODES-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="ALLOWED_NODES-view-value"></label><span class="default_value">{&lt;class &#39;ast.Call&#39;&gt;, &lt;class &#39;ast.Assign&#39;&gt;, &lt;class &#39;ast.BinOp&#39;&gt;, &lt;class &#39;ast.Dict&#39;&gt;, &lt;class &#39;ast.Eq&#39;&gt;, &lt;class &#39;ast.List&#39;&gt;, &lt;class &#39;ast.Lt&#39;&gt;, &lt;class &#39;ast.For&#39;&gt;, &lt;class &#39;ast.Gt&#39;&gt;, &lt;class &#39;ast.Load&#39;&gt;, &lt;class &#39;ast.Subscript&#39;&gt;, &lt;class &#39;ast.USub&#39;&gt;, &lt;class &#39;ast.Tuple&#39;&gt;, &lt;class &#39;ast.Store&#39;&gt;, &lt;class &#39;ast.In&#39;&gt;, &lt;class &#39;ast.UnaryOp&#39;&gt;, &lt;class &#39;ast.Add&#39;&gt;, &lt;class &#39;ast.Compare&#39;&gt;, &lt;class &#39;ast.Constant&#39;&gt;, &lt;class &#39;ast.Div&#39;&gt;, &lt;class &#39;ast.Expr&#39;&gt;, &lt;class &#39;ast.LtE&#39;&gt;, &lt;class &#39;ast.GtE&#39;&gt;, &lt;class &#39;ast.If&#39;&gt;, &lt;class &#39;ast.Mult&#39;&gt;, &lt;class &#39;ast.Name&#39;&gt;, &lt;class &#39;ast.NotEq&#39;&gt;, &lt;class &#39;ast.Module&#39;&gt;, &lt;class &#39;ast.Sub&#39;&gt;, &lt;class &#39;ast.Mod&#39;&gt;}</span>
+            <label class="view-value-button pdoc-button" for="ALLOWED_NODES-view-value"></label><span class="default_value">{&lt;class &#39;ast.Add&#39;&gt;, &lt;class &#39;ast.Compare&#39;&gt;, &lt;class &#39;ast.Constant&#39;&gt;, &lt;class &#39;ast.Div&#39;&gt;, &lt;class &#39;ast.Expr&#39;&gt;, &lt;class &#39;ast.LtE&#39;&gt;, &lt;class &#39;ast.GtE&#39;&gt;, &lt;class &#39;ast.If&#39;&gt;, &lt;class &#39;ast.Module&#39;&gt;, &lt;class &#39;ast.Mult&#39;&gt;, &lt;class &#39;ast.NotEq&#39;&gt;, &lt;class &#39;ast.UnaryOp&#39;&gt;, &lt;class &#39;ast.Sub&#39;&gt;, &lt;class &#39;ast.Mod&#39;&gt;, &lt;class &#39;ast.BinOp&#39;&gt;, &lt;class &#39;ast.Assign&#39;&gt;, &lt;class &#39;ast.Call&#39;&gt;, &lt;class &#39;ast.Dict&#39;&gt;, &lt;class &#39;ast.Eq&#39;&gt;, &lt;class &#39;ast.List&#39;&gt;, &lt;class &#39;ast.Lt&#39;&gt;, &lt;class &#39;ast.For&#39;&gt;, &lt;class &#39;ast.Gt&#39;&gt;, &lt;class &#39;ast.Load&#39;&gt;, &lt;class &#39;ast.Subscript&#39;&gt;, &lt;class &#39;ast.USub&#39;&gt;, &lt;class &#39;ast.Name&#39;&gt;, &lt;class &#39;ast.Tuple&#39;&gt;, &lt;class &#39;ast.Store&#39;&gt;, &lt;class &#39;ast.In&#39;&gt;}</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ALLOWED_NODES"></a>
-
-
+    
+    
 
                 </section>
                 <section id="CONTAINER_CODE_MODE_SCRIPT">
@@ -404,11 +404,11 @@
 <input id="CONTAINER_CODE_MODE_SCRIPT-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
             <label class="view-value-button pdoc-button" for="CONTAINER_CODE_MODE_SCRIPT-view-value"></label><span class="default_value">&#34;\nimport json\nimport sys\nimport traceback\n\nSAFE_BUILTINS = {\n    &#39;abs&#39;: abs,\n    &#39;dict&#39;: dict,\n    &#39;enumerate&#39;: enumerate,\n    &#39;len&#39;: len,\n    &#39;list&#39;: list,\n    &#39;max&#39;: max,\n    &#39;min&#39;: min,\n    &#39;range&#39;: range,\n    &#39;round&#39;: round,\n    &#39;sorted&#39;: sorted,\n    &#39;str&#39;: str,\n    &#39;sum&#39;: sum,\n}\n\ndef validate(value, label):\n    if value is None or isinstance(value, (bool, int, float, str)):\n        return\n    if isinstance(value, (list, tuple)):\n        for index, item in enumerate(value):\n            validate(item, f&#39;{label}[{index}]&#39;)\n        return\n    if isinstance(value, dict):\n        for key, item in value.items():\n            if not isinstance(key, str):\n                raise ValueError(f&#39;{label} contains a non-string key&#39;)\n            validate(item, f&#39;{label}.{key}&#39;)\n        return\n    raise ValueError(f&#39;{label} contains unsupported value type: {type(value).__name__}&#39;)\n\ntry:\n    payload = json.loads(sys.stdin.read())\n    namespace = {&#39;__builtins__&#39;: SAFE_BUILTINS}\n    namespace.update(payload[&#39;inputs&#39;])\n    exec(compile(payload[&#39;code&#39;], &#39;&lt;teaagent-code-mode&gt;&#39;, &#39;exec&#39;), namespace, namespace)\n    variables = {\n        key: value\n        for key, value in namespace.items()\n        if key != &#39;__builtins__&#39; and not key.startswith(&#39;_&#39;)\n    }\n    validate(variables, &#39;variables&#39;)\nexcept Exception as exc:\n    print(json.dumps({&#39;status&#39;: &#39;error&#39;, &#39;error&#39;: f&#39;{type(exc).__name__}: {exc}&#39;, &#39;traceback&#39;: traceback.format_exc()}))\nelse:\n    print(json.dumps({&#39;status&#39;: &#39;ok&#39;, &#39;variables&#39;: variables}))\n&#34;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CONTAINER_CODE_MODE_SCRIPT"></a>
-
-
+    
+    
 
                 </section>
                 <section id="SAFE_BUILTINS">
@@ -417,11 +417,11 @@
 <input id="SAFE_BUILTINS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
             <label class="view-value-button pdoc-button" for="SAFE_BUILTINS-view-value"></label><span class="default_value">{&#39;abs&#39;: &lt;built-in function abs&gt;, &#39;dict&#39;: &lt;class &#39;dict&#39;&gt;, &#39;enumerate&#39;: &lt;class &#39;enumerate&#39;&gt;, &#39;len&#39;: &lt;built-in function len&gt;, &#39;list&#39;: &lt;class &#39;list&#39;&gt;, &#39;max&#39;: &lt;built-in function max&gt;, &#39;min&#39;: &lt;built-in function min&gt;, &#39;range&#39;: &lt;class &#39;range&#39;&gt;, &#39;round&#39;: &lt;built-in function round&gt;, &#39;sorted&#39;: &lt;built-in function sorted&gt;, &#39;str&#39;: &lt;class &#39;str&#39;&gt;, &#39;sum&#39;: &lt;built-in function sum&gt;}</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SAFE_BUILTINS"></a>
-
-
+    
+    
 
                 </section>
                 <section id="ChildProcessCodeModeBackend">
@@ -493,14 +493,14 @@
 
                             <div id="ChildProcessCodeModeBackend.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">ChildProcessCodeModeBackend</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">trusted_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ChildProcessCodeModeBackend.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ChildProcessCodeModeBackend.trusted_only" class="classattr">
@@ -508,17 +508,17 @@
             <span class="name">trusted_only</span><span class="annotation">: bool</span>        =
 <span class="default_value">True</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ChildProcessCodeModeBackend.trusted_only"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ChildProcessCodeModeBackend.execute" class="classattr">
                                         <input id="ChildProcessCodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -566,14 +566,14 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="CodeModeBackend">
                             <input id="CodeModeBackend-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">CodeModeBackend</span><wbr>(<span class="base">typing.Protocol</span>):
 
@@ -630,7 +630,7 @@ Protocol classes can be generic, they are defined as::</p>
                             <div id="CodeModeBackend.__init__" class="classattr">
                                         <input id="CodeModeBackend.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">CodeModeBackend</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span>)</span>
 
                 <label class="view-source-button" for="CodeModeBackend.__init__-view-source"><span>View Source</span></label>
@@ -667,13 +667,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="CodeModeBackend.execute" class="classattr">
                                         <input id="CodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -690,7 +690,7 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -712,29 +712,29 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="CodeModeResult.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">CodeModeResult</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">variables</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CodeModeResult.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="CodeModeResult.variables" class="classattr">
                                 <div class="attr variable">
             <span class="name">variables</span><span class="annotation">: dict[str, typing.Any]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CodeModeResult.variables"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -759,18 +759,18 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="CodeModeSandbox.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">CodeModeSandbox</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">timeout_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span>,</span><span class="param">	<span class="n">cpu_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>,</span><span class="param">	<span class="n">memory_bytes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">67108864</span>,</span><span class="param">	<span class="n">max_output_bytes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1048576</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CodeModeSandbox.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="CodeModeSandbox.timeout_seconds" class="classattr">
@@ -778,11 +778,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">timeout_seconds</span><span class="annotation">: float</span>        =
 <span class="default_value">2.0</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CodeModeSandbox.timeout_seconds"></a>
-
-
+    
+    
 
                             </div>
                             <div id="CodeModeSandbox.cpu_seconds" class="classattr">
@@ -790,11 +790,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">cpu_seconds</span><span class="annotation">: int</span>        =
 <span class="default_value">2</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CodeModeSandbox.cpu_seconds"></a>
-
-
+    
+    
 
                             </div>
                             <div id="CodeModeSandbox.memory_bytes" class="classattr">
@@ -802,11 +802,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">memory_bytes</span><span class="annotation">: int</span>        =
 <span class="default_value">67108864</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CodeModeSandbox.memory_bytes"></a>
-
-
+    
+    
 
                             </div>
                             <div id="CodeModeSandbox.max_output_bytes" class="classattr">
@@ -814,11 +814,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">max_output_bytes</span><span class="annotation">: int</span>        =
 <span class="default_value">1048576</span>
 
-
+        
     </div>
     <a class="headerlink" href="#CodeModeSandbox.max_output_bytes"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -953,29 +953,29 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="ContainerCodeModeBackend.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">ContainerCodeModeBackend</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">image</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;docker&#39;</span>,</span><span class="param">	<span class="n">python_executable</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;python3&#39;</span>,</span><span class="param">	<span class="n">network</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>,</span><span class="param">	<span class="n">cpus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>,</span><span class="param">	<span class="n">user</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;65534:65534&#39;</span>,</span><span class="param">	<span class="n">tmpfs_size_mb</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span>,</span><span class="param">	<span class="n">require_image_digest</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">allowed_images</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">seccomp_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">apparmor_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">selinux_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">oci_runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.image" class="classattr">
                                 <div class="attr variable">
             <span class="name">image</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.image"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.runtime" class="classattr">
@@ -983,11 +983,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">runtime</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;docker&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.runtime"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.python_executable" class="classattr">
@@ -995,11 +995,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">python_executable</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;python3&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.python_executable"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.network" class="classattr">
@@ -1007,11 +1007,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">network</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;none&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.network"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.cpus" class="classattr">
@@ -1019,11 +1019,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">cpus</span><span class="annotation">: float</span>        =
 <span class="default_value">1.0</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.cpus"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.user" class="classattr">
@@ -1031,11 +1031,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">user</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;65534:65534&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.user"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.tmpfs_size_mb" class="classattr">
@@ -1043,11 +1043,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">tmpfs_size_mb</span><span class="annotation">: int</span>        =
 <span class="default_value">16</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.tmpfs_size_mb"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.require_image_digest" class="classattr">
@@ -1055,11 +1055,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">require_image_digest</span><span class="annotation">: bool</span>        =
 <span class="default_value">False</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.require_image_digest"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.allowed_images" class="classattr">
@@ -1067,11 +1067,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">allowed_images</span><span class="annotation">: frozenset[str] | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.allowed_images"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.seccomp_profile" class="classattr">
@@ -1079,11 +1079,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">seccomp_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.seccomp_profile"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.apparmor_profile" class="classattr">
@@ -1091,11 +1091,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">apparmor_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.apparmor_profile"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.selinux_label" class="classattr">
@@ -1103,11 +1103,11 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">selinux_label</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.selinux_label"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.oci_runtime" class="classattr">
@@ -1115,17 +1115,17 @@ Protocol classes can be generic, they are defined as::</p>
             <span class="name">oci_runtime</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ContainerCodeModeBackend.oci_runtime"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ContainerCodeModeBackend.execute" class="classattr">
                                         <input id="ContainerCodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -1181,7 +1181,7 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -1264,25 +1264,25 @@ required by default and seccomp profile set to 'default'.</p>
 
                             <div id="IsolateCodeModeBackend.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">IsolateCodeModeBackend</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">image</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;docker&#39;</span>,</span><span class="param">	<span class="n">python_executable</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;python3&#39;</span>,</span><span class="param">	<span class="n">network</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>,</span><span class="param">	<span class="n">cpus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>,</span><span class="param">	<span class="n">user</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;65534:65534&#39;</span>,</span><span class="param">	<span class="n">tmpfs_size_mb</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span>,</span><span class="param">	<span class="n">require_image_digest</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>,</span><span class="param">	<span class="n">allowed_images</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">seccomp_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s1">&#39;default&#39;</span>,</span><span class="param">	<span class="n">apparmor_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">selinux_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.image" class="classattr">
                                 <div class="attr variable">
             <span class="name">image</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.image"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.runtime" class="classattr">
@@ -1290,11 +1290,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">runtime</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;docker&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.runtime"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.python_executable" class="classattr">
@@ -1302,11 +1302,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">python_executable</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;python3&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.python_executable"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.network" class="classattr">
@@ -1314,11 +1314,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">network</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;none&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.network"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.cpus" class="classattr">
@@ -1326,11 +1326,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">cpus</span><span class="annotation">: float</span>        =
 <span class="default_value">1.0</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.cpus"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.user" class="classattr">
@@ -1338,11 +1338,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">user</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;65534:65534&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.user"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.tmpfs_size_mb" class="classattr">
@@ -1350,11 +1350,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">tmpfs_size_mb</span><span class="annotation">: int</span>        =
 <span class="default_value">16</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.tmpfs_size_mb"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.require_image_digest" class="classattr">
@@ -1362,11 +1362,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">require_image_digest</span><span class="annotation">: bool</span>        =
 <span class="default_value">True</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.require_image_digest"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.allowed_images" class="classattr">
@@ -1374,11 +1374,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">allowed_images</span><span class="annotation">: frozenset[str] | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.allowed_images"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.seccomp_profile" class="classattr">
@@ -1386,11 +1386,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">seccomp_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">&#39;default&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.seccomp_profile"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.apparmor_profile" class="classattr">
@@ -1398,11 +1398,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">apparmor_profile</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.apparmor_profile"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.selinux_label" class="classattr">
@@ -1410,11 +1410,11 @@ required by default and seccomp profile set to 'default'.</p>
             <span class="name">selinux_label</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#IsolateCodeModeBackend.selinux_label"></a>
-
-
+    
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.is_vm_isolated" class="classattr">
@@ -1432,13 +1432,13 @@ required by default and seccomp profile set to 'default'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="IsolateCodeModeBackend.execute" class="classattr">
                                         <input id="IsolateCodeModeBackend.execute-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">execute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -1471,14 +1471,14 @@ required by default and seccomp profile set to 'default'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="UnsafeCodeError">
                             <input id="UnsafeCodeError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">UnsafeCodeError</span><wbr>(<span class="base">builtins.ValueError</span>):
 
@@ -1501,7 +1501,7 @@ required by default and seccomp profile set to 'default'.</p>
                 <section id="execute_code_mode">
                             <input id="execute_code_mode-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">execute_code_mode</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">sandbox</span><span class="p">:</span> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">backend</span><span class="p">:</span> <span class="n"><a href="#CodeModeBackend">CodeModeBackend</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">profile</span><span class="p">:</span> <span class="n"><a href="#SandboxProfile">SandboxProfile</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">audit_logger</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">run_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeResult">CodeModeResult</a></span>:</span></span>
 
@@ -1565,13 +1565,13 @@ required by default and seccomp profile set to 'default'.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="SandboxProfile">
                             <input id="SandboxProfile-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">SandboxProfile</span><wbr>(<span class="base">builtins.str</span>, <span class="base">enum.Enum</span>):
 
@@ -1649,11 +1649,11 @@ errors defaults to 'strict'.</p>
             <span class="name">LOCAL</span>        =
 <span class="default_value">&lt;<a href="#SandboxProfile.LOCAL">SandboxProfile.LOCAL</a>: &#39;local&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SandboxProfile.LOCAL"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SandboxProfile.CI" class="classattr">
@@ -1661,11 +1661,11 @@ errors defaults to 'strict'.</p>
             <span class="name">CI</span>        =
 <span class="default_value">&lt;<a href="#SandboxProfile.CI">SandboxProfile.CI</a>: &#39;ci&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SandboxProfile.CI"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SandboxProfile.PRODUCTION" class="classattr">
@@ -1673,17 +1673,17 @@ errors defaults to 'strict'.</p>
             <span class="name">PRODUCTION</span>        =
 <span class="default_value">&lt;<a href="#SandboxProfile.PRODUCTION">SandboxProfile.PRODUCTION</a>: &#39;production&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SandboxProfile.PRODUCTION"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SandboxProfile.default_sandbox" class="classattr">
                                         <input id="SandboxProfile.default_sandbox-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">default_sandbox</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n"><a href="#CodeModeSandbox">CodeModeSandbox</a></span>:</span></span>
 
@@ -1716,13 +1716,13 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SandboxProfile.validate_runtime_support" class="classattr">
                                         <input id="SandboxProfile.validate_runtime_support-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">validate_runtime_support</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
 
@@ -1754,7 +1754,7 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>

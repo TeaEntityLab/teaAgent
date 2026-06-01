@@ -13,6 +13,7 @@ class ToolRequest:
     tool_name: str
     arguments: dict[str, Any]
     call_id: str = field(default_factory=lambda: uuid4().hex)
+    reasoning: str | None = None
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,7 @@ class ApprovalRequest:
 
 
 ApprovalHandler = Callable[[ApprovalRequest], bool]
+BudgetPromptHandler = Callable[[dict[str, Any]], bool]
 
 
 @dataclass(frozen=True)

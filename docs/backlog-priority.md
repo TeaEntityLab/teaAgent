@@ -2,7 +2,7 @@
 
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
-Last updated: 2026-05-28 (Phase 4–6 Beta hardening shipped)
+Last updated: 2026-05-31 (Phase 4–6 Beta hardening shipped; VS Code extension removed - does not exist in repo)
 
 ---
 
@@ -32,7 +32,6 @@ Items below were deferred at baseline and have since been implemented in-repo.
 | Extended conformance tiers: `TOOL_CALLING` (invokes `get_current_time` tool, checks `tool_calls`); `SAFETY` (API-level block + text refusal taxonomy); `LLMToolDefinition`, `LLMToolCall`, `SafetyCategory`, `LLMSafetyBlock` types; tool wiring in all three adapters | P1-r3 | `llm/_types.py`, `llm/_adapters.py`, `llm/__init__.py`, `llm_conformance/_types.py`, `llm_conformance/_runner.py` |
 | A2A HTTP discovery + wire protocol: `A2ADiscoveryServer` (serves `/.well-known/agent.json`, handles POST `/a2a/task`); `A2AClient` (`fetch_card`, `delegate`); `FederatedAgentRegistry` (TTL-cached pulls from remote endpoints) | P1-r3 | `teaagent/agentcard.py` |
 | GraphQLite production deployment (`GraphQLitePersistentStore`, `GraphQLiteProductionConfig`, index strategy, migration integration, `graphqlite migrate` CLI, production deployment guide) | P2-r3 | `teaagent/graphqlite_production.py`, `docs/graphqlite-production.md`, `cli/_handlers/_misc.py`, `cli/_misc_parsers.py` |
-| IDE integration - VS Code extension (command palette, task provider, terminal profile, TeaAgent output channel) | P2-r3 | `vscode/package.json`, `vscode/src/extension.ts` |
 | Hosted doc site infrastructure (`pdoc` dependency, `scripts/build_docs.py` build script, class-level docstrings on core modules) | P2-r3 | `pyproject.toml`, `scripts/build_docs.py`, `teaagent/tools.py`, `teaagent/runner/_core.py`, `teaagent/budget.py`, `teaagent/policy.py`, `teaagent/memory.py` |
 | ANP bidirectional adapter governed federation (`ANPGovernedService`, audit correlation, approval/budget invariants) | P1 | `teaagent/anp_adapter.py`, `tests/acceptance/test_anp_adapter_flow.py`, `docs/adr/0007-anp-adapter-boundary.md` |
 | Daily-use ergonomics (init, providerless CLI, recipes, sessions, background/attach, model capabilities, KPI) | P1 | `teaagent/ergonomics/`, `teaagent/recipes/`, `scripts/measure_time_to_first_run.py`, `examples/ergonomics/` |
@@ -50,7 +49,248 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — High (P0)
 
-_No open P0 items._
+**Note:** All P0 items below have been implemented. See `docs/specs/` for technical specifications.
+
+### Issue-to-Plan Intake
+**Status:** ✅ Implemented
+**Journey:** User pastes an issue, gets ambiguity score, plan artifact, safe command, and acceptance checklist.
+**Acceptance test:** `test_issue_to_plan_acceptance_flow.py`
+**Dependencies:** Plan mode, issue parsing, ambiguity detection, plan generation
+**Size:** Large (2-3 weeks)
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Files:** `teaagent/issue_intake.py`, `tests/test_issue_intake.py`, `docs/specs/issue-to-plan-intake-spec-2026-05-31.md`
+
+### Plan Review and Revision
+**Status:** ✅ Implemented
+**Journey:** User can compare two plan revisions before execution and bind run to the accepted plan hash.
+**Acceptance test:** `test_plan_review_revision_flow.py`
+**Dependencies:** Plan versioning, plan diff, run-to-plan binding, hash verification
+**Size:** Large (2-3 weeks)
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Files:** `teaagent/plan_storage.py`, `tests/test_plan_storage.py`, `docs/specs/plan-review-revision-spec-2026-05-31.md`
+
+### Guided Recovery
+**Status:** ✅ Implemented
+**Journey:** Failed/partial run suggests resume, undo, inspect audit, or retry with safer mode.
+**Acceptance test:** `test_guided_recovery_flow.py`
+**Dependencies:** Failure classification, recovery strategy selection, undo/resume integration
+**Size:** Medium (1-2 weeks)
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+**Files:** `teaagent/guided_recovery.py`, `tests/test_guided_recovery.py`, `tests/acceptance/test_guided_recovery_flow.py`, `docs/specs/guided-recovery-spec-2026-05-31.md`
+
+---
+
+## Open — High (P1)
+
+**Note:** Items extracted from strategic reference documents (competitive positioning, UX improvements, future roadmap).
+
+### CP-1 — README Rewrite for Governance-First Narrative [P1]
+**Status:** ✅ Complete
+**Journey:** README already leads with governance-first positioning (permission gates, audit trail, undo, cost cap, model-agnostic)
+**Acceptance criteria:** README answers all three persona questions in first screen, governance table in top half, time to comprehension < 30 seconds
+**Size:** Small (3 days)
+**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+
+### CP-2 — Security Whitepaper for Enterprise Evaluation [P1]
+**Status:** ✅ Complete
+**Journey:** Security whitepaper exists documenting governance model, control catalog, NIST mapping, data handling, deployment isolation, incident response
+**Acceptance criteria:** Document exists and reviewed by security background, every control has traceable code path, honest "known limitations" section
+**Size:** Medium (1 week)
+**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+
+### CP-3 — Aider-Style Commit-Per-Change Visibility [P1]
+**Status:** ✅ Complete
+**Journey:** Surface git commit-per-change workflow prominently (stage in branch, review diff, commit/discard, structured commit messages with run metadata)
+**Acceptance criteria:** `teaagent show --diff` works without git knowledge, commit message includes run metadata, `teaagent commit` is idempotent
+**Size:** Medium (1 week)
+**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+
+### UX1.1 — Post-Run Summary [P1]
+**Status:** ✅ Complete
+**Journey:** Emit structured summary at end of every run (tools called, files changed, cost, budget remaining, audit log location, undo command)
+**Acceptance criteria:** Run summary always emitted at session end, `--no-summary` flag suppresses it, summary includes files changed/cost/undo command
+**Size:** Small (3 days)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+### UX1.2 — Proactive Budget Warnings [P1]
+**Status:** ✅ Complete
+**Journey:** Emit budget warnings at 50%, 80%, 90% (with prompt), 100% (offer read-only mode)
+**Acceptance criteria:** Tests trigger at 50%/80%/90%/100%, TUI shows persistent budget status line, warning in post-run summary
+**Size:** Small (3 days)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+### UX1.3 — One-Command Undo with Diff Preview [P1]
+**Status:** ✅ Complete
+**Journey:** Add `--preview` flag to undo command, add `--last` shortcut, show unified diff of what will be reverted
+**Acceptance criteria:** `teaagent undo --last --preview` shows readable diff without executing, `teaagent undo --last` reverts all writes, post-run summary includes undo command
+**Size:** Small (3 days)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+### UX3.1 — teaagent init < 2 Minutes to First Useful Output [P1]
+**Status:** ✅ Complete
+**Journey:** Implement guided init flow (provider selection, permission mode, config write) that completes in < 2 minutes
+**Acceptance criteria:** Init completes in < 2 minutes with guided prompts, after init `teaagent "hello"` produces useful response, init is documented first step in README
+**Size:** Medium (1 week)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+### UX3.2 — First-Run Orientation Message [P1]
+**Status:** ✅ Complete
+**Journey:** On first run (no `.teaagent/`), show orientation message explaining governance features (approval gates, audit log, undo, budget cap)
+**Acceptance criteria:** Orientation message shown on first run, explains key governance features, includes next steps
+**Size:** Small (2 days)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+### UX2.1 — Persistent Decision Log [P1]
+**Status:** ✅ Complete
+**Journey:** Implement DecisionLog stored in `.teaagent/decisions.md`, inject into system prompt, CLI commands to list/add decisions
+**Acceptance criteria:** `teaagent memory decisions list` shows all decisions, `teaagent memory decisions add` appends entry, system prompt includes 10 most recent decisions
+**Size:** Medium (1 week)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+### UX2.2 — Proactive Context Compaction Warning [P1]
+**Status:** ✅ Complete
+**Journey:** Track context window usage, warn at 60% with `/compact` suggestion, implement one-command summary-and-continue
+**Acceptance criteria:** Warning triggers at configurable threshold (default 60%), `/compact` summarizes conversation and replaces with compressed version
+**Size:** Medium (1 week)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+### UX2.3 — Cross-Session Scratchpad [P1]
+**Status:** ✅ Complete
+**Journey:** Write structured scratchpad on session end (goal, progress, open questions, next step), offer resumption on next session start
+**Acceptance criteria:** Scratchpad written on clean exit/ctrl+c/crash, offered for resumption on next session start, `teaagent sessions list` shows recent sessions
+**Size:** Medium (1 week)
+**Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+
+---
+
+## Completed — High (P0) - Security & Reliability
+
+**Note:** All P0 security and reliability items from comprehensive audit have been completed.
+
+### S1 — Fix AuditLevel.L3 "encrypted at rest" documentation fraud [P0]
+**Status:** ✅ Complete
+**Journey:** Removed incorrect "encrypted at rest" claim from audit.py docstring, updated threat-model.md with L3 plaintext row
+**Acceptance criteria:** grep returns no "encrypted at rest" in audit.py, threat-model.md has L3 plaintext row, no other file claims L3 encrypts
+**Size:** Small (1 day)
+**Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
+
+### S2 — Gate ChildProcessCodeModeBackend as trusted-user only [P0]
+**Status:** ✅ Complete
+**Journey:** Added docstring warning, added trusted_only field that raises ValueError when False, updated security-spec.md with trust boundary table
+**Acceptance criteria:** ChildProcessCodeModeBackend(trusted_only=False) raises ValueError, docstring change auditable via git log
+**Size:** Small (1 day)
+**Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
+
+### R1 — Fix fragile async loop management in approval paths [P0]
+**Status:** ✅ Complete
+**Journey:** Replaced new_loop pattern in approval_manager.py and policy.py with proper async loop handling to prevent "Event loop is closed" errors
+**Acceptance criteria:** No asyncio.set_event_loop(new_loop) pattern in approval paths, tests verify no closed loop errors
+**Size:** Small (2 days)
+**Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
+
+### S-H3 — workspace_run_shell shell=True → argv-only path [P0]
+**Status:** ✅ Complete
+**Journey:** Converted shell=True to argv-only path in workspace_run_shell for security
+**Acceptance criteria:** shell=True removed, argv-only path used, tests pass
+**Size:** Small (2 days)
+**Reference:** `docs/plans/remediation-roadmap.md`
+
+### S-H4 — Shell normalization adversarial matrix gaps [P0]
+**Status:** ✅ Complete
+**Journey:** Completed ShellObfuscationTests coverage for adversarial matrix
+**Acceptance criteria:** ShellObfuscationTests pass, adversarial matrix complete
+**Size:** Medium (3 days)
+**Reference:** `docs/plans/remediation-roadmap.md`
+
+### S-H5 — MCP loopback no-auth default [P0]
+**Status:** ✅ Complete
+**Journey:** Required token when TEAAGENT_STRICT_LOCAL=1 for MCP loopback
+**Acceptance criteria:** MCP loopback requires token when strict local mode enabled, tests pass
+**Size:** Small (2 days)
+**Reference:** `docs/plans/remediation-roadmap.md`
+
+### S-H6 — Vote relay loopback without auth_policy [P0]
+**Status:** ✅ Complete
+**Journey:** Auto-load relay-tokens.json or env for vote relay auth
+**Acceptance criteria:** surface_auth.default_relay_token_file implemented, tests pass
+**Size:** Small (2 days)
+**Reference:** `docs/plans/remediation-roadmap.md`
+
+### S-H8 — Plugin audit fail-open [P0]
+**Status:** ✅ Complete
+**Journey:** Implemented fail-closed when TEAAGENT_PLUGINS_STRICT=1
+**Acceptance criteria:** Plugin fails closed when strict mode enabled, tests pass
+**Size:** Small (2 days)
+**Reference:** `docs/plans/remediation-roadmap.md`
+
+### S-M2 — Plaintext bearer token files [P1]
+**Status:** ✅ Complete
+**Journey:** Documented plaintext bearer token files as known limitation with operational guidance
+**Acceptance criteria:** Bearer token files documented as known limitation with chmod 600 guidance
+**Size:** Small (documentation only)
+**Reference:** `docs/plans/remediation-roadmap.md`
+
+### S-M3 — Audit verify swallows exceptions [P1]
+**Status:** ✅ Complete
+**Journey:** Verified audit verify raises exceptions properly
+**Acceptance criteria:** Audit verify raises exceptions properly, tests pass
+**Size:** Small (verification only)
+**Reference:** `docs/plans/remediation-roadmap.md``
+
+---
+
+## Completed Reference Plans
+
+The following plans are marked as complete and are retained for reference:
+
+- **daily-driver-backlog-2026-06-01.md**: ✅ COMPLETE - All 6 tickets implemented (chat REPL fixes, cost accounting, compaction, shared controller, TUI scrollback)
+- **governance-hardening.md**: ✅ SHIPPED - All tranches shipped (tool lint, plan gate, audit, failure cards, MCP trust, approval queue, swarm, Phase 4-6 Beta)
+- **daily-driver-execution-readiness-2026-06-01.md**: ✅ COMPLETE - All items marked as completed
+- **daily-driver-hardening-plan-2026-06-01.md**: ✅ COMPLETE - All items marked as completed
+
+---
+
+## Open — Medium (P2)
+
+### CP-4 — OpenCode Gap Watch [P2]
+**Status:** 📋 Ongoing monitoring
+**Journey:** Monitor OpenCode GitHub releases monthly for governance-related features, escalate if approval gates added
+**Acceptance criteria:** Monthly checks performed, escalation trigger defined (50+ votes on governance issues)
+**Size:** Ongoing
+**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Process document:** `docs/processes/opencode-gap-watch.md`
+
+### CP-5 — Model Capability Matrix [P2]
+**Status:** ✅ Complete
+**Journey:** Create model capability matrix document mapping features to models (extended thinking, tool use, streaming, multi-sig, cost tracking)
+**Acceptance criteria:** Matrix exists and updated with provider adapter changes, README links to matrix
+**Size:** Small (2 days)
+**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+
+### CP-6 — Community Presence / Developer Relations [P3]
+**Status:** 📋 Process (not binary)
+**Journey:** Post on r/LocalLLaMA, Hacker News, GitHub, Dev.to; track GitHub stars, Reddit mentions, HN upvotes
+**Acceptance criteria:** Track metrics monthly, respond to governance-related competitor issues
+**Size:** Ongoing
+**Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
+**Process document:** `docs/processes/community-presence.md`
+
+---
+
+## Strategic Reference Documents
+
+For long-term planning, positioning, and UX research, see:
+- `docs/plans/competitive-positioning-plan-2026-05-31.md` - README rewrite, security whitepaper, demo scripts
+- `docs/plans/ux-improvement-roadmap-2026-05-31.md` - Post-run summary, budget warnings, undo UX, memory/context
+- `docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` - Large strategic backlog with horizons
+
+These are reference documents for strategic decisions. Extract actionable items to this backlog as needed.
+
+---
+
+## Phase 4-6 Status — Beta (All Shipped)
+
+Phase 4 (consensus), Phase 5 (sandbox routing + execution), and Phase 6 (skill writer, docker monitor, control plane) are **Beta** with all items marked as shipped. No remaining hardening work identified.
 
 ---
 

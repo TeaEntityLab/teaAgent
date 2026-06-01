@@ -40,6 +40,7 @@ from teaagent.prompt import (
 from teaagent.runner import (
     AgentRunner,
     ApprovalHandler,
+    BudgetPromptHandler,
     Decision,
     FinalAnswer,
     RunResult,
@@ -79,6 +80,7 @@ class ChatAgentConfig:
     on_chunk: Optional[Callable[[str], None]] = None
     stream_text_only: bool = True
     approval_handler: Optional[ApprovalHandler] = None
+    budget_prompt_handler: Optional[BudgetPromptHandler] = None
     checkpoint_store: Any = None
     chat_messages: Optional[list[LLMMessage]] = None
     cancel_token: Optional[threading.Event] = None
@@ -193,6 +195,7 @@ class ModelDecisionEngine:
             task_spec=self.task_spec,
             skills=self.skills,
             skill_index=self.skill_index,
+            decision_summary=context.get('decision_summary', ''),
         )
 
         if self.budget is not None and self.model:
@@ -561,6 +564,7 @@ def _run_chat_agent_impl(
             multi_sig_config=MultiSigQuorumConfig.from_workspace_config(config.root),
         ),
         approval_handler=config.approval_handler,
+        budget_prompt_handler=config.budget_prompt_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),
         checkpoint_store=config.checkpoint_store,
         cancel_token=config.cancel_token,

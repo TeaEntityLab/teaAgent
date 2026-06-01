@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 
 from teaagent import MemoryCatalog, PermissionMode, preflight
 from teaagent.cli import main
+from test_support import can_bind_loopback
 
 
 class PreflightTests(unittest.TestCase):
@@ -36,6 +37,10 @@ class PreflightTests(unittest.TestCase):
                 route=True,
             )
             payload = report.to_dict()
+
+            if not can_bind_loopback():
+                self.assertFalse(payload['ready'])
+                return
 
             self.assertTrue(payload['ready'])
             self.assertEqual(payload['routing']['category'], 'review')
@@ -75,6 +80,11 @@ class PreflightTests(unittest.TestCase):
                 )
 
             payload = json.loads(output.getvalue())
+            if not can_bind_loopback():
+                self.assertEqual(exit_code, 2)
+                self.assertFalse(payload['ready'])
+                return
+
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload['routing']['category'], 'review')
             # With complexity-based routing, "review this patch for regressions" routes to gpt-4o-mini (medium complexity)

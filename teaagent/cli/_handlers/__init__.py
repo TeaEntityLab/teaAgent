@@ -7,6 +7,7 @@ from ._agent import (
     agent_resume_command,
     agent_run_show,
     agent_run_task,
+    agent_runs_commit_command,
     agent_runs_export,
     agent_runs_list,
     agent_runs_replay,
@@ -72,6 +73,7 @@ from ._consensus import (
     consensus_wait_command,
 )
 from ._control_plane import control_plane_serve_command
+from ._cost import cost_report_command
 from ._doctor import (
     doctor_aigateway,
     doctor_all,
@@ -144,6 +146,8 @@ from ._mcp_trust import (
 )
 from ._memory import (
     memory_add_command,
+    memory_decisions_add_command,
+    memory_decisions_list_command,
     memory_failures_auto_invalidate_command,
     memory_failures_invalidate_command,
     memory_failures_list_command,
@@ -153,6 +157,8 @@ from ._memory import (
     memory_list_command,
     memory_search_command,
     memory_show_command,
+    team_memory_add_command,
+    team_memory_list_command,
 )
 from ._misc import (
     clarify_command,
@@ -273,6 +279,7 @@ __all__ = [
     'doctor_env_order',
     'agent_resume_command',
     'agent_run_show',
+    'agent_runs_commit_command',
     'agent_run_task',
     'agent_runs_list',
     'agent_runs_trace',
@@ -327,6 +334,8 @@ __all__ = [
     'mcp_trust_inspect_command',
     'mcp_trust_list_command',
     'memory_add_command',
+    'memory_decisions_add_command',
+    'memory_decisions_list_command',
     'memory_list_command',
     'memory_search_command',
     'memory_show_command',
@@ -336,6 +345,8 @@ __all__ = [
     'memory_failures_prune_command',
     'memory_failures_review_command',
     'memory_failures_auto_invalidate_command',
+    'team_memory_add_command',
+    'team_memory_list_command',
     'model_conformance',
     'model_providers',
     'model_capabilities',
@@ -401,6 +412,7 @@ __all__ = [
     'consensus_wait_command',
     'consensus_votes_import_command',
     'control_plane_serve_command',
+    'cost_report_command',
     'sandbox_route_command',
     'sandbox_execute_command',
     'sandbox_monitor_command',

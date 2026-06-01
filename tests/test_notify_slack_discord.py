@@ -9,6 +9,7 @@ from threading import Thread
 from typing import Any
 
 from teaagent.notify import NotifyConfig, fire_notification
+from test_support import skip_if_socket_bind_is_blocked
 
 
 class _MockWorker:
@@ -33,6 +34,7 @@ class _CaptureHandler(BaseHTTPRequestHandler):
 
 
 def _start_mock_server() -> tuple[HTTPServer, str]:
+    skip_if_socket_bind_is_blocked()
     server = HTTPServer(('127.0.0.1', 0), _CaptureHandler)
     port = server.server_address[1]
     url = f'http://127.0.0.1:{port}/'

@@ -114,7 +114,7 @@ def register_workspace_tools(registry: ToolRegistry, factory: Any) -> None:
     )
     registry.register(
         name='workspace_read_file_hashed',
-        description='Read a UTF-8 text file with stable LINE#HASH anchors for safer edits.',
+        description='Read a UTF-8 text file with stable LINE#HASH anchors for safer patching.',
         input_schema=object_schema(
             {'path': 'string', 'max_bytes': 'integer'},
             required=['path'],

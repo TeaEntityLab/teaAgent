@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
@@ -20,7 +21,15 @@ def agent_status_command(args: argparse.Namespace) -> int:
 
 def agent_runs_list(args: argparse.Namespace) -> int:
     store = RunStore(args.root, readonly=True)
-    print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
+    payload = [summary.to_dict() for summary in store.list_runs(limit=args.limit)]
+    from teaagent.scratchpad import Scratchpad
+
+    scratchpad = Scratchpad(Path(args.root))
+    if scratchpad.exists():
+        content = scratchpad.read()
+        if content and content.get('last_goal'):
+            payload.append({'scratchpad_last_goal': content['last_goal']})
+    print_json(payload)
     return 0
 
 

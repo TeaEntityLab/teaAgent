@@ -607,7 +607,7 @@
                     <h1 class="modulename">
 <a href="./../teaagent.html">teaagent</a><wbr>.oauth21    </h1>
 
-
+                
                         <input id="mod-oauth21-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-oauth21-view-source"><span>View Source</span></label>
@@ -695,17 +695,17 @@
             <span class="name">HAS_CRYPTOGRAPHY</span>        =
 <span class="default_value">True</span>
 
-
+        
     </div>
     <a class="headerlink" href="#HAS_CRYPTOGRAPHY"></a>
-
-
+    
+    
 
                 </section>
                 <section id="JWTError">
                             <input id="JWTError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">JWTError</span><wbr>(<span class="base"><a href="#OAuth21Error">teaagent.oauth21.OAuth21Error</a></span>):
 
@@ -728,7 +728,7 @@
                 <section id="InvalidClientError">
                             <input id="InvalidClientError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">InvalidClientError</span><wbr>(<span class="base"><a href="#OAuth21Error">teaagent.oauth21.OAuth21Error</a></span>):
 
@@ -751,7 +751,7 @@
                 <section id="InvalidGrantError">
                             <input id="InvalidGrantError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">InvalidGrantError</span><wbr>(<span class="base"><a href="#OAuth21Error">teaagent.oauth21.OAuth21Error</a></span>):
 
@@ -774,7 +774,7 @@
                 <section id="InvalidDPoPError">
                             <input id="InvalidDPoPError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">InvalidDPoPError</span><wbr>(<span class="base"><a href="#OAuth21Error">teaagent.oauth21.OAuth21Error</a></span>):
 
@@ -797,7 +797,7 @@
                 <section id="OAuth21AuthorizationServer">
                             <input id="OAuth21AuthorizationServer-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">OAuth21AuthorizationServer</span>:
 
@@ -1158,12 +1158,12 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="OAuth21AuthorizationServer.__init__" class="classattr">
                                         <input id="OAuth21AuthorizationServer.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">OAuth21AuthorizationServer</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">signing_key</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">issuer</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">token_ttl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3600</span>,</span><span class="param">	<span class="n">refresh_token_ttl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2592000</span>,</span><span class="param">	<span class="n">nonce_ttl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span>,</span><span class="param">	<span class="n">dpop_replay_ttl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span>,</span><span class="param">	<span class="n">store</span><span class="p">:</span> <span class="n"><a href="#OAuthStore">OAuthStore</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">key_ring</span><span class="p">:</span> <span class="n"><a href="#OAuthKeyRing">OAuthKeyRing</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="OAuth21AuthorizationServer.__init__-view-source"><span>View Source</span></label>
@@ -1196,13 +1196,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.register_client" class="classattr">
                                         <input id="OAuth21AuthorizationServer.register_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">register_client</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">redirect_uris</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;mcp&#39;</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span>:</span></span>
 
@@ -1231,13 +1231,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.get_client" class="classattr">
                                         <input id="OAuth21AuthorizationServer.get_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span>:</span></span>
 
@@ -1256,7 +1256,7 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.issuer" class="classattr">
@@ -1274,7 +1274,7 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.key_ring" class="classattr">
@@ -1292,13 +1292,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.create_authorization_code" class="classattr">
                                         <input id="OAuth21AuthorizationServer.create_authorization_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">create_authorization_code</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">redirect_uri</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">code_challenge</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">code_challenge_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;S256&#39;</span>,</span><span class="param">	<span class="n">scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;mcp&#39;</span>,</span><span class="param">	<span class="n">state</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>:</span></span>
 
@@ -1350,13 +1350,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.exchange_code" class="classattr">
                                         <input id="OAuth21AuthorizationServer.exchange_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">exchange_code</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">code</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">code_verifier</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">dpop_proof_jwt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21TokenResponse">OAuth21TokenResponse</a></span>:</span></span>
 
@@ -1395,13 +1395,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.exchange_refresh_token" class="classattr">
                                         <input id="OAuth21AuthorizationServer.exchange_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">exchange_refresh_token</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">refresh_token</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">dpop_proof_jwt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21TokenResponse">OAuth21TokenResponse</a></span>:</span></span>
 
@@ -1458,13 +1458,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.introspect_token" class="classattr">
                                         <input id="OAuth21AuthorizationServer.introspect_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">introspect_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21TokenClaims">OAuth21TokenClaims</a></span>:</span></span>
 
@@ -1493,13 +1493,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.generate_dpop_nonce" class="classattr">
                                         <input id="OAuth21AuthorizationServer.generate_dpop_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">generate_dpop_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -1515,13 +1515,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.validate_dpop_nonce" class="classattr">
                                         <input id="OAuth21AuthorizationServer.validate_dpop_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">validate_dpop_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -1537,13 +1537,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21AuthorizationServer.metadata" class="classattr">
                                         <input id="OAuth21AuthorizationServer.metadata-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">metadata</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1570,14 +1570,14 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="OAuth21ResourceServer">
                             <input id="OAuth21ResourceServer-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">OAuth21ResourceServer</span>:
 
@@ -1684,12 +1684,12 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="OAuth21ResourceServer.__init__" class="classattr">
                                         <input id="OAuth21ResourceServer.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">OAuth21ResourceServer</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">signing_key</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">issuer</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">key_ring</span><span class="p">:</span> <span class="n"><a href="#OAuthKeyRing">OAuthKeyRing</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="OAuth21ResourceServer.__init__-view-source"><span>View Source</span></label>
@@ -1712,13 +1712,13 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuth21ResourceServer.validate_request" class="classattr">
                                         <input id="OAuth21ResourceServer.validate_request-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">validate_request</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">authorization_header</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">dpop_header</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">method</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">url</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21TokenClaims">OAuth21TokenClaims</a></span>:</span></span>
 
@@ -1768,7 +1768,7 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -1796,51 +1796,51 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="OAuth21Client.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">OAuth21Client</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">redirect_uris</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="n">scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;mcp&#39;</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21Client.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21Client.client_id" class="classattr">
                                 <div class="attr variable">
             <span class="name">client_id</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21Client.client_id"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21Client.client_secret" class="classattr">
                                 <div class="attr variable">
             <span class="name">client_secret</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21Client.client_secret"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21Client.redirect_uris" class="classattr">
                                 <div class="attr variable">
             <span class="name">redirect_uris</span><span class="annotation">: frozenset[str]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21Client.redirect_uris"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21Client.scope" class="classattr">
@@ -1848,17 +1848,17 @@
             <span class="name">scope</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;mcp&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21Client.scope"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21Client.validate_redirect_uri" class="classattr">
                                         <input id="OAuth21Client.validate_redirect_uri-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">validate_redirect_uri</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">uri</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -1871,7 +1871,7 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -1897,62 +1897,62 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="OAuth21TokenResponse.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">OAuth21TokenResponse</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">access_token</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">token_type</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">expires_in</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">scope</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">refresh_token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenResponse.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenResponse.access_token" class="classattr">
                                 <div class="attr variable">
             <span class="name">access_token</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenResponse.access_token"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenResponse.token_type" class="classattr">
                                 <div class="attr variable">
             <span class="name">token_type</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenResponse.token_type"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenResponse.expires_in" class="classattr">
                                 <div class="attr variable">
             <span class="name">expires_in</span><span class="annotation">: int</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenResponse.expires_in"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenResponse.scope" class="classattr">
                                 <div class="attr variable">
             <span class="name">scope</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenResponse.scope"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenResponse.refresh_token" class="classattr">
@@ -1960,11 +1960,11 @@
             <span class="name">refresh_token</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenResponse.refresh_token"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -1994,95 +1994,95 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="OAuth21TokenClaims.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">OAuth21TokenClaims</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">iss</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">sub</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">aud</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">iat</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">exp</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">jti</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">scope</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">cnf_jkt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">raw</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.iss" class="classattr">
                                 <div class="attr variable">
             <span class="name">iss</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.iss"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.sub" class="classattr">
                                 <div class="attr variable">
             <span class="name">sub</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.sub"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.aud" class="classattr">
                                 <div class="attr variable">
             <span class="name">aud</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.aud"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.iat" class="classattr">
                                 <div class="attr variable">
             <span class="name">iat</span><span class="annotation">: int</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.iat"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.exp" class="classattr">
                                 <div class="attr variable">
             <span class="name">exp</span><span class="annotation">: int</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.exp"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.jti" class="classattr">
                                 <div class="attr variable">
             <span class="name">jti</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.jti"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.scope" class="classattr">
                                 <div class="attr variable">
             <span class="name">scope</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.scope"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.cnf_jkt" class="classattr">
@@ -2090,22 +2090,22 @@
             <span class="name">cnf_jkt</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.cnf_jkt"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuth21TokenClaims.raw" class="classattr">
                                 <div class="attr variable">
             <span class="name">raw</span><span class="annotation">: dict[str, typing.Any]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuth21TokenClaims.raw"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -2129,29 +2129,29 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="DPoPValidationResult.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">DPoPValidationResult</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">valid</span><span class="p">:</span> <span class="nb">bool</span>, </span><span class="param"><span class="n">jkt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>, </span><span class="param"><span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#DPoPValidationResult.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="DPoPValidationResult.valid" class="classattr">
                                 <div class="attr variable">
             <span class="name">valid</span><span class="annotation">: bool</span>
 
-
+        
     </div>
     <a class="headerlink" href="#DPoPValidationResult.valid"></a>
-
-
+    
+    
 
                             </div>
                             <div id="DPoPValidationResult.jkt" class="classattr">
@@ -2159,11 +2159,11 @@
             <span class="name">jkt</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#DPoPValidationResult.jkt"></a>
-
-
+    
+    
 
                             </div>
                             <div id="DPoPValidationResult.error" class="classattr">
@@ -2171,18 +2171,18 @@
             <span class="name">error</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#DPoPValidationResult.error"></a>
-
-
+    
+    
 
                             </div>
                 </section>
                 <section id="OAuth21Error">
                             <input id="OAuth21Error-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">OAuth21Error</span><wbr>(<span class="base">builtins.Exception</span>):
 
@@ -2205,7 +2205,7 @@
                 <section id="OAuthStore">
                             <input id="OAuthStore-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">OAuthStore</span><wbr>(<span class="base">typing.Protocol</span>):
 
@@ -2289,7 +2289,7 @@ Protocol classes can be generic, they are defined as::</p>
                             <div id="OAuthStore.__init__" class="classattr">
                                         <input id="OAuthStore.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">OAuthStore</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span>)</span>
 
                 <label class="view-source-button" for="OAuthStore.__init__-view-source"><span>View Source</span></label>
@@ -2326,13 +2326,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.register_client" class="classattr">
                                         <input id="OAuthStore.register_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">register_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client</span><span class="p">:</span> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2344,13 +2344,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.get_client" class="classattr">
                                         <input id="OAuthStore.get_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2362,13 +2362,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.save_code" class="classattr">
                                         <input id="OAuthStore.save_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2380,13 +2380,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.consume_code" class="classattr">
                                         <input id="OAuthStore.consume_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2398,13 +2398,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.save_nonce" class="classattr">
                                         <input id="OAuthStore.save_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">created_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2416,13 +2416,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.get_nonce" class="classattr">
                                         <input id="OAuthStore.get_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2434,13 +2434,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.consume_nonce" class="classattr">
                                         <input id="OAuthStore.consume_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2452,13 +2452,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.delete_nonce" class="classattr">
                                         <input id="OAuthStore.delete_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">delete_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2470,13 +2470,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.prune" class="classattr">
                                         <input id="OAuthStore.prune-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">prune</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">now</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">code_ttl_cutoff</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">nonce_ttl</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2490,13 +2490,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.save_refresh_token" class="classattr">
                                         <input id="OAuthStore.save_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">record</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2508,13 +2508,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.consume_refresh_token" class="classattr">
                                         <input id="OAuthStore.consume_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2526,13 +2526,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.record_refresh_reuse" class="classattr">
                                         <input id="OAuthStore.record_refresh_reuse-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">record_refresh_reuse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">expires_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2546,13 +2546,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.is_refresh_reused" class="classattr">
                                         <input id="OAuthStore.is_refresh_reused-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">is_refresh_reused</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -2564,13 +2564,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.get_refresh_reuse_family_id" class="classattr">
                                         <input id="OAuthStore.get_refresh_reuse_family_id-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_refresh_reuse_family_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2582,13 +2582,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthStore.revoke_refresh_family" class="classattr">
                                         <input id="OAuthStore.revoke_refresh_family-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">revoke_refresh_family</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2600,14 +2600,14 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="InMemoryOAuthStore">
                             <input id="InMemoryOAuthStore-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">InMemoryOAuthStore</span>:
 
@@ -2699,67 +2699,67 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="InMemoryOAuthStore.clients" class="classattr">
                                 <div class="attr variable">
             <span class="name">clients</span><span class="annotation">: dict[str, <a href="#OAuth21Client">OAuth21Client</a>]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#InMemoryOAuthStore.clients"></a>
-
-
+    
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.codes" class="classattr">
                                 <div class="attr variable">
             <span class="name">codes</span><span class="annotation">: dict[str, teaagent.oauth21._types._AuthorizationCode]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#InMemoryOAuthStore.codes"></a>
-
-
+    
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.nonces" class="classattr">
                                 <div class="attr variable">
             <span class="name">nonces</span><span class="annotation">: dict[str, float]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#InMemoryOAuthStore.nonces"></a>
-
-
+    
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.refresh_tokens" class="classattr">
                                 <div class="attr variable">
             <span class="name">refresh_tokens</span><span class="annotation">: dict[str, teaagent.oauth21._types._RefreshToken]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#InMemoryOAuthStore.refresh_tokens"></a>
-
-
+    
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.refresh_reuse" class="classattr">
                                 <div class="attr variable">
             <span class="name">refresh_reuse</span><span class="annotation">: dict[str, tuple[str, float]]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#InMemoryOAuthStore.refresh_reuse"></a>
-
-
+    
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.register_client" class="classattr">
                                         <input id="InMemoryOAuthStore.register_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">register_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client</span><span class="p">:</span> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2772,13 +2772,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.get_client" class="classattr">
                                         <input id="InMemoryOAuthStore.get_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2791,13 +2791,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.save_code" class="classattr">
                                         <input id="InMemoryOAuthStore.save_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2810,13 +2810,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.consume_code" class="classattr">
                                         <input id="InMemoryOAuthStore.consume_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2829,13 +2829,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.save_nonce" class="classattr">
                                         <input id="InMemoryOAuthStore.save_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">created_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2848,13 +2848,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.get_nonce" class="classattr">
                                         <input id="InMemoryOAuthStore.get_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2867,13 +2867,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.consume_nonce" class="classattr">
                                         <input id="InMemoryOAuthStore.consume_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2886,13 +2886,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.delete_nonce" class="classattr">
                                         <input id="InMemoryOAuthStore.delete_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">delete_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2905,13 +2905,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.prune" class="classattr">
                                         <input id="InMemoryOAuthStore.prune-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">prune</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">now</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">code_ttl_cutoff</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">nonce_ttl</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2939,13 +2939,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.save_refresh_token" class="classattr">
                                         <input id="InMemoryOAuthStore.save_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">record</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2958,13 +2958,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.consume_refresh_token" class="classattr">
                                         <input id="InMemoryOAuthStore.consume_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -2977,13 +2977,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.record_refresh_reuse" class="classattr">
                                         <input id="InMemoryOAuthStore.record_refresh_reuse-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">record_refresh_reuse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">expires_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -2998,13 +2998,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.is_refresh_reused" class="classattr">
                                         <input id="InMemoryOAuthStore.is_refresh_reused-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">is_refresh_reused</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -3017,13 +3017,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.get_refresh_reuse_family_id" class="classattr">
                                         <input id="InMemoryOAuthStore.get_refresh_reuse_family_id-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_refresh_reuse_family_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -3043,13 +3043,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="InMemoryOAuthStore.revoke_refresh_family" class="classattr">
                                         <input id="InMemoryOAuthStore.revoke_refresh_family-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">revoke_refresh_family</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3067,14 +3067,14 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="SQLiteOAuthStore">
                             <input id="SQLiteOAuthStore-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">SQLiteOAuthStore</span>:
 
@@ -3469,12 +3469,12 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="SQLiteOAuthStore.__init__" class="classattr">
                                         <input id="SQLiteOAuthStore.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">SQLiteOAuthStore</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">path</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span></span>)</span>
 
                 <label class="view-source-button" for="SQLiteOAuthStore.__init__-view-source"><span>View Source</span></label>
@@ -3489,24 +3489,24 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.path" class="classattr">
                                 <div class="attr variable">
             <span class="name">path</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SQLiteOAuthStore.path"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.register_client" class="classattr">
                                         <input id="SQLiteOAuthStore.register_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">register_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client</span><span class="p">:</span> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3537,13 +3537,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.get_client" class="classattr">
                                         <input id="SQLiteOAuthStore.get_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -3597,13 +3597,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.validate_client_secret" class="classattr">
                                         <input id="SQLiteOAuthStore.validate_client_secret-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">validate_client_secret</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -3630,13 +3630,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.save_code" class="classattr">
                                         <input id="SQLiteOAuthStore.save_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3666,13 +3666,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.consume_code" class="classattr">
                                         <input id="SQLiteOAuthStore.consume_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -3709,13 +3709,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.save_nonce" class="classattr">
                                         <input id="SQLiteOAuthStore.save_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">created_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3735,13 +3735,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.get_nonce" class="classattr">
                                         <input id="SQLiteOAuthStore.get_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -3761,13 +3761,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.consume_nonce" class="classattr">
                                         <input id="SQLiteOAuthStore.consume_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -3791,13 +3791,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.delete_nonce" class="classattr">
                                         <input id="SQLiteOAuthStore.delete_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">delete_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3811,13 +3811,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.prune" class="classattr">
                                         <input id="SQLiteOAuthStore.prune-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">prune</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">now</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">code_ttl_cutoff</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">nonce_ttl</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3846,13 +3846,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.save_refresh_token" class="classattr">
                                         <input id="SQLiteOAuthStore.save_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">record</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3880,13 +3880,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.consume_refresh_token" class="classattr">
                                         <input id="SQLiteOAuthStore.consume_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -3924,13 +3924,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.record_refresh_reuse" class="classattr">
                                         <input id="SQLiteOAuthStore.record_refresh_reuse-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">record_refresh_reuse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">expires_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -3953,13 +3953,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.is_refresh_reused" class="classattr">
                                         <input id="SQLiteOAuthStore.is_refresh_reused-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">is_refresh_reused</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -3972,13 +3972,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.get_refresh_reuse_family_id" class="classattr">
                                         <input id="SQLiteOAuthStore.get_refresh_reuse_family_id-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_refresh_reuse_family_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -4005,13 +4005,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="SQLiteOAuthStore.revoke_refresh_family" class="classattr">
                                         <input id="SQLiteOAuthStore.revoke_refresh_family-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">revoke_refresh_family</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4032,14 +4032,14 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="PostgreSQLOAuthStore">
                             <input id="PostgreSQLOAuthStore-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">PostgreSQLOAuthStore</span>:
 
@@ -4367,7 +4367,7 @@ hosts sharing the same database.</p>
                             <div id="PostgreSQLOAuthStore.__init__" class="classattr">
                                         <input id="PostgreSQLOAuthStore.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">PostgreSQLOAuthStore</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">dsn</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">_conn_factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="PostgreSQLOAuthStore.__init__-view-source"><span>View Source</span></label>
@@ -4393,13 +4393,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.register_client" class="classattr">
                                         <input id="PostgreSQLOAuthStore.register_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">register_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client</span><span class="p">:</span> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4434,13 +4434,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.get_client" class="classattr">
                                         <input id="PostgreSQLOAuthStore.get_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -4492,13 +4492,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.validate_client_secret" class="classattr">
                                         <input id="PostgreSQLOAuthStore.validate_client_secret-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">validate_client_secret</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -4523,13 +4523,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.save_code" class="classattr">
                                         <input id="PostgreSQLOAuthStore.save_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4560,13 +4560,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.consume_code" class="classattr">
                                         <input id="PostgreSQLOAuthStore.consume_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -4599,13 +4599,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.save_nonce" class="classattr">
                                         <input id="PostgreSQLOAuthStore.save_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">created_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4623,13 +4623,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.get_nonce" class="classattr">
                                         <input id="PostgreSQLOAuthStore.get_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -4647,13 +4647,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.consume_nonce" class="classattr">
                                         <input id="PostgreSQLOAuthStore.consume_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -4672,13 +4672,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.delete_nonce" class="classattr">
                                         <input id="PostgreSQLOAuthStore.delete_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">delete_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4692,13 +4692,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.prune" class="classattr">
                                         <input id="PostgreSQLOAuthStore.prune-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">prune</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">now</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">code_ttl_cutoff</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">nonce_ttl</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4722,13 +4722,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.save_refresh_token" class="classattr">
                                         <input id="PostgreSQLOAuthStore.save_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">record</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4758,13 +4758,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.consume_refresh_token" class="classattr">
                                         <input id="PostgreSQLOAuthStore.consume_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -4795,13 +4795,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.record_refresh_reuse" class="classattr">
                                         <input id="PostgreSQLOAuthStore.record_refresh_reuse-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">record_refresh_reuse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">expires_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4826,13 +4826,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.is_refresh_reused" class="classattr">
                                         <input id="PostgreSQLOAuthStore.is_refresh_reused-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">is_refresh_reused</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -4845,13 +4845,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.get_refresh_reuse_family_id" class="classattr">
                                         <input id="PostgreSQLOAuthStore.get_refresh_reuse_family_id-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_refresh_reuse_family_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -4878,13 +4878,13 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="PostgreSQLOAuthStore.revoke_refresh_family" class="classattr">
                                         <input id="PostgreSQLOAuthStore.revoke_refresh_family-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">revoke_refresh_family</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -4905,14 +4905,14 @@ hosts sharing the same database.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="RedisOAuthStore">
                             <input id="RedisOAuthStore-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">RedisOAuthStore</span>:
 
@@ -5162,7 +5162,7 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
                             <div id="RedisOAuthStore.__init__" class="classattr">
                                         <input id="RedisOAuthStore.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">RedisOAuthStore</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;redis://localhost:6379&#39;</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">nonce_ttl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span>,</span><span class="param">	<span class="n">key_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;oauth:&#39;</span>,</span><span class="param">	<span class="n">_client</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="RedisOAuthStore.__init__-view-source"><span>View Source</span></label>
@@ -5192,13 +5192,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.register_client" class="classattr">
                                         <input id="RedisOAuthStore.register_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">register_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client</span><span class="p">:</span> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5222,13 +5222,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.get_client" class="classattr">
                                         <input id="RedisOAuthStore.get_client-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_client</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuth21Client">OAuth21Client</a></span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -5275,13 +5275,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.validate_client_secret" class="classattr">
                                         <input id="RedisOAuthStore.validate_client_secret-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">validate_client_secret</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -5303,13 +5303,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.save_code" class="classattr">
                                         <input id="RedisOAuthStore.save_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5335,13 +5335,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.consume_code" class="classattr">
                                         <input id="RedisOAuthStore.consume_code-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_code</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">code</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_AuthorizationCode</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -5366,13 +5366,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.save_nonce" class="classattr">
                                         <input id="RedisOAuthStore.save_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">created_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5390,13 +5390,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.get_nonce" class="classattr">
                                         <input id="RedisOAuthStore.get_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -5410,13 +5410,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.consume_nonce" class="classattr">
                                         <input id="RedisOAuthStore.consume_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -5430,13 +5430,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.delete_nonce" class="classattr">
                                         <input id="RedisOAuthStore.delete_nonce-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">delete_nonce</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">nonce</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5449,13 +5449,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.prune" class="classattr">
                                         <input id="RedisOAuthStore.prune-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">prune</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">now</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">code_ttl_cutoff</span><span class="p">:</span> <span class="nb">float</span>, </span><span class="param"><span class="n">nonce_ttl</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5470,13 +5470,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.save_refresh_token" class="classattr">
                                         <input id="RedisOAuthStore.save_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">save_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">record</span><span class="p">:</span> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5501,13 +5501,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.consume_refresh_token" class="classattr">
                                         <input id="RedisOAuthStore.consume_refresh_token-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">consume_refresh_token</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">teaagent</span><span class="o">.</span><span class="n">oauth21</span><span class="o">.</span><span class="n">_types</span><span class="o">.</span><span class="n">_RefreshToken</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -5532,13 +5532,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.record_refresh_reuse" class="classattr">
                                         <input id="RedisOAuthStore.record_refresh_reuse-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">record_refresh_reuse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">expires_at</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5558,13 +5558,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.is_refresh_reused" class="classattr">
                                         <input id="RedisOAuthStore.is_refresh_reused-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">is_refresh_reused</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
@@ -5577,13 +5577,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.get_refresh_reuse_family_id" class="classattr">
                                         <input id="RedisOAuthStore.get_refresh_reuse_family_id-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">get_refresh_reuse_family_id</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
 
@@ -5599,13 +5599,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="RedisOAuthStore.revoke_refresh_family" class="classattr">
                                         <input id="RedisOAuthStore.revoke_refresh_family-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">revoke_refresh_family</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">family_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
@@ -5631,7 +5631,7 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -5702,40 +5702,40 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="OAuthKeyRing.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">OAuthKeyRing</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">active_kid</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">keys</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span>,</span><span class="param">	<span class="n">rotation_window_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">deprecated_at</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuthKeyRing.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuthKeyRing.active_kid" class="classattr">
                                 <div class="attr variable">
             <span class="name">active_kid</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuthKeyRing.active_kid"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuthKeyRing.keys" class="classattr">
                                 <div class="attr variable">
             <span class="name">keys</span><span class="annotation">: Mapping[str, bytes]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuthKeyRing.keys"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuthKeyRing.rotation_window_seconds" class="classattr">
@@ -5743,22 +5743,22 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">rotation_window_seconds</span><span class="annotation">: int</span>        =
 <span class="default_value">0</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuthKeyRing.rotation_window_seconds"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuthKeyRing.deprecated_at" class="classattr">
                                 <div class="attr variable">
             <span class="name">deprecated_at</span><span class="annotation">: Mapping[str, float]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#OAuthKeyRing.deprecated_at"></a>
-
-
+    
+    
 
                             </div>
                             <div id="OAuthKeyRing.single" class="classattr">
@@ -5779,7 +5779,7 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthKeyRing.active_key" class="classattr">
@@ -5797,13 +5797,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthKeyRing.rotate" class="classattr">
                                         <input id="OAuthKeyRing.rotate-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">rotate</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">new_kid</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">now</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="#OAuthKeyRing">OAuthKeyRing</a></span>:</span></span>
 
@@ -5828,13 +5828,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthKeyRing.key_for" class="classattr">
                                         <input id="OAuthKeyRing.key_for-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">key_for</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">kid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">bytes</span>:</span></span>
 
@@ -5849,13 +5849,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="OAuthKeyRing.key_for_validation" class="classattr">
                                         <input id="OAuthKeyRing.key_for_validation-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">key_for_validation</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">kid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">now</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">bytes</span>:</span></span>
 
@@ -5883,14 +5883,14 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="create_jwt">
                             <input id="create_jwt-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">create_jwt</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">key</span><span class="p">:</span> <span class="nb">bytes</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">header_extra</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -5915,13 +5915,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="verify_jwt">
                             <input id="verify_jwt-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">verify_jwt</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">token</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">key</span><span class="p">:</span> <span class="nb">bytes</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">aud</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">iss</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">allow_expired</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -5958,13 +5958,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="decode_jwt_unsafe">
                             <input id="decode_jwt_unsafe-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">decode_jwt_unsafe</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">token</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]]</span>:</span></span>
 
@@ -5985,13 +5985,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="_b64url_encode">
                             <input id="_b64url_encode-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">_b64url_encode</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -6004,13 +6004,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="compute_jwk_thumbprint">
                             <input id="compute_jwk_thumbprint-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">compute_jwk_thumbprint</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">jwk</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -6030,13 +6030,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="generate_code_verifier">
                             <input id="generate_code_verifier-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">generate_code_verifier</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">43</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -6055,13 +6055,13 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="compute_s256_challenge">
                             <input id="compute_s256_challenge-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">compute_s256_challenge</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">verifier</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -6075,7 +6075,7 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
 </span></pre></div>
 
 
-
+    
 
                 </section>
                 <section id="_AUTHORIZE_PATH">
@@ -6083,11 +6083,11 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">_AUTHORIZE_PATH</span>        =
 <span class="default_value">&#39;/authorize&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#_AUTHORIZE_PATH"></a>
-
-
+    
+    
 
                 </section>
                 <section id="_TOKEN_PATH">
@@ -6095,11 +6095,11 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">_TOKEN_PATH</span>        =
 <span class="default_value">&#39;/token&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#_TOKEN_PATH"></a>
-
-
+    
+    
 
                 </section>
                 <section id="_OAUTH_METADATA_PATH">
@@ -6107,11 +6107,11 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">_OAUTH_METADATA_PATH</span>        =
 <span class="default_value">&#39;/.well-known/oauth-authorization-server&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#_OAUTH_METADATA_PATH"></a>
-
-
+    
+    
 
                 </section>
                 <section id="_DPOP_NONCE_HEADER">
@@ -6119,11 +6119,11 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">_DPOP_NONCE_HEADER</span>        =
 <span class="default_value">&#39;DPoP-Nonce&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#_DPOP_NONCE_HEADER"></a>
-
-
+    
+    
 
                 </section>
                 <section id="_DPOP_HEADER">
@@ -6131,11 +6131,11 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">_DPOP_HEADER</span>        =
 <span class="default_value">&#39;DPoP&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#_DPOP_HEADER"></a>
-
-
+    
+    
 
                 </section>
                 <section id="_AUTHORIZATION_HEADER">
@@ -6143,11 +6143,11 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">_AUTHORIZATION_HEADER</span>        =
 <span class="default_value">&#39;Authorization&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#_AUTHORIZATION_HEADER"></a>
-
-
+    
+    
 
                 </section>
                 <section id="_TOKEN_TYPE_DPOP">
@@ -6155,11 +6155,11 @@ round-trip) so one-time semantics hold across multiple hosts.</p>
             <span class="name">_TOKEN_TYPE_DPOP</span>        =
 <span class="default_value">&#39;DPoP&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#_TOKEN_TYPE_DPOP"></a>
-
-
+    
+    
 
                 </section>
     </main>

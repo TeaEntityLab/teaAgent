@@ -10,6 +10,7 @@ from urllib.request import urlopen
 from teaagent.audit import AuditLogger
 from teaagent.audit_viewer import make_audit_server
 from teaagent.run_store import RunStore
+from test_support import skip_if_socket_bind_is_blocked
 
 
 def _make_store_with_run(tmp: str) -> RunStore:
@@ -25,6 +26,7 @@ def _make_store_with_run(tmp: str) -> RunStore:
 
 class AuditViewerHTTPTests(unittest.TestCase):
     def setUp(self) -> None:
+        skip_if_socket_bind_is_blocked()
         self._tmp = tempfile.mkdtemp()
         self._store = _make_store_with_run(self._tmp)
         self._server = make_audit_server(self._store, host='127.0.0.1', port=0)

@@ -1,5 +1,7 @@
 # Agent Ecosystem Acceptance Roadmap - 2026-05-31
 
+**Status:** Partially implemented - See `docs/analysis/agent-ecosystem-roadmap-cross-reference-2026-05-31.md` for detailed status
+
 This roadmap expands TeaAgent's acceptance backlog from component stories into
 ecosystem and daily-use journeys.
 
@@ -22,29 +24,29 @@ background work, integrations, recovery, and reporting.
 
 ## Journey Acceptance Matrix
 
-| Journey | Priority | Required Outcome | New Acceptance File |
-| --- | --- | --- | --- |
-| Daily cockpit parity | P0 | CLI, TUI, and dashboard expose the same core run, approval, cost, and warning state. | `test_daily_cockpit_parity_flow.py` |
-| First-task from issue text | P0 | User pastes an issue, gets ambiguity score, plan artifact, safe command, and acceptance checklist. | `test_issue_to_plan_acceptance_flow.py` |
-| Plan review and revision | P0 | User can compare two plan revisions before execution and bind run to the accepted plan hash. | `test_plan_review_revision_flow.py` |
-| Execution evidence summary | P0 | Completed run emits changed files, tests, approvals, costs, failures, and rollback path. | `test_run_evidence_summary_flow.py` |
-| Guided recovery | P0 | Failed/partial run suggests resume, undo, inspect audit, or retry with safer mode. | `test_guided_recovery_flow.py` |
-| Background attach lifecycle | P1 | User starts, detaches, receives notify, attaches, approves, resumes, cancels, and exports evidence. | `test_background_full_lifecycle_flow.py` |
-| Cloud/background parity | P1 | Cloud task and local background run preserve permission, audit, status, and cancellation semantics. | `test_cloud_background_parity_flow.py` |
-| Slack/message intake | P1 | Gateway task becomes a scoped run ticket with provenance, approval, and audit lineage. | `test_gateway_task_intake_flow.py` |
-| MCP trust onboarding | P1 | Remote MCP server requires trust review, scoped authorization, list, call, revoke, and audit. | `test_mcp_trust_onboarding_flow.py` |
-| IDE command parity | P1 | VS Code/ACP can run daily, preflight, plan, run, status, and evidence summary. | `test_ide_command_parity_flow.py` |
-| Subagent review merge | P1 | Parent compares child worktree results, applies one patch, rejects others, records rationale. | `test_subagent_review_merge_flow.py` |
-| Extension activation explain | P1 | Hooks, skills, plugins, and MCP tools show why they activated and how to disable them. | `test_extension_activation_explain_flow.py` |
-| Provider fallback day two | P1 | Provider outage or capability mismatch yields safe fallback suggestion without silent escalation. | `test_provider_fallback_recovery_flow.py` |
-| Memory review inbox | P1 | User can accept, edit, reject, expire, and explain auto-curated memory. | `test_memory_review_inbox_flow.py` |
-| Automation lifecycle | P1 | Automation can be created, dry-run, promoted, paused, resumed, renewed, expired, and explained. | `test_automation_lifecycle_review_flow.py` |
-| Risk-mode decision table | P1 | Docs and CLI explain permission-mode risk, rollback, audit, and recommended use. | `test_permission_mode_decision_guide_flow.py` |
-| Repo-map benchmark corpus | P2 | Benchmark reports top-K target hit rate, latency, misses, and corpus metadata. | `test_repo_map_benchmark_corpus_flow.py` |
-| Desktop/client-server package | P2 | Packaged desktop/client-server launch can attach to a local workspace and run smoke commands. | `test_desktop_packaged_launch_flow.py` |
-| Managed runtime deployment guide | P2 | Managed runtime task includes auth, audit, tool context, cancel, and evidence bundle. | `test_managed_runtime_deployment_flow.py` |
-| Workflow framework boundary | P2 | TeaAgent explains when to use external workflow frameworks and keeps governance central. | `test_workflow_framework_boundary_flow.py` |
-| Release evidence bundle | P2 | Release candidate emits reproducible evidence bundle with tests, docs, versions, and residual risks. | `test_release_evidence_bundle_flow.py` |
+| Journey | Priority | Required Outcome | New Acceptance File | Status |
+| --- | --- | --- | --- | --- |
+| Daily cockpit parity | P0 | CLI, TUI, and dashboard expose the same core run, approval, cost, and warning state. | `test_daily_cockpit_parity_flow.py` | 🔄 Unit test exists (`test_cockpit.py`), acceptance test with different name (`test_daily_cli.py`, `test_daily_tui.py`) |
+| First-task from issue text | P0 | User pastes an issue, gets ambiguity score, plan artifact, safe command, and acceptance checklist. | `test_issue_to_plan_acceptance_flow.py` | 📋 Not implemented |
+| Plan review and revision | P0 | User can compare two plan revisions before execution and bind run to the accepted plan hash. | `test_plan_review_revision_flow.py` | 📋 Not implemented |
+| Execution evidence summary | P0 | Completed run emits changed files, tests, approvals, costs, failures, and rollback path. | `test_run_evidence_summary_flow.py` | 🔄 Unit test exists (`test_run_evidence.py`), acceptance test not yet created |
+| Guided recovery | P0 | Failed/partial run suggests resume, undo, inspect audit, or retry with safer mode. | `test_guided_recovery_flow.py` | 📋 Not implemented |
+| Background attach lifecycle | P1 | User starts, detaches, receives notify, attaches, approves, resumes, cancels, and exports evidence. | `test_background_full_lifecycle_flow.py` | 🔄 Similar test exists (`test_background_attach_resume_notify_flow.py`) |
+| Cloud/background parity | P1 | Cloud task and local background run preserve permission, audit, status, and cancellation semantics. | `test_cloud_background_parity_flow.py` | 📋 Not implemented |
+| Slack/message intake | P1 | Gateway task becomes a scoped run ticket with provenance, approval, and audit lineage. | `test_gateway_task_intake_flow.py` | 📋 Not implemented |
+| MCP trust onboarding | P1 | Remote MCP server requires trust review, scoped authorization, list, call, revoke, and audit. | `test_mcp_trust_onboarding_flow.py` | 🔄 Unit test exists (`test_mcp_trust.py`), acceptance test not yet created |
+| IDE command parity | P1 | VS Code/ACP can run daily, preflight, plan, run, status, and evidence summary. | `test_ide_command_parity_flow.py` | ⏸️ Blocked (VS Code extension doesn't exist) |
+| Subagent review merge | P1 | Parent compares child worktree results, applies one patch, rejects others, records rationale. | `test_subagent_review_merge_flow.py` | 🔄 Similar test exists (`test_subagent_parallel_worktree_merge_flow.py`) |
+| Extension activation explain | P1 | Hooks, skills, plugins, and MCP tools show why they activated and how to disable them. | `test_extension_activation_explain_flow.py` | 📋 Not implemented |
+| Provider fallback day two | P1 | Provider outage or capability mismatch yields safe fallback suggestion without silent escalation. | `test_provider_fallback_recovery_flow.py` | 📋 Not implemented |
+| Memory review inbox | P1 | User can accept, edit, reject, expire, and explain auto-curated memory. | `test_memory_review_inbox_flow.py` | 🔄 Similar test exists (`test_memory_auto_curation_flow.py`) |
+| Automation lifecycle | P1 | Automation can be created, dry-run, promoted, paused, resumed, renewed, expired, and explained. | `test_automation_lifecycle_review_flow.py` | 🔄 Unit test exists (`test_automation_lifecycle.py`), acceptance test not yet created |
+| Risk-mode decision table | P1 | Docs and CLI explain permission-mode risk, rollback, audit, and recommended use. | `test_permission_mode_decision_guide_flow.py` | 📋 Not implemented |
+| Repo-map benchmark corpus | P2 | Benchmark reports top-K target hit rate, latency, misses, and corpus metadata. | `test_repo_map_benchmark_corpus_flow.py` | 🔄 Similar test exists (`test_repo_map_quality_large_repo_flow.py`) |
+| Desktop/client-server package | P2 | Packaged desktop/client-server launch can attach to a local workspace and run smoke commands. | `test_desktop_packaged_launch_flow.py` | 🔄 Similar test exists (`test_desktop_client_server_session_flow.py`) |
+| Managed runtime deployment guide | P2 | Managed runtime task includes auth, audit, tool context, cancel, and evidence bundle. | `test_managed_runtime_deployment_flow.py` | 🔄 Similar test exists (`test_managed_runtime_flow.py`) |
+| Workflow framework boundary | P2 | TeaAgent explains when to use external workflow frameworks and keeps governance central. | `test_workflow_framework_boundary_flow.py` | 📋 Not implemented |
+| Release evidence bundle | P2 | Release candidate emits reproducible evidence bundle with tests, docs, versions, and residual risks. | `test_release_evidence_bundle_flow.py` | 📋 Not implemented |
 
 ## User Stories
 

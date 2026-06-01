@@ -141,6 +141,13 @@ def session_list_command(args: argparse.Namespace) -> int:
         row['heartbeat'] = store.heartbeat_for_run(summary.run_id)
         row['pending_approval'] = store.pending_approval_for_run(summary.run_id)
         rows.append(row)
+    from teaagent.scratchpad import Scratchpad
+
+    scratchpad = Scratchpad(Path(args.root))
+    if scratchpad.exists():
+        content = scratchpad.read()
+        if content and content.get('last_goal'):
+            rows.append({'scratchpad_last_goal': content['last_goal']})
     print_json(rows)
     return 0
 

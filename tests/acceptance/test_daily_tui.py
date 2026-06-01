@@ -8,6 +8,7 @@ from pathlib import Path
 from conftest import FakeAdapter
 
 from teaagent.tui import TeaAgentTUI
+from test_support import can_bind_loopback
 
 
 class DailyTUIAcceptanceTests(unittest.TestCase):
@@ -99,8 +100,13 @@ class DailyTUIAcceptanceTests(unittest.TestCase):
             self.assertTrue(tui.handle_command('permission read-only'))
             self.assertTrue(tui.handle_command('daily summarize README.md'))
 
-            self.assertIn('daily: ready=True', '\n'.join(output))
             payload = json.loads(output[-1])
+            if not can_bind_loopback():
+                self.assertIn('daily: ready=False', '\n'.join(output))
+                self.assertFalse(payload['ready'])
+                return
+
+            self.assertIn('daily: ready=True', '\n'.join(output))
             self.assertTrue(payload['ready'])
             self.assertEqual(payload['permission_mode'], 'read-only')
             self.assertIn('token_budget', payload)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 from typing import Any, Optional
@@ -8,6 +9,7 @@ from uuid import uuid4
 from teaagent.audit import AuditLogger
 from teaagent.auto_mode import AutoModeConfig
 from teaagent.budget import RunBudget
+from teaagent.budget_monitor import BudgetAction, BudgetMonitor
 from teaagent.context import ContextCompactor
 from teaagent.errors import (
     AgentHarnessError,
@@ -21,12 +23,23 @@ from teaagent.file_policy import FilePolicy
 from teaagent.plugins import load_plugins
 from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
+from teaagent.tool_call_context import (
+    ToolCallContext,
+    bind_tool_call_context,
+    reset_tool_call_context,
+)
 from teaagent.tools import ToolRegistry
 
 from ._approval_manager import ApprovalManager
 from ._auto_mode_manager import AutoModeManager
 from ._plan_validator import PlanValidator
-from ._types import ApprovalHandler, DecisionFn, FinalAnswer, RunResult
+from ._types import (
+    ApprovalHandler,
+    BudgetPromptHandler,
+    DecisionFn,
+    FinalAnswer,
+    RunResult,
+)
 
 
 class AgentRunner:
@@ -48,8 +61,12 @@ class AgentRunner:
         budget: Optional[RunBudget] = None,
         approval_policy: Optional[ApprovalPolicy] = None,
         approval_handler: Optional[ApprovalHandler] = None,
+        budget_prompt_handler: Optional[BudgetPromptHandler] = None,
+        budget_monitor: Optional[BudgetMonitor] = None,
         compactor: Optional[ContextCompactor] = None,
         compact_after_observations: int = 20,
+        compaction_warning_threshold: float = 0.6,
+        max_context_tokens: int = 200000,
         checkpoint_store: Any = None,
         cancel_token: Optional[threading.Event] = None,
         file_policy: Optional[FilePolicy] = None,
@@ -58,16 +75,25 @@ class AgentRunner:
         workspace_root: Optional[Path] = None,
         require_plan: bool = False,
         skip_plan_check: bool = False,
+        show_summary: bool = True,
+        scratchpad: Any = None,
+        decision_log: Any = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
         self.budget = budget or RunBudget()
+        self.scratchpad = scratchpad
         self.budget.validate()
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
+        self._compaction_warning_threshold = max(0.0, min(1.0, compaction_warning_threshold))
+        self._max_context_tokens = max(1, max_context_tokens)
         self.checkpoint_store = checkpoint_store
         self.cancel_token = cancel_token
         self.file_policy = file_policy
+        self.show_summary = show_summary
+        self.workspace_root = workspace_root
+        self.decision_log = decision_log
 
         # Initialize manager classes
         self.approval_policy = approval_policy or ApprovalPolicy()
@@ -76,6 +102,13 @@ class AgentRunner:
             approval_handler=approval_handler,
             jit_state=jit_state,
         )
+        self._budget_prompt_handler = budget_prompt_handler
+        self._budget_monitor = budget_monitor or BudgetMonitor(budget=self.budget)
+        if self._budget_monitor.on_prompt is None and budget_prompt_handler is not None:
+            self._budget_monitor.on_prompt = budget_prompt_handler
+        self._budget_warning_levels_emitted: set[int] = set()
+        self._budget_prompted = False
+        self._compaction_warning_emitted = False
         self.plan_validator = PlanValidator(
             approval_policy=self.approval_policy,
             require_plan=require_plan,
@@ -89,8 +122,6 @@ class AgentRunner:
         if workspace_root is not None:
             plugin_result = load_plugins(registry)
             if not plugin_result.ok:
-                import logging
-
                 logger = logging.getLogger(__name__)
                 logger.warning(
                     f'Failed to load {len(plugin_result.failed)} plugin(s): {plugin_result.failed}'
@@ -108,6 +139,139 @@ class AgentRunner:
     def _assert_cost_budget(self, cost_cents: float) -> None:
         if cost_cents > self.budget.max_estimated_cost_cents:
             raise BudgetExceededError('cost budget exceeded')
+
+    def _check_budget_warnings(self, *, run_id: str, cost_cents: float) -> None:
+        max_cost = float(self.budget.max_estimated_cost_cents)
+        if max_cost <= 0:
+            return
+        percent = (cost_cents / max_cost) * 100.0
+        for level in (50, 80, 90, 100):
+            if percent < level or level in self._budget_warning_levels_emitted:
+                continue
+            self._budget_warning_levels_emitted.add(level)
+
+            action = self._budget_monitor.check_at_threshold(
+                run_id=run_id, cost_cents=cost_cents, threshold=level,
+            )
+
+            self.audit.record(
+                'budget_warning',
+                run_id,
+                level=level,
+                percent=percent,
+                cost_cents=cost_cents,
+                max_cost_cents=max_cost,
+            )
+
+            if action == BudgetAction.PROMPT_CONFIRM:
+                self.audit.record(
+                    'budget_prompt',
+                    run_id,
+                    percent=percent,
+                    cost_cents=cost_cents,
+                    max_cost_cents=max_cost,
+                    approved=False,
+                )
+                raise RunCancelledError('run cancelled: budget at 90%')
+
+            if action == BudgetAction.SUGGEST_READ_ONLY:
+                self.audit.record(
+                    'budget_read_only_suggested',
+                    run_id,
+                    percent=percent,
+                    cost_cents=cost_cents,
+                    max_cost_cents=max_cost,
+                )
+
+    def _check_compaction_warning(
+        self, *, context: dict[str, Any], input_tokens: int, output_tokens: int
+    ) -> None:
+        """Emit a proactive context-compaction warning when estimated usage exceeds threshold.
+
+        The warning fires at most once per run (idempotent). It adds a system
+        observation to the context so the model can suggest ``/compact``.
+        """
+        if self._compaction_warning_emitted:
+            return
+        if self._compaction_warning_threshold <= 0.0:
+            return
+        total = input_tokens + output_tokens
+        if total <= 0:
+            return
+        usage_pct = (total / self._max_context_tokens) * 100.0
+        threshold_pct = self._compaction_warning_threshold * 100.0
+        if usage_pct < threshold_pct:
+            return
+        self._compaction_warning_emitted = True
+        warning_content = (
+            f'[System: Context is filling up (estimated {usage_pct:.0f}% used). '
+            f'Consider /compact or starting a new session with a summary of progress.]'
+        )
+        context['observations'].append(
+            {'role': 'system', 'content': warning_content}
+        )
+
+    def _build_run_summary(
+        self,
+        *,
+        run_id: str,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> str:
+        """Build a structured post-run summary string.
+
+        Collects tool-call counts (read vs write), changed files, cost/tokens,
+        budget remaining, audit log path, and undo command.
+        """
+        from teaagent.ergonomics.run_summary import format_run_summary, summarize_run
+
+        run_events: list[dict[str, Any]] = [
+            {'event_type': e.event_type, 'payload': e.payload}
+            for e in self.audit.events
+            if getattr(e, 'run_id', None) == run_id
+        ]
+
+        root = str(self.workspace_root) if self.workspace_root else '.'
+        budget_cap = self.budget.max_estimated_cost_cents
+
+        summary_dict = summarize_run(
+            root=root,
+            run_id=run_id,
+            events=run_events,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            budget_cap_cents=budget_cap,
+        )
+        return format_run_summary(summary_dict)
+
+    def _emit_summary(
+        self,
+        *,
+        run_id: str,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> None:
+        if not self.show_summary:
+            return
+        if self.workspace_root is None:
+            return
+        try:
+            text = self._build_run_summary(
+                run_id=run_id,
+                cost_cents=cost_cents,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
+            logger = logging.getLogger(__name__)
+            logger.info(text)
+        except Exception:
+            logger = logging.getLogger(__name__)
+            logger.debug(
+                'Failed to build run summary for %s', run_id, exc_info=True
+            )
 
     def run(
         self,
@@ -128,6 +292,10 @@ class AgentRunner:
             context.update(
                 {k: v for k, v in initial_context_extra.items() if k != 'task'}
             )
+        if self.decision_log is not None:
+            summary = self.decision_log.inject_summary()
+            if summary:
+                context['decision_summary'] = summary
         iterations = 0
         tool_calls = len(observations)
         cost_cents = 0.0
@@ -153,6 +321,14 @@ class AgentRunner:
                 cost_cents = context.get('_cost_cents', cost_cents)
                 input_tokens = context.get('_input_tokens', input_tokens)
                 output_tokens = context.get('_output_tokens', output_tokens)
+                self._check_budget_warnings(
+                    run_id=current_run_id, cost_cents=cost_cents
+                )
+                self._check_compaction_warning(
+                    context=context,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                )
                 self._assert_cost_budget(cost_cents)
                 if isinstance(decision, FinalAnswer):
                     self.audit.record(
@@ -167,6 +343,12 @@ class AgentRunner:
                     extra_meta: dict[str, Any] = {}
                     if self.auto_mode_manager.is_enabled():
                         extra_meta['auto_mode'] = self.auto_mode_manager.summary()
+                    self._emit_summary(
+                        run_id=current_run_id,
+                        cost_cents=cost_cents,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                    )
                     return RunResult(
                         run_id=current_run_id,
                         final_answer=decision,
@@ -247,6 +429,12 @@ class AgentRunner:
                         )
                         if not approved:
                             if self.approval_manager.approval_handler is None:
+                                self._emit_summary(
+                                    run_id=current_run_id,
+                                    cost_cents=cost_cents,
+                                    input_tokens=input_tokens,
+                                    output_tokens=output_tokens,
+                                )
                                 return RunResult(
                                     run_id=current_run_id,
                                     final_answer=None,
@@ -274,14 +462,23 @@ class AgentRunner:
                     tool_name=decision.tool_name,
                     arguments=decision.arguments,
                     annotations=annotations,
+                    reasoning=decision.reasoning if decision.reasoning else None,
                 )
                 try:
                     parent_token = bind_parent_run_id(current_run_id)
+                    tool_ctx_token = bind_tool_call_context(
+                        ToolCallContext(
+                            audit=self.audit,
+                            run_id=current_run_id,
+                            call_id=decision.call_id,
+                        )
+                    )
                     try:
                         result = self.registry.execute(
                             decision.tool_name, decision.arguments
                         )
                     finally:
+                        reset_tool_call_context(tool_ctx_token)
                         reset_parent_run_id(parent_token)
                 except ToolExecutionError as exc:
                     tool_calls += 1
@@ -337,6 +534,12 @@ class AgentRunner:
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                 )
+                self._emit_summary(
+                    run_id=current_run_id,
+                    cost_cents=cost_cents,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                )
                 return RunResult(
                     run_id=current_run_id,
                     final_answer=None,
@@ -358,6 +561,12 @@ class AgentRunner:
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                 )
+                self._emit_summary(
+                    run_id=current_run_id,
+                    cost_cents=cost_cents,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                )
                 return RunResult(
                     run_id=current_run_id,
                     final_answer=None,
@@ -375,6 +584,12 @@ class AgentRunner:
             current_run_id,
             category=ErrorCategory.MODEL_LOGIC,
             message='iteration budget exceeded',
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        self._emit_summary(
+            run_id=current_run_id,
             cost_cents=cost_cents,
             input_tokens=input_tokens,
             output_tokens=output_tokens,

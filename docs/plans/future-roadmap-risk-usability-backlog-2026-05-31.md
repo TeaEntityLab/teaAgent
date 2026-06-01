@@ -1,5 +1,7 @@
 # Future Roadmap, Risk, and Usability Backlog - 2026-05-31
 
+**Status:** Reference document - not an active execution plan. Extract actionable items to backlog-priority.md as needed.
+
 This backlog extends the existing TeaAgent roadmap with competitor/community
 feedback, local risk audits, and daily-user usability needs. It is intentionally
 large so future work can be sliced into issues, milestones, acceptance tests,

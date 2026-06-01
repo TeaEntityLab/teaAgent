@@ -16,6 +16,7 @@ from teaagent.automation_delivery import (
 )
 from teaagent.automation_ticket import validate_automation_spec
 from teaagent.automations import AutomationStore
+from test_support import skip_if_socket_bind_is_blocked
 
 
 class _CaptureHandler(BaseHTTPRequestHandler):
@@ -35,6 +36,7 @@ class _CaptureHandler(BaseHTTPRequestHandler):
 
 
 def _start_server() -> tuple[HTTPServer, str]:
+    skip_if_socket_bind_is_blocked()
     server = HTTPServer(('127.0.0.1', 0), _CaptureHandler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()

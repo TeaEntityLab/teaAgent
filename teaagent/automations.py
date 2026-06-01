@@ -467,6 +467,92 @@ class AutomationStore:
         )
         return self.update(updated)
 
+    def renew_automation(
+        self, automation_id: str, *, ttl_seconds: Optional[float] = None
+    ) -> AutomationSpec:
+        """Renew an automation by updating its next_run_at."""
+        if self.readonly:
+            raise RuntimeError('Cannot renew in readonly mode')
+        spec = self.show(automation_id)
+        next_run = compute_next_run_at(spec.schedule)
+        updated = AutomationSpec(
+            **{**spec.to_dict(), 'next_run_at': next_run, 'updated_at': utc_now()}
+        )
+        return self.update(updated)
+
+    def expire_automation(self, automation_id: str) -> AutomationSpec:
+        """Expire an automation by disabling it and clearing next_run_at."""
+        if self.readonly:
+            raise RuntimeError('Cannot expire in readonly mode')
+        spec = self.show(automation_id)
+        updated = AutomationSpec(
+            **{
+                **spec.to_dict(),
+                'enabled': False,
+                'next_run_at': None,
+                'updated_at': utc_now(),
+            }
+        )
+        return self.update(updated)
+
+    def transfer_ownership(self, automation_id: str, new_owner: str) -> AutomationSpec:
+        """Transfer ownership of an automation (adds provenance note)."""
+        if self.readonly:
+            raise RuntimeError('Cannot transfer ownership in readonly mode')
+        spec = self.show(automation_id)
+        provenance = spec.provenance_digest or ''
+        transfer_note = f'ownership_transfer_to={new_owner};transferred_at={utc_now()}'
+        new_provenance = (
+            f'{provenance}|{transfer_note}' if provenance else transfer_note
+        )
+        updated = AutomationSpec(
+            **{
+                **spec.to_dict(),
+                'provenance_digest': new_provenance,
+                'updated_at': utc_now(),
+            }
+        )
+        return self.update(updated)
+
+    def review_automation(
+        self, automation_id: str, *, review_notes: str = ''
+    ) -> AutomationSpec:
+        """Add review notes to an automation's acceptance criteria."""
+        if self.readonly:
+            raise RuntimeError('Cannot review in readonly mode')
+        spec = self.show(automation_id)
+        current_criteria = spec.acceptance_criteria or ''
+        new_criteria = (
+            f'{current_criteria}\n\nReview: {review_notes}'
+            if review_notes
+            else current_criteria
+        )
+        updated = AutomationSpec(
+            **{
+                **spec.to_dict(),
+                'acceptance_criteria': new_criteria,
+                'updated_at': utc_now(),
+            }
+        )
+        return self.update(updated)
+
+    def explain_skip(self, automation_id: str, *, skip_reason: str) -> AutomationSpec:
+        """Explain why an automation was skipped (adds to acceptance criteria)."""
+        if self.readonly:
+            raise RuntimeError('Cannot explain skip in readonly mode')
+        spec = self.show(automation_id)
+        current_criteria = spec.acceptance_criteria or ''
+        skip_note = f'\n\nSkip Reason: {skip_reason} (at {utc_now()})'
+        new_criteria = f'{current_criteria}{skip_note}'
+        updated = AutomationSpec(
+            **{
+                **spec.to_dict(),
+                'acceptance_criteria': new_criteria,
+                'updated_at': utc_now(),
+            }
+        )
+        return self.update(updated)
+
     def due(self, *, now: Optional[datetime] = None) -> builtins.list[AutomationSpec]:
         current = now or utc_now()
         ready: builtins.list[AutomationSpec] = []

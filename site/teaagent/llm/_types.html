@@ -316,7 +316,7 @@
                     <h1 class="modulename">
 <a href="./../../teaagent.html">teaagent</a><wbr>.<a href="./../llm.html">llm</a><wbr>._types    </h1>
 
-
+                
                         <input id="mod-_types-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-_types-view-source"><span>View Source</span></label>
@@ -508,7 +508,7 @@
                 <section id="LLMAdapterError">
                             <input id="LLMAdapterError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">LLMAdapterError</span><wbr>(<span class="base">builtins.RuntimeError</span>):
 
@@ -531,7 +531,7 @@
                 <section id="LLMConfigurationError">
                             <input id="LLMConfigurationError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">LLMConfigurationError</span><wbr>(<span class="base"><a href="#LLMAdapterError">LLMAdapterError</a></span>):
 
@@ -554,7 +554,7 @@
                 <section id="LLMHTTPError">
                             <input id="LLMHTTPError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">LLMHTTPError</span><wbr>(<span class="base"><a href="#LLMAdapterError">LLMAdapterError</a></span>):
 
@@ -578,7 +578,7 @@
                             <div id="LLMHTTPError.__init__" class="classattr">
                                         <input id="LLMHTTPError.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">LLMHTTPError</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">message</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">status_code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span></span>)</span>
 
                 <label class="view-source-button" for="LLMHTTPError.__init__-view-source"><span>View Source</span></label>
@@ -591,25 +591,25 @@
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="LLMHTTPError.status_code" class="classattr">
                                 <div class="attr variable">
             <span class="name">status_code</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMHTTPError.status_code"></a>
-
-
+    
+    
 
                             </div>
                 </section>
                 <section id="LLMProviderError">
                             <input id="LLMProviderError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">LLMProviderError</span><wbr>(<span class="base"><a href="#LLMAdapterError">LLMAdapterError</a></span>):
 
@@ -632,7 +632,7 @@
                 <section id="LLMResponseFormatError">
                             <input id="LLMResponseFormatError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">LLMResponseFormatError</span><wbr>(<span class="base"><a href="#LLMAdapterError">LLMAdapterError</a></span>):
 
@@ -671,40 +671,40 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="LLMMessage.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">LLMMessage</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">role</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">content</span><span class="p">:</span> <span class="nb">str</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMMessage.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMMessage.role" class="classattr">
                                 <div class="attr variable">
             <span class="name">role</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMMessage.role"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMMessage.content" class="classattr">
                                 <div class="attr variable">
             <span class="name">content</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMMessage.content"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -730,51 +730,51 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="LLMToolDefinition.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">LLMToolDefinition</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">description</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">input_schema</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolDefinition.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMToolDefinition.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolDefinition.name"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMToolDefinition.description" class="classattr">
                                 <div class="attr variable">
             <span class="name">description</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolDefinition.description"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMToolDefinition.input_schema" class="classattr">
                                 <div class="attr variable">
             <span class="name">input_schema</span><span class="annotation">: dict[str, typing.Any]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolDefinition.input_schema"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -798,40 +798,40 @@
 </span></pre></div>
 
 
-
+    
 
                             <div id="LLMToolCall.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">LLMToolCall</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">tool_name</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">tool_input</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>, </span><span class="param"><span class="n">call_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolCall.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMToolCall.tool_name" class="classattr">
                                 <div class="attr variable">
             <span class="name">tool_name</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolCall.tool_name"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMToolCall.tool_input" class="classattr">
                                 <div class="attr variable">
             <span class="name">tool_input</span><span class="annotation">: dict[str, typing.Any]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolCall.tool_input"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMToolCall.call_id" class="classattr">
@@ -839,18 +839,18 @@
             <span class="name">call_id</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMToolCall.call_id"></a>
-
-
+    
+    
 
                             </div>
                 </section>
                 <section id="SafetyCategory">
                             <input id="SafetyCategory-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">SafetyCategory</span><wbr>(<span class="base">builtins.str</span>, <span class="base">enum.Enum</span>):
 
@@ -887,11 +887,11 @@ errors defaults to 'strict'.</p>
             <span class="name">HARASSMENT</span>        =
 <span class="default_value">&lt;<a href="#SafetyCategory.HARASSMENT">SafetyCategory.HARASSMENT</a>: &#39;harassment&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SafetyCategory.HARASSMENT"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SafetyCategory.HATE_SPEECH" class="classattr">
@@ -899,11 +899,11 @@ errors defaults to 'strict'.</p>
             <span class="name">HATE_SPEECH</span>        =
 <span class="default_value">&lt;<a href="#SafetyCategory.HATE_SPEECH">SafetyCategory.HATE_SPEECH</a>: &#39;hate_speech&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SafetyCategory.HATE_SPEECH"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SafetyCategory.SEXUAL" class="classattr">
@@ -911,11 +911,11 @@ errors defaults to 'strict'.</p>
             <span class="name">SEXUAL</span>        =
 <span class="default_value">&lt;<a href="#SafetyCategory.SEXUAL">SafetyCategory.SEXUAL</a>: &#39;sexual&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SafetyCategory.SEXUAL"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SafetyCategory.VIOLENCE" class="classattr">
@@ -923,11 +923,11 @@ errors defaults to 'strict'.</p>
             <span class="name">VIOLENCE</span>        =
 <span class="default_value">&lt;<a href="#SafetyCategory.VIOLENCE">SafetyCategory.VIOLENCE</a>: &#39;violence&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SafetyCategory.VIOLENCE"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SafetyCategory.SELF_HARM" class="classattr">
@@ -935,11 +935,11 @@ errors defaults to 'strict'.</p>
             <span class="name">SELF_HARM</span>        =
 <span class="default_value">&lt;<a href="#SafetyCategory.SELF_HARM">SafetyCategory.SELF_HARM</a>: &#39;self_harm&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SafetyCategory.SELF_HARM"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SafetyCategory.DANGEROUS" class="classattr">
@@ -947,11 +947,11 @@ errors defaults to 'strict'.</p>
             <span class="name">DANGEROUS</span>        =
 <span class="default_value">&lt;<a href="#SafetyCategory.DANGEROUS">SafetyCategory.DANGEROUS</a>: &#39;dangerous&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SafetyCategory.DANGEROUS"></a>
-
-
+    
+    
 
                             </div>
                             <div id="SafetyCategory.OTHER" class="classattr">
@@ -959,11 +959,11 @@ errors defaults to 'strict'.</p>
             <span class="name">OTHER</span>        =
 <span class="default_value">&lt;<a href="#SafetyCategory.OTHER">SafetyCategory.OTHER</a>: &#39;other&#39;&gt;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#SafetyCategory.OTHER"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -987,29 +987,29 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="LLMSafetyBlock.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">LLMSafetyBlock</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">blocked</span><span class="p">:</span> <span class="nb">bool</span>,</span><span class="param">	<span class="n">category</span><span class="p">:</span> <span class="n"><a href="#SafetyCategory">SafetyCategory</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">detail</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMSafetyBlock.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMSafetyBlock.blocked" class="classattr">
                                 <div class="attr variable">
             <span class="name">blocked</span><span class="annotation">: bool</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMSafetyBlock.blocked"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMSafetyBlock.category" class="classattr">
@@ -1017,11 +1017,11 @@ errors defaults to 'strict'.</p>
             <span class="name">category</span><span class="annotation">: <a href="#SafetyCategory">SafetyCategory</a> | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMSafetyBlock.category"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMSafetyBlock.detail" class="classattr">
@@ -1029,11 +1029,11 @@ errors defaults to 'strict'.</p>
             <span class="name">detail</span><span class="annotation">: str</span>        =
 <span class="default_value">&#39;&#39;</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMSafetyBlock.detail"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -1063,29 +1063,29 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="LLMRequest.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">LLMRequest</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n"><a href="#LLMMessage">LLMMessage</a></span><span class="p">]</span>,</span><span class="param">	<span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">system</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span>,</span><span class="param">	<span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span>,</span><span class="param">	<span class="n">stream</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">on_chunk</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">tools</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n"><a href="#LLMToolDefinition">LLMToolDefinition</a></span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">response_format</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.messages" class="classattr">
                                 <div class="attr variable">
             <span class="name">messages</span><span class="annotation">: list[<a href="#LLMMessage">LLMMessage</a>]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.messages"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.model" class="classattr">
@@ -1093,11 +1093,11 @@ errors defaults to 'strict'.</p>
             <span class="name">model</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.model"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.system" class="classattr">
@@ -1105,11 +1105,11 @@ errors defaults to 'strict'.</p>
             <span class="name">system</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.system"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.max_tokens" class="classattr">
@@ -1117,11 +1117,11 @@ errors defaults to 'strict'.</p>
             <span class="name">max_tokens</span><span class="annotation">: int</span>        =
 <span class="default_value">1024</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.max_tokens"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.temperature" class="classattr">
@@ -1129,11 +1129,11 @@ errors defaults to 'strict'.</p>
             <span class="name">temperature</span><span class="annotation">: float</span>        =
 <span class="default_value">0.2</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.temperature"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.stream" class="classattr">
@@ -1141,11 +1141,11 @@ errors defaults to 'strict'.</p>
             <span class="name">stream</span><span class="annotation">: bool</span>        =
 <span class="default_value">False</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.stream"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.on_chunk" class="classattr">
@@ -1153,22 +1153,22 @@ errors defaults to 'strict'.</p>
             <span class="name">on_chunk</span><span class="annotation">: Callable[[str], None] | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.on_chunk"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.tools" class="classattr">
                                 <div class="attr variable">
             <span class="name">tools</span><span class="annotation">: list[<a href="#LLMToolDefinition">LLMToolDefinition</a>]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.tools"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMRequest.response_format" class="classattr">
@@ -1176,11 +1176,11 @@ errors defaults to 'strict'.</p>
             <span class="name">response_format</span><span class="annotation">: dict[str, Any] | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMRequest.response_format"></a>
-
-
+    
+    
 
                             </div>
                 </section>
@@ -1217,62 +1217,62 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="LLMResponse.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">LLMResponse</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">provider</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">model</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">content</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">raw</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">input_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">output_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">tool_calls</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n"><a href="#LLMToolCall">LLMToolCall</a></span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">safety</span><span class="p">:</span> <span class="n"><a href="#LLMSafetyBlock">LLMSafetyBlock</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.provider" class="classattr">
                                 <div class="attr variable">
             <span class="name">provider</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.provider"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.model" class="classattr">
                                 <div class="attr variable">
             <span class="name">model</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.model"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.content" class="classattr">
                                 <div class="attr variable">
             <span class="name">content</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.content"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.raw" class="classattr">
                                 <div class="attr variable">
             <span class="name">raw</span><span class="annotation">: dict[str, typing.Any]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.raw"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.input_tokens" class="classattr">
@@ -1280,11 +1280,11 @@ errors defaults to 'strict'.</p>
             <span class="name">input_tokens</span><span class="annotation">: int</span>        =
 <span class="default_value">0</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.input_tokens"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.output_tokens" class="classattr">
@@ -1292,22 +1292,22 @@ errors defaults to 'strict'.</p>
             <span class="name">output_tokens</span><span class="annotation">: int</span>        =
 <span class="default_value">0</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.output_tokens"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.tool_calls" class="classattr">
                                 <div class="attr variable">
             <span class="name">tool_calls</span><span class="annotation">: list[<a href="#LLMToolCall">LLMToolCall</a>]</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.tool_calls"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.safety" class="classattr">
@@ -1315,11 +1315,11 @@ errors defaults to 'strict'.</p>
             <span class="name">safety</span><span class="annotation">: <a href="#LLMSafetyBlock">LLMSafetyBlock</a> | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMResponse.safety"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMResponse.estimated_cost_cents" class="classattr">
@@ -1341,7 +1341,7 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
@@ -1410,62 +1410,62 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             <div id="ProviderConfig.__init__" class="classattr">
                                 <div class="attr function">
-
+            
         <span class="name">ProviderConfig</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">api_key_env</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">default_model</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">base_url_env</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.__init__"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.name"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.api_key_env" class="classattr">
                                 <div class="attr variable">
             <span class="name">api_key_env</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.api_key_env"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.default_model" class="classattr">
                                 <div class="attr variable">
             <span class="name">default_model</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.default_model"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.base_url" class="classattr">
                                 <div class="attr variable">
             <span class="name">base_url</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.base_url"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.api_key" class="classattr">
@@ -1473,11 +1473,11 @@ errors defaults to 'strict'.</p>
             <span class="name">api_key</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.api_key"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.model" class="classattr">
@@ -1485,11 +1485,11 @@ errors defaults to 'strict'.</p>
             <span class="name">model</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.model"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.base_url_env" class="classattr">
@@ -1497,17 +1497,17 @@ errors defaults to 'strict'.</p>
             <span class="name">base_url_env</span><span class="annotation">: str | None</span>        =
 <span class="default_value">None</span>
 
-
+        
     </div>
     <a class="headerlink" href="#ProviderConfig.base_url_env"></a>
-
-
+    
+    
 
                             </div>
                             <div id="ProviderConfig.resolved_api_key" class="classattr">
                                         <input id="ProviderConfig.resolved_api_key-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">resolved_api_key</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -1523,13 +1523,13 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="ProviderConfig.resolved_model" class="classattr">
                                         <input id="ProviderConfig.resolved_model-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">resolved_model</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -1543,13 +1543,13 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="ProviderConfig.resolved_base_url" class="classattr">
                                         <input id="ProviderConfig.resolved_base_url-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">resolved_base_url</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">str</span>:</span></span>
 
@@ -1590,14 +1590,14 @@ errors defaults to 'strict'.</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="HTTPTransport">
                             <input id="HTTPTransport-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">HTTPTransport</span><wbr>(<span class="base">typing.Protocol</span>):
 
@@ -1656,7 +1656,7 @@ Protocol classes can be generic, they are defined as::</p>
                             <div id="HTTPTransport.__init__" class="classattr">
                                         <input id="HTTPTransport.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">HTTPTransport</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span>)</span>
 
                 <label class="view-source-button" for="HTTPTransport.__init__-view-source"><span>View Source</span></label>
@@ -1693,13 +1693,13 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="HTTPTransport.post_json" class="classattr">
                                         <input id="HTTPTransport.post_json-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">post_json</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">url</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">headers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span>:</span></span>
 
@@ -1718,14 +1718,14 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>
                 <section id="LLMAdapter">
                             <input id="LLMAdapter-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
-
+            
     <span class="def">class</span>
     <span class="name">LLMAdapter</span><wbr>(<span class="base">typing.Protocol</span>):
 
@@ -1779,7 +1779,7 @@ Protocol classes can be generic, they are defined as::</p>
                             <div id="LLMAdapter.__init__" class="classattr">
                                         <input id="LLMAdapter.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="name">LLMAdapter</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span><span class="n">args</span>, </span><span class="param"><span class="o">**</span><span class="n">kwargs</span></span>)</span>
 
                 <label class="view-source-button" for="LLMAdapter.__init__-view-source"><span>View Source</span></label>
@@ -1816,24 +1816,24 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                             <div id="LLMAdapter.provider" class="classattr">
                                 <div class="attr variable">
             <span class="name">provider</span><span class="annotation">: str</span>
 
-
+        
     </div>
     <a class="headerlink" href="#LLMAdapter.provider"></a>
-
-
+    
+    
 
                             </div>
                             <div id="LLMAdapter.complete" class="classattr">
                                         <input id="LLMAdapter.complete-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-
+            
         <span class="def">def</span>
         <span class="name">complete</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">request</span><span class="p">:</span> <span class="n"><a href="#LLMRequest">LLMRequest</a></span></span><span class="return-annotation">) -> <span class="n"><a href="#LLMResponse">LLMResponse</a></span>:</span></span>
 
@@ -1845,7 +1845,7 @@ Protocol classes can be generic, they are defined as::</p>
 </span></pre></div>
 
 
-
+    
 
                             </div>
                 </section>

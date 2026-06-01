@@ -16,6 +16,7 @@ from teaagent.cli._handlers import (
     agent_resume_command,
     agent_run_show,
     agent_run_task,
+    agent_runs_commit_command,
     agent_runs_export,
     agent_runs_list,
     agent_runs_replay,
@@ -90,6 +91,7 @@ from teaagent.cli._handlers import (
     consensus_votes_import_command,
     consensus_wait_command,
     control_plane_serve_command,
+    cost_report_command,
     daily_journal_command,
     doctor_aigateway,
     doctor_all,
@@ -123,6 +125,8 @@ from teaagent.cli._handlers import (
     mcp_trust_inspect_command,
     mcp_trust_list_command,
     memory_add_command,
+    memory_decisions_add_command,
+    memory_decisions_list_command,
     memory_failures_auto_invalidate_command,
     memory_failures_invalidate_command,
     memory_failures_list_command,
@@ -177,6 +181,8 @@ from teaagent.cli._handlers import (
     sync_signature_relay_serve_command,
     sync_signature_submit_command,
     sync_status,
+    team_memory_add_command,
+    team_memory_list_command,
     tool_inspect_command,
     tool_lint_command,
     tool_list_command,
@@ -259,6 +265,7 @@ def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._cloud_parsers import register as register_cloud
     from teaagent.cli._consensus_parsers import register as register_consensus
     from teaagent.cli._control_plane_parsers import register as register_control_plane
+    from teaagent.cli._cost_parsers import register as register_cost
     from teaagent.cli._ergonomics_parsers import register as register_ergonomics
     from teaagent.cli._gateway_parsers import register as register_gateway
     from teaagent.cli._mcp_parsers import register as register_mcp
@@ -355,6 +362,10 @@ def build_parser() -> argparse.ArgumentParser:
             'failures_prune': memory_failures_prune_command,
             'failures_review': memory_failures_review_command,
             'failures_auto_invalidate': memory_failures_auto_invalidate_command,
+            'team_memory_list': team_memory_list_command,
+            'team_memory_add': team_memory_add_command,
+            'decisions_list': memory_decisions_list_command,
+            'decisions_add': memory_decisions_add_command,
         },
     )
     register_skill(
@@ -425,7 +436,10 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers,
         {'serve': control_plane_serve_command},
     )
-    from teaagent.cli._agent_parsers import register_top_level_agent_aliases
+    from teaagent.cli._agent_parsers import (
+        _undo,
+        register_top_level_agent_aliases,
+    )
 
     register_top_level_agent_aliases(
         subparsers,
@@ -443,11 +457,14 @@ def build_parser() -> argparse.ArgumentParser:
                     'trace': agent_runs_trace,
                     'export': agent_runs_export,
                     'replay': agent_runs_replay,
+                    'commit': agent_runs_commit_command,
                 },
                 'chat': chat_command,
             },
         ),
     )
+    _undo(subparsers, agent_undo_command)
+
     register_agent(
         subparsers,
         cast(
@@ -466,6 +483,7 @@ def build_parser() -> argparse.ArgumentParser:
                     'trace': agent_runs_trace,
                     'export': agent_runs_export,
                     'replay': agent_runs_replay,
+                    'commit': agent_runs_commit_command,
                 },
                 'show': agent_run_show,
                 'card': agent_card_command,
@@ -565,6 +583,12 @@ def build_parser() -> argparse.ArgumentParser:
         {
             'start': gateway_start_command,
             'list': gateway_list_command,
+        },
+    )
+    register_cost(
+        subparsers,
+        {
+            'cost_report': cost_report_command,
         },
     )
 

@@ -8,12 +8,18 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from teaagent.preflight import check_env_health
+from test_support import can_bind_loopback
 
 
 class TestPreflightEnvHealth(unittest.TestCase):
     def test_health_check_passes_on_normal_dir(self) -> None:
         with TemporaryDirectory() as td:
             report = check_env_health(Path(td))
+            if not can_bind_loopback():
+                self.assertFalse(report['healthy'])
+                self.assertTrue(any('Network binding' in f for f in report['failures']))
+                return
+
             self.assertTrue(report['healthy'])
             self.assertEqual(len(report['failures']), 0)
 

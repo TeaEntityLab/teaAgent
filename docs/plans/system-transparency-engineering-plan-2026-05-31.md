@@ -127,9 +127,14 @@ TeaAgent should be able to answer four operator questions with evidence:
 | TASK-012–013 | Open (cx doctor CLI) |
 | TASK-014–016 | Open (remote MCP trust defaults) |
 | TASK-017 | Done Phase A (L3 docfix; encryption optional) |
-| TASK-018–030 | Open |
+| TASK-018–021 | Open |
+| TASK-022 | Open (warning budget file) |
+| TASK-023 | Done (tool lint warnings at 0) |
+| TASK-024–026 | Open |
+| TASK-027–028 | Done (evidence bundle MVP; counts-only profile) |
+| TASK-029–030 | Open |
 | TASK-031–032 | Done (denial `reason_code`, `approval why-denied`) |
-| TASK-033 | Open |
+| TASK-033 | Done (docs generator guardrails) |
 | TASK-034 | Done (`scripts/verify_docs.sh`) |
 | TASK-035 | Open |
 

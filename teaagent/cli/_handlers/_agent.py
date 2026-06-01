@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Optional
 
@@ -43,6 +44,52 @@ logger = logging.getLogger(__name__)
 DEFAULT_DIFF_PREVIEW_LINES = 30
 DEFAULT_PAGINATION_LINES = 50
 DEFAULT_SESSION_GRANT_TTL_HOURS = 8.0
+
+
+def _display_recovery_guidance(
+    result: RunResult,
+    args: argparse.Namespace,
+    store: RunStore,
+) -> None:
+    """Display recovery guidance for failed or partial success runs.
+
+    Args:
+        result: RunResult from the failed run
+        args: CLI arguments
+        store: RunStore for accessing audit logs
+    """
+    from teaagent.guided_recovery import (
+        FailureAnalyzer,
+        RecoveryAdviceFormatter,
+        RecoverySelector,
+    )
+    from teaagent.run_undo import UndoJournal
+
+    # Load audit log if available
+    audit_path = store.run_path(result.run_id)
+    from teaagent.audit import AuditLogger
+
+    audit = AuditLogger(path=audit_path) if audit_path.is_file() else None
+
+    # Load undo journal if available
+    undo_journal = None
+    undo_path = store.undo_path(result.run_id)
+    if undo_path.is_file():
+        undo_journal = UndoJournal(root=args.root, path=undo_path)
+
+    # Analyze failure
+    analyzer = FailureAnalyzer(audit_logger=audit)
+    failure = analyzer.classify(result)
+
+    # Select recovery strategy
+    selector = RecoverySelector(undo_journal=undo_journal)
+    advice = selector.select(failure)
+
+    # Format and display advice
+    formatter = RecoveryAdviceFormatter()
+    formatted_advice = formatter.format(advice, run_id=result.run_id)
+
+    print('\n' + formatted_advice)
 
 
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
@@ -329,6 +376,14 @@ def _execute_agent_task(
     auto_approved_call_id: Optional[str] = None,
     plan_contract: Optional[Any] = None,
 ) -> int:
+    # First-run orientation (shown once per workspace)
+    import os as _os
+
+    from teaagent.cli._handlers._misc import handle_first_run
+
+    # Suppress welcome message in test environment
+    quiet = getattr(args, 'quiet', False) or _os.environ.get('TEAAGENT_QUIET') == '1'
+    handle_first_run(Path(args.root), quiet=quiet)
     # Handle parallel experiments
     parallel_value = getattr(args, 'parallel', None)
     if parallel_value:
@@ -382,6 +437,65 @@ def _execute_agent_task(
         return gate_exit
     store = RunStore(args.root)
     audit = store.audit_logger()
+
+    from teaagent.scratchpad import Scratchpad
+
+    scratchpad = Scratchpad(Path(args.root))
+
+    _sp_state: dict[str, object] = {
+        'written': False,
+    }
+
+    def _write_scratchpad_on_exit() -> None:
+        if _sp_state['written']:
+            return
+        try:
+            scratchpad.write(
+                goal=task,
+                progress='Session interrupted before completion.',
+                open_questions=[],
+                next_step='Resume from previous session.',
+            )
+            _sp_state['written'] = True
+        except Exception:
+            pass
+
+    import atexit
+
+    atexit.register(_write_scratchpad_on_exit)
+
+    previous = signal.signal(signal.SIGINT, lambda sig, frame: _write_scratchpad_on_exit())
+    _sp_sigint_restore: Callable[..., Any] = previous
+
+    # Resume offer on session start
+    if scratchpad.exists() and not resumed_from:
+        content = scratchpad.read()
+        if content:
+            is_interactive = sys.stdin.isatty()
+            if is_interactive:
+                print(
+                    '\nFound scratchpad from previous session.',
+                    file=sys.stderr,
+                )
+                print(
+                    f'Last goal: {content.get("last_goal", "(none)")}',
+                    file=sys.stderr,
+                )
+                progress = content.get('progress', '')
+                if progress:
+                    print(f'Progress: {progress}', file=sys.stderr)
+                print('Resume? (y/n): ', end='', file=sys.stderr)
+                choice = input().strip().lower()
+                if choice in ('y', 'yes'):
+                    resume_prompt = scratchpad.resume_prompt()
+                    if resume_prompt:
+                        merged_context_extra['scratchpad_resume'] = resume_prompt
+                        task = f'{task}\n\n{resume_prompt}'
+                else:
+                    scratchpad.clear()
+            else:
+                scratchpad.clear()
+
     from teaagent.run_undo import UndoJournal
     from teaagent.sandbox import GitBranchSandbox
 
@@ -493,6 +607,13 @@ def _execute_agent_task(
         if args.hitl_approval
         else None
     )
+    budget_prompt_handler = None
+    if (
+        sys.stdin.isatty()
+        and not getattr(args, 'background', False)
+        and not getattr(args, 'json_stream', False)
+    ):
+        budget_prompt_handler = make_cli_budget_prompt_handler()
     checkpoint_store = None
     checkpoint_path = getattr(args, 'checkpoint_store', None)
     if checkpoint_path:
@@ -524,6 +645,7 @@ def _execute_agent_task(
             max_subagent_depth=args.max_subagent_depth,
             heartbeat_seconds=args.heartbeat,
             approval_handler=approval_handler,
+            budget_prompt_handler=budget_prompt_handler,
             checkpoint_store=checkpoint_store,
             stream=use_stream,
             on_chunk=stream_handlers.on_chunk,
@@ -549,6 +671,33 @@ def _execute_agent_task(
     store.logger_for_result(result, audit)
     if undo_journal.has_entries:
         undo_journal.save_to(store.undo_path(result.run_id))
+
+    if 'scratchpad' in dir():
+        _sp_state['written'] = True
+        error_msg = result.error_message or ''
+        if result.status == 'completed':
+            final_answer = (
+                result.final_answer.content
+                if result.final_answer
+                else 'Task completed.'
+            )
+            scratchpad.write(
+                goal=task,
+                progress=f'Completed: {final_answer[:500]}',
+                open_questions=[],
+                next_step='',
+                session_id=result.run_id,
+            )
+        else:
+            scratchpad.write(
+                goal=task,
+                progress=f'Ended ({result.status})' + (
+                    f': {error_msg[:200]}' if error_msg else ''),
+                open_questions=[],
+                next_step='Review errors and retry.',
+                session_id=result.run_id,
+            )
+
 
     validation_profile = _resolve_validation_profile(args)
     if validation_profile and result.status == 'completed':
@@ -775,6 +924,24 @@ def _execute_agent_task(
         audit_summary=summarize_audit_events(events),
         permission_mode=resolved_permission_mode.value,
     )
+    if not getattr(args, 'no_summary', False):
+        from teaagent.budget import RunBudget
+        from teaagent.ergonomics.run_summary import summarize_run
+
+        cap = (
+            int(args.max_estimated_cost_cents)
+            if int(getattr(args, 'max_estimated_cost_cents', 0) or 0) > 0
+            else RunBudget().max_estimated_cost_cents
+        )
+        payload['run_summary'] = summarize_run(
+            root=args.root,
+            run_id=result.run_id,
+            events=events,
+            cost_cents=result.cost_cents,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            budget_cap_cents=cap,
+        )
     if plan_contract is not None:
         payload['plan_contract'] = plan_contract.to_dict()
     if resumed_from:
@@ -796,6 +963,11 @@ def _execute_agent_task(
         from teaagent.ergonomics.notify import notify
 
         notify('TeaAgent', f'Run {result.run_id} {result.status}')
+
+    # Display recovery guidance for failed or partial success runs
+    if result.status != 'completed' and not getattr(args, 'json_stream', False):
+        _display_recovery_guidance(result, args, store)
+
     return 0 if result.status == 'completed' else 1
 
 
@@ -1297,6 +1469,36 @@ def make_cli_approval_handler(
     return _handler
 
 
+def make_cli_budget_prompt_handler() -> Callable[[dict[str, Any]], bool]:
+    def _handler(payload: dict[str, Any]) -> bool:
+        percent = float(payload.get('percent', 0.0))
+        cost_cents = float(payload.get('cost_cents', 0.0))
+        max_cost_cents = float(payload.get('max_cost_cents', 0.0))
+        spent = cost_cents / 100.0
+        cap = max_cost_cents / 100.0
+        print(
+            json.dumps(
+                {
+                    'status': 'budget_prompt',
+                    'percent': percent,
+                    'spent_usd': spent,
+                    'cap_usd': cap,
+                },
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        print(
+            f'[TeaAgent] Budget at {percent:.0f}% (${spent:.2f} / ${cap:.2f}). Continue? [y/N]: ',
+            end='',
+            file=sys.stderr,
+        )
+        answer = input().strip().lower()
+        return answer in {'y', 'yes'}
+
+    return _handler
+
+
 def cli_approval_handler(request: ApprovalRequest) -> bool:
     """Default handler for cwd workspace; prefer ``make_cli_approval_handler(root)``."""
     return make_cli_approval_handler('.')(request)
@@ -1349,6 +1551,9 @@ def agent_plan_command(args: argparse.Namespace) -> int:
 
 
 def agent_undo_command(args: argparse.Namespace) -> int:
+    import base64
+    import difflib
+
     from teaagent.run_undo import UndoJournal
     from teaagent.sandbox import GitBranchSandbox
 
@@ -1365,9 +1570,33 @@ def agent_undo_command(args: argparse.Namespace) -> int:
             )
             return 1
 
+    preview = getattr(args, 'preview', False)
+
     # Try git sandbox rollback first
     git_sandbox = GitBranchSandbox(args.root, run_id=run_id)
     if git_sandbox.is_available():
+        if preview:
+            root_path = Path(args.root).resolve()
+            try:
+                diff_result = subprocess.run(
+                    [
+                        'git',
+                        'diff',
+                        git_sandbox._branch_name,
+                        git_sandbox._original_branch or 'HEAD',
+                    ],
+                    cwd=root_path,
+                    capture_output=True,
+                    text=True,
+                )
+                if diff_result.stdout.strip():
+                    print(diff_result.stdout)
+                else:
+                    print('(no undo diff available)')
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                print('(unable to generate git diff preview)')
+            return 0
+
         rollback_result = git_sandbox.rollback()
         if rollback_result.success:
             print_json(
@@ -1397,6 +1626,53 @@ def agent_undo_command(args: argparse.Namespace) -> int:
         )
         return 1
     journal = UndoJournal(args.root, path=undo_path)
+
+    if preview:
+        root_path = Path(args.root).resolve()
+        out: list[str] = []
+        for entry in journal.iter_entries():
+            rel_path = entry.get('path')
+            if not isinstance(rel_path, str) or not rel_path:
+                continue
+            existed_before = bool(entry.get('existed_before'))
+            abs_path = (root_path / rel_path).resolve()
+            if not str(abs_path).startswith(str(root_path)):
+                continue
+            if not existed_before:
+                out.append(f'--- {rel_path} (would be deleted)')
+                continue
+            before_b64 = entry.get('content_b64')
+            if not isinstance(before_b64, str) or not before_b64:
+                continue
+            try:
+                before_bytes = base64.b64decode(before_b64)
+            except Exception:
+                continue
+            try:
+                before_text = before_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                out.append(f'--- {rel_path} (binary restore)')
+                continue
+            try:
+                after_text = (
+                    abs_path.read_text(encoding='utf-8') if abs_path.is_file() else ''
+                )
+            except UnicodeDecodeError:
+                out.append(f'--- {rel_path} (binary current)')
+                continue
+            before_lines = before_text.splitlines(keepends=True)
+            after_lines = after_text.splitlines(keepends=True)
+            out.extend(
+                difflib.unified_diff(
+                    after_lines,
+                    before_lines,
+                    fromfile=f'a/{rel_path}',
+                    tofile=f'b/{rel_path}',
+                )
+            )
+        print(''.join(out) if out else '(no undo diff available)')
+        return 0
+
     result = journal.restore()
     status = 'restored' if result.ok else 'partial'
     rel_undo = undo_path.resolve().relative_to(store.root).as_posix()
@@ -2269,7 +2545,15 @@ def agent_status_command(args: argparse.Namespace) -> int:
 
 def agent_runs_list(args: argparse.Namespace) -> int:
     store = RunStore(args.root, readonly=True)
-    print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
+    payload = [summary.to_dict() for summary in store.list_runs(limit=args.limit)]
+    from teaagent.scratchpad import Scratchpad
+
+    scratchpad = Scratchpad(Path(args.root))
+    if scratchpad.exists():
+        content = scratchpad.read()
+        if content and content.get('last_goal'):
+            payload.append({'scratchpad_last_goal': content['last_goal']})
+    print_json(payload)
     return 0
 
 
@@ -2317,12 +2601,171 @@ def agent_runs_replay(args: argparse.Namespace) -> int:
 
 
 def agent_run_show(args: argparse.Namespace) -> int:
+    # Handle --diff flag to show git diff of changes
+    if getattr(args, 'diff', False):
+        return _show_run_diff(args)
+
     store = RunStore(args.root, readonly=True)
     try:
         print_json(store.show_run(args.run_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
+    return 0
+
+
+def _show_run_diff(args: argparse.Namespace) -> int:
+    """Show git diff of changes made in a run."""
+    import json
+    import subprocess
+    from pathlib import Path
+
+    root = Path(args.root).resolve()
+    undo_path = root / '.teaagent' / 'undo' / f'{args.run_id}.jsonl'
+
+    if not undo_path.exists():
+        print_json({'status': 'error', 'message': f'No undo journal found for run {args.run_id}'})
+        return 1
+
+    # Read undo journal to get changed files
+    changed_files: list[str] = []
+    for line in undo_path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        p = obj.get('path')
+        if isinstance(p, str) and p:
+            changed_files.append(p)
+
+    if not changed_files:
+        print('No files changed in this run.')
+        return 0
+
+    print(f'Changes from run {args.run_id}:')
+    print()
+
+    # Show diff for each file
+    for file_path in changed_files:
+        full_path = root / file_path
+        if not full_path.exists():
+            print(f'{file_path} (deleted)')
+            continue
+
+        try:
+            result = subprocess.run(
+                ['git', 'diff', '--', str(full_path)],
+                cwd=root,
+                capture_output=True,
+                text=True,
+            )
+            if result.stdout.strip():
+                print(f'--- {file_path}')
+                print(result.stdout)
+            else:
+                print(f'{file_path} (new file)')
+        except subprocess.SubprocessError:
+            print(f'{file_path} (unable to show diff)')
+
+    return 0
+
+
+def agent_runs_commit_command(args: argparse.Namespace) -> int:
+    """Commit changes from a run with metadata."""
+    import subprocess
+    from pathlib import Path
+
+    root = Path(args.root).resolve()
+
+    # Get run_id from args or use last run
+    run_id = getattr(args, 'run_id', None)
+    if not run_id:
+        # Get last run from RunStore
+        from teaagent.run_store import RunStore
+        store = RunStore(root, readonly=True)
+        runs = store.list_runs(limit=1)
+        if not runs:
+            print_json({'status': 'error', 'message': 'No runs found to commit'})
+            return 1
+        run_id = runs[0].run_id
+
+    undo_path = root / '.teaagent' / 'undo' / f'{run_id}.jsonl'
+    if not undo_path.exists():
+        print_json({'status': 'error', 'message': f'No undo journal found for run {run_id}'})
+        return 1
+
+    # Check if git repo
+    try:
+        subprocess.run(
+            ['git', 'rev-parse', '--git-dir'],
+            cwd=root,
+            capture_output=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        print_json({'status': 'error', 'message': 'Not a git repository'})
+        return 1
+
+    # Stage all changes
+    try:
+        subprocess.run(['git', 'add', '-A'], cwd=root, check=True)
+    except subprocess.CalledProcessError as e:
+        print_json({'status': 'error', 'message': f'Failed to stage changes: {e}'})
+        return 1
+
+    # Generate commit message
+    custom_message = getattr(args, 'message', None)
+    if custom_message:
+        commit_message = custom_message
+    else:
+        # Auto-generate commit message with run metadata
+        from teaagent.run_store import RunStore
+        store = RunStore(root, readonly=True)
+        try:
+            events = store.show_run(run_id)
+            # Extract task from first event
+            task = 'TeaAgent run'
+            for event in events:
+                if event.get('event_type') == 'run_started':
+                    task = event.get('payload', {}).get('task', 'TeaAgent run')
+                    break
+            commit_message = f'teaagent: {task}\n\nRun ID: {run_id}'
+        except FileNotFoundError:
+            commit_message = f'teaagent: changes from run {run_id}'
+
+    # Commit
+    try:
+        subprocess.run(
+            ['git', 'commit', '-m', commit_message],
+            cwd=root,
+            check=True,
+        )
+        print_json({
+            'status': 'committed',
+            'run_id': run_id,
+            'message': commit_message,
+        })
+    except subprocess.CalledProcessError as e:
+        # Check if nothing to commit
+        result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+        if not result.stdout.strip():
+            print_json({
+                'status': 'nothing_to_commit',
+                'run_id': run_id,
+                'message': 'No changes to commit (idempotent)',
+            })
+            return 0
+        print_json({'status': 'error', 'message': f'Failed to commit: {e}'})
+        return 1
+
     return 0
 
 

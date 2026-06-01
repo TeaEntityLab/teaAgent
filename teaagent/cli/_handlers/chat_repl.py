@@ -12,14 +12,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.chat_agent import ChatAgentConfig
+from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.context import ContextCompactor
 from teaagent.llm import available_providers, create_llm_adapter
 from teaagent.memory.file_watcher import FileWatcher
 from teaagent.memory.pinned_file import PinnedFileStorage
+from teaagent.run_store import RunStore
+from teaagent.run_undo import UndoJournal
 
 from .chat_commands import (
     get_failure_warnings,
+    handle_compact,
     handle_memory_clear,
     handle_memory_failures,
     handle_pin,
@@ -98,7 +102,8 @@ def suspend_to_background(
         print(f'[TeaAgent] Error saving suspension state: {exc}')
         return ''
 
-    # Create Git sandbox branch if workspace is dirty
+    # Check if workspace is dirty and warn user
+    branch_created = False
     try:
         result = subprocess.run(
             ['git', 'status', '--porcelain'],
@@ -108,45 +113,36 @@ def suspend_to_background(
         )
 
         if result.stdout.strip():
-            print(
-                '[TeaAgent] Workspace has uncommitted changes, creating sandbox branch...'
-            )
-            branch_name = f'suspended-{run_id}'
-
-            # Check if branch already exists
-            check_result = subprocess.run(
-                ['git', 'branch', '--list', branch_name],
-                cwd=root,
-                capture_output=True,
-                text=True,
-            )
-
-            if check_result.stdout.strip():
-                # Branch exists, use timestamp to make unique
-                import time as time_module
-
-                branch_name = f'suspended-{run_id}-{int(time_module.time())}'
-
-            subprocess.run(
-                ['git', 'checkout', '-b', branch_name], cwd=root, capture_output=True
-            )
-            suspension_data['sandbox_branch'] = branch_name
-            suspension_data['audit_trail']['sandbox_branch'] = branch_name
-            suspension_file.write_text(
-                json.dumps(suspension_data, indent=2), encoding='utf-8'
-            )
-            print(f'[TeaAgent] Created sandbox branch: {branch_name}')
+            print('[TeaAgent] Warning: Workspace has uncommitted changes.')
+            print('[TeaAgent] Session is suspended on current branch.')
+            print('[TeaAgent] Uncommitted changes remain in working directory.')
+            branch_created = False
     except FileNotFoundError:
-        print('[TeaAgent] Git not found, skipping sandbox branch creation')
+        print('[TeaAgent] Git not found, skipping workspace check')
     except Exception as exc:
-        print(f'[TeaAgent] Warning: Could not create sandbox branch: {exc}')
+        print(f'[TeaAgent] Warning: Could not check workspace status: {exc}')
+
+    # Emit audit event for suspension
+    try:
+        store = RunStore(root)
+        audit = store.audit_logger()
+        audit.record(
+            event_type='session_suspended',
+            run_id=run_id,
+            mode='suspended_from_repl',
+            observations_count=len(session_context.get('observations', [])),
+            targeted_files_count=len(targeted_files),
+            branch_created=branch_created,
+        )
+    except Exception as exc:
+        print(f'[TeaAgent] Warning: Could not emit suspension audit event: {exc}')
 
     print('[TeaAgent] Session suspended successfully!')
     print(f'[TeaAgent] Run ID: {run_id}')
-    print(f'[TeaAgent] To attach: teaagent attach {run_id} --follow')
     print(f'[TeaAgent] To resume: teaagent resume {run_id}')
     print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
-    print('[TeaAgent] Note: Background execution requires manual setup')
+    print('[TeaAgent] Note: This is a suspension checkpoint, not background execution.')
+    print('[TeaAgent] Use "teaagent agent run --detach" for actual background tasks.')
 
     return run_id
 
@@ -270,7 +266,7 @@ def run_chat_repl(
     # Effort throttling configuration
     effort_level = 'normal'  # low, normal, high
     max_cost_budget_cents = config.max_estimated_cost_cents or 1000  # Default $10
-    session_cost_cents = 0
+    session_cost_cents: float = 0
 
     # File watcher for live context synchronization
     file_watcher = None
@@ -414,12 +410,6 @@ def run_chat_repl(
             stash_exists = checkpoint_ref and checkpoint_ref in result.stdout
 
             if stash_exists:
-                # Revert all working directory changes first
-                subprocess.run(
-                    ['git', 'checkout', '--', '.'],
-                    cwd=config.root,
-                    capture_output=True,
-                )
                 # Pop the stash
                 subprocess.run(
                     ['git', 'stash', 'pop'],
@@ -541,6 +531,19 @@ def run_chat_repl(
     # Start file watcher if there are pinned files
     start_file_watcher()
 
+    # Create shared session controller (CG-05)
+    session_state = SessionState(
+        session_cost_cents=session_cost_cents,
+        observations=session_context.get('observations', []),
+        compaction_count=session_context.get('compaction_count', 0),
+        targeted_files=targeted_files,
+    )
+    controller = ChatSessionController(
+        root=config.root,
+        output_fn=print,
+        session_state=session_state,
+    )
+
     # If initial task provided, execute it first
     if initial_task:
         print(f'[TeaAgent] Executing initial task: {initial_task}')
@@ -554,20 +557,28 @@ def run_chat_repl(
             model=runtime_model,
             max_estimated_cost_cents=runtime_max_cost_cents,
         )
-        result = run_chat_agent(
-            task=task_with_warnings, adapter=adapter, config=updated_config
+
+        # Set up audit and undo journal
+        store = RunStore(config.root)
+        audit = store.audit_logger()
+        undo_journal = UndoJournal(config.root)
+        audit.add_sink(undo_journal)
+
+        # Use controller for consistent behavior (CG-05)
+        result = controller.execute_task(
+            task=task_with_warnings,
+            config=updated_config,
+            adapter=adapter,
+            audit=audit,
+            undo_journal=undo_journal,
         )
-        if result.status != 'completed':
+
+        if result.run_result.status != 'completed':
             return 1
-        # Placeholder cost tracking for initial task
-        session_cost_cents += 10
-        session_context['observations'].append(
-            {
-                'task': initial_task,
-                'result': result,
-                'cost_cents': 10,
-            }
-        )
+
+        # Sync back to session_context for compatibility
+        session_cost_cents = int(session_state.session_cost_cents)
+        session_context['observations'] = session_state.observations
         print()
 
     # REPL loop
@@ -609,18 +620,13 @@ def run_chat_repl(
 
             # Handle compact command
             if user_input == '/compact':
-                print('[TeaAgent] Compacting session context...')
-                compaction_result = compactor.compact(session_context)
+                compact_result = handle_compact(compactor, session_context)
                 print('[TeaAgent] Compaction complete:')
-                print(f'  - Tokens saved: ~{compaction_result.tokens_saved}')
+                print(f'  - Tokens saved: ~{compact_result["tokens_saved"]}')
+                print(f'  - Compression ratio: {compact_result["compression_ratio"]:.2%}')
+                print(f'  - Total compactions: {compact_result["compaction_count"]}')
                 print(
-                    f'  - Compression ratio: {compaction_result.compression_ratio:.2%}'
-                )
-                print(
-                    f'  - Total compactions: {session_context.get("compaction_count", 0)}'
-                )
-                print(
-                    f'  - Observations retained: {len(session_context.get("observations", []))}'
+                    f'  - Observations: {compact_result["pre_count"]} → {compact_result["post_count"]}'
                 )
                 continue
 
@@ -781,24 +787,15 @@ def run_chat_repl(
 
             # Handle undo command
             if user_input == '/undo':
-                print('[TeaAgent] Undoing last change using checkpoint...')
-                if restore_checkpoint():
+                print('[TeaAgent] Undoing last change...')
+                if controller.undo_last_run():
                     print('[TeaAgent] Undo completed successfully')
                 else:
-                    print('[TeaAgent] Undo failed - falling back to git checkout')
-                    try:
-                        proc_result = subprocess.run(
-                            ['git', 'checkout', '--', '.'],
-                            cwd=config.root,
-                            capture_output=True,
-                            text=True,
-                        )
-                        if proc_result.returncode == 0:
-                            print('[TeaAgent] Fallback undo completed')
-                        else:
-                            print(f'[TeaAgent] Error: {proc_result.stderr}')
-                    except Exception as exc:
-                        print(f'[TeaAgent] Error in fallback undo: {exc}')
+                    # If no journal, try checkpoint as fallback
+                    if restore_checkpoint():
+                        print('[TeaAgent] Undo completed via checkpoint')
+                    else:
+                        print('[TeaAgent] Nothing to undo')
                 continue
 
             # Execute task
@@ -813,16 +810,25 @@ def run_chat_repl(
                 model=runtime_model,
                 max_estimated_cost_cents=runtime_max_cost_cents,
             )
-            result = run_chat_agent(
-                task=task_with_warnings, adapter=adapter, config=updated_config
+
+            # Set up audit and undo journal for this task
+            store = RunStore(config.root)
+            audit = store.audit_logger()
+            undo_journal = UndoJournal(config.root)
+            audit.add_sink(undo_journal)
+
+            # Use controller for consistent behavior (CG-05)
+            result = controller.execute_task(
+                task=task_with_warnings,
+                config=updated_config,
+                adapter=adapter,
+                audit=audit,
+                undo_journal=undo_journal,
             )
 
-            if result != 0:
-                print(f'[TeaAgent] Task failed with exit code {result}')
-            else:
-                # In a full implementation, we would track actual cost here
-                # For now, we'll increment a placeholder
-                session_cost_cents += 10  # Placeholder: 10 cents per task
+            # Sync back to session_context for compatibility
+            session_cost_cents = int(session_state.session_cost_cents)
+            session_context['observations'] = session_state.observations
 
             print()
 

@@ -14,6 +14,7 @@ from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
 from teaagent.tui import TeaAgentTUI
+from test_support import can_bind_loopback
 
 
 class CapturingAdapterFactory:
@@ -469,6 +470,10 @@ class TUITests(unittest.TestCase):
             )
 
             payload = json.loads(output[-1])
+            if not can_bind_loopback():
+                self.assertFalse(payload['ready'])
+                return
+
             self.assertTrue(payload['ready'])
             self.assertEqual(payload['routing']['category'], 'review')
             # With complexity-based routing, review tasks (medium complexity) use gpt-4o-mini
@@ -1070,11 +1075,11 @@ class TUITests(unittest.TestCase):
         tui._handle_cost()
         self.assertIn('$1.23', ' '.join(output))
 
-    def test_tui_compact_stub(self) -> None:
+    def test_tui_compact_no_session(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._handle_compact()
-        self.assertIn('not yet implemented', ' '.join(output))
+        self.assertIn('no active chat session', ' '.join(output))
 
     # ── Checkpoint / undo ─────────────────────────────────────────────────────
 

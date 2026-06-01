@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.cockpit import CockpitState
+from teaagent.context import ContextCompactor as _ContextCompactor
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
@@ -186,6 +188,9 @@ class TeaAgentTUI:
         self._runtime_max_cost_cents: int = 1000
         self._max_cost_budget_cents: int = 1000
 
+        # Cockpit state for operator dashboard
+        self._cockpit_state: Optional[CockpitState] = None
+
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
         try:
@@ -201,8 +206,7 @@ class TeaAgentTUI:
         except (OSError, ValueError):
             return
 
-        # Clear screen and print header
-        print('\033[2J\033[H', end='')  # Clear screen
+        # Print header (no clear screen - CG-06 fix)
         print('=' * columns)
         print(f'TeaAgent TUI {__version__} - State Panel')
         print('=' * columns)
@@ -234,6 +238,48 @@ class TeaAgentTUI:
         print(f'Permission Mode: {self.permission_mode.value}')
         print(f'Destructive: {"allowed" if self.allow_destructive else "blocked"}')
         print(f'Chat: {"enabled" if self.chat else "disabled"}')
+
+        # Cockpit state (blocked approvals, harness health, budget, recoverable)
+        print('\n[Cockpit]')
+        if self._cockpit_state:
+            # Blocked approvals
+            if self._cockpit_state.approvals.blocked_count > 0:
+                print(
+                    f'  Blocked Approvals: {self._cockpit_state.approvals.blocked_count}'
+                )
+            if self._cockpit_state.approvals.pending_count > 0:
+                print(
+                    f'  Pending Approvals: {self._cockpit_state.approvals.pending_count}'
+                )
+
+            # Harness health
+            if self._cockpit_state.harness_health.overall != 'unknown':
+                health = self._cockpit_state.harness_health.overall
+                print(f'  Harness Health: {health.upper()}')
+                if self._cockpit_state.harness_health.errors:
+                    print(
+                        f'    Errors: {len(self._cockpit_state.harness_health.errors)}'
+                    )
+
+            # Budget
+            if self._cockpit_state.budget.status != 'unknown':
+                budget = self._cockpit_state.budget
+                print(f'  Budget: {budget.status.upper()}')
+                print(f'    Spent: ${budget.spent_cents / 100:.2f}')
+                if budget.limit_cents:
+                    print(f'    Limit: ${budget.limit_cents / 100:.2f}')
+                if budget.remaining_cents is not None:
+                    print(f'    Remaining: ${budget.remaining_cents / 100:.2f}')
+
+            # Recoverable
+            if self._cockpit_state.recoverable.has_undo_journal:
+                print(
+                    f'  Undo: Available (run_id: {self._cockpit_state.recoverable.last_run_id})'
+                )
+            if self._cockpit_state.recoverable.has_checkpoint:
+                print('  Checkpoint: Available')
+            if self._cockpit_state.recoverable.has_suspended_session:
+                print('  Suspended Session: Available')
 
         # Parallel experiments panel
         if self._parallel_stack and self._parallel_options:
@@ -664,7 +710,35 @@ class TeaAgentTUI:
     # ── Effort throttling / budget enforcement ───────────────────────────────
 
     def _handle_compact(self) -> None:
-        self.output_fn('compact: session compaction not yet implemented in TUI')
+        session = self._current_session()
+        if session is None or not session.messages:
+            self.output_fn('compact: no active chat session to compact')
+            return
+
+        compactor = _ContextCompactor(
+            recent_observations=3,
+            enable_semantic_compression=True,
+        )
+        max_tokens = 160000  # conservative default for most model context windows
+
+        messages_dicts = [m.to_dict() for m in session.messages]
+        pre_count = len(messages_dicts)
+        compacted = compactor.compact_chat_history(messages_dicts, max_tokens)
+        post_count = len(compacted)
+
+        session.messages = [ChatMessage.from_dict(m) for m in compacted]
+        omitted = pre_count - post_count
+        if omitted > 0:
+            session.messages.append(
+                ChatMessage(
+                    role='system',
+                    content=f'[System: Session compacted. {omitted} earlier messages compressed to preserve context.]',
+                )
+            )
+        self._get_session_store().save(session)
+        self.output_fn(
+            f'compact: session compacted ({pre_count} → {post_count} messages, {omitted} omitted)'
+        )
 
     def _handle_cost(self) -> None:
         self.output_fn(f'cost: ${self._session_cost_cents / 100:.2f}')
@@ -716,7 +790,7 @@ class TeaAgentTUI:
 
     def _handle_background(self) -> None:
         self.output_fn(
-            'background: use teaagent agent run --detach from CLI for background tasks'
+            'background: /background is not implemented in TUI. Use "teaagent agent run --detach" from CLI for background tasks.'
         )
 
     def _get_session_store(self) -> SessionStore:
@@ -776,6 +850,10 @@ class TeaAgentTUI:
         audit = store.audit_logger()
         if self.progress:
             audit.add_sink(self._progress_sink)
+        from teaagent.run_undo import UndoJournal
+
+        undo_journal = UndoJournal(self.root)
+        audit.add_sink(undo_journal)
 
         chat_messages = None
         if self.chat:
@@ -800,6 +878,9 @@ class TeaAgentTUI:
                 on_chunk=self._stream_chunk if self.stream else None,
                 stream_text_only=True,
                 approval_handler=self._approval_handler,
+                budget_prompt_handler=self._budget_prompt_handler
+                if (self.input_fn is not None)
+                else None,
                 chat_messages=chat_messages,
                 max_estimated_cost_cents=self._runtime_max_cost_cents,
                 max_iterations=self.max_iterations,
@@ -816,8 +897,24 @@ class TeaAgentTUI:
             else None,
         )
         store.logger_for_result(result, audit)
+        if undo_journal.has_entries:
+            undo_journal.save_to(store.undo_path(result.run_id))
         self.last_run_id = result.run_id
-        audit_summary = summarize_audit_events(store.show_run(result.run_id))
+        events = store.show_run(result.run_id)
+        if not isinstance(events, list):
+            events = []
+        audit_summary = summarize_audit_events(events)
+        from teaagent.ergonomics.run_summary import format_run_summary, summarize_run
+
+        run_summary = summarize_run(
+            root=self.root,
+            run_id=result.run_id,
+            events=events,
+            cost_cents=result.cost_cents,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            budget_cap_cents=self._runtime_max_cost_cents,
+        )
 
         if self.chat:
             chat_session: Optional[ChatSession] = self._current_session()
@@ -835,15 +932,28 @@ class TeaAgentTUI:
 
         if self.chat and result.status == 'completed' and result.final_answer:
             self.output_fn(result.final_answer.content)
+            self.output_fn(format_run_summary(run_summary).rstrip())
         else:
             payload = self._run_result_payload(
                 result,
                 routing=routing.to_dict() if routing else None,
                 audit_summary=audit_summary,
             )
+            payload['run_summary'] = run_summary
             if initial_observations:
                 payload['replayed_observations'] = len(initial_observations)
             self._print_json(payload)
+
+    def _budget_prompt_handler(self, payload: dict[str, Any]) -> bool:
+        percent = float(payload.get('percent', 0.0))
+        cost_cents = float(payload.get('cost_cents', 0.0))
+        max_cost_cents = float(payload.get('max_cost_cents', 0.0))
+        spent = cost_cents / 100.0
+        cap = max_cost_cents / 100.0
+        self.output_fn(f'budget: at {percent:.0f}% (${spent:.2f} / ${cap:.2f})')
+        fn = self.input_fn or input
+        answer = fn('Continue? [y/N]: ').strip().lower()
+        return answer in {'y', 'yes'}
 
     def _approval_handler(self, request: ApprovalRequest) -> bool:
         from teaagent.ergonomics.approval_store import ApprovalPresetStore

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 
+from teaagent.audit import AuditLogger
 from teaagent.hooks import HookRegistry, mcp_tool_filter_hook
 from teaagent.tools import ToolRegistry
 
@@ -19,6 +21,7 @@ class MCPServerTrust:
     allowed_tools: list[str] = field(default_factory=list)
     denied_tools: list[str] = field(default_factory=list)
     trusted: bool = False
+    expires_at: Optional[float] = None  # Unix timestamp for token expiry
 
 
 @dataclass
@@ -27,17 +30,20 @@ class MCPTrustPolicy:
     allowed_tools: list[str] = field(default_factory=list)
     denied_tools: list[str] = field(default_factory=list)
     servers: dict[str, MCPServerTrust] = field(default_factory=dict)
+    default_ttl_seconds: float = 86400.0  # 24 hours default TTL
 
     def to_dict(self) -> dict[str, Any]:
         return {
             'version': self.version,
             'allowed_tools': list(self.allowed_tools),
             'denied_tools': list(self.denied_tools),
+            'default_ttl_seconds': self.default_ttl_seconds,
             'servers': {
                 name: {
                     'allowed_tools': list(server.allowed_tools),
                     'denied_tools': list(server.denied_tools),
                     'trusted': server.trusted,
+                    'expires_at': server.expires_at,
                 }
                 for name, server in self.servers.items()
             },
@@ -59,12 +65,14 @@ class MCPTrustPolicy:
                         str(item) for item in payload.get('denied_tools', [])
                     ],
                     trusted=bool(payload.get('trusted', False)),
+                    expires_at=payload.get('expires_at'),
                 )
         return cls(
             version=int(data.get('version', 1)),
             allowed_tools=[str(item) for item in data.get('allowed_tools', [])],
             denied_tools=[str(item) for item in data.get('denied_tools', [])],
             servers=servers,
+            default_ttl_seconds=float(data.get('default_ttl_seconds', 86400.0)),
         )
 
 
@@ -184,10 +192,17 @@ def update_server_tools(
     allow: Optional[list[str]] = None,
     deny: Optional[list[str]] = None,
     trusted: Optional[bool] = None,
+    ttl_seconds: Optional[float] = None,
 ) -> MCPTrustPolicy:
+    """Update server trust with optional TTL for token expiry."""
     entry = policy.servers.setdefault(server, MCPServerTrust())
     if trusted is not None:
         entry.trusted = trusted
+        # Set expiry when trusting a server
+        if trusted and ttl_seconds is None:
+            ttl_seconds = policy.default_ttl_seconds
+        if trusted and ttl_seconds is not None:
+            entry.expires_at = time.time() + ttl_seconds
     if allow:
         for tool in allow:
             if tool not in entry.allowed_tools:
@@ -201,3 +216,62 @@ def update_server_tools(
             if tool in entry.allowed_tools:
                 entry.allowed_tools.remove(tool)
     return policy
+
+
+def is_server_trust_expired(server_trust: MCPServerTrust) -> bool:
+    """Check if server trust has expired based on expires_at timestamp."""
+    if server_trust.expires_at is None:
+        return False
+    return time.time() > server_trust.expires_at
+
+
+def revoke_server_trust(
+    policy: MCPTrustPolicy,
+    server: str,
+    *,
+    audit_logger: Optional[AuditLogger] = None,
+    run_id: Optional[str] = None,
+) -> MCPTrustPolicy:
+    """Revoke trust for a server and emit audit event."""
+    if server in policy.servers:
+        entry = policy.servers[server]
+        # Emit audit event
+        if audit_logger is not None:
+            audit_logger.record(
+                event_type='mcp_server_trust_revoked',
+                run_id=run_id or 'unknown',
+                server=server,
+                previous_trusted=entry.trusted,
+                previous_allowed_tools=len(entry.allowed_tools),
+                previous_denied_tools=len(entry.denied_tools),
+            )
+        # Remove server entry
+        del policy.servers[server]
+    return policy
+
+
+def check_unknown_tool_prompt(
+    policy: MCPTrustPolicy,
+    tool_name: str,
+    server: Optional[str] = None,
+) -> bool:
+    """Check if an unknown tool should trigger a default-deny prompt.
+
+    Returns True if the tool is unknown and should trigger a prompt.
+    """
+    # Check global allow/deny lists
+    if tool_name in policy.allowed_tools:
+        return False
+    if tool_name in policy.denied_tools:
+        return False
+
+    # Check server-specific lists if server is provided
+    if server and server in policy.servers:
+        server_trust = policy.servers[server]
+        if tool_name in server_trust.allowed_tools:
+            return False
+        if tool_name in server_trust.denied_tools:
+            return False
+
+    # Tool is unknown - should trigger default-deny prompt
+    return True

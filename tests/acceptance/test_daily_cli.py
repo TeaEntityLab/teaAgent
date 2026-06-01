@@ -11,6 +11,7 @@ from unittest.mock import patch
 from conftest import FakeAdapter
 
 from teaagent.cli import main
+from test_support import can_bind_loopback
 
 
 class DailyCLIAcceptanceTests(unittest.TestCase):
@@ -67,8 +68,12 @@ class DailyCLIAcceptanceTests(unittest.TestCase):
                 )
             events = json.loads(show_out.getvalue())
 
-            self.assertEqual(preflight_code, 0)
-            self.assertTrue(preflight_payload['ready'])
+            if not can_bind_loopback():
+                self.assertEqual(preflight_code, 2)
+                self.assertFalse(preflight_payload['ready'])
+            else:
+                self.assertEqual(preflight_code, 0)
+                self.assertTrue(preflight_payload['ready'])
             self.assertEqual(preflight_payload['permission_mode'], 'read-only')
             self.assertEqual(run_code, 0)
             self.assertEqual(run_payload['status'], 'completed')
@@ -106,6 +111,11 @@ class DailyCLIAcceptanceTests(unittest.TestCase):
                     ]
                 )
             payload = json.loads(daily_out.getvalue())
+
+            if not can_bind_loopback():
+                self.assertEqual(daily_code, 2)
+                self.assertFalse(payload['ready'])
+                return
 
             self.assertEqual(daily_code, 0)
             self.assertTrue(payload['ready'])
