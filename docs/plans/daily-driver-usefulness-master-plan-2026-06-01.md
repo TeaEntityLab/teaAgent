@@ -39,6 +39,8 @@ A daily surface is ready when:
 | DU-003 | Resolve git-sandbox contract. | Tests prove branch switching occurs only under the documented default/flag/consent path. |
 | DU-004 | Rename/correct suspension output. | `/background` no longer says work continues unless it does; help uses `suspend` for checkpoints. |
 | DU-005 | Update acceptance count docs. | `python3 scripts/validate_docs_consistency.py` passes. |
+| DU-005A | Protect explicit TUI root from saved global state. | A saved TUI state from root A cannot override an explicit root B supplied by the current command. |
+| DU-005B | Prevent path approval from becoming global by accident. | Path-scoped approval with no path is refused or requires a separate explicit global/tool grant. |
 
 ## Phase 1: Unify The State Model
 
@@ -49,6 +51,8 @@ A daily surface is ready when:
 | DU-008 | Create one daily command grammar. | Docs and parser tests agree on provider/task order for `run`, `chat`, `tui`, `resume`, `attach`, and `undo`. |
 | DU-009 | Recovery decision tree. | Docs and help describe undo preview, undo restore, resume, attach, background, checkpoint, and suspend. |
 | DU-010 | Approval copy taxonomy. | Setup, provider missing, approval blocked, budget exceeded, undo unavailable, and unknown command have tested messages. |
+| DU-010A | Resolve cost-cap zero semantics. | Parser help, runtime, run summary, TUI, and docs agree on whether `0` means unlimited or default budget. |
+| DU-010B | Preserve git sandbox lifecycle state. | The original sandbox object or persisted metadata carries original branch and stash data into merge/discard/keep. |
 
 ## Phase 2: Daily Cockpit
 
@@ -83,8 +87,14 @@ teaagent tool lint --root .
 For branch/sandbox changes, add a temporary clean-repo integration test before changing
 docs or defaults.
 
+## Second-Pass Delta
+
+The newest second-pass plan is
+`docs/plans/daily-driver-second-pass-task-plan-2026-06-01.md`. Treat it as the
+execution queue for DU-005A, DU-005B, DU-010A, DU-010B, and the verification gaps
+discovered after the controller-backed chat improvements.
+
 ## Release Criteria
 
 TeaAgent can be described as daily-useful when Phase 0 and Phase 1 are complete, the
 verification commands pass, and README/docs no longer contradict runtime behavior.
-

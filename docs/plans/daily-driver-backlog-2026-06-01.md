@@ -58,6 +58,53 @@ auto-clear) or M (real layout). **Decision:** DQ-3.
 
 ---
 
+## Post-fix tickets (third-pass audit, 2026-06-01)
+
+After the `ChatSessionController` batch landed, a re-audit found the fix reached the REPL
+but not the TUI. See `docs/analysis/daily-driver-third-pass-postfix-audit-2026-06-01.md`.
+
+### TICKET-12 — [P1] TUI adopts `ChatSessionController` (CG-11, CG-12, CG-15)
+**Problem:** TUI `_run_agent_task` still calls `run_chat_agent` directly; `/cost` always
+shows $0.00 because `_session_cost_cents` is never incremented; TUI undo uses git-stash
+while REPL uses `UndoJournal`. CG-05 divergence is active again.
+**Stop-gap (do first, 1 line):** `self._session_cost_cents += result.cost_cents` after
+the run in `_run_agent_task` (`tui/__init__.py:~924`).
+**Acceptance:** TUI `_run_agent_task` drives `ChatSessionController`; cost accumulates;
+`/undo` uses `UndoJournal`; REPL/TUI behavior identical for result/cost/undo.
+**Test:** `test_tui_session_cost_accumulates`, `test_chat_surface_parity`. **Size:** M.
+**Human review:** touches undo + cost. **Depends:** stop-gap can ship immediately.
+
+### TICKET-13 — [P2] Controller stops swallowing real errors (CG-13)
+**Problem:** `execute_task` catches `(AttributeError, TypeError)` to detect test mocks
+(`chat_session_controller.py:143-159`) — silently hides a real undo-journal save failure.
+**Acceptance:** mock-detection removed; persistence/journal-save errors surface (logged
+or raised); a fault-injection test proves a save failure is not swallowed.
+**Test:** `test_controller_surfaces_save_failure`. **Size:** S.
+
+### TICKET-14 — [P1] Fix the test that masks CG-11 (CG-16)
+**Problem:** `test_tui_cost_shows_session_cost` injects `_session_cost_cents` by hand and
+asserts the display — never exercises accumulation, so it stays green with CG-11 present.
+**Acceptance:** keep a formatting test, but add an end-to-end test that runs a stub-cost
+task and asserts the counter rose. **Test:** `test_tui_session_cost_accumulates`. **Size:** S.
+
+### TICKET-16 — [P1] Honest, then working suspend→resume (AG-01…AG-04)
+**Problem:** REPL `/background` prints 3 follow-up commands; `teaagent resume <id>` errors
+(no `run_started` → `task_for_run` raises), `agent run --background <id>` runs the id as a
+literal task, only `interactive-review` works (review-only). Saved observations are never
+rehydrated. See `docs/analysis/daily-driver-agent-mode-suspension-audit-2026-06-01.md`.
+**Now (XS):** print only `interactive-review`; drop the broken `resume`/`--background`
+hints (`chat_repl.py:142,662`). **Real (M):** persist `run_started`+task+observations to
+`RunStore` at suspend (or make `agent resume` fall back to the suspension JSON) so resume
+rehydrates. Guard `--background <existing-id>` with "did you mean `agent resume`?".
+**Test:** `test_repl_suspend_resume_roundtrip`. **Human review:** governance handoff.
+
+### TICKET-15 — [P3] Cleanup: redundant audit field + stale help (CG-14, CG-15-doc)
+Remove `suspension_data['audit_trail']` (`chat_repl.py:89-93`, superseded by the real
+`audit.record`); fix REPL `/undo` help text (`:168`) to describe journal-first surgical
+undo, not "all changes (using checkpoint)". **Size:** XS.
+
+---
+
 ## Spec-track tickets (design landed; build when prioritized)
 
 ### TICKET-8 — [P1] Persona journey→acceptance tests (SPEC-JM / F-ECO-002)
@@ -79,13 +126,15 @@ Extend `summarize_run` with commands/tests/approvals/known-gaps + `run_evidence.
 
 ## Summary
 
-| Priority | Tickets | Total size |
-|----------|---------|-----------|
-| P0 | 1, 2 | S + S |
-| P1 (correctness) | 3, 4, 5, 6 | mostly S, one M |
-| P2 | 7 | S |
-| P1 (spec-track) | 8, 9, 10, 11 | mostly M |
+| Priority | Tickets | Status |
+|----------|---------|--------|
+| P0 | 1, 2 | ✅ done (verified third-pass) |
+| P1 (correctness) | 3, 4, 5, 6 | ✅ done **for REPL**; TUI gap → TICKET-12 |
+| P2 | 7 | ✅ done (TUI compact real) |
+| **Post-fix (open)** | **12, 13, 14, 15** | **TUI never adopted the controller** |
+| P1 (spec-track) | 8, 9, 10, 11 | mixed |
 
-**Critical path to a trustworthy daily driver:** TICKET-1 → TICKET-2 (ship now) →
-TICKET-5 (unify) → TICKET-3/4/6 (fold in) → spec-track as prioritized.
+**Current critical path:** TICKET-12 stop-gap (1-line TUI cost) + TICKET-14 (un-mask the
+test) → TICKET-12 full controller migration (unify REPL/TUI) → TICKET-13 (stop swallowing
+errors) → TICKET-15 cleanup → spec-track as prioritized.
 </content>

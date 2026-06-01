@@ -21,6 +21,12 @@ parallel read-only audits.
 | R-010 | Medium | Acceptance docs overstate readiness. | `validate_docs_consistency` reported count mismatch against pytest collection. | Generate counts or update docs in the same PR as tests. | `python3 scripts/validate_docs_consistency.py` passes. |
 | R-011 | Low | TUI cockpit promise outruns implementation. | README/docs promote TUI daily loop; tests mostly assert line output/no-throw. | Write a TUI cockpit contract and back it with headless smoke scenarios. | Headless TUI scenarios for status, cost, undo, approvals. |
 | R-012 | Low | Older same-day docs are easy to misread as current truth. | Previous docs mark completed items that current audit still finds active. | Keep this refresh and index supersession note first in read order. | Index links current truth docs before historical docs. |
+| R-013 | High | TUI can target the wrong workspace after loading global state. | `_load_tui_state` reads `~/.teaagent/tui_state.json` and overwrites `self.root`. | Make explicit root higher priority than saved state; scope saved state by workspace if needed. | Test saved root A cannot override explicit root B. |
+| R-014 | High | Git sandbox merge/discard may lose original branch/stash state. | Agent mode starts a `pending` sandbox, then re-creates a new sandbox object with `result.run_id`. | Preserve the initialized sandbox object or persist sandbox metadata before resolution. | Test merge prompt uses real original branch and stash id. |
+| R-015 | Medium | Cost cap `0` has contradictory meanings. | Parser help says default budget; runtime treats `<=0` as no cap; summary can report default budget. | Pick one semantic and update parser, runtime, summaries, docs, and tests together. | Budget tests for zero, default, and explicit caps. |
+| R-016 | Medium | Path-scoped approval can silently become session-wide approval. | TUI path approval without an extractable path creates a grant with no path globs; empty globs match all paths. | Reject path approval without a path or require explicit global confirmation. | TUI approval test with answer `p` and no path. |
+| R-017 | Medium | Help text can recommend nonexistent lifecycle flags. | TUI/chat help mention `--detach`; parser exposes `--background`. | Either implement `--detach` alias or remove all references. | Help snapshot test scans TUI, chat, and docs. |
+| R-018 | Low | Acceptance count guard is narrower than the docs claim. | Guard checks the ``N passed`` marker, not the headline `N tests collected`. | Parse and validate both count markers. | Acceptance count accuracy test fails if either marker drifts. |
 
 ## Human Review Gates
 
@@ -30,6 +36,8 @@ Human review is required before:
 - Relaxing or broadening permission approvals.
 - Deleting duplicate chat implementation paths.
 - Changing undo behavior.
+- Changing TUI root/state precedence.
+- Changing cost-cap default semantics.
 - Claiming daily-driver readiness in README or release notes.
 
 ## Rollback Strategy
@@ -46,4 +54,3 @@ Even after the high risks are fixed, TeaAgent will remain exposed to normal agen
 risks: provider outages, model regressions, tool-call loops, noisy approvals, and user
 misconfiguration. The daily-driver bar is not "no failures"; it is visible state,
 bounded authority, recoverable edits, and honest evidence.
-

@@ -42,6 +42,48 @@ Source docs referenced (all dated 2026-06-01 unless noted):
 `daily-driver-findings-second-pass-2026-06-01.md`. Severity re-exam there: CG-04 may
 drop to P2 pending its test; CG-05 escalated in sequencing.)*
 
+### Third-pass post-fix status (2026-06-01, after `ChatSessionController` landed)
+
+**Closed/verified-fixed:** CG-01, CG-02, CG-03(REPL), CG-04, CG-06, CG-07, CG-09, CG-10.
+CG-05 root-cause fix (the controller) exists and is correct **for the REPL only**.
+
+| ID | Type | Conf | Statement | Evidence | Status | Fix |
+|----|------|:----:|-----------|----------|--------|-----|
+| CG-11 | FINDING | H | TUI `/cost`/budget always $0.00 — `_session_cost_cents` never incremented | `tui:186` init, only read; `_run_agent_task` 842-970 | OPEN | TICKET-12 |
+| CG-12 | FINDING | H | TUI never adopted `ChatSessionController` → CG-05 divergence active | `tui:890` calls `run_chat_agent` directly | OPEN | TICKET-12 |
+| CG-13 | FINDING | M | Controller swallows real `AttributeError/TypeError` as "mock detection" → hides undo-journal save failure | `chat_session_controller.py:143-159` | OPEN | TICKET-13 |
+| CG-14 | FINDING | L | Redundant `audit_trail` JSON field on suspension (superseded by real audit event) | `chat_repl.py:89-93` vs `:129` | OPEN | TICKET-15 |
+| CG-15 | FINDING | M | TUI `/undo` (git-stash) vs REPL `/undo` (UndoJournal) diverge; REPL help text stale | `tui:641-708`; `chat_repl.py:168` | OPEN | TICKET-12/15 |
+| CG-16 | FINDING | H | A passing test masks CG-11 (injects cost, asserts display) | `tests/test_tui.py:1140-1145` | OPEN | TICKET-14 |
+
+Full write-up: `daily-driver-third-pass-postfix-audit-2026-06-01.md`. New residual risks
+R-6 (divergence active), R-7 (silent undo-save loss), R-8 (TUI green ≠ correct).
+
+### Fourth-pass agent-mode / suspend→resume audit (2026-06-01)
+
+Broadened to the previously un-reviewed agent surface. Suspension messaging is honest
+(CG-09/10) but the advertised resume round-trip is broken.
+
+| ID | Type | Conf | Statement | Evidence | Status | Fix |
+|----|------|:----:|-----------|----------|--------|-----|
+| AG-01 | FINDING | H | `teaagent resume <repl-suspend-id>` always errors (no `run_started` → `task_for_run` raises) | `chat_repl.py:56,130`; `run_store.py:143-149`; `_agent.py:217-220` | OPEN | TICKET-16 |
+| AG-02 | FINDING | H | `agent run --background <id>` runs the id as a literal task, not a resume | `_agent.py:145`; `_agent_parsers.py:286`; positional `task` nargs='?' | OPEN | TICKET-16 |
+| AG-03 | FINDING | M | No working "continue session" path; saved observations never rehydrated | `chat_repl.py:77-94` vs `_agent.py:239-244` | OPEN | TICKET-16 |
+| AG-04 | FINDING | M | 3 inconsistent follow-up commands undercut the CG-09/10 honesty fix | `chat_repl.py:142,143,662` | OPEN | TICKET-16 |
+
+Agent-mode governance verified solid (scoped approvals, plan gate, auto-compact). Full
+write-up: `daily-driver-agent-mode-suspension-audit-2026-06-01.md`.
+
+### Fifth-pass: test-catalog grounding (2026-06-01)
+
+| ID | Type | Conf | Statement | Evidence | Status | Fix |
+|----|------|:----:|-----------|----------|--------|-----|
+| CG-17 | FINDING | H | `test_chat_surface_parity` claims CG-05 TUI parity but builds two controllers and never instantiates `TeaAgentTUI` | `tests/test_cli_chat.py:483-552` | OPEN(test) | TICKET-12b |
+
+Catalog also found **5 shipped fixes with no named guard test** (CG-02, CG-03-REPL, CG-04,
+CG-09, CG-10). Full: `daily-driver-acceptance-test-catalog-2026-06-01.md`,
+`daily-driver-findings-status-ledger-2026-06-01.md`.
+
 ## 2. Recommendations (fixes) — from PLAN
 
 | ID | Type | Statement | Closes | Status |
@@ -106,11 +148,13 @@ See `daily-driver-assumptions-and-nongoals-2026-06-01.md`. IDs: AS-1…AS-6, NG-
 
 ## Status roll-up
 
-- **8 findings**, all PLANNED via 7 fix items.
+- **16 findings** (CG-01…CG-16). CG-01/02/03(REPL)/04/06/07/09/10 now **FIXED** by the
+  maintainer's `ChatSessionController` batch; **CG-11…CG-16 OPEN** (TUI not migrated).
 - **4 design specs**, all SPEC (designed, unbuilt).
 - **10 judgments** logged with basis.
 - **4 research signals** sourced.
-- **0 lines of code changed** this review (analysis + docs only).
+- Code **was** changed since this review opened (the controller + REPL fixes); the
+  third-pass audit re-anchored all findings against current HEAD.
 
 ## Next concrete action (if approved to implement)
 

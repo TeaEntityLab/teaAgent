@@ -4,7 +4,22 @@
 A single entry point to the 2026-06-01 review of teaagent's daily surfaces
 (TUI, `teaagent chat`, agent mode). Read in this order.
 
-## 2026-06-01 late refresh: read these first
+## 2026-06-01 second-pass after improvements: read these first
+
+These files are the newest layer of the daily-driver review. They incorporate the
+latest code improvements and the parallel second-pass audits, and should be read before
+the earlier same-day refresh documents.
+
+1. **`daily-driver-second-pass-after-improvements-2026-06-01.md`** *(analysis)*
+   Current fixed/still-active/new facts after the latest code changes.
+2. **`../plans/daily-driver-second-pass-task-plan-2026-06-01.md`** *(plans)*
+   Reviewable task queue for the newly discovered risks.
+3. **`daily-driver-verification-gap-audit-2026-06-01.md`** *(analysis)*
+   Where current tests prove behavior, and where they only cover helpers or smoke paths.
+4. **`daily-driver-ux-contract-drift-2026-06-01.md`** *(analysis)*
+   User-facing words, flags, and displays that currently drift from runtime behavior.
+
+## 2026-06-01 late refresh: read these next
 
 The files below supersede stale parts of the earlier same-day package. Some earlier
 findings were fixed or shifted to different runtime paths; the current risks now center
@@ -60,6 +75,24 @@ runtime/test path divergence.
     new findings CG-09/CG-10, severity re-exam, completeness audit, residual risks R-1…R-5.
 22. **`daily-driver-execution-readiness-2026-06-01.md`** *(plans)* — dev/test mechanics,
     per-ticket DoD + implementation pointers, and the **spec-level risk register SR-1…SR-11**.
+23. **`daily-driver-third-pass-postfix-audit-2026-06-01.md`** *(analysis)* — **READ THIS
+    FOR CURRENT TRUTH.** After the `ChatSessionController` batch landed: CG-01/02/03(REPL)/
+    04/06/07/09/10 FIXED; new findings CG-11…CG-16 (TUI never adopted the controller →
+    `/cost` $0.00, undo divergence, a test masking the bug). Tickets 12-15 in the backlog.
+
+## Post-fix layer (third pass — TUI not yet on the controller)
+
+24. **`daily-driver-tui-controller-migration-spec-2026-06-01.md`** *(specs)* — how to
+    migrate the TUI onto `ChatSessionController` without regressing (capability gap,
+    minimal additive controller changes, parity contract, risks MR-1…MR-5).
+25. **`daily-driver-surface-parity-matrix-2026-06-01.md`** *(analysis)* — REPL vs TUI vs
+    agent, behavior-by-behavior; makes CG-12 legible (3 ❌ rows = the bugs).
+26. **`daily-driver-tui-postfix-execution-sheets-2026-06-01.md`** *(plans)* — per-ticket
+    DoD + exact file:line for TICKET-12…15 (incl. the 1-line cost stop-gap 12a).
+27. **`daily-driver-test-integrity-audit-2026-06-01.md`** *(analysis)* — the
+    inject-the-state-you-assert anti-pattern (CG-16), grounded instances, the rule.
+28. **`daily-driver-third-pass-thought-log-2026-06-01.md`** *(analysis)* — complete
+    "log everything" for this pass: TP-OBS / TP-J / TP-REC / TP-AS / TP-DQ / R-6…R-8.
 
 ## Consolidation / log layer
 
@@ -69,6 +102,30 @@ runtime/test path divergence.
 11. **`daily-driver-assumptions-and-nongoals-2026-06-01.md`** — AS-1…, NG-1….
 12. **`daily-driver-traceability-matrix-2026-06-01.md`** — finding→fix→test→theme→gap.
 13. **`daily-driver-backlog-2026-06-01.md`** *(plans)* — flat, ticket-style backlog.
+
+## Fourth-pass: agent-mode surface (newly reviewed)
+
+29. **`daily-driver-agent-mode-suspension-audit-2026-06-01.md`** *(analysis)* — audits the
+    non-interactive agent path + the suspend→resume round-trip. Findings AG-01…AG-04: the
+    REPL advertises `resume`/`--background`/`interactive-review` but only review works;
+    `resume` errors, `--background` runs the id as a literal task. Agent-mode *governance*
+    (scoped approvals, plan gate, auto-compact) verified solid. → TICKET-16.
+
+## Consolidation & QA layer (fifth pass)
+
+30. **`daily-driver-findings-status-ledger-2026-06-01.md`** *(analysis)* — **single
+    authoritative status page** for CG-01…CG-17 + AG-01…AG-04 (status/ticket/test/evidence).
+31. **`daily-driver-acceptance-test-catalog-2026-06-01.md`** *(plans)* — every named test:
+    exists / missing / misleading. Surfaced CG-17 + 5 unguarded shipped fixes.
+32. **`../processes/daily-driver-manual-qa-smoke.md`** *(processes)* — human smoke
+    checklist with observable expected results per finding/surface.
+
+## Repo-convention artifacts (this review, filed in the project's own dirs)
+
+- **`../adr/0025-chat-session-controller-unification.md`** — ADR for the controller
+  decision, honestly marked *Implemented (Partial — REPL done, TUI pending)*.
+- **`../processes/postfix-reaudit-process.md`** — reusable re-audit procedure that caught
+  the partial application + masking test; run it after any fix batch lands.
 
 ## Relationship to the May-31 corpus
 

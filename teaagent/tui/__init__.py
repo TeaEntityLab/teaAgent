@@ -921,6 +921,9 @@ class TeaAgentTUI:
             if resumed_from
             else None,
         )
+        # CG-11 stop-gap: accumulate real cost from each run result so /cost and
+        # /budget show the true session total instead of always $0.00.
+        self._session_cost_cents += result.cost_cents
         store.logger_for_result(result, audit)
         if undo_journal.has_entries:
             undo_journal.save_to(store.undo_path(result.run_id))

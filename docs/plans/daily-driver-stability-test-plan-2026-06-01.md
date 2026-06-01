@@ -32,6 +32,7 @@ Use a layered strategy:
 |---|---|
 | Successful run with `cost_cents=123` | `/cost` reports `$1.23`; `/budget` includes the same total. |
 | Two successful runs | Session cost is cumulative. |
+| Explicit root with saved global state | Saved root from a previous workspace does not override the root supplied to this run. |
 | Failed run | User sees failure reason and no false success summary. |
 | Undo after run with journal | Restores recorded files and reports journal id/run id. |
 | Undo with no journal | Says no undo is available and suggests recovery options. |
@@ -62,8 +63,9 @@ Use a layered strategy:
 |---|---|
 | Unknown remote MCP tool with no annotations | Prompts before execution. |
 | Remote tool claims read-only but writes in test double | Test proves registry policy blocks or requires trust override. |
-| Approval with no path | Output says whether approval is session-wide and why. |
+| Path approval with no path | Refuses path-scoped grant or requires explicit global/tool confirmation. |
 | Budget exceeded | Agent stops with remediation, not a generic failure. |
+| Cost cap set to `0` | Runtime behavior matches parser help and run summary. |
 
 ### Documentation
 
@@ -71,6 +73,7 @@ Use a layered strategy:
 |---|---|
 | Acceptance count validation | `docs/acceptance.md` exactly matches collected acceptance tests. |
 | Help snapshot | Help text matches command grammar and lifecycle words. |
+| Background/detach wording | Help does not recommend `--detach` unless the parser exposes it. |
 | Risk index | Current truth docs appear before historical daily-driver docs. |
 
 ## Verification Commands
@@ -87,6 +90,9 @@ Add targeted tests before broad acceptance runs:
 - `tests/test_tui_cost_ledger.py` for real cost accumulation.
 - `tests/test_agent_git_sandbox_defaults.py` for branch behavior.
 - `tests/test_lifecycle_copy.py` for suspend/background output.
+- `tests/test_tui_state_root.py` for explicit root precedence.
+- `tests/test_tui_approval_scope.py` for path approval with no path.
+- `tests/test_cost_cap_semantics.py` for zero/default/unlimited budget behavior.
 
 ## Manual Smoke Script
 
@@ -105,4 +111,3 @@ Run in a disposable repository:
 The product is stable enough for daily-user recommendation only when all high-severity
 tests pass, docs consistency passes, and every remaining medium risk is explicitly
 listed in the release notes.
-
