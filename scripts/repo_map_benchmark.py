@@ -49,44 +49,52 @@ def _extract_symbols_from_file(file_path: Path) -> list[dict[str, Any]]:
 
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.FunctionDef):
-            symbols.append({
-                'name': node.name,
-                'kind': 'function',
-                'file': str(file_path),
-                'lineno': node.lineno,
-                'docstring': ast.get_docstring(node) or '',
-            })
+            symbols.append(
+                {
+                    'name': node.name,
+                    'kind': 'function',
+                    'file': str(file_path),
+                    'lineno': node.lineno,
+                    'docstring': ast.get_docstring(node) or '',
+                }
+            )
         elif isinstance(node, ast.AsyncFunctionDef):
-            symbols.append({
-                'name': node.name,
-                'kind': 'async_function',
-                'file': str(file_path),
-                'lineno': node.lineno,
-                'docstring': ast.get_docstring(node) or '',
-            })
+            symbols.append(
+                {
+                    'name': node.name,
+                    'kind': 'async_function',
+                    'file': str(file_path),
+                    'lineno': node.lineno,
+                    'docstring': ast.get_docstring(node) or '',
+                }
+            )
         elif isinstance(node, ast.ClassDef):
             methods: list[str] = []
             for body_node in node.body:
                 if isinstance(body_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     methods.append(body_node.name)
-            symbols.append({
-                'name': node.name,
-                'kind': 'class',
-                'file': str(file_path),
-                'lineno': node.lineno,
-                'methods': methods,
-                'docstring': ast.get_docstring(node) or '',
-            })
+            symbols.append(
+                {
+                    'name': node.name,
+                    'kind': 'class',
+                    'file': str(file_path),
+                    'lineno': node.lineno,
+                    'methods': methods,
+                    'docstring': ast.get_docstring(node) or '',
+                }
+            )
         elif isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name):
-                    symbols.append({
-                        'name': target.id,
-                        'kind': 'variable',
-                        'file': str(file_path),
-                        'lineno': node.lineno,
-                        'docstring': '',
-                    })
+                    symbols.append(
+                        {
+                            'name': target.id,
+                            'kind': 'variable',
+                            'file': str(file_path),
+                            'lineno': node.lineno,
+                            'docstring': '',
+                        }
+                    )
 
     return symbols
 
@@ -105,10 +113,12 @@ def build_repo_map(repo_path: Path) -> dict[str, Any]:
             file_symbols = _extract_symbols_from_file(py_file)
             all_symbols.extend(file_symbols)
         except Exception as exc:
-            errors.append({
-                'file': str(py_file),
-                'error': str(exc),
-            })
+            errors.append(
+                {
+                    'file': str(py_file),
+                    'error': str(exc),
+                }
+            )
 
     module_structure: dict[str, list[str]] = {}
     for sym in all_symbols:

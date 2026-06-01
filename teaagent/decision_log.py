@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 
 class DecisionLog:
@@ -35,9 +35,7 @@ class DecisionLog:
 
     # ------------------------------------------------------------------ public
 
-    def add(
-        self, decision: str, reason: str, do_not_reverse: str = ''
-    ) -> None:
+    def add(self, decision: str, reason: str, do_not_reverse: str = '') -> None:
         """Append a decision entry to the log."""
         self._ensure_dir()
         today = date.today().isoformat()
@@ -47,12 +45,12 @@ class DecisionLog:
         with self._path.open('a', encoding='utf-8') as handle:
             handle.write(entry)
 
-    def list(self) -> list[dict[str, Any]]:
+    def list(self) -> List[Dict[str, Any]]:
         """Return all decisions as a list of dicts."""
-        decisions: list[dict[str, Any]] = self._parse().get('decisions', [])
+        decisions: List[Dict[str, Any]] = self._parse().get('decisions', [])
         return decisions
 
-    def recent(self, limit: int = 10) -> list[dict[str, Any]]:
+    def recent(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Return the *limit* most recent decisions."""
         all_decisions = self.list()
         return list(reversed(all_decisions))[:limit]
@@ -70,14 +68,12 @@ class DecisionLog:
         lines: list[str] = ['## Recent Decisions']
         for d in recent:
             lines.append('')
-            lines.append(f"**Decision:** {_truncate(d.get('decision', ''))}")
-            lines.append(f"**Reason:** {_truncate(d.get('reason', ''))}")
+            lines.append(f'**Decision:** {_truncate(d.get("decision", ""))}')
+            lines.append(f'**Reason:** {_truncate(d.get("reason", ""))}')
             dnr = d.get('do_not_reverse', '')
             if dnr:
-                lines.append(
-                    f'**Do not reverse without:** {_truncate(dnr)}'
-                )
-            lines.append(f"*Logged: {d.get('date', '')}*")
+                lines.append(f'**Do not reverse without:** {_truncate(dnr)}')
+            lines.append(f'*Logged: {d.get("date", "")}*')
         summary = '\n'.join(lines)
         if max_chars is not None and len(summary) > max_chars:
             summary = summary[:max_chars].rsplit('\n', 1)[0] + '\n*(truncated)*'

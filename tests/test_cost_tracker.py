@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -128,7 +127,11 @@ class TestCostTracker:
                         'event_type': 'run_completed',
                         'run_id': 'run-1',
                         'created_at': '2026-06-01T10:05:00+00:00',
-                        'payload': {'cost_cents': 15, 'input_tokens': 200, 'output_tokens': 100},
+                        'payload': {
+                            'cost_cents': 15,
+                            'input_tokens': 200,
+                            'output_tokens': 100,
+                        },
                     },
                 ],
             )
@@ -148,7 +151,11 @@ class TestCostTracker:
                         'event_type': 'run_completed',
                         'run_id': 'run-2',
                         'created_at': '2026-06-01T11:05:00+00:00',
-                        'payload': {'cost_cents': 25, 'input_tokens': 300, 'output_tokens': 150},
+                        'payload': {
+                            'cost_cents': 25,
+                            'input_tokens': 300,
+                            'output_tokens': 150,
+                        },
                     },
                 ],
             )
@@ -198,15 +205,35 @@ class TestCostTracker:
     def test_export_csv_produces_valid_content(self) -> None:
         data = {
             'by_label': {
-                'feature:a': {'runs': 2, 'cost_cents': 30, 'input_tokens': 400, 'output_tokens': 200},
+                'feature:a': {
+                    'runs': 2,
+                    'cost_cents': 30,
+                    'input_tokens': 400,
+                    'output_tokens': 200,
+                },
             },
             'by_day': {
-                '2026-06-01': {'runs': 2, 'cost_cents': 30, 'input_tokens': 400, 'output_tokens': 200},
+                '2026-06-01': {
+                    'runs': 2,
+                    'cost_cents': 30,
+                    'input_tokens': 400,
+                    'output_tokens': 200,
+                },
             },
             'by_model': {
-                'gpt': {'runs': 2, 'cost_cents': 30, 'input_tokens': 400, 'output_tokens': 200},
+                'gpt': {
+                    'runs': 2,
+                    'cost_cents': 30,
+                    'input_tokens': 400,
+                    'output_tokens': 200,
+                },
             },
-            'total': {'runs': 2, 'cost_cents': 30, 'input_tokens': 400, 'output_tokens': 200},
+            'total': {
+                'runs': 2,
+                'cost_cents': 30,
+                'input_tokens': 400,
+                'output_tokens': 200,
+            },
         }
 
         csv_output = CostTracker.export_csv(data)

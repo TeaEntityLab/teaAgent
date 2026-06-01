@@ -67,7 +67,8 @@ class ScratchpadTests(unittest.TestCase):
             root = Path(tmp)
             root.joinpath('.teaagent').mkdir()
             root.joinpath('.teaagent', 'scratchpad.json').write_text(
-                'not valid json {{{', encoding='utf-8',
+                'not valid json {{{',
+                encoding='utf-8',
             )
             sp = Scratchpad(root)
             self.assertIsNone(sp.read())
@@ -165,7 +166,9 @@ class ScratchpadTests(unittest.TestCase):
             atexit.register(handler)
             atexit.unregister(handler)
 
-            sp.write(goal='atexit test', progress='cleanup', open_questions=[], next_step='')
+            sp.write(
+                goal='atexit test', progress='cleanup', open_questions=[], next_step=''
+            )
             content = sp.read()
             self.assertIsNotNone(content)
             assert content is not None

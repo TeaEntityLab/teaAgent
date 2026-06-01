@@ -1,4 +1,5 @@
 """Acceptance: managed agent readiness assessment."""
+
 from __future__ import annotations
 
 from teaagent.readiness import (
@@ -93,7 +94,10 @@ class TestAssessManagedAgentReadiness:
             has_human_approval=False,
         )
         assert not report.ready
-        assert any('destructive' in f.message.lower() or 'HITL' in f.message for f in report.findings)
+        assert any(
+            'destructive' in f.message.lower() or 'HITL' in f.message
+            for f in report.findings
+        )
 
     def test_missing_audit_log_reports_error(self):
         registry = ToolRegistry()

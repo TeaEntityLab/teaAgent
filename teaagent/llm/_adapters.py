@@ -60,7 +60,7 @@ def _extract_openai_tool_calls(response: dict[str, Any]) -> list[LLMToolCall]:
         fn = tc.get('function', {})
         try:
             args = json.loads(fn.get('arguments', '{}'))
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             args = {}
         calls.append(
             LLMToolCall(
@@ -275,10 +275,12 @@ class OpenAICompatibleAdapter:
     def _headers(self) -> dict[str, str]:
         headers = {'authorization': f'Bearer {self.config.resolved_api_key()}'}
         if self.provider == 'openrouter':
-            if os.environ.get('OPENROUTER_HTTP_REFERER'):
-                headers['HTTP-Referer'] = os.environ['OPENROUTER_HTTP_REFERER']
-            if os.environ.get('OPENROUTER_APP_TITLE'):
-                headers['X-Title'] = os.environ['OPENROUTER_APP_TITLE']
+            referer = os.environ.get('OPENROUTER_HTTP_REFERER')
+            if referer:
+                headers['HTTP-Referer'] = referer
+            app_title = os.environ.get('OPENROUTER_APP_TITLE')
+            if app_title:
+                headers['X-Title'] = app_title
         headers.update(_provider_extra_headers(self.provider))
         return headers
 

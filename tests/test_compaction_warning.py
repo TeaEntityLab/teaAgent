@@ -74,7 +74,9 @@ class TestWarningEmissionLogic:
         )
         context: dict = {'observations': []}
         runner._check_compaction_warning(
-            context=context, input_tokens=50000, output_tokens=50000,
+            context=context,
+            input_tokens=50000,
+            output_tokens=50000,
         )
         assert not runner._compaction_warning_emitted
         assert context['observations'] == []
@@ -89,7 +91,9 @@ class TestWarningEmissionLogic:
         )
         context: dict = {'observations': []}
         runner._check_compaction_warning(
-            context=context, input_tokens=70000, output_tokens=60000,
+            context=context,
+            input_tokens=70000,
+            output_tokens=60000,
         )
         assert runner._compaction_warning_emitted
         assert len(context['observations']) == 1
@@ -108,13 +112,17 @@ class TestWarningEmissionLogic:
         )
         context: dict = {'observations': []}
         runner._check_compaction_warning(
-            context=context, input_tokens=70000, output_tokens=60000,
+            context=context,
+            input_tokens=70000,
+            output_tokens=60000,
         )
         assert runner._compaction_warning_emitted
         assert len(context['observations']) == 1
 
         runner._check_compaction_warning(
-            context=context, input_tokens=100000, output_tokens=100000,
+            context=context,
+            input_tokens=100000,
+            output_tokens=100000,
         )
         assert len(context['observations']) == 1
 
@@ -128,7 +136,9 @@ class TestWarningEmissionLogic:
         )
         context: dict = {'observations': []}
         runner._check_compaction_warning(
-            context=context, input_tokens=190000, output_tokens=9000,
+            context=context,
+            input_tokens=190000,
+            output_tokens=9000,
         )
         assert not runner._compaction_warning_emitted
         assert context['observations'] == []
@@ -143,7 +153,9 @@ class TestWarningEmissionLogic:
         )
         context: dict = {'observations': []}
         runner._check_compaction_warning(
-            context=context, input_tokens=0, output_tokens=0,
+            context=context,
+            input_tokens=0,
+            output_tokens=0,
         )
         assert not runner._compaction_warning_emitted
 
@@ -158,7 +170,9 @@ class TestWarningEmissionLogic:
         )
         context: dict = {'observations': []}
         runner._check_compaction_warning(
-            context=context, input_tokens=50000, output_tokens=50000,
+            context=context,
+            input_tokens=50000,
+            output_tokens=50000,
         )
         assert runner._compaction_warning_emitted
         assert '50%' in context['observations'][0]['content']
@@ -172,7 +186,9 @@ class TestCompactionWarningInRunLoop:
         runner = AgentRunner(
             registry=ToolRegistry(),
             audit=audit,
-            budget=RunBudget(max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=100),
+            budget=RunBudget(
+                max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=100
+            ),
             compaction_warning_threshold=0.3,
             max_context_tokens=50000,
         )
@@ -191,7 +207,9 @@ class TestCompactionWarningInRunLoop:
         runner = AgentRunner(
             registry=ToolRegistry(),
             audit=audit,
-            budget=RunBudget(max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=100),
+            budget=RunBudget(
+                max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=100
+            ),
             compaction_warning_threshold=0.9,
             max_context_tokens=50000,
         )
@@ -212,15 +230,20 @@ class TestCompactionWarningInRunLoop:
         runner = AgentRunner(
             registry=ToolRegistry(),
             audit=audit,
-            budget=RunBudget(max_iterations=10, max_tool_calls=10, max_estimated_cost_cents=100),
+            budget=RunBudget(
+                max_iterations=10, max_tool_calls=10, max_estimated_cost_cents=100
+            ),
             compactor=compactor,
             compact_after_observations=2,
             compaction_warning_threshold=0.6,
             max_context_tokens=200000,
         )
-        runner.run(task='t', decide=_make_final_answer_decider(), run_id='run-auto-compact')
+        runner.run(
+            task='t', decide=_make_final_answer_decider(), run_id='run-auto-compact'
+        )
         compact_events = [
-            e for e in audit.events
+            e
+            for e in audit.events
             if getattr(e, 'event_type', None) == 'context_compacted'
         ]
         assert len(compact_events) >= 0
@@ -228,8 +251,10 @@ class TestCompactionWarningInRunLoop:
 
 def _make_final_answer_decider():
     """Create a simple decide function that returns FinalAnswer."""
+
     def decide(context: dict) -> FinalAnswer:
         return FinalAnswer('ok')
+
     return decide
 
 

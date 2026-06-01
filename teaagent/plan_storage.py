@@ -51,7 +51,7 @@ class PlanVersioner:
     def __init__(self, storage: PlanStorage):
         self._storage = storage
 
-    def create(self, content: PlanContent, created_by: str = "user") -> PlanArtifact:
+    def create(self, content: PlanContent, created_by: str = 'user') -> PlanArtifact:
         """Create a new plan (version 1).
 
         Args:
@@ -68,18 +68,20 @@ class PlanVersioner:
             created_at=datetime.now(),
             created_by=created_by,
             title=content.title,
-            content_hash="",
-            storage_path=Path(""),
+            content_hash='',
+            storage_path=Path(''),
         )
 
         plan = PlanArtifact(metadata=metadata, content=content)
         self._storage.save(plan)
 
-        logger.info(f"Created new plan {metadata.id} version 1")
+        logger.info(f'Created new plan {metadata.id} version 1')
 
         return plan
 
-    def revise(self, parent_id: str, new_content: PlanContent, created_by: str = "user") -> PlanArtifact:
+    def revise(
+        self, parent_id: str, new_content: PlanContent, created_by: str = 'user'
+    ) -> PlanArtifact:
         """Create a new revision of an existing plan.
 
         Args:
@@ -104,15 +106,15 @@ class PlanVersioner:
             created_at=datetime.now(),
             created_by=created_by,
             title=new_content.title,
-            content_hash="",
-            storage_path=Path(""),
+            content_hash='',
+            storage_path=Path(''),
         )
 
         plan = PlanArtifact(metadata=metadata, content=new_content)
         self._storage.save(plan)
 
         logger.info(
-            f"Created revision {metadata.version} of plan {parent_id} as {metadata.id}"
+            f'Created revision {metadata.version} of plan {parent_id} as {metadata.id}'
         )
 
         return plan
@@ -165,7 +167,7 @@ class PlanVersioner:
         # Get all revisions and return the one with highest version
         all_revisions = self.get_all_revisions(plan_id)
         if not all_revisions:
-            raise FileNotFoundError(f"No revisions found for plan {plan_id}")
+            raise FileNotFoundError(f'No revisions found for plan {plan_id}')
 
         # Sort by version descending and return first
         all_revisions.sort(key=lambda p: p.metadata.version, reverse=True)
@@ -267,18 +269,18 @@ class PlanDiffer:
         diff = self.diff(plan_a_id, plan_b_id)
 
         return {
-            "plan_a_id": diff.plan_a_id,
-            "plan_b_id": diff.plan_b_id,
-            "added_steps": diff.added_steps,
-            "removed_steps": diff.removed_steps,
-            "modified_steps": [
-                {"old": old, "new": new} for old, new in diff.modified_steps
+            'plan_a_id': diff.plan_a_id,
+            'plan_b_id': diff.plan_b_id,
+            'added_steps': diff.added_steps,
+            'removed_steps': diff.removed_steps,
+            'modified_steps': [
+                {'old': old, 'new': new} for old, new in diff.modified_steps
             ],
-            "changed_files": list(diff.changed_files),
-            "summary": diff.summary,
+            'changed_files': list(diff.changed_files),
+            'summary': diff.summary,
         }
 
-    def format(self, diff: PlanDiff, format_type: str = "markdown") -> str:
+    def format(self, diff: PlanDiff, format_type: str = 'markdown') -> str:
         """Format diff for display.
 
         Args:
@@ -288,26 +290,30 @@ class PlanDiffer:
         Returns:
             Formatted string
         """
-        if format_type == "markdown":
+        if format_type == 'markdown':
             return self._format_markdown(diff)
-        elif format_type == "json":
+        elif format_type == 'json':
             import json
 
             return json.dumps(self.compare(diff.plan_a_id, diff.plan_b_id), indent=2)
         else:
-            raise ValueError(f"Unknown format type: {format_type}")
+            raise ValueError(f'Unknown format type: {format_type}')
 
     def _diff_steps(
         self, steps_a: list[dict[str, Any]], steps_b: list[dict[str, Any]]
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[tuple[dict[str, Any], dict[str, Any]]]]:
+    ) -> tuple[
+        list[dict[str, Any]],
+        list[dict[str, Any]],
+        list[tuple[dict[str, Any], dict[str, Any]]],
+    ]:
         """Compare step lists."""
         added = []
         removed = []
         modified = []
 
         # Simple comparison by description
-        descriptions_a = {step["description"]: step for step in steps_a}
-        descriptions_b = {step["description"]: step for step in steps_b}
+        descriptions_a = {step['description']: step for step in steps_a}
+        descriptions_b = {step['description']: step for step in steps_b}
 
         # Find added steps
         for desc, step in descriptions_b.items():
@@ -349,59 +355,61 @@ class PlanDiffer:
         """Generate a human-readable summary."""
         parts = []
 
-        parts.append(f"Comparing plan {plan_a.metadata.id} (v{plan_a.metadata.version})")
-        parts.append(f"with plan {plan_b.metadata.id} (v{plan_b.metadata.version})")
+        parts.append(
+            f'Comparing plan {plan_a.metadata.id} (v{plan_a.metadata.version})'
+        )
+        parts.append(f'with plan {plan_b.metadata.id} (v{plan_b.metadata.version})')
 
         if added_steps:
-            parts.append(f"Added {len(added_steps)} step(s)")
+            parts.append(f'Added {len(added_steps)} step(s)')
         if removed_steps:
-            parts.append(f"Removed {len(removed_steps)} step(s)")
+            parts.append(f'Removed {len(removed_steps)} step(s)')
         if modified_steps:
-            parts.append(f"Modified {len(modified_steps)} step(s)")
+            parts.append(f'Modified {len(modified_steps)} step(s)')
         if changed_files:
-            parts.append(f"Changed {len(changed_files)} file(s)")
+            parts.append(f'Changed {len(changed_files)} file(s)')
 
         if not (added_steps or removed_steps or modified_steps or changed_files):
-            parts.append("No changes detected")
+            parts.append('No changes detected')
 
-        return ". ".join(parts)
+        return '. '.join(parts)
 
     def _format_markdown(self, diff: PlanDiff) -> str:
         """Format diff as Markdown."""
         lines = [
-            f"# Plan Diff: {diff.plan_a_id} → {diff.plan_b_id}",
-            "",
-            f"**Summary:** {diff.summary}",
-            "",
+            f'# Plan Diff: {diff.plan_a_id} → {diff.plan_b_id}',
+            '',
+            f'**Summary:** {diff.summary}',
+            '',
         ]
 
         if diff.added_steps:
-            lines.append("## Added Steps")
+            lines.append('## Added Steps')
             for step in diff.added_steps:
-                lines.append(f"- {step['description']}")
-            lines.append("")
+                lines.append(f'- {step["description"]}')
+            lines.append('')
 
         if diff.removed_steps:
-            lines.append("## Removed Steps")
+            lines.append('## Removed Steps')
             for step in diff.removed_steps:
-                lines.append(f"- {step['description']}")
-            lines.append("")
+                lines.append(f'- {step["description"]}')
+            lines.append('')
 
         if diff.modified_steps:
-            lines.append("## Modified Steps")
+            lines.append('## Modified Steps')
             for old_step, new_step in diff.modified_steps:
-                lines.append(f"- **{old_step['description']}**")
-                lines.append(f"  - Old: {old_step}")
-                lines.append(f"  - New: {new_step}")
-            lines.append("")
+                lines.append(f'- **{old_step["description"]}**')
+                lines.append(f'  - Old: {old_step}')
+                lines.append(f'  - New: {new_step}')
+            lines.append('')
 
         if diff.changed_files:
-            lines.append("## Changed Files")
+            lines.append('## Changed Files')
             for file in sorted(diff.changed_files):
-                lines.append(f"- {file}")
-            lines.append("")
+                lines.append(f'- {file}')
+            lines.append('')
 
-        return "\n".join(lines)
+        return '\n'.join(lines)
 
 
 class PlanBinder:
@@ -438,7 +446,9 @@ class PlanBinder:
 
         self._bindings[run_id] = binding
 
-        logger.info(f"Bound run {run_id} to plan {plan_id} with hash {plan.metadata.content_hash}")
+        logger.info(
+            f'Bound run {run_id} to plan {plan_id} with hash {plan.metadata.content_hash}'
+        )
 
         return binding
 
@@ -455,7 +465,7 @@ class PlanBinder:
             ValueError: If no binding exists for run_id
         """
         if run_id not in self._bindings:
-            raise ValueError(f"No binding found for run {run_id}")
+            raise ValueError(f'No binding found for run {run_id}')
 
         binding = self._bindings[run_id]
 
@@ -464,18 +474,18 @@ class PlanBinder:
             plan = self._storage.load(binding.plan_id)
             current_hash = plan.metadata.content_hash
         except FileNotFoundError:
-            logger.error(f"Plan {binding.plan_id} not found during verification")
+            logger.error(f'Plan {binding.plan_id} not found during verification')
             return False
 
         # Verify hash
         if current_hash == binding.plan_hash:
             binding.verified = True
-            logger.info(f"Plan hash verified for run {run_id}")
+            logger.info(f'Plan hash verified for run {run_id}')
             return True
         else:
             binding.verified = False
             logger.warning(
-                f"Plan hash mismatch for run {run_id}: expected {binding.plan_hash}, got {current_hash}"
+                f'Plan hash mismatch for run {run_id}: expected {binding.plan_hash}, got {current_hash}'
             )
             return False
 
@@ -522,7 +532,7 @@ class PlanBinder:
         """
         if run_id in self._bindings:
             del self._bindings[run_id]
-            logger.info(f"Unbound run {run_id}")
+            logger.info(f'Unbound run {run_id}')
 
 
 @dataclass
@@ -564,7 +574,7 @@ class PlanStorage:
     """Persistent storage for plan artifacts."""
 
     def __init__(self, root: Path):
-        self._root = Path(root) / ".teaagent" / "plans"
+        self._root = Path(root) / '.teaagent' / 'plans'
         self._root.mkdir(parents=True, exist_ok=True)
         secure_audit_dir(self._root)
 
@@ -584,7 +594,7 @@ class PlanStorage:
         plan.metadata.content_hash = content_hash
 
         # Generate storage path
-        storage_path = self._root / f"{plan.metadata.id}.json"
+        storage_path = self._root / f'{plan.metadata.id}.json'
         plan.metadata.storage_path = storage_path
 
         # Serialize plan
@@ -594,7 +604,7 @@ class PlanStorage:
         atomic_write_text(storage_path, json.dumps(plan_dict, indent=2, default=str))
         secure_audit_file(storage_path)
 
-        logger.info(f"Saved plan {plan.metadata.id} to {storage_path}")
+        logger.info(f'Saved plan {plan.metadata.id} to {storage_path}')
 
         return plan.metadata
 
@@ -610,17 +620,17 @@ class PlanStorage:
         Raises:
             FileNotFoundError: If plan does not exist
         """
-        storage_path = self._root / f"{plan_id}.json"
+        storage_path = self._root / f'{plan_id}.json'
 
         if not storage_path.exists():
-            raise FileNotFoundError(f"Plan {plan_id} not found at {storage_path}")
+            raise FileNotFoundError(f'Plan {plan_id} not found at {storage_path}')
 
-        with open(storage_path, "r", encoding="utf-8") as f:
+        with open(storage_path, 'r', encoding='utf-8') as f:
             plan_dict = json.load(f)
 
         plan = self._deserialize_plan(plan_dict)
 
-        logger.info(f"Loaded plan {plan_id} from {storage_path}")
+        logger.info(f'Loaded plan {plan_id} from {storage_path}')
 
         return plan
 
@@ -632,15 +642,15 @@ class PlanStorage:
         """
         plans = []
 
-        for path in self._root.glob("*.json"):
+        for path in self._root.glob('*.json'):
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, 'r', encoding='utf-8') as f:
                     plan_dict = json.load(f)
 
-                metadata = self._deserialize_metadata(plan_dict["metadata"])
+                metadata = self._deserialize_metadata(plan_dict['metadata'])
                 plans.append(metadata)
             except (json.JSONDecodeError, KeyError) as e:
-                logger.warning(f"Failed to load plan metadata from {path}: {e}")
+                logger.warning(f'Failed to load plan metadata from {path}: {e}')
 
         # Sort by creation time
         plans.sort(key=lambda m: m.created_at, reverse=True)
@@ -656,82 +666,82 @@ class PlanStorage:
         Raises:
             FileNotFoundError: If plan does not exist
         """
-        storage_path = self._root / f"{plan_id}.json"
+        storage_path = self._root / f'{plan_id}.json'
 
         if not storage_path.exists():
-            raise FileNotFoundError(f"Plan {plan_id} not found at {storage_path}")
+            raise FileNotFoundError(f'Plan {plan_id} not found at {storage_path}')
 
         storage_path.unlink()
-        logger.info(f"Deleted plan {plan_id} from {storage_path}")
+        logger.info(f'Deleted plan {plan_id} from {storage_path}')
 
     def _compute_content_hash(self, content: PlanContent) -> str:
         """Compute SHA-256 hash of plan content."""
         content_str = json.dumps(
             {
-                "title": content.title,
-                "goal": content.goal,
-                "approach": content.approach,
-                "steps": content.steps,
-                "affected_files": content.affected_files,
-                "risks": content.risks,
-                "acceptance_criteria": content.acceptance_criteria,
+                'title': content.title,
+                'goal': content.goal,
+                'approach': content.approach,
+                'steps': content.steps,
+                'affected_files': content.affected_files,
+                'risks': content.risks,
+                'acceptance_criteria': content.acceptance_criteria,
             },
             sort_keys=True,
         )
-        return "sha256:" + hashlib.sha256(content_str.encode()).hexdigest()
+        return 'sha256:' + hashlib.sha256(content_str.encode()).hexdigest()
 
     def _serialize_plan(self, plan: PlanArtifact) -> dict[str, Any]:
         """Serialize plan artifact to dictionary."""
         return {
-            "metadata": {
-                "id": plan.metadata.id,
-                "version": plan.metadata.version,
-                "parent_id": plan.metadata.parent_id,
-                "created_at": plan.metadata.created_at.isoformat(),
-                "created_by": plan.metadata.created_by,
-                "title": plan.metadata.title,
-                "content_hash": plan.metadata.content_hash,
-                "storage_path": str(plan.metadata.storage_path),
+            'metadata': {
+                'id': plan.metadata.id,
+                'version': plan.metadata.version,
+                'parent_id': plan.metadata.parent_id,
+                'created_at': plan.metadata.created_at.isoformat(),
+                'created_by': plan.metadata.created_by,
+                'title': plan.metadata.title,
+                'content_hash': plan.metadata.content_hash,
+                'storage_path': str(plan.metadata.storage_path),
             },
-            "content": {
-                "title": plan.content.title,
-                "goal": plan.content.goal,
-                "approach": plan.content.approach,
-                "steps": plan.content.steps,
-                "affected_files": plan.content.affected_files,
-                "risks": plan.content.risks,
-                "acceptance_criteria": plan.content.acceptance_criteria,
+            'content': {
+                'title': plan.content.title,
+                'goal': plan.content.goal,
+                'approach': plan.content.approach,
+                'steps': plan.content.steps,
+                'affected_files': plan.content.affected_files,
+                'risks': plan.content.risks,
+                'acceptance_criteria': plan.content.acceptance_criteria,
             },
         }
 
     def _deserialize_plan(self, plan_dict: dict[str, Any]) -> PlanArtifact:
         """Deserialize plan artifact from dictionary."""
         return PlanArtifact(
-            metadata=self._deserialize_metadata(plan_dict["metadata"]),
-            content=self._deserialize_content(plan_dict["content"]),
+            metadata=self._deserialize_metadata(plan_dict['metadata']),
+            content=self._deserialize_content(plan_dict['content']),
         )
 
     def _deserialize_metadata(self, metadata_dict: dict[str, Any]) -> PlanMetadata:
         """Deserialize metadata from dictionary."""
         return PlanMetadata(
-            id=metadata_dict["id"],
-            version=metadata_dict["version"],
-            parent_id=metadata_dict.get("parent_id"),
-            created_at=datetime.fromisoformat(metadata_dict["created_at"]),
-            created_by=metadata_dict["created_by"],
-            title=metadata_dict["title"],
-            content_hash=metadata_dict["content_hash"],
-            storage_path=Path(metadata_dict["storage_path"]),
+            id=metadata_dict['id'],
+            version=metadata_dict['version'],
+            parent_id=metadata_dict.get('parent_id'),
+            created_at=datetime.fromisoformat(metadata_dict['created_at']),
+            created_by=metadata_dict['created_by'],
+            title=metadata_dict['title'],
+            content_hash=metadata_dict['content_hash'],
+            storage_path=Path(metadata_dict['storage_path']),
         )
 
     def _deserialize_content(self, content_dict: dict[str, Any]) -> PlanContent:
         """Deserialize content from dictionary."""
         return PlanContent(
-            title=content_dict["title"],
-            goal=content_dict["goal"],
-            approach=content_dict["approach"],
-            steps=content_dict["steps"],
-            affected_files=content_dict["affected_files"],
-            risks=content_dict["risks"],
-            acceptance_criteria=content_dict["acceptance_criteria"],
+            title=content_dict['title'],
+            goal=content_dict['goal'],
+            approach=content_dict['approach'],
+            steps=content_dict['steps'],
+            affected_files=content_dict['affected_files'],
+            risks=content_dict['risks'],
+            acceptance_criteria=content_dict['acceptance_criteria'],
         )

@@ -177,7 +177,14 @@ class AuditLogger:
             # Keep metadata but remove detailed arguments/results
             filtered = dict(payload)
             # Remove sensitive detailed fields
-            for key in ['arguments', 'result', 'content', 'output', 'input', 'reasoning']:
+            for key in [
+                'arguments',
+                'result',
+                'content',
+                'output',
+                'input',
+                'reasoning',
+            ]:
                 filtered.pop(key, None)
             return filtered
         elif self._audit_level == 'L2':

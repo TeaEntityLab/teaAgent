@@ -623,7 +623,9 @@ def run_chat_repl(
                 compact_result = handle_compact(compactor, session_context)
                 print('[TeaAgent] Compaction complete:')
                 print(f'  - Tokens saved: ~{compact_result["tokens_saved"]}')
-                print(f'  - Compression ratio: {compact_result["compression_ratio"]:.2%}')
+                print(
+                    f'  - Compression ratio: {compact_result["compression_ratio"]:.2%}'
+                )
                 print(f'  - Total compactions: {compact_result["compaction_count"]}')
                 print(
                     f'  - Observations: {compact_result["pre_count"]} → {compact_result["post_count"]}'

@@ -143,7 +143,7 @@ directory.
 
 All currently implemented acceptance stories are passing. As of the latest
 local verification, `python3 -m pytest tests/acceptance -q` reports
-`393 passed` (includes TUI evolution Phase A-C features, denial reason-code flow, and compliance audit exporter).
+`432 passed` (includes TUI evolution Phase A-C features, denial reason-code flow, and compliance audit exporter).
 
 <!-- ACCEPTANCE_TIERS:START -->
 

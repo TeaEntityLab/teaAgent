@@ -33,17 +33,21 @@ def audit_show_command(args: argparse.Namespace) -> int:
             payload = evt.get('payload', {})
             reasoning = payload.get('reasoning')
             if reasoning is not None:
-                reasoning_entries.append({
-                    'event_type': evt.get('event_type'),
-                    'tool_name': payload.get('tool_name'),
-                    'call_id': payload.get('call_id'),
-                    'reasoning': reasoning,
-                })
-        print_json({
-            'run_id': args.run_id,
-            'events': events,
-            'reasoning_entries': reasoning_entries,
-        })
+                reasoning_entries.append(
+                    {
+                        'event_type': evt.get('event_type'),
+                        'tool_name': payload.get('tool_name'),
+                        'call_id': payload.get('call_id'),
+                        'reasoning': reasoning,
+                    }
+                )
+        print_json(
+            {
+                'run_id': args.run_id,
+                'events': events,
+                'reasoning_entries': reasoning_entries,
+            }
+        )
     else:
         print_json(events)
     return 0

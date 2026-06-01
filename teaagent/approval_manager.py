@@ -242,8 +242,7 @@ class JITApprovalManager:
             )
         if choice == 'e':
             raise ToolPermissionError(
-                f"Tool call '{call_id}' for '{tool_name}' requires approval. "
-                f'Tool: {tool_name}, Call ID: {call_id}, Arguments: {arguments}',
+                f"Tool call '{call_id}' for '{tool_name}' requires approval.",
                 reason_code=DenialReasonCode.JIT_USER_DENIED,
             )
         return None
@@ -817,14 +816,26 @@ def format_denial_message(
     lines.append('  Options:')
 
     idx = 1
-    if reason_code in (DenialReasonCode.JIT_NO_APPROVAL, DenialReasonCode.MISSING_STATE):
-        lines.append(f'    {idx}. Approve once:    teaagent approve --call-id {call_id}')
+    if reason_code in (
+        DenialReasonCode.JIT_NO_APPROVAL,
+        DenialReasonCode.MISSING_STATE,
+    ):
+        lines.append(
+            f'    {idx}. Approve once:    teaagent approve --call-id {call_id}'
+        )
         idx += 1
-        lines.append(f'    {idx}. Approve session: teaagent approve --tool {tool_name} --session')
+        lines.append(
+            f'    {idx}. Approve session: teaagent approve --tool {tool_name} --session'
+        )
         idx += 1
 
-    if reason_code in (DenialReasonCode.READ_ONLY_MODE, DenialReasonCode.WORKSPACE_WRITE_MODE):
-        lines.append(f'    {idx}. Change mode:     teaagent config set permission_mode prompt')
+    if reason_code in (
+        DenialReasonCode.READ_ONLY_MODE,
+        DenialReasonCode.WORKSPACE_WRITE_MODE,
+    ):
+        lines.append(
+            f'    {idx}. Change mode:     teaagent config set permission_mode prompt'
+        )
         idx += 1
 
     lines.append(f'    {idx}. Learn more:      teaagent docs permissions')

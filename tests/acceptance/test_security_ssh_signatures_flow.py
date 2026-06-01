@@ -26,10 +26,18 @@ def _generate_ssh_keypair() -> tuple[Path, str]:
     key_path = key_dir / 'id_ed25519'
     subprocess.run(
         [
-            'ssh-keygen', '-t', 'ed25519', '-f', str(key_path),
-            '-N', '', '-q',
+            'ssh-keygen',
+            '-t',
+            'ed25519',
+            '-f',
+            str(key_path),
+            '-N',
+            '',
+            '-q',
         ],
-        check=True, capture_output=True, timeout=30,
+        check=True,
+        capture_output=True,
+        timeout=30,
     )
     pubkey = key_path.with_suffix('.pub').read_text(encoding='utf-8').strip()
     return key_path, pubkey
@@ -63,7 +71,9 @@ class TestIsSSHSignatureBlob:
 class TestSignAndVerify:
     def test_round_trip_sign_and_verify(self):
         key_path, pubkey = _generate_ssh_keypair()
-        message = build_vote_signing_message('prop-r1', 'peer-r1', 'approve', 'test task')
+        message = build_vote_signing_message(
+            'prop-r1', 'peer-r1', 'approve', 'test task'
+        )
         try:
             signature = sign_message_ssh(key_path, message)
         except (FileNotFoundError, RuntimeError) as e:

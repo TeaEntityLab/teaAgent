@@ -44,7 +44,8 @@ class TestPermissionModeEnforcer:
             permission_mode=PermissionMode.WORKSPACE_WRITE
         )
         reason = enforcer.check(
-            tool_name='workspace_write_file', destructive=True,
+            tool_name='workspace_write_file',
+            destructive=True,
             arguments={'path': 'src/main.py'},
         )
         # Without a plan_contract, workspace_write allows file write
@@ -55,18 +56,24 @@ class TestPermissionModeEnforcer:
             permission_mode=PermissionMode.WORKSPACE_WRITE
         )
         reason = enforcer.check(
-            tool_name='workspace_run_shell_mutate', destructive=True,
+            tool_name='workspace_run_shell_mutate',
+            destructive=True,
         )
         assert reason is not None
         assert 'prompt' in reason.lower() or 'permission' in reason.lower()
 
     def test_allow_mode_allows_all(self):
         enforcer = PermissionModeEnforcer(permission_mode=PermissionMode.ALLOW)
-        assert enforcer.check(tool_name='workspace_run_shell_mutate', destructive=True) is None
+        assert (
+            enforcer.check(tool_name='workspace_run_shell_mutate', destructive=True)
+            is None
+        )
 
     def test_prompt_mode_returns_continue_for_destructive(self):
         enforcer = PermissionModeEnforcer(permission_mode=PermissionMode.PROMPT)
-        reason = enforcer.check(tool_name='workspace_run_shell_mutate', destructive=True)
+        reason = enforcer.check(
+            tool_name='workspace_run_shell_mutate', destructive=True
+        )
         assert reason == '__continue__'
 
 
@@ -106,30 +113,36 @@ class TestApprovalManager:
     def test_assert_allowed_read_only_allows_read(self):
         mgr = ApprovalManager(permission_mode=PermissionMode.READ_ONLY)
         mgr.assert_allowed(
-            tool_name='workspace_read_file', call_id='c1',
-            destructive=False, read_only=True,
+            tool_name='workspace_read_file',
+            call_id='c1',
+            destructive=False,
+            read_only=True,
         )
 
     def test_assert_allowed_read_only_blocks_write(self):
         mgr = ApprovalManager(permission_mode=PermissionMode.READ_ONLY)
         with pytest.raises(ToolPermissionError):
             mgr.assert_allowed(
-                tool_name='workspace_write_file', call_id='c1',
+                tool_name='workspace_write_file',
+                call_id='c1',
                 destructive=True,
             )
 
     def test_assert_allowed_workspace_write_allows_edit(self):
         mgr = ApprovalManager(permission_mode=PermissionMode.WORKSPACE_WRITE)
         mgr.assert_allowed(
-            tool_name='workspace_edit_at_hash', call_id='c1',
-            destructive=True, arguments={'path': 'foo.py'},
+            tool_name='workspace_edit_at_hash',
+            call_id='c1',
+            destructive=True,
+            arguments={'path': 'foo.py'},
         )
 
     def test_approve_once_then_assert_allowed(self):
         mgr = ApprovalManager(permission_mode=PermissionMode.PROMPT)
         mgr.approve_once('c1')
         mgr.assert_allowed(
-            tool_name='workspace_write_file', call_id='c1',
+            tool_name='workspace_write_file',
+            call_id='c1',
             destructive=True,
         )
 
@@ -144,12 +157,16 @@ class TestVerifySSHSignature:
         assert result is False
 
     def test_missing_public_key_fails(self):
-        result = _verify_ssh_signature('sig', 'msg', 'peer', {}, allow_dev_signatures=True)
+        result = _verify_ssh_signature(
+            'sig', 'msg', 'peer', {}, allow_dev_signatures=True
+        )
         assert result is False
 
     def test_non_ssh_blob_dev_disabled_fails(self):
         result = _verify_ssh_signature(
-            'plaintext', 'msg', 'peer',
+            'plaintext',
+            'msg',
+            'peer',
             {'peer': 'ssh-ed25519 AAAAC3...'},
             allow_dev_signatures=False,
         )

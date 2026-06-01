@@ -37,8 +37,11 @@ def test_output_is_valid_json() -> None:
     report = json.loads(output)
     assert isinstance(report, dict)
     required_keys = {
-        'symbol_count', 'mapped_count', 'coverage_pct',
-        'accuracy_pct', 'duration_seconds',
+        'symbol_count',
+        'mapped_count',
+        'coverage_pct',
+        'accuracy_pct',
+        'duration_seconds',
     }
     missing = required_keys - set(report.keys())
     assert not missing, f'Missing keys: {missing}'
@@ -76,9 +79,12 @@ def test_output_file_writes_json(tmp_path: Path) -> None:
     out_file = tmp_path / 'report.json'
     result = subprocess.run(
         [
-            sys.executable, str(_SCRIPT),
-            '--repo', str(_TEST_REPO),
-            '--output', str(out_file),
+            sys.executable,
+            str(_SCRIPT),
+            '--repo',
+            str(_TEST_REPO),
+            '--output',
+            str(out_file),
         ],
         capture_output=True,
         text=True,

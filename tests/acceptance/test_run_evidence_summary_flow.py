@@ -13,21 +13,10 @@ Acceptance criteria:
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
 
 from teaagent.audit import AuditLogger
 from teaagent.run_evidence import (
-    ApprovalEvidence,
-    CommandEvidence,
-    KnownGap,
-    RunEvidenceBundle,
-    TestEvidence,
-    auto_derive_known_gaps,
     build_run_evidence_bundle,
-    extract_approvals,
-    extract_commands_run,
-    extract_tests,
 )
 from teaagent.run_store import RunStore
 
@@ -77,7 +66,9 @@ def test_evidence_summary_includes_all_required_fields(tmp_path):
         status='passed',
         duration_ms=100.0,
     )
-    audit.record('run_completed', run_id, answer='done', total_tokens=1000, total_cost=0.01)
+    audit.record(
+        'run_completed', run_id, answer='done', total_tokens=1000, total_cost=0.01
+    )
 
     # Build evidence bundle
     bundle = build_run_evidence_bundle(tmp_path, run_id)
@@ -186,7 +177,9 @@ def test_evidence_summary_for_pending_approval_run(tmp_path):
     bundle = build_run_evidence_bundle(tmp_path, run_id)
     assert bundle.run_id == run_id
     assert len(bundle.approvals) == 1
-    assert bundle.approvals[0].approved is False, 'Pending approval should not be marked as approved'
+    assert bundle.approvals[0].approved is False, (
+        'Pending approval should not be marked as approved'
+    )
 
 
 def test_evidence_summary_denied_actions(tmp_path):

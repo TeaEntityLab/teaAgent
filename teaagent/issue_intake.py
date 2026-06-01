@@ -21,24 +21,24 @@ logger = logging.getLogger(__name__)
 class IssueType(Enum):
     """Classification of issue types."""
 
-    BUG = "bug"
-    FEATURE = "feature"
-    REFACTOR = "refactor"
-    DOCUMENTATION = "documentation"
-    PERFORMANCE = "performance"
-    SECURITY = "security"
-    UNKNOWN = "unknown"
+    BUG = 'bug'
+    FEATURE = 'feature'
+    REFACTOR = 'refactor'
+    DOCUMENTATION = 'documentation'
+    PERFORMANCE = 'performance'
+    SECURITY = 'security'
+    UNKNOWN = 'unknown'
 
 
 class AmbiguityCategory(Enum):
     """Categories of ambiguity in issue descriptions."""
 
-    MISSING_STEPS = "missing_steps"
-    UNCLEAR_DESCRIPTION = "unclear_description"
-    MISSING_EXPECTED = "missing_expected"
-    MISSING_ACTUAL = "missing_actual"
-    VAGUE_SCOPE = "vague_scope"
-    NO_ISSUE_TYPE = "no_issue_type"
+    MISSING_STEPS = 'missing_steps'
+    UNCLEAR_DESCRIPTION = 'unclear_description'
+    MISSING_EXPECTED = 'missing_expected'
+    MISSING_ACTUAL = 'missing_actual'
+    VAGUE_SCOPE = 'vague_scope'
+    NO_ISSUE_TYPE = 'no_issue_type'
 
 
 @dataclass
@@ -116,7 +116,7 @@ class AcceptanceChecklist:
 class IssueParser:
     """Parses issue text into structured format."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Patterns for extracting structured information
         self._title_pattern = re.compile(r'^#\s+(.+)$|^Title:\s*(.+)$', re.MULTILINE)
         self._steps_pattern = re.compile(
@@ -140,7 +140,7 @@ class IssueParser:
             re.IGNORECASE,
         )
 
-    def parse(self, text: str, source: str = "manual") -> ParsedIssue:
+    def parse(self, text: str, source: str = 'manual') -> ParsedIssue:
         """Parse issue text into structured format.
 
         Args:
@@ -151,7 +151,7 @@ class IssueParser:
             ParsedIssue with extracted fields
         """
         # Extract title
-        title = self._extract_title(text) or "Untitled Issue"
+        title = self._extract_title(text) or 'Untitled Issue'
 
         # Extract structured sections
         steps_to_reproduce = self._extract_steps(text)
@@ -193,10 +193,10 @@ class IssueParser:
             Currently returns a mock parsed issue.
         """
         # TODO: Implement GitHub API integration
-        logger.warning("GitHub API integration not yet implemented")
+        logger.warning('GitHub API integration not yet implemented')
         return ParsedIssue(
-            title="GitHub Issue (API not implemented)",
-            description=f"Issue from {issue_url}",
+            title='GitHub Issue (API not implemented)',
+            description=f'Issue from {issue_url}',
             issue_type=IssueType.UNKNOWN,
             steps_to_reproduce=None,
             expected_behavior=None,
@@ -204,7 +204,7 @@ class IssueParser:
             affected_files=None,
             affected_components=None,
             priority=None,
-            raw_text=f"GitHub issue URL: {issue_url}",
+            raw_text=f'GitHub issue URL: {issue_url}',
         )
 
     def _extract_title(self, text: str) -> Optional[str]:
@@ -237,7 +237,9 @@ class IssueParser:
         if match:
             return match.group(1).strip()
         # Try inline format: "Expected: value" or "Expected result: value"
-        inline_match = re.search(r'Expected(?:\s+result)?:\s*(.+?)(?:\n|$)', text, re.IGNORECASE)
+        inline_match = re.search(
+            r'Expected(?:\s+result)?:\s*(.+?)(?:\n|$)', text, re.IGNORECASE
+        )
         if inline_match:
             return inline_match.group(1).strip()
         return None
@@ -248,7 +250,11 @@ class IssueParser:
         if match:
             return match.group(1).strip()
         # Try inline format: "Actual: value", "Current: value", or "Current behavior: value"
-        inline_match = re.search(r'(?:Actual|Current)(?:\s+(?:behavior|result))?:\s*(.+?)(?:\n|$)', text, re.IGNORECASE)
+        inline_match = re.search(
+            r'(?:Actual|Current)(?:\s+(?:behavior|result))?:\s*(.+?)(?:\n|$)',
+            text,
+            re.IGNORECASE,
+        )
         if inline_match:
             return inline_match.group(1).strip()
         return None
@@ -281,35 +287,42 @@ class IssueParser:
 
     def _classify_issue_type(self, text: str, title: str) -> IssueType:
         """Classify the issue type based on text content."""
-        combined = (title + " " + text).lower()
+        combined = (title + ' ' + text).lower()
 
         # Check for security indicators (highest priority due to specificity)
-        security_keywords = ["security", "vulnerability", "exploit"]
+        security_keywords = ['security', 'vulnerability', 'exploit']
         if any(keyword in combined for keyword in security_keywords):
             return IssueType.SECURITY
 
         # Check for performance indicators (including optimize)
-        perf_keywords = ["performance", "slow", "speed", "latency", "optimize", "fast"]
+        perf_keywords = ['performance', 'slow', 'speed', 'latency', 'optimize', 'fast']
         if any(keyword in combined for keyword in perf_keywords):
             return IssueType.PERFORMANCE
 
         # Check for bug indicators
-        bug_keywords = ["bug", "fix", "error", "crash", "broken", "fail", "incorrect"]
+        bug_keywords = ['bug', 'fix', 'error', 'crash', 'broken', 'fail', 'incorrect']
         if any(keyword in combined for keyword in bug_keywords):
             return IssueType.BUG
 
         # Check for feature indicators
-        feature_keywords = ["feature", "add", "implement", "new", "support", "enhancement"]
+        feature_keywords = [
+            'feature',
+            'add',
+            'implement',
+            'new',
+            'support',
+            'enhancement',
+        ]
         if any(keyword in combined for keyword in feature_keywords):
             return IssueType.FEATURE
 
         # Check for refactor indicators
-        refactor_keywords = ["refactor", "clean up", "restructure", "simplify"]
+        refactor_keywords = ['refactor', 'clean up', 'restructure', 'simplify']
         if any(keyword in combined for keyword in refactor_keywords):
             return IssueType.REFACTOR
 
         # Check for documentation indicators
-        doc_keywords = ["documentation", "docs", "readme", "comment", "document"]
+        doc_keywords = ['documentation', 'docs', 'readme', 'comment', 'document']
         if any(keyword in combined for keyword in doc_keywords):
             return IssueType.DOCUMENTATION
 
@@ -349,33 +362,43 @@ class AmbiguityDetector:
 
         # Check for missing steps to reproduce
         if not issue.steps_to_reproduce:
-            missing_fields.append("steps_to_reproduce")
-            recommendations.append("Add steps to reproduce to clarify how to trigger the issue")
+            missing_fields.append('steps_to_reproduce')
+            recommendations.append(
+                'Add steps to reproduce to clarify how to trigger the issue'
+            )
 
         # Check for missing expected behavior
         if not issue.expected_behavior:
-            missing_fields.append("expected_behavior")
-            recommendations.append("Specify expected behavior to define success criteria")
+            missing_fields.append('expected_behavior')
+            recommendations.append(
+                'Specify expected behavior to define success criteria'
+            )
 
         # Check for missing actual behavior
         if not issue.actual_behavior:
-            missing_fields.append("actual_behavior")
-            recommendations.append("Describe actual behavior to understand the current state")
+            missing_fields.append('actual_behavior')
+            recommendations.append(
+                'Describe actual behavior to understand the current state'
+            )
 
         # Check for vague description
         if len(issue.description) < 50:
-            unclear_sections.append("description")
-            recommendations.append("Provide a more detailed description of the issue")
+            unclear_sections.append('description')
+            recommendations.append('Provide a more detailed description of the issue')
 
         # Check for unknown issue type
         if issue.issue_type == IssueType.UNKNOWN:
-            missing_fields.append("issue_type")
-            recommendations.append("Clarify the issue type (bug, feature, refactor, etc.)")
+            missing_fields.append('issue_type')
+            recommendations.append(
+                'Clarify the issue type (bug, feature, refactor, etc.)'
+            )
 
         # Check for missing affected files/components
         if not issue.affected_files and not issue.affected_components:
-            unclear_sections.append("scope")
-            recommendations.append("Specify affected files or components to narrow the scope")
+            unclear_sections.append('scope')
+            recommendations.append(
+                'Specify affected files or components to narrow the scope'
+            )
 
         # Calculate ambiguity score
         score = self._calculate_ambiguity_score(missing_fields, unclear_sections, issue)
@@ -416,7 +439,7 @@ class AmbiguityDetector:
         score += len(unclear_sections) * 10
 
         # Check for vague language
-        vague_words = ["some", "sometimes", "maybe", "might", "probably", "seems"]
+        vague_words = ['some', 'sometimes', 'maybe', 'might', 'probably', 'seems']
         for word in vague_words:
             if word in issue.description.lower():
                 score += 5
@@ -428,7 +451,9 @@ class AmbiguityDetector:
 class PlanGenerator:
     """Generates plan artifacts from issues."""
 
-    def __init__(self, plan_mode: Optional[Any] = None, context_gatherer: Optional[Any] = None):
+    def __init__(
+        self, plan_mode: Optional[Any] = None, context_gatherer: Optional[Any] = None
+    ):
         self._plan_mode = plan_mode
         self._context_gatherer = context_gatherer
 
@@ -492,11 +517,11 @@ class PlanGenerator:
         # and gather context about affected files, components, etc.
 
         context = {
-            "workspace_root": str(workspace_root),
-            "issue_type": issue.issue_type.value,
-            "affected_files": issue.affected_files or [],
-            "affected_components": issue.affected_components or [],
-            "exploration_enabled": self._plan_mode is not None,
+            'workspace_root': str(workspace_root),
+            'issue_type': issue.issue_type.value,
+            'affected_files': issue.affected_files or [],
+            'affected_components': issue.affected_components or [],
+            'exploration_enabled': self._plan_mode is not None,
         }
 
         return context
@@ -504,30 +529,30 @@ class PlanGenerator:
     def _build_goal(self, issue: ParsedIssue) -> str:
         """Build goal statement from issue."""
         if issue.issue_type == IssueType.BUG:
-            return f"Fix: {issue.title}"
+            return f'Fix: {issue.title}'
         elif issue.issue_type == IssueType.FEATURE:
-            return f"Implement: {issue.title}"
+            return f'Implement: {issue.title}'
         elif issue.issue_type == IssueType.REFACTOR:
-            return f"Refactor: {issue.title}"
+            return f'Refactor: {issue.title}'
         elif issue.issue_type == IssueType.DOCUMENTATION:
-            return f"Document: {issue.title}"
+            return f'Document: {issue.title}'
         elif issue.issue_type == IssueType.PERFORMANCE:
-            return f"Optimize: {issue.title}"
+            return f'Optimize: {issue.title}'
         elif issue.issue_type == IssueType.SECURITY:
-            return f"Secure: {issue.title}"
+            return f'Secure: {issue.title}'
         else:
-            return f"Address: {issue.title}"
+            return f'Address: {issue.title}'
 
     def _build_approach(self, issue: ParsedIssue) -> str:
         """Build approach description based on issue type."""
         approaches = {
-            IssueType.BUG: "Analyze the bug, identify root cause, implement fix, and verify with tests",
-            IssueType.FEATURE: "Design feature, implement changes, add tests, and update documentation",
-            IssueType.REFACTOR: "Analyze current implementation, refactor for clarity/maintainability, ensure tests pass",
-            IssueType.DOCUMENTATION: "Review code, write comprehensive documentation, verify accuracy",
-            IssueType.PERFORMANCE: "Profile performance, identify bottlenecks, optimize, measure improvements",
-            IssueType.SECURITY: "Analyze vulnerability, implement security fix, audit for similar issues",
-            IssueType.UNKNOWN: "Analyze issue, determine appropriate approach, implement solution",
+            IssueType.BUG: 'Analyze the bug, identify root cause, implement fix, and verify with tests',
+            IssueType.FEATURE: 'Design feature, implement changes, add tests, and update documentation',
+            IssueType.REFACTOR: 'Analyze current implementation, refactor for clarity/maintainability, ensure tests pass',
+            IssueType.DOCUMENTATION: 'Review code, write comprehensive documentation, verify accuracy',
+            IssueType.PERFORMANCE: 'Profile performance, identify bottlenecks, optimize, measure improvements',
+            IssueType.SECURITY: 'Analyze vulnerability, implement security fix, audit for similar issues',
+            IssueType.UNKNOWN: 'Analyze issue, determine appropriate approach, implement solution',
         }
         return approaches.get(issue.issue_type, approaches[IssueType.UNKNOWN])
 
@@ -538,9 +563,9 @@ class PlanGenerator:
         # Add analysis step
         steps.append(
             PlanStep(
-                description="Analyze the issue and understand requirements",
+                description='Analyze the issue and understand requirements',
                 command=None,
-                permission_mode="read_only",
+                permission_mode='read_only',
                 destructive=False,
             )
         )
@@ -549,38 +574,38 @@ class PlanGenerator:
         if issue.affected_files:
             steps.append(
                 PlanStep(
-                    description=f"Review affected files: {', '.join(issue.affected_files)}",
-                command=None,
-                permission_mode="read_only",
-                destructive=False,
-            )
+                    description=f'Review affected files: {", ".join(issue.affected_files)}',
+                    command=None,
+                    permission_mode='read_only',
+                    destructive=False,
+                )
             )
 
         # Add implementation step based on issue type
         if issue.issue_type == IssueType.BUG:
             steps.append(
                 PlanStep(
-                    description="Implement bug fix",
+                    description='Implement bug fix',
                     command=None,
-                    permission_mode="prompt",
+                    permission_mode='prompt',
                     destructive=True,
                 )
             )
         elif issue.issue_type == IssueType.FEATURE:
             steps.append(
                 PlanStep(
-                    description="Implement new feature",
+                    description='Implement new feature',
                     command=None,
-                    permission_mode="prompt",
+                    permission_mode='prompt',
                     destructive=True,
                 )
             )
         elif issue.issue_type == IssueType.REFACTOR:
             steps.append(
                 PlanStep(
-                    description="Refactor code",
+                    description='Refactor code',
                     command=None,
-                    permission_mode="prompt",
+                    permission_mode='prompt',
                     destructive=True,
                 )
             )
@@ -588,9 +613,9 @@ class PlanGenerator:
         # Add testing step
         steps.append(
             PlanStep(
-                description="Add or update tests",
+                description='Add or update tests',
                 command=None,
-                permission_mode="prompt",
+                permission_mode='prompt',
                 destructive=True,
             )
         )
@@ -598,9 +623,9 @@ class PlanGenerator:
         # Add verification step
         steps.append(
             PlanStep(
-                description="Verify implementation meets requirements",
+                description='Verify implementation meets requirements',
                 command=None,
-                permission_mode="read_only",
+                permission_mode='read_only',
                 destructive=False,
             )
         )
@@ -612,18 +637,18 @@ class PlanGenerator:
         risks = []
 
         if issue.issue_type == IssueType.BUG:
-            risks.append("Fix may introduce regressions")
+            risks.append('Fix may introduce regressions')
         elif issue.issue_type == IssueType.FEATURE:
-            risks.append("New feature may affect existing functionality")
+            risks.append('New feature may affect existing functionality')
         elif issue.issue_type == IssueType.REFACTOR:
-            risks.append("Refactoring may introduce subtle bugs")
+            risks.append('Refactoring may introduce subtle bugs')
         elif issue.issue_type == IssueType.PERFORMANCE:
-            risks.append("Optimizations may affect code readability")
+            risks.append('Optimizations may affect code readability')
         elif issue.issue_type == IssueType.SECURITY:
-            risks.append("Security fix may break existing integrations")
+            risks.append('Security fix may break existing integrations')
 
         if issue.affected_files:
-            risks.append(f"Changes to {len(issue.affected_files)} file(s)")
+            risks.append(f'Changes to {len(issue.affected_files)} file(s)')
 
         return risks
 
@@ -631,7 +656,7 @@ class PlanGenerator:
 class CommandSuggester:
     """Suggests safe commands to execute plans."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def suggest(self, plan: PlanArtifact) -> CommandSuggestion:
@@ -677,24 +702,24 @@ class CommandSuggester:
         """Recommend permission mode based on plan characteristics."""
         # High ambiguity -> read_only or prompt
         if plan.ambiguity_score > 50:
-            return "read_only"
+            return 'read_only'
 
         # Security issues -> prompt for safety
-        if any("security" in risk.lower() for risk in plan.risks):
-            return "prompt"
+        if any('security' in risk.lower() for risk in plan.risks):
+            return 'prompt'
 
         # Many affected files -> prompt for caution
         if len(plan.affected_files) > 5:
-            return "prompt"
+            return 'prompt'
 
         # Default to prompt for new issues
-        return "prompt"
+        return 'prompt'
 
     def _build_command(self, plan: PlanArtifact, permission_mode: str) -> str:
         """Build command to execute the plan."""
         # In a full implementation, this would construct the actual teaagent command
         # For now, return a placeholder
-        return f"teaagent run --task \"{plan.goal}\" --permission-mode {permission_mode}"
+        return f'teaagent run --task "{plan.goal}" --permission-mode {permission_mode}'
 
     def _build_reasoning(self, plan: PlanArtifact, permission_mode: str) -> str:
         """Build reasoning for the permission mode recommendation."""
@@ -702,20 +727,20 @@ class CommandSuggester:
 
         if plan.ambiguity_score > 50:
             reasoning_parts.append(
-                f"High ambiguity score ({plan.ambiguity_score:.0f}/100) suggests read-only exploration first"
+                f'High ambiguity score ({plan.ambiguity_score:.0f}/100) suggests read-only exploration first'
             )
 
-        if any("security" in risk.lower() for risk in plan.risks):
-            reasoning_parts.append("Security risks require careful review")
+        if any('security' in risk.lower() for risk in plan.risks):
+            reasoning_parts.append('Security risks require careful review')
 
         if len(plan.affected_files) > 5:
             reasoning_parts.append(
-                f"Many affected files ({len(plan.affected_files)}) warrant caution"
+                f'Many affected files ({len(plan.affected_files)}) warrant caution'
             )
 
-        reasoning_parts.append(f"Recommended permission mode: {permission_mode}")
+        reasoning_parts.append(f'Recommended permission mode: {permission_mode}')
 
-        return ". ".join(reasoning_parts)
+        return '. '.join(reasoning_parts)
 
     def _generate_alternatives(self, plan: PlanArtifact) -> list[str]:
         """Generate alternative command suggestions."""
@@ -723,13 +748,11 @@ class CommandSuggester:
 
         # Always offer read_only as an alternative
         alternatives.append(
-            f"teaagent run --task \"{plan.goal}\" --permission-mode read_only"
+            f'teaagent run --task "{plan.goal}" --permission-mode read_only'
         )
 
         # Offer plan mode for exploration
-        alternatives.append(
-            f"teaagent run --task \"{plan.goal}\" --permission-mode plan"
-        )
+        alternatives.append(f'teaagent run --task "{plan.goal}" --permission-mode plan')
 
         return alternatives
 
@@ -737,7 +760,7 @@ class CommandSuggester:
 class ChecklistGenerator:
     """Generates acceptance checklists from plans."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def generate(self, plan: PlanArtifact) -> AcceptanceChecklist:
@@ -766,19 +789,21 @@ class ChecklistGenerator:
         requirements = []
 
         # Add goal as a requirement
-        requirements.append(f"Goal: {plan.goal}")
+        requirements.append(f'Goal: {plan.goal}')
 
         # Add requirements based on issue type
-        if "bug" in plan.goal.lower():
-            requirements.append("Bug is fixed without introducing regressions")
-        elif "feature" in plan.goal.lower():
-            requirements.append("New feature works as specified")
-        elif "refactor" in plan.goal.lower():
-            requirements.append("Code is refactored while maintaining functionality")
+        if 'bug' in plan.goal.lower():
+            requirements.append('Bug is fixed without introducing regressions')
+        elif 'feature' in plan.goal.lower():
+            requirements.append('New feature works as specified')
+        elif 'refactor' in plan.goal.lower():
+            requirements.append('Code is refactored while maintaining functionality')
 
         # Add requirements based on affected files
         if plan.affected_files:
-            requirements.append(f"Changes to {len(plan.affected_files)} file(s) are correct")
+            requirements.append(
+                f'Changes to {len(plan.affected_files)} file(s) are correct'
+            )
 
         return requirements
 
@@ -787,18 +812,18 @@ class ChecklistGenerator:
         edge_cases = []
 
         # Common edge cases
-        edge_cases.append("Handle empty inputs")
-        edge_cases.append("Handle invalid inputs")
-        edge_cases.append("Handle boundary conditions")
+        edge_cases.append('Handle empty inputs')
+        edge_cases.append('Handle invalid inputs')
+        edge_cases.append('Handle boundary conditions')
 
         # Add specific edge cases based on risks
-        if any("security" in risk.lower() for risk in plan.risks):
-            edge_cases.append("Handle unauthorized access attempts")
-            edge_cases.append("Handle malformed security tokens")
+        if any('security' in risk.lower() for risk in plan.risks):
+            edge_cases.append('Handle unauthorized access attempts')
+            edge_cases.append('Handle malformed security tokens')
 
-        if any("performance" in risk.lower() for risk in plan.risks):
-            edge_cases.append("Handle large data sets")
-            edge_cases.append("Handle concurrent operations")
+        if any('performance' in risk.lower() for risk in plan.risks):
+            edge_cases.append('Handle large data sets')
+            edge_cases.append('Handle concurrent operations')
 
         return edge_cases
 
@@ -807,18 +832,20 @@ class ChecklistGenerator:
         requirements = []
 
         # General testing requirements
-        requirements.append("Unit tests for new/modified code")
-        requirements.append("Integration tests for affected components")
+        requirements.append('Unit tests for new/modified code')
+        requirements.append('Integration tests for affected components')
 
         # Add specific testing based on plan
         if plan.affected_files:
-            requirements.append(f"Tests for {len(plan.affected_files)} affected file(s)")
+            requirements.append(
+                f'Tests for {len(plan.affected_files)} affected file(s)'
+            )
 
-        if any("security" in risk.lower() for risk in plan.risks):
-            requirements.append("Security testing for vulnerabilities")
+        if any('security' in risk.lower() for risk in plan.risks):
+            requirements.append('Security testing for vulnerabilities')
 
-        if any("performance" in risk.lower() for risk in plan.risks):
-            requirements.append("Performance benchmarks")
+        if any('performance' in risk.lower() for risk in plan.risks):
+            requirements.append('Performance benchmarks')
 
         return requirements
 
@@ -827,17 +854,17 @@ class ChecklistGenerator:
         criteria = []
 
         # Add goal as success criterion
-        criteria.append(f"{plan.goal} is achieved")
+        criteria.append(f'{plan.goal} is achieved')
 
         # Add general success criteria
-        criteria.append("All tests pass")
-        criteria.append("No regressions introduced")
+        criteria.append('All tests pass')
+        criteria.append('No regressions introduced')
 
         # Add specific criteria based on plan
         if plan.ambiguity_score < 30:
-            criteria.append("Implementation matches original issue description")
+            criteria.append('Implementation matches original issue description')
 
         if plan.affected_files:
-            criteria.append("All affected files are correctly modified")
+            criteria.append('All affected files are correctly modified')
 
         return criteria

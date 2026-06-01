@@ -21,23 +21,29 @@ def _safe_handler(x: int) -> int:
 class TestBedrockWriteToolNames:
     def test_workspace_write_file_blocked(self):
         reason = read_only_runtime_block_reason(
-            tool_name='workspace_write_file', description='Write a file',
-            read_only=None, destructive=True,
+            tool_name='workspace_write_file',
+            description='Write a file',
+            read_only=None,
+            destructive=True,
         )
         assert reason is not None
         assert 'blocked' in reason.lower()
 
     def test_workspace_apply_patch_blocked(self):
         reason = read_only_runtime_block_reason(
-            tool_name='workspace_apply_patch', description='Apply patch',
-            read_only=None, destructive=True,
+            tool_name='workspace_apply_patch',
+            description='Apply patch',
+            read_only=None,
+            destructive=True,
         )
         assert reason is not None
 
     def test_workspace_edit_at_hash_blocked(self):
         reason = read_only_runtime_block_reason(
-            tool_name='workspace_edit_at_hash', description='Edit file',
-            read_only=None, destructive=True,
+            tool_name='workspace_edit_at_hash',
+            description='Edit file',
+            read_only=None,
+            destructive=True,
         )
         assert reason is not None
 
@@ -45,15 +51,19 @@ class TestBedrockWriteToolNames:
 class TestShellMutateNames:
     def test_workspace_run_shell_mutate_blocked(self):
         reason = read_only_runtime_block_reason(
-            tool_name='workspace_run_shell_mutate', description='Run shell',
-            read_only=None, destructive=True,
+            tool_name='workspace_run_shell_mutate',
+            description='Run shell',
+            read_only=None,
+            destructive=True,
         )
         assert reason is not None
 
     def test_workspace_run_shell_blocked(self):
         reason = read_only_runtime_block_reason(
-            tool_name='workspace_run_shell', description='Run shell',
-            read_only=None, destructive=True,
+            tool_name='workspace_run_shell',
+            description='Run shell',
+            read_only=None,
+            destructive=True,
         )
         assert reason is not None
 
@@ -61,22 +71,28 @@ class TestShellMutateNames:
 class TestReadOnlyFlagRequired:
     def test_destructive_tool_blocked(self):
         reason = read_only_runtime_block_reason(
-            tool_name='custom_tool', description='A custom tool',
-            read_only=None, destructive=True,
+            tool_name='custom_tool',
+            description='A custom tool',
+            read_only=None,
+            destructive=True,
         )
         assert reason is not None
 
     def test_read_only_true_passes_with_safe_descriptor(self):
         reason = read_only_runtime_block_reason(
-            tool_name='safe_tool', description='Read data from source',
-            read_only=True, destructive=False,
+            tool_name='safe_tool',
+            description='Read data from source',
+            read_only=True,
+            destructive=False,
         )
         assert reason is None
 
     def test_missing_read_only_declaration_blocked(self):
         reason = read_only_runtime_block_reason(
-            tool_name='unknown_tool', description='Query something',
-            read_only=None, destructive=False,
+            tool_name='unknown_tool',
+            description='Query something',
+            read_only=None,
+            destructive=False,
         )
         assert reason is not None
         assert 'read_only=true' in reason or 'Read-only' in reason
@@ -88,12 +104,14 @@ class TestReadOnlyHandlerBlockReason:
 
     def test_mutating_handler_source_detected(self):
         reason = read_only_handler_block_reason(
-            'mutating_tool', _mutating_handler,
+            'mutating_tool',
+            _mutating_handler,
         )
         assert reason is not None
 
     def test_safe_handler_passes(self):
         reason = read_only_handler_block_reason(
-            'safe_tool', _safe_handler,
+            'safe_tool',
+            _safe_handler,
         )
         assert reason is None

@@ -1,4 +1,5 @@
 """Acceptance: vote relay payload parsing, verification, and submission."""
+
 from __future__ import annotations
 
 import pytest
@@ -19,11 +20,13 @@ from teaagent.vote_relay import (
 
 def _make_engine_with_peer() -> tuple[ConsensusEngine, str]:
     registry = PeerRegistry()
-    registry.register(PeerIdentity(
-        name='peer-a',
-        ssh_public_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGx... test',
-        is_active=True,
-    ))
+    registry.register(
+        PeerIdentity(
+            name='peer-a',
+            ssh_public_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGx... test',
+            is_active=True,
+        )
+    )
     config = ConsensusConfig()
     engine = ConsensusEngine(peer_registry=registry, config=config)
     state = engine.request_consensus(
@@ -107,7 +110,10 @@ class TestVerifyRelayVote:
         engine, proposal_id = _make_engine_with_peer()
         payload = _make_payload(proposal_id)
         ok, reason = verify_relay_vote(
-            engine, payload, require_ssh=False, allow_dev_signatures=False,
+            engine,
+            payload,
+            require_ssh=False,
+            allow_dev_signatures=False,
         )
         assert not ok
         assert 'dev signatures' in reason
@@ -123,5 +129,6 @@ class TestRequireRelayBindAuth:
 
     def test_non_loopback_with_policy_ok(self):
         from teaagent.surface_auth import SurfaceAuthPolicy
+
         policy = SurfaceAuthPolicy()
         require_relay_bind_auth('0.0.0.0', policy)

@@ -399,12 +399,13 @@ def _register_browser_tools_if_available(registry: ToolRegistry) -> None:
 def read_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, Any]:
     path = resolve_workspace_path(config, args['path'])
 
-    # Check for symlinks to prevent symlink attacks
+    # Check for symlinks to prevent symlink attacks (BEFORE resolution)
     if path.is_symlink():
         raise ValueError('symlinks are not allowed')
 
     # Validate path is within workspace root to prevent path traversal
-    if not path.resolve().is_relative_to(config.root.resolve()):
+    resolved = path.resolve()
+    if not resolved.is_relative_to(config.root.resolve()):
         raise ValueError('Path outside workspace')
 
     max_bytes = non_negative_int_arg(args, 'max_bytes', default=config.max_read_bytes)
@@ -472,13 +473,13 @@ def write_file(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, A
 
         # Atomic rename
         os.replace(tmp_path, path)
-    except Exception:
+    except (OSError, IOError):
         # Clean up temp file on error
         if os.path.exists(tmp_path):
             try:
                 os.unlink(tmp_path)
-            except OSError as exc:
-                logger.warning(f'Temp file cleanup failed: {tmp_path}: {exc}')
+            except OSError as cleanup_exc:
+                logger.warning(f'Temp file cleanup failed: {tmp_path}: {cleanup_exc}')
         raise
 
     stat = path.stat()

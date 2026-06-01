@@ -7,6 +7,7 @@ from typing import Optional
 @dataclass
 class User:
     """A user record."""
+
     id: int
     name: str
     email: Optional[str] = None
@@ -18,12 +19,13 @@ class User:
 @dataclass
 class Order:
     """An order record."""
+
     id: int
     user_id: int
     total: float
 
     def apply_discount(self, pct: float) -> None:
-        self.total *= (1 - pct / 100)
+        self.total *= 1 - pct / 100
 
 
 class UserRepository:

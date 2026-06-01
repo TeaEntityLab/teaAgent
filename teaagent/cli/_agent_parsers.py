@@ -1076,8 +1076,12 @@ def _runs(
     replay_p.add_argument('run_id')
     replay_p.set_defaults(func=handlers['replay'])
 
-    commit_p = run_subs.add_parser('commit', help='Commit changes from a run with metadata.')
-    commit_p.add_argument('run_id', nargs='?', help='Run id to commit (defaults to last run).')
+    commit_p = run_subs.add_parser(
+        'commit', help='Commit changes from a run with metadata.'
+    )
+    commit_p.add_argument(
+        'run_id', nargs='?', help='Run id to commit (defaults to last run).'
+    )
     commit_p.add_argument(
         '--message',
         '-m',

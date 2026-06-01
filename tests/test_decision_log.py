@@ -5,10 +5,9 @@ import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
-from pathlib import Path
 
-from teaagent.decision_log import DecisionLog
 from teaagent.cli import main
+from teaagent.decision_log import DecisionLog
 
 
 class DecisionLogTests(unittest.TestCase):
@@ -26,9 +25,7 @@ class DecisionLogTests(unittest.TestCase):
             self.assertEqual(decisions[0]['decision'], 'Use JSONL for audit')
             self.assertEqual(decisions[0]['reason'], 'Simplicity')
             self.assertNotIn('do_not_reverse', decisions[0])
-            self.assertEqual(
-                decisions[1]['do_not_reverse'], 'After security review'
-            )
+            self.assertEqual(decisions[1]['do_not_reverse'], 'After security review')
 
     def test_recent_limit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -57,9 +54,7 @@ class DecisionLogTests(unittest.TestCase):
     def test_inject_summary_truncation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             log = DecisionLog(tmp)
-            log.add(
-                decision='A' * 500, reason='B' * 500
-            )
+            log.add(decision='A' * 500, reason='B' * 500)
             summary = log.inject_summary(max_chars=100)
             self.assertLessEqual(len(summary), 110)
 
@@ -74,10 +69,14 @@ class DecisionLogTests(unittest.TestCase):
             with redirect_stdout(add_output):
                 add_code = main(
                     [
-                        'memory', 'decisions', 'add',
+                        'memory',
+                        'decisions',
+                        'add',
                         'Use prompt mode for risky edits',
-                        '--reason', 'Protect against accidents',
-                        '--root', tmp,
+                        '--reason',
+                        'Protect against accidents',
+                        '--root',
+                        tmp,
                     ]
                 )
             self.assertEqual(add_code, 0)
@@ -86,9 +85,7 @@ class DecisionLogTests(unittest.TestCase):
 
             list_output = io.StringIO()
             with redirect_stdout(list_output):
-                list_code = main(
-                    ['memory', 'decisions', 'list', '--root', tmp]
-                )
+                list_code = main(['memory', 'decisions', 'list', '--root', tmp])
             self.assertEqual(list_code, 0)
             decisions = json.loads(list_output.getvalue())
             self.assertEqual(len(decisions), 1)
@@ -102,11 +99,16 @@ class DecisionLogTests(unittest.TestCase):
             with redirect_stdout(add_output):
                 add_code = main(
                     [
-                        'memory', 'decisions', 'add',
+                        'memory',
+                        'decisions',
+                        'add',
                         'Enforce two-person review',
-                        '--reason', 'Compliance',
-                        '--dont-reverse', 'Without legal approval',
-                        '--root', tmp,
+                        '--reason',
+                        'Compliance',
+                        '--dont-reverse',
+                        'Without legal approval',
+                        '--root',
+                        tmp,
                     ]
                 )
             self.assertEqual(add_code, 0)
@@ -114,9 +116,7 @@ class DecisionLogTests(unittest.TestCase):
             with redirect_stdout(list_output):
                 main(['memory', 'decisions', 'list', '--root', tmp])
             decisions = json.loads(list_output.getvalue())
-            self.assertEqual(
-                decisions[0]['do_not_reverse'], 'Without legal approval'
-            )
+            self.assertEqual(decisions[0]['do_not_reverse'], 'Without legal approval')
 
 
 if __name__ == '__main__':

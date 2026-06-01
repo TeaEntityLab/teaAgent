@@ -64,9 +64,7 @@ def test_preview_shows_unified_diff_without_executing_undo(tmp_path: Path) -> No
 
     preview_out = io.StringIO()
     with redirect_stdout(preview_out):
-        preview_code = main(
-            ['undo', run_id, '--preview', '--root', str(tmp_path)]
-        )
+        preview_code = main(['undo', run_id, '--preview', '--root', str(tmp_path)])
     preview_text = preview_out.getvalue()
 
     assert preview_code == 0
@@ -87,9 +85,7 @@ def test_last_preview_shows_diff_without_undo(tmp_path: Path) -> None:
 
     preview_out = io.StringIO()
     with redirect_stdout(preview_out):
-        preview_code = main(
-            ['undo', '--last', '--preview', '--root', str(tmp_path)]
-        )
+        preview_code = main(['undo', '--last', '--preview', '--root', str(tmp_path)])
     preview_text = preview_out.getvalue()
 
     assert preview_code == 0
@@ -108,9 +104,7 @@ def test_last_undo_restores_most_recent_run(tmp_path: Path) -> None:
 
     undo_out = io.StringIO()
     with redirect_stdout(undo_out):
-        undo_code = main(
-            ['undo', '--last', '--root', str(tmp_path)]
-        )
+        undo_code = main(['undo', '--last', '--root', str(tmp_path)])
     undo_payload = json.loads(undo_out.getvalue())
 
     assert undo_code == 0
@@ -130,9 +124,7 @@ def test_top_level_undo_command_works(tmp_path: Path) -> None:
 
     undo_out = io.StringIO()
     with redirect_stdout(undo_out):
-        undo_code = main(
-            ['undo', run_id, '--root', str(tmp_path)]
-        )
+        undo_code = main(['undo', run_id, '--root', str(tmp_path)])
     undo_payload = json.loads(undo_out.getvalue())
 
     assert undo_code == 0
@@ -147,9 +139,7 @@ def test_agent_undo_still_works(tmp_path: Path) -> None:
 
     undo_out = io.StringIO()
     with redirect_stdout(undo_out):
-        undo_code = main(
-            ['agent', 'undo', run_id, '--root', str(tmp_path)]
-        )
+        undo_code = main(['agent', 'undo', run_id, '--root', str(tmp_path)])
     undo_payload = json.loads(undo_out.getvalue())
 
     assert undo_code == 0
@@ -164,9 +154,7 @@ def test_preview_deleted_only_file(tmp_path: Path) -> None:
 
     preview_out = io.StringIO()
     with redirect_stdout(preview_out):
-        preview_code = main(
-            ['undo', run_id, '--preview', '--root', str(tmp_path)]
-        )
+        preview_code = main(['undo', run_id, '--preview', '--root', str(tmp_path)])
     preview_text = preview_out.getvalue()
 
     assert preview_code == 0
@@ -192,9 +180,7 @@ def test_undo_without_journal_returns_error(tmp_path: Path) -> None:
     """Undo for a non-existent run returns a clear error."""
     out = io.StringIO()
     with redirect_stdout(out):
-        code = main(
-            ['undo', 'nonexistent-run', '--root', str(tmp_path)]
-        )
+        code = main(['undo', 'nonexistent-run', '--root', str(tmp_path)])
     payload = json.loads(out.getvalue())
     assert code == 1
     assert payload['status'] == 'error'

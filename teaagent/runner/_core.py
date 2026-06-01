@@ -86,7 +86,9 @@ class AgentRunner:
         self.budget.validate()
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
-        self._compaction_warning_threshold = max(0.0, min(1.0, compaction_warning_threshold))
+        self._compaction_warning_threshold = max(
+            0.0, min(1.0, compaction_warning_threshold)
+        )
         self._max_context_tokens = max(1, max_context_tokens)
         self.checkpoint_store = checkpoint_store
         self.cancel_token = cancel_token
@@ -151,7 +153,9 @@ class AgentRunner:
             self._budget_warning_levels_emitted.add(level)
 
             action = self._budget_monitor.check_at_threshold(
-                run_id=run_id, cost_cents=cost_cents, threshold=level,
+                run_id=run_id,
+                cost_cents=cost_cents,
+                threshold=level,
             )
 
             self.audit.record(
@@ -207,9 +211,7 @@ class AgentRunner:
             f'[System: Context is filling up (estimated {usage_pct:.0f}% used). '
             f'Consider /compact or starting a new session with a summary of progress.]'
         )
-        context['observations'].append(
-            {'role': 'system', 'content': warning_content}
-        )
+        context['observations'].append({'role': 'system', 'content': warning_content})
 
     def _build_run_summary(
         self,
@@ -269,9 +271,7 @@ class AgentRunner:
             logger.info(text)
         except Exception:
             logger = logging.getLogger(__name__)
-            logger.debug(
-                'Failed to build run summary for %s', run_id, exc_info=True
-            )
+            logger.debug('Failed to build run summary for %s', run_id, exc_info=True)
 
     def run(
         self,

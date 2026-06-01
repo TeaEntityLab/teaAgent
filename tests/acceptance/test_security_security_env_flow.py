@@ -69,7 +69,10 @@ class TestSignatureRelayApiToken:
             assert signature_relay_api_token() == 'fallback'
 
     def test_primary_takes_precedence(self):
-        env = {'TEAAGENT_SIGNATURE_RELAY_TOKEN': 'primary', 'TEAAGENT_RELAY_TOKEN': 'fallback'}
+        env = {
+            'TEAAGENT_SIGNATURE_RELAY_TOKEN': 'primary',
+            'TEAAGENT_RELAY_TOKEN': 'fallback',
+        }
         with patch.dict(os.environ, env):
             assert signature_relay_api_token() == 'primary'
 

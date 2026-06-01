@@ -108,8 +108,7 @@ class CostTracker:
         return {
             'days': days,
             'by_day': {
-                day: self._build_summary(runs)
-                for day, runs in sorted(by_day.items())
+                day: self._build_summary(runs) for day, runs in sorted(by_day.items())
             },
         }
 
@@ -134,8 +133,7 @@ class CostTracker:
             by_label[run['label']].append(run)
         return {
             'by_label': {
-                lbl: self._build_summary(runs)
-                for lbl, runs in sorted(by_label.items())
+                lbl: self._build_summary(runs) for lbl, runs in sorted(by_label.items())
             },
             'by_day': by_day['by_day'],
             'by_model': by_model['by_model'],
@@ -166,36 +164,48 @@ class CostTracker:
         writer.writerow(['Total Output Tokens', total.get('output_tokens', 0)])
         writer.writerow([])
 
-        writer.writerow(['By Label', 'Runs', 'Cost (cents)', 'Input Tokens', 'Output Tokens'])
+        writer.writerow(
+            ['By Label', 'Runs', 'Cost (cents)', 'Input Tokens', 'Output Tokens']
+        )
         for label, summary in data.get('by_label', {}).items():
-            writer.writerow([
-                label,
-                summary.get('runs', 0),
-                summary.get('cost_cents', 0),
-                summary.get('input_tokens', 0),
-                summary.get('output_tokens', 0),
-            ])
+            writer.writerow(
+                [
+                    label,
+                    summary.get('runs', 0),
+                    summary.get('cost_cents', 0),
+                    summary.get('input_tokens', 0),
+                    summary.get('output_tokens', 0),
+                ]
+            )
 
         writer.writerow([])
-        writer.writerow(['By Day', 'Runs', 'Cost (cents)', 'Input Tokens', 'Output Tokens'])
+        writer.writerow(
+            ['By Day', 'Runs', 'Cost (cents)', 'Input Tokens', 'Output Tokens']
+        )
         for day, summary in data.get('by_day', {}).items():
-            writer.writerow([
-                day,
-                summary.get('runs', 0),
-                summary.get('cost_cents', 0),
-                summary.get('input_tokens', 0),
-                summary.get('output_tokens', 0),
-            ])
+            writer.writerow(
+                [
+                    day,
+                    summary.get('runs', 0),
+                    summary.get('cost_cents', 0),
+                    summary.get('input_tokens', 0),
+                    summary.get('output_tokens', 0),
+                ]
+            )
 
         writer.writerow([])
-        writer.writerow(['By Model', 'Runs', 'Cost (cents)', 'Input Tokens', 'Output Tokens'])
+        writer.writerow(
+            ['By Model', 'Runs', 'Cost (cents)', 'Input Tokens', 'Output Tokens']
+        )
         for model, summary in data.get('by_model', {}).items():
-            writer.writerow([
-                model,
-                summary.get('runs', 0),
-                summary.get('cost_cents', 0),
-                summary.get('input_tokens', 0),
-                summary.get('output_tokens', 0),
-            ])
+            writer.writerow(
+                [
+                    model,
+                    summary.get('runs', 0),
+                    summary.get('cost_cents', 0),
+                    summary.get('input_tokens', 0),
+                    summary.get('output_tokens', 0),
+                ]
+            )
 
         return output.getvalue()

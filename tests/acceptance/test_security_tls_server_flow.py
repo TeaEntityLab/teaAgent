@@ -17,16 +17,30 @@ from teaagent.tls_server import build_server_ssl_context, wrap_server_socket
 
 
 def _generate_self_signed_cert(
-    cert_path: Path, key_path: Path,
+    cert_path: Path,
+    key_path: Path,
 ) -> None:
     """Generate a self-signed cert for testing."""
     subprocess.run(
         [
-            'openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
-            '-keyout', str(key_path), '-out', str(cert_path),
-            '-subj', '/CN=test.local', '-days', '1',
+            'openssl',
+            'req',
+            '-x509',
+            '-newkey',
+            'rsa:2048',
+            '-nodes',
+            '-keyout',
+            str(key_path),
+            '-out',
+            str(cert_path),
+            '-subj',
+            '/CN=test.local',
+            '-days',
+            '1',
         ],
-        check=True, capture_output=True, timeout=30,
+        check=True,
+        capture_output=True,
+        timeout=30,
     )
 
 
@@ -49,7 +63,9 @@ class TestBuildServerSSLContext:
         _generate_self_signed_cert(ca, tmp_path / 'ca.key')
 
         ctx = build_server_ssl_context(
-            cert_file=cert, key_file=key, client_ca_file=ca,
+            cert_file=cert,
+            key_file=key,
+            client_ca_file=ca,
         )
         assert ctx.verify_mode == ssl.CERT_REQUIRED
 

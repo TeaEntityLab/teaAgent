@@ -432,12 +432,37 @@ def handle_first_run(root: Path, quiet: bool = False) -> bool:
 
     Returns True if the welcome was shown, False otherwise.
     """
-    # Temporarily disabled to fix test failures
-    # TODO: Re-enable once test infrastructure supports stderr capture
     tea_dir = Path(root) / '.teaagent'
+    welcomed_file = tea_dir / 'welcomed'
+
+    if welcomed_file.exists():
+        return False
+
     tea_dir.mkdir(parents=True, exist_ok=True)
-    (tea_dir / 'welcomed').touch()
-    return False
+
+    if quiet:
+        welcomed_file.touch()
+        return False
+
+    welcomed_file.touch()
+
+    print(
+        '\n'
+        'Welcome to TeaAgent!\n'
+        '--------------------\n'
+        'TeaAgent is a governance-first agent harness for autonomous coding tasks.\n'
+        '\n'
+        'Key features:\n'
+        '  • Approval gates: prompt/read-only/workspace-write/allow/danger-full-access\n'
+        '  • Audit log: hash-chained JSONL for full traceability\n'
+        '  • Undo: reversible workspace edits with journal\n'
+        '  • Budget cap: cost limits with real-time tracking\n'
+        '\n'
+        'Get started: teaagent run "your task here"\n'
+        'Docs: https://github.com/yourusername/teaagent\n',
+        file=sys.stderr,
+    )
+    return True
 
 
 def print_json(value: Any) -> None:

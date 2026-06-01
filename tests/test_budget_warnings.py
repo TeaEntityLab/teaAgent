@@ -103,7 +103,8 @@ def test_budget_warning_100_percent_read_only_suggestion() -> None:
     ]
     assert 100 in levels
     read_only_events = [
-        e for e in audit.events
+        e
+        for e in audit.events
         if getattr(e, 'event_type', None) == 'budget_read_only_suggested'
     ]
     assert len(read_only_events) == 1

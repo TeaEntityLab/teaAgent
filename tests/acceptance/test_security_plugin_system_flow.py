@@ -71,9 +71,15 @@ class TestPluginRegistry:
 
     def test_list_commands_and_agents(self):
         registry = PluginRegistry()
-        registry.register_command(CommandPlugin(name='c1', description='cmd 1', handler=lambda: None))
-        registry.register_command(CommandPlugin(name='c2', description='cmd 2', handler=lambda: None))
-        registry.register_agent(AgentPlugin(name='a1', description='ag 1', system_prompt='prompt'))
+        registry.register_command(
+            CommandPlugin(name='c1', description='cmd 1', handler=lambda: None)
+        )
+        registry.register_command(
+            CommandPlugin(name='c2', description='cmd 2', handler=lambda: None)
+        )
+        registry.register_agent(
+            AgentPlugin(name='a1', description='ag 1', system_prompt='prompt')
+        )
         assert len(registry.list_commands()) == 2
         assert len(registry.list_agents()) == 1
 
@@ -105,11 +111,15 @@ class TestDiscoverPlugins:
     def test_discovers_plugin_with_manifest(self, tmp_path):
         plugin_dir = tmp_path / '.teaagent' / 'plugins' / 'my-plugin'
         plugin_dir.mkdir(parents=True)
-        (plugin_dir / 'plugin.json').write_text(json.dumps({
-            'name': 'my-plugin',
-            'type': 'command',
-            'description': 'my desc',
-        }))
+        (plugin_dir / 'plugin.json').write_text(
+            json.dumps(
+                {
+                    'name': 'my-plugin',
+                    'type': 'command',
+                    'description': 'my desc',
+                }
+            )
+        )
         plugins = discover_plugins(tmp_path)
         assert len(plugins) == 1
         assert plugins[0].manifest.name == 'my-plugin'
@@ -118,11 +128,15 @@ class TestDiscoverPlugins:
         for sub in ('first', 'second'):
             pdir = tmp_path / '.teaagent' / 'plugins' / sub
             pdir.mkdir(parents=True)
-            (pdir / 'plugin.json').write_text(json.dumps({
-                'name': 'same-name',
-                'type': 'command',
-                'description': sub,
-            }))
+            (pdir / 'plugin.json').write_text(
+                json.dumps(
+                    {
+                        'name': 'same-name',
+                        'type': 'command',
+                        'description': sub,
+                    }
+                )
+            )
         plugins = discover_plugins(tmp_path)
         assert len(plugins) == 1
 

@@ -64,7 +64,4 @@ class TeamMemory:
             lines.insert(0, entry)
 
         snippet = '\n'.join(lines)
-        return (
-            f'[team-memory] Shared team context ({len(lines)} entries):\n'
-            f'{snippet}'
-        )
+        return f'[team-memory] Shared team context ({len(lines)} entries):\n{snippet}'

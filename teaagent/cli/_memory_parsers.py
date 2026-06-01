@@ -103,9 +103,7 @@ def register(
     )
     fail_review.set_defaults(func=handlers['failures_review'])
 
-    decisions = subs.add_parser(
-        'decisions', help='Persistent decision log.'
-    )
+    decisions = subs.add_parser('decisions', help='Persistent decision log.')
     dec_subs = decisions.add_subparsers(dest='decisions_command', required=True)
 
     dec_list = dec_subs.add_parser('list', help='List all decisions.')
@@ -119,8 +117,9 @@ def register(
     dec_add.add_argument('decision', help='Decision text.')
     dec_add.add_argument('--reason', required=True, help='Reason for the decision.')
     dec_add.add_argument(
-        '--dont-reverse', default='',
-        help='Context for when not to reverse this decision.'
+        '--dont-reverse',
+        default='',
+        help='Context for when not to reverse this decision.',
     )
     dec_add.add_argument('--root', default='.', help='Workspace root.')
     dec_add.set_defaults(func=handlers['decisions_add'])

@@ -11,7 +11,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from teaagent.automations import (
     AutomationSpec,
@@ -89,7 +89,7 @@ def _display_recovery_guidance(
     formatter = RecoveryAdviceFormatter()
     formatted_advice = formatter.format(advice, run_id=result.run_id)
 
-    print('\n' + formatted_advice)
+    print('\n' + formatted_advice, file=sys.stderr)
 
 
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
@@ -464,8 +464,10 @@ def _execute_agent_task(
 
     atexit.register(_write_scratchpad_on_exit)
 
-    previous = signal.signal(signal.SIGINT, lambda sig, frame: _write_scratchpad_on_exit())
-    _sp_sigint_restore: Callable[..., Any] = previous
+    previous = signal.signal(
+        signal.SIGINT, lambda sig, frame: _write_scratchpad_on_exit()
+    )
+    _sp_sigint_restore: Union[Callable[..., Any], int, None] = previous
 
     # Resume offer on session start
     if scratchpad.exists() and not resumed_from:
@@ -691,13 +693,12 @@ def _execute_agent_task(
         else:
             scratchpad.write(
                 goal=task,
-                progress=f'Ended ({result.status})' + (
-                    f': {error_msg[:200]}' if error_msg else ''),
+                progress=f'Ended ({result.status})'
+                + (f': {error_msg[:200]}' if error_msg else ''),
                 open_questions=[],
                 next_step='Review errors and retry.',
                 session_id=result.run_id,
             )
-
 
     validation_profile = _resolve_validation_profile(args)
     if validation_profile and result.status == 'completed':
@@ -822,11 +823,13 @@ def _execute_agent_task(
                                 )
                             else:
                                 print(
-                                    '[TeaAgent] Some conflicts could not be resolved. Manual intervention required.'
+                                    '[TeaAgent] Some conflicts could not be resolved. Manual intervention required.',
+                                    file=sys.stderr,
                                 )
                                 abort_merge(args.root)
                                 print(
-                                    '[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.'
+                                    '[TeaAgent] Merge aborted. Sandbox branch preserved for manual resolution.',
+                                    file=sys.stderr,
                                 )
                         elif resolution == 'a':
                             for file in merge_result.conflicted_files:
@@ -2624,7 +2627,12 @@ def _show_run_diff(args: argparse.Namespace) -> int:
     undo_path = root / '.teaagent' / 'undo' / f'{args.run_id}.jsonl'
 
     if not undo_path.exists():
-        print_json({'status': 'error', 'message': f'No undo journal found for run {args.run_id}'})
+        print_json(
+            {
+                'status': 'error',
+                'message': f'No undo journal found for run {args.run_id}',
+            }
+        )
         return 1
 
     # Read undo journal to get changed files
@@ -2685,6 +2693,7 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:
     if not run_id:
         # Get last run from RunStore
         from teaagent.run_store import RunStore
+
         store = RunStore(root, readonly=True)
         runs = store.list_runs(limit=1)
         if not runs:
@@ -2694,7 +2703,9 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:
 
     undo_path = root / '.teaagent' / 'undo' / f'{run_id}.jsonl'
     if not undo_path.exists():
-        print_json({'status': 'error', 'message': f'No undo journal found for run {run_id}'})
+        print_json(
+            {'status': 'error', 'message': f'No undo journal found for run {run_id}'}
+        )
         return 1
 
     # Check if git repo
@@ -2723,6 +2734,7 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:
     else:
         # Auto-generate commit message with run metadata
         from teaagent.run_store import RunStore
+
         store = RunStore(root, readonly=True)
         try:
             events = store.show_run(run_id)
@@ -2743,11 +2755,13 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:
             cwd=root,
             check=True,
         )
-        print_json({
-            'status': 'committed',
-            'run_id': run_id,
-            'message': commit_message,
-        })
+        print_json(
+            {
+                'status': 'committed',
+                'run_id': run_id,
+                'message': commit_message,
+            }
+        )
     except subprocess.CalledProcessError as e:
         # Check if nothing to commit
         result = subprocess.run(
@@ -2757,11 +2771,13 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:
             text=True,
         )
         if not result.stdout.strip():
-            print_json({
-                'status': 'nothing_to_commit',
-                'run_id': run_id,
-                'message': 'No changes to commit (idempotent)',
-            })
+            print_json(
+                {
+                    'status': 'nothing_to_commit',
+                    'run_id': run_id,
+                    'message': 'No changes to commit (idempotent)',
+                }
+            )
             return 0
         print_json({'status': 'error', 'message': f'Failed to commit: {e}'})
         return 1
