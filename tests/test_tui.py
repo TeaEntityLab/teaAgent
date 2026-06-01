@@ -1139,11 +1139,54 @@ class TUITests(unittest.TestCase):
         self.assertIn('remaining=', text)
 
     def test_tui_cost_shows_session_cost(self) -> None:
+        # Tests /cost display formatting only — see
+        # test_tui_run_agent_task_accumulates_cost for the accumulation path.
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._session_cost_cents = 123.0
         tui._handle_cost()
         self.assertIn('$1.23', ' '.join(output))
+
+    def test_tui_run_agent_task_accumulates_cost(self) -> None:
+        """_run_agent_task must add result.cost_cents to _session_cost_cents.
+
+        This is the regression guard for CG-11 / TICKET-12.  The previous
+        test (test_tui_cost_shows_session_cost) injected _session_cost_cents
+        directly, so it passed even when the accumulation line was absent.
+        This test drives through the real code path to catch that gap.
+        """
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        with (
+            patch('teaagent.tui.run_chat_agent') as mock_run,
+            patch('teaagent.tui.RunStore') as mock_store,
+            patch('teaagent.tui.create_llm_adapter'),
+        ):
+            mock_run.return_value = unittest.mock.MagicMock(
+                run_id='test-run',
+                status='completed',
+                iterations=1,
+                tool_calls=0,
+                cost_cents=150.0,  # the value we expect to accumulate
+                input_tokens=100,
+                output_tokens=50,
+                final_answer=unittest.mock.MagicMock(content='ok'),
+                metadata={},
+                error_message=None,
+            )
+            mock_store.return_value.show_run.return_value = {}
+            mock_store.return_value.logger_for_result = lambda *a: None
+            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+
+            self.assertEqual(tui._session_cost_cents, 0.0)
+            tui._run_agent_task('test task')
+            # After one run, accumulated cost must equal the run's cost_cents.
+            self.assertEqual(tui._session_cost_cents, 150.0)
+
+            # Run a second task; total must be additive.
+            mock_run.return_value.cost_cents = 75.0
+            tui._run_agent_task('second task')
+            self.assertEqual(tui._session_cost_cents, 225.0)
 
     def test_tui_compact_no_session(self) -> None:
         output: list[str] = []
