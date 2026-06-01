@@ -55,8 +55,10 @@ Implement a comprehensive 5-loop governance system that provides complete operat
 - Strict validation failures trigger automatic rollback via `UndoJournal`
 
 **Verification:**
-- `tests/test_plan_mode.py`
-- `tests/test_workflow_engine.py`
+- `tests/test_plan_contract.py`
+- `tests/test_plan_storage.py`
+- `tests/test_phase4_workflow_engine.py`
+- `tests/test_phase5_workflow_engine.py`
 
 ### Loop 3: Audit / Replay Loop (Tiered Logging & Integrity)
 
@@ -205,7 +207,7 @@ teaagent tool lint --root .
 pytest tests/test_governance_fuzz.py tests/test_governance_adversarial_runtime.py
 
 # Plan binding
-pytest tests/test_plan_mode.py tests/test_workflow_engine.py
+pytest tests/test_plan_contract.py tests/test_plan_storage.py tests/test_phase4_workflow_engine.py tests/test_phase5_workflow_engine.py
 
 # Audit logging
 pytest tests/test_audit.py tests/test_run_store.py

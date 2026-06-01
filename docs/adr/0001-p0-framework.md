@@ -27,7 +27,7 @@ Use a small Python standard-library harness as the P0 foundation. The implementa
 - `teaagent/budget.py` - Budget enforcement (18 lines)
 - `teaagent/errors.py` - Error definitions (30 lines)
 - `teaagent/policy.py` - Approval policy (18 lines)
-- `teaagent/runner.py` - Core runner (154 lines)
+- `teaagent/runner/_core.py` - Core runner (154 lines)
 - `teaagent/schema.py` - Schema validation (45 lines)
 - `teaagent/tools.py` - Tool registry (90 lines)
 - `tests/test_p0_harness.py` - Unit tests (133 lines)

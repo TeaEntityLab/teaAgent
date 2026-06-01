@@ -1,4 +1,4 @@
-# ADR-0016: Add Dependency Injection for Tool Registration
+# ADR 0016: Add Dependency Injection for Tool Registration
 
 ## Status
 Proposed

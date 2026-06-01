@@ -1,4 +1,4 @@
-# ADR-0015: Replace Hard-Coded Configuration with Plugin System
+# ADR 0015: Replace Hard-Coded Configuration with Plugin System
 
 ## Status
 Proposed

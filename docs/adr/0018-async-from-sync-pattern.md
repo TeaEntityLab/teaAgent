@@ -1,8 +1,8 @@
-# ADR-0018: Async-from-sync bridge for approval paths
+# ADR 0018: Async-from-sync bridge for approval paths
 
 ## Status
 
-Accepted (2026-05-31)
+Proposed
 
 ## Context
 

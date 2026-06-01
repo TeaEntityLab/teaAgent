@@ -50,4 +50,4 @@ tests/
 
 ## References
 
-- Read `REFERENCE.md` for detailed testing patterns and fixtures.
+- See the test types and rules sections above for detailed testing patterns and fixtures.

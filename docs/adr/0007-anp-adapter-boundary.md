@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (PoC + governed execution boundary).
+Accepted and Implemented - 2026-05-22
 
 ## Decision
 

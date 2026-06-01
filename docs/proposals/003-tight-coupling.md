@@ -318,6 +318,6 @@ class ChatAgentBuilder:
 - **Decision**: Rejected - simpler solution available
 
 ## References
-- ADR-0012: Reduce tight coupling in chat_agent.py
+- ADR 0012: Reduce tight coupling in chat_agent.py
 - Current implementation in `chat_agent.py`
 - Dependency injection best practices

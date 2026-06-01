@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — incremental delivery; full multi-node production remains future work.
+Accepted and Implemented - 2026-05-29
 
 ## Context
 

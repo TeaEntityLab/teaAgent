@@ -71,4 +71,4 @@ MCP servers are configured via:
 
 ## References
 
-- Read `REFERENCE.md` for advanced MCP patterns and troubleshooting.
+- See the MCP concepts, transport types, and debugging sections above for advanced MCP patterns and troubleshooting.

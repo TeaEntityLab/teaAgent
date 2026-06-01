@@ -331,6 +331,6 @@ class ApprovalManager:
 - **Decision**: Rejected - not needed for this use case
 
 ## References
-- ADR-0011: Refactor ApprovalManager to follow Single Responsibility Principle
+- ADR 0011: Refactor ApprovalManager to follow Single Responsibility Principle
 - Current implementation in `approval_manager.py`
 - SOLID principles documentation

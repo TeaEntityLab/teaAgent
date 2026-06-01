@@ -33,4 +33,4 @@ Use this skill when reviewing code changes, PRs, or performing quality assessmen
 
 ## References
 
-- Read `REFERENCE.md` for detailed review checklists and common patterns.
+- See the main workflow and rules sections above for detailed review checklists and common patterns.

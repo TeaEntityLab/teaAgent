@@ -50,4 +50,4 @@ Use this skill when refactoring code to improve structure, readability, or perfo
 
 ## References
 
-- Read `REFERENCE.md` for specific refactoring patterns.
+- See the common refactorings and safety checklist sections above for specific refactoring patterns.

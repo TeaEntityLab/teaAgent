@@ -1,4 +1,4 @@
-# ADR-0013: Add Abstraction Layer for Backend Systems
+# ADR 0013: Add Abstraction Layer for Backend Systems
 
 ## Status
 Proposed

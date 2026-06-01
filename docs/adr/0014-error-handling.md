@@ -1,4 +1,4 @@
-# ADR-0014: Standardize Error Handling Across Modules
+# ADR 0014: Standardize Error Handling Across Modules
 
 ## Status
 Proposed

@@ -257,8 +257,10 @@ pytest tests/test_governance_fuzz.py -v
 pytest tests/test_tranche_bc_governance.py -v
 
 # Plan mode tests
-pytest tests/test_plan_mode.py -v
-pytest tests/test_workflow_engine.py -v
+pytest tests/test_plan_contract.py -v
+pytest tests/test_plan_storage.py -v
+pytest tests/test_phase4_workflow_engine.py -v
+pytest tests/test_phase5_workflow_engine.py -v
 
 # CLI commands
 teaagent run --skip-plan-check  # Explicit override

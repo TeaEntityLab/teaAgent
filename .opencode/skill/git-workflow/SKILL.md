@@ -44,4 +44,4 @@ Use this skill when performing git operations, branch management, or collaborati
 
 ## References
 
-- Read `REFERENCE.md` for advanced workflows and common scenarios.
+- See the workflow and rules sections above for advanced workflows and common scenarios.
