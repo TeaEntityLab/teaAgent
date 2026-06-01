@@ -1,6 +1,8 @@
 # Daily-Driver Hardening Plan — TUI / Chat / Agent
 # 2026-06-01
 
+**Status: ✅ COMPLETE** - All phases implemented and shipped (2026-05-31 session)
+
 **Goal (Why).** Make teaagent trustworthy as a *daily driver* in its three operator
 surfaces, by fixing the code-level defects found in
 `docs/analysis/daily-driver-code-grounded-ux-findings-2026-06-01.md`. Trust, not
@@ -24,7 +26,7 @@ the fixes stop diverging (CG-05).
 
 ## Phase 0 — P0 correctness (ship first, no refactor required)
 
-### P0-1 — REPL displays answers and reports status correctly  (fixes CG-01)
+### ✅ P0-1 — REPL displays answers and reports status correctly  (fixes CG-01)
 - **Change.** In `chat_repl.py` interactive loop (~`:816-827`), replace
   `if result != 0:` with status-based handling mirroring the initial-task path
   (`:557-560`) and the TUI (`tui/__init__.py:859-861`):
@@ -38,7 +40,7 @@ the fixes stop diverging (CG-05).
     *with the error message*, not a `RunResult` repr.
 - **Falsifiability.** If a successful task still prints "Task failed", the fix is wrong.
 
-### P0-2 — REPL undo cannot destroy un-agented work  (fixes CG-02)
+### ✅ P0-2 — REPL undo cannot destroy un-agented work  (fixes CG-02)
 - **Change.** Remove the `git checkout -- .` calls (`chat_repl.py:418` and the
   fallback `:789-799`). Route `/undo` through the run's `UndoJournal` (as the TUI/agent
   path does) or restore only checkpoint-captured files. If nothing is recoverable,
@@ -54,7 +56,7 @@ the fixes stop diverging (CG-05).
 
 ## Phase 1 — P1 trust & accuracy
 
-### P1-1 — Real cost/budget accounting  (fixes CG-03)
+### ✅ P1-1 — Real cost/budget accounting  (fixes CG-03)
 - **Change.** After each run in both surfaces, increment the session cost from
   `result.cost_cents` (REPL `:825` placeholder removed; TUI `_run_agent_task` updates
   `self._session_cost_cents`). Surface `input_tokens` / `output_tokens` and, where the
@@ -64,14 +66,14 @@ the fixes stop diverging (CG-05).
   `$1.37` (not `$0.00`, not `$0.10`); after two tasks shows the sum. Same assertion in
   TUI via injected `input_fn`/`output_fn`.
 
-### P1-2 — Operator-visible compaction acts on real history  (fixes CG-04)
+### ✅ P1-2 — Operator-visible compaction acts on real history  (fixes CG-04)
 - **Change.** Record each turn into `session_context['observations']` in the loop
   (coupled to P0-1). Make `/clear` and `/compact` operate on populated history.
 - **Acceptance.** Run 3 tasks, assert `len(observations) == 3`; `/compact` reports
   `tokens_saved > 0` and a retained-count consistent with the compactor config;
   `/clear` resets to 0.
 
-### P1-3 — Shared `ChatSessionController`  (fixes CG-05)
+### ✅ P1-3 — Shared `ChatSessionController`  (fixes CG-05)
 - **Change.** Extract result-handling, cost accounting, undo scope, session memory, and
   effort/budget into one controller consumed by both `run_chat_repl` and
   `TeaAgentTUI`. Surfaces retain only input/output. Fold P0-1, P0-2, P1-1, P1-2 into
@@ -80,7 +82,7 @@ the fixes stop diverging (CG-05).
   same status, same displayed answer, same cost, same undo scope. (Directly satisfies
   survey gap **F-ECO-010** "CLI/TUI parity for the same run state".)
 
-### P1-4 — TUI panel stops destroying scrollback  (fixes CG-06)
+### ✅ P1-4 — TUI panel stops destroying scrollback  (fixes CG-06)
 - **Change.** Replace the per-prompt `\033[2J\033[H` clear + vertical "panels" with
   either (a) a prompt_toolkit full-screen `Application` with a fixed state region and a
   scrollable, never-cleared chat buffer, or (b) make the state panel an opt-in `state`
@@ -93,7 +95,7 @@ the fixes stop diverging (CG-05).
 
 ## Phase 2 — P2 consistency
 
-### P2-1 — One undo vocabulary  (fixes CG-07, CG-08)
+### ✅ P2-1 — One undo vocabulary  (fixes CG-07, CG-08)
 - **Change.** After P1-3, make `UndoJournal` the single operator-facing `undo`; rename
   the git-stash mechanism to `checkpoint restore`. Wire TUI `compact` to the shared
   compactor (removes the CG-07 stub). Update help text in both surfaces and

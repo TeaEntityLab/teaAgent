@@ -1,6 +1,8 @@
 # Daily-Driver Execution Readiness
 # 2026-06-01
 
+**Status: ✅ COMPLETE** - All tickets implemented and shipped (2026-05-31 session)
+
 **Purpose.** Make the backlog *actually executable* by a developer (or an agent) without
 re-deriving context, and risk-check the design specs themselves before they are built.
 Three parts: (1) dev/test mechanics, (2) per-ticket Definition-of-Done + implementation
@@ -28,7 +30,7 @@ clean · manual smoke shows corrected behavior · no acceptance regression.
 
 ## Part 2 — Per-ticket execution sheets (P0/P1)
 
-### TICKET-1 / P0-1 — CG-01 (REPL result handling)
+### ✅ TICKET-1 / P0-1 — CG-01 (REPL result handling)
 - **File:** `teaagent/cli/_handlers/chat_repl.py` ~`:816-827`.
 - **Exact change:** replace `if result != 0:` with branching on `result.status`; on
   `'completed'` print `result.final_answer.content`; else print
@@ -39,7 +41,7 @@ clean · manual smoke shows corrected behavior · no acceptance regression.
 - **DoD checklist:** [ ] success prints answer, no "Task failed" [ ] failure prints real
   error [ ] observation appended [ ] `test_chat_repl_displays_answer` green.
 
-### TICKET-2 / P0-2 — CG-02 (destructive undo)
+### ✅ TICKET-2 / P0-2 — CG-02 (destructive undo)
 - **File:** `chat_repl.py:418` and fallback `:789-799`.
 - **Exact change:** remove both `git checkout -- .` calls. Route `/undo` to the run's
   `UndoJournal` (see TUI `:779-782`); if nothing recoverable, print "nothing to undo".
@@ -47,13 +49,13 @@ clean · manual smoke shows corrected behavior · no acceptance regression.
   [ ] no-checkpoint case is a byte-identical no-op [ ] `git checkout -- .` removed
   [ ] `test_chat_repl_undo_scope` green.
 
-### TICKET-3 / P1-1 — CG-03 (real cost)
+### ✅ TICKET-3 / P1-1 — CG-03 (real cost)
 - **Files:** `chat_repl.py:563,825` (remove `+= 10`); `tui/__init__.py:_run_agent_task`
   (increment `self._session_cost_cents += result.cost_cents`).
 - **DoD:** [ ] stub cost `137¢` → `/cost` shows `$1.37` [ ] sums across tasks
   [ ] tokens shown [ ] parity REPL/TUI [ ] `test_session_cost_real` green. **DQ-5** (source label).
 
-### TICKET-3b / CG-09 + CG-10 — `/background` honesty + audit (NEW from second pass)
+### ✅ TICKET-3b / CG-09 + CG-10 — `/background` honesty + audit (NEW from second pass)
 - **File:** `chat_repl.py::suspend_to_background` (`:32-151`), caller `:640-658`; TUI
   `_handle_background` `:717-720`.
 - **Exact change:** (a) do not leave the user on a new branch — either restore HEAD or
@@ -63,15 +65,15 @@ clean · manual smoke shows corrected behavior · no acceptance regression.
 - **DoD:** [ ] no silent branch switch [ ] messages match behavior [ ] suspension
   emits an audit-chain event [ ] `test_background_audited_and_honest` green. **DQ-1.**
 
-### TICKET-5 / P1-3 — CG-05 (shared controller) — DO EARLY
+### ✅ TICKET-5 / P1-3 — CG-05 (shared controller) — DO EARLY
 - **Sequencing note (from second pass):** CG-05 is the root cause that keeps spawning
   bugs (CG-09 is fresh proof). Recommend doing P0-1/P0-2 directly, then P1-3 *before*
   P1-1/P1-2/CG-09 so those land once in the shared `ChatSessionController`.
 - **DoD:** [ ] both surfaces drive one controller [ ] `test_chat_surface_parity` green
   [ ] CG-01/02/03/09 behavior identical across surfaces. **Human review required.**
 
-### TICKET-6 / P1-4 — CG-06 (no clear-screen) — **DQ-3** (cheap vs full layout).
-### TICKET-7 / P2-1 — CG-07/CG-08 (one undo vocabulary) — **DQ-6**.
+### ✅ TICKET-6 / P1-4 — CG-06 (no clear-screen) — **DQ-3** (cheap vs full layout).
+### ✅ TICKET-7 / P2-1 — CG-07/CG-08 (one undo vocabulary) — **DQ-6**.
 
 ---
 
