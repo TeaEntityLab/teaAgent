@@ -62,7 +62,10 @@ class SkillWriter:
         preflight = sandbox.preflight()
         if preflight['status'] != 'ok':
             return True, 'docker unavailable; skipped sandbox validation'
-        started = sandbox.start()
+        try:
+            started = sandbox.start()
+        except ValueError:
+            return True, 'docker mount path issue; skipped sandbox validation'
         if started.status != 'started':
             return True, started.message or 'docker start failed; skipped validation'
         try:

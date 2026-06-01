@@ -59,6 +59,32 @@ def test_resolve_api_key_prefers_flag_then_env() -> None:
         assert source2 == 'env'
 
 
+def test_redact_wizard_payload_bearer_and_export_lines() -> None:
+    payload = {
+        'launch_command': 'teaagent mcp serve --auth-token Bearer sk-live',
+        'export_line': 'export OPENAI_API_KEY=sk-test123',
+        'plain_text': 'hello world',
+    }
+    redacted = redact_wizard_payload(payload)
+    text = json.dumps(redacted)
+    assert 'sk-live' not in text
+    assert 'Bearer [redacted]' in text
+    assert redacted['plain_text'] == 'hello world'
+
+
+def test_read_existing_exports_handles_non_existent_and_malformed(
+    tmp_path: Path,
+) -> None:
+    env_file = tmp_path / 'env'
+    assert read_existing_exports(env_file) == {}
+    env_file.write_text(
+        'export KEY_WITHOUT_VALUE=\nexport \nexport ONLY_KEY\nnot_an_export\n',
+        encoding='utf-8',
+    )
+    exports = read_existing_exports(env_file)
+    assert exports['KEY_WITHOUT_VALUE'] == ''
+
+
 def test_run_first_session_setup_non_interactive(tmp_path: Path) -> None:
     class Args:
         root = str(tmp_path)

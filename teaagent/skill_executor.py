@@ -223,7 +223,17 @@ def _execute_docker(
         workspace_mount_path=skill_path.parent,
         run_id='skill-execute',
     )
-    started = sandbox.start()
+    try:
+        started = sandbox.start()
+    except ValueError:
+        logger.exception('Docker sandbox start failed; falling back to code mode')
+        return _execute_python_subprocess(
+            skill_path,
+            tool_code,
+            payload,
+            sandbox_type=SandboxType.DOCKER,
+            backend='docker_fallback_subprocess',
+        )
     if started.status != 'started':
         logger.info('Docker unavailable for skill execution; falling back to code mode')
         return _execute_python_subprocess(

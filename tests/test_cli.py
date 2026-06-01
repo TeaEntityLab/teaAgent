@@ -897,6 +897,24 @@ class CLITests(unittest.TestCase):
                 'teaagent.cli.check_graphqlite_runtime',
                 return_value=(True, 'ok'),
             ),
+            patch(
+                'teaagent.ergonomics._approval_state.ApprovalPresetStore.check_security_health',
+                return_value={
+                    'ok': True,
+                    'error_count': 0,
+                    'warning_count': 0,
+                    'fixed_count': 0,
+                    'verified_count': 0,
+                    'checks': [
+                        {
+                            'name': 'mocked',
+                            'ok': True,
+                            'severity': 'info',
+                            'message': 'mocked',
+                        }
+                    ],
+                },
+            ),
             redirect_stdout(output),
         ):
             exit_code = main(
@@ -920,6 +938,24 @@ class CLITests(unittest.TestCase):
                 patch(
                     'teaagent.cli.check_graphqlite_runtime',
                     return_value=(True, 'ok'),
+                ),
+                patch(
+                    'teaagent.ergonomics._approval_state.ApprovalPresetStore.check_security_health',
+                    return_value={
+                        'ok': True,
+                        'error_count': 0,
+                        'warning_count': 0,
+                        'fixed_count': 0,
+                        'verified_count': 0,
+                        'checks': [
+                            {
+                                'name': 'mocked',
+                                'ok': True,
+                                'severity': 'info',
+                                'message': 'mocked',
+                            }
+                        ],
+                    },
                 ),
                 redirect_stdout(output),
             ):
