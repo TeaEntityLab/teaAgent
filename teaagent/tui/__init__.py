@@ -785,10 +785,7 @@ class TeaAgentTUI:
             if self._max_cost_budget_cents == 0
             else f'${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
         )
-        self.output_fn(
-            f'effort: {level}  '
-            f'budget={budget_str}'
-        )
+        self.output_fn(f'effort: {level}  budget={budget_str}')
 
     def _handle_budget(self) -> None:
         remaining = self._max_cost_budget_cents - self._session_cost_cents
