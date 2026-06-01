@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for P1 implementation.
+Accepted and Implemented - 2026-05-08
 
 ## Decision
 
@@ -10,6 +10,34 @@ Include trace recording, execution context compaction, eval framework, in-memory
 skill review, and AI-BOM generation as P1 primitives on top of the P0 agent harness.
 
 Each primitive follows the same no-external-dependency policy as P0 (stdlib only).
+
+## Implementation
+
+**Git History:**
+- **Created:** 2026-05-08 23:54:34 +0800
+- **Commit:** `2ab09cd8f87dbfcaf7fb9eeb4dc34be613179baa`
+- **Message:** "Modularize oauth21, add gitignore-aware listing with pagination, enforce mypy strict mode"
+
+**Files Added:**
+- `teaagent/trace.py` - Trace recording
+- `teaagent/context.py` - Context compaction
+- `teaagent/eval.py` - Eval framework
+- `teaagent/knowledge.py` - In-memory RAG (InMemoryRetriever, KnowledgeGraph)
+- `teaagent/skill_review.py` - Skill review
+- `teaagent/aibom.py` - AI-BOM generation
+
+**Key Components:**
+- **TraceRecorder**: Records agent observation stream for replay and debugging
+- **ContextCompactor**: Compresses long observation lists into summaries
+- **Eval framework**: Measures agent performance on representative tasks
+- **InMemoryRetriever**: Lightweight RAG without vector database
+- **KnowledgeGraph**: In-memory knowledge graph for project knowledge
+- **SkillReview**: Audits skill content for security and correctness
+- **AIBOM**: Generates bill-of-materials for agent dependencies
+
+**Tests:**
+- Unit tests for each primitive
+- All tests passing
 
 ## Rationale
 

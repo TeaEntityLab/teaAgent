@@ -2,13 +2,41 @@
 
 ## Status
 
-Accepted for P2 implementation.
+Accepted and Implemented - 2026-05-08
 
 ## Decision
 
 Execute LLM-generated Python code in a detached child process with AST allow-list
 validation, CPU-time limits, wall-clock timeouts, and best-effort memory limits.
 Reject container-level isolation, seccomp, and V8 isolates as P2 scope.
+
+## Implementation
+
+**Git History:**
+- **Created:** 2026-05-08 23:54:34 +0800
+- **Commit:** `2ab09cd8f87dbfcaf7fb9eeb4dc34be613179baa`
+- **Message:** "Modularize oauth21, add gitignore-aware listing with pagination, enforce mypy strict mode"
+
+**Updated:** 2026-05-14 18:40:37 +0800
+- **Commit:** `98154d80f5bd12506db766dee9f72b3c1688abba`
+- **Message:** "Drop Python 3.9 support, require >=3.10"
+
+**Files Added:**
+- `teaagent/code_mode/_types.py` - Code mode types and profiles
+- `teaagent/code_mode/_sandbox.py` - Child-process sandbox implementation
+- `teaagent/code_mode/__init__.py` - Code mode API
+
+**Key Components:**
+- **AST allow-list validation**: `ALLOWED_NODES` prevents dangerous constructs
+- **Process boundary**: `multiprocessing.Process` isolates child address space
+- **CPU-time limits**: `RLIMIT_CPU` provides hard ceiling
+- **Wall-clock timeout**: `process.join(timeout)` prevents hung code
+- **Memory limits**: `RLIMIT_AS` provides advisory limits (no-op on macOS)
+- **SAFE_BUILTINS**: Small list (math, collection constructors)
+
+**Tests:**
+- Unit tests for code mode sandbox
+- All tests passing
 
 ## Rationale
 

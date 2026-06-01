@@ -2,13 +2,36 @@
 
 ## Status
 
-Accepted for P2 implementation.
+Accepted and Implemented - 2026-05-08
 
 ## Decision
 
 Expose the TeaAgent workspace tool pack to MCP clients over stdio JSON-RPC
 and Streamable HTTP (POST/GET/DELETE on `/mcp`) with `Mcp-Session-Id` session
 management, bearer-token/OAuth 2.1 guardrails, and Origin allowlisting.
+
+## Implementation
+
+**Git History:**
+- **Created:** 2026-05-08 23:54:34 +0800
+- **Commit:** `2ab09cd8f87dbfcaf7fb9eeb4dc34be613179baa`
+- **Message:** "Modularize oauth21, add gitignore-aware listing with pagination, enforce mypy strict mode"
+
+**Files Added:**
+- `teaagent/mcp_http.py` - Streamable HTTP implementation
+- `teaagent/mcp_server.py` - stdio JSON-RPC implementation
+
+**Key Components:**
+- **stdio JSON-RPC**: Zero-config integration with MCP clients
+- **Streamable HTTP**: POST/GET/DELETE on `/mcp` with SSE streaming
+- **Session management**: `Mcp-Session-Id` header for session tracking
+- **Authentication**: Bearer-token/OAuth 2.1 guardrails
+- **Origin allowlisting**: Cross-origin protection
+
+**Tests:**
+- Unit tests for MCP HTTP and stdio
+- E2E tests for session management
+- All tests passing
 
 ## Rationale
 
