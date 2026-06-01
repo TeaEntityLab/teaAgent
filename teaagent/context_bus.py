@@ -456,6 +456,7 @@ class ContextBus:
             try:
                 if delta_ids is not None:
                     placeholders = ','.join('?' for _ in delta_ids)
+                    # noqa: B608 - placeholders is safely constructed from '?' characters only
                     cursor.execute(
                         f'DELETE FROM delta_cards WHERE delta_id IN ({placeholders})',
                         delta_ids,

@@ -83,7 +83,7 @@ class RedactionFilter:
         RedactionRule('private_key', '[REDACTED]'),
         RedactionRule('/home/', '[HOME]/'),
         RedactionRule('/Users/', '[HOME]/'),
-        RedactionRule('/tmp/', '[TEMP]/'),
+        RedactionRule(tempfile.gettempdir() + '/', '[TEMP]/'),
     ]
 
     def __init__(self, custom_rules: list[RedactionRule] | None = None) -> None:

@@ -467,7 +467,7 @@ def _execute_agent_task(
     previous = signal.signal(
         signal.SIGINT, lambda sig, frame: _write_scratchpad_on_exit()
     )
-    _sp_sigint_restore: Union[Callable[..., Any], int, None] = previous
+    _ = previous  # Signal handler for cleanup; intentionally not restored
 
     # Resume offer on session start
     if scratchpad.exists() and not resumed_from:

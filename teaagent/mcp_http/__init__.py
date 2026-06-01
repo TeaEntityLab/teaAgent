@@ -34,6 +34,7 @@ _OAUTH_PATHS = frozenset({_AUTHORIZE_PATH, _TOKEN_PATH, _OAUTH_METADATA_PATH})
 def is_loopback_host(host: str) -> bool:
     if host == 'localhost':
         return True
+    # noqa: B104 - This is intentional host validation to reject bind-all-interfaces
     if host in {'', '0.0.0.0', '::'}:
         return False
     try:

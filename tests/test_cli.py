@@ -270,7 +270,7 @@ class CLITests(unittest.TestCase):
 
     def test_doctor_model_reports_missing_key(self) -> None:
         with (
-            tempfile.TemporaryDirectory() as _tmp,
+            tempfile.TemporaryDirectory(),
             patch.dict(os.environ, {'OPENAI_API_KEY': ''}, clear=True),
         ):
             output = io.StringIO()

@@ -48,6 +48,9 @@ class SQLiteMigrationStore:
 
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
+        # Validate TABLE is identifier-safe to prevent SQL injection
+        if not self.TABLE.replace('_', '').isalnum():
+            raise ValueError(f'Invalid table name: {self.TABLE}')
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._init_table()
 
@@ -88,6 +91,7 @@ class SQLiteMigrationStore:
 
     def applied_versions(self) -> list[int]:
         with self._connect() as conn:
+            # noqa: B608 - TABLE is validated in __init__ to be identifier-safe
             rows = conn.execute(
                 f'SELECT version FROM {self.TABLE} ORDER BY version'
             ).fetchall()

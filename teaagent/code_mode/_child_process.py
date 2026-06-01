@@ -74,6 +74,7 @@ def _execute_code_mode_child(
         _apply_resource_limits(sandbox)
         namespace: dict[str, Any] = {'__builtins__': SAFE_BUILTINS}
         namespace.update(inputs)
+        # noqa: B102 - exec() is sandboxed with SAFE_BUILTINS to restrict dangerous operations
         exec(compile(code, '<teaagent-code-mode>', 'exec'), namespace, namespace)
         variables = {
             key: value

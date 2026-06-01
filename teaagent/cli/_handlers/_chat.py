@@ -687,7 +687,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             file_path: Path to the changed file
             event_type: Type of event ('modified' or 'deleted')
         """
-        nonlocal session_context, targeted_files
+        nonlocal targeted_files
 
         try:
             from datetime import datetime

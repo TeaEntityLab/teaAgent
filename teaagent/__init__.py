@@ -9,7 +9,7 @@ except PackageNotFoundError:
 
 from teaagent.a2a_trace import TraceparentError, generate_traceparent, parse_traceparent
 from teaagent.agentcard import CircuitBreakerConfig
-from teaagent.aibom import AIBOMManifest, build_aibom
+from teaagent.aibom import AIBOMComponent, AIBOMManifest, build_aibom
 from teaagent.anp_adapter import (
     ANPAdapterError,
     ANPBidirectionalRouter,
@@ -21,7 +21,7 @@ from teaagent.anp_adapter import (
     ANPRoutingResult,
 )
 from teaagent.approval_ui import DiffApprovalHandler
-from teaagent.audit import AuditLogger
+from teaagent.audit import AuditEvent, AuditLogger
 from teaagent.audit_chain import (
     ChainVerificationResult,
     compute_event_hash,
@@ -257,6 +257,7 @@ from teaagent.ultrawork import UltraworkStore, WorkerRecord
 from teaagent.webhook_sink import WebhookAuditSink
 from teaagent.workspace_tools import (
     GitToolConfig,
+    ToolRegistryBuilder,
     WorkspaceToolConfig,
     build_workspace_tool_registry,
     register_git_tools,
@@ -265,6 +266,7 @@ from teaagent.workspace_tools import (
 
 __all__ = [
     '__version__',
+    'AIBOMComponent',
     'AIBOMManifest',
     'ANPAdapterError',
     'ANPBidirectionalRouter',
@@ -275,7 +277,6 @@ __all__ = [
     'ANPOutboundClient',
     'ANPRoutingResult',
     'AgentRunner',
-    'AIBOMComponent',
     'AgentCard',
     'ApprovalPolicy',
     'ApprovalRequest',
