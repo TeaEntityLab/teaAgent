@@ -40,6 +40,7 @@ class MemoryCatalog:
         self.path = self.root / '.teaagent' / 'memory.jsonl'
         self.quarantine_path = self.root / '.teaagent' / 'memory-quarantine.jsonl'
         self.readonly = readonly
+        self._corrupt_count = 0  # Track corrupt entries for health reporting
         if not readonly:
             self.path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -132,11 +133,28 @@ class MemoryCatalog:
             try:
                 payload = json.loads(line)
             except json.JSONDecodeError:
+                self._corrupt_count += 1
                 continue
             entry = memory_entry_from_payload(payload)
             if entry is not None:
                 entries.append(entry)
         return entries
+
+    def health_report(self) -> dict[str, Any]:
+        """Report health status including corruption count.
+        
+        Returns:
+            Dict with 'corrupt_entries' count and 'healthy' boolean
+        """
+        total_lines = 0
+        if self.path.exists():
+            total_lines = len([l for l in self.path.read_text(encoding='utf-8').splitlines() if l.strip()])
+        
+        return {
+            'corrupt_entries': self._corrupt_count,
+            'total_entries': total_lines - self._corrupt_count,
+            'healthy': self._corrupt_count == 0,
+        }
 
     def delete_by_branch(self, branch_name: str) -> int:
         """Delete all memory entries associated with a specific branch.

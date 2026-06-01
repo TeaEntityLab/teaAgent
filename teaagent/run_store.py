@@ -38,6 +38,7 @@ class RunStore:
         self.root = Path(root).resolve()
         self.readonly = readonly
         self.store_dir = self.root / '.teaagent' / 'runs'
+        self._corrupt_count = 0  # Track corrupt run files for health reporting
         if not readonly:
             self.store_dir.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.root / '.teaagent')
@@ -134,11 +135,15 @@ class RunStore:
         path = self.run_path(run_id)
         if not path.exists():
             raise FileNotFoundError(f"run '{run_id}' not found")
-        return [
-            json.loads(line)
-            for line in path.read_text(encoding='utf-8').splitlines()
-            if line.strip()
-        ]
+        events = []
+        for line in path.read_text(encoding='utf-8').splitlines():
+            if not line.strip():
+                continue
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                self._corrupt_count += 1
+        return events
 
     def task_for_run(self, run_id: str) -> str:
         for event in self.show_run(run_id):
@@ -246,10 +251,12 @@ class RunStore:
                 if line.strip()
             ]
         except (OSError, json.JSONDecodeError):
+            self._corrupt_count += 1
             return None
         if not events:
             return None
         if not all(isinstance(event, dict) for event in events):
+            self._corrupt_count += 1
             return None
         run_id = events[0].get('run_id')
         if not isinstance(run_id, str) or not run_id:
@@ -281,6 +288,22 @@ class RunStore:
             path=path,
             final_answer=final_answer,
         )
+
+    def health_report(self) -> dict[str, Any]:
+        """Report health status including corruption count.
+        
+        Returns:
+            Dict with 'corrupt_runs' count, 'total_runs', and 'healthy' boolean
+        """
+        total_runs = 0
+        if self.store_dir.exists():
+            total_runs = len(list(self.store_dir.glob('*.jsonl')))
+        
+        return {
+            'corrupt_runs': self._corrupt_count,
+            'total_runs': total_runs - self._corrupt_count,
+            'healthy': self._corrupt_count == 0,
+        }
 
 
 def safe_run_id(run_id: str) -> str:

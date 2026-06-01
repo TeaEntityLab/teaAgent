@@ -314,6 +314,13 @@ def build_daily_brief(
     )
     store = RunStore(root, readonly=readonly)
     recent_runs = _recent_run_rollups(store, runs_limit)
+    
+    # Add corruption warnings to harness health if not already present
+    run_health = store.health_report()
+    if not run_health['healthy'] and 'corrupt_runs' not in harness_health.warnings:
+        harness_health.warnings.append(
+            f"Run store corruption: {run_health['corrupt_runs']} corrupt runs detected"
+        )
     token_budget = build_token_budget_report(
         task=effective_task,
         provider=provider,

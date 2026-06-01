@@ -153,9 +153,8 @@ def preflight(
     profile = resolve_context_profile(context_profile, memory_limit=memory_limit)
     clarification = clarify_task(task)
     routing = route_model(task, provider=provider, model=model) if route else None
-    memories = MemoryCatalog(root_path, readonly=readonly).search(
-        task, limit=profile.memory_limit
-    )
+    memory_catalog = MemoryCatalog(root_path, readonly=readonly)
+    memories = memory_catalog.search(task, limit=profile.memory_limit)
     context_pack = build_context_pack(
         task,
         root=root_path,
@@ -178,6 +177,24 @@ def preflight(
         health['healthy'] = False
     health['warnings'] = build_harness_health_report(root_path, health).warnings
     health['provider_connectivity'] = provider_msg
+    
+    # Check memory and run store corruption
+    memory_catalog = MemoryCatalog(root_path, readonly=readonly)
+    memory_health = memory_catalog.health_report()
+    if not memory_health['healthy']:
+        health['failures'].append(
+            f"Memory corruption detected: {memory_health['corrupt_entries']} corrupt entries"
+        )
+        health['healthy'] = False
+    
+    from teaagent.run_store import RunStore
+    run_store = RunStore(root_path, readonly=readonly)
+    run_health = run_store.health_report()
+    if not run_health['healthy']:
+        health['failures'].append(
+            f"Run store corruption detected: {run_health['corrupt_runs']} corrupt runs"
+        )
+        health['healthy'] = False
     token_budget = build_token_budget_report(
         task=task,
         provider=provider,
