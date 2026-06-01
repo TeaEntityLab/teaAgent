@@ -49,25 +49,30 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — High (P0)
 
+**Note:** All P0 items below require spec writing and design before implementation. See `docs/analysis/p0-implementation-readiness-assessment-2026-05-31.md` for details.
+
 ### Issue-to-Plan Intake
+**Status:** 📋 Needs spec
 **Journey:** User pastes an issue, gets ambiguity score, plan artifact, safe command, and acceptance checklist.
 **Acceptance test:** `test_issue_to_plan_acceptance_flow.py`
 **Dependencies:** Plan mode, issue parsing, ambiguity detection, plan generation
-**Size:** Large
+**Size:** Large (2-3 weeks)
 **Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 
 ### Plan Review and Revision
+**Status:** 📋 Needs spec
 **Journey:** User can compare two plan revisions before execution and bind run to the accepted plan hash.
 **Acceptance test:** `test_plan_review_revision_flow.py`
 **Dependencies:** Plan versioning, plan diff, run-to-plan binding, hash verification
-**Size:** Large
+**Size:** Large (2-3 weeks)
 **Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 
 ### Guided Recovery
+**Status:** 📋 Needs spec
 **Journey:** Failed/partial run suggests resume, undo, inspect audit, or retry with safer mode.
 **Acceptance test:** `test_guided_recovery_flow.py`
 **Dependencies:** Failure classification, recovery strategy selection, undo/resume integration
-**Size:** Medium
+**Size:** Medium (1-2 weeks)
 **Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
 
 ---
