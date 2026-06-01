@@ -21,6 +21,12 @@ TeaAgent vote relay and control plane support **Bearer tokens**, optional **mTLS
 | `token` | Raw secret (hashed at load; not stored in memory as plaintext) |
 | `tenants` | Allowed tenant IDs; omit or `["*"]` for admin (all tenants + list tenants API) |
 
+**Security note:** Token files are stored in plaintext on disk. Operational guidance:
+- Set file permissions to `chmod 600` (owner read/write only)
+- Store token files outside the repository (e.g., `~/.teaagent/relay-tokens.json`)
+- Do not commit token files to version control
+- Encryption at rest is not currently implemented
+
 Relay mode ignores `tenants` (any valid relay token may submit votes).
 
 ### Auto-discovered relay token file (loopback)

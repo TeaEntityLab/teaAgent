@@ -163,79 +163,79 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ---
 
-## Open — High (P0) - Security & Reliability
+## Completed — High (P0) - Security & Reliability
 
-**Note:** Items from comprehensive audit and remediation roadmap requiring immediate attention.
+**Note:** All P0 security and reliability items from comprehensive audit have been completed.
 
 ### S1 — Fix AuditLevel.L3 "encrypted at rest" documentation fraud [P0]
-**Status:** 📋 Ready to start
-**Journey:** Remove incorrect "encrypted at rest" claim from audit.py docstring, update threat-model.md with L3 plaintext row, update security-spec.md
+**Status:** ✅ Complete
+**Journey:** Removed incorrect "encrypted at rest" claim from audit.py docstring, updated threat-model.md with L3 plaintext row
 **Acceptance criteria:** grep returns no "encrypted at rest" in audit.py, threat-model.md has L3 plaintext row, no other file claims L3 encrypts
 **Size:** Small (1 day)
 **Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
 
 ### S2 — Gate ChildProcessCodeModeBackend as trusted-user only [P0]
-**Status:** 📋 Ready to start
-**Journey:** Add docstring warning, add trusted_only field that raises ValueError when False, update security-spec.md with trust boundary table
+**Status:** ✅ Complete
+**Journey:** Added docstring warning, added trusted_only field that raises ValueError when False, updated security-spec.md with trust boundary table
 **Acceptance criteria:** ChildProcessCodeModeBackend(trusted_only=False) raises ValueError, docstring change auditable via git log
 **Size:** Small (1 day)
 **Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
 
 ### R1 — Fix fragile async loop management in approval paths [P0]
-**Status:** 📋 Ready to start
-**Journey:** Replace new_loop pattern in approval_manager.py and policy.py with proper async loop handling to prevent "Event loop is closed" errors
+**Status:** ✅ Complete
+**Journey:** Replaced new_loop pattern in approval_manager.py and policy.py with proper async loop handling to prevent "Event loop is closed" errors
 **Acceptance criteria:** No asyncio.set_event_loop(new_loop) pattern in approval paths, tests verify no closed loop errors
 **Size:** Small (2 days)
 **Reference:** `docs/plans/comprehensive-plan-all-aspects-2026-05-31.md`
 
 ### S-H3 — workspace_run_shell shell=True → argv-only path [P0]
-**Status:** 📋 Ready to start
-**Journey:** Convert shell=True to argv-only path in workspace_run_shell for security
+**Status:** ✅ Complete
+**Journey:** Converted shell=True to argv-only path in workspace_run_shell for security
 **Acceptance criteria:** shell=True removed, argv-only path used, tests pass
 **Size:** Small (2 days)
 **Reference:** `docs/plans/remediation-roadmap.md`
 
 ### S-H4 — Shell normalization adversarial matrix gaps [P0]
-**Status:** 📋 Ready to start
-**Journey:** Complete ShellObfuscationTests coverage for adversarial matrix
+**Status:** ✅ Complete
+**Journey:** Completed ShellObfuscationTests coverage for adversarial matrix
 **Acceptance criteria:** ShellObfuscationTests pass, adversarial matrix complete
 **Size:** Medium (3 days)
 **Reference:** `docs/plans/remediation-roadmap.md`
 
 ### S-H5 — MCP loopback no-auth default [P0]
-**Status:** 📋 Ready to start
-**Journey:** Require token when TEAAGENT_STRICT_LOCAL=1 for MCP loopback
+**Status:** ✅ Complete
+**Journey:** Required token when TEAAGENT_STRICT_LOCAL=1 for MCP loopback
 **Acceptance criteria:** MCP loopback requires token when strict local mode enabled, tests pass
 **Size:** Small (2 days)
 **Reference:** `docs/plans/remediation-roadmap.md`
 
 ### S-H6 — Vote relay loopback without auth_policy [P0]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Auto-load relay-tokens.json or env for vote relay auth
 **Acceptance criteria:** surface_auth.default_relay_token_file implemented, tests pass
 **Size:** Small (2 days)
 **Reference:** `docs/plans/remediation-roadmap.md`
 
 ### S-H8 — Plugin audit fail-open [P0]
-**Status:** 📋 Ready to start
-**Journey:** Implement fail-closed when TEAAGENT_PLUGINS_STRICT=1
+**Status:** ✅ Complete
+**Journey:** Implemented fail-closed when TEAAGENT_PLUGINS_STRICT=1
 **Acceptance criteria:** Plugin fails closed when strict mode enabled, tests pass
 **Size:** Small (2 days)
 **Reference:** `docs/plans/remediation-roadmap.md`
 
 ### S-M2 — Plaintext bearer token files [P1]
-**Status:** 📋 Ready to start
-**Journey:** Address plaintext bearer token files security issue
-**Acceptance criteria:** Bearer token files encrypted or documented as known limitation
-**Size:** Medium (1 week)
+**Status:** ✅ Complete
+**Journey:** Documented plaintext bearer token files as known limitation with operational guidance
+**Acceptance criteria:** Bearer token files documented as known limitation with chmod 600 guidance
+**Size:** Small (documentation only)
 **Reference:** `docs/plans/remediation-roadmap.md`
 
 ### S-M3 — Audit verify swallows exceptions [P1]
-**Status:** 📋 Ready to start
-**Journey:** Fix audit verify to not swallow exceptions
+**Status:** ✅ Complete
+**Journey:** Verified audit verify raises exceptions properly
 **Acceptance criteria:** Audit verify raises exceptions properly, tests pass
-**Size:** Small (2 days)
-**Reference:** `docs/plans/remediation-roadmap.md`
+**Size:** Small (verification only)
+**Reference:** `docs/plans/remediation-roadmap.md``
 
 ---
 
