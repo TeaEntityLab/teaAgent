@@ -525,4 +525,5 @@ def build_context_pack(
         memories=memories,
         symbols=symbols,
         graph_rag=graph_rag,
+        read_only=readonly,
     )

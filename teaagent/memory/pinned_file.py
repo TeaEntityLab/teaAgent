@@ -209,8 +209,21 @@ class PinnedFileStorage:
             logger.warning('Refusing to pin potential secret file: %s', file_path)
             return False
 
+        # Validate path containment - reject absolute paths and parent traversal
+        try:
+            # Reject absolute paths
+            if Path(file_path).is_absolute():
+                logger.warning('Refusing to pin absolute path: %s', file_path)
+                return False
+            
+            # Resolve and verify containment under workspace root
+            full_path = (self.root / file_path).resolve()
+            full_path.relative_to(self.root)
+        except ValueError:
+            logger.warning('Refusing to pin path outside workspace: %s', file_path)
+            return False
+
         # Validate file exists
-        full_path = self.root / file_path
         if not full_path.exists():
             return False
 
@@ -235,6 +248,18 @@ class PinnedFileStorage:
         Returns:
             True if file was removed, False if file was not pinned
         """
+        # Validate path containment
+        try:
+            if Path(file_path).is_absolute():
+                logger.warning('Refusing to unpin absolute path: %s', file_path)
+                return False
+            
+            full_path = (self.root / file_path).resolve()
+            full_path.relative_to(self.root)
+        except ValueError:
+            logger.warning('Refusing to unpin path outside workspace: %s', file_path)
+            return False
+
         pinned_files = self._read_pinned_files()
         original_count = len(pinned_files)
         pinned_files = [pf for pf in pinned_files if pf.get('file_path') != file_path]
@@ -266,6 +291,18 @@ class PinnedFileStorage:
         Returns:
             True if file was found and updated, False otherwise
         """
+        # Validate path containment
+        try:
+            if Path(file_path).is_absolute():
+                logger.warning('Refusing to update absolute path: %s', file_path)
+                return False
+            
+            full_path = (self.root / file_path).resolve()
+            full_path.relative_to(self.root)
+        except ValueError:
+            logger.warning('Refusing to update path outside workspace: %s', file_path)
+            return False
+
         pinned_files = self._read_pinned_files()
         updated = False
 
