@@ -46,6 +46,52 @@ DEFAULT_PAGINATION_LINES = 50
 DEFAULT_SESSION_GRANT_TTL_HOURS = 8.0
 
 
+def _display_recovery_guidance(
+    result: RunResult,
+    args: argparse.Namespace,
+    store: RunStore,
+) -> None:
+    """Display recovery guidance for failed or partial success runs.
+
+    Args:
+        result: RunResult from the failed run
+        args: CLI arguments
+        store: RunStore for accessing audit logs
+    """
+    from teaagent.guided_recovery import (
+        FailureAnalyzer,
+        RecoveryAdviceFormatter,
+        RecoverySelector,
+    )
+    from teaagent.run_undo import UndoJournal
+
+    # Load audit log if available
+    audit_path = store.run_path(result.run_id)
+    from teaagent.audit import AuditLogger
+
+    audit = AuditLogger(path=audit_path) if audit_path.is_file() else None
+
+    # Load undo journal if available
+    undo_journal = None
+    undo_path = store.undo_path(result.run_id)
+    if undo_path.is_file():
+        undo_journal = UndoJournal(root=args.root, path=undo_path)
+
+    # Analyze failure
+    analyzer = FailureAnalyzer(audit_logger=audit)
+    failure = analyzer.classify(result)
+
+    # Select recovery strategy
+    selector = RecoverySelector(undo_journal=undo_journal)
+    advice = selector.select(failure)
+
+    # Format and display advice
+    formatter = RecoveryAdviceFormatter()
+    formatted_advice = formatter.format(advice, run_id=result.run_id)
+
+    print('\n' + formatted_advice)
+
+
 def _resolve_selected_skills(args: argparse.Namespace) -> Optional[frozenset[str]]:
     """Resolve selected skills from args, returning frozenset or None.
 
@@ -913,6 +959,11 @@ def _execute_agent_task(
         from teaagent.ergonomics.notify import notify
 
         notify('TeaAgent', f'Run {result.run_id} {result.status}')
+
+    # Display recovery guidance for failed or partial success runs
+    if result.status != 'completed' and not getattr(args, 'json_stream', False):
+        _display_recovery_guidance(result, args, store)
+
     return 0 if result.status == 'completed' else 1
 
 
