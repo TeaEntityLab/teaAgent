@@ -139,6 +139,8 @@ class AgentRunner:
             self.plan_validator.set_read_only_lint_errors(lint_errors)
 
     def _assert_cost_budget(self, cost_cents: float) -> None:
+        if self.budget.max_estimated_cost_cents <= 0:
+            return
         if cost_cents > self.budget.max_estimated_cost_cents:
             raise BudgetExceededError('cost budget exceeded')
 
