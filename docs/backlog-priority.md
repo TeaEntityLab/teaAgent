@@ -85,15 +85,15 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Note:** Items extracted from strategic reference documents (competitive positioning, UX improvements, future roadmap).
 
 ### CP-1 — README Rewrite for Governance-First Narrative [P1]
-**Status:** 📋 Ready to start
-**Journey:** Rewrite README to lead with governance-first positioning (permission gates, audit trail, undo, cost cap, model-agnostic)
+**Status:** ✅ Complete
+**Journey:** README already leads with governance-first positioning (permission gates, audit trail, undo, cost cap, model-agnostic)
 **Acceptance criteria:** README answers all three persona questions in first screen, governance table in top half, time to comprehension < 30 seconds
 **Size:** Small (3 days)
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-2 — Security Whitepaper for Enterprise Evaluation [P1]
-**Status:** 📋 Ready to start
-**Journey:** Create security whitepaper documenting governance model, control catalog, NIST mapping, data handling, deployment isolation, incident response
+**Status:** ✅ Complete
+**Journey:** Security whitepaper exists documenting governance model, control catalog, NIST mapping, data handling, deployment isolation, incident response
 **Acceptance criteria:** Document exists and reviewed by security background, every control has traceable code path, honest "known limitations" section
 **Size:** Medium (1 week)
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
@@ -111,9 +111,10 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Acceptance criteria:** Run summary always emitted at session end, `--no-summary` flag suppresses it, summary includes files changed/cost/undo command
 **Size:** Small (3 days)
 **Reference:** `docs/plans/ux-improvement-roadmap-2026-05-31.md`
+**Note:** Partially implemented - cost tracking exists but full summary not yet emitted
 
 ### UX1.2 — Proactive Budget Warnings [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Emit budget warnings at 50%, 80%, 90% (with prompt), 100% (offer read-only mode)
 **Acceptance criteria:** Tests trigger at 50%/80%/90%/100%, TUI shows persistent budget status line, warning in post-run summary
 **Size:** Small (3 days)
