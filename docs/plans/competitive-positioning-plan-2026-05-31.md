@@ -1,5 +1,7 @@
 # Competitive Positioning Plan — 2026-05-31
 
+**Status:** Reference document - not an active execution plan. Extract actionable items to backlog-priority.md as needed.
+
 **Source:** `docs/analysis/agent-competitive-risks-2026-05-31.md` and
 `docs/analysis/agent-market-ux-survey-2026-05-31.md`.
 

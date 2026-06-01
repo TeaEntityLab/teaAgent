@@ -49,7 +49,37 @@ Items below were deferred at baseline and have since been implemented in-repo.
 
 ## Open — High (P0)
 
-_No open P0 items._
+### Issue-to-Plan Intake
+**Journey:** User pastes an issue, gets ambiguity score, plan artifact, safe command, and acceptance checklist.
+**Acceptance test:** `test_issue_to_plan_acceptance_flow.py`
+**Dependencies:** Plan mode, issue parsing, ambiguity detection, plan generation
+**Size:** Large
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+
+### Plan Review and Revision
+**Journey:** User can compare two plan revisions before execution and bind run to the accepted plan hash.
+**Acceptance test:** `test_plan_review_revision_flow.py`
+**Dependencies:** Plan versioning, plan diff, run-to-plan binding, hash verification
+**Size:** Large
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+
+### Guided Recovery
+**Journey:** Failed/partial run suggests resume, undo, inspect audit, or retry with safer mode.
+**Acceptance test:** `test_guided_recovery_flow.py`
+**Dependencies:** Failure classification, recovery strategy selection, undo/resume integration
+**Size:** Medium
+**Reference:** `docs/plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md`
+
+---
+
+## Strategic Reference Documents
+
+For long-term planning, positioning, and UX research, see:
+- `docs/plans/competitive-positioning-plan-2026-05-31.md` - README rewrite, security whitepaper, demo scripts
+- `docs/plans/ux-improvement-roadmap-2026-05-31.md` - Post-run summary, budget warnings, undo UX, memory/context
+- `docs/plans/future-roadmap-risk-usability-backlog-2026-05-31.md` - Large strategic backlog with horizons
+
+These are reference documents for strategic decisions. Extract actionable items to this backlog as needed.
 
 ---
 

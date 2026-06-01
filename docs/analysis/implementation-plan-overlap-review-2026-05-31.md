@@ -75,7 +75,8 @@ These decisions appear to have been implemented in the shipped governance work.
 ### Immediate Actions
 
 1. **Archive or delete** the external implementation_plan.md:
-   - If no longer needed: Delete it
+   - ✅ Documented in this review - external plan is superseded
+   - Recommendation: Delete `.gemini/antigravity/brain/.../implementation_plan.md` as it's obsolete
    - If useful for reference: Move to `docs/archive/implementation_plan-superseded.md` with a note
 
 2. **Update any references** to the external plan to point to governance-hardening.md
@@ -83,6 +84,12 @@ These decisions appear to have been implemented in the shipped governance work.
 3. **Document completion** in governance-hardening.md:
    - The "Architectural Decisions" from the external plan are now implemented
    - Consider adding a note linking to the archived plan for historical context
+
+### Status
+
+- ✅ Review completed 2026-05-31
+- ⏸️ External plan deletion requires manual action (outside repo)
+- ✅ All proposed work already shipped per governance-hardening.md
 
 ---
 
