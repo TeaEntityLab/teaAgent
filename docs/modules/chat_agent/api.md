@@ -191,7 +191,7 @@ def register_subagent_tool(
 | Field | Type | Description |
 |-------|------|-------------|
 | `run_id` | `str` | Unique hex run identifier |
-| `status` | `str` | `'completed'`, `'budget_exceeded'`, `'suspended'`, `'error'` |
+| `status` | `str` | `'completed'`, `'pending_approval'`, `'failed:budget_exceeded'`, `'failed:run_cancelled'`, `'failed:tool_permission'`, `'failed:model_logic'`, `'failed:system'`, `'failed:transient'` |
 | `final_answer` | `Optional[FinalAnswer]` | Agent's final answer on success |
 | `iterations` | `int` | Number of LLM calls made |
 | `tool_calls` | `int` | Total tool invocations |

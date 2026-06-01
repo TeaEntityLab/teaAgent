@@ -295,14 +295,14 @@ class RunStore:
 
     def health_report(self) -> dict[str, Any]:
         """Report health status including corruption count.
-        
+
         Returns:
             Dict with 'corrupt_runs' count, 'total_runs', and 'healthy' boolean
         """
         total_runs = 0
         if self.store_dir.exists():
             total_runs = len(list(self.store_dir.glob('*.jsonl')))
-        
+
         return {
             'corrupt_runs': self._corrupt_count,
             'total_runs': total_runs - self._corrupt_count,

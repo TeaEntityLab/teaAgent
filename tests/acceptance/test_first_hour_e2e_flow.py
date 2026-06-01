@@ -104,6 +104,7 @@ def test_first_hour_setup_daily_plan_edit_undo(tmp_path: Path) -> None:
         return
 
     assert plan_code == 0
+    # With --permission-mode read-only, context_pack.read_only should be True
     assert plan_payload['context_pack']['read_only'] is True
 
     adapter = FakeAdapter(

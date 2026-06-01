@@ -36,6 +36,8 @@ When `on_prompt` returns `False` (user declined), the action returned is `Budget
 
 **Risk**: Daily cap may be under- or over-enforced depending on actual vs. estimated run costs.
 
+> **See also:** [context/risks.md](../context/risks.md) — token estimation inaccuracies
+
 ---
 
 ### 5. `CostTracker` uses file mtime fallback for timestamp

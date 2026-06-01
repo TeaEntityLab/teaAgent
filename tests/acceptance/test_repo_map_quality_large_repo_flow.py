@@ -41,7 +41,8 @@ def test_large_repo_context_pack_hits_target_file_within_slo(tmp_path: Path) -> 
     assert elapsed < 8.0, f'preflight took {elapsed:.2f}s on large fixture repo'
     paths = [entry['path'] for entry in payload['context_pack']['candidate_files']]
     assert 'teaagent/core/runner.py' in paths
-    assert payload['context_pack']['read_only'] is True
+    # preflight defaults to readonly=False, so context_pack.read_only should be False
+    assert payload['context_pack']['read_only'] is False
     graph = payload['context_pack'].get('graph_rag') or {}
     assert graph.get('status') in {'indexed', 'not_indexed', 'partial'}
 

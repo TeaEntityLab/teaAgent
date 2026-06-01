@@ -12,6 +12,9 @@ raise SystemExit(main())
 
 **Returns**: Integer exit code (0 = success, 1 = error, 2 = usage error).
 
+**Pre-condition**: CLI arguments must be parseable by `argparse`.  
+**Post-condition**: Dispatches to the appropriate handler; returns integer exit code.
+
 ---
 
 ## Handler Signatures
@@ -34,6 +37,17 @@ agent_status_command(args)     # teaagent agent status
 agent_attach_command(args)     # teaagent agent attach <run_id>
 ```
 
+**Pre/Post Conditions (Agent Handlers)**:
+
+| Handler | Pre-condition | Post-condition |
+|---------|---------------|----------------|
+| `agent_run_task` | `args.task` must be non-empty string | Returns `RunResult` or `None` on success, `1` on error |
+| `agent_plan_command` | Workspace root must be configured | Plan stored in run context |
+| `agent_undo_command` | A run must have been executed | UndoJournal applied or error reported |
+| `agent_resume_command` | `run_id` must reference a resumable run | Resumed run completes or fails |
+| `agent_status_command` | Run store accessible | Prints current run status |
+| `agent_attach_command` | `run_id` must reference an active run | Attaches to running session |
+
 ### Chat Handlers
 
 ```python
@@ -46,6 +60,13 @@ chat_command(args)             # teaagent chat [task]
 run_chat_repl(args)            # non-TUI REPL loop
 ```
 
+**Pre/Post Conditions (Chat Handlers)**:
+
+| Handler | Pre-condition | Post-condition |
+|---------|---------------|----------------|
+| `chat_command` | Provider must be configured; `args.task` optional | Interactive chat session started |
+| `run_chat_repl` | Provider must be configured | REPL loop runs until `/quit` or Ctrl-C |
+
 ### Audit Handlers
 
 ```python
@@ -56,6 +77,16 @@ audit_verify_command(args)     # teaagent audit verify <path>
 audit_export_command(args)     # teaagent audit export
 audit_serve_command(args)      # teaagent audit serve [--port]
 ```
+
+**Pre/Post Conditions (Audit Handlers)**:
+
+| Handler | Pre-condition | Post-condition |
+|---------|---------------|----------------|
+| `audit_list_command` | Audit log directory exists | Prints run list from audit store |
+| `audit_show_command` | `run_id` must be valid | Prints run details and event log |
+| `audit_verify_command` | `path` must exist and be a valid audit log | Prints verification result (valid/invalid) |
+| `audit_export_command` | Audit logs accessible | Exports audit data (default: NDJSON) |
+| `audit_serve_command` | Port must be available (default: 5000) | Starts HTTP audit server |
 
 ### Approval Handlers
 
@@ -68,6 +99,17 @@ approval_grant_command(args)
 approval_revoke_command(args)
 approval_pending_command(args)
 ```
+
+**Pre/Post Conditions (Approval Handlers)**:
+
+| Handler | Pre-condition | Post-condition |
+|---------|---------------|----------------|
+| `approval_list_command` | Approval store accessible | Prints all approval entries |
+| `approval_approve_command` | Approval request must exist | Request marked as approved |
+| `approval_deny_command` | Approval request must exist | Request marked as denied |
+| `approval_grant_command` | Grant scope and tool name valid | New grant created in store |
+| `approval_revoke_command` | Grant must exist | Grant removed from store |
+| `approval_pending_command` | Approval store accessible | Prints pending-approval items |
 
 ---
 

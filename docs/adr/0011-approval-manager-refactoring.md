@@ -1,7 +1,7 @@
 # ADR 0011: Refactor ApprovalManager to Follow Single Responsibility Principle
 
 ## Status
-Proposed
+Implemented
 
 ## Context
 The `ApprovalManager` class in `approval_manager.py` has too many responsibilities:

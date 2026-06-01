@@ -1,5 +1,7 @@
 # WASM skill CI templates
 
+Last updated: 2026-06-02
+
 TeaAgent ships a **reusable GitHub Actions workflow** for building and validating WASM skill modules.
 
 ## Workflow

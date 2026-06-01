@@ -110,8 +110,8 @@ The `runner` module is the core agent execution engine. It owns the agent loop: 
   Abnormal exits:
   ─────────────
   AgentHarnessError  →  audit: run_failed  →  return RunResult(failed:category)
-  bare Exception     →  audit: run_failed  →  return RunResult(failed:SYSTEM)
-  iterations == max  →  audit: run_failed  →  return RunResult(failed:MODEL_LOGIC)
+  bare Exception     →  audit: run_failed  →  return RunResult(failed:system)
+  iterations == max  →  audit: run_failed  →  return RunResult(failed:model_logic)
 ```
 
 ---

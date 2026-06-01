@@ -46,7 +46,7 @@ def check_cost_preflight(
 ```
 
 **Pre-conditions**:
-- `provider` and `model` must be strings recognized by `teaagent.llm.estimate_cost_preflight`
+- `provider` and `model` must be strings whose model configuration includes cost-per-token estimates (see `teaagent.llm._config`)
 - `approx_input_chars >= 0`, `max_output_tokens >= 0`
 
 **Post-conditions**: Returns `None` if estimated cost is within budget  

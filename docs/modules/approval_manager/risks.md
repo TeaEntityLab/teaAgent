@@ -15,6 +15,8 @@
 **Risk**: `DANGER_FULL_ACCESS` skips every check. A user enabling it for convenience may forget it's active.
 **Failure mode**: Unintended destructive writes with no approval gate.
 
+> **See also:** [governance/risks.md](../governance/risks.md) — DANGER_FULL_ACCESS bypasses plan gate
+
 ## R4: Multi-sig quorum uses in-memory peer registry
 **File**: `approval_manager.py:73-80` (`MultiSigQuorumConfig`)
 **Risk**: Peer agent IDs and public keys are configured at startup. If a peer is decommissioned without updating the config, the quorum can never be satisfied (requires N of M peers, all M slots must be valid).

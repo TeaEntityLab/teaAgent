@@ -22,7 +22,7 @@ class CompactionResult:
 @dataclass
 class ContextCompactor:
     recent_observations: int = 3         # how many recent observations to keep
-    memory_keys: tuple[str, ...] = ()    # keys pinned across compactions
+    memory_keys: dict[str, Any] = field(default_factory=dict)  # Pinned key-value pairs across compactions (see runtime schema below)
     threshold_low: float = 0.75          # trigger compaction above this usage ratio
     threshold_high: float = 0.92         # emergency compaction threshold
     enable_semantic_compression: bool = True

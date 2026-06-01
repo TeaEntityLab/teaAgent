@@ -49,3 +49,7 @@ Provides isolated execution environments for agent runs to prevent unintended si
 - `_sandbox_lock` is always acquired before any git branch operation.
 - A stash is created before branch switch; restored after.
 - Failed sandbox never leaves the worktree on the sandbox branch.
+
+## Relationship to `git_sandbox`
+
+The `git_sandbox` module provides a focused, standalone git sandbox implementation. The sandbox module includes git branch sandboxing as one of its isolation strategies (alongside OS-level and VFS isolation). For git-specific sandboxing workflows, see [`git_sandbox`](../git_sandbox/spec.md).

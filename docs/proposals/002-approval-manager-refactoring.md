@@ -1,5 +1,7 @@
 # Proposal: Refactor ApprovalManager to Follow Single Responsibility Principle
 
+> **⚠️ OBSOLETED:** This proposal describes work that has already been implemented. See the corresponding module docs under `docs/modules/` for current state. The associated ADR status has been updated to "Implemented".
+
 ## Executive Summary
 This proposal outlines a plan to refactor the `ApprovalManager` class into multiple specialized classes coordinated through composition, following the Single Responsibility Principle.
 

@@ -146,14 +146,14 @@ class MemoryCatalog:
 
     def health_report(self) -> dict[str, Any]:
         """Report health status including corruption count.
-        
+
         Returns:
             Dict with 'corrupt_entries' count and 'healthy' boolean
         """
         total_lines = 0
         if self.path.exists():
-            total_lines = len([l for l in self.path.read_text(encoding='utf-8').splitlines() if l.strip()])
-        
+            total_lines = len([line for line in self.path.read_text(encoding='utf-8').splitlines() if line.strip()])
+
         return {
             'corrupt_entries': self._corrupt_count,
             'total_entries': total_lines - self._corrupt_count,

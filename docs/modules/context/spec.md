@@ -48,3 +48,5 @@ compact(context)
 - `recent_observations` most recent items are always preserved.
 - `memory_keys` are copied verbatim across compactions.
 - Token estimation is approximate (3.5-4.0 chars/token); actual token count may differ.
+
+> **Note:** The `context_pack` sub-module provides context packing and semantic compression utilities. See [`context_pack`](../context_pack/spec.md) for details.

@@ -37,4 +37,5 @@ def test_plan_cli_writes_artifact(tmp_path: Path) -> None:
     assert '## Steps' in text
     assert '## Files likely touched' in text
     assert '## Rollback' in text
+    # plan command defaults to PermissionMode.READ_ONLY, so context_pack.read_only should be True
     assert payload['context_pack']['read_only'] is True

@@ -5,6 +5,8 @@
 **Scope:** Full source under `teaagent/`  
 **Method:** Static code analysis, control-flow tracing, adversarial scenario modeling
 
+> **Note on line-number references:** Source file references (e.g., `audit.py:127`) were accurate as of 2026-06-02 but may drift as the codebase evolves. Verify against current source before acting on specific line references.
+
 ---
 
 ## Reflective Risk Gate

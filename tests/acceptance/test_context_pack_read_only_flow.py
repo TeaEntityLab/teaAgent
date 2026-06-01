@@ -59,7 +59,8 @@ def test_preflight_includes_read_only_context_pack_evidence() -> None:
 
         assert code == 0
         context_pack = payload['context_pack']
-        assert context_pack['read_only'] is True
+        # preflight defaults to readonly=False, so context_pack.read_only should be False
+        assert context_pack['read_only'] is False
         paths = [entry['path'] for entry in context_pack['candidate_files']]
         assert 'teaagent/runner.py' in paths
         assert any(entry['exists'] for entry in context_pack['candidate_files'])

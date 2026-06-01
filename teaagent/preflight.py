@@ -187,7 +187,7 @@ def preflight(
         health['healthy'] = False
     health['warnings'] = build_harness_health_report(root_path, health).warnings
     health['provider_connectivity'] = provider_msg
-    
+
     # Check memory and run store corruption
     memory_catalog = MemoryCatalog(root_path, readonly=readonly)
     memory_health = memory_catalog.health_report()
@@ -196,7 +196,7 @@ def preflight(
             f"Memory corruption detected: {memory_health['corrupt_entries']} corrupt entries"
         )
         health['healthy'] = False
-    
+
     from teaagent.run_store import RunStore
     run_store = RunStore(root_path, readonly=readonly)
     run_health = run_store.health_report()

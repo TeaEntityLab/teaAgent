@@ -1,7 +1,7 @@
 # ADR 0013: Add Abstraction Layer for Backend Systems
 
 ## Status
-Proposed
+Implemented
 
 ## Context
 The `external_backends.py` module uses global module-level dictionaries to manage backend registration:

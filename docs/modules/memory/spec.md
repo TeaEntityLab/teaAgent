@@ -128,3 +128,5 @@ The memory module provides persistent, structured storage for agent knowledge ac
 | Team memory | `<root>/.teaagent/team-memory.md` |
 | Auto-memory | `<root>/.claude/MEMORY.md` |
 | Personal memory | `~/.config/teaagent/memory.jsonl` |
+
+> **Note:** The `pinned_file` sub-module provides pinned file watching and path validation utilities. See [`pinned_file`](../pinned_file/spec.md) for details.

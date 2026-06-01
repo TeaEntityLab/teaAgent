@@ -5,6 +5,8 @@
 **Risk**: `estimate_tokens` uses 3.5-4.0 chars/token approximation. For code-heavy context (more symbols), actual token count may be 20-30% higher. This means `should_compact` may trigger too late, causing context overflow.
 **Failure mode**: LLM context window overflow → API error.
 
+> **See also:** [budget/risks.md](../budget/risks.md) — cost estimation limits
+
 ## R2: Semantic summarization is heuristic-only
 **File**: `context.py:60-65`
 **Risk**: `_semantic_summarize` likely uses simple text truncation or local summarization, not an LLM call. For complex multi-step agent histories, the summary may lose critical state.

@@ -11,7 +11,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from teaagent.automations import (
     AutomationSpec,
@@ -1508,15 +1508,17 @@ def cli_approval_handler(request: ApprovalRequest) -> bool:
 
 
 def agent_preflight_command(args: argparse.Namespace) -> int:
+    permission_mode = parse_permission_mode(args.permission_mode)
     report = preflight(
         args.task,
         root=args.root,
         provider=args.provider,
         model=args.model,
-        permission_mode=parse_permission_mode(args.permission_mode),
+        permission_mode=permission_mode,
         route=args.route_model,
         memory_limit=args.memory_limit,
         context_profile=args.context_profile,
+        readonly=(permission_mode == PermissionMode.READ_ONLY),
     )
     if args.human:
         print(format_preflight_summary(report.to_dict(), root=args.root))
@@ -1528,15 +1530,17 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
 def agent_plan_command(args: argparse.Namespace) -> int:
     from teaagent.plan import write_plan_artifact
 
+    permission_mode = parse_permission_mode(args.permission_mode)
     report = preflight(
         args.task,
         root=args.root,
         provider=args.provider,
         model=args.model,
-        permission_mode=parse_permission_mode(args.permission_mode),
+        permission_mode=permission_mode,
         route=args.route_model,
         memory_limit=args.memory_limit,
         context_profile=args.context_profile,
+        readonly=(permission_mode == PermissionMode.READ_ONLY),
     )
     payload = report.to_dict()
     if not getattr(args, 'no_write', False):
@@ -2506,16 +2510,18 @@ def agent_daily_command(args: argparse.Namespace) -> int:
         _emit_readiness_payload(args, payload)
         ready = payload.get('would_invoke_model', False)
         return 0 if ready or not getattr(args, 'human', False) else 2
+    permission_mode = parse_permission_mode(args.permission_mode)
     brief = build_daily_brief(
         task=args.task,
         root=args.root,
         provider=args.provider,
         model=args.model,
-        permission_mode=parse_permission_mode(args.permission_mode),
+        permission_mode=permission_mode,
         route=args.route_model,
         memory_limit=args.memory_limit,
         runs_limit=args.runs_limit,
         context_profile=args.context_profile,
+        readonly=(permission_mode == PermissionMode.READ_ONLY),
     )
     if getattr(args, 'write_journal', False):
         from teaagent.ergonomics.daily_journal import write_daily_journal

@@ -1,6 +1,6 @@
 # TeaAgent Module Documentation Index
 
-Generated: 2026-06-02 | 20 modules | 80 documents
+Generated: 2026-06-02 | 24 modules | 92 documents
 
 ---
 
@@ -92,7 +92,10 @@ Generated: 2026-06-02 | 20 modules | 80 documents
 | [skills](skills/) | Extension | Skill discovery, routing, sandboxed execution | [spec](skills/spec.md) · [inspection](skills/inspection.md) · [risks](skills/risks.md) · [api](skills/api.md) |
 | [mcp](mcp/) | Extension | MCP client/server, trust management | [spec](mcp/spec.md) · [inspection](mcp/inspection.md) · [risks](mcp/risks.md) · [api](mcp/api.md) |
 | [memory](memory/) | Storage | Memory catalog, pinned files, failure cards | [spec](memory/spec.md) · [inspection](memory/inspection.md) · [risks](memory/risks.md) · [api](memory/api.md) |
-
+| [context_pack](context_pack/) | Core | Context packing and semantic compression | [spec](context_pack/spec.md) · [risks](context_pack/risks.md) |
+| [pinned_file](pinned_file/) | Storage | Pinned file watching, path validation | [spec](pinned_file/spec.md) · [risks](pinned_file/risks.md) |
+| [git_sandbox](git_sandbox/) | Execution | Git branch sandboxing, stash, rollback | [spec](git_sandbox/spec.md) · [risks](git_sandbox/risks.md) |
+| [run_store](run_store/) | Core | Persistent run storage, replay, audit | [spec](run_store/spec.md) · [inspection](run_store/inspection.md) · [risks](run_store/risks.md) |
 ---
 
 ## Layer Definitions
@@ -124,12 +127,21 @@ Generated: 2026-06-02 | 20 modules | 80 documents
 | R1 | governance | High | `DANGER_FULL_ACCESS` bypasses plan gate |
 | R1 | skills | High | Native skill runs in same process (no isolation) |
 | R8 | llm | Medium | No timeout on streaming connections |
+| R1 | runner | High | Policy override in auto mode — approval policy mutated in-place and never restored after auto mode exits |
+| R2 | runner | Medium | Bare exception swallowing in run loop — programming errors silently become `failed:SYSTEM` |
+| RSK-01 | subagents | High | Path traversal in isolation session keys — no length cap on `def_name` segment |
+| RSK-02 | subagents | High | Directory-snapshot workspace copy exposes `.env`/secrets if not gitignored |
+| RSK-06 | subagents | High | Deadlock risk from nested `asyncio._lock` inside `threading._sync_lock` |
+| R1 | memory | High | Duplicate `MemoryCatalog` implementation — divergent `memory_matches()` from `memory_legacy.py` |
+| R2 | memory | High | Windows data corruption — no cross-process locking, concurrent writes can corrupt `memory.jsonl` |
+| R3 | memory | High | Non-atomic rewrites in `catalog.py` — `delete_by_branch`/`delete_by_run_id` truncate file on crash |
+| R2 | budget | Medium | Over-budget execution — `on_prompt` returning `False` does not halt run if caller ignores return value |
 
 ---
 
 ## Known P0/P1 Bugs (from memory)
 
-See `teaagent-daily-driver-p0-bugs.md` for confirmed unfixed bugs:
+See `docs/daily-driver-known-issues-2026-06-01.md` for confirmed unfixed bugs:
 - **CG-01**: Chat result handling incorrect
 - **CG-02**: Destructive undo
 - **CG-03**: Fake cost display (TUI shows 0)

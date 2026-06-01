@@ -1,5 +1,7 @@
 # Abstraction Layer Implementation Summary
 
+Last updated: 2026-06-02
+
 ## Overview
 This document summarizes the implementation of a missing abstraction layer between the CLI and core components in the TeaAgent project.
 

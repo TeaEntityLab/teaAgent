@@ -2,7 +2,7 @@
 
 ## Risk Vectors
 
-### 1. Policy override in auto mode (HIGH)
+### RUN-R-001: Policy override in auto mode (HIGH)
 
 **File:** `_core.py:387-388`
 
@@ -18,7 +18,7 @@ if auto_approve_policy is not None:
 
 ---
 
-### 2. Bare exception swallowing (`# pragma: no cover`) (MEDIUM)
+### RUN-R-002: Bare exception swallowing (`# pragma: no cover`) (MEDIUM)
 
 **File:** `_core.py:556-582`
 
@@ -30,7 +30,7 @@ The catch-all `except Exception` silently converts any unexpected error (includi
 
 ---
 
-### 3. `tool_calls` counter initialisation includes replayed observations (LOW/CORRECTNESS)
+### RUN-R-003: `tool_calls` counter initialisation includes replayed observations (LOW/CORRECTNESS)
 
 **File:** `_core.py:302`
 
@@ -42,7 +42,7 @@ For resumed runs, `initial_observations` pre-populates observations. The counter
 
 ---
 
-### 4. Double cost-budget assertion (LOW/REDUNDANT)
+### RUN-R-004: Double cost-budget assertion (LOW/REDUNDANT)
 
 **File:** `_core.py:321` and `_core.py:334`
 
@@ -50,7 +50,7 @@ For resumed runs, `initial_observations` pre-populates observations. The counter
 
 ---
 
-### 5. Context mutation by `decide()` function (MEDIUM)
+### RUN-R-005: Context mutation by `decide()` function (MEDIUM)
 
 **File:** `_core.py:322-325`
 
@@ -64,7 +64,7 @@ The runner reads cost/token accounting from the shared `context` dict populated 
 
 ---
 
-### 6. `file_policy.assert_allowed` on wrong tool (MEDIUM)
+### RUN-R-006: `file_policy.assert_allowed` on wrong tool (MEDIUM)
 
 **File:** `_core.py:375-379`
 
@@ -80,7 +80,7 @@ if self.file_policy is not None:
 
 ---
 
-### 7. `ToolPermissionError` re-raised without proper audit event (LOW)
+### RUN-R-007: `ToolPermissionError` re-raised without proper audit event (LOW)
 
 **File:** `_core.py:451-458`
 
@@ -96,7 +96,7 @@ When `approval_handler` returns `False` (explicit denial) and `approval_handler 
 
 ---
 
-### 8. Thread safety of `approval_policy` mutation (MEDIUM)
+### RUN-R-008: Thread safety of `approval_policy` mutation (MEDIUM)
 
 **File:** `_core.py:388`
 
@@ -108,7 +108,7 @@ self.approval_policy = auto_approve_policy
 
 ---
 
-### 9. Plugin load failure only logs a warning (LOW)
+### RUN-R-009: Plugin load failure only logs a warning (LOW)
 
 **File:** `_core.py:124-129`
 
@@ -122,7 +122,7 @@ Plugin load failures are silently swallowed. A plugin that was expected to regis
 
 ---
 
-### 10. `compactor.compact()` replaces observations list, may lose in-flight context (LOW)
+### RUN-R-010: `compactor.compact()` replaces observations list, may lose in-flight context (LOW)
 
 **File:** `_core.py:514-528`
 

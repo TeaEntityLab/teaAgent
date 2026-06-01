@@ -5,12 +5,11 @@
 
 ```python
 class PermissionMode(str, Enum):
-    READ_ONLY = 'read_only'
-    WORKSPACE_WRITE = 'workspace_write'
+    READ_ONLY = 'read-only'
+    WORKSPACE_WRITE = 'workspace-write'
     PROMPT = 'prompt'
     ALLOW = 'allow'
-    DANGER_FULL_ACCESS = 'danger_full_access'
-```
+    DANGER_FULL_ACCESS = 'danger-full-access'
 
 | Mode | Allows writes? | Plan required? | Approval prompts? |
 |------|---------------|---------------|------------------|

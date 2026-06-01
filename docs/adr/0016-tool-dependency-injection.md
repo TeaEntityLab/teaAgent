@@ -1,7 +1,7 @@
 # ADR 0016: Add Dependency Injection for Tool Registration
 
 ## Status
-Proposed
+Implemented
 
 ## Context
 Tool registration uses lambda functions that capture configuration in closures, making it difficult to test and creating implicit dependencies:

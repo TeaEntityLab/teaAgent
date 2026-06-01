@@ -1,5 +1,7 @@
 # Proposal: Add Dependency Injection for Tool Registration
 
+> **⚠️ OBSOLETED:** This proposal describes work that has already been implemented. See the corresponding module docs under `docs/modules/` for current state. The associated ADR status has been updated to "Implemented".
+
 ## Executive Summary
 This proposal outlines a plan to create a `ToolFactory` class that handles tool creation with proper dependency injection, replacing the lambda function pattern that captures configuration in closures.
 

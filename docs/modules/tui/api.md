@@ -22,6 +22,13 @@ TUIApp(
 ### `run() -> None`
 Starts the Textual event loop. Blocks until user exits (`/quit` or Ctrl-C).
 
+**Pre/Post Conditions (TUIApp)**:
+
+| Method | Pre-condition | Post-condition |
+|--------|---------------|----------------|
+| `__init__` | `workspace_root` must be a valid `Path` | `TUIApp` instance ready; layout not yet configured |
+| `run()` | `TUIApp` must be initialized; `setup_tui()` called | Interactive chat session started; blocks until exit |
+
 ---
 
 ## TUI Setup (`_setup.py`)
@@ -30,6 +37,9 @@ Starts the Textual event loop. Blocks until user exits (`/quit` or Ctrl-C).
 def setup_tui(app: TUIApp) -> None
 ```
 Configures the Textual layout: input widget, output panel, cost display, approval subagent panel.
+
+**Pre-condition**: `app` must be a valid `TUIApp` instance.  
+**Post-condition**: Textual layout widgets mounted and ready for user interaction.
 
 ---
 
@@ -53,6 +63,9 @@ def handle_command(command: str, app: TUIApp) -> Optional[str]
 # Returns a response string to display, or None to handle internally.
 ```
 
+**Pre-condition**: `command` must be a non-empty string.  
+**Post-condition**: Command executed; returns response `str` or `None`.
+
 ---
 
 ## TUI Approval Subagents (`_approval_subagents.py`)
@@ -65,6 +78,15 @@ class ApprovalSubagentPanel:
     def on_approve_session(self) -> None
 ```
 Renders pending tool approval requests inline in the TUI. User approves/denies without leaving the chat.
+
+**Pre/Post Conditions (ApprovalSubagentPanel)**:
+
+| Method | Pre-condition | Post-condition |
+|--------|---------------|----------------|
+| `show_approval_request` | `tool_name` and `arguments` must be valid | Approval request rendered inline in TUI |
+| `on_approve` | Approval request must be active | Request approved; tool execution proceeds |
+| `on_deny` | Approval request must be active | Request denied; tool execution blocked |
+| `on_approve_session` | Approval request must be active | All future requests for this session auto-approved |
 
 ---
 

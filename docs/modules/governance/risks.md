@@ -1,23 +1,25 @@
 # governance — Risk Vectors & Known Issues
 
-## R1: DANGER_FULL_ACCESS bypasses all checks
+## GOV-R-001: DANGER_FULL_ACCESS bypasses all checks
 **File**: `governance/plan_gate.py:19-25`
 **Risk**: `DANGER_FULL_ACCESS` permission mode skips the plan gate entirely. An agent in this mode can write anything without a plan.
 **Failure mode**: Accidental destructive writes.
 **Mitigation**: Never use DANGER_FULL_ACCESS for automated runs; require explicit human confirmation.
 
-## R2: `--skip-plan-check` leaves no audit trail
+> **See also:** [approval_manager/risks.md](../approval_manager/risks.md) — DANGER_FULL_ACCESS bypasses all approval
+
+## GOV-R-002: `--skip-plan-check` leaves no audit trail
 **File**: `governance/plan_gate.py:52-55`
 **Risk**: When `skip_plan_check=True`, the plan gate silently returns without recording that the check was skipped.
 **Failure mode**: Post-hoc audit cannot tell whether a write was plan-bound or bypassed.
 **Fix**: Record a `plan_gate_bypassed` audit event.
 
-## R3: `_has_plan_contract` accepts any non-empty string as hash
+## GOV-R-003: `_has_plan_contract` accepts any non-empty string as hash
 **File**: `governance/plan_gate.py:28-33`
 **Risk**: `content_hash` is validated only as a non-empty string. A forged or placeholder hash (e.g., `"placeholder"`) passes the check.
 **Failure mode**: Plan gate satisfied with an invalid plan reference.
 
-## R4: `check_audit_completeness` not wired to agent loop
+## GOV-R-004: `check_audit_completeness` not wired to agent loop
 **File**: `governance/audit_completeness.py`
 **Risk**: The function exists but is not called by the runner automatically. It must be invoked explicitly (e.g., from a post-run hook or CLI).
 **Failure mode**: Incomplete audit runs go undetected.

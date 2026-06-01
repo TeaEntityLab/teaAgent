@@ -24,3 +24,7 @@ The git sandbox isolates agent work from the user's active branch when enabled.
 - Pending run id and final run id can split lifecycle state.
 - Recreated sandbox objects can lose original branch.
 - Users can be confused about whether sandbox is opt-in or default.
+
+## Relationship to `sandbox`
+
+The `sandbox` module provides git branch sandboxing alongside OS and VFS isolation strategies. This module (`git_sandbox`) provides a focused git-only sandbox implementation. For the broader sandbox framework, see [`sandbox`](../sandbox/spec.md).

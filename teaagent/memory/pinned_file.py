@@ -215,7 +215,7 @@ class PinnedFileStorage:
             if Path(file_path).is_absolute():
                 logger.warning('Refusing to pin absolute path: %s', file_path)
                 return False
-            
+
             # Resolve and verify containment under workspace root
             full_path = (self.root / file_path).resolve()
             full_path.relative_to(self.root)
@@ -253,7 +253,7 @@ class PinnedFileStorage:
             if Path(file_path).is_absolute():
                 logger.warning('Refusing to unpin absolute path: %s', file_path)
                 return False
-            
+
             full_path = (self.root / file_path).resolve()
             full_path.relative_to(self.root)
         except ValueError:
@@ -296,7 +296,7 @@ class PinnedFileStorage:
             if Path(file_path).is_absolute():
                 logger.warning('Refusing to update absolute path: %s', file_path)
                 return False
-            
+
             full_path = (self.root / file_path).resolve()
             full_path.relative_to(self.root)
         except ValueError:

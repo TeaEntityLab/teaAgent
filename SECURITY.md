@@ -1,5 +1,7 @@
 # Security
 
+Last updated: 2026-06-02
+
 ## Threat Model
 
 TeaAgent is a governance-first agent harness that gives an LLM-controlled agent access to

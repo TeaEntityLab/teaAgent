@@ -1,5 +1,7 @@
 # Skill Governance and Security Audit Process
 
+Last updated: 2026-06-02
+
 This document defines the governance process for TeaAgent skills, including review, security auditing, and trust scoring.
 
 ## Overview
@@ -399,8 +401,8 @@ teaagent skill audit --skill-path my-skill-fixed --security-scan
 
 ## Resources
 
-- **Security ADRs**: [docs/adr/security/](adr/security/)
-- **Audit Tools**: [tools/audit/](../tools/audit/)
+- **Architecture Decisions**: [docs/adr/](adr/)
+- **Audit Module Docs**: [docs/modules/audit/](../docs/modules/audit/)
 - **Security Policies**: [SECURITY.md](../SECURITY.md)
 - **Reporting**: [security@teaagent.dev](mailto:security@teaagent.dev)
 

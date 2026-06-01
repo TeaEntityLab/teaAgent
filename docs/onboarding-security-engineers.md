@@ -1,5 +1,7 @@
 # TeaAgent Onboarding Guide for Security Engineers
 
+Last updated: 2026-06-02
+
 This guide helps security engineers understand and leverage TeaAgent's security-first architecture for AI agent governance.
 
 ## Overview
@@ -275,7 +277,7 @@ teaagent skill verify-tsb critical-skill.tsb \
 - **Architecture**: [docs/architecture.md](architecture.md)
 - **Security Model**: [docs/threat-model.md](threat-model.md)
 - **Audit Log**: [docs/architecture.md#audit-log](architecture.md#audit-log)
-- **Security ADRs**: [docs/adr/](adr/)
+- **Architecture Decisions**: [docs/adr/](adr/)
 
 ## Support
 
