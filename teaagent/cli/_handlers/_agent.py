@@ -2597,12 +2597,172 @@ def agent_runs_replay(args: argparse.Namespace) -> int:
 
 
 def agent_run_show(args: argparse.Namespace) -> int:
+    # Handle --diff flag to show git diff of changes
+    if getattr(args, 'diff', False):
+        return _show_run_diff(args)
+
     store = RunStore(args.root, readonly=True)
     try:
         print_json(store.show_run(args.run_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
+    return 0
+
+
+def _show_run_diff(args: argparse.Namespace) -> int:
+    """Show git diff of changes made in a run."""
+    import json
+    import subprocess
+    from pathlib import Path
+
+    root = Path(args.root).resolve()
+    undo_path = root / '.teaagent' / 'undo' / f'{args.run_id}.jsonl'
+
+    if not undo_path.exists():
+        print_json({'status': 'error', 'message': f'No undo journal found for run {args.run_id}'})
+        return 1
+
+    # Read undo journal to get changed files
+    changed_files: list[str] = []
+    for line in undo_path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        p = obj.get('path')
+        if isinstance(p, str) and p:
+            changed_files.append(p)
+
+    if not changed_files:
+        print('No files changed in this run.')
+        return 0
+
+    print(f'Changes from run {args.run_id}:')
+    print()
+
+    # Show diff for each file
+    for file_path in changed_files:
+        full_path = root / file_path
+        if not full_path.exists():
+            print(f'{file_path} (deleted)')
+            continue
+
+        try:
+            result = subprocess.run(
+                ['git', 'diff', '--', str(full_path)],
+                cwd=root,
+                capture_output=True,
+                text=True,
+            )
+            if result.stdout.strip():
+                print(f'--- {file_path}')
+                print(result.stdout)
+            else:
+                print(f'{file_path} (new file)')
+        except subprocess.SubprocessError:
+            print(f'{file_path} (unable to show diff)')
+
+    return 0
+
+
+def agent_runs_commit_command(args: argparse.Namespace) -> int:
+    """Commit changes from a run with metadata."""
+    import json
+    import subprocess
+    from pathlib import Path
+
+    root = Path(args.root).resolve()
+
+    # Get run_id from args or use last run
+    run_id = getattr(args, 'run_id', None)
+    if not run_id:
+        # Get last run from RunStore
+        from teaagent.run_store import RunStore
+        store = RunStore(root, readonly=True)
+        runs = store.list_runs(limit=1)
+        if not runs:
+            print_json({'status': 'error', 'message': 'No runs found to commit'})
+            return 1
+        run_id = runs[0].run_id
+
+    undo_path = root / '.teaagent' / 'undo' / f'{run_id}.jsonl'
+    if not undo_path.exists():
+        print_json({'status': 'error', 'message': f'No undo journal found for run {run_id}'})
+        return 1
+
+    # Check if git repo
+    try:
+        subprocess.run(
+            ['git', 'rev-parse', '--git-dir'],
+            cwd=root,
+            capture_output=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        print_json({'status': 'error', 'message': 'Not a git repository'})
+        return 1
+
+    # Stage all changes
+    try:
+        subprocess.run(['git', 'add', '-A'], cwd=root, check=True)
+    except subprocess.CalledProcessError as e:
+        print_json({'status': 'error', 'message': f'Failed to stage changes: {e}'})
+        return 1
+
+    # Generate commit message
+    custom_message = getattr(args, 'message', None)
+    if custom_message:
+        commit_message = custom_message
+    else:
+        # Auto-generate commit message with run metadata
+        from teaagent.run_store import RunStore
+        store = RunStore(root, readonly=True)
+        try:
+            events = store.show_run(run_id)
+            # Extract task from first event
+            task = 'TeaAgent run'
+            for event in events:
+                if event.get('event_type') == 'run_started':
+                    task = event.get('payload', {}).get('task', 'TeaAgent run')
+                    break
+            commit_message = f'teaagent: {task}\n\nRun ID: {run_id}'
+        except FileNotFoundError:
+            commit_message = f'teaagent: changes from run {run_id}'
+
+    # Commit
+    try:
+        subprocess.run(
+            ['git', 'commit', '-m', commit_message],
+            cwd=root,
+            check=True,
+        )
+        print_json({
+            'status': 'committed',
+            'run_id': run_id,
+            'message': commit_message,
+        })
+    except subprocess.CalledProcessError as e:
+        # Check if nothing to commit
+        result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+        if not result.stdout.strip():
+            print_json({
+                'status': 'nothing_to_commit',
+                'run_id': run_id,
+                'message': 'No changes to commit (idempotent)',
+            })
+            return 0
+        print_json({'status': 'error', 'message': f'Failed to commit: {e}'})
+        return 1
+
     return 0
 
 

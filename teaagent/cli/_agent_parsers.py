@@ -1050,6 +1050,11 @@ def _runs(
 
     show_p = run_subs.add_parser('show', help='Show run JSONL events.')
     show_p.add_argument('run_id')
+    show_p.add_argument(
+        '--diff',
+        action='store_true',
+        help='Show git diff of changes made in this run.',
+    )
     show_p.set_defaults(func=handlers['show'])
 
     trace_p = run_subs.add_parser('trace', help='Show run audit timeline.')
@@ -1070,6 +1075,15 @@ def _runs(
     )
     replay_p.add_argument('run_id')
     replay_p.set_defaults(func=handlers['replay'])
+
+    commit_p = run_subs.add_parser('commit', help='Commit changes from a run with metadata.')
+    commit_p.add_argument('run_id', nargs='?', help='Run id to commit (defaults to last run).')
+    commit_p.add_argument(
+        '--message',
+        '-m',
+        help='Custom commit message (overrides auto-generated message).',
+    )
+    commit_p.set_defaults(func=handlers['commit'])
 
     defaults: dict[str, object] = {'func': handlers['list'], 'runs_command': 'list'}
     if top_level:

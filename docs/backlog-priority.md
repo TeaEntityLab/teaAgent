@@ -99,12 +99,11 @@ Items below were deferred at baseline and have since been implemented in-repo.
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
 
 ### CP-3 — Aider-Style Commit-Per-Change Visibility [P1]
-**Status:** 📋 Ready to start
+**Status:** ✅ Complete
 **Journey:** Surface git commit-per-change workflow prominently (stage in branch, review diff, commit/discard, structured commit messages with run metadata)
 **Acceptance criteria:** `teaagent show --diff` works without git knowledge, commit message includes run metadata, `teaagent commit` is idempotent
 **Size:** Medium (1 week)
 **Reference:** `docs/plans/competitive-positioning-plan-2026-05-31.md`
-**Note:** Not yet implemented - no `teaagent commit` or `teaagent show --diff` commands exist
 
 ### UX1.1 — Post-Run Summary [P1]
 **Status:** ✅ Complete
