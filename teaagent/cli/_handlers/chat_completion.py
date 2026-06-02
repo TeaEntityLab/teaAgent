@@ -64,8 +64,10 @@ def complete_file_path(text: str, root: Path) -> list[str]:
                     completion += '/'
 
                 completions.append(completion)
-    except Exception:
-        pass
+    except (OSError, PermissionError) as exc:
+        # Log but don't crash completion - filesystem errors are expected in some scenarios
+        import logging
+        logging.getLogger(__name__).debug('File completion error: %s', exc)
 
     return sorted(completions)
 

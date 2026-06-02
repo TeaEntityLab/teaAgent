@@ -457,8 +457,10 @@ def _execute_agent_task(
                 next_step='Resume from previous session.',
             )
             _sp_state['written'] = True
-        except Exception:
-            pass
+        except (OSError, IOError) as exc:
+            # Log but don't crash - scratchpad write is best-effort
+            import logging
+            logging.getLogger(__name__).warning('Scratchpad write error: %s', exc)
 
     import atexit
 

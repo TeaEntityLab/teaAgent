@@ -187,6 +187,7 @@ class ConsensusState:
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     required_peers: Set[str] = field(default_factory=set)
+    cancelled_by: Optional[str] = None  # Peer who cancelled the consensus
 
     def add_vote(self, vote: Vote) -> None:
         """Add a vote to the consensus state."""
@@ -265,6 +266,7 @@ class ConsensusState:
             if self.completed_at
             else None,
             'required_peers': list(self.required_peers),
+            'cancelled_by': self.cancelled_by,
         }
 
     @classmethod
@@ -283,6 +285,7 @@ class ConsensusState:
             if data.get('completed_at')
             else None,
             required_peers=set(data.get('required_peers', [])),
+            cancelled_by=data.get('cancelled_by'),
         )
 
 
@@ -1137,6 +1140,7 @@ class ConsensusEngine:
 
         state.status = ConsensusStatus.CANCELLED
         state.completed_at = datetime.now(timezone.utc)
+        state.cancelled_by = cancelled_by
         self._save_state()
         return True
 
@@ -1222,7 +1226,7 @@ class ConsensusEngine:
                     tmp.flush()
                     os.fsync(tmp.fileno())
                     os.replace(tmp.name, self.storage_path)
-                except BaseException:
+                except (OSError, IOError, json.JSONDecodeError):
                     with contextlib.suppress(OSError):
                         os.unlink(tmp.name)
                     raise

@@ -349,8 +349,10 @@ def run_chat_repl(
             try:
                 file_watcher.stop()
                 watcher_running = False
-            except Exception:
-                pass
+            except (OSError, RuntimeError) as exc:
+                # Log but don't crash - watcher cleanup is best-effort
+                import logging
+                logging.getLogger(__name__).warning('File watcher stop error: %s', exc)
 
     def create_checkpoint() -> bool:
         """Create a git stash checkpoint to protect pre-session changes."""

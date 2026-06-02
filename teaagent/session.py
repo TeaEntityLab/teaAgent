@@ -131,13 +131,14 @@ class ChatSession:
         )
 
     def compress_returned_topic(
-        self, frame: FocusFrame, compaction_manager: Any
+        self, frame: FocusFrame, _compaction_manager: Any
     ) -> None:
         """Compress messages from a returned topic into a summary card.
 
         Args:
             frame: The focus frame that was returned.
-            compaction_manager: CompactionManager instance for compression.
+            _compaction_manager: CompactionManager instance (currently unused -
+                compression is done manually via summary replacement).
         """
         if frame.message_start_index >= len(self.messages):
             return
