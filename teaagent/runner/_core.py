@@ -275,16 +275,19 @@ class AgentRunner:
             logger = logging.getLogger(__name__)
             logger.debug('Failed to build run summary for %s', run_id, exc_info=True)
 
-    def run(
+    def _initialize_run_state(
         self,
-        *,
         task: str,
-        decide: DecisionFn,
-        run_id: Optional[str] = None,
-        initial_observations: Optional[list[dict[str, Any]]] = None,
-        initial_context_extra: Optional[dict[str, Any]] = None,
-        run_started_extra: Optional[dict[str, Any]] = None,
-    ) -> RunResult:
+        run_id: Optional[str],
+        initial_observations: Optional[list[dict[str, Any]]],
+        initial_context_extra: Optional[dict[str, Any]],
+        run_started_extra: Optional[dict[str, Any]],
+    ) -> tuple[str, dict[str, Any], int, float, int, int]:
+        """Initialize run state and context.
+
+        Returns:
+            Tuple of (run_id, context, tool_calls, cost_cents, input_tokens, output_tokens)
+        """
         current_run_id = run_id or uuid4().hex
         observations: list[dict[str, Any]] = (
             list(initial_observations) if initial_observations else []
@@ -298,7 +301,6 @@ class AgentRunner:
             summary = self.decision_log.inject_summary()
             if summary:
                 context['decision_summary'] = summary
-        iterations = 0
         tool_calls = len(observations)
         cost_cents = 0.0
         input_tokens = 0
@@ -310,6 +312,343 @@ class AgentRunner:
         if run_started_extra:
             started_payload.update(run_started_extra)
         self.audit.record('run_started', current_run_id, **started_payload)
+        return current_run_id, context, tool_calls, cost_cents, input_tokens, output_tokens
+
+    def _handle_final_answer(
+        self,
+        decision: FinalAnswer,
+        run_id: str,
+        iterations: int,
+        tool_calls: int,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> RunResult:
+        """Handle a FinalAnswer decision and return the run result."""
+        self.audit.record(
+            'run_completed',
+            run_id,
+            answer=decision.content,
+            metadata=decision.metadata,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        extra_meta: dict[str, Any] = {}
+        if self.auto_mode_manager.is_enabled():
+            extra_meta['auto_mode'] = self.auto_mode_manager.summary()
+        self._emit_summary(
+            run_id=run_id,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        return RunResult(
+            run_id=run_id,
+            final_answer=decision,
+            iterations=iterations,
+            tool_calls=tool_calls,
+            status='completed',
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            metadata=extra_meta if extra_meta else decision.metadata,
+        )
+
+    def _handle_harness_error(
+        self,
+        exc: AgentHarnessError,
+        run_id: str,
+        iterations: int,
+        tool_calls: int,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> RunResult:
+        """Handle an AgentHarnessError and return the run result."""
+        self.audit.record(
+            'run_failed',
+            run_id,
+            category=exc.category,
+            message=str(exc),
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        self._emit_summary(
+            run_id=run_id,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        return RunResult(
+            run_id=run_id,
+            final_answer=None,
+            iterations=iterations,
+            tool_calls=tool_calls,
+            status=f'failed:{exc.category}',
+            error_message=str(exc),
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+
+    def _handle_system_error(
+        self,
+        exc: Exception,
+        run_id: str,
+        iterations: int,
+        tool_calls: int,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> RunResult:
+        """Handle a system error and return the run result."""
+        self.audit.record(
+            'run_failed',
+            run_id,
+            category=ErrorCategory.SYSTEM,
+            message=str(exc),
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        self._emit_summary(
+            run_id=run_id,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        return RunResult(
+            run_id=run_id,
+            final_answer=None,
+            iterations=iterations,
+            tool_calls=tool_calls,
+            status=f'failed:{ErrorCategory.SYSTEM}',
+            error_message=str(exc),
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+
+    def _execute_tool_decision(
+        self,
+        decision: ToolRequest,
+        context: dict[str, Any],
+        run_id: str,
+        tool_calls: int,
+        cost_cents: float,
+    ) -> tuple[int, dict[str, Any]]:
+        """Execute a tool decision with approval flow and return updated state.
+
+        Returns:
+            Tuple of (updated_tool_calls, updated_context)
+        """
+        tool = self.registry.get(decision.tool_name)
+        annotations = {
+            'read_only': tool.annotations.read_only,
+            'destructive': tool.annotations.destructive,
+            'idempotent': tool.annotations.idempotent,
+        }
+        if self.file_policy is not None:
+            self.file_policy.assert_allowed(
+                tool_name=decision.tool_name,
+                arguments=decision.arguments,
+            )
+        self.plan_validator.validate_write_allowed(
+            tool_name=decision.tool_name,
+            context=context,
+        )
+        # Auto mode: block disallowed tools, auto-approve allowed ones
+        self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
+        auto_approve_policy = self.auto_mode_manager.get_auto_approve_policy()
+        if auto_approve_policy is not None:
+            self.approval_policy = auto_approve_policy
+        try:
+            # Get plan contract from plan validator
+            plan_contract = self.plan_validator.get_plan_contract()
+
+            # Check read-only lint errors
+            lint_error = self.plan_validator.check_read_only_lint_errors()
+            if lint_error:
+                raise ToolPermissionError(lint_error)
+
+            self.approval_policy.assert_allowed(
+                tool_name=decision.tool_name,
+                call_id=decision.call_id,
+                destructive=tool.annotations.destructive,
+                arguments=decision.arguments,
+                jit_state=self.approval_manager.jit_state,
+                plan_contract=plan_contract,
+                read_only=tool.annotations.read_only,
+                description=tool.description,
+                handler=tool.handler,
+            )
+        except ToolPermissionError as exc:
+            reason_code = getattr(exc, 'reason_code', None)
+            reason_code_str = reason_code.value if reason_code else None
+            approval_request = self.approval_manager.create_approval_request(
+                call_id=decision.call_id,
+                tool_name=decision.tool_name,
+                arguments=decision.arguments,
+                reason=str(exc),
+                annotations=annotations,
+                run_id=run_id,
+            )
+            if self.approval_manager.can_request_approval(
+                tool.annotations.destructive
+            ):
+                approved = self.approval_manager.handle_approval_request(
+                    approval_request=approval_request,
+                    audit=self.audit,
+                    run_id=run_id,
+                    checkpoint_store=self.checkpoint_store,
+                    context=context,
+                    cost_cents=cost_cents,
+                    reason_code=reason_code_str,
+                )
+                if not approved:
+                    if self.approval_manager.approval_handler is None:
+                        self._emit_summary(
+                            run_id=run_id,
+                            cost_cents=cost_cents,
+                            input_tokens=context.get('_input_tokens', 0),
+                            output_tokens=context.get('_output_tokens', 0),
+                        )
+                        raise ToolPermissionError(
+                            f'Tool call pending approval: {decision.tool_name}'
+                        )
+                    raise
+            else:
+                self.approval_manager.record_blocked(
+                    approval_request=approval_request,
+                    audit=self.audit,
+                    run_id=run_id,
+                    reason_code=reason_code_str,
+                )
+                raise
+
+        self.audit.record(
+            'tool_call_started',
+            run_id,
+            call_id=decision.call_id,
+            tool_name=decision.tool_name,
+            arguments=decision.arguments,
+            annotations=annotations,
+            reasoning=decision.reasoning if decision.reasoning else None,
+        )
+        try:
+            parent_token = bind_parent_run_id(run_id)
+            tool_ctx_token = bind_tool_call_context(
+                ToolCallContext(
+                    audit=self.audit,
+                    run_id=run_id,
+                    call_id=decision.call_id,
+                )
+            )
+            try:
+                result = self.registry.execute(decision.tool_name, decision.arguments)
+            finally:
+                reset_tool_call_context(tool_ctx_token)
+                reset_parent_run_id(parent_token)
+        except ToolExecutionError as exc:
+            tool_calls += 1
+            err_observation: dict[str, Any] = {
+                'call_id': decision.call_id,
+                'tool_name': decision.tool_name,
+                'error': str(exc),
+            }
+            context['observations'].append(err_observation)
+            self.audit.record('tool_call_failed', run_id, **err_observation)
+            if self.checkpoint_store is not None:
+                self.checkpoint_store.save(run_id, context)
+            return tool_calls, context
+
+        tool_calls += 1
+        self.auto_mode_manager.record_tool_call()
+        observation = {
+            'call_id': decision.call_id,
+            'tool_name': decision.tool_name,
+            'result': result,
+        }
+        context['observations'].append(observation)
+        self.audit.record('tool_call_completed', run_id, **observation)
+        if self.checkpoint_store is not None:
+            self.checkpoint_store.save(run_id, context)
+        if (
+            self.compactor
+            and len(context['observations']) > self.compact_after_observations
+        ):
+            pre_compact_count = len(context['observations'])
+            compacted = self.compactor.compact(context)
+            context['observations'] = compacted.context['observations']
+            context['compacted_summary'] = compacted.summary
+            context['memory_keys'] = compacted.pinned
+            omitted_count = pre_compact_count - len(context['observations'])
+            context['observations'].append(
+                {
+                    'role': 'system',
+                    'content': f'[System: Context compaction completed. {omitted_count} observations compressed to preserve token budget. Key context preserved in recent observations.]',
+                }
+            )
+            self.audit.record(
+                'context_compacted', run_id, summary=compacted.summary
+            )
+        return tool_calls, context
+
+    def _handle_budget_exceeded(
+        self,
+        run_id: str,
+        iterations: int,
+        tool_calls: int,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> RunResult:
+        """Handle budget exceeded case and return the run result."""
+        self.audit.record(
+            'run_failed',
+            run_id,
+            category=ErrorCategory.MODEL_LOGIC,
+            message='iteration budget exceeded',
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        self._emit_summary(
+            run_id=run_id,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        return RunResult(
+            run_id=run_id,
+            final_answer=None,
+            iterations=iterations,
+            tool_calls=tool_calls,
+            status=f'failed:{ErrorCategory.MODEL_LOGIC}',
+            error_message='iteration budget exceeded',
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+
+    def run(
+        self,
+        *,
+        task: str,
+        decide: DecisionFn,
+        run_id: Optional[str] = None,
+        initial_observations: Optional[list[dict[str, Any]]] = None,
+        initial_context_extra: Optional[dict[str, Any]] = None,
+        run_started_extra: Optional[dict[str, Any]] = None,
+    ) -> RunResult:
+        current_run_id, context, tool_calls, cost_cents, input_tokens, output_tokens = (
+            self._initialize_run_state(
+                task, run_id, initial_observations, initial_context_extra, run_started_extra
+            )
+        )
+        iterations = 0
 
         while iterations < self.budget.max_iterations:
             iterations += 1
@@ -333,277 +672,52 @@ class AgentRunner:
                 )
                 self._assert_cost_budget(cost_cents)
                 if isinstance(decision, FinalAnswer):
-                    self.audit.record(
-                        'run_completed',
+                    return self._handle_final_answer(
+                        decision,
                         current_run_id,
-                        answer=decision.content,
-                        metadata=decision.metadata,
-                        cost_cents=cost_cents,
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
-                    )
-                    extra_meta: dict[str, Any] = {}
-                    if self.auto_mode_manager.is_enabled():
-                        extra_meta['auto_mode'] = self.auto_mode_manager.summary()
-                    self._emit_summary(
-                        run_id=current_run_id,
-                        cost_cents=cost_cents,
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
-                    )
-                    return RunResult(
-                        run_id=current_run_id,
-                        final_answer=decision,
-                        iterations=iterations,
-                        tool_calls=tool_calls,
-                        status='completed',
-                        cost_cents=cost_cents,
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
-                        metadata=extra_meta if extra_meta else decision.metadata,
+                        iterations,
+                        tool_calls,
+                        cost_cents,
+                        input_tokens,
+                        output_tokens,
                     )
 
                 if tool_calls >= self.budget.max_tool_calls:
                     raise BudgetExceededError('tool-call budget exceeded')
 
-                tool = self.registry.get(decision.tool_name)
-                annotations = {
-                    'read_only': tool.annotations.read_only,
-                    'destructive': tool.annotations.destructive,
-                    'idempotent': tool.annotations.idempotent,
-                }
-                if self.file_policy is not None:
-                    self.file_policy.assert_allowed(
-                        tool_name=decision.tool_name,
-                        arguments=decision.arguments,
-                    )
-                self.plan_validator.validate_write_allowed(
-                    tool_name=decision.tool_name,
-                    context=context,
-                )
-                # Auto mode: block disallowed tools, auto-approve allowed ones
-                self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
-                auto_approve_policy = self.auto_mode_manager.get_auto_approve_policy()
-                if auto_approve_policy is not None:
-                    self.approval_policy = auto_approve_policy
-                try:
-                    # Get plan contract from plan validator
-                    plan_contract = self.plan_validator.get_plan_contract()
-
-                    # Check read-only lint errors
-                    lint_error = self.plan_validator.check_read_only_lint_errors()
-                    if lint_error:
-                        raise ToolPermissionError(lint_error)
-
-                    self.approval_policy.assert_allowed(
-                        tool_name=decision.tool_name,
-                        call_id=decision.call_id,
-                        destructive=tool.annotations.destructive,
-                        arguments=decision.arguments,
-                        jit_state=self.approval_manager.jit_state,
-                        plan_contract=plan_contract,
-                        read_only=tool.annotations.read_only,
-                        description=tool.description,
-                        handler=tool.handler,
-                    )
-                except ToolPermissionError as exc:
-                    reason_code = getattr(exc, 'reason_code', None)
-                    reason_code_str = reason_code.value if reason_code else None
-                    approval_request = self.approval_manager.create_approval_request(
-                        call_id=decision.call_id,
-                        tool_name=decision.tool_name,
-                        arguments=decision.arguments,
-                        reason=str(exc),
-                        annotations=annotations,
-                        run_id=current_run_id,
-                    )
-                    if self.approval_manager.can_request_approval(
-                        tool.annotations.destructive
-                    ):
-                        approved = self.approval_manager.handle_approval_request(
-                            approval_request=approval_request,
-                            audit=self.audit,
-                            run_id=current_run_id,
-                            checkpoint_store=self.checkpoint_store,
-                            context=context,
-                            cost_cents=cost_cents,
-                            reason_code=reason_code_str,
-                        )
-                        if not approved:
-                            if self.approval_manager.approval_handler is None:
-                                self._emit_summary(
-                                    run_id=current_run_id,
-                                    cost_cents=cost_cents,
-                                    input_tokens=input_tokens,
-                                    output_tokens=output_tokens,
-                                )
-                                return RunResult(
-                                    run_id=current_run_id,
-                                    final_answer=None,
-                                    iterations=iterations,
-                                    tool_calls=tool_calls,
-                                    status='pending_approval',
-                                    metadata={'approval': approval_request.to_dict()},
-                                    cost_cents=cost_cents,
-                                    input_tokens=input_tokens,
-                                    output_tokens=output_tokens,
-                                )
-                            raise
-                    else:
-                        self.approval_manager.record_blocked(
-                            approval_request=approval_request,
-                            audit=self.audit,
-                            run_id=current_run_id,
-                            reason_code=reason_code_str,
-                        )
-                        raise
-                self.audit.record(
-                    'tool_call_started',
+                tool_calls, context = self._execute_tool_decision(
+                    decision,
+                    context,
                     current_run_id,
-                    call_id=decision.call_id,
-                    tool_name=decision.tool_name,
-                    arguments=decision.arguments,
-                    annotations=annotations,
-                    reasoning=decision.reasoning if decision.reasoning else None,
+                    tool_calls,
+                    cost_cents,
                 )
-                try:
-                    parent_token = bind_parent_run_id(current_run_id)
-                    tool_ctx_token = bind_tool_call_context(
-                        ToolCallContext(
-                            audit=self.audit,
-                            run_id=current_run_id,
-                            call_id=decision.call_id,
-                        )
-                    )
-                    try:
-                        result = self.registry.execute(
-                            decision.tool_name, decision.arguments
-                        )
-                    finally:
-                        reset_tool_call_context(tool_ctx_token)
-                        reset_parent_run_id(parent_token)
-                except ToolExecutionError as exc:
-                    tool_calls += 1
-                    err_observation: dict[str, Any] = {
-                        'call_id': decision.call_id,
-                        'tool_name': decision.tool_name,
-                        'error': str(exc),
-                    }
-                    context['observations'].append(err_observation)
-                    self.audit.record(
-                        'tool_call_failed', current_run_id, **err_observation
-                    )
-                    if self.checkpoint_store is not None:
-                        self.checkpoint_store.save(current_run_id, context)
-                    continue
-                tool_calls += 1
-                self.auto_mode_manager.record_tool_call()
-                observation = {
-                    'call_id': decision.call_id,
-                    'tool_name': decision.tool_name,
-                    'result': result,
-                }
-                context['observations'].append(observation)
-                self.audit.record('tool_call_completed', current_run_id, **observation)
-                if self.checkpoint_store is not None:
-                    self.checkpoint_store.save(current_run_id, context)
-                if (
-                    self.compactor
-                    and len(context['observations']) > self.compact_after_observations
-                ):
-                    pre_compact_count = len(context['observations'])
-                    compacted = self.compactor.compact(context)
-                    context['observations'] = compacted.context['observations']
-                    context['compacted_summary'] = compacted.summary
-                    context['memory_keys'] = compacted.pinned
-                    omitted_count = pre_compact_count - len(context['observations'])
-                    context['observations'].append(
-                        {
-                            'role': 'system',
-                            'content': f'[System: Context compaction completed. {omitted_count} observations compressed to preserve token budget. Key context preserved in recent observations.]',
-                        }
-                    )
-                    self.audit.record(
-                        'context_compacted', current_run_id, summary=compacted.summary
-                    )
             except AgentHarnessError as exc:
-                self.audit.record(
-                    'run_failed',
+                return self._handle_harness_error(
+                    exc,
                     current_run_id,
-                    category=exc.category,
-                    message=str(exc),
-                    cost_cents=cost_cents,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                )
-                self._emit_summary(
-                    run_id=current_run_id,
-                    cost_cents=cost_cents,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                )
-                return RunResult(
-                    run_id=current_run_id,
-                    final_answer=None,
-                    iterations=iterations,
-                    tool_calls=tool_calls,
-                    status=f'failed:{exc.category}',
-                    error_message=str(exc),
-                    cost_cents=cost_cents,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
+                    iterations,
+                    tool_calls,
+                    cost_cents,
+                    input_tokens,
+                    output_tokens,
                 )
             except Exception as exc:  # pragma: no cover - defensive boundary
-                self.audit.record(
-                    'run_failed',
+                return self._handle_system_error(
+                    exc,
                     current_run_id,
-                    category=ErrorCategory.SYSTEM,
-                    message=str(exc),
-                    cost_cents=cost_cents,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                )
-                self._emit_summary(
-                    run_id=current_run_id,
-                    cost_cents=cost_cents,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                )
-                return RunResult(
-                    run_id=current_run_id,
-                    final_answer=None,
-                    iterations=iterations,
-                    tool_calls=tool_calls,
-                    status=f'failed:{ErrorCategory.SYSTEM}',
-                    error_message=str(exc),
-                    cost_cents=cost_cents,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
+                    iterations,
+                    tool_calls,
+                    cost_cents,
+                    input_tokens,
+                    output_tokens,
                 )
 
-        self.audit.record(
-            'run_failed',
+        return self._handle_budget_exceeded(
             current_run_id,
-            category=ErrorCategory.MODEL_LOGIC,
-            message='iteration budget exceeded',
-            cost_cents=cost_cents,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-        )
-        self._emit_summary(
-            run_id=current_run_id,
-            cost_cents=cost_cents,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-        )
-        return RunResult(
-            run_id=current_run_id,
-            final_answer=None,
-            iterations=iterations,
-            tool_calls=tool_calls,
-            status=f'failed:{ErrorCategory.MODEL_LOGIC}',
-            error_message='iteration budget exceeded',
-            cost_cents=cost_cents,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            iterations,
+            tool_calls,
+            cost_cents,
+            input_tokens,
+            output_tokens,
         )
