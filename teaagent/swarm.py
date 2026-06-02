@@ -273,7 +273,7 @@ class Subagent:
                 approval_lineage=self._approval_lineage,
                 test_results=output.get('test_results', {}),
             )
-        except Exception as exc:
+        except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
             execution_time = (time.perf_counter() - start_time) * 1000
             self.is_running = False
             return SubagentResult(
@@ -698,7 +698,7 @@ class SwarmManager:
                     subagent = future_to_subagent[future]
                     try:
                         results.append(future.result())
-                    except Exception as exc:
+                    except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
                         results.append(
                             SubagentResult(
                                 task_id=subagent._task.task_id,
@@ -713,7 +713,7 @@ class SwarmManager:
                     if future.done():
                         try:
                             results.append(future.result())
-                        except Exception as exc:
+                        except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
                             results.append(
                                 SubagentResult(
                                     task_id=subagent._task.task_id,
@@ -807,7 +807,7 @@ class SwarmManager:
                             'reason': 'Consensus not reached',
                         }
                         all_approved = False
-                except Exception as exc:
+                except (RuntimeError, ValueError, ConnectionError) as exc:
                     task_results[subagent._task.task_id] = {
                         'approved': False,
                         'reason': str(exc),

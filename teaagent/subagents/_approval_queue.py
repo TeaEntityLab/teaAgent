@@ -376,7 +376,7 @@ class CentralizedApprovalQueue:
         return approved
 
     def deny_all_pending_sync(
-        self, reason: str = 'Denied by human', denied_by: str = 'human'
+        self, reason: str = 'Denied by human', _denied_by: str = 'human'
     ) -> int:
         """Deny every pending sync request. Returns count denied."""
         denied = 0

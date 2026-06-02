@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
 from typing import Any, Optional
 
 from teaagent.http_utils import safe_urlopen

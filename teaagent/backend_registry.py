@@ -28,14 +28,14 @@ class BackendRegistry:
             if hasattr(backend, 'initialize'):
                 try:
                     backend.initialize()
-                except Exception:
-                    logger.exception('Failed to initialize knowledge backend')
+                except (OSError, RuntimeError, ConnectionError) as exc:
+                    logger.exception('Failed to initialize knowledge backend: %s', exc)
         for backend in list(self._code_parse_backends.values()):
             if hasattr(backend, 'initialize'):
                 try:
                     backend.initialize()
-                except Exception:
-                    logger.exception('Failed to initialize code parse backend')
+                except (OSError, RuntimeError, ConnectionError) as exc:
+                    logger.exception('Failed to initialize code parse backend: %s', exc)
         self._initialized = True
 
     def shutdown(self) -> None:
@@ -43,14 +43,14 @@ class BackendRegistry:
             if hasattr(backend, 'shutdown'):
                 try:
                     backend.shutdown()
-                except Exception:
-                    logger.exception('Failed to shutdown knowledge backend')
+                except (OSError, RuntimeError, ConnectionError) as exc:
+                    logger.exception('Failed to shutdown knowledge backend: %s', exc)
         for backend in list(self._code_parse_backends.values()):
             if hasattr(backend, 'shutdown'):
                 try:
                     backend.shutdown()
-                except Exception:
-                    logger.exception('Failed to shutdown code parse backend')
+                except (OSError, RuntimeError, ConnectionError) as exc:
+                    logger.exception('Failed to shutdown code parse backend: %s', exc)
         self._initialized = False
 
     def check_health(self) -> dict[str, dict[str, Any]]:

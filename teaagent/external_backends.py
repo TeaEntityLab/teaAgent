@@ -235,7 +235,7 @@ class BackendAdapterRegistry:
                 try:
                     healthy, msg = backend.check_health()  # type: ignore[union-attr]
                     results[f'knowledge/{name}'] = {'healthy': healthy, 'message': msg}
-                except Exception as exc:
+                except (ConnectionError, TimeoutError, OSError) as exc:
                     results[f'knowledge/{name}'] = {
                         'healthy': False,
                         'message': str(exc),
@@ -245,7 +245,7 @@ class BackendAdapterRegistry:
                 try:
                     healthy, msg = backend.check_health()  # type: ignore[union-attr]
                     results[f'codeparse/{name}'] = {'healthy': healthy, 'message': msg}
-                except Exception as exc:
+                except (ConnectionError, TimeoutError, OSError) as exc:
                     results[f'codeparse/{name}'] = {
                         'healthy': False,
                         'message': str(exc),
@@ -276,7 +276,7 @@ class FallbackKnowledgeBackend:
         for name in (self.primary, self.fallback):
             try:
                 healthy.append(get_knowledge_backend(name).health(root=root))
-            except Exception as exc:
+            except (ConnectionError, TimeoutError, OSError, ImportError) as exc:
                 healthy.append({'backend': name, 'ok': False, 'error': str(exc)})
         return {'backends': healthy}
 

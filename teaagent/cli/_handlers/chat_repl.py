@@ -592,7 +592,9 @@ def run_chat_repl(
                 prompt = (
                     f'teaagent📌{pinned_count}> ' if pinned_count > 0 else 'teaagent> '
                 )
-            except Exception:
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).debug('Pinned file count error: %s', exc)
                 prompt = 'teaagent> '
 
             # Read user input

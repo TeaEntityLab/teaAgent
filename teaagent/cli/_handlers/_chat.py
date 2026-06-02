@@ -232,8 +232,10 @@ def get_failure_warnings(task: str, root: Path) -> str:
             warnings.append(warning)
 
         return '\n\n' + '\n'.join(warnings) + '\n'
-    except Exception:
+    except Exception as exc:
         # Don't let failure warnings break the chat system
+        import logging
+        logging.getLogger(__name__).debug('Failure warning generation error: %s', exc)
         return ''
 
 
@@ -343,7 +345,9 @@ def complete_file_path(text: str, root: Path) -> list[str]:
             return []
         if not search_dir.is_relative_to(root.resolve()):
             return []
-    except Exception:
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).debug('File path resolution error: %s', exc)
         return []
 
     # Get matching files and directories
@@ -410,8 +414,10 @@ def complete_symbol(text: str, root: Path) -> list[str]:
                 completions.append(completion)
 
         return sorted(set(completions))
-    except Exception:
+    except Exception as exc:
         # Fallback: simple file-based symbol search
+        import logging
+        logging.getLogger(__name__).debug('Symbol completion error: %s', exc)
         return []
 
 
@@ -1052,7 +1058,9 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 prompt = (
                     f'teaagent📌{pinned_count}> ' if pinned_count > 0 else 'teaagent> '
                 )
-            except Exception:
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).debug('Pinned file count error: %s', exc)
                 prompt = 'teaagent> '
 
             # Read user input

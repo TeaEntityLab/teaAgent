@@ -6,7 +6,6 @@ import sqlite3
 import threading
 import time as _time
 import urllib.error
-import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
