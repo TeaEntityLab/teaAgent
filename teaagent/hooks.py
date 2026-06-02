@@ -222,7 +222,7 @@ def post_lint_check_hook(
     """Run linter after file-modifying tools. Raises ``HookError`` on failure."""
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], result: dict[str, Any]
+        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
     ) -> dict[str, Any] | None:
         if tool_name not in tools:
             return None
@@ -260,7 +260,7 @@ def run_tests_hook(
     cmd = command or ['uv', 'run', 'pytest', 'tests/', '-x', '-q']
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], result: dict[str, Any]
+        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
     ) -> dict[str, Any] | None:
         if tool_name not in tools:
             return None
@@ -299,7 +299,7 @@ def format_check_hook(
     cmd = ['ruff', 'format', str(root)]
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], result: dict[str, Any]
+        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
     ) -> dict[str, Any] | None:
         if tool_name not in tools:
             return None
@@ -331,7 +331,7 @@ def shell_command_hook(
     target_tools = tools or on_tools
 
     def _hook(
-        tool_name: str, arguments: dict[str, Any], result: dict[str, Any]
+        tool_name: str, arguments: dict[str, Any], _result: dict[str, Any]
     ) -> dict[str, Any] | None:
         if target_tools and tool_name not in target_tools:
             return None
@@ -393,7 +393,7 @@ def permission_check_hook(
 ) -> PreToolUseHookFn:
     """Permission check hook that enforces Allow/Ask/Deny patterns."""
 
-    def _hook(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
+    def _hook(tool_name: str, _arguments: dict[str, Any]) -> dict[str, Any] | None:
         if mode == HookPermissionMode.ALLOW:
             return None
         if mode == HookPermissionMode.DENY:
@@ -464,7 +464,7 @@ def mcp_tool_filter_hook(
 ) -> PreToolUseHookFn:
     """Filter MCP tool calls based on allow/block lists."""
 
-    def _hook(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
+    def _hook(tool_name: str, _arguments: dict[str, Any]) -> dict[str, Any] | None:
         if blocked_tools and tool_name in blocked_tools:
             raise HookError(f"MCP tool '{tool_name}' is blocked")
 

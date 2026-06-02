@@ -138,7 +138,7 @@ class TeaAgentCompleter(Completer):
         self._root = root
 
     def get_completions(
-        self, document: Document, complete_event: CompleteEvent
+        self, document: Document, _complete_event: CompleteEvent
     ) -> list[Completion]:
         text = document.text_before_cursor
         if not text.startswith('@'):
