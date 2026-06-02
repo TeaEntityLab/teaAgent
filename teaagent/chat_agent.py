@@ -416,18 +416,20 @@ def run_chat_agent(*args: Any, **kwargs: Any) -> RunResult:
     )
 
 
-def _run_chat_agent_impl(
-    *,
-    task: str,
-    adapter: LLMAdapter,
+def _setup_tool_registry(
     config: ChatAgentConfig,
-    audit: Optional[AuditLogger] = None,
-    registry: Optional[ToolRegistry] = None,
-    task_spec: Optional[str] = None,
-    depth: int = 0,
-    initial_observations: Optional[list[dict[str, Any]]] = None,
-    initial_context_extra: Optional[dict[str, Any]] = None,
-) -> RunResult:
+    adapter: LLMAdapter,
+    registry: Optional[ToolRegistry],
+    task: str,
+    task_spec: Optional[str],
+    depth: int,
+    initial_context_extra: Optional[dict[str, Any]],
+) -> tuple[ToolRegistry, dict[str, Any]]:
+    """Setup and configure the tool registry.
+
+    Returns:
+        Tuple of (tool_registry, context_extra)
+    """
     tool_registry = registry or build_workspace_tool_registry(config.root)
     if config.hook_registry is not None and tool_registry.hook_registry is None:
         tool_registry.hook_registry = config.hook_registry
@@ -463,12 +465,20 @@ def _run_chat_agent_impl(
         from teaagent.mcp_trust import apply_mcp_trust_hooks
 
         apply_mcp_trust_hooks(tool_registry, config.root)
-    run_id = uuid4().hex
-    project_instructions = load_project_instructions(config.root)
-    memories = memory_entries_to_prompt(
-        MemoryCatalog(config.root).search(task, limit=config.memory_limit)
-    )
-    audit_logger = audit or AuditLogger()
+    return tool_registry, context_extra
+
+
+def _load_skills_and_memory(
+    config: ChatAgentConfig,
+    task: str,
+    run_id: str,
+    audit_logger: AuditLogger,
+) -> tuple[list[SkillIndexEntry], list[dict]]:
+    """Load skills and memory for the chat agent.
+
+    Returns:
+        Tuple of (skill_index_entries, memories)
+    """
     if config.skill_source_profile == 'custom' and not config.skill_search_dirs:
         raise ValueError('skill_source_profile=custom requires skill_search_dirs')
     skill_index_entries: list[SkillIndexEntry] = []
@@ -520,6 +530,29 @@ def _run_chat_agent_impl(
             for warning in skill_report.warnings
         ],
     )
+    memories = memory_entries_to_prompt(
+        MemoryCatalog(config.root).search(task, limit=config.memory_limit)
+    )
+    return skill_index_entries, memories
+
+
+def _create_runner_and_engine(
+    config: ChatAgentConfig,
+    adapter: LLMAdapter,
+    tool_registry: ToolRegistry,
+    project_instructions: str,
+    task_spec: Optional[str],
+    active_skills: list,
+    skill_index_entries: list[SkillIndexEntry],
+    context_extra: dict[str, Any],
+    run_id: str,
+    audit_logger: AuditLogger,
+) -> tuple[AgentRunner, ModelDecisionEngine]:
+    """Create the AgentRunner and ModelDecisionEngine.
+
+    Returns:
+        Tuple of (runner, engine)
+    """
     cost_cap = (
         config.max_estimated_cost_cents
         if config.max_estimated_cost_cents >= 0
@@ -572,12 +605,37 @@ def _run_chat_agent_impl(
         require_plan=config.require_plan,
         skip_plan_check=config.skip_plan_check,
     )
+    return runner, engine
+
+
+def _setup_heartbeat(
+    config: ChatAgentConfig,
+    audit_logger: AuditLogger,
+    run_id: str,
+) -> Optional[Heartbeat]:
+    """Setup heartbeat monitoring if configured.
+
+    Returns:
+        Heartbeat instance or None
+    """
     heartbeat: Optional[Heartbeat] = None
     if config.heartbeat_seconds > 0:
         heartbeat = Heartbeat(
             audit_logger, run_id, interval_seconds=config.heartbeat_seconds
         )
         heartbeat.start()
+    return heartbeat
+
+
+def _apply_plan_contract(
+    runner: AgentRunner,
+    context_extra: dict[str, Any],
+) -> Optional[dict[str, Any]]:
+    """Apply plan contract to runner if present in context.
+
+    Returns:
+        run_started_extra dict or None
+    """
     run_started_extra: Optional[dict[str, Any]] = None
     plan_contract = context_extra.get('plan_contract')
     if isinstance(plan_contract, dict):
@@ -585,24 +643,61 @@ def _run_chat_agent_impl(
             'plan_path': plan_contract.get('rel_path'),
             'plan_content_hash': plan_contract.get('content_hash'),
         }
+    if plan_contract and isinstance(plan_contract, dict):
+        from teaagent.plan import PlanContract
+
+        # Reconstruct PlanContract from dict for runner use
+        object.__setattr__(
+            runner,
+            '_plan_contract',
+            PlanContract(
+                path=Path(plan_contract.get('path', '')),
+                rel_path=plan_contract.get('rel_path', ''),
+                content_hash=plan_contract.get('content_hash', ''),
+                task=plan_contract.get('task', ''),
+                file_targets=frozenset(plan_contract.get('file_targets', [])),
+            ),
+        )
+    return run_started_extra
+
+
+def _run_chat_agent_impl(
+    *,
+    task: str,
+    adapter: LLMAdapter,
+    config: ChatAgentConfig,
+    audit: Optional[AuditLogger] = None,
+    registry: Optional[ToolRegistry] = None,
+    task_spec: Optional[str] = None,
+    depth: int = 0,
+    initial_observations: Optional[list[dict[str, Any]]] = None,
+    initial_context_extra: Optional[dict[str, Any]] = None,
+) -> RunResult:
+    run_id = uuid4().hex
+    project_instructions = load_project_instructions(config.root)
+    audit_logger = audit or AuditLogger()
+
+    tool_registry, context_extra = _setup_tool_registry(
+        config, adapter, registry, task, task_spec, depth, initial_context_extra
+    )
+    skill_index_entries, memories = _load_skills_and_memory(
+        config, task, run_id, audit_logger
+    )
+    runner, engine = _create_runner_and_engine(
+        config,
+        adapter,
+        tool_registry,
+        project_instructions,
+        task_spec,
+        skill_index_entries,
+        context_extra,
+        run_id,
+        audit_logger,
+    )
+    heartbeat = _setup_heartbeat(config, audit_logger, run_id)
+    run_started_extra = _apply_plan_contract(runner, context_extra)
+
     try:
-        # Pass plan_contract to runner for policy validation
-        if plan_contract and isinstance(plan_contract, dict):
-            from teaagent.plan import PlanContract
-
-            # Reconstruct PlanContract from dict for runner use
-            object.__setattr__(
-                runner,
-                '_plan_contract',
-                PlanContract(
-                    path=Path(plan_contract.get('path', '')),
-                    rel_path=plan_contract.get('rel_path', ''),
-                    content_hash=plan_contract.get('content_hash', ''),
-                    task=plan_contract.get('task', ''),
-                    file_targets=frozenset(plan_contract.get('file_targets', [])),
-                ),
-            )
-
         result = runner.run(
             task=task,
             decide=lambda context: engine.decide(with_memories(context, memories)),
