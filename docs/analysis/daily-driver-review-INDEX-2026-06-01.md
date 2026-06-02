@@ -4,6 +4,20 @@
 A single entry point to the 2026-06-01 review of teaagent's daily surfaces
 (TUI, `teaagent chat`, agent mode). Read in this order.
 
+## Document governance
+
+This package is historical evidence plus active indexes. When dated review files
+disagree, use the active status ledgers and the governance rules below:
+
+1. **`../governance/document-state-model.md`** *(governance)*
+   Canonical states for findings, risks, tickets, roadmap rows, and archived docs.
+2. **`../governance/risk-issue-roadmap-workflow.md`** *(governance)*
+   Pipeline from finding/risk capture to ticket, roadmap, evidence, and supersession.
+3. **`../governance/doc-taxonomy-and-ownership.md`** *(governance)*
+   Document type ownership and source-of-truth rules.
+4. **`markdown-status-review-2026-06-02.md`** *(analysis)*
+   `cx`/repo review of the Markdown corpus and recommended consolidation policy.
+
 ## 2026-06-02 expansion after further code improvements
 
 These files are the newest layer. They preserve the June 1 evidence but reclassify
