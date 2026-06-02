@@ -8,7 +8,7 @@ except PackageNotFoundError:
     __version__ = '0+local'
 
 from teaagent.a2a_trace import TraceparentError, generate_traceparent, parse_traceparent
-from teaagent.agentcard import CircuitBreakerConfig
+from teaagent.agentcard import AgentCard, CircuitBreakerConfig
 from teaagent.aibom import AIBOMComponent, AIBOMManifest, build_aibom
 from teaagent.anp_adapter import (
     ANPAdapterError,

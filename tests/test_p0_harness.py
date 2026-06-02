@@ -141,6 +141,15 @@ class P0HarnessTests(unittest.TestCase):
 
         from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
+        def decide(context):
+            if not context['observations']:
+                return ToolRequest(
+                    tool_name='pilot_echo',
+                    arguments={'value': 'approved'},
+                    call_id='call-1',
+                )
+            return FinalAnswer(content='done')
+
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
             store.add_scoped_approval(
@@ -158,15 +167,6 @@ class P0HarnessTests(unittest.TestCase):
                     approval_origin_run_id='run-3',
                 ),
             )
-
-        def decide(context):
-            if not context['observations']:
-                return ToolRequest(
-                    tool_name='pilot_echo',
-                    arguments={'value': 'approved'},
-                    call_id='call-1',
-                )
-            return FinalAnswer(content='done')
 
             result = runner.run(task='approved action', decide=decide, run_id='run-3')
 

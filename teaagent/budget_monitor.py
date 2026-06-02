@@ -100,9 +100,6 @@ class BudgetMonitor:
                 highest_action = action
 
         return highest_action
-                max_cost=max_cost,
-                run_id=run_id,
-            )
 
         return BudgetAction.NONE
 

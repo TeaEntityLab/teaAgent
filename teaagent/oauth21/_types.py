@@ -7,9 +7,6 @@ try:
     from cryptography.exceptions import InvalidSignature  # noqa: F401
     from cryptography.hazmat.primitives import hashes as _crypto_hashes  # noqa: F401
     from cryptography.hazmat.primitives.asymmetric import ec as _crypto_ec  # noqa: F401
-    from cryptography.hazmat.primitives.asymmetric.utils import (
-        encode_dss_signature,  # noqa: F401
-    )
 
     HAS_CRYPTOGRAPHY = True
 except ImportError:

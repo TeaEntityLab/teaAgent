@@ -279,7 +279,6 @@ def run_chat_repl(
             file_path: Path to the changed file
             event_type: Type of event ('modified' or 'deleted')
         """
-        nonlocal targeted_files
 
         try:
             storage = PinnedFileStorage(config.root)
@@ -343,7 +342,7 @@ def run_chat_repl(
 
     def stop_file_watcher() -> None:
         """Stop the file watcher."""
-        nonlocal file_watcher, watcher_running
+        nonlocal watcher_running
 
         if file_watcher and watcher_running:
             try:
@@ -394,8 +393,7 @@ def run_chat_repl(
 
     def restore_checkpoint() -> bool:
         """Restore the git checkpoint to undo changes."""
-        nonlocal checkpoint_created, checkpoint_ref
-        nonlocal checkpoint_created, checkpoint_ref
+        nonlocal checkpoint_created
 
         try:
             if not checkpoint_created:
