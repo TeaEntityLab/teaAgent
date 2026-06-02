@@ -1,15 +1,7 @@
 # governance — Public API Reference
 
 ## `PermissionMode` (Enum)
-**Location**: `policy.py`
-
-```python
-class PermissionMode(str, Enum):
-    READ_ONLY = 'read-only'
-    WORKSPACE_WRITE = 'workspace-write'
-    PROMPT = 'prompt'
-    ALLOW = 'allow'
-    DANGER_FULL_ACCESS = 'danger-full-access'
+Defined in `approval_manager.py:31`. See [approval_manager/api.md](../approval_manager/api.md) for the canonical definition.
 
 | Mode | Allows writes? | Plan required? | Approval prompts? |
 |------|---------------|---------------|------------------|

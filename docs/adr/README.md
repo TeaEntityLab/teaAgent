@@ -16,12 +16,12 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0008 | P4 Strategic Posture (Storage, TLS, P2P Auth) | Accepted and Implemented | 2026-05-29 21:05:06 +0800 | - |
 | 0009 | 5-Loop Governance System | Accepted and Implemented | 2026-05-27 to 2026-05-29 | - |
 | 0010 | Resolve Circular Dependencies Between approval_manager.py and policy.py | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0011 | Refactor ApprovalManager to Follow Single Responsibility Principle | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
+| 0011 | Refactor ApprovalManager to Follow Single Responsibility Principle | Accepted and Implemented | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
 | 0012 | Reduce Tight Coupling in chat_agent.py | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0013 | Add Abstraction Layer for Backend Systems | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
+| 0013 | Add Abstraction Layer for Backend Systems | Accepted and Implemented | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
 | 0014 | Standardize Error Handling Across Modules | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
 | 0015 | Replace Hard-coded Configuration with Plugin System | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0016 | Add Dependency Injection for Tool Registration | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
+| 0016 | Add Dependency Injection for Tool Registration | Accepted and Implemented | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
 | 0017 | Standardize Backend Adapter Interfaces | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
 | 0018 | Async from Sync Pattern | Proposed | 2026-05-31 18:53:13 +0800 | 2026-06-01 16:01:28 +0800 |
 | 0019 | Phase 4 - Federated Swarm Consensus & Peer Attestations | Accepted and Implemented (Beta) | 2026-05-27 to 2026-05-29 | - |
@@ -62,7 +62,8 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **0021**: Phase 6 - Skill Writer, Docker Monitor, Control Plane - Operational tooling
 
 ### Refactoring Proposals (0010-0018)
-- **0010-0018**: Proposed refactoring decisions (status: Proposed, not yet implemented)
+- **0010, 0012, 0014, 0015, 0017, 0018**: Proposed refactoring decisions (status: Proposed, not yet implemented)
+- **0011, 0013, 0016**: Implemented refactoring decisions (see individual ADRs for details)
 
 ## ADR Status Legend
 

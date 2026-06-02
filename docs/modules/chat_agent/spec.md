@@ -1,6 +1,6 @@
 # chat_agent — Behavior Specification
 
-## Module Purpose
+## Purpose
 
 `chat_agent.py` is the primary entry point for all agent execution. It assembles and wires together the LLM engine, tool registry, skill loader, memory catalog, budget, approval policy, and audit logger, then delegates to `AgentRunner` to execute an iterative reasoning loop.
 

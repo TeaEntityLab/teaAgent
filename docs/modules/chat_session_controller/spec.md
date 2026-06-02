@@ -1,6 +1,6 @@
 # chat_session_controller — Behavior Specification
 
-## Module Purpose
+## Purpose
 
 `chat_session_controller.py` provides `ChatSessionController`, a shared facade used by both CLI and TUI surfaces to execute agent tasks with **consistent correctness guarantees** across the following known issues:
 

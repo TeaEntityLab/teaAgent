@@ -12,6 +12,8 @@ class PermissionMode(str, Enum):
     DANGER_FULL_ACCESS = 'danger-full-access'
 ```
 
+This is the canonical definition. See also [governance/api.md](../governance/api.md) for the permission mode table.
+
 ---
 
 ## `JITApprovalState` (dataclass)

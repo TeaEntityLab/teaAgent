@@ -937,6 +937,22 @@ show <run_id>
 resume <run_id>
 ```
 
+### Undo
+
+Undo write operations by rolling back the git sandbox state used by agent runs:
+
+```bash
+teaagent undo --last
+```
+
+Undo all writes produced by a specific run id:
+
+```bash
+teaagent undo --run-id <run_id>
+```
+
+`undo` uses git sandbox rollback. Use `--last` to revert the most recent write operation, or `--run-id` to revert all writes associated with that run.
+
 ## Agent Automation
 
 Create persistent scheduled automations (stored under `.teaagent/automations/*.json`):

@@ -96,6 +96,10 @@ Renders pending tool approval requests inline in the TUI. User approves/denies w
 class TUICompleter:
     def get_completions(self, text: str) -> list[str]
 ```
+
+**Pre-condition**: `text` is a non-empty string.
+**Post-condition**: Returns matching completions as a list of strings; empty list if no matches.
+
 Tab-completion for slash commands and known tool names in the TUI input field.
 
 ---

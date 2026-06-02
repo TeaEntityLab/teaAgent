@@ -1,6 +1,6 @@
 # TeaAgent Module Documentation Index
 
-Generated: 2026-06-02 | 24 modules | 92 documents
+Generated: 2026-06-02 | 28 modules | 93 documents
 
 ---
 
@@ -79,9 +79,12 @@ Generated: 2026-06-02 | 24 modules | 92 documents
 | [audit](audit/) | Core | Tamper-evident JSONL audit log with SHA-256 hash chain | [spec](audit/spec.md) · [inspection](audit/inspection.md) · [risks](audit/risks.md) · [api](audit/api.md) |
 | [governance](governance/) | Core | Plan gate, policy enforcement, tool linting | [spec](governance/spec.md) · [inspection](governance/inspection.md) · [risks](governance/risks.md) · [api](governance/api.md) |
 | [approval_manager](approval_manager/) | Core | JIT approvals, presets, multi-sig quorum | [spec](approval_manager/spec.md) · [inspection](approval_manager/inspection.md) · [risks](approval_manager/risks.md) · [api](approval_manager/api.md) |
+| [policy](policy/) | Core | Permission mode policy definitions, write gates | [spec](policy/spec.md) |
 | [context](context/) | Core | Context compaction, session state, pub/sub bus | [spec](context/spec.md) · [inspection](context/inspection.md) · [risks](context/risks.md) · [api](context/api.md) |
 | [streaming](streaming/) | Core | Audit-to-stream event mapping, progress display | [spec](streaming/spec.md) · [inspection](streaming/inspection.md) · [risks](streaming/risks.md) · [api](streaming/api.md) |
 | [budget](budget/) | Core | Cost tracking, budget enforcement | [spec](budget/spec.md) · [inspection](budget/inspection.md) · [risks](budget/risks.md) · [api](budget/api.md) |
+| [config](config/) | Core | Configuration loading, schema, env resolution | [spec](config/spec.md) |
+| [errors](errors/) | Core | Error hierarchy, ErrorCategory enum, exception types | [spec](errors/spec.md) |
 | [cli](cli/) | Interface | CLI entry point, argparse dispatch, all commands | [spec](cli/spec.md) · [inspection](cli/inspection.md) · [risks](cli/risks.md) · [api](cli/api.md) |
 | [tui](tui/) | Interface | Textual TUI for interactive chat | [spec](tui/spec.md) · [inspection](tui/inspection.md) · [risks](tui/risks.md) · [api](tui/api.md) |
 | [chat_agent](chat_agent/) | Interface | Chat agent state machine and LLM dispatch | [spec](chat_agent/spec.md) · [inspection](chat_agent/inspection.md) · [risks](chat_agent/risks.md) · [api](chat_agent/api.md) |
@@ -91,6 +94,7 @@ Generated: 2026-06-02 | 24 modules | 92 documents
 | [sandbox](sandbox/) | Execution | Git branch, OS, VFS, Docker isolation | [spec](sandbox/spec.md) · [inspection](sandbox/inspection.md) · [risks](sandbox/risks.md) · [api](sandbox/api.md) |
 | [skills](skills/) | Extension | Skill discovery, routing, sandboxed execution | [spec](skills/spec.md) · [inspection](skills/inspection.md) · [risks](skills/risks.md) · [api](skills/api.md) |
 | [mcp](mcp/) | Extension | MCP client/server, trust management | [spec](mcp/spec.md) · [inspection](mcp/inspection.md) · [risks](mcp/risks.md) · [api](mcp/api.md) |
+| [external_backends](external_backends/) | Extension | External backend adapters (GraphQL, OAuth, WASM) | [spec](external_backends/spec.md) |
 | [memory](memory/) | Storage | Memory catalog, pinned files, failure cards | [spec](memory/spec.md) · [inspection](memory/inspection.md) · [risks](memory/risks.md) · [api](memory/api.md) |
 | [context_pack](context_pack/) | Core | Context packing and semantic compression | [spec](context_pack/spec.md) · [risks](context_pack/risks.md) |
 | [pinned_file](pinned_file/) | Storage | Pinned file watching, path validation | [spec](pinned_file/spec.md) · [risks](pinned_file/risks.md) |

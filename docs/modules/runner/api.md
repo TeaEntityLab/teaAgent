@@ -121,15 +121,16 @@ class RunResult:
 
 **Status values:**
 
+Actual status strings are constructed from the `ErrorCategory` enum (`teaagent/errors.py`):
+
 | Value | Meaning |
 |-------|---------|
 | `'completed'` | `FinalAnswer` returned by decide |
 | `'pending_approval'` | Run paused, waiting for human approval |
-| `'failed:budget_exceeded'` | Cost or tool-call budget exhausted |
-| `'failed:run_cancelled'` | `cancel_token` was set or budget 90% reached |
-| `'failed:tool_permission'` | Tool was blocked and cannot be approved |
-| `'failed:model_logic'` | Iteration budget exhausted (or model logic error) |
-| `'failed:system'` | Unexpected exception (bare `Exception`) |
+| `'failed:model_logic'` | Iteration budget exhausted, model logic error, or budget exceeded |
+| `'failed:permission'` | Tool was blocked and cannot be approved |
+| `'failed:system'` | Unexpected exception or run cancelled |
+| `'failed:transient'` | Transient error (retryable) |
 
 ---
 

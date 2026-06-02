@@ -1,5 +1,7 @@
 # Proposal: Add Abstraction Layer for Backend Systems
 
+> **⚠️ OBSOLETED:** This proposal describes work that has already been implemented. See the corresponding module docs under `docs/modules/` for current state. The associated ADR status has been updated to "Implemented".
+
 ## Executive Summary
 This proposal outlines a plan to create an abstraction layer for backend systems by implementing a `BackendRegistry` class to encapsulate backend management with proper lifecycle support.
 
