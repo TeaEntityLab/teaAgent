@@ -26,6 +26,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any, Optional
 
+from teaagent.http_utils import safe_urlopen
+
 
 @dataclass(frozen=True)
 class NotifyConfig:
@@ -111,9 +113,12 @@ def _deliver_webhook(url: str, payload: dict[str, Any], *, timeout: float) -> No
             method='POST',
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout):
+            with safe_urlopen(url, timeout=timeout, data=body, headers={
+                'Content-Type': 'application/json',
+                'Content-Length': str(len(body)),
+            }):
                 pass  # Connection automatically closed
-        except (urllib.error.URLError, OSError):
+        except (urllib.error.URLError, OSError, ValueError):
             pass  # Already wrapped in contextlib.suppress
 
 
@@ -166,9 +171,12 @@ def _deliver_slack(url: str, payload: dict[str, Any], *, timeout: float) -> None
             method='POST',
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout):
+            with safe_urlopen(url, timeout=timeout, data=body, headers={
+                'Content-Type': 'application/json',
+                'Content-Length': str(len(body)),
+            }):
                 pass  # Connection automatically closed
-        except (urllib.error.URLError, OSError):
+        except (urllib.error.URLError, OSError, ValueError):
             pass  # Already wrapped in contextlib.suppress
 
 
@@ -200,7 +208,10 @@ def _deliver_discord(url: str, payload: dict[str, Any], *, timeout: float) -> No
             method='POST',
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout):
+            with safe_urlopen(url, timeout=timeout, data=body, headers={
+                'Content-Type': 'application/json',
+                'Content-Length': str(len(body)),
+            }):
                 pass  # Connection automatically closed
-        except (urllib.error.URLError, OSError):
+        except (urllib.error.URLError, OSError, ValueError):
             pass  # Already wrapped in contextlib.suppress

@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from teaagent.http_utils import safe_urlopen
+
 
 @dataclass(frozen=True)
 class RemoteSkillEntry:
@@ -44,7 +46,7 @@ class MarketplaceClient:
         if query:
             url += f'?q={urllib.parse.quote(query)}&limit={limit}'
         try:
-            with urllib.request.urlopen(url, timeout=10) as resp:
+            with safe_urlopen(url, timeout=10) as resp:
                 data = json.loads(resp.read().decode('utf-8'))
         except Exception:
             return []
@@ -71,7 +73,7 @@ class MarketplaceClient:
     def download(self, entry: RemoteSkillEntry, dest: str) -> bool:
         """Download a skill SKILL.md to *dest* path."""
         try:
-            with urllib.request.urlopen(entry.download_url, timeout=30) as resp:
+            with safe_urlopen(entry.download_url, timeout=30) as resp:
                 content = resp.read().decode('utf-8')
             Path(dest).write_text(content, encoding='utf-8')
             return True

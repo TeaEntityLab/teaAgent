@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 from teaagent.consensus import ConsensusEngine, VoteDecision
 from teaagent.http_rate_limit import TokenRateLimiter
+from teaagent.http_utils import safe_urlopen
 from teaagent.ssh_signatures import (
     build_vote_signing_message,
     is_ssh_signature_blob,
@@ -177,14 +178,13 @@ class VoteRelayClient:
         headers = {'Content-Type': 'application/json'}
         if self.api_token:
             headers['Authorization'] = f'Bearer {self.api_token}'
-        request = urllib.request.Request(
-            f'{self.relay_base_url}/api/v1/votes',
-            data=body,
-            headers=headers,
-            method='POST',
-        )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with safe_urlopen(
+                f'{self.relay_base_url}/api/v1/votes',
+                timeout=30,
+                data=body,
+                headers=headers,
+            ) as response:
                 return json.loads(response.read().decode('utf-8'))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='replace')

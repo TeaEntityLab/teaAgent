@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from teaagent.http_utils import safe_urlopen
+
 
 @dataclass(frozen=True)
 class CircuitBreakerConfig:
@@ -369,7 +371,7 @@ class A2AClient:
 
     def fetch_card(self) -> AgentCard:
         url = f'{self._endpoint}/.well-known/agent.json'
-        with urllib.request.urlopen(url, timeout=self._timeout) as resp:
+        with safe_urlopen(url, timeout=self._timeout) as resp:
             data = json.loads(resp.read().decode('utf-8'))
         return AgentCard.from_dict(data)
 
@@ -384,13 +386,12 @@ class A2AClient:
         headers: dict[str, str] = {'Content-Type': 'application/json'}
         if traceparent is not None:
             headers['traceparent'] = traceparent
-        req = urllib.request.Request(
+        with safe_urlopen(
             f'{self._endpoint}/a2a/task',
+            timeout=self._timeout,
             data=payload,
             headers=headers,
-            method='POST',
-        )
-        with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+        ) as resp:
             result_data = json.loads(resp.read().decode('utf-8'))
         agent_name = result_data.get('agent_name') or ''
         return A2ATaskResult(
@@ -440,7 +441,7 @@ class FederatedAgentRegistry:
                 continue  # circuit open — skip this endpoint
             url = base_url.rstrip('/') + '/.well-known/agent.json'
             try:
-                with urllib.request.urlopen(url, timeout=self._timeout) as resp:
+                with safe_urlopen(url, timeout=self._timeout) as resp:
                     data = json.loads(resp.read().decode('utf-8'))
                 cards.append(AgentCard.from_dict(data))
                 circuit.record_success()

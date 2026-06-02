@@ -10,6 +10,7 @@ import json
 import os
 from typing import Any, Optional
 
+from teaagent.http_utils import safe_urlopen
 from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.workspace_tools._helpers import object_schema
 
@@ -34,15 +35,11 @@ def _github_headers() -> dict[str, str]:
 def _gh_api(
     method: str, path: str, body: Optional[dict[str, Any]] = None
 ) -> dict[str, Any]:
-    import urllib.error
-    import urllib.request
-
     url = f'https://api.github.com{path}'
     headers = _github_headers()
     data = json.dumps(body).encode('utf-8') if body else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req) as resp:
+        with safe_urlopen(url, data=data, headers=headers) as resp:
             return json.loads(resp.read().decode('utf-8'))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode('utf-8', errors='replace')

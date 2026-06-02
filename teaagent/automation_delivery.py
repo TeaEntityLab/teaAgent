@@ -12,6 +12,7 @@ from typing import Any, Optional
 
 from teaagent.automations import AutomationSpec
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+from teaagent.http_utils import safe_urlopen
 
 _AUTOMATION_WEBHOOK_ENV = 'TEAAGENT_AUTOMATION_WEBHOOK_URL'
 _AUTOMATION_WEBHOOK_SECRET_ENV = 'TEAAGENT_AUTOMATION_WEBHOOK_SECRET'
@@ -90,13 +91,7 @@ def deliver_automation_tick(
         secret = resolve_automation_webhook_secret(root)
         if secret:
             headers['X-TeaAgent-Signature-256'] = sign_webhook_body(secret, body)
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers=headers,
-            method='POST',
-        )
-        with urllib.request.urlopen(req, timeout=5):
+        with safe_urlopen(url, timeout=5, data=body, headers=headers):
             pass  # Connection automatically closed
     except (urllib.error.URLError, OSError, ValueError):
         if raise_on_error:

@@ -15,6 +15,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from teaagent.http_rate_limit import TokenRateLimiter
+from teaagent.http_utils import safe_urlopen
 from teaagent.surface_auth import (
     SurfaceAuthPolicy,
     authorize_request,
@@ -168,14 +169,8 @@ class SignatureRelayClient:
         import urllib.request
 
         data = None if body is None else json.dumps(body).encode('utf-8')
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers=self._headers(),
-            method=method,
-        )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as response:
+            with safe_urlopen(url, timeout=timeout, data=data, headers=self._headers()) as response:
                 raw = response.read().decode('utf-8')
                 if not raw.strip():
                     return {'ok': True}
