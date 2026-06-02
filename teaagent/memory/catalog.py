@@ -41,6 +41,8 @@ class MemoryCatalog:
         self.quarantine_path = self.root / '.teaagent' / 'memory-quarantine.jsonl'
         self.readonly = readonly
         self._corrupt_count = 0  # Track corrupt entries for health reporting
+        self._cache: List[MemoryEntry] | None = None  # In-memory cache
+        self._cache_dirty = True  # Track if cache needs refresh
         if not readonly:
             self.path.parent.mkdir(parents=True, exist_ok=True)
         elif not self.path.parent.exists():
@@ -68,6 +70,7 @@ class MemoryCatalog:
         if not entry.content:
             raise ValueError('memory content cannot be empty')
         append_jsonl_line(self.path, json.dumps(entry.to_dict(), sort_keys=True))
+        self._cache_dirty = True  # Invalidate cache on write
         return entry
 
     def add_quarantined(
@@ -128,7 +131,13 @@ class MemoryCatalog:
         raise FileNotFoundError(f"memory '{memory_id}' not found")
 
     def _read_entries(self) -> List[MemoryEntry]:
+        # Use cache if available and not dirty
+        if self._cache is not None and not self._cache_dirty:
+            return self._cache
+        
         if not self.path.exists():
+            self._cache = []
+            self._cache_dirty = False
             return []
         entries: List[MemoryEntry] = []
         for line in self.path.read_text(encoding='utf-8').splitlines():
@@ -142,6 +151,8 @@ class MemoryCatalog:
             entry = memory_entry_from_payload(payload)
             if entry is not None:
                 entries.append(entry)
+        self._cache = entries
+        self._cache_dirty = False
         return entries
 
     def health_report(self) -> dict[str, Any]:
@@ -186,6 +197,7 @@ class MemoryCatalog:
                 ),
                 encoding='utf-8',
             )
+            self._cache_dirty = True  # Invalidate cache on delete
 
         return deleted_count
 
@@ -215,6 +227,7 @@ class MemoryCatalog:
                 ),
                 encoding='utf-8',
             )
+            self._cache_dirty = True  # Invalidate cache on delete
 
         return deleted_count
 
@@ -246,6 +259,7 @@ class MemoryCatalog:
                 ),
                 encoding='utf-8',
             )
+            self._cache_dirty = True  # Invalidate cache on quarantine
 
             # Add to quarantine
             for entry in to_quarantine:

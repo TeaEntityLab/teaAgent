@@ -125,19 +125,43 @@ class CostTracker:
         }
 
     def report_all(self, days: int = 30) -> dict[str, Any]:
-        by_day = self.report_by_day(days=days)
-        by_model = self.report_by_model()
-        by_label_runs = self._parse_runs()
+        # Parse runs once to avoid redundant file reads
+        all_runs = self._parse_runs()
+        
+        # Filter by day
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        by_day: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for run in all_runs:
+            try:
+                dt = datetime.fromisoformat(run['created_at'].replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                continue
+            if dt >= cutoff:
+                day_key = dt.strftime('%Y-%m-%d')
+                by_day[day_key].append(run)
+        
+        # Group by model
+        by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for run in all_runs:
+            by_model[run['model']].append(run)
+        
+        # Group by label
         by_label: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        for run in by_label_runs:
+        for run in all_runs:
             by_label[run['label']].append(run)
+        
         return {
             'by_label': {
                 lbl: self._build_summary(runs) for lbl, runs in sorted(by_label.items())
             },
-            'by_day': by_day['by_day'],
-            'by_model': by_model['by_model'],
-            'total': self._build_summary(by_label_runs),
+            'by_day': {
+                day: self._build_summary(runs) for day, runs in sorted(by_day.items())
+            },
+            'by_model': {
+                model: self._build_summary(runs)
+                for model, runs in sorted(by_model.items())
+            },
+            'total': self._build_summary(all_runs),
         }
 
     def _build_summary(self, runs: list[dict[str, Any]]) -> dict[str, Any]:
