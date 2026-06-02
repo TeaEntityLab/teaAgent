@@ -126,6 +126,7 @@ class AuditLogger:
         self._disk_error_cooldown_seconds: float = 30.0
         self._chain_key: bytes = os.urandom(32)
         self._audit_level = audit_level
+        self._file_chmod_done = False  # Track if chmod has been done
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.path.parent)
@@ -256,14 +257,12 @@ class AuditLogger:
             sinks = list(self._sinks)
 
         if path is not None and self.disk_error is None:
-            from teaagent.audit_chain import (
-                compute_chain_hmac,
-                last_chain_hash,
-            )
+            from teaagent.audit_chain import compute_chain_hmac
 
             try:
                 with file_lock(path):
-                    prev = last_chain_hash(path)
+                    # Use in-memory _prev_hash instead of disk read for performance
+                    prev = self._prev_hash
                     canonical = json.dumps(
                         {
                             'event_id': event.event_id,
@@ -290,7 +289,10 @@ class AuditLogger:
                         )
                         handle.flush()
                         os.fsync(handle.fileno())
-                    secure_audit_file(path)
+                    # Only chmod once at file creation
+                    if not self._file_chmod_done:
+                        secure_audit_file(path)
+                        self._file_chmod_done = True
                 with self._lock:
                     self._prev_hash = current_hash
                     self._disk_error = None
@@ -429,6 +431,9 @@ def redact_tool_arguments(
 def redact_tool_argument_value(
     key: str, value: Any, *, string_patterns: Any = None
 ) -> Any:
+    # Skip redaction for primitive types (optimization)
+    if value is None or isinstance(value, (int, float, bool)):
+        return value
     if is_sensitive_key(key) or key in SENSITIVE_ARGUMENT_KEYS:
         return AUDIT_REDACTED
     if isinstance(value, dict):
@@ -465,6 +470,9 @@ def redact_tool_result(
 def redact_tool_result_value(
     key: str, value: Any, *, string_patterns: Any = None
 ) -> Any:
+    # Skip redaction for primitive types (optimization)
+    if value is None or isinstance(value, (int, float, bool)):
+        return value
     if is_sensitive_key(key) or key in SENSITIVE_RESULT_KEYS:
         return AUDIT_REDACTED
     if isinstance(value, dict):
