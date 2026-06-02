@@ -8,6 +8,7 @@ from teaagent.llm._adapters import (
     OpenAICompatibleAdapter,
     WorkersAIAdapter,
 )
+from teaagent.llm._fake_adapter import FakeLLMAdapter
 from teaagent.llm._types import (
     HTTPTransport,
     LLMAdapter,
@@ -16,6 +17,13 @@ from teaagent.llm._types import (
 )
 
 PROVIDER_CONFIGS = {
+    'fake': ProviderConfig(
+        name='fake',
+        api_key_env='FAKE_API_KEY',
+        default_model='fake-model',
+        base_url='https://fake.example.com/v1',
+        base_url_env='FAKE_BASE_URL',
+    ),
     'claude': ProviderConfig(
         name='claude',
         api_key_env='ANTHROPIC_API_KEY',
@@ -136,6 +144,9 @@ def create_llm_adapter(
     model: Optional[str] = None,
 ) -> LLMAdapter:
     normalized = provider.lower()
+    # Special case for fake adapter used in tests
+    if normalized == 'fake':
+        return FakeLLMAdapter(provider='fake', model=model or 'fake-model')
     if normalized not in PROVIDER_CONFIGS:
         raise LLMConfigurationError(
             f"unknown provider '{provider}'. Available: {', '.join(available_providers())}"
@@ -171,6 +182,7 @@ def check_llm_configuration(provider: str) -> tuple[bool, str]:
 
 # Base per-provider rates (used when no model-specific rate exists).
 PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
+    'fake': 0.0,
     'claude': 0.003,
     'gpt': 0.00015,
     'gemini': 0.000075,
@@ -187,6 +199,7 @@ PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
 }
 
 PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
+    'fake': 0.0,
     'claude': 0.015,
     'gpt': 0.0006,
     'gemini': 0.0003,

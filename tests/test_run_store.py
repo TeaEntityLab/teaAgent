@@ -12,6 +12,7 @@ from teaagent import FinalAnswer, RunStore
 from teaagent.audit import AUDIT_REDACTED
 from teaagent.cli import main
 from teaagent.runner import RunResult
+from teaagent.storage import file_lock
 
 
 def file_mode(path: Path) -> int:
@@ -270,6 +271,72 @@ class RunStoreTests(unittest.TestCase):
             )
 
             self.assertIsNone(store.pending_approval_for_run('run-resolved'))
+
+    def test_runs_index_is_created_and_used(self) -> None:
+        """Test that the runs index is created and used for O(1) list_runs()."""
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            # Create multiple runs
+            for i in range(5):
+                audit = store.audit_logger()
+                run_id = f'run-{i}'
+                audit.record('run_started', run_id, task=f'task-{i}')
+                audit.record('run_completed', run_id, answer=f'done-{i}', metadata={})
+                store.logger_for_result(
+                    RunResult(
+                        run_id=run_id,
+                        final_answer=FinalAnswer(f'done-{i}'),
+                        iterations=1,
+                        tool_calls=0,
+                        status='completed',
+                    ),
+                    audit,
+                )
+
+            # Verify index file exists
+            index_path = Path(tmp) / '.teaagent' / 'runs' / 'runs-index.jsonl'
+            self.assertTrue(index_path.exists())
+
+            # Verify list_runs uses the index (should be fast and return correct data)
+            summaries = store.list_runs()
+            self.assertEqual(len(summaries), 5)
+            run_ids = [s.run_id for s in summaries]
+            self.assertIn('run-0', run_ids)
+            self.assertIn('run-4', run_ids)
+
+    def test_rebuild_index(self) -> None:
+        """Test that rebuild_index recreates the index from scratch."""
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            # Create runs without using logger_for_result (no index)
+            for i in range(3):
+                audit = store.audit_logger()
+                run_id = f'run-{i}'
+                audit.record('run_started', run_id, task=f'task-{i}')
+                audit.record('run_completed', run_id, answer=f'done-{i}', metadata={})
+                # Manually write the file without updating index
+                target = store.run_path(run_id)
+                from teaagent.storage import atomic_write_text
+                with file_lock(audit.path):
+                    content = audit.path.read_text(encoding='utf-8')
+                atomic_write_text(target, content)
+                from teaagent.audit import secure_audit_file
+                secure_audit_file(target)
+                audit.path.unlink(missing_ok=True)
+
+            # Index should not exist yet
+            index_path = Path(tmp) / '.teaagent' / 'runs' / 'runs-index.jsonl'
+            self.assertFalse(index_path.exists())
+
+            # Rebuild index
+            store.rebuild_index()
+
+            # Index should now exist
+            self.assertTrue(index_path.exists())
+
+            # list_runs should now use the index
+            summaries = store.list_runs()
+            self.assertEqual(len(summaries), 3)
 
 
 if __name__ == '__main__':

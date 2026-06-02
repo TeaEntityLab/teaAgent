@@ -31,6 +31,15 @@ from teaagent.llm._config import (  # noqa: F401
 from teaagent.llm._config import (  # noqa: F401
     estimate_cost_preflight as estimate_cost_preflight,
 )
+from teaagent.llm._fake_adapter import (  # noqa: F401
+    FakeLLMAdapter as FakeLLMAdapter,
+)
+from teaagent.llm._fake_adapter import (  # noqa: F401
+    create_fake_text_response as create_fake_text_response,
+)
+from teaagent.llm._fake_adapter import (  # noqa: F401
+    create_fake_tool_call_response as create_fake_tool_call_response,
+)
 from teaagent.llm._retry import (  # noqa: F401
     DEFAULT_RETRY_CONFIG as DEFAULT_RETRY_CONFIG,
 )

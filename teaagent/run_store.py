@@ -38,6 +38,7 @@ class RunStore:
         self.root = Path(root).resolve()
         self.readonly = readonly
         self.store_dir = self.root / '.teaagent' / 'runs'
+        self._index_path = self.store_dir / 'runs-index.jsonl'
         self._corrupt_count = 0  # Track corrupt run files for health reporting
         if not readonly:
             self.store_dir.mkdir(parents=True, exist_ok=True)
@@ -70,6 +71,49 @@ class RunStore:
         atomic_write_text(target, content)
         secure_audit_file(target)
         audit.path.unlink(missing_ok=True)
+        # Update the index with the new run summary
+        self._update_index(target)
+
+    def _update_index(self, run_path: Path) -> None:
+        """Update the runs index with a summary of the given run file."""
+        if self.readonly:
+            return
+        summary = self.summarize(run_path)
+        if summary is None:
+            return
+        # Append to index file
+        index_line = json.dumps(summary.to_dict()) + '\n'
+        if self._index_path.exists():
+            existing_content = self._index_path.read_text(encoding='utf-8')
+            atomic_write_text(self._index_path, existing_content + index_line)
+        else:
+            atomic_write_text(self._index_path, index_line)
+        secure_audit_file(self._index_path)
+
+    def _read_index(self) -> list[RunSummary]:
+        """Read the runs index and return a list of RunSummary objects."""
+        if not self._index_path.exists():
+            return []
+        summaries = []
+        for line in self._index_path.read_text(encoding='utf-8').splitlines():
+            if not line.strip():
+                continue
+            try:
+                data = json.loads(line)
+                summaries.append(
+                    RunSummary(
+                        run_id=data['run_id'],
+                        task=data['task'],
+                        status=data['status'],
+                        created_at=data['created_at'],
+                        updated_at=data['updated_at'],
+                        path=Path(data['path']),
+                        final_answer=data.get('final_answer'),
+                    )
+                )
+            except (json.JSONDecodeError, KeyError, TypeError):
+                self._corrupt_count += 1
+        return summaries
 
     def run_path(self, run_id: str) -> Path:
         return self.store_dir / f'{safe_run_id(run_id)}.jsonl'
@@ -125,6 +169,13 @@ class RunStore:
     def list_runs(self, *, limit: int = 20) -> list[RunSummary]:
         if not self.store_dir.exists():
             return []
+        # Try to use the index first for O(1) lookup
+        if self._index_path.exists():
+            summaries = self._read_index()
+            # Sort by updated_at descending
+            summaries.sort(key=lambda s: s.updated_at, reverse=True)
+            return summaries[:limit]
+        # Fallback to the old method if index doesn't exist
         summaries = [
             self.summarize(path)
             for path in sorted(
@@ -308,6 +359,26 @@ class RunStore:
             'total_runs': total_runs - self._corrupt_count,
             'healthy': self._corrupt_count == 0,
         }
+
+    def rebuild_index(self) -> None:
+        """Rebuild the runs index from scratch by scanning all run files."""
+        if self.readonly:
+            raise RuntimeError('Cannot rebuild index in readonly mode')
+        if not self.store_dir.exists():
+            return
+        summaries = []
+        for path in sorted(
+            self.store_dir.glob('*.jsonl'),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        ):
+            summary = self.summarize(path)
+            if summary is not None:
+                summaries.append(summary)
+        # Write the index atomically
+        index_content = '\n'.join(json.dumps(s.to_dict()) for s in summaries) + '\n'
+        atomic_write_text(self._index_path, index_content)
+        secure_audit_file(self._index_path)
 
 
 def safe_run_id(run_id: str) -> str:
