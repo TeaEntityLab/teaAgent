@@ -2,64 +2,64 @@
 
 ## Risk Vectors
 
-### RSK-01: Path traversal in isolation session keys
+### SBA-R-001: Path traversal in isolation session keys
 **File**: `_isolation.py:281-292`
 
 `new_isolation_session_key` strips non-alphanumeric/dash/underscore characters from both `def_name` and `parent_run_id` before assembling the filesystem path. However, callers that pass an untrusted `def_name` from external config could still produce long keys (max 8+12+name length). The `safe_def_name` has no length cap — an extremely long def name could produce an excessively long path.
 
 **Mitigation**: Characters restricted; but no length limit on `def_name` segment.
 
-### RSK-02: `directory-snapshot` workspace copy does not exclude `.env` / secrets
+### SBA-R-002: `directory-snapshot` workspace copy does not exclude `.env` / secrets
 **File**: `_isolation.py:93-109`
 
 `_copy_workspace_snapshot` only skips `.teaagent/` and gitignored files. If `.env` or credential files are not gitignored, they are copied verbatim into the snapshot directory, potentially exposing secrets to subagents with different permission modes.
 
-### RSK-03: `docker` isolation uses `ro` mount — subagent cannot write
+### SBA-R-003: `docker` isolation uses `ro` mount — subagent cannot write
 **File**: `_isolation.py:229-232`
 
 The Docker volume is mounted read-only (`-v .../temp_dir:/workspace:ro`). A subagent with write tools will fail silently or with opaque errors because it cannot modify `/workspace`. Additionally, the Docker image is always `python:3.11-slim` and not configurable.
 
-### RSK-04: Sync approval polling re-reads disk every 0.25s
+### SBA-R-004: Sync approval polling re-reads disk every 0.25s
 **File**: `_approval_queue.py:317-338`
 
 `submit_request_sync` loops with `event.wait(0.25)` and calls `reload_from_store()` on each iteration. Under high load with many parallel subagents, this creates O(n_subagents × 4) disk reads per second. The `.json.lock` file uses `fcntl` (Unix only; graceful fall-through on Windows), so on Windows there is no locking — concurrent writes can corrupt queue files.
 
-### RSK-05: HMAC secret in env var — cleartext
+### SBA-R-005: HMAC secret in env var — cleartext
 **File**: `_approval_queue_store.py:278-284`
 
 `TEAAGENT_APPROVAL_HMAC_KEY` is read from the environment. Any process with access to the environment can read it. The HMAC only prevents accidental tampering, not a determined attacker with env read access.
 
-### RSK-06: `asyncio._lock` nested inside `threading._sync_lock` — deadlock risk
+### SBA-R-006: `asyncio._lock` nested inside `threading._sync_lock` — deadlock risk
 **File**: `_approval_queue.py:437-443`, `_approval_queue.py:471-488`
 
 `approve_request` acquires `async with self._lock` then `with self._sync_lock` inside. `reload_from_store` holds `self._sync_lock` and calls `self._resolve_future_threadsafe` which uses `call_soon_threadsafe`. If the event loop is blocked by `_lock`, the threadsafe callback cannot execute — this can deadlock under certain coroutine scheduling.
 
-### RSK-07: `_build_registry_for` accesses private attribute `_parent_registry._tools`
+### SBA-R-007: `_build_registry_for` accesses private attribute `_parent_registry._tools`
 **File**: `_manager.py:322`
 
 `source_names = sorted(self._parent_registry._tools.keys())` relies on the private `_tools` attribute of `ToolRegistry`. If `ToolRegistry` is replaced or its internals change, this will break silently or raise `AttributeError`.
 
-### RSK-08: `TeamOrchestrator.run_team` is sequential, not truly concurrent
+### SBA-R-008: `TeamOrchestrator.run_team` is sequential, not truly concurrent
 **File**: `_team_orchestrator.py:196-208`
 
 Despite the name "orchestrator", `run_team` iterates specialists in a `for` loop — there is no thread pool. `subagent_batch` does use `ThreadPoolExecutor`, but `run_team` does not. A slow specialist blocks all subsequent specialists.
 
-### RSK-09: `new_isolation_session_key` — `parent_run_id` truncated to 12 chars
+### SBA-R-009: `new_isolation_session_key` — `parent_run_id` truncated to 12 chars
 **File**: `_isolation.py:290`
 
 Only 12 characters of `parent_run_id` are used in the session key, reducing uniqueness when many runs share a long common prefix. Collision probability is low but non-zero for high-frequency batch runs.
 
-### RSK-10: `capture_subagent_review` depends on `git add -N` — fails on non-git workspaces
+### SBA-R-010: `capture_subagent_review` depends on `git add -N` — fails on non-git workspaces
 **File**: `_review.py:57`
 
 If the child workspace is not a git repo (e.g., `directory-snapshot` isolation), `_is_git_worktree` returns `False` and the function returns `None` — no review artifact is created. The parent only sees `review=None` in the session record, with no explanation.
 
-### RSK-11: `apply_patch` (review) path escape check
+### SBA-R-011: `apply_patch` (review) path escape check
 **File**: `_review.py:164-172`
 
 `patch_path.relative_to(workspace)` raises `ValueError` if the path escapes the workspace. This is handled correctly and returns `{'ok': False, 'status': 'invalid_review'}`. However, the patch file contents are passed directly to `git apply` — a malicious patch could overwrite files outside the git index (e.g., via `git apply --3way` writing to tracked paths).
 
-### RSK-12: `_load_simple_yaml` is a partial parser — can silently misparse valid YAML
+### SBA-R-012: `_load_simple_yaml` is a partial parser — can silently misparse valid YAML
 **File**: `_loader.py:111-171`, `_team_orchestrator.py:39-102`
 
 The fallback `_load_simple_yaml` only handles top-level scalar keys, block scalars (`|`), and list values. Complex YAML (anchors, multi-line strings without `|`, nested mappings) will be silently dropped or misread. This can cause a subagent def to load with missing fields without warning.

@@ -1,4 +1,4 @@
-# TUI Module Spec
+# tui — Behavior Specification
 
 ## Purpose
 

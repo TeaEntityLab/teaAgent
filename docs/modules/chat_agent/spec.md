@@ -1,4 +1,4 @@
-# chat_agent — Behavior Contract, Invariants, and State Machines
+# chat_agent — Behavior Specification
 
 ## Module Purpose
 

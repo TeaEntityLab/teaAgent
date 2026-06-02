@@ -20,6 +20,10 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+# Heartbeat tick interval for subagent heartbeat ticker (seconds)
+# Must be < lock_timeout_seconds (default 60)
+HEARTBEAT_TICK_INTERVAL = 30
+
 from teaagent.consensus import (
     ConsensusConfig,
     ConsensusEngine,
@@ -210,8 +214,6 @@ class Subagent:
 
     def execute(self) -> SubagentResult:
         """Execute the subagent task in isolated sandbox with centralized approval lineage."""
-        import threading
-        import time
 
         self.is_running = True
         self.last_heartbeat = time.time()
@@ -223,9 +225,6 @@ class Subagent:
 
         # Background daemon thread ticks heartbeat during long execution
         # to prevent false-positive hang detection by the heartbeat monitor.
-        HEARTBEAT_TICK_INTERVAL = (
-            30  # seconds; must be < lock_timeout_seconds (default 60)
-        )
 
         def _heartbeat_ticker() -> None:
             while self.is_running:
@@ -532,7 +531,6 @@ class SwarmManager:
 
     def execute_swarm(self) -> SwarmReport:
         """Execute all subagents in parallel and collect results."""
-        import time
 
         start_time = time.perf_counter()
 

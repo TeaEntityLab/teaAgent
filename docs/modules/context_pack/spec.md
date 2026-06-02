@@ -1,4 +1,4 @@
-# Context Pack Module Spec
+# context_pack — Behavior Specification
 
 ## Purpose
 

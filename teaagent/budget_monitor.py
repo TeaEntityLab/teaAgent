@@ -100,18 +100,6 @@ class BudgetMonitor:
                 highest_action = action
 
         return highest_action
-
-        percent = (cost_cents / max_cost) * 100.0
-
-        for level in sorted(self.thresholds):
-            if percent < level or int(level) in self._emitted_levels:
-                continue
-
-            self._emitted_levels.add(int(level))
-            return self._handle_threshold(
-                level=int(level),
-                percent=percent,
-                cost_cents=cost_cents,
                 max_cost=max_cost,
                 run_id=run_id,
             )

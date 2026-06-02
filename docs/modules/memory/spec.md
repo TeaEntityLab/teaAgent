@@ -1,4 +1,4 @@
-# Memory Module — Behavior Contract and Spec
+# memory — Behavior Specification
 
 ## Overview
 

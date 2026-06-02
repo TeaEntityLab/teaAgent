@@ -359,4 +359,62 @@ class TestFailureCardMatching:
             task_description='Test task',
         )
         assert len(matching) == 2
+        assert matching[0].run_id == 'run-2'
+
+    def test_stopword_filtering_prevents_false_positives(self, temp_root: Path) -> None:
+        """Test that stopword filtering prevents unrelated tasks from matching."""
+        storage = FailureCardStorage(temp_root)
+
+        # Add a card for an auth-related failure
+        card = FailureCard.create(
+            run_id='run-1',
+            error_type='TypeError',
+            file_path='src/auth.py',
+            error_message='Auth error',
+            task_description='Add OAuth2 support to authentication module',
+            context_files=[],
+        )
+        storage.append(card)
+
+        # Try to match with a completely different task that shares common words
+        # "add", "support", "to" are stopwords, so this should not match
+        matching = storage.find_matching(
+            file_paths=['src/database.py'],
+            task_description='Add support for database connection pooling',
+        )
+        # Should not match because only stopwords overlap
+        assert len(matching) == 0
+
+    def test_significant_word_matching_requires_two_words(self, temp_root: Path) -> None:
+        """Test that matching requires at least 2 significant words in common."""
+        storage = FailureCardStorage(temp_root)
+
+        # Add a card
+        card = FailureCard.create(
+            run_id='run-1',
+            error_type='TypeError',
+            file_path='src/auth.py',
+            error_message='Auth error',
+            task_description='Implement OAuth2 authentication flow',
+            context_files=[],
+        )
+        storage.append(card)
+
+        # Match with task that shares only 1 significant word ("authentication")
+        matching = storage.find_matching(
+            file_paths=[],
+            task_description='Fix authentication bug in user profile',
+        )
+        # Should not match because only 1 significant word in common
+        assert len(matching) == 0
+
+        # Match with task that shares 2+ significant words ("authentication", "flow")
+        matching = storage.find_matching(
+            file_paths=[],
+            task_description='Update authentication flow for new API',
+        )
+        # Should match because 2 significant words in common
+        assert len(matching) == 1
+        )
+        assert len(matching) == 2
         assert matching[0].run_id == 'run-2'  # More recent

@@ -1,4 +1,4 @@
-# subagents — Behavior Contract, Invariants, State Machines
+# subagents — Behavior Specification
 
 ## Purpose
 

@@ -1,4 +1,4 @@
-# approval_manager — Behavior Contract, Invariants, and State Machines
+# approval_manager — Behavior Specification
 
 ## Overview
 

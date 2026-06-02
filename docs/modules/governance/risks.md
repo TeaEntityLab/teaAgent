@@ -24,11 +24,11 @@
 **Risk**: The function exists but is not called by the runner automatically. It must be invoked explicitly (e.g., from a post-run hook or CLI).
 **Failure mode**: Incomplete audit runs go undetected.
 
-## R5: `lint_tool_registry` called only during preflight
+## GOV-R-005: `lint_tool_registry` called only during preflight
 **File**: `runner/_plan_validator.py`
 **Risk**: Tool schema violations detected at preflight time. Dynamically registered tools (e.g., MCP tools loaded mid-run) are not re-linted.
 **Failure mode**: Invalid MCP tool schemas cause runtime errors rather than preflight failures.
 
-## R6: PermissionMode is stringly typed in some paths
+## GOV-R-006: PermissionMode is stringly typed in some paths
 **File**: `cli` handlers
 **Risk**: Some CLI handlers may compare permission mode as string rather than enum member, causing mode mismatches if the string representation changes.

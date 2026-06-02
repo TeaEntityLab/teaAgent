@@ -1,4 +1,4 @@
-# Streaming Module — Behavior Contract & Spec
+# streaming — Behavior Specification
 
 ## Overview
 

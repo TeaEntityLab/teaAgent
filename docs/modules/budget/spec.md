@@ -1,4 +1,4 @@
-# Budget Module — Behavior Contract & Spec
+# budget — Behavior Specification
 
 ## Overview
 

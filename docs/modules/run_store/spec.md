@@ -1,4 +1,4 @@
-# Run Store Module Spec
+# run_store — Behavior Specification
 
 ## Purpose
 

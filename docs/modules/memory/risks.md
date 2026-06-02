@@ -4,7 +4,7 @@
 
 ## Risk Vectors
 
-### R1 — Duplicate `MemoryCatalog` Implementation
+### MEM-R-001: Duplicate `MemoryCatalog` Implementation
 
 **File:** `memory/catalog.py` vs `memory_legacy.py`
 
@@ -16,7 +16,7 @@ Both files define `MemoryEntry`, `MemoryCatalog`, `normalize_tags`, `memory_matc
 
 ---
 
-### R2 — Cross-Process Lock is Unix-Only
+### MEM-R-002: Cross-Process Lock is Unix-Only
 
 **File:** `memory_legacy.py`, lines 133–160
 
@@ -31,7 +31,7 @@ This means concurrent sub-agent processes on Windows can corrupt `memory.jsonl` 
 
 ---
 
-### R3 — `catalog.py` Uses Non-Atomic Rewrites
+### MEM-R-003: `catalog.py` Uses Non-Atomic Rewrites
 
 **File:** `memory/catalog.py`, lines 160–166, 190–196
 
@@ -39,7 +39,7 @@ This means concurrent sub-agent processes on Windows can corrupt `memory.jsonl` 
 
 ---
 
-### R4 — `FailureCardStorage` Reads/Writes Full JSON Array
+### MEM-R-004: `FailureCardStorage` Reads/Writes Full JSON Array
 
 **File:** `memory/failure_card.py`, lines 256–277
 
@@ -47,7 +47,7 @@ Every call to `append()`, `invalidate()`, or `prune_expired()` reads the entire 
 
 ---
 
-### R5 — `FailureCardStorage._write_cards()` Silently Swallows `OSError`
+### MEM-R-005: `FailureCardStorage._write_cards()` Silently Swallows `OSError`
 
 **File:** `memory/failure_card.py`, lines 268–277
 
@@ -60,7 +60,7 @@ A disk-full or permission error causes a write to silently fail. The caller rece
 
 ---
 
-### R6 — `FileWatcher` Is Optional but Raises on Construction
+### MEM-R-006: `FileWatcher` Is Optional but Raises on Construction
 
 **File:** `memory/file_watcher.py`, lines 165–169
 
@@ -68,7 +68,7 @@ If `watchdog` is not installed, constructing a `FileWatcher` raises `ImportError
 
 ---
 
-### R7 — Debounce Uses Wall Clock and `threading.Lock`, Not Process-Safe
+### MEM-R-007: Debounce Uses Wall Clock and `threading.Lock`, Not Process-Safe
 
 **File:** `memory/file_watcher.py`, lines 108–113
 
@@ -76,7 +76,7 @@ Debounce logic in `FileChangeHandler.on_modified()` uses `time.time()` and a thr
 
 ---
 
-### R8 — Secret File Detection is Filename-Only, Not Content-Based
+### MEM-R-008: Secret File Detection is Filename-Only, Not Content-Based
 
 **File:** `memory/pinned_file.py`, lines 162–197
 
@@ -84,7 +84,7 @@ Debounce logic in `FileChangeHandler.on_modified()` uses `time.time()` and a thr
 
 ---
 
-### R9 — `PinnedFile.from_dict()` Has No Validation
+### MEM-R-009: `PinnedFile.from_dict()` Has No Validation
 
 **File:** `memory/pinned_file.py`, line 110
 
@@ -96,7 +96,7 @@ If the stored JSON is missing `file_path`, `pinned_at`, or `last_modified`, this
 
 ---
 
-### R10 — `TeamMemory.inject_prompt()` Token Estimate is a 4:1 Char Heuristic
+### MEM-R-010: `TeamMemory.inject_prompt()` Token Estimate is a 4:1 Char Heuristic
 
 **File:** `memory/team_memory.py`, line 54
 
@@ -108,7 +108,7 @@ This approximation will over-include for CJK or emoji-heavy content (1–2 chars
 
 ---
 
-### R11 — `MemoryHierarchy.search_all()` `auto_memory` Match is Substring-Only
+### MEM-R-011: `MemoryHierarchy.search_all()` `auto_memory` Match is Substring-Only
 
 **File:** `memory_legacy.py`, lines 421–430
 
@@ -121,7 +121,7 @@ Only the first 500 chars of the auto-memory file are returned as a single synthe
 
 ---
 
-### R12 — `apply_auto_invalidation()` Key `file_signature` Not in `FailureCard` Dataclass
+### MEM-R-012: `apply_auto_invalidation()` Key `file_signature` Not in `FailureCard` Dataclass
 
 **File:** `memory/failure_card.py`, lines 406–419
 
@@ -133,15 +133,15 @@ Only the first 500 chars of the auto-memory file are returned as a single synthe
 
 | ID | File | Line | Severity | Description |
 |---|---|---|---|---|
-| R1 | `memory/catalog.py` | 252–258 | High | Divergent `memory_matches()` from `memory_legacy.py` |
-| R2 | `memory_legacy.py` | 133–160 | Medium | No cross-process locking on Windows |
-| R3 | `memory/catalog.py` | 160–196 | High | Non-atomic file rewrite on delete operations |
-| R4 | `memory/failure_card.py` | 247–277 | Low | Full JSON array read-write O(n) per operation |
-| R5 | `memory/failure_card.py` | 268–277 | Medium | OSError on write silently swallowed |
-| R6 | `memory/file_watcher.py` | 165–169 | Low | ImportError if watchdog absent and FileWatcher constructed |
-| R7 | `memory/file_watcher.py` | 116 | Low | Callback exceptions silently suppressed |
-| R8 | `memory/pinned_file.py` | 162–197 | Medium | Filename-only secret detection |
-| R9 | `memory/pinned_file.py` | 110 | Medium | `PinnedFile.from_dict()` no field validation |
-| R10 | `memory/team_memory.py` | 54 | Low | Inaccurate token estimate for inject_prompt |
-| R11 | `memory_legacy.py` | 421–430 | Low | Auto-memory search returns truncated content |
-| R12 | `memory/failure_card.py` | 406–419 | Low | `file_signature` key invisible after deserialization |
+| MEM-R-001 | `memory/catalog.py` | 252–258 | High | Divergent `memory_matches()` from `memory_legacy.py` |
+| MEM-R-002 | `memory_legacy.py` | 133–160 | Medium | No cross-process locking on Windows |
+| MEM-R-003 | `memory/catalog.py` | 160–196 | High | Non-atomic file rewrite on delete operations |
+| MEM-R-004 | `memory/failure_card.py` | 247–277 | Low | Full JSON array read-write O(n) per operation |
+| MEM-R-005 | `memory/failure_card.py` | 268–277 | Medium | OSError on write silently swallowed |
+| MEM-R-006 | `memory/file_watcher.py` | 165–169 | Low | ImportError if watchdog absent and FileWatcher constructed |
+| MEM-R-007 | `memory/file_watcher.py` | 116 | Low | Callback exceptions silently suppressed |
+| MEM-R-008 | `memory/pinned_file.py` | 162–197 | Medium | Filename-only secret detection |
+| MEM-R-009 | `memory/pinned_file.py` | 110 | Medium | `PinnedFile.from_dict()` no field validation |
+| MEM-R-010 | `memory/team_memory.py` | 54 | Low | Inaccurate token estimate for inject_prompt |
+| MEM-R-011 | `memory_legacy.py` | 421–430 | Low | Auto-memory search returns truncated content |
+| MEM-R-012 | `memory/failure_card.py` | 406–419 | Low | `file_signature` key invisible after deserialization |

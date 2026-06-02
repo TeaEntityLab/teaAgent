@@ -2,7 +2,7 @@
 
 ## Risk Vectors
 
-### R1: Deprecated `run_chat_agent` keyword-only signature silently accepted
+### CHA-R-001: Deprecated `run_chat_agent` keyword-only signature silently accepted
 
 - **File:line** — `chat_agent.py:401–416`
 - **Description** — The legacy `run_chat_agent(*, task=..., adapter=..., config=...)` form emits only a `DeprecationWarning` and continues. Any caller that passes `adapter=None` along with keyword-only args will silently use `None` as the adapter, causing a downstream `AttributeError` inside `_run_chat_agent_impl`.
@@ -11,7 +11,7 @@
 
 ---
 
-### R2: `_plain_text_answer_fallback` bypasses structured decision contract
+### CHA-R-002: `_plain_text_answer_fallback` bypasses structured decision contract
 
 - **File:line** — `chat_agent.py:272–286`
 - **Description** — When JSON parse fails on all retries, the fallback checks if the task "looks like a simple question". If heuristics match, the raw LLM text is returned as a `FinalAnswer` without any tool call validation or schema enforcement.
@@ -20,7 +20,7 @@
 
 ---
 
-### R3: `plan_contract` injection uses `object.__setattr__` on frozen dataclass
+### CHA-R-003: `plan_contract` injection uses `object.__setattr__` on frozen dataclass
 
 - **File:line** — `chat_agent.py:596–604`
 - **Description** — `AgentRunner` is not a frozen dataclass, but the pattern `object.__setattr__(runner, '_plan_contract', ...)` bypasses normal attribute assignment. If `AgentRunner`'s `__init__` already sets `_plan_contract`, this works; if `AgentRunner` changes its initialization to be truly immutable, this will break silently or raise `AttributeError`.
@@ -28,7 +28,7 @@
 
 ---
 
-### R4: Skill loading errors not propagated to caller
+### CHA-R-004: Skill loading errors not propagated to caller
 
 - **File:line** — `chat_agent.py:474–522`
 - **Description** — `load_skills_with_report()` returns skipped/warning items but does not raise on partial failures. Skipped skills are only recorded in the `skill_load` audit event. The caller has no way to detect that an expected skill was silently dropped.
@@ -36,7 +36,7 @@
 
 ---
 
-### R5: `_registry_fresh` logic gates tool registration to the first call only
+### CHA-R-005: `_registry_fresh` logic gates tool registration to the first call only
 
 - **File:line** — `chat_agent.py:438–465`
 - **Description** — When a `registry` is passed in, `_registry_fresh = False` and none of the optional tools (code analysis, git, browser, MCP trust) are registered. This is the intended behavior for subagent calls, but callers who pass a pre-built registry and expect these tools to be registered will find them absent.
@@ -44,7 +44,7 @@
 
 ---
 
-### R6: `_auto_curate_memory` is not transactional
+### CHA-R-006: `_auto_curate_memory` is not transactional
 
 - **File:line** — `chat_agent.py:666–686`
 - **Description** — The deduplication check (`catalog.list(limit=50)`) and the `catalog.add()` call are not atomic. Under concurrent runs sharing the same workspace root, duplicate auto-curated entries can be written.
@@ -52,7 +52,7 @@
 
 ---
 
-### R7: Heartbeat thread leak if `runner.run()` raises an unexpected exception
+### CHA-R-007: Heartbeat thread leak if `runner.run()` raises an unexpected exception
 
 - **File:line** — `chat_agent.py:575–623`
 - **Description** — The `finally` block does stop the heartbeat, but if `object.__setattr__` (line 596) raises (e.g., `AttributeError`), the exception occurs before `runner.run()`, and the heartbeat thread may have been started (line 580) but only stopped if the `finally` runs. The `finally` does run in this case — this is safe. However if the heartbeat `start()` itself raises, `heartbeat` remains non-None and `stop()` will be called on a potentially corrupt object.
@@ -60,7 +60,7 @@
 
 ---
 
-### R8: `max_estimated_cost_cents = -1` silently delegates to `RunBudget` default
+### CHA-R-008: `max_estimated_cost_cents = -1` silently delegates to `RunBudget` default
 
 - **File:line** — `chat_agent.py:523–527`
 - **Description** — A value of `-1` falls through the condition `if config.max_estimated_cost_cents >= 0` to `RunBudget().max_estimated_cost_cents`. This is documented behavior but is easy to misunderstand: `-1` does NOT mean "no limit", it means "use RunBudget default".

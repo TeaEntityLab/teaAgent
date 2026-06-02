@@ -1333,7 +1333,6 @@ def watch_command(args: argparse.Namespace) -> int:
         if provider:
             print(build_status_short(root=args.root, provider=provider), flush=True)
         time.sleep(interval)
-    return 0
 
 
 def daily_journal_command(args: argparse.Namespace) -> int:

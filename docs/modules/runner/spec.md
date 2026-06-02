@@ -1,4 +1,4 @@
-# runner — Behavior Contract, Invariants, and State Machine
+# runner — Behavior Specification
 
 ## Overview
 

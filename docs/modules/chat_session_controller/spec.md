@@ -1,4 +1,4 @@
-# chat_session_controller — Behavior Contract, Invariants, and State Machines
+# chat_session_controller — Behavior Specification
 
 ## Module Purpose
 

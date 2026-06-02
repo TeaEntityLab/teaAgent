@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import uuid
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime
@@ -23,6 +24,47 @@ logger = logging.getLogger(__name__)
 DEFAULT_TTL_SECONDS = 30 * 86400
 VALID_CONFIDENCE = frozenset({'low', 'medium', 'high'})
 VALID_WARNING_BEHAVIOR = frozenset({'info', 'warning', 'block'})
+
+# Common stopwords to filter out in failure-card matching to avoid false positives
+# from unrelated tasks that share common words
+STOPWORDS = frozenset({
+    'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'be',
+    'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+    'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can',
+    'it', 'its', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she',
+    'we', 'they', 'what', 'which', 'who', 'whom', 'when', 'where', 'why',
+    'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other',
+    'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
+    'than', 'too', 'very', 'just', 'also', 'now', 'then', 'here', 'there',
+    'use', 'using', 'make', 'making', 'get', 'getting', 'add', 'adding',
+    'fix', 'fixing', 'update', 'updating', 'change', 'changing', 'create',
+    'creating', 'implement', 'implementing', 'write', 'writing', 'test',
+    'testing', 'run', 'running', 'build', 'building', 'check', 'checking',
+    'ensure', 'ensuring', 'handle', 'handling', 'support', 'supporting',
+    'need', 'needed', 'want', 'wanted', 'try', 'trying', 'able', 'unable',
+    'new', 'old', 'first', 'last', 'next', 'previous', 'before', 'after',
+    'during', 'while', 'until', 'since', 'through', 'without', 'within',
+    'about', 'into', 'over', 'under', 'again', 'further', 'once', 'here',
+    'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
+    'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
+    'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also',
+})
+
+
+def _extract_significant_words(text: str) -> set[str]:
+    """Extract significant words from text, filtering stopwords and short tokens.
+
+    Args:
+        text: The text to extract words from
+
+    Returns:
+        Set of significant words (lowercase, non-stopwords, length >= 3)
+    """
+    # Normalize: lowercase and extract alphanumeric words
+    words = re.findall(r'\b[a-z]{3,}\b', text.lower())
+    # Filter stopwords
+    return set(word for word in words if word not in STOPWORDS)
 
 
 @dataclass
@@ -506,18 +548,16 @@ class FailureCardStorage:
             if error_type and card.error_type == error_type:
                 score += 5
 
-            # Match by keywords in task description
-            task_lower = task_description.lower()
-            card_task_lower = card.task_description.lower()
+            # Match by keywords in task description (with stopword filtering)
+            task_words = _extract_significant_words(task_description)
+            card_words = _extract_significant_words(card.task_description)
 
-            # Extract words from task descriptions
-            task_words = set(task_lower.split())
-            card_words = set(card_task_lower.split())
-
-            # Calculate keyword overlap
+            # Calculate keyword overlap (only significant words)
             common_words = task_words & card_words
             if common_words:
-                score += len(common_words)
+                # Require at least 2 significant words in common to avoid false positives
+                if len(common_words) >= 2:
+                    score += len(common_words) * 2  # Weight significant matches higher
 
             # Append to scored cards if score > 0
             if score > 0:

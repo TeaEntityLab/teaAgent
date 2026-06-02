@@ -1,4 +1,4 @@
-# Pinned File Module Spec
+# pinned_file — Behavior Specification
 
 ## Purpose
 

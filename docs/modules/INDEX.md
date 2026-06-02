@@ -115,27 +115,27 @@ Generated: 2026-06-02 | 24 modules | 92 documents
 
 | Risk ID | Module | Severity | Description |
 |---------|--------|----------|-------------|
-| R1 | audit | High | L3 stores plaintext credentials |
-| R2 | audit | Medium | Regex redaction incomplete |
-| R4 | audit | Medium | `hmac.new()` deprecated in Python 3.14 |
-| R1 | hooks | High | Hook registration not thread-safe |
-| R3 | hooks | Medium | `run_tests_hook` raises `HookError` as post-hook |
-| R1 | mcp | Critical | MCP tool injection from untrusted server |
-| R3 | approval_manager | High | `DANGER_FULL_ACCESS` bypasses all approval |
-| R1 | sandbox | High | Git sandbox unavailable in detached HEAD |
-| R3 | workspace_tools | High | Shell command injection if `shell=True` |
-| R1 | governance | High | `DANGER_FULL_ACCESS` bypasses plan gate |
-| R1 | skills | High | Native skill runs in same process (no isolation) |
-| R8 | llm | Medium | No timeout on streaming connections |
-| R1 | runner | High | Policy override in auto mode — approval policy mutated in-place and never restored after auto mode exits |
-| R2 | runner | Medium | Bare exception swallowing in run loop — programming errors silently become `failed:SYSTEM` |
-| RSK-01 | subagents | High | Path traversal in isolation session keys — no length cap on `def_name` segment |
-| RSK-02 | subagents | High | Directory-snapshot workspace copy exposes `.env`/secrets if not gitignored |
-| RSK-06 | subagents | High | Deadlock risk from nested `asyncio._lock` inside `threading._sync_lock` |
-| R1 | memory | High | Duplicate `MemoryCatalog` implementation — divergent `memory_matches()` from `memory_legacy.py` |
-| R2 | memory | High | Windows data corruption — no cross-process locking, concurrent writes can corrupt `memory.jsonl` |
-| R3 | memory | High | Non-atomic rewrites in `catalog.py` — `delete_by_branch`/`delete_by_run_id` truncate file on crash |
-| R2 | budget | Medium | Over-budget execution — `on_prompt` returning `False` does not halt run if caller ignores return value |
+| AUD-R-001 | audit | High | L3 stores plaintext credentials |
+| AUD-R-002 | audit | Medium | Regex redaction incomplete |
+| AUD-R-004 | audit | Medium | `hmac.new()` deprecated in Python 3.14 |
+| HOOK-R-001 | hooks | High | Hook registration not thread-safe |
+| HOOK-R-003 | hooks | Medium | `run_tests_hook` raises `HookError` as post-hook |
+| MCP-R-001 | mcp | Critical | MCP tool injection from untrusted server |
+| APR-R-003 | approval_manager | High | `DANGER_FULL_ACCESS` bypasses all approval |
+| SAN-R-001 | sandbox | High | Git sandbox unavailable in detached HEAD |
+| WST-R-003 | workspace_tools | High | Shell command injection if `shell=True` |
+| GOV-R-001 | governance | High | `DANGER_FULL_ACCESS` bypasses plan gate |
+| SKL-R-001 | skills | High | Native skill runs in same process (no isolation) |
+| LLM-R-008 | llm | Medium | No timeout on streaming connections |
+| RUN-R-001 | runner | High | Policy override in auto mode — approval policy mutated in-place and never restored after auto mode exits |
+| RUN-R-002 | runner | Medium | Bare exception swallowing in run loop — programming errors silently become `failed:SYSTEM` |
+| SBA-R-001 | subagents | High | Path traversal in isolation session keys — no length cap on `def_name` segment |
+| SBA-R-002 | subagents | High | Directory-snapshot workspace copy exposes `.env`/secrets if not gitignored |
+| SBA-R-006 | subagents | High | Deadlock risk from nested `asyncio._lock` inside `threading._sync_lock` |
+| MEM-R-001 | memory | High | Duplicate `MemoryCatalog` implementation — divergent `memory_matches()` from `memory_legacy.py` |
+| MEM-R-002 | memory | High | Windows data corruption — no cross-process locking, concurrent writes can corrupt `memory.jsonl` |
+| MEM-R-003 | memory | High | Non-atomic rewrites in `catalog.py` — `delete_by_branch`/`delete_by_run_id` truncate file on crash |
+| BUD-R-002 | budget | Medium | Over-budget execution — `on_prompt` returning `False` does not halt run if caller ignores return value |
 
 ---
 

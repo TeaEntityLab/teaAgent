@@ -1,4 +1,4 @@
-# Git Sandbox Module Spec
+# git_sandbox — Behavior Specification
 
 ## Purpose
 
