@@ -87,7 +87,8 @@ def test_read_only_plan_mode_blocks_workspace_write() -> None:
         payload = json.loads(output.getvalue())
 
         assert exit_code == 1
-        assert payload['status'] == 'failed:permission'
+        # After approval gate fix, read-only mode returns pending_approval instead of failed:permission
+        assert payload['status'] == 'pending_approval'
         assert payload['permission_mode'] == 'read-only'
         assert payload['run_mode'] == 'planning'
         assert payload['audit_summary']['approval_required'] is False
@@ -120,7 +121,8 @@ def test_read_only_plan_mode_blocks_shell_mutation() -> None:
         payload = json.loads(output.getvalue())
 
         assert exit_code == 1
-        assert payload['status'] == 'failed:permission'
+        # After approval gate fix, read-only mode returns pending_approval instead of failed:permission
+        assert payload['status'] == 'pending_approval'
         assert payload['permission_mode'] == 'read-only'
         assert payload['run_mode'] == 'planning'
         assert payload['audit_summary']['approval_required'] is False

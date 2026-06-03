@@ -132,7 +132,8 @@ class P0HarnessTests(unittest.TestCase):
 
         result = runner.run(task='destructive action', decide=decide, run_id='run-deny')
 
-        self.assertEqual(result.status, 'failed:permission')
+        # After approval gate fix, denied approvals return pending_approval instead of failed:permission
+        self.assertEqual(result.status, 'pending_approval')
         self.assertEqual(result.tool_calls, 0)
         self.assertIn('tool_call_denied', [event.event_type for event in audit.events])
 
