@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.cockpit import CockpitState
 from teaagent.context import ContextCompactor as _ContextCompactor
 from teaagent.graphqlite_store import (
@@ -191,6 +192,10 @@ class TeaAgentTUI:
 
         # Cockpit state for operator dashboard
         self._cockpit_state: Optional[CockpitState] = None
+
+        # Chat session controller for unified execution semantics (TASK-002)
+        self._chat_controller: Optional[ChatSessionController] = None
+        self._session_state = SessionState()
 
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
@@ -841,6 +846,16 @@ class TeaAgentTUI:
             self._session_store = SessionStore(self.root)
         return self._session_store
 
+    def _get_chat_controller(self) -> ChatSessionController:
+        """Get or create the chat session controller (TASK-002)."""
+        if self._chat_controller is None:
+            self._chat_controller = ChatSessionController(
+                root=self.root,
+                output_fn=self.output_fn,
+                session_state=self._session_state,
+            )
+        return self._chat_controller
+
     def _current_session(self) -> Optional[ChatSession]:
         if not self.session_id:
             return None
@@ -939,9 +954,11 @@ class TeaAgentTUI:
             if resumed_from
             else None,
         )
-        # CG-11 stop-gap: accumulate real cost from each run result so /cost and
-        # /budget show the true session total instead of always $0.00.
-        self._session_cost_cents += result.cost_cents
+        # TASK-002: Use ChatSessionController for cost tracking (unified with CLI)
+        # This replaces the direct cost accumulation with controller-based tracking
+        controller = self._get_chat_controller()
+        controller.session_state.session_cost_cents += result.cost_cents
+        self._session_cost_cents = controller.session_state.session_cost_cents
         store.logger_for_result(result, audit)
         if undo_journal.has_entries:
             undo_journal.save_to(store.undo_path(result.run_id))

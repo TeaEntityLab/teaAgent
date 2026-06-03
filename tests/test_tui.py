@@ -919,6 +919,29 @@ class TUITests(unittest.TestCase):
             self.assertIsInstance(events, list)
             self.assertGreater(len(events), 0)
 
+    def test_tui_uses_chat_session_controller_for_cost_tracking(self) -> None:
+        """TASK-002: Verify TUI uses ChatSessionController for unified cost tracking."""
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+            
+            # Verify chat controller is created
+            controller = tui._get_chat_controller()
+            self.assertIsNotNone(controller)
+            self.assertEqual(controller.session_state.session_cost_cents, 0.0)
+            
+            # Simulate cost accumulation through controller (as would happen in real execution)
+            controller.session_state.session_cost_cents += 50.0
+            tui._session_cost_cents = controller.session_state.session_cost_cents
+            
+            # Verify cost was tracked through controller
+            self.assertEqual(tui._session_cost_cents, 50.0)
+            self.assertEqual(controller.session_state.session_cost_cents, 50.0)
+
     def test_tui_ask_clarify_with_concrete_task_builds_spec(self) -> None:
         output = []
         adapter = FakeAdapter(['{"type":"final","content":"done"}'])

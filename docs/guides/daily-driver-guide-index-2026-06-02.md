@@ -9,6 +9,10 @@ This index groups the user-facing guide layer.
 - [daily-driver-command-cookbook-2026-06-02.md](daily-driver-command-cookbook-2026-06-02.md)
 - [../daily-driver-troubleshooting.md](../daily-driver-troubleshooting.md)
 
+## Architecture
+
+- [../architecture/heddle-concept-fit-2026-06-03.md](../architecture/heddle-concept-fit-2026-06-03.md)
+
 ## Surface guides
 
 - [../tui-daily-driver-guide.md](../tui-daily-driver-guide.md)

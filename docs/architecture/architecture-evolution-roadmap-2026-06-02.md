@@ -15,6 +15,8 @@ Beyond the immediate fixes, three structural investments will determine whether 
 2. **Async-First Runner** — the synchronous AgentRunner is the primary bottleneck for concurrent subagent coordination; migrating to async enables true parallelism without thread-pool workarounds.
 3. **Federated State Store** — the JSONL single-writer model is correct for local single-user; it must become pluggable before team or cloud deployments are safe.
 
+**Heddle Concept Fit (2026-06-03):** Recent architectural analysis mapped Heddle concepts to TeaAgent boundaries. The conclusion is to adopt Heddle's "boundaries and process" approach without copying the TypeScript/daemon framework. Key mappings include CLI entry flow, agent loop layering, session persistence, and memory maintenance loops. See [Heddle Concept Fit](heddle-concept-fit-2026-06-03.md) for detailed mapping and task plan.
+
 ---
 
 ## 1. Current Architecture Assessment
