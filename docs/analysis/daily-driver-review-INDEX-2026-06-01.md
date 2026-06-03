@@ -67,6 +67,8 @@ why behind the current priorities.
    Policy for turning evidence into durable principles.
 7. **`../work-log/roadmap-work-items-2026-06-04.md`** *(work log)*
    Concrete task list with dependencies and acceptance criteria.
+8. **`../plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`** *(plans)*
+   Complete execution plan ranked by risk, feasibility, ROI, and strategic leverage.
 
 ## 2026-06-02 additional guide/module supplement
 

@@ -16,20 +16,22 @@ Use the governance docs before adding another dated risk, issue, or roadmap file
 
 ## Critical path
 
-1. TUI root state.
-2. Chat task execution verification.
-3. TUI cost ledger and controller migration.
-4. Approval path scope.
-5. Git sandbox lifecycle.
-6. Lifecycle wording.
-7. Stale chat cleanup.
-8. Read-only/dry-run side-effect contract.
-9. Memory and run-state integrity warnings.
+1. Cost and budget truth.
+2. TUI / CLI semantic parity.
+3. Undo and recovery honesty.
+4. Root and approval-scope truth.
+5. Resume/background lifecycle repair.
+6. Run evidence and audit completeness.
+7. Controller persistence error handling.
+8. First-hour onboarding and recovery copy.
+9. MCP, skills, and subagent trust hardening.
+10. Docs as control plane.
 
 ## Current source files
 
 | Purpose | File |
 |---------|------|
+| Complete risk/ROI work plan | [../daily-driver-complete-work-plan-risk-roi-2026-06-04.md](../daily-driver-complete-work-plan-risk-roi-2026-06-04.md) |
 | Implementation sequence | [../daily-driver-implementation-sequencing-board-2026-06-02.md](../daily-driver-implementation-sequencing-board-2026-06-02.md) |
 | Regression matrix | [../daily-driver-regression-test-matrix-2026-06-02.md](../daily-driver-regression-test-matrix-2026-06-02.md) |
 | Ticket plans | [../ticket-plans/index.md](../ticket-plans/index.md) |

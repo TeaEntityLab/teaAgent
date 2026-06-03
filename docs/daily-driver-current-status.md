@@ -33,6 +33,12 @@ Use these when you need the rules behind status, risk, or document ownership:
 - Maintenance entry point: [governance/doc-maintenance-policy-2026-06-02.md](governance/doc-maintenance-policy-2026-06-02.md)
 - Markdown corpus review: [analysis/markdown-status-review-2026-06-02.md](analysis/markdown-status-review-2026-06-02.md)
 
+## Current planning front door
+
+Use [plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md)
+when choosing what to implement next. It ranks the active work by user value, risk
+reduction, feasibility, strategic leverage, and ROI.
+
 ## Known issues
 
 | Issue | Practical impact | Tracking |
@@ -69,4 +75,5 @@ Use these when you need the rules behind status, risk, or document ownership:
 - Agent mode guide: [agent-mode-operator-guide.md](agent-mode-operator-guide.md)
 - Troubleshooting: [daily-driver-troubleshooting.md](daily-driver-troubleshooting.md)
 - Reliability scorecard: [reliability/daily-driver-reliability-scorecard-2026-06-02.md](reliability/daily-driver-reliability-scorecard-2026-06-02.md)
+- Complete risk/ROI work plan: [plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md)
 - Full review index: [analysis/daily-driver-review-INDEX-2026-06-01.md](analysis/daily-driver-review-INDEX-2026-06-01.md)
