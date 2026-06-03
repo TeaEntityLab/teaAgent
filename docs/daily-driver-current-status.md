@@ -20,20 +20,22 @@ agent mode. It is intentionally more practical than the audit corpus.
 - `teaagent chat` `/cost` and `/budget` are wired to real session cost.
 - `teaagent chat` `/undo` uses the undo journal and preserves unrelated manual edits.
 - TUI setup, preflight, runs, session listing, and approval commands provide useful operational coverage.
+- TUI `/cost` now accumulates via ChatSessionController (CG-11 fixed).
+- TUI has adopted ChatSessionController for unified execution semantics (CG-12 fixed).
 
 ## Known issues
 
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
-| TUI cost and budget display can show `$0.00` after real work. | Misleading display, not a provider billing cap. | CG-11 / TICKET-12 |
-| TUI chat has not fully migrated to `ChatSessionController`. | REPL and TUI can differ for cost, undo, and tests. | CG-12 / ADR-0025 |
 | `teaagent chat <task>` was recently wired into the TUI initial-task path. | Treat as verify/close until parser, handler, and TUI tests prove it. | TASK-DD2-001 |
 | Explicit `--root` can be overwritten by saved TUI state. | Work can run against a stale project root. | TASK-DD2-002 |
 | Suspend/resume wording is ahead of implementation in some paths. | A user can try a printed command that does not rehydrate the run. | AG-01..AG-04 / TICKET-16 |
+| Controller swallows real errors as "mock" detection. | Production errors may be silently ignored. | CG-13 / TICKET-13 |
+| Redundant `audit_trail` JSON field in suspension data. | Wasted space, potential confusion. | CG-14 / TICKET-15 |
+| TUI/REPL undo diverge; REPL help stale. | Users may see inconsistent undo behavior. | CG-15 / TICKET-15 |
 
 ## Do not rely on yet
 
-- Do not use TUI `/cost` as the source of truth for spend until the stop-gap and full TICKET-12 parity tests pass.
 - Do not assume TUI `/undo` has the same scope as `teaagent chat` `/undo` until the TUI controller migration lands.
 - Do not use `teaagent agent run --background <run_id>` to resume; it can treat the id as a new task argument.
 - Do not treat a successful docs-only check as proof that active runtime paths were tested.

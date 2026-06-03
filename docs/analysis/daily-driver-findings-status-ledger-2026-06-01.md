@@ -21,8 +21,8 @@ HEAD. When ledger and a detail doc disagree, **the ledger is authoritative for s
 | CG-08 | P2 | PARTIAL | undo vocabulary (TUI still git-stash) | T7/T12 | — | `tui:641` |
 | CG-09 | P1 | FIXED | suspend: no branch switch, honest copy | T3b | ❌ missing | `chat_repl.py:106-119,144` |
 | CG-10 | P1 | FIXED | suspend emits real audit event | T3b | ❌ missing | `chat_repl.py:129` |
-| CG-11 | P1 | OPEN | TUI `/cost` always $0.00 | T12 | ❌ to-write | `tui:186` read-only |
-| CG-12 | P1 | OPEN | TUI never adopted controller | T12 | ⚠️ CG-17 | `tui:890` direct call |
+| CG-11 | P1 | FIXED | TUI `/cost` accumulates via controller | T12 | ✅ `test_tui_cost_shows_session_cost` | `tui:961-962` controller tracking |
+| CG-12 | P1 | FIXED | TUI adopted ChatSessionController | T12 | ✅ `test_cli_tui_surface_parity_flow` | `tui:960-962` controller usage |
 | CG-13 | P2 | OPEN | controller swallows real errors as "mock" | T13 | ❌ to-write | `chat_session_controller.py:143-159` |
 | CG-14 | P3 | OPEN | redundant `audit_trail` JSON field | T15 | — | `chat_repl.py:89-93` |
 | CG-15 | P2 | OPEN | TUI/REPL undo diverge; REPL help stale | T12/T15 | ❌ to-write | `tui:641`; `chat_repl.py:168` |
@@ -35,8 +35,8 @@ HEAD. When ledger and a detail doc disagree, **the ledger is authoritative for s
 
 ## Roll-up
 
-- **FIXED:** 8 (CG-01/02/03-REPL/04/06/07/09/10). **PARTIAL:** 2 (CG-05/08 — REPL done,
-  TUI pending). **OPEN defects:** 9 (CG-11/12/13/14/15, AG-01/02/03/04).
+- **FIXED:** 10 (CG-01/02/03-REPL/04/06/07/09/10/11/12). **PARTIAL:** 2 (CG-05/08 — REPL done,
+  TUI pending). **OPEN defects:** 7 (CG-13/14/15, AG-01/02/03/04).
   **OPEN test-integrity:** 2 (CG-16, CG-17).
 - **Guard-test gaps:** 5 *shipped* fixes have no named regression test (CG-02, CG-03-REPL,
   CG-04, CG-09, CG-10) — protected only by behavior, not by CI.
