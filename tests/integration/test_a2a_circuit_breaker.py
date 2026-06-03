@@ -25,8 +25,8 @@ _CARD_DATA = {
 }
 
 
-def _ok_fetch(url, timeout=10):
-    """urllib.request.urlopen replacement that succeeds."""
+def _ok_fetch(url, timeout=10, allow_http=False, max_redirects=5, data=None, headers=None):
+    """safe_urlopen replacement that succeeds."""
 
     class _Resp:
         def read(self):
@@ -43,13 +43,13 @@ def _ok_fetch(url, timeout=10):
     return _Resp()
 
 
-def _fail_fetch(url, timeout=10):
+def _fail_fetch(url, timeout=10, allow_http=False, max_redirects=5, data=None, headers=None):
     raise OSError('connection refused')
 
 
 def test_circuit_opens_after_threshold():
     cb = CircuitBreakerConfig(failure_threshold=2, reset_timeout_seconds=60.0)
-    reg = FederatedAgentRegistry(['http://bad.local'], circuit_breaker=cb)
+    reg = FederatedAgentRegistry(['http://bad.local'], circuit_breaker=cb, allow_http=True)
 
     with patch('teaagent.http_utils.safe_urlopen', side_effect=_fail_fetch):
         reg.refresh()  # failure 1
@@ -64,10 +64,11 @@ def test_open_circuit_skips_endpoint():
     reg = FederatedAgentRegistry(
         ['http://bad.local', 'http://good.local'],
         circuit_breaker=cb,
+        allow_http=True,
     )
     call_log: list[str] = []
 
-    def selective_fetch(url, timeout=10):
+    def selective_fetch(url, timeout=10, allow_http=False, max_redirects=5, data=None, headers=None):
         call_log.append(url)
         if 'bad' in url:
             raise OSError('bad')
@@ -86,11 +87,11 @@ def test_open_circuit_skips_endpoint():
 
 def test_success_resets_failure_count():
     cb = CircuitBreakerConfig(failure_threshold=3, reset_timeout_seconds=60.0)
-    reg = FederatedAgentRegistry(['http://flaky.local'], circuit_breaker=cb)
+    reg = FederatedAgentRegistry(['http://flaky.local'], circuit_breaker=cb, allow_http=True)
 
     fail_count = {'n': 0}
 
-    def flaky(url, timeout=10):
+    def flaky(url, timeout=10, allow_http=False, max_redirects=5, data=None, headers=None):
         fail_count['n'] += 1
         if fail_count['n'] < 2:
             raise OSError('flaky')
@@ -107,7 +108,7 @@ def test_success_resets_failure_count():
 
 def test_circuit_resets_after_timeout():
     cb = CircuitBreakerConfig(failure_threshold=1, reset_timeout_seconds=0.05)
-    reg = FederatedAgentRegistry(['http://temp-bad.local'], circuit_breaker=cb)
+    reg = FederatedAgentRegistry(['http://temp-bad.local'], circuit_breaker=cb, allow_http=True)
 
     with patch('teaagent.http_utils.safe_urlopen', side_effect=_fail_fetch):
         reg.refresh()  # opens circuit
@@ -117,7 +118,7 @@ def test_circuit_resets_after_timeout():
     time.sleep(0.1)  # wait for reset
 
     # After timeout, circuit should allow a retry
-    with patch('teaagent.http_utils.safe_urlopen', return_value=_ok_fetch('')):
+    with patch('teaagent.http_utils.safe_urlopen', return_value=_ok_fetch('http://temp-bad.local')):
         reg.refresh()
 
     assert reg.circuit_state('http://temp-bad.local') == 'closed'
@@ -125,10 +126,10 @@ def test_circuit_resets_after_timeout():
 
 def test_no_circuit_breaker_behaves_as_before():
     """Without circuit_breaker, FederatedAgentRegistry retries every time."""
-    reg = FederatedAgentRegistry(['http://always-fail.local'])
+    reg = FederatedAgentRegistry(['http://always-fail.local'], allow_http=True)
     call_count = {'n': 0}
 
-    def counting_fail(url, timeout=10):
+    def counting_fail(url, timeout=10, allow_http=False, max_redirects=5, data=None, headers=None):
         call_count['n'] += 1
         raise OSError('down')
 
@@ -150,9 +151,10 @@ def test_cards_from_healthy_endpoints_still_returned():
     reg = FederatedAgentRegistry(
         ['http://bad.local', 'http://good.local'],
         circuit_breaker=cb,
+        allow_http=True,
     )
 
-    def selective(url, timeout=10):
+    def selective(url, timeout=10, allow_http=False, max_redirects=5, data=None, headers=None):
         if 'bad' in url:
             raise OSError('bad')
         return _ok_fetch(url)
