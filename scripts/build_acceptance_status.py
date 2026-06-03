@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-STATUS_PATTERN = re.compile(r'`(\d+)\s+passed`')
+STATUS_PATTERN = re.compile(r'`(\d+)\s+passed')
 
 
 def parse_passed_count(pytest_output: str) -> int:
@@ -55,9 +55,24 @@ def collect_acceptance_test_count(acceptance_tests_dir: Path) -> int:
 
 
 def update_acceptance_status(markdown: str, passed_count: int) -> str:
-    replacement = f'`{passed_count} passed`'
-    if STATUS_PATTERN.search(markdown):
-        return STATUS_PATTERN.sub(replacement, markdown, count=1)
+    # Support both old format "X passed" and new format "X tests collected (Y passed, Z failed, W skipped)"
+    old_pattern = re.compile(r'`(\d+)\s+passed`')
+    new_pattern = re.compile(r'(\d+)\s+tests\s+collected\s+\([^)]+\)')
+    
+    if old_pattern.search(markdown):
+        replacement = f'`{passed_count} passed`'
+        return old_pattern.sub(replacement, markdown, count=1)
+    elif new_pattern.search(markdown):
+        # Update the new format: extract failed/skipped counts and update passed count
+        match = new_pattern.search(markdown)
+        if match:
+            # Try to extract failed and skipped counts from existing text
+            failed_match = re.search(r'(\d+)\s+failed', markdown)
+            skipped_match = re.search(r'(\d+)\s+skipped', markdown)
+            failed = failed_match.group(1) if failed_match else '0'
+            skipped = skipped_match.group(1) if skipped_match else '0'
+            replacement = f'{passed_count + int(failed) + int(skipped)} tests collected ({passed_count} passed, {failed} failed, {skipped} skipped)'
+            return new_pattern.sub(replacement, markdown, count=1)
     raise ValueError('Could not find acceptance status marker in docs/acceptance.md.')
 
 
