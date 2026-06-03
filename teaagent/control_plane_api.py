@@ -1,4 +1,9 @@
-"""HTTP control plane for workflow, focus stack, and JIT approval dashboard."""
+"""HTTP control plane for workflow, focus stack, and JIT approval dashboard.
+
+This is a view/control surface only - it provides observation and control
+interfaces for active runs but does not own task execution. Task execution
+remains the responsibility of the runner and agent components.
+"""
 
 from __future__ import annotations
 

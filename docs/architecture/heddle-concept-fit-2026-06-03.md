@@ -264,6 +264,11 @@ teaagent memory maintain --dry-run
 - Background/suspend/resume terminology matches implementation
 - No over-promising on unsupported features
 
+**Status:** ✅ COMPLETED
+- TASK-DD2-002 implemented explicit root guard with `_root_explicit` flag
+- TASK-DD2-006 and TICKET-16 Phase 1 fixed lifecycle wording (removed --detach references, clarified suspend vs background)
+- TUI help now displays active root path
+
 ### TASK-004: Runtime Surface Metadata
 
 **Objective:** Add `surface` field to execution context and audit logs.
@@ -321,6 +326,10 @@ teaagent memory maintain --dry-run
 - Control plane documented as view/control only
 - Tests verify no task execution ownership
 - Health and auth behavior unchanged
+
+**Status:** ✅ COMPLETED
+- Added module-level documentation clarifying control plane as view/control surface only
+- Control plane does not own task execution (runner/agent components own execution)
 
 ---
 
