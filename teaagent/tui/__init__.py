@@ -75,10 +75,10 @@ HELP_TEXT = """Commands:
   daily [task]              Show readiness, recent runs, harness health, and token budget.
   run <task>                Run a model-driven agent task (alias for ask).
   ask <task>                Run a model-driven agent task with workspace tools.
+  ask --clarify <task>      Clarify first; stop if key details are missing.
   undo [run_id]             Restore workspace files from the last undo journal (or a run id).
   permissions               List destructive-tool approval presets for this workspace.
   mcp                       Hint for MCP doctor / serve commands (run from a shell).
-  ask --clarify <task>      Clarify first; stop if key details are missing.
   memory add <text>         Add a workspace memory entry.
   memory list               List recent workspace memories.
   memory search <query>     Search workspace memories.
@@ -109,6 +109,7 @@ HELP_TEXT = """Commands:
   checkpoint                Create manual git checkpoint.
   undo                      Undo all changes (using checkpoint — use teaagent agent undo for advanced).
   background                Suspend session to background mode (use teaagent agent run --detach).
+  handoff                   Alias for background command.
   exit | quit               Leave the TUI.
 
 Slash aliases (/daily, /plan, /run, …) are accepted for the same commands.
