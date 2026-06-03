@@ -942,6 +942,99 @@ class TUITests(unittest.TestCase):
             self.assertEqual(tui._session_cost_cents, 50.0)
             self.assertEqual(controller.session_state.session_cost_cents, 50.0)
 
+    def test_tui_plan_command_generates_clarification(self) -> None:
+        """Test TUI plan command generates task clarification."""
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+            
+            self.assertTrue(tui.handle_command('plan write a test function'))
+            result = json.loads(output[-1])
+            self.assertEqual(result['status'], 'clarification_generated')
+            self.assertIn('plan', result)
+            self.assertIn('ambiguity', result['plan'])
+
+    def test_tui_parallel_command_stores_options(self) -> None:
+        """Test TUI parallel command stores options for selection."""
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+            
+            self.assertTrue(tui.handle_command('parallel option1 option2 option3'))
+            result = json.loads(output[-1])
+            self.assertEqual(result['status'], 'options_stored')
+            self.assertEqual(result['count'], 3)
+            self.assertEqual(result['options'], ['option1', 'option2', 'option3'])
+            self.assertTrue(hasattr(tui, '_parallel_options'))
+            self.assertEqual(tui._parallel_options, ['option1', 'option2', 'option3'])
+
+    def test_tui_select_command_chooses_option(self) -> None:
+        """Test TUI select command chooses from parallel options."""
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+            
+            # First set up parallel options
+            tui.handle_command('parallel option1 option2 option3')
+            output.clear()
+            
+            # Select by index
+            self.assertTrue(tui.handle_command('select 0'))
+            result = json.loads(output[-1])
+            self.assertEqual(result['status'], 'selected')
+            self.assertEqual(result['selected'], 'option1')
+            self.assertEqual(result['index'], 0)
+            self.assertIsNone(tui._parallel_options)  # Should be cleared
+
+    def test_tui_cancel_command_clears_parallel_options(self) -> None:
+        """Test TUI cancel command clears parallel options."""
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+            
+            # Set up parallel options
+            tui.handle_command('parallel option1 option2')
+            output.clear()
+            
+            # Cancel
+            self.assertTrue(tui.handle_command('cancel'))
+            result = json.loads(output[-1])
+            self.assertEqual(result['status'], 'cancelled')
+            self.assertEqual(result['action'], 'cleared_parallel_options')
+            self.assertIsNone(tui._parallel_options)
+
+    def test_tui_conflict_command_provides_hint(self) -> None:
+        """Test TUI conflict command provides helpful hint."""
+        with tempfile.TemporaryDirectory() as tmp:
+            output = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+            
+            self.assertTrue(tui.handle_command('conflict'))
+            result = json.loads(output[-1])
+            self.assertEqual(result['status'], 'conflict_mode')
+            self.assertIn('hint', result)
+            self.assertIn('git', result['hint'].lower())
+
     def test_tui_ask_clarify_with_concrete_task_builds_spec(self) -> None:
         output = []
         adapter = FakeAdapter(['{"type":"final","content":"done"}'])

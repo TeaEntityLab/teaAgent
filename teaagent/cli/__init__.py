@@ -134,6 +134,9 @@ from teaagent.cli._handlers import (
     memory_failures_review_command,
     memory_failures_show_command,
     memory_list_command,
+    memory_maintain_command,
+    memory_quarantine_list_command,
+    memory_quarantine_promote_command,
     memory_search_command,
     memory_show_command,
     model_capabilities,
@@ -366,6 +369,9 @@ def build_parser() -> argparse.ArgumentParser:
             'team_memory_add': team_memory_add_command,
             'decisions_list': memory_decisions_list_command,
             'decisions_add': memory_decisions_add_command,
+            'quarantine_list': memory_quarantine_list_command,
+            'quarantine_promote': memory_quarantine_promote_command,
+            'maintain': memory_maintain_command,
         },
     )
     register_skill(

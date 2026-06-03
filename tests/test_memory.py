@@ -47,6 +47,56 @@ class MemoryCatalogTests(unittest.TestCase):
 
             self.assertEqual([entry.memory_id for entry in entries], [good.memory_id])
 
+    def test_memory_quarantine_list_promote_maintain(self) -> None:
+        """Test memory quarantine list, promote, and maintain functions (TASK-005)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = MemoryCatalog(tmp)
+            
+            # Add a quarantined entry
+            quarantined = catalog.add_quarantined(
+                'test memory',
+                tags=('test',),
+                provenance={'reason': 'test', 'source': 'manual'}
+            )
+            
+            # List quarantined
+            quarantined_list = catalog.list_quarantined()
+            self.assertEqual(len(quarantined_list), 1)
+            self.assertEqual(quarantined_list[0].memory_id, quarantined.memory_id)
+            
+            # Test maintain dry run
+            report = catalog.maintain_dry_run()
+            self.assertEqual(report['quarantined_entries'], 1)
+            self.assertIn('quarantined', str(report['recommendations']).lower())
+            
+            # Promote quarantined entry
+            promoted = catalog.promote_quarantined(
+                quarantined.memory_id,
+                attestation='test attestation'
+            )
+            self.assertEqual(promoted.memory_id, quarantined.memory_id)
+            
+            # Verify it's no longer quarantined
+            quarantined_after = catalog.list_quarantined()
+            self.assertEqual(len(quarantined_after), 0)
+            
+            # Verify it's now in main catalog
+            main_entries = catalog.list()
+            self.assertEqual(len(main_entries), 1)
+            self.assertEqual(main_entries[0].memory_id, promoted.memory_id)
+
+    def test_cli_memory_quarantine_commands(self) -> None:
+        """Test CLI memory quarantine commands (TASK-005)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            # Test quarantine list
+            with redirect_stdout(io.StringIO()) as f:
+                try:
+                    main(['memory', 'quarantine', 'list', '--root', tmp])
+                except SystemExit:
+                    pass
+                output = f.getvalue()
+                self.assertIn('[]', output)  # Empty quarantine initially
+
     def test_cli_memory_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             add_output = io.StringIO()

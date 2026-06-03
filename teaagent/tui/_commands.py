@@ -170,7 +170,20 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: plan requires a task')
             return True
         task = ' '.join(args)
-        tui._print_json({'task': task, 'plan': 'not implemented'})
+        from teaagent.intent import clarify_task
+        try:
+            clarification = clarify_task(task)
+            tui._print_json({
+                'task': task,
+                'plan': clarification.to_dict(),
+                'status': 'clarification_generated'
+            })
+        except Exception as e:
+            tui._print_json({
+                'task': task,
+                'plan': f'error: {str(e)}',
+                'status': 'error'
+            })
         return True
 
     if action == 'permissions':
@@ -218,27 +231,81 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         if not args:
             tui.output_fn('error: parallel requires at least one option')
             return True
-        tui._print_json({'options': args, 'status': 'not implemented'})
+        # Store parallel options for later selection
+        tui._parallel_options = args
+        tui._print_json({
+            'options': args,
+            'count': len(args),
+            'status': 'options_stored',
+            'hint': 'use "select <index>" to choose an option'
+        })
         return True
 
     if action == 'select':
         if not args:
-            tui.output_fn('error: select requires an option')
+            tui.output_fn('error: select requires an option index or value')
             return True
-        tui._print_json({'selected': args[0], 'status': 'not implemented'})
+        if not hasattr(tui, '_parallel_options') or not tui._parallel_options:
+            tui.output_fn('error: no parallel options available. Use "parallel" first.')
+            return True
+        selection = args[0]
+        try:
+            # Try to parse as index
+            index = int(selection)
+            if 0 <= index < len(tui._parallel_options):
+                selected = tui._parallel_options[index]
+                tui._print_json({
+                    'selected': selected,
+                    'index': index,
+                    'status': 'selected'
+                })
+                tui._parallel_options = None  # Clear after selection
+            else:
+                tui.output_fn(f'error: index {index} out of range (0-{len(tui._parallel_options)-1})')
+        except ValueError:
+            # Try to match as value
+            if selection in tui._parallel_options:
+                tui._print_json({
+                    'selected': selection,
+                    'status': 'selected'
+                })
+                tui._parallel_options = None
+            else:
+                tui.output_fn(f'error: option "{selection}" not found in parallel options')
         return True
 
     if action == 'cancel':
-        tui._print_json({'status': 'cancelled'})
+        if hasattr(tui, '_parallel_options') and tui._parallel_options:
+            tui._parallel_options = None
+            tui._print_json({'status': 'cancelled', 'action': 'cleared_parallel_options'})
+        else:
+            tui._print_json({'status': 'cancelled', 'action': 'no_active_operation'})
         return True
 
     if action == 'conflict':
-        tui._print_json({'status': 'conflict mode not implemented'})
+        tui._print_json({
+            'status': 'conflict_mode',
+            'message': 'Conflict resolution mode not yet implemented',
+            'hint': 'Use git tools directly for conflict resolution'
+        })
         return True
 
     # Conflict resolution shortcuts
     if action in ('o', 't', 'n', 'p', 'a'):
-        tui._print_json({'status': 'conflict resolution not implemented'})
+        shortcuts = {
+            'o': 'accept_ours',
+            't': 'accept_theirs',
+            'n': 'next_conflict',
+            'p': 'prev_conflict',
+            'a': 'abort_conflict'
+        }
+        tui._print_json({
+            'status': 'conflict_resolution',
+            'shortcut': action,
+            'action': shortcuts[action],
+            'message': 'Conflict resolution shortcuts not yet implemented',
+            'hint': 'Use git tools: git checkout --ours/theirs, git diff, etc.'
+        })
         return True
 
     # Handle chat mode fallback

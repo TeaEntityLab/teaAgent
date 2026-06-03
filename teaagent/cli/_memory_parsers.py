@@ -139,3 +139,41 @@ def register(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
     team_add.set_defaults(func=handlers['team_memory_add'])
+
+    quarantine = subs.add_parser('quarantine', help='Quarantined memory management.')
+    quarantine_subs = quarantine.add_subparsers(dest='quarantine_command', required=True)
+
+    quarantine_list = quarantine_subs.add_parser('list', help='List quarantined memory entries.')
+    quarantine_list.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    quarantine_list.add_argument(
+        '--limit', type=int, default=20, help='Maximum quarantined entries to list.'
+    )
+    quarantine_list.set_defaults(func=handlers['quarantine_list'])
+
+    quarantine_promote = quarantine_subs.add_parser(
+        'promote', help='Promote a quarantined memory entry.'
+    )
+    quarantine_promote.add_argument('memory_id', help='Memory ID to promote.')
+    quarantine_promote.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    quarantine_promote.add_argument(
+        '--attestation',
+        required=True,
+        help='Attestation string for the promotion (e.g., operator confirmation).',
+    )
+    quarantine_promote.set_defaults(func=handlers['quarantine_promote'])
+
+    maintain = subs.add_parser('maintain', help='Memory maintenance and cleanup.')
+    maintain.add_argument(
+        '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    maintain.add_argument(
+        '--dry-run',
+        action='store_true',
+        default=True,
+        help='Report maintenance actions without executing (default: true).',
+    )
+    maintain.set_defaults(func=handlers['maintain'])

@@ -251,3 +251,38 @@ def team_memory_add_command(args: argparse.Namespace) -> int:
     line = memory.add(args.entry)
     print_json({'status': 'created', 'entry': line})
     return 0
+
+
+def memory_quarantine_list_command(args: argparse.Namespace) -> int:
+    """List quarantined memory entries (TASK-005)."""
+    catalog = MemoryCatalog(args.root, readonly=True)
+    print_json(
+        [
+            entry.to_dict()
+            for entry in catalog.list_quarantined(limit=args.limit)
+        ]
+    )
+    return 0
+
+
+def memory_quarantine_promote_command(args: argparse.Namespace) -> int:
+    """Promote a quarantined memory entry with attestation (TASK-005)."""
+    catalog = MemoryCatalog(args.root)
+    try:
+        entry = catalog.promote_quarantined(
+            args.memory_id,
+            attestation=args.attestation,
+        )
+        print_json({'status': 'promoted', 'memory': entry.to_dict()})
+        return 0
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+
+
+def memory_maintain_command(args: argparse.Namespace) -> int:
+    """Perform dry-run maintenance report (TASK-005)."""
+    catalog = MemoryCatalog(args.root, readonly=True)
+    report = catalog.maintain_dry_run()
+    print_json({'status': 'ok', 'report': report})
+    return 0

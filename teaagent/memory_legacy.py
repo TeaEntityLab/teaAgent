@@ -297,6 +297,153 @@ class MemoryCatalog:
 
         return quarantined_count
 
+    def list_quarantined(self, *, limit: int = 20) -> List[MemoryEntry]:
+        """List quarantined memory entries.
+
+        Args:
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of quarantined memory entries.
+        """
+        if not self.quarantine_path.exists():
+            return []
+        
+        entries: List[MemoryEntry] = []
+        for line in self.quarantine_path.read_text(encoding='utf-8').splitlines():
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if payload.get('quarantine', False):
+                entry = memory_entry_from_payload(payload)
+                if entry is not None:
+                    entries.append(entry)
+        
+        return list(reversed(entries))[:limit]
+
+    def promote_quarantined(
+        self,
+        memory_id: str,
+        *,
+        attestation: str,
+    ) -> MemoryEntry:
+        """Promote a quarantined memory entry to the main catalog.
+
+        Args:
+            memory_id: ID of the quarantined memory entry to promote.
+            attestation: Attestation string for the promotion (e.g., operator confirmation).
+
+        Returns:
+            The promoted memory entry.
+
+        Raises:
+            FileNotFoundError: If the memory_id is not found in quarantine.
+            RuntimeError: If in readonly mode.
+        """
+        if self.readonly:
+            raise RuntimeError('Cannot promote memory in readonly mode')
+        
+        # Find the quarantined entry
+        quarantined_entries = []
+        for line in self.quarantine_path.read_text(encoding='utf-8').splitlines():
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if payload.get('quarantine', False) and payload.get('memory_id') == memory_id:
+                quarantined_entries.append(payload)
+        
+        if not quarantined_entries:
+            raise FileNotFoundError(f"quarantined memory '{memory_id}' not found")
+        
+        # Remove quarantine flag and add provenance attestation
+        payload = quarantined_entries[0]
+        payload['quarantine'] = False
+        if 'provenance' not in payload:
+            payload['provenance'] = {}
+        payload['provenance']['promoted_at'] = utc_now()
+        payload['provenance']['attestation'] = attestation
+        
+        # Remove from quarantine file
+        remaining_lines = [
+            line for line in self.quarantine_path.read_text(encoding='utf-8').splitlines()
+            if line.strip() and json.loads(line).get('memory_id') != memory_id
+        ]
+        self.quarantine_path.write_text('\n'.join(remaining_lines), encoding='utf-8')
+        
+        # Add to main catalog
+        entry = memory_entry_from_payload(payload)
+        if entry is not None:
+            with self._cross_process_lock():
+                append_jsonl_line(self.path, json.dumps(payload, sort_keys=True))
+        
+        return entry
+
+    def maintain_dry_run(self) -> dict[str, Any]:
+        """Perform a dry-run maintenance report without executing actions.
+
+        Returns:
+            Dict with maintenance recommendations and statistics.
+        """
+        report = {
+            'total_entries': 0,
+            'quarantined_entries': 0,
+            'stale_entries': 0,
+            'duplicate_entries': 0,
+            'recommendations': [],
+        }
+        
+        # Count main catalog entries
+        if self.path.exists():
+            main_entries = self._read_entries()
+            report['total_entries'] = len(main_entries)
+            
+            # Check for duplicates (same content)
+            content_map = {}
+            for entry in main_entries:
+                content = entry.content
+                if content in content_map:
+                    content_map[content].append(entry.memory_id)
+                else:
+                    content_map[content] = [entry.memory_id]
+            
+            duplicate_count = sum(1 for ids in content_map.values() if len(ids) > 1)
+            report['duplicate_entries'] = duplicate_count
+            if duplicate_count > 0:
+                report['recommendations'].append(
+                    f"Found {duplicate_count} duplicate entries (same content)"
+                )
+        
+        # Count quarantined entries
+        quarantined = self.list_quarantined()
+        report['quarantined_entries'] = len(quarantined)
+        
+        if report['quarantined_entries'] > 0:
+            report['recommendations'].append(
+                f"Review {report['quarantined_entries']} quarantined entries for promotion"
+            )
+        
+        # Check for stale entries (older than 30 days)
+        from datetime import datetime, timedelta
+        cutoff_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
+        stale_count = 0
+        for entry in self._read_entries():
+            if entry.created_at < cutoff_date:
+                stale_count += 1
+        
+        report['stale_entries'] = stale_count
+        if stale_count > 0:
+            report['recommendations'].append(
+                f"Consider reviewing {stale_count} entries older than 30 days"
+            )
+        
+        return report
+
 
 def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
     if not isinstance(payload, dict):
