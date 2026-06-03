@@ -26,7 +26,7 @@ class A2ADiscoveryServerTests(unittest.TestCase):
     def test_serves_well_known_agent_json(self) -> None:
         card = _card()
         with A2ADiscoveryServer(card, port=0) as server:
-            client = A2AClient(server.base_url)
+            client = A2AClient(server.base_url, allow_http=True)
             fetched = client.fetch_card()
         self.assertEqual(fetched.name, card.name)
         self.assertEqual(fetched.version, card.version)
@@ -62,7 +62,7 @@ class A2ADiscoveryServerTests(unittest.TestCase):
             return f'done:{task}'
 
         with A2ADiscoveryServer(card, port=0, task_handler=handler) as server:
-            client = A2AClient(server.base_url)
+            client = A2AClient(server.base_url, allow_http=True)
             result = client.delegate('run tests', context={'env': 'ci'})
 
         self.assertIsInstance(result, A2ATaskResult)
@@ -109,7 +109,7 @@ class A2AClientTests(unittest.TestCase):
     def test_fetch_card_round_trip(self) -> None:
         original = _card(name='round-trip-agent')
         with A2ADiscoveryServer(original, port=0) as server:
-            client = A2AClient(server.base_url)
+            client = A2AClient(server.base_url, allow_http=True)
             fetched = client.fetch_card()
         self.assertEqual(fetched.name, 'round-trip-agent')
         self.assertIn('file_read', fetched.tools)
@@ -119,7 +119,7 @@ class A2AClientTests(unittest.TestCase):
         with A2ADiscoveryServer(
             card, port=0, task_handler=lambda t, c: 'finished'
         ) as server:
-            result = A2AClient(server.base_url).delegate('my task')
+            result = A2AClient(server.base_url, allow_http=True).delegate('my task')
         self.assertEqual(result.output, 'finished')
         self.assertEqual(result.task, 'my task')
 
@@ -132,7 +132,7 @@ class A2AClientTests(unittest.TestCase):
 
         card = _card()
         with A2ADiscoveryServer(card, port=0, task_handler=handler) as server:
-            A2AClient(server.base_url).delegate('task')
+            A2AClient(server.base_url, allow_http=True).delegate('task')
         self.assertEqual(received[0], {})
 
 
@@ -140,7 +140,7 @@ class FederatedAgentRegistryTests(unittest.TestCase):
     def test_get_card_from_remote(self) -> None:
         card = _card(name='remote-agent')
         with A2ADiscoveryServer(card, port=0) as server:
-            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60)
+            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60, allow_http=True)
             fetched = registry.get('remote-agent')
         self.assertIsNotNone(fetched)
         assert fetched is not None
@@ -154,7 +154,7 @@ class FederatedAgentRegistryTests(unittest.TestCase):
             A2ADiscoveryServer(card_b, port=0) as srv_b,
         ):
             registry = FederatedAgentRegistry(
-                [srv_a.base_url, srv_b.base_url], ttl_seconds=60
+                [srv_a.base_url, srv_b.base_url], ttl_seconds=60, allow_http=True
             )
             names = {c.name for c in registry.list_cards()}
         self.assertIn('agent-alpha', names)
@@ -163,12 +163,12 @@ class FederatedAgentRegistryTests(unittest.TestCase):
     def test_get_missing_returns_none(self) -> None:
         card = _card(name='only-one')
         with A2ADiscoveryServer(card, port=0) as server:
-            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60)
+            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60, allow_http=True)
             self.assertIsNone(registry.get('does-not-exist'))
 
     def test_errors_on_unreachable_endpoint(self) -> None:
         registry = FederatedAgentRegistry(
-            ['http://127.0.0.1:1'], ttl_seconds=60, timeout=1
+            ['http://127.0.0.1:1'], ttl_seconds=60, timeout=1, allow_http=True
         )
         errors = registry.refresh()
         self.assertEqual(len(errors), 1)
@@ -177,7 +177,7 @@ class FederatedAgentRegistryTests(unittest.TestCase):
     def test_stale_cache_refreshes(self) -> None:
         card = _card(name='cached-agent')
         with A2ADiscoveryServer(card, port=0) as server:
-            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=0)
+            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=0, allow_http=True)
             # First call: stale immediately (ttl=0)
             first = registry.get('cached-agent')
             # Second call: still stale, refreshes again
@@ -188,7 +188,7 @@ class FederatedAgentRegistryTests(unittest.TestCase):
     def test_find_by_capability(self) -> None:
         card = _card(name='searcher')
         with A2ADiscoveryServer(card, port=0) as server:
-            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60)
+            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60, allow_http=True)
             found = registry.find_by_capability('search')
         self.assertEqual(len(found), 1)
         self.assertEqual(found[0].name, 'searcher')
@@ -196,7 +196,7 @@ class FederatedAgentRegistryTests(unittest.TestCase):
     def test_find_by_tool(self) -> None:
         card = _card(name='reader')
         with A2ADiscoveryServer(card, port=0) as server:
-            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60)
+            registry = FederatedAgentRegistry([server.base_url], ttl_seconds=60, allow_http=True)
             found = registry.find_by_tool('file_read')
         self.assertEqual(len(found), 1)
         self.assertEqual(found[0].name, 'reader')

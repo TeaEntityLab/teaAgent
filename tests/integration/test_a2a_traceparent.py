@@ -112,7 +112,7 @@ def test_generate_then_parse_roundtrip():
 def test_delegate_injects_traceparent_header():
     server, base_url = _start_server()
     try:
-        client = A2AClient(base_url)
+        client = A2AClient(base_url, allow_http=True)
         tp = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
         client.delegate('hello', traceparent=tp)
         assert _RECEIVED_HEADERS.get('traceparent') == tp
@@ -123,7 +123,7 @@ def test_delegate_injects_traceparent_header():
 def test_delegate_without_traceparent_no_header():
     server, base_url = _start_server()
     try:
-        client = A2AClient(base_url)
+        client = A2AClient(base_url, allow_http=True)
         client.delegate('hello')
         assert 'traceparent' not in _RECEIVED_HEADERS
     finally:
@@ -133,7 +133,7 @@ def test_delegate_without_traceparent_no_header():
 def test_delegate_returns_traceparent_in_result():
     server, base_url = _start_server()
     try:
-        client = A2AClient(base_url)
+        client = A2AClient(base_url, allow_http=True)
         tp = generate_traceparent()
         result = client.delegate('task', traceparent=tp)
         assert isinstance(result, A2ATaskResult)
@@ -146,7 +146,7 @@ def test_delegate_returns_traceparent_in_result():
 def test_delegate_result_traceparent_none_when_not_set():
     server, base_url = _start_server()
     try:
-        client = A2AClient(base_url)
+        client = A2AClient(base_url, allow_http=True)
         result = client.delegate('task')
         assert result.traceparent is None
     finally:

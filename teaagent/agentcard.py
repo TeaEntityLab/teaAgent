@@ -357,19 +357,20 @@ class A2ADiscoveryServer:
 class A2AClient:
     """HTTP client for A2A task delegation and card discovery."""
 
-    def __init__(self, endpoint: str, *, timeout: int = 30) -> None:
+    def __init__(self, endpoint: str, *, timeout: int = 30, allow_http: bool = False) -> None:
         self._endpoint = endpoint.rstrip('/')
         self._timeout = timeout
+        self._allow_http = allow_http
 
     @classmethod
-    def from_card(cls, card: AgentCard, *, timeout: int = 30) -> 'A2AClient':
+    def from_card(cls, card: AgentCard, *, timeout: int = 30, allow_http: bool = False) -> 'A2AClient':
         if not card.endpoint:
             raise ValueError(f'AgentCard {card.name!r} has no endpoint')
-        return cls(card.endpoint, timeout=timeout)
+        return cls(card.endpoint, timeout=timeout, allow_http=allow_http)
 
     def fetch_card(self) -> AgentCard:
         url = f'{self._endpoint}/.well-known/agent.json'
-        with safe_urlopen(url, timeout=self._timeout) as resp:
+        with safe_urlopen(url, timeout=self._timeout, allow_http=self._allow_http) as resp:
             data = json.loads(resp.read().decode('utf-8'))
         return AgentCard.from_dict(data)
 
@@ -387,6 +388,7 @@ class A2AClient:
         with safe_urlopen(
             f'{self._endpoint}/a2a/task',
             timeout=self._timeout,
+            allow_http=self._allow_http,
             data=payload,
             headers=headers,
         ) as resp:
@@ -416,10 +418,12 @@ class FederatedAgentRegistry:
         ttl_seconds: int = 300,
         timeout: int = 10,
         circuit_breaker: Optional[CircuitBreakerConfig] = None,
+        allow_http: bool = False,
     ) -> None:
         self._endpoints = list(endpoints)
         self._ttl = ttl_seconds
         self._timeout = timeout
+        self._allow_http = allow_http
         self._cache: list[AgentCard] = []
         self._fetched_at: float = 0.0
         self._cb_config = circuit_breaker
@@ -439,7 +443,7 @@ class FederatedAgentRegistry:
                 continue  # circuit open — skip this endpoint
             url = base_url.rstrip('/') + '/.well-known/agent.json'
             try:
-                with safe_urlopen(url, timeout=self._timeout) as resp:
+                with safe_urlopen(url, timeout=self._timeout, allow_http=self._allow_http) as resp:
                     data = json.loads(resp.read().decode('utf-8'))
                 cards.append(AgentCard.from_dict(data))
                 circuit.record_success()

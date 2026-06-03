@@ -51,7 +51,7 @@ def test_circuit_opens_after_threshold():
     cb = CircuitBreakerConfig(failure_threshold=2, reset_timeout_seconds=60.0)
     reg = FederatedAgentRegistry(['http://bad.local'], circuit_breaker=cb)
 
-    with patch('teaagent.agentcard.urllib.request.urlopen', side_effect=_fail_fetch):
+    with patch('teaagent.http_utils.safe_urlopen', side_effect=_fail_fetch):
         reg.refresh()  # failure 1
         reg.refresh()  # failure 2 → circuit opens
 
@@ -74,7 +74,7 @@ def test_open_circuit_skips_endpoint():
         return _ok_fetch(url)
 
     with patch(
-        'teaagent.agentcard.urllib.request.urlopen', side_effect=selective_fetch
+        'teaagent.http_utils.safe_urlopen', side_effect=selective_fetch
     ):
         reg.refresh()  # bad fails → circuit opens; good succeeds
         call_log.clear()
@@ -96,7 +96,7 @@ def test_success_resets_failure_count():
             raise OSError('flaky')
         return _ok_fetch(url)
 
-    with patch('teaagent.agentcard.urllib.request.urlopen', side_effect=flaky):
+    with patch('teaagent.http_utils.safe_urlopen', side_effect=flaky):
         reg.refresh()  # fail 1
         reg.refresh()  # success → reset
         reg.refresh()  # success
@@ -109,7 +109,7 @@ def test_circuit_resets_after_timeout():
     cb = CircuitBreakerConfig(failure_threshold=1, reset_timeout_seconds=0.05)
     reg = FederatedAgentRegistry(['http://temp-bad.local'], circuit_breaker=cb)
 
-    with patch('teaagent.agentcard.urllib.request.urlopen', side_effect=_fail_fetch):
+    with patch('teaagent.http_utils.safe_urlopen', side_effect=_fail_fetch):
         reg.refresh()  # opens circuit
 
     assert reg.circuit_state('http://temp-bad.local') == 'open'
@@ -117,7 +117,7 @@ def test_circuit_resets_after_timeout():
     time.sleep(0.1)  # wait for reset
 
     # After timeout, circuit should allow a retry
-    with patch('teaagent.agentcard.urllib.request.urlopen', return_value=_ok_fetch('')):
+    with patch('teaagent.http_utils.safe_urlopen', return_value=_ok_fetch('')):
         reg.refresh()
 
     assert reg.circuit_state('http://temp-bad.local') == 'closed'
@@ -132,7 +132,7 @@ def test_no_circuit_breaker_behaves_as_before():
         call_count['n'] += 1
         raise OSError('down')
 
-    with patch('teaagent.agentcard.urllib.request.urlopen', side_effect=counting_fail):
+    with patch('teaagent.http_utils.safe_urlopen', side_effect=counting_fail):
         reg.refresh()
         reg.refresh()
         reg.refresh()
@@ -157,7 +157,7 @@ def test_cards_from_healthy_endpoints_still_returned():
             raise OSError('bad')
         return _ok_fetch(url)
 
-    with patch('teaagent.agentcard.urllib.request.urlopen', side_effect=selective):
+    with patch('teaagent.http_utils.safe_urlopen', side_effect=selective):
         errors = reg.refresh()
         cards = reg.list_cards()
 
