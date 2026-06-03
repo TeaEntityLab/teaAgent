@@ -933,6 +933,7 @@ def _execute_agent_task(
     if not getattr(args, 'no_summary', False):
         from teaagent.budget import RunBudget
         from teaagent.ergonomics.run_summary import summarize_run
+        from teaagent.run_evidence import build_run_evidence_bundle
 
         cap = (
             int(args.max_estimated_cost_cents)
@@ -948,6 +949,13 @@ def _execute_agent_task(
             output_tokens=result.output_tokens,
             budget_cap_cents=cap,
         )
+        # Surface run evidence bundle when available (commands, tests, approvals, gaps)
+        try:
+            evidence = build_run_evidence_bundle(args.root, result.run_id)
+            if evidence.commands_run or evidence.tests or evidence.approvals:
+                payload['run_evidence'] = evidence.to_dict()
+        except Exception:
+            pass
     if plan_contract is not None:
         payload['plan_contract'] = plan_contract.to_dict()
     if resumed_from:

@@ -765,7 +765,12 @@ class TeaAgentTUI:
         )
 
     def _handle_cost(self) -> None:
-        self.output_fn(f'cost: ${self._session_cost_cents / 100:.2f}')
+        # Use controller cost when available (CG-03), fall back to local tracking
+        controller = self._get_chat_controller()
+        cost_cents = controller.get_session_cost()
+        if cost_cents == 0 and self._session_cost_cents > 0:
+            cost_cents = self._session_cost_cents
+        self.output_fn(f'cost: ${cost_cents / 100:.2f}')
 
     def _handle_effort(self, args: list[str]) -> None:
         if not args:
@@ -834,8 +839,22 @@ class TeaAgentTUI:
         self._create_checkpoint()
 
     def _handle_undo(self) -> None:
-        ok = self._restore_checkpoint()
-        self.output_fn('undo: ok' if ok else 'undo: failed')
+        """Undo using ChatSessionController undo journal first, fall back to git checkpoint."""
+        controller = self._get_chat_controller()
+        if controller.undo_last_run():
+            self.output_fn('undo: journal undo completed (file-level restore)')
+            return
+        # Fallback to git-stash checkpoint (TUI legacy undo)
+        if self._restore_checkpoint():
+            self.output_fn(
+                'undo: checkpoint restore completed (git-level restore — '
+                'stale undo journal may exist for non-checkpoint runs)'
+            )
+        else:
+            self.output_fn(
+                'undo: nothing to undo — no undo journal or checkpoint found. '
+                'Try running a task first.'
+            )
 
     def _handle_background(self) -> None:
         self.output_fn(
@@ -1144,7 +1163,11 @@ class TeaAgentTUI:
         self.provider = data.get('provider', self.provider)
         self.model = data.get('model', self.model)
         if not self._root_explicit:
-            self.root = Path(data.get('root', str(self.root))).resolve()
+            # Only restore root from state when no explicit --root was provided
+            # AND the state has a root value (TASK-DD2-002)
+            saved_root = data.get('root')
+            if saved_root:
+                self.root = Path(saved_root).resolve()
         self.permission_mode = PermissionMode(
             data.get('permission_mode', self.permission_mode.value)
         )

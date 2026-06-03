@@ -15,6 +15,10 @@ This directory contains the authoritative standards and process documentation fo
 | [testing-standards.md](testing-standards.md) | Test layout, naming convention, coverage requirements, unit/integration/acceptance/property test rules, mocking rules |
 | [release-process.md](release-process.md) | Versioning, changelog format, pre-release checklist, tag/publish procedure, hotfix process, deprecation policy |
 | [compliance-checklist.md](compliance-checklist.md) | Release gates, deployment gates, sign-off requirements, audit trail access, data governance |
+| [document-state-model.md](document-state-model.md) | Canonical states for findings, risks, issues, roadmap items, and archived docs |
+| [risk-issue-roadmap-workflow.md](risk-issue-roadmap-workflow.md) | Pipeline from finding capture to ticketing, roadmap, verification, and supersession |
+| [doc-taxonomy-and-ownership.md](doc-taxonomy-and-ownership.md) | Document types, source-of-truth rules, and default owner surfaces |
+| [doc-maintenance-policy-2026-06-02.md](doc-maintenance-policy-2026-06-02.md) | Short entry point for keeping the daily-driver doc corpus useful |
 
 For the threat model and permission mode table, see [SECURITY.md](../../SECURITY.md).  
 For architecture decisions, see [docs/adr/](../adr/).  

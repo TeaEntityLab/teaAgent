@@ -955,6 +955,24 @@ class TUITests(unittest.TestCase):
             self.assertEqual(tui._session_cost_cents, 50.0)
             self.assertEqual(controller.session_state.session_cost_cents, 50.0)
 
+    def test_tui_cost_command_shows_controller_cost(self) -> None:
+        """TUI /cost should reflect controller state and keep currency formatting."""
+        with tempfile.TemporaryDirectory() as tmp:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+
+            controller = tui._get_chat_controller()
+            controller.session_state.session_cost_cents = 123.0
+            tui._session_cost_cents = 999.0
+
+            tui._handle_cost()
+
+            self.assertEqual(output[-1], 'cost: $1.23')
+
     def test_tui_plan_command_generates_clarification(self) -> None:
         """Test TUI plan command generates task clarification."""
         with tempfile.TemporaryDirectory() as tmp:

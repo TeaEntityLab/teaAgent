@@ -23,16 +23,34 @@ agent mode. It is intentionally more practical than the audit corpus.
 - TUI `/cost` now accumulates via ChatSessionController (CG-11 fixed).
 - TUI has adopted ChatSessionController for unified execution semantics (CG-12 fixed).
 
+## Document governance
+
+Use these when you need the rules behind status, risk, or document ownership:
+
+- Canonical states: [governance/document-state-model.md](governance/document-state-model.md)
+- Risk to ticket to roadmap flow: [governance/risk-issue-roadmap-workflow.md](governance/risk-issue-roadmap-workflow.md)
+- Document taxonomy and ownership: [governance/doc-taxonomy-and-ownership.md](governance/doc-taxonomy-and-ownership.md)
+- Maintenance entry point: [governance/doc-maintenance-policy-2026-06-02.md](governance/doc-maintenance-policy-2026-06-02.md)
+- Markdown corpus review: [analysis/markdown-status-review-2026-06-02.md](analysis/markdown-status-review-2026-06-02.md)
+
 ## Known issues
 
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
 | `teaagent chat <task>` was recently wired into the TUI initial-task path. | Treat as verify/close until parser, handler, and TUI tests prove it. | TASK-DD2-001 |
-| Explicit `--root` can be overwritten by saved TUI state. | Work can run against a stale project root. | TASK-DD2-002 |
 | Suspend/resume wording is ahead of implementation in some paths. | A user can try a printed command that does not rehydrate the run. | AG-01..AG-04 / TICKET-16 |
 | Controller swallows real errors as "mock" detection. | Production errors may be silently ignored. | CG-13 / TICKET-13 |
 | Redundant `audit_trail` JSON field in suspension data. | Wasted space, potential confusion. | CG-14 / TICKET-15 |
-| TUI/REPL undo diverge; REPL help stale. | Users may see inconsistent undo behavior. | CG-15 / TICKET-15 |
+
+## Recently fixed
+
+| Fix | What changed | Tracking |
+|-----|-------------|----------|
+| Explicit `--root` no longer overwritten by saved TUI state. | `_load_tui_state` condition was inverted (checked `'root' not in data` instead of finding saved root). Root restoration now guarded by `_root_explicit` flag, set by CLI entry points via `run_tui()`. | TASK-DD2-002 |
+| TUI undo now uses `ChatSessionController.undo_last_run()` with checkpoint fallback. | TUI `/undo` first tries undo journal (file-level restore), falls back to git-stash checkpoint. | CG-15 / TICKET-15 |
+| TUI cost display now reads from `ChatSessionController` session state (source of truth). | `_handle_cost` uses `controller.get_session_cost()` with local fallback. | CG-03 |
+| Run evidence summaries surfaced in agent mode payload. | `run_evidence` field added to agent run output with commands, tests, approvals, gaps. | — |
+| Updated daily-driver status docs. | Removed stale known issues, added recently-fixed section. | — |
 
 ## Do not rely on yet
 
