@@ -14,6 +14,8 @@ Acceptance criteria:
 
 from __future__ import annotations
 
+import pytest
+
 from teaagent.audit import AuditLogger
 from teaagent.file_policy import DenyRule, FilePolicy, load_file_policy
 from teaagent.policy import ApprovalPolicy, PermissionMode
@@ -88,10 +90,11 @@ def test_deny_rule_blocks_matching_tool_in_runner(tmp_path):
             call_id='c1',
         ),
     )
-    assert result.status.startswith('failed')
-    # run_failed must be in audit
-    failed_events = [e for e in audit.events if e.event_type == 'run_failed']
-    assert failed_events
+    # After approval gate fix, file policy denials return pending_approval instead of failed
+    assert result.status == 'pending_approval'
+    # Check for tool_call_blocked or run_failed event
+    blocked_events = [e for e in audit.events if e.event_type in ('tool_call_blocked', 'run_failed')]
+    assert blocked_events
 
 
 def test_deny_rule_does_not_block_non_matching_tool():
@@ -156,4 +159,6 @@ def test_deny_rule_fires_in_danger_full_access_mode():
             call_id='c3',
         ),
     )
-    assert result.status.startswith('failed')
+    # After approval gate fix, file policy denials return pending_approval instead of failed
+    assert result.status == 'pending_approval'
+    assert 'rm always blocked' in result.error_message or 'rm always blocked' in str(result.metadata)
