@@ -130,6 +130,22 @@ class AuditLogger:
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.path.parent)
+            if self.path.is_file() and self.path.stat().st_size > 0:
+                try:
+                    with open(self.path) as f:
+                        lines = f.readlines()
+                    for line in reversed(lines):
+                        line = line.strip()
+                        if line:
+                            try:
+                                last_entry = json.loads(line)
+                                if "hash" in last_entry:
+                                    self._prev_hash = last_entry["hash"]
+                                    break
+                            except json.JSONDecodeError:
+                                continue
+                except (OSError, json.JSONDecodeError):
+                    pass
 
     @property
     def disk_error(self) -> Optional[OSError]:

@@ -150,6 +150,7 @@
             "opencodezen-go",
             "mistral",
             "deepseek",
+            "fake",
             "grok",
             "workers-ai",
             "aigateway"

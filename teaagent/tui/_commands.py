@@ -127,12 +127,12 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         if subcommand == 'new':
             tui._ensure_session()
             tui.output_fn(
-                f'session: {tui.session_id[:8] if tui.session_id else "none"}'
+                f'session new: {tui.session_id[:8] if tui.session_id else "none"}'
             )
         elif subcommand == 'list':
             store = tui._get_session_store()  # type: ignore[attr-defined]
             sessions = store.list_sessions()  # type: ignore[attr-defined]
-            tui._print_json([s.to_dict() for s in sessions])  # type: ignore[attr-defined]
+            tui._print_json(sessions)
         elif subcommand == 'switch':
             if len(args) < 2:
                 tui.output_fn('error: session switch requires a session id')
@@ -217,8 +217,9 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
     if action == 'daily':
         task_str: str | None = ' '.join(args) if args else None
         from teaagent.daily import build_daily_brief
-
-        brief = build_daily_brief(task=task_str, root=tui.root, provider='anthropic')  # type: ignore[call-arg]
+        provider = tui.provider or 'gpt'
+        brief = build_daily_brief(task=task_str, root=tui.root, provider=provider, permission_mode=tui.permission_mode)
+        tui.output_fn(f'daily: ready={brief.ready}')
         tui._print_json(brief.to_dict())
         return True
 

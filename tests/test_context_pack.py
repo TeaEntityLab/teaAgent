@@ -31,6 +31,7 @@ class ContextPackTests(unittest.TestCase):
             pack = build_context_pack(
                 'plan changes to teaagent/preflight.py before editing',
                 root=root,
+                readonly=True,
             )
             payload = pack.to_dict()
 

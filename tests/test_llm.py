@@ -56,6 +56,7 @@ class LLMAdapterTests(unittest.TestCase):
                 'aigateway',
                 'claude',
                 'deepseek',
+                'fake',
                 'gemini',
                 'gpt',
                 'grok',

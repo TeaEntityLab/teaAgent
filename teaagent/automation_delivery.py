@@ -91,7 +91,7 @@ def deliver_automation_tick(
         secret = resolve_automation_webhook_secret(root)
         if secret:
             headers['X-TeaAgent-Signature-256'] = sign_webhook_body(secret, body)
-        with safe_urlopen(url, timeout=5, data=body, headers=headers):
+        with safe_urlopen(url, timeout=5, data=body, headers=headers, allow_http=True):
             pass  # Connection automatically closed
     except (urllib.error.URLError, OSError, ValueError):
         if raise_on_error:

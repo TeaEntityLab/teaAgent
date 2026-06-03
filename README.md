@@ -175,7 +175,7 @@ Self-healing validation is described in [section 8](#8-self-healing-validation-b
 CLI / TUI  →  AgentRunner (decision loop)  →  ToolRegistry  →  Workspace Tools
                   ↕                              ↕
            LLM Adapters                  ApprovalPolicy
-           (13 providers)                 (5 permission modes)
+           (14 providers)                 (5 permission modes)
 ```
 
 - **AgentRunner**: Iterates between model decisions and tool executions within budget limits.
@@ -266,6 +266,7 @@ export MISTRAL_API_KEY=...
 export DEEPSEEK_API_KEY=...
 export XAI_API_KEY=...
 export CLOUDFLARE_API_TOKEN=...
+export FAKE_API_KEY=...
 ```
 
 For persistent setup, copy and edit the template:

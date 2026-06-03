@@ -138,7 +138,7 @@ teaagent tui --setup --root .
 
 ## API Key Setup
 
-TeaAgent supports 13 LLM providers. Set environment variables for the ones you want to use:
+TeaAgent supports 14 LLM providers. Set environment variables for the ones you want to use:
 
 | Provider  | Env Var                | Default Model          | Get Key                                          |
 |-----------|------------------------|------------------------|--------------------------------------------------|

@@ -473,12 +473,12 @@ def _load_skills_and_memory(
     task: str,
     run_id: str,
     audit_logger: AuditLogger,
-) -> tuple[list[SkillIndexEntry], list[dict]]:
+) -> tuple[list[SkillIndexEntry], list[dict], list]:
     """Load skills and memory for the chat agent.
 
-    Returns:
-        Tuple of (skill_index_entries, memories)
-    """
+        Returns:
+            Tuple of (skill_index_entries, memories, active_skills)
+        """
     if config.skill_source_profile == 'custom' and not config.skill_search_dirs:
         raise ValueError('skill_source_profile=custom requires skill_search_dirs')
     skill_index_entries: list[SkillIndexEntry] = []
@@ -533,7 +533,7 @@ def _load_skills_and_memory(
     memories = memory_entries_to_prompt(
         MemoryCatalog(config.root).search(task, limit=config.memory_limit)
     )
-    return skill_index_entries, memories
+    return skill_index_entries, memories, active_skills
 
 
 def _create_runner_and_engine(
@@ -680,7 +680,7 @@ def _run_chat_agent_impl(
     tool_registry, context_extra = _setup_tool_registry(
         config, adapter, registry, task, task_spec, depth, initial_context_extra
     )
-    skill_index_entries, memories = _load_skills_and_memory(
+    skill_index_entries, memories, active_skills = _load_skills_and_memory(
         config, task, run_id, audit_logger
     )
     runner, engine = _create_runner_and_engine(
@@ -689,7 +689,7 @@ def _run_chat_agent_impl(
         tool_registry,
         project_instructions,
         task_spec,
-        [],  # active_skills
+        active_skills,
         skill_index_entries,
         context_extra,
         run_id,

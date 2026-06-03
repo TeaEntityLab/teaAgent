@@ -141,7 +141,7 @@ def suspend_to_background(
     print(f'[TeaAgent] Run ID: {run_id}')
     print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
     print('[TeaAgent] Note: This is a suspension checkpoint, not background execution.')
-    print('[TeaAgent] (Resume from REPL session not yet supported via CLI.)')
+    print(f'[TeaAgent] To run in background: teaagent agent run --detach {run_id}')
 
     return run_id
 

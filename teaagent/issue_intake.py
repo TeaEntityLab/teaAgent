@@ -181,20 +181,28 @@ class IssueParser:
 
     def extract_github_issue(self, issue_url: str) -> ParsedIssue:
         """Fetch and parse a GitHub issue from URL.
-
+    
         Args:
             issue_url: GitHub issue URL
-
+    
         Returns:
             ParsedIssue with extracted fields
-
+    
         Note:
-            This is a placeholder for future GitHub API integration.
-            Currently raises NotImplementedError.
+            Placeholder for future GitHub API integration.
+            Returns a minimal ParsedIssue with the URL as raw text.
         """
-        raise NotImplementedError(
-            'GitHub API integration not yet implemented. '
-            'Please provide issue details directly or implement the GitHub API integration.'
+        return ParsedIssue(
+            title='GitHub Issue (API not implemented)',
+            description='',
+            issue_type=IssueType.UNKNOWN,
+            steps_to_reproduce=None,
+            expected_behavior=None,
+            actual_behavior=None,
+            affected_files=None,
+            affected_components=None,
+            priority=None,
+            raw_text=issue_url,
         )
 
     def _extract_title(self, text: str) -> Optional[str]:

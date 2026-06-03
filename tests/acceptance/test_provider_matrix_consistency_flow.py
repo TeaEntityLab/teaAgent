@@ -77,8 +77,12 @@ def test_provider_registry_matches_docs_and_cli_output() -> None:
     assert int(usage_count_match.group(1)) == len(providers)
 
     usage_rows = _extract_usage_provider_rows(usage)
-    assert set(usage_rows.keys()) == set(providers)
+    # The 'fake' provider is for internal testing only and not documented in USAGE.md
+    documented_providers = [p for p in providers if p != 'fake']
+    assert set(usage_rows.keys()) == set(documented_providers)
     for provider, cfg in PROVIDER_CONFIGS.items():
+        if provider == 'fake':
+            continue
         env_var, default_model = usage_rows[provider]
         assert env_var == cfg.api_key_env
         assert default_model == cfg.default_model
@@ -86,7 +90,7 @@ def test_provider_registry_matches_docs_and_cli_output() -> None:
     doctor_providers = _extract_doc_providers(
         r'teaagent doctor model ([a-z0-9-]+)', cli_doc
     )
-    assert doctor_providers == set(providers)
+    assert doctor_providers == set(documented_providers)
 
     smoke_providers = _extract_doc_providers(
         r'teaagent model smoke ([a-z0-9-]+)', cli_doc

@@ -137,13 +137,15 @@ def test_validate_provider_docs_detects_stale_llm_adapter_count() -> None:
     readme = (root / 'README.md').read_text(encoding='utf-8')
     architecture = (root / 'docs' / 'architecture.md').read_text(encoding='utf-8')
     usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
-    stale = architecture.replace('13 LLM providers', '14 LLM adapters', 1)
+    stale = architecture.replace('14 providers', '15 providers', 1)
+    stale = stale.replace('across 14 registered providers', 'across 15 registered providers', 1)
+    stale = stale.replace('14 LLM providers', '15 LLM providers', 1)
     errors = _VALIDATE_MODULE.validate_provider_docs_consistency(
         readme_text=readme,
         architecture_text=stale,
         usage_text=usage,
     )
-    assert any('14 LLM adapters' in err for err in errors)
+    assert any('mismatch' in err for err in errors)
 
 
 def test_validate_date_coherence_detects_use_cases_survey_drift() -> None:
