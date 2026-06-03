@@ -47,6 +47,27 @@ the June 2 review.
 10. **`../reviews/daily-driver-docs-package-review-2026-06-02.md`** *(review)*
     Review of the documentation package itself and its saturation risk.
 
+## 2026-06-04 evidence and rationale pack
+
+These files capture the English evidence trail and the concrete roadmap rationale
+behind the current direction. Read them after the daily-driver package if you want the
+why behind the current priorities.
+
+1. **`teaagent-evidence-ledger-2026-06-04.md`** *(analysis)*
+   Current evidence map for governance-first direction, trust-path drift, and daily-driver usefulness.
+2. **`competitor-signal-survey-2026-06-04.md`** *(analysis)*
+   Current competitor signal survey from official docs and community feedback.
+3. **`../strategy/teaagent-product-principles-2026-06-04.md`** *(strategy)*
+   Product principles derived from repository evidence.
+4. **`../strategy/daily-driver-roadmap-rationale-2026-06-04.md`** *(strategy)*
+   Roadmap priority rationale and trust-first work themes.
+5. **`../reviews/daily-driver-critique-and-counterarguments-2026-06-04.md`** *(review)*
+   Skeptical companion document and counterarguments.
+6. **`../governance/evidence-to-principle-policy.md`** *(governance)*
+   Policy for turning evidence into durable principles.
+7. **`../work-log/roadmap-work-items-2026-06-04.md`** *(work log)*
+   Concrete task list with dependencies and acceptance criteria.
+
 ## 2026-06-02 additional guide/module supplement
 
 This supplement makes the June 2 findings easier to use day to day.

@@ -19,6 +19,7 @@ This directory contains the authoritative standards and process documentation fo
 | [risk-issue-roadmap-workflow.md](risk-issue-roadmap-workflow.md) | Pipeline from finding capture to ticketing, roadmap, verification, and supersession |
 | [doc-taxonomy-and-ownership.md](doc-taxonomy-and-ownership.md) | Document types, source-of-truth rules, and default owner surfaces |
 | [doc-maintenance-policy-2026-06-02.md](doc-maintenance-policy-2026-06-02.md) | Short entry point for keeping the daily-driver doc corpus useful |
+| [evidence-to-principle-policy.md](evidence-to-principle-policy.md) | How to turn repository evidence into durable principles and roadmap rationale |
 
 For the threat model and permission mode table, see [SECURITY.md](../../SECURITY.md).  
 For architecture decisions, see [docs/adr/](../adr/).  
