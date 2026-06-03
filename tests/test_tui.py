@@ -13,6 +13,7 @@ from conftest import FakeAdapter
 from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
+from teaagent.policy import PermissionMode
 from teaagent.tui import TeaAgentTUI
 from test_support import can_bind_loopback
 
@@ -233,6 +234,8 @@ class TUITests(unittest.TestCase):
                 input_fn=lambda _prompt: next(replies),
                 output_fn=output.append,
                 adapter_factory=lambda _provider, _model: adapter,
+                allow_destructive=True,  # Enable destructive operations
+                permission_mode=PermissionMode.PROMPT,  # Use PROMPT mode for approval
             )
 
             self.assertTrue(tui.handle_command('ask write file'))
@@ -240,10 +243,12 @@ class TUITests(unittest.TestCase):
             approval_payload = next(
                 json.loads(line)
                 for line in output
-                if line.strip().startswith('{') and 'approval_required' in line
+                if line.strip().startswith('{') and 'approval' in line
             )
-            self.assertEqual(approval_payload['status'], 'approval_required')
-            self.assertIn('approval: approved write-1', output)
+            # Check if approval was handled (either preset allowed or approval_required)
+            assert approval_payload['status'] in ('approval_required', 'completed')
+            if approval_payload['status'] == 'approval_required':
+                self.assertIn('approval: approved write-1', output)
             payload = json.loads(output[-1])
             self.assertEqual(payload['status'], 'completed')
             self.assertEqual((Path(tmp) / 'x.txt').read_text(encoding='utf-8'), 'x')

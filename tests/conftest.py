@@ -26,19 +26,9 @@ class FakeAdapter:
             self.before_each()
         self.requests.append(request)
         content = self.outputs.pop(0)
-        # Parse cost_cents from JSON content if present
-        cost_cents = 0
-        if isinstance(content, str) and 'cost_cents' in content:
-            try:
-                import json
-
-                parsed = json.loads(content)
-                if isinstance(parsed, dict) and 'cost_cents' in parsed:
-                    cost_cents = parsed['cost_cents']
-            except (json.JSONDecodeError, KeyError):
-                pass
+        # LLMResponse doesn't take cost_cents as a parameter - it's a computed property
         return LLMResponse(
-            provider='fake', model='fake-model', content=content, cost_cents=cost_cents
+            provider='fake', model='fake-model', content=content
         )
 
 
