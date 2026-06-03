@@ -39,6 +39,7 @@ from ._types import (
     DecisionFn,
     FinalAnswer,
     RunResult,
+    ToolRequest,
 )
 
 
@@ -312,7 +313,14 @@ class AgentRunner:
         if run_started_extra:
             started_payload.update(run_started_extra)
         self.audit.record('run_started', current_run_id, **started_payload)
-        return current_run_id, context, tool_calls, cost_cents, input_tokens, output_tokens
+        return (
+            current_run_id,
+            context,
+            tool_calls,
+            cost_cents,
+            input_tokens,
+            output_tokens,
+        )
 
     def _handle_final_answer(
         self,
@@ -495,9 +503,7 @@ class AgentRunner:
                 annotations=annotations,
                 run_id=run_id,
             )
-            if self.approval_manager.can_request_approval(
-                tool.annotations.destructive
-            ):
+            if self.approval_manager.can_request_approval(tool.annotations.destructive):
                 approved = self.approval_manager.handle_approval_request(
                     approval_request=approval_request,
                     audit=self.audit,
@@ -517,7 +523,7 @@ class AgentRunner:
                         )
                         raise ToolPermissionError(
                             f'Tool call pending approval: {decision.tool_name}'
-                        )
+                        ) from None
                     raise
             else:
                 self.approval_manager.record_blocked(
@@ -591,9 +597,7 @@ class AgentRunner:
                     'content': f'[System: Context compaction completed. {omitted_count} observations compressed to preserve token budget. Key context preserved in recent observations.]',
                 }
             )
-            self.audit.record(
-                'context_compacted', run_id, summary=compacted.summary
-            )
+            self.audit.record('context_compacted', run_id, summary=compacted.summary)
         return tool_calls, context
 
     def _handle_budget_exceeded(
@@ -645,7 +649,11 @@ class AgentRunner:
     ) -> RunResult:
         current_run_id, context, tool_calls, cost_cents, input_tokens, output_tokens = (
             self._initialize_run_state(
-                task, run_id, initial_observations, initial_context_extra, run_started_extra
+                task,
+                run_id,
+                initial_observations,
+                initial_context_extra,
+                run_started_extra,
             )
         )
         iterations = 0

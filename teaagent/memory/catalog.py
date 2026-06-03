@@ -134,7 +134,7 @@ class MemoryCatalog:
         # Use cache if available and not dirty
         if self._cache is not None and not self._cache_dirty:
             return self._cache
-        
+
         if not self.path.exists():
             self._cache = []
             self._cache_dirty = False
@@ -163,7 +163,13 @@ class MemoryCatalog:
         """
         total_lines = 0
         if self.path.exists():
-            total_lines = len([line for line in self.path.read_text(encoding='utf-8').splitlines() if line.strip()])
+            total_lines = len(
+                [
+                    line
+                    for line in self.path.read_text(encoding='utf-8').splitlines()
+                    if line.strip()
+                ]
+            )
 
         return {
             'corrupt_entries': self._corrupt_count,

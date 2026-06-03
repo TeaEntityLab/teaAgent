@@ -18,7 +18,6 @@ from teaagent.ergonomics._approval_grants import (
     _grant_expired,
     _new_grant_id,
     _new_record_id,
-    _normalize_and_validate_path,
     _parse_grant,
     _path_matches,
     _stable_grant_id,

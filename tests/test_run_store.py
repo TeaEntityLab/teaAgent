@@ -317,10 +317,12 @@ class RunStoreTests(unittest.TestCase):
                 # Manually write the file without updating index
                 target = store.run_path(run_id)
                 from teaagent.storage import atomic_write_text
+
                 with file_lock(audit.path):
                     content = audit.path.read_text(encoding='utf-8')
                 atomic_write_text(target, content)
                 from teaagent.audit import secure_audit_file
+
                 secure_audit_file(target)
                 audit.path.unlink(missing_ok=True)
 

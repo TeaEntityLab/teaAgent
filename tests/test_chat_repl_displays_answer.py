@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import io
-from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from conftest import FakeAdapter
+
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController
 from teaagent.cli._handlers._chat import chat_command
@@ -25,7 +23,9 @@ def test_controller_displays_answer_on_success(tmp_path: Path) -> None:
     adapter = FakeAdapter(outputs)
 
     output_buffer = io.StringIO()
-    output_fn = lambda s: output_buffer.write(s + '\n')
+
+    def output_fn(s: str) -> None:
+        output_buffer.write(s + '\n')
 
     controller = ChatSessionController(tmp_path, output_fn=output_fn)
 
@@ -46,15 +46,19 @@ def test_controller_displays_answer_on_success(tmp_path: Path) -> None:
     )
 
     output = output_buffer.getvalue()
-    assert 'Task completed successfully' in output, f'Expected answer in output, got: {output}'
-    assert 'Task failed' not in output, f'Should not print "Task failed" on success'
+    assert 'Task completed successfully' in output, (
+        f'Expected answer in output, got: {output}'
+    )
+    assert 'Task failed' not in output, 'Should not print "Task failed" on success'
     assert result.run_result.status == 'completed'
 
 
 def test_controller_displays_error_on_failure(tmp_path: Path) -> None:
     """Test that failed task prints error message, not RunResult repr (CG-01)."""
     output_buffer = io.StringIO()
-    output_fn = lambda s: output_buffer.write(s + '\n')
+
+    def output_fn(s: str) -> None:
+        output_buffer.write(s + '\n')
 
     controller = ChatSessionController(tmp_path, output_fn=output_fn)
 
@@ -83,7 +87,9 @@ def test_controller_displays_error_on_failure(tmp_path: Path) -> None:
         )
 
     output = output_buffer.getvalue()
-    assert 'permission denied' in output or '[failed]' in output, f'Expected error message, got: {output}'
+    assert 'permission denied' in output or '[failed]' in output, (
+        f'Expected error message, got: {output}'
+    )
     assert 'RunResult' not in output, f'Should not print RunResult repr, got: {output}'
     assert result.run_result.status == 'failed'
 
@@ -91,7 +97,9 @@ def test_controller_displays_error_on_failure(tmp_path: Path) -> None:
 def test_controller_no_output_on_empty_final_answer(tmp_path: Path) -> None:
     """Test that task with no final_answer prints status, not crash (CG-01)."""
     output_buffer = io.StringIO()
-    output_fn = lambda s: output_buffer.write(s + '\n')
+
+    def output_fn(s: str) -> None:
+        output_buffer.write(s + '\n')
 
     controller = ChatSessionController(tmp_path, output_fn=output_fn)
 
@@ -127,10 +135,11 @@ def test_controller_no_output_on_empty_final_answer(tmp_path: Path) -> None:
 
 # ── TASK-DD2-001: Execute or reject `teaagent chat <task>` ─────────────────────
 
+
 def test_chat_command_executes_initial_task(tmp_path: Path) -> None:
     """Test that chat_command with args.task executes the task before REPL loop."""
     from argparse import Namespace
-    
+
     # Create mock args with task
     args = Namespace(
         task='do something',
@@ -150,14 +159,14 @@ def test_chat_command_executes_initial_task(tmp_path: Path) -> None:
         skill_search_dirs=None,
         memory_limit=5,
     )
-    
+
     # Mock run_tui to capture the initial_task parameter
     # run_tui is imported inside chat_command, so we patch it at the tui module
     with patch('teaagent.tui.run_tui') as mock_run_tui:
         mock_run_tui.return_value = 0
-        
+
         result = chat_command(args)
-        
+
         # Verify run_tui was called with initial_task
         mock_run_tui.assert_called_once()
         call_kwargs = mock_run_tui.call_args[1]
@@ -168,7 +177,7 @@ def test_chat_command_executes_initial_task(tmp_path: Path) -> None:
 def test_chat_command_no_task_opens_repl(tmp_path: Path) -> None:
     """Test that chat_command with args.task=None opens REPL without executing task."""
     from argparse import Namespace
-    
+
     # Create mock args without task
     args = Namespace(
         task=None,
@@ -188,13 +197,13 @@ def test_chat_command_no_task_opens_repl(tmp_path: Path) -> None:
         skill_search_dirs=None,
         memory_limit=5,
     )
-    
+
     # Mock run_tui to capture the initial_task parameter
     with patch('teaagent.tui.run_tui') as mock_run_tui:
         mock_run_tui.return_value = 0
-        
+
         result = chat_command(args)
-        
+
         # Verify run_tui was called with initial_task=None
         mock_run_tui.assert_called_once()
         call_kwargs = mock_run_tui.call_args[1]

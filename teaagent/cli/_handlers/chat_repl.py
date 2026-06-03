@@ -350,6 +350,7 @@ def run_chat_repl(
             except (OSError, RuntimeError) as exc:
                 # Log but don't crash - watcher cleanup is best-effort
                 import logging
+
                 logging.getLogger(__name__).warning('File watcher stop error: %s', exc)
 
     def create_checkpoint() -> bool:
@@ -593,6 +594,7 @@ def run_chat_repl(
                 )
             except Exception as exc:
                 import logging
+
                 logging.getLogger(__name__).debug('Pinned file count error: %s', exc)
                 prompt = 'teaagent> '
 

@@ -141,9 +141,13 @@ def register(
     team_add.set_defaults(func=handlers['team_memory_add'])
 
     quarantine = subs.add_parser('quarantine', help='Quarantined memory management.')
-    quarantine_subs = quarantine.add_subparsers(dest='quarantine_command', required=True)
+    quarantine_subs = quarantine.add_subparsers(
+        dest='quarantine_command', required=True
+    )
 
-    quarantine_list = quarantine_subs.add_parser('list', help='List quarantined memory entries.')
+    quarantine_list = quarantine_subs.add_parser(
+        'list', help='List quarantined memory entries.'
+    )
     quarantine_list.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )

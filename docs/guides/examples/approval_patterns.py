@@ -39,7 +39,7 @@ def make_runner(
     hook_reg: HookRegistry | None = None,
 ) -> AgentRunner:
     registry = build_workspace_tool_registry(workspace)
-    audit = AuditLogger(path=workspace / ".teaagent" / "audit.jsonl")
+    audit = AuditLogger(path=workspace / '.teaagent' / 'audit.jsonl')
     return AgentRunner(
         registry=registry,
         audit=audit,
@@ -53,7 +53,7 @@ def make_runner(
 
 
 def demo_read_only(workspace: Path) -> None:
-    print("\n=== Pattern 1: READ_ONLY ===")
+    print('\n=== Pattern 1: READ_ONLY ===')
     policy = ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY)
     runner = make_runner(workspace, policy)
 
@@ -64,40 +64,40 @@ def demo_read_only(workspace: Path) -> None:
         if step[0] == 1:
             # Attempt a write — should be blocked
             return ToolRequest(
-                tool_name="workspace_write_file",
-                arguments={"path": "blocked.txt", "content": "this should not appear"},
+                tool_name='workspace_write_file',
+                arguments={'path': 'blocked.txt', 'content': 'this should not appear'},
             )
-        return FinalAnswer(content="write was blocked as expected")
+        return FinalAnswer(content='write was blocked as expected')
 
     try:
-        result = runner.run(task="try to write a file", decide=decide)
-        print(f"  status={result.status}")
+        result = runner.run(task='try to write a file', decide=decide)
+        print(f'  status={result.status}')
     except ToolPermissionError as exc:
-        print(f"  Blocked correctly: {exc}")
+        print(f'  Blocked correctly: {exc}')
 
 
 # ── pattern 2: PROMPT with custom approval handler ────────────────────────────
 
 
 def demo_prompt_with_handler(workspace: Path) -> None:
-    print("\n=== Pattern 2: PROMPT + custom handler ===")
+    print('\n=== Pattern 2: PROMPT + custom handler ===')
 
     approved = []
 
     def my_handler(tool_name: str, arguments: dict, call_id: str) -> bool:
         # Auto-approve writes to the 'output/' directory only
-        path = arguments.get("path", "")
-        decision = path.startswith("output/")
+        path = arguments.get('path', '')
+        decision = path.startswith('output/')
         approved.append((tool_name, path, decision))
         return decision
 
     policy = ApprovalPolicy(
         permission_mode=PermissionMode.PROMPT,
-        enable_jit_prompt=False,       # use handler instead of TTY
+        enable_jit_prompt=False,  # use handler instead of TTY
         approval_handler=my_handler,
     )
     runner = make_runner(workspace, policy)
-    (workspace / "output").mkdir(exist_ok=True)
+    (workspace / 'output').mkdir(exist_ok=True)
 
     step = [0]
 
@@ -106,35 +106,35 @@ def demo_prompt_with_handler(workspace: Path) -> None:
         if step[0] == 1:
             # Write to output/ — handler will approve
             return ToolRequest(
-                tool_name="workspace_write_file",
-                arguments={"path": "output/result.txt", "content": "ok"},
+                tool_name='workspace_write_file',
+                arguments={'path': 'output/result.txt', 'content': 'ok'},
             )
-        return FinalAnswer(content="done")
+        return FinalAnswer(content='done')
 
-    result = runner.run(task="write output file", decide=decide)
-    print(f"  status={result.status}")
+    result = runner.run(task='write output file', decide=decide)
+    print(f'  status={result.status}')
     for tool, path, dec in approved:
-        print(f"  handler: {tool} @ {path!r} → {'approved' if dec else 'denied'}")
+        print(f'  handler: {tool} @ {path!r} → {"approved" if dec else "denied"}')
 
 
 # ── pattern 3: hook-level path guard ─────────────────────────────────────────
 
 
 def demo_hook_guard(workspace: Path) -> None:
-    print("\n=== Pattern 3: hook-level path guard ===")
+    print('\n=== Pattern 3: hook-level path guard ===')
 
     hook_reg = HookRegistry()
     hook_reg.register_pre_hook(
         permission_check_hook(
             mode=HookPermissionMode.ASK,
-            allow_patterns=frozenset({"safe/**"}),
-            deny_patterns=frozenset({"secrets/**", ".env"}),
+            allow_patterns=frozenset({'safe/**'}),
+            deny_patterns=frozenset({'secrets/**', '.env'}),
         )
     )
 
     policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
     runner = make_runner(workspace, policy, hook_reg=hook_reg)
-    (workspace / "safe").mkdir(exist_ok=True)
+    (workspace / 'safe').mkdir(exist_ok=True)
 
     step = [0]
 
@@ -142,13 +142,13 @@ def demo_hook_guard(workspace: Path) -> None:
         step[0] += 1
         if step[0] == 1:
             return ToolRequest(
-                tool_name="workspace_write_file",
-                arguments={"path": "safe/notes.txt", "content": "allowed"},
+                tool_name='workspace_write_file',
+                arguments={'path': 'safe/notes.txt', 'content': 'allowed'},
             )
-        return FinalAnswer(content="done")
+        return FinalAnswer(content='done')
 
-    result = runner.run(task="write to safe directory", decide=decide)
-    print(f"  status={result.status} (safe/ write allowed by hook guard)")
+    result = runner.run(task='write to safe directory', decide=decide)
+    print(f'  status={result.status} (safe/ write allowed by hook guard)')
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -162,8 +162,8 @@ def main() -> None:
         demo_prompt_with_handler(workspace)
         demo_hook_guard(workspace)
 
-    print("\nAll approval pattern demos complete.")
+    print('\nAll approval pattern demos complete.')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

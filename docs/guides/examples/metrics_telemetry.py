@@ -30,46 +30,54 @@ from teaagent.workspace_tools import build_workspace_tool_registry
 
 
 def demo_metrics(workspace: Path) -> None:
-    print("=== Custom Metrics ===")
+    print('=== Custom Metrics ===')
 
     metrics = InMemoryMetricsSink()
 
     # The metrics sink handles audit events; increment counters by emitting events
-    audit = AuditLogger(path=workspace / ".teaagent" / "audit.jsonl")
+    audit = AuditLogger(path=workspace / '.teaagent' / 'audit.jsonl')
     audit.add_sink(metrics.handle_event)
 
     # Emit a custom event
-    audit.log(AuditEvent(
-        event_type="custom_metric",
-        run_id="demo-run-001",
-        payload={"metric": "pages_indexed", "value": 42, "labels": {"source": "docs"}},
-    ))
+    audit.log(
+        AuditEvent(
+            event_type='custom_metric',
+            run_id='demo-run-001',
+            payload={
+                'metric': 'pages_indexed',
+                'value': 42,
+                'labels': {'source': 'docs'},
+            },
+        )
+    )
 
-    audit.log(AuditEvent(
-        event_type="run_completed",
-        run_id="demo-run-001",
-        payload={
-            "status": "completed",
-            "cost_cents": 3.14,
-            "input_tokens": 1200,
-            "output_tokens": 300,
-            "label": "demo-task",
-        },
-    ))
+    audit.log(
+        AuditEvent(
+            event_type='run_completed',
+            run_id='demo-run-001',
+            payload={
+                'status': 'completed',
+                'cost_cents': 3.14,
+                'input_tokens': 1200,
+                'output_tokens': 300,
+                'label': 'demo-task',
+            },
+        )
+    )
 
     snap = metrics.snapshot()
-    print(f"  counters: {dict(snap.counters)}")
-    print(f"  events recorded: {len(snap.events)}")
+    print(f'  counters: {dict(snap.counters)}')
+    print(f'  events recorded: {len(snap.events)}')
 
 
 # ── 2. Full run with audit + cost tracking ────────────────────────────────────
 
 
 def demo_cost_tracking(workspace: Path) -> None:
-    print("\n=== Cost Tracking ===")
+    print('\n=== Cost Tracking ===')
 
     metrics = InMemoryMetricsSink()
-    audit = AuditLogger(path=workspace / ".teaagent" / "audit.jsonl")
+    audit = AuditLogger(path=workspace / '.teaagent' / 'audit.jsonl')
     audit.add_sink(metrics.handle_event)
 
     registry = build_workspace_tool_registry(workspace)
@@ -82,66 +90,72 @@ def demo_cost_tracking(workspace: Path) -> None:
         step[0] += 1
         if step[0] == 1:
             return ToolRequest(
-                tool_name="workspace_write_file",
-                arguments={"path": "out.txt", "content": "hello"},
+                tool_name='workspace_write_file',
+                arguments={'path': 'out.txt', 'content': 'hello'},
             )
-        return FinalAnswer(content="done")
+        return FinalAnswer(content='done')
 
     runner = AgentRunner(
         registry=registry, audit=audit, budget=budget, approval_policy=policy
     )
-    result = runner.run(task="write a file", decide=decide)
-    print(f"  run_id:  {result.run_id}")
-    print(f"  status:  {result.status}")
-    print(f"  cost:    {result.cost_cents:.2f}c")
+    result = runner.run(task='write a file', decide=decide)
+    print(f'  run_id:  {result.run_id}')
+    print(f'  status:  {result.status}')
+    print(f'  cost:    {result.cost_cents:.2f}c')
 
     # Aggregate via CostTracker (reads JSONL from .teaagent/runs/)
     tracker = CostTracker(root=workspace)
     summary = tracker.summary()
-    print(f"  tracker total runs:  {summary.get('total_runs', 0)}")
+    print(f'  tracker total runs:  {summary.get("total_runs", 0)}')
 
 
 # ── 3. Emit custom structured audit events ────────────────────────────────────
 
 
 def demo_custom_audit(workspace: Path) -> None:
-    print("\n=== Custom Audit Events ===")
+    print('\n=== Custom Audit Events ===')
 
-    audit = AuditLogger(path=workspace / ".teaagent" / "custom_audit.jsonl")
+    audit = AuditLogger(path=workspace / '.teaagent' / 'custom_audit.jsonl')
 
     # Emit domain events alongside standard run events
-    for page in ["index.md", "guide.md", "api.md"]:
-        audit.log(AuditEvent(
-            event_type="doc_page_indexed",
-            run_id="indexer-run-001",
-            payload={"page": page, "words": 500 + len(page) * 10},
-        ))
+    for page in ['index.md', 'guide.md', 'api.md']:
+        audit.log(
+            AuditEvent(
+                event_type='doc_page_indexed',
+                run_id='indexer-run-001',
+                payload={'page': page, 'words': 500 + len(page) * 10},
+            )
+        )
 
     # Read back and display
-    log_path = workspace / ".teaagent" / "custom_audit.jsonl"
+    log_path = workspace / '.teaagent' / 'custom_audit.jsonl'
     if log_path.exists():
-        events = [json.loads(line) for line in log_path.read_text().splitlines() if line]
-        print(f"  logged {len(events)} custom events")
+        events = [
+            json.loads(line) for line in log_path.read_text().splitlines() if line
+        ]
+        print(f'  logged {len(events)} custom events')
         for evt in events:
-            print(f"    {evt['event_type']:30s}  page={evt['payload'].get('page')}")
+            print(f'    {evt["event_type"]:30s}  page={evt["payload"].get("page")}')
 
 
 # ── 4. OpenTelemetry wiring (stub — no real endpoint needed) ──────────────────
 
 
 def demo_otel_stub() -> None:
-    print("\n=== OpenTelemetry (stub) ===")
+    print('\n=== OpenTelemetry (stub) ===')
     try:
         from teaagent.telemetry import TelemetryConfig, configure_telemetry
 
         # In production: replace endpoint with your OTLP collector URL
-        configure_telemetry(TelemetryConfig(
-            service_name="teaagent-demo",
-            otlp_endpoint="http://localhost:4317",  # no-op if collector not running
-        ))
-        print("  OTel configured (no-op if collector not running)")
+        configure_telemetry(
+            TelemetryConfig(
+                service_name='teaagent-demo',
+                otlp_endpoint='http://localhost:4317',  # no-op if collector not running
+            )
+        )
+        print('  OTel configured (no-op if collector not running)')
     except Exception as exc:
-        print(f"  OTel not available: {exc}")
+        print(f'  OTel not available: {exc}')
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -156,8 +170,8 @@ def main() -> None:
         demo_custom_audit(workspace)
         demo_otel_stub()
 
-    print("\nAll metrics/telemetry demos complete.")
+    print('\nAll metrics/telemetry demos complete.')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

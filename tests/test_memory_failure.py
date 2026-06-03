@@ -385,7 +385,9 @@ class TestFailureCardMatching:
         # Should not match because only stopwords overlap
         assert len(matching) == 0
 
-    def test_significant_word_matching_requires_two_words(self, temp_root: Path) -> None:
+    def test_significant_word_matching_requires_two_words(
+        self, temp_root: Path
+    ) -> None:
         """Test that matching requires at least 2 significant words in common."""
         storage = FailureCardStorage(temp_root)
 
@@ -414,7 +416,5 @@ class TestFailureCardMatching:
             task_description='Update authentication flow for new API',
         )
         # Should match because 2 significant words in common
-        assert len(matching) == 1
-        )
         assert len(matching) == 2
         assert matching[0].run_id == 'run-2'  # More recent

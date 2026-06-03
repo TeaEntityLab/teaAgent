@@ -20,10 +20,6 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
-# Heartbeat tick interval for subagent heartbeat ticker (seconds)
-# Must be < lock_timeout_seconds (default 60)
-HEARTBEAT_TICK_INTERVAL = 30
-
 from teaagent.consensus import (
     ConsensusConfig,
     ConsensusEngine,
@@ -35,6 +31,10 @@ from teaagent.consensus import (
 )
 from teaagent.sandbox import GitBranchSandbox
 from teaagent.subagents._approval_queue import get_approval_queue
+
+# Heartbeat tick interval for subagent heartbeat ticker (seconds)
+# Must be < lock_timeout_seconds (default 60)
+HEARTBEAT_TICK_INTERVAL = 30
 
 logger = logging.getLogger(__name__)
 
@@ -698,7 +698,11 @@ class SwarmManager:
                     subagent = future_to_subagent[future]
                     try:
                         results.append(future.result())
-                    except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+                    except (
+                        RuntimeError,
+                        ValueError,
+                        subprocess.SubprocessError,
+                    ) as exc:
                         results.append(
                             SubagentResult(
                                 task_id=subagent._task.task_id,
@@ -713,7 +717,11 @@ class SwarmManager:
                     if future.done():
                         try:
                             results.append(future.result())
-                        except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+                        except (
+                            RuntimeError,
+                            ValueError,
+                            subprocess.SubprocessError,
+                        ) as exc:
                             results.append(
                                 SubagentResult(
                                     task_id=subagent._task.task_id,

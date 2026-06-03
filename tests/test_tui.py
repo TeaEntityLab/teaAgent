@@ -928,16 +928,16 @@ class TUITests(unittest.TestCase):
                 input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
             )
-            
+
             # Verify chat controller is created
             controller = tui._get_chat_controller()
             self.assertIsNotNone(controller)
             self.assertEqual(controller.session_state.session_cost_cents, 0.0)
-            
+
             # Simulate cost accumulation through controller (as would happen in real execution)
             controller.session_state.session_cost_cents += 50.0
             tui._session_cost_cents = controller.session_state.session_cost_cents
-            
+
             # Verify cost was tracked through controller
             self.assertEqual(tui._session_cost_cents, 50.0)
             self.assertEqual(controller.session_state.session_cost_cents, 50.0)
@@ -951,7 +951,7 @@ class TUITests(unittest.TestCase):
                 input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
             )
-            
+
             self.assertTrue(tui.handle_command('plan write a test function'))
             result = json.loads(output[-1])
             self.assertEqual(result['status'], 'clarification_generated')
@@ -967,7 +967,7 @@ class TUITests(unittest.TestCase):
                 input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
             )
-            
+
             self.assertTrue(tui.handle_command('parallel option1 option2 option3'))
             result = json.loads(output[-1])
             self.assertEqual(result['status'], 'options_stored')
@@ -985,11 +985,11 @@ class TUITests(unittest.TestCase):
                 input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
             )
-            
+
             # First set up parallel options
             tui.handle_command('parallel option1 option2 option3')
             output.clear()
-            
+
             # Select by index
             self.assertTrue(tui.handle_command('select 0'))
             result = json.loads(output[-1])
@@ -1007,11 +1007,11 @@ class TUITests(unittest.TestCase):
                 input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
             )
-            
+
             # Set up parallel options
             tui.handle_command('parallel option1 option2')
             output.clear()
-            
+
             # Cancel
             self.assertTrue(tui.handle_command('cancel'))
             result = json.loads(output[-1])
@@ -1028,7 +1028,7 @@ class TUITests(unittest.TestCase):
                 input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
             )
-            
+
             self.assertTrue(tui.handle_command('conflict'))
             result = json.loads(output[-1])
             self.assertEqual(result['status'], 'conflict_mode')
@@ -1514,8 +1514,10 @@ class TUITests(unittest.TestCase):
 
         with (
             patch('teaagent.tui.run_tui') as mock_run,
-            patch('teaagent.cli._handlers._chat.parse_permission_mode',
-                  return_value=PermissionMode.PROMPT),
+            patch(
+                'teaagent.cli._handlers._chat.parse_permission_mode',
+                return_value=PermissionMode.PROMPT,
+            ),
         ):
             chat_command(args)
 
@@ -1715,7 +1717,7 @@ class TUITests(unittest.TestCase):
                 output_fn=output.append,
             )
             tui._root_explicit = True  # Simulate run_tui setting this
-            
+
             # Create a mock state file with a different root
             state_file = Path(tmpdir) / 'state.json'
             saved_state = {
@@ -1724,11 +1726,16 @@ class TUITests(unittest.TestCase):
                 'model': 'test-model',
             }
             state_file.write_text(json.dumps(saved_state), encoding='utf-8')
-            
+
             # Use PropertyMock to patch the property
-            with patch.object(type(tui), '_state_path', new_callable=PropertyMock, return_value=state_file):
+            with patch.object(
+                type(tui),
+                '_state_path',
+                new_callable=PropertyMock,
+                return_value=state_file,
+            ):
                 tui._load_tui_state()
-            
+
             # Root should remain the explicit one, not the saved one
             self.assertEqual(tui.root.resolve(), explicit_root.resolve())
             self.assertNotEqual(str(tui.root), '/some/other/path')
@@ -1739,13 +1746,13 @@ class TUITests(unittest.TestCase):
             # Create a saved state with a specific root
             saved_root = Path(tmpdir) / 'saved'
             saved_root.mkdir()
-            
+
             saved_state = {
                 'root': str(saved_root),
                 'provider': 'test',
                 'model': 'test-model',
             }
-            
+
             # Create TUI without explicit root (default '.')
             output: list[str] = []
             tui = TeaAgentTUI(
@@ -1754,15 +1761,20 @@ class TUITests(unittest.TestCase):
                 output_fn=output.append,
             )
             tui._root_explicit = False  # Explicitly False
-            
+
             # Create a mock state file with saved root
             state_file = Path(tmpdir) / 'state.json'
             state_file.write_text(json.dumps(saved_state), encoding='utf-8')
-            
+
             # Use PropertyMock to patch the property
-            with patch.object(type(tui), '_state_path', new_callable=PropertyMock, return_value=state_file):
+            with patch.object(
+                type(tui),
+                '_state_path',
+                new_callable=PropertyMock,
+                return_value=state_file,
+            ):
                 tui._load_tui_state()
-            
+
             # Root should be restored from saved state
             self.assertEqual(tui.root.resolve(), saved_root.resolve())
 
@@ -1776,7 +1788,7 @@ class TUITests(unittest.TestCase):
                 output_fn=output.append,
             )
             tui._print_header()
-            
+
             # Check that root is shown in header
             header_text = ' '.join(output)
             self.assertIn('Root:', header_text)

@@ -43,6 +43,7 @@ class StdioLSPClient(LSPClient):
             self._notify('exit', {})
         except Exception as exc:
             import logging
+
             logging.getLogger(__name__).debug('LSP client shutdown error: %s', exc)
         proc = self._proc
         self._proc = None

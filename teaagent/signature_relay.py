@@ -169,8 +169,11 @@ class SignatureRelayClient:
         import urllib.request
 
         data = None if body is None else json.dumps(body).encode('utf-8')
+        timeout_int = int(timeout)
         try:
-            with safe_urlopen(url, timeout=timeout, data=data, headers=self._headers()) as response:
+            with safe_urlopen(
+                url, timeout=timeout_int, data=data, headers=self._headers()
+            ) as response:
                 raw = response.read().decode('utf-8')
                 if not raw.strip():
                     return {'ok': True}

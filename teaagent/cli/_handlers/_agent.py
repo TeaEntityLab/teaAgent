@@ -460,6 +460,7 @@ def _execute_agent_task(
         except (OSError, IOError) as exc:
             # Log but don't crash - scratchpad write is best-effort
             import logging
+
             logging.getLogger(__name__).warning('Scratchpad write error: %s', exc)
 
     import atexit

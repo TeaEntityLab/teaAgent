@@ -41,7 +41,7 @@ class TestFakeLLMAdapter(unittest.TestCase):
 
         request = LLMRequest(messages=[LLMMessage(role='user', content='test')])
 
-        response1 = adapter.complete(request)
+        adapter.complete(request)
         self.assertEqual(adapter.call_count, 1)
 
         adapter.reset()

@@ -64,7 +64,7 @@ def safe_urlopen(
     if parsed.scheme not in allowed_schemes:
         raise ValueError(
             f"URL scheme '{parsed.scheme}' not allowed. "
-            f"Allowed schemes: {', '.join(sorted(allowed_schemes))}"
+            f'Allowed schemes: {", ".join(sorted(allowed_schemes))}'
         )
 
     # Create request with headers if provided
@@ -84,22 +84,22 @@ def safe_urlopen(
             if response.getcode() in (301, 302, 303, 307, 308):
                 redirect_count += 1
                 if redirect_count > max_redirects:
-                    raise ValueError(f"Too many redirects (max: {max_redirects})")
+                    raise ValueError(f'Too many redirects (max: {max_redirects})')
                 location = response.headers.get('Location')
                 if not location:
-                    raise ValueError("Redirect response missing Location header")
+                    raise ValueError('Redirect response missing Location header')
                 current_url = location
                 # Validate redirect URL scheme
                 redirect_parsed = urllib.parse.urlparse(current_url)
                 if redirect_parsed.scheme not in allowed_schemes:
                     raise ValueError(
                         f"Redirect to scheme '{redirect_parsed.scheme}' not allowed. "
-                        f"Allowed schemes: {', '.join(sorted(allowed_schemes))}"
+                        f'Allowed schemes: {", ".join(sorted(allowed_schemes))}'
                     )
                 req = urllib.request.Request(current_url, headers=headers or {})
                 continue
             return response
-        except urllib.error.HTTPError as exc:
+        except urllib.error.HTTPError:
             # HTTP errors should be propagated
             raise
         except urllib.error.URLError as exc:
@@ -111,4 +111,4 @@ def safe_urlopen(
             raise
 
     # Should not reach here, but just in case
-    raise ValueError(f"Too many redirects (max: {max_redirects})")
+    raise ValueError(f'Too many redirects (max: {max_redirects})')

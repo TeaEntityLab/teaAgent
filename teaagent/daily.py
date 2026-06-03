@@ -330,7 +330,7 @@ def build_daily_brief(
     run_health = store.health_report()
     if not run_health['healthy'] and 'corrupt_runs' not in harness_health.warnings:
         harness_health.warnings.append(
-            f"Run store corruption: {run_health['corrupt_runs']} corrupt runs detected"
+            f'Run store corruption: {run_health["corrupt_runs"]} corrupt runs detected'
         )
 
     recommendations = _daily_recommendations(

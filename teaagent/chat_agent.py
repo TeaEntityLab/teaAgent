@@ -689,6 +689,7 @@ def _run_chat_agent_impl(
         tool_registry,
         project_instructions,
         task_spec,
+        [],  # active_skills
         skill_index_entries,
         context_extra,
         run_id,

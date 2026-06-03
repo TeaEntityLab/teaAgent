@@ -193,16 +193,17 @@ def preflight(
     memory_health = memory_catalog.health_report()
     if not memory_health['healthy']:
         health['failures'].append(
-            f"Memory corruption detected: {memory_health['corrupt_entries']} corrupt entries"
+            f'Memory corruption detected: {memory_health["corrupt_entries"]} corrupt entries'
         )
         health['healthy'] = False
 
     from teaagent.run_store import RunStore
+
     run_store = RunStore(root_path, readonly=readonly)
     run_health = run_store.health_report()
     if not run_health['healthy']:
         health['failures'].append(
-            f"Run store corruption detected: {run_health['corrupt_runs']} corrupt runs"
+            f'Run store corruption detected: {run_health["corrupt_runs"]} corrupt runs'
         )
         health['healthy'] = False
     token_budget = build_token_budget_report(

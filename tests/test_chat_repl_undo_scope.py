@@ -7,8 +7,6 @@ import io
 import json
 from pathlib import Path
 
-import pytest
-
 from teaagent.chat_session_controller import ChatSessionController
 from teaagent.run_store import RunStore
 
@@ -29,7 +27,7 @@ def test_undo_preserves_manual_edits(tmp_path: Path) -> None:
     run_id = 'test-run-001'
     undo_path = store.undo_path(run_id)
     undo_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Create journal entry for file B only (not file A)
     original_content_b64 = base64.b64encode(b'original\n').decode('ascii')
     journal_entry = {
@@ -38,25 +36,29 @@ def test_undo_preserves_manual_edits(tmp_path: Path) -> None:
         'content_b64': original_content_b64,
     }
     undo_path.write_text(json.dumps(journal_entry), encoding='utf-8')
-    
+
     # Create a minimal run summary so latest_run_with_undo can find it
     run_summary_path = store.store_dir / f'{run_id}.jsonl'
     run_summary_path.write_text(
-        json.dumps({
-            'run_id': run_id,
-            'task': 'edit agent.txt',
-            'status': 'completed',
-            'created_at': '2026-06-02T00:00:00Z',
-            'updated_at': '2026-06-02T00:00:00Z',
-        }),
-        encoding='utf-8'
+        json.dumps(
+            {
+                'run_id': run_id,
+                'task': 'edit agent.txt',
+                'status': 'completed',
+                'created_at': '2026-06-02T00:00:00Z',
+                'updated_at': '2026-06-02T00:00:00Z',
+            }
+        ),
+        encoding='utf-8',
     )
-    
+
     # Actually edit file B
     file_b.write_text('agent edited\n', encoding='utf-8')
 
     output_buffer = io.StringIO()
-    output_fn = lambda s: output_buffer.write(s + '\n')
+
+    def output_fn(s: str) -> None:
+        output_buffer.write(s + '\n')
 
     controller = ChatSessionController(tmp_path, output_fn=output_fn)
 
@@ -64,8 +66,12 @@ def test_undo_preserves_manual_edits(tmp_path: Path) -> None:
     undo_success = controller.undo_last_run()
 
     assert undo_success, 'Undo should succeed'
-    assert file_a.read_text(encoding='utf-8') == original_a_content, 'Manual edit should be preserved'
-    assert file_b.read_text(encoding='utf-8') == 'original\n', 'Agent edit should be reverted'
+    assert file_a.read_text(encoding='utf-8') == original_a_content, (
+        'Manual edit should be preserved'
+    )
+    assert file_b.read_text(encoding='utf-8') == 'original\n', (
+        'Agent edit should be reverted'
+    )
 
 
 def test_undo_noop_without_journal(tmp_path: Path) -> None:
@@ -81,7 +87,9 @@ def test_undo_noop_without_journal(tmp_path: Path) -> None:
     initial_b = file_b.read_text(encoding='utf-8')
 
     output_buffer = io.StringIO()
-    output_fn = lambda s: output_buffer.write(s + '\n')
+
+    def output_fn(s: str) -> None:
+        output_buffer.write(s + '\n')
 
     controller = ChatSessionController(tmp_path, output_fn=output_fn)
 
@@ -93,7 +101,9 @@ def test_undo_noop_without_journal(tmp_path: Path) -> None:
     assert file_b.read_text(encoding='utf-8') == initial_b, 'File B should be unchanged'
 
     output = output_buffer.getvalue()
-    assert 'Nothing to undo' in output or 'no undo journal' in output, f'Expected "nothing to undo" message, got: {output}'
+    assert 'Nothing to undo' in output or 'no undo journal' in output, (
+        f'Expected "nothing to undo" message, got: {output}'
+    )
 
 
 def test_undo_preserves_untracked_files(tmp_path: Path) -> None:
@@ -110,7 +120,7 @@ def test_undo_preserves_untracked_files(tmp_path: Path) -> None:
     run_id = 'test-run-002'
     undo_path = store.undo_path(run_id)
     undo_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Create journal entry for edited.txt only (not untouched.txt)
     before_content_b64 = base64.b64encode(b'before\n').decode('ascii')
     journal_entry = {
@@ -119,25 +129,29 @@ def test_undo_preserves_untracked_files(tmp_path: Path) -> None:
         'content_b64': before_content_b64,
     }
     undo_path.write_text(json.dumps(journal_entry), encoding='utf-8')
-    
+
     # Create a minimal run summary so latest_run_with_undo can find it
     run_summary_path = store.store_dir / f'{run_id}.jsonl'
     run_summary_path.write_text(
-        json.dumps({
-            'run_id': run_id,
-            'task': 'edit edited.txt',
-            'status': 'completed',
-            'created_at': '2026-06-02T00:00:00Z',
-            'updated_at': '2026-06-02T00:00:00Z',
-        }),
-        encoding='utf-8'
+        json.dumps(
+            {
+                'run_id': run_id,
+                'task': 'edit edited.txt',
+                'status': 'completed',
+                'created_at': '2026-06-02T00:00:00Z',
+                'updated_at': '2026-06-02T00:00:00Z',
+            }
+        ),
+        encoding='utf-8',
     )
-    
+
     # Actually edit edited.txt
     edited.write_text('after\n', encoding='utf-8')
 
     output_buffer = io.StringIO()
-    output_fn = lambda s: output_buffer.write(s + '\n')
+
+    def output_fn(s: str) -> None:
+        output_buffer.write(s + '\n')
 
     controller = ChatSessionController(tmp_path, output_fn=output_fn)
 
@@ -145,5 +159,9 @@ def test_undo_preserves_untracked_files(tmp_path: Path) -> None:
     undo_success = controller.undo_last_run()
 
     assert undo_success, 'Undo should succeed'
-    assert edited.read_text(encoding='utf-8') == 'before\n', 'Edited file should be reverted'
-    assert untouched.read_text(encoding='utf-8') == 'never touched\n', 'Untouched file should remain unchanged'
+    assert edited.read_text(encoding='utf-8') == 'before\n', (
+        'Edited file should be reverted'
+    )
+    assert untouched.read_text(encoding='utf-8') == 'never touched\n', (
+        'Untouched file should remain unchanged'
+    )

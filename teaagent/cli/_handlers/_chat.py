@@ -235,6 +235,7 @@ def get_failure_warnings(task: str, root: Path) -> str:
     except Exception as exc:
         # Don't let failure warnings break the chat system
         import logging
+
         logging.getLogger(__name__).debug('Failure warning generation error: %s', exc)
         return ''
 
@@ -347,6 +348,7 @@ def complete_file_path(text: str, root: Path) -> list[str]:
             return []
     except Exception as exc:
         import logging
+
         logging.getLogger(__name__).debug('File path resolution error: %s', exc)
         return []
 
@@ -374,6 +376,7 @@ def complete_file_path(text: str, root: Path) -> list[str]:
     except (OSError, PermissionError) as exc:
         # Log but don't crash completion - filesystem errors are expected in some scenarios
         import logging
+
         logging.getLogger(__name__).debug('File completion error: %s', exc)
 
     return sorted(completions)
@@ -417,6 +420,7 @@ def complete_symbol(text: str, root: Path) -> list[str]:
     except Exception as exc:
         # Fallback: simple file-based symbol search
         import logging
+
         logging.getLogger(__name__).debug('Symbol completion error: %s', exc)
         return []
 
@@ -778,6 +782,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
             except (OSError, RuntimeError) as exc:
                 # Log but don't crash - watcher cleanup is best-effort
                 import logging
+
                 logging.getLogger(__name__).warning('File watcher stop error: %s', exc)
 
     def create_checkpoint() -> bool:
@@ -1060,6 +1065,7 @@ def run_chat_repl(config: ChatAgentConfig, initial_task: Optional[str] = None) -
                 )
             except Exception as exc:
                 import logging
+
                 logging.getLogger(__name__).debug('Pinned file count error: %s', exc)
                 prompt = 'teaagent> '
 

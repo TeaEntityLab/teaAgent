@@ -31,6 +31,7 @@ class FakeAdapter:
         if isinstance(content, str) and 'cost_cents' in content:
             try:
                 import json
+
                 parsed = json.loads(content)
                 if isinstance(parsed, dict) and 'cost_cents' in parsed:
                     cost_cents = parsed['cost_cents']

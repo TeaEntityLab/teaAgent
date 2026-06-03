@@ -257,10 +257,7 @@ def memory_quarantine_list_command(args: argparse.Namespace) -> int:
     """List quarantined memory entries (TASK-005)."""
     catalog = MemoryCatalog(args.root, readonly=True)
     print_json(
-        [
-            entry.to_dict()
-            for entry in catalog.list_quarantined(limit=args.limit)
-        ]
+        [entry.to_dict() for entry in catalog.list_quarantined(limit=args.limit)]
     )
     return 0
 

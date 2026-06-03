@@ -27,6 +27,7 @@ class FakeLLMAdapter:
         self.model = model
         self._responses = responses or []
         self._call_count = 0
+
         # Add a fake config for compatibility with code that expects it
         class FakeProviderConfig:
             def __init__(self, provider: str, model: str) -> None:

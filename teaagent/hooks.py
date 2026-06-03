@@ -407,13 +407,13 @@ def permission_check_hook(
             )
 
         if deny_patterns:
-            path = arguments.get('path', '')
+            path = _arguments.get('path', '')
             for pattern in deny_patterns:
                 if _match_glob(path, pattern):
                     raise HookError(f"Path '{path}' matches denied pattern '{pattern}'")
 
         if allow_patterns:
-            path = arguments.get('path', '')
+            path = _arguments.get('path', '')
             for pattern in allow_patterns:
                 if _match_glob(path, pattern):
                     return None

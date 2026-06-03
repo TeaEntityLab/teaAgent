@@ -101,22 +101,20 @@ def fire_notification(
 
 
 def _deliver_webhook(url: str, payload: dict[str, Any], *, timeout: float) -> None:
+    """Deliver webhook payload to URL with timeout."""
+    timeout_int = int(timeout)
     with contextlib.suppress(Exception):
         body = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers={
-                'Content-Type': 'application/json',
-                'Content-Length': str(len(body)),
-            },
-            method='POST',
-        )
         try:
-            with safe_urlopen(url, timeout=timeout, data=body, headers={
-                'Content-Type': 'application/json',
-                'Content-Length': str(len(body)),
-            }):
+            with safe_urlopen(
+                url,
+                timeout=timeout_int,
+                data=body,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body)),
+                },
+            ):
                 pass  # Connection automatically closed
         except (urllib.error.URLError, OSError, ValueError):
             pass  # Already wrapped in contextlib.suppress
@@ -147,6 +145,7 @@ def _run_shell(command: str, payload: dict[str, Any]) -> None:
 
 def _deliver_slack(url: str, payload: dict[str, Any], *, timeout: float) -> None:
     """Post a formatted message to a Slack Incoming Webhook."""
+    timeout_int = int(timeout)
     with contextlib.suppress(Exception):
         worker_id = payload.get('worker_id', 'unknown')
         event = payload.get('event', 'unknown')
@@ -161,20 +160,16 @@ def _deliver_slack(url: str, payload: dict[str, Any], *, timeout: float) -> None
             },
         ]
         body = json.dumps({'text': text, 'blocks': blocks}).encode('utf-8')
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers={
-                'Content-Type': 'application/json',
-                'Content-Length': str(len(body)),
-            },
-            method='POST',
-        )
         try:
-            with safe_urlopen(url, timeout=timeout, data=body, headers={
-                'Content-Type': 'application/json',
-                'Content-Length': str(len(body)),
-            }):
+            with safe_urlopen(
+                url,
+                timeout=timeout_int,
+                data=body,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body)),
+                },
+            ):
                 pass  # Connection automatically closed
         except (urllib.error.URLError, OSError, ValueError):
             pass  # Already wrapped in contextlib.suppress
@@ -182,6 +177,7 @@ def _deliver_slack(url: str, payload: dict[str, Any], *, timeout: float) -> None
 
 def _deliver_discord(url: str, payload: dict[str, Any], *, timeout: float) -> None:
     """Post a formatted embed to a Discord Webhook."""
+    timeout_int = int(timeout)
     with contextlib.suppress(Exception):
         worker_id = payload.get('worker_id', 'unknown')
         event = payload.get('event', 'unknown')
@@ -198,20 +194,16 @@ def _deliver_discord(url: str, payload: dict[str, Any], *, timeout: float) -> No
                 ],
             }
         ).encode('utf-8')
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers={
-                'Content-Type': 'application/json',
-                'Content-Length': str(len(body)),
-            },
-            method='POST',
-        )
         try:
-            with safe_urlopen(url, timeout=timeout, data=body, headers={
-                'Content-Type': 'application/json',
-                'Content-Length': str(len(body)),
-            }):
+            with safe_urlopen(
+                url,
+                timeout=timeout_int,
+                data=body,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Content-Length': str(len(body)),
+                },
+            ):
                 pass  # Connection automatically closed
         except (urllib.error.URLError, OSError, ValueError):
             pass  # Already wrapped in contextlib.suppress

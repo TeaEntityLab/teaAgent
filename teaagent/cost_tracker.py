@@ -127,7 +127,7 @@ class CostTracker:
     def report_all(self, days: int = 30) -> dict[str, Any]:
         # Parse runs once to avoid redundant file reads
         all_runs = self._parse_runs()
-        
+
         # Filter by day
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         by_day: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -139,17 +139,17 @@ class CostTracker:
             if dt >= cutoff:
                 day_key = dt.strftime('%Y-%m-%d')
                 by_day[day_key].append(run)
-        
+
         # Group by model
         by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for run in all_runs:
             by_model[run['model']].append(run)
-        
+
         # Group by label
         by_label: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for run in all_runs:
             by_label[run['label']].append(run)
-        
+
         return {
             'by_label': {
                 lbl: self._build_summary(runs) for lbl, runs in sorted(by_label.items())
