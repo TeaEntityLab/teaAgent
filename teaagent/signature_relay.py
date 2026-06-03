@@ -164,6 +164,7 @@ class SignatureRelayClient:
         *,
         body: dict[str, Any] | None = None,
         timeout: float = 30.0,
+        allow_http: bool = False,
     ) -> dict[str, Any]:
         import urllib.error
         import urllib.request
@@ -172,7 +173,7 @@ class SignatureRelayClient:
         timeout_int = int(timeout)
         try:
             with safe_urlopen(
-                url, timeout=timeout_int, data=data, headers=self._headers()
+                url, timeout=timeout_int, data=data, headers=self._headers(), allow_http=allow_http
             ) as response:
                 raw = response.read().decode('utf-8')
                 if not raw.strip():
@@ -192,12 +193,16 @@ class SignatureRelayClient:
         self, relay_base_url: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
         url = f'{relay_base_url.rstrip("/")}/api/v1/approval-requests'
-        return self._request('POST', url, body=payload)
+        # Allow HTTP for localhost testing
+        allow_http = url.startswith('http://127.0.0.1') or url.startswith('http://localhost')
+        return self._request('POST', url, body=payload, allow_http=allow_http)
 
     def post_signature(
         self, submit_url: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        return self._request('POST', submit_url, body=payload)
+        # Allow HTTP for localhost testing
+        allow_http = submit_url.startswith('http://127.0.0.1') or submit_url.startswith('http://localhost')
+        return self._request('POST', submit_url, body=payload, allow_http=allow_http)
 
     def fetch_signatures(
         self, relay_base_url: str, request_id: str
@@ -206,7 +211,9 @@ class SignatureRelayClient:
             f'{relay_base_url.rstrip("/")}/api/v1/approval-signatures'
             f'?request_id={request_id}'
         )
-        result = self._request('GET', url)
+        # Allow HTTP for localhost testing
+        allow_http = url.startswith('http://127.0.0.1') or url.startswith('http://localhost')
+        result = self._request('GET', url, allow_http=allow_http)
         if not result.get('ok', False):
             return []
         signatures: list[dict[str, Any]] = []
