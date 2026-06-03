@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
@@ -521,8 +521,11 @@ class AgentRunner:
                             input_tokens=context.get('_input_tokens', 0),
                             output_tokens=context.get('_output_tokens', 0),
                         )
+                        # Include approval metadata in the exception for later extraction
                         raise ToolPermissionError(
-                            f'Tool call pending approval: {decision.tool_name}'
+                            f'Tool call pending approval: {decision.tool_name}',
+                            reason_code=reason_code,
+                            approval_request=approval_request,
                         ) from None
                     raise
             else:
@@ -699,6 +702,29 @@ class AgentRunner:
                     current_run_id,
                     tool_calls,
                     cost_cents,
+                )
+            except ToolPermissionError as exc:
+                # ToolPermissionError should be treated as pending_approval, not system error
+                # This happens when approval_handler is None and we want to pause
+                # Extract approval metadata from the exception context if available
+                approval_metadata = {}
+                if hasattr(exc, 'reason_code') and exc.reason_code:
+                    approval_metadata['reason_code'] = exc.reason_code.value
+                if hasattr(exc, 'approval_request') and exc.approval_request:
+                    approval_metadata['call_id'] = exc.approval_request.call_id
+                    approval_metadata['tool_name'] = exc.approval_request.tool_name
+                    approval_metadata['arguments'] = exc.approval_request.arguments
+                return RunResult(
+                    run_id=current_run_id,
+                    final_answer=None,
+                    iterations=iterations,
+                    tool_calls=tool_calls,
+                    status='pending_approval',
+                    error_message=str(exc),
+                    metadata={'approval': approval_metadata},
+                    cost_cents=cost_cents,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
                 )
             except AgentHarnessError as exc:
                 return self._handle_harness_error(

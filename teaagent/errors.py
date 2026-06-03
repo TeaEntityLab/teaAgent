@@ -92,6 +92,7 @@ class ToolPermissionError(AgentHarnessError):
         *,
         hint: Optional[str] = None,
         reason_code: Optional[DenialReasonCode] = None,
+        approval_request: Optional[Any] = None,
     ) -> None:
         super().__init__(
             message,
@@ -102,6 +103,7 @@ class ToolPermissionError(AgentHarnessError):
             ),
         )
         self.reason_code: Optional[DenialReasonCode] = reason_code
+        self.approval_request: Optional[Any] = approval_request
 
 
 class ToolExecutionError(AgentHarnessError):

@@ -190,8 +190,8 @@ def _extract_significant_words(text: str) -> set[str]:
     Returns:
         Set of significant words (lowercase, non-stopwords, length >= 3)
     """
-    # Normalize: lowercase and extract alphanumeric words
-    words = re.findall(r'\b[a-z]{3,}\b', text.lower())
+    # Normalize: lowercase and extract alphanumeric words (including digits for technical terms like OAuth2)
+    words = re.findall(r'\b[a-z0-9]{3,}\b', text.lower())
     # Filter stopwords
     return set(word for word in words if word not in STOPWORDS)
 

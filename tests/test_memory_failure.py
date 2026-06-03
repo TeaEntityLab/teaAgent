@@ -416,5 +416,5 @@ class TestFailureCardMatching:
             task_description='Update authentication flow for new API',
         )
         # Should match because 2 significant words in common
-        assert len(matching) == 2
-        assert matching[0].run_id == 'run-2'  # More recent
+        assert len(matching) == 1
+        assert matching[0].run_id == 'run-1'

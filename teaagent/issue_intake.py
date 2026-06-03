@@ -190,21 +190,11 @@ class IssueParser:
 
         Note:
             This is a placeholder for future GitHub API integration.
-            Currently returns a mock parsed issue.
+            Currently raises NotImplementedError.
         """
-        # TODO: Implement GitHub API integration
-        logger.warning('GitHub API integration not yet implemented')
-        return ParsedIssue(
-            title='GitHub Issue (API not implemented)',
-            description=f'Issue from {issue_url}',
-            issue_type=IssueType.UNKNOWN,
-            steps_to_reproduce=None,
-            expected_behavior=None,
-            actual_behavior=None,
-            affected_files=None,
-            affected_components=None,
-            priority=None,
-            raw_text=f'GitHub issue URL: {issue_url}',
+        raise NotImplementedError(
+            'GitHub API integration not yet implemented. '
+            'Please provide issue details directly or implement the GitHub API integration.'
         )
 
     def _extract_title(self, text: str) -> Optional[str]:
