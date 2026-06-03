@@ -146,6 +146,7 @@ class TeaAgentTUI:
         self.model = model
         self.route_model_enabled = False
         self.root = Path(root).resolve()
+        self._root_explicit: bool = False
         self.allow_destructive = allow_destructive
         self.permission_mode = permission_mode
         self.progress = True
@@ -1142,7 +1143,8 @@ class TeaAgentTUI:
             return
         self.provider = data.get('provider', self.provider)
         self.model = data.get('model', self.model)
-        self.root = Path(data.get('root', str(self.root))).resolve()
+        if not self._root_explicit:
+            self.root = Path(data.get('root', str(self.root))).resolve()
         self.permission_mode = PermissionMode(
             data.get('permission_mode', self.permission_mode.value)
         )
@@ -1214,6 +1216,7 @@ class TeaAgentTUI:
         from teaagent.tui._setup import workspace_configured
 
         self.output_fn(f'TeaAgent TUI {__version__}')
+        self.output_fn(f'Root: {self.root}')
         self.output_fn("Type 'help' for commands. Type 'exit' to quit.")
         if not workspace_configured(self.root):
             self.output_fn(
@@ -1277,6 +1280,8 @@ def run_tui(
     if chat:
         tui.chat = True
         tui._chat_explicit = True
+    if str(root) != '.':
+        tui._root_explicit = True
     return tui.run(
         run_setup=run_setup,
         setup_write_env=setup_write_env,

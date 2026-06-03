@@ -12,6 +12,7 @@ import pytest
 from conftest import FakeAdapter
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController
+from teaagent.cli._handlers._chat import chat_command
 from teaagent.runner import RunResult
 
 
@@ -122,3 +123,80 @@ def test_controller_no_output_on_empty_final_answer(tmp_path: Path) -> None:
     # Should print status but not crash
     assert '[completed]' in output or output == '', f'Unexpected output: {output}'
     assert result.run_result.status == 'completed'
+
+
+# ── TASK-DD2-001: Execute or reject `teaagent chat <task>` ─────────────────────
+
+def test_chat_command_executes_initial_task(tmp_path: Path) -> None:
+    """Test that chat_command with args.task executes the task before REPL loop."""
+    from argparse import Namespace
+    
+    # Create mock args with task
+    args = Namespace(
+        task='do something',
+        provider=None,
+        model=None,
+        root=str(tmp_path),
+        allow_destructive=False,
+        permission_mode='prompt',
+        max_iterations=10,
+        max_tool_calls=10,
+        max_estimated_cost_cents=0,
+        subagent=False,
+        max_subagent_depth=1,
+        heartbeat=0.0,
+        stream=False,
+        enable_git_tools=False,
+        skill_search_dirs=None,
+        memory_limit=5,
+    )
+    
+    # Mock run_tui to capture the initial_task parameter
+    # run_tui is imported inside chat_command, so we patch it at the tui module
+    with patch('teaagent.tui.run_tui') as mock_run_tui:
+        mock_run_tui.return_value = 0
+        
+        result = chat_command(args)
+        
+        # Verify run_tui was called with initial_task
+        mock_run_tui.assert_called_once()
+        call_kwargs = mock_run_tui.call_args[1]
+        assert call_kwargs['initial_task'] == 'do something'
+        assert result == 0
+
+
+def test_chat_command_no_task_opens_repl(tmp_path: Path) -> None:
+    """Test that chat_command with args.task=None opens REPL without executing task."""
+    from argparse import Namespace
+    
+    # Create mock args without task
+    args = Namespace(
+        task=None,
+        provider=None,
+        model=None,
+        root=str(tmp_path),
+        allow_destructive=False,
+        permission_mode='prompt',
+        max_iterations=10,
+        max_tool_calls=10,
+        max_estimated_cost_cents=0,
+        subagent=False,
+        max_subagent_depth=1,
+        heartbeat=0.0,
+        stream=False,
+        enable_git_tools=False,
+        skill_search_dirs=None,
+        memory_limit=5,
+    )
+    
+    # Mock run_tui to capture the initial_task parameter
+    with patch('teaagent.tui.run_tui') as mock_run_tui:
+        mock_run_tui.return_value = 0
+        
+        result = chat_command(args)
+        
+        # Verify run_tui was called with initial_task=None
+        mock_run_tui.assert_called_once()
+        call_kwargs = mock_run_tui.call_args[1]
+        assert call_kwargs['initial_task'] is None
+        assert result == 0

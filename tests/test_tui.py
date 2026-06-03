@@ -1700,6 +1700,88 @@ class TUITests(unittest.TestCase):
                 tui._handle_memory_clear(['99'])
             self.assertIn('invalid card index', ' '.join(output))
 
+    # ── TASK-DD2-002: Explicit TUI root guard ─────────────────────────────────────
+
+    def test_tui_explicit_root_not_overridden(self) -> None:
+        """When an explicit root is provided, saved state should not override it."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create TUI with explicit root
+            explicit_root = Path(tmpdir) / 'explicit'
+            explicit_root.mkdir()
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=explicit_root,
+                input_fn=lambda _: '',
+                output_fn=output.append,
+            )
+            tui._root_explicit = True  # Simulate run_tui setting this
+            
+            # Create a mock state file with a different root
+            state_file = Path(tmpdir) / 'state.json'
+            saved_state = {
+                'root': '/some/other/path',
+                'provider': 'test',
+                'model': 'test-model',
+            }
+            state_file.write_text(json.dumps(saved_state), encoding='utf-8')
+            
+            # Use PropertyMock to patch the property
+            with patch.object(type(tui), '_state_path', new_callable=PropertyMock, return_value=state_file):
+                tui._load_tui_state()
+            
+            # Root should remain the explicit one, not the saved one
+            self.assertEqual(tui.root.resolve(), explicit_root.resolve())
+            self.assertNotEqual(str(tui.root), '/some/other/path')
+
+    def test_tui_no_explicit_root_restores_saved(self) -> None:
+        """When no explicit root is provided, saved state should be restored."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a saved state with a specific root
+            saved_root = Path(tmpdir) / 'saved'
+            saved_root.mkdir()
+            
+            saved_state = {
+                'root': str(saved_root),
+                'provider': 'test',
+                'model': 'test-model',
+            }
+            
+            # Create TUI without explicit root (default '.')
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir,
+                input_fn=lambda _: '',
+                output_fn=output.append,
+            )
+            tui._root_explicit = False  # Explicitly False
+            
+            # Create a mock state file with saved root
+            state_file = Path(tmpdir) / 'state.json'
+            state_file.write_text(json.dumps(saved_state), encoding='utf-8')
+            
+            # Use PropertyMock to patch the property
+            with patch.object(type(tui), '_state_path', new_callable=PropertyMock, return_value=state_file):
+                tui._load_tui_state()
+            
+            # Root should be restored from saved state
+            self.assertEqual(tui.root.resolve(), saved_root.resolve())
+
+    def test_tui_header_shows_active_root(self) -> None:
+        """TUI header should display the active root path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmpdir,
+                input_fn=lambda _: '',
+                output_fn=output.append,
+            )
+            tui._print_header()
+            
+            # Check that root is shown in header
+            header_text = ' '.join(output)
+            self.assertIn('Root:', header_text)
+            self.assertIn(str(tmpdir), header_text)
+
 
 if __name__ == '__main__':
     unittest.main()

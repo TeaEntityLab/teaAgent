@@ -210,6 +210,87 @@ class TestPinnedFileStorage:
         pinned = storage.list_all()
         assert pinned == []
 
+    # ── TASK-DD2-010: Enforce pinned-file workspace containment ───────────────
+
+    def test_rejects_absolute_path(self, temp_root: Path) -> None:
+        """Test that absolute paths outside workspace are rejected."""
+        storage = PinnedFileStorage(temp_root)
+
+        # Try to pin absolute path outside workspace
+        result = storage.add('/etc/passwd')
+        assert result is False
+
+        # Try to pin absolute path inside workspace (should still be rejected)
+        result = storage.add(str(temp_root / 'test.py'))
+        assert result is False
+
+    def test_rejects_parent_traversal(self, temp_root: Path) -> None:
+        """Test that parent traversal (..) is rejected."""
+        storage = PinnedFileStorage(temp_root)
+
+        # Try to pin path with parent traversal
+        result = storage.add('../etc/passwd')
+        assert result is False
+
+        result = storage.add('src/../../etc/passwd')
+        assert result is False
+
+    def test_rejects_symlink_escape(self, temp_root: Path) -> None:
+        """Test that symlink escape is rejected."""
+        storage = PinnedFileStorage(temp_root)
+
+        # Create a symlink outside workspace
+        outside_file = temp_root.parent / 'outside.txt'
+        outside_file.write_text('outside content')
+        symlink = temp_root / 'link.txt'
+        symlink.symlink_to(outside_file)
+
+        # Try to pin the symlink (should be rejected as it escapes workspace)
+        result = storage.add('link.txt')
+        assert result is False
+
+    def test_allows_valid_relative_paths(self, temp_root: Path) -> None:
+        """Test that valid relative paths within workspace are allowed."""
+        storage = PinnedFileStorage(temp_root)
+
+        # Create a test file
+        (temp_root / 'src').mkdir()
+        test_file = temp_root / 'src' / 'test.py'
+        test_file.write_text('test content')
+
+        # Pin with relative path
+        result = storage.add('src/test.py')
+        assert result is True
+
+        # Verify it was pinned
+        pinned = storage.list_all()
+        assert len(pinned) == 1
+        assert pinned[0].file_path == 'src/test.py'
+
+    def test_remove_rejects_invalid_paths(self, temp_root: Path) -> None:
+        """Test that remove also validates path containment."""
+        storage = PinnedFileStorage(temp_root)
+
+        # Try to remove with absolute path
+        result = storage.remove('/etc/passwd')
+        assert result is False
+
+        # Try to remove with parent traversal
+        result = storage.remove('../etc/passwd')
+        assert result is False
+
+    def test_update_rejects_invalid_paths(self, temp_root: Path) -> None:
+        """Test that update_last_modified also validates path containment."""
+        storage = PinnedFileStorage(temp_root)
+
+        # Try to update with absolute path
+        result = storage.update_last_modified('/etc/passwd')
+        assert result is False
+
+        # Try to update with parent traversal
+        result = storage.update_last_modified('../etc/passwd')
+        assert result is False
+
 
 class TestFileWatcher:
     """Test file watcher functionality."""

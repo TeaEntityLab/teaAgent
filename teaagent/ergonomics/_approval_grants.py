@@ -5,6 +5,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Literal, Optional
 from uuid import uuid4
 
@@ -151,22 +152,79 @@ def _grant_expired(grant: ApprovalGrant) -> bool:
     return datetime.now(timezone.utc) >= expires
 
 
-def _path_matches(path_globs: tuple[str, ...], arguments: dict[str, Any]) -> bool:
+def _normalize_and_validate_path(
+    path_value: str, workspace_root: str | Path
+) -> str | None:
+    """Normalize and validate a path is within workspace bounds.
+    
+    Returns normalized path if valid, None if:
+    - Path is None or empty
+    - Path contains parent traversal (..)
+    - Path is absolute and outside workspace
+    - Path is a symlink escaping workspace
+    
+    This prevents approval widening through path manipulation.
+    """
+    if not path_value or not isinstance(path_value, str):
+        return None
+    
+    # Normalize backslashes and resolve
+    normalized = path_value.replace('\\', '/')
+    
+    # Reject parent traversal
+    if '../' in normalized or normalized.startswith('..'):
+        return None
+    
+    # Resolve against workspace root
+    try:
+        root_path = Path(workspace_root).resolve()
+        abs_path = root_path / normalized
+        
+        # Resolve to catch symlinks
+        resolved = abs_path.resolve()
+        
+        # Check if resolved path is within workspace
+        try:
+            resolved.relative_to(root_path)
+        except ValueError:
+            # Path escapes workspace
+            return None
+        
+        # Return relative path from workspace root
+        return str(resolved.relative_to(root_path)).replace('\\', '/')
+    except (OSError, ValueError):
+        return None
+
+
+def _path_matches(
+    path_globs: tuple[str, ...], arguments: dict[str, Any], workspace_root: str | Path = '.'
+) -> bool:
+    """Check if tool call path arguments match approved path globs.
+    
+    Enhanced with workspace containment validation to prevent
+    path traversal and approval widening.
+    """
     if not path_globs:
         return True
+    
     path_value: str | None = None
     for key in _PATH_ARGUMENT_KEYS:
         raw = arguments.get(key)
         if isinstance(raw, str) and raw.strip():
-            path_value = raw.replace('\\', '/')
-            break
+            # Normalize and validate path against workspace
+            normalized = _normalize_and_validate_path(raw, workspace_root)
+            if normalized:
+                path_value = normalized
+                break
+    
     if path_value is None:
         return False
+    
     for pattern in path_globs:
-        normalized = pattern.replace('\\', '/')
-        if fnmatch.fnmatch(path_value, normalized):
+        normalized_pattern = pattern.replace('\\', '/')
+        if fnmatch.fnmatch(path_value, normalized_pattern):
             return True
-        if fnmatch.fnmatch(path_value, f'**/{normalized.lstrip("/")}'):
+        if fnmatch.fnmatch(path_value, f'**/{normalized_pattern.lstrip("/")}'):
             return True
     return False
 
@@ -223,6 +281,7 @@ __all__ = [
     '_grant_expired',
     '_new_grant_id',
     '_new_record_id',
+    '_normalize_and_validate_path',
     '_parse_grant',
     '_path_matches',
     '_stable_grant_id',

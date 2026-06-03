@@ -18,6 +18,7 @@ from teaagent.ergonomics._approval_grants import (
     _grant_expired,
     _new_grant_id,
     _new_record_id,
+    _normalize_and_validate_path,
     _parse_grant,
     _path_matches,
     _stable_grant_id,
@@ -492,7 +493,8 @@ class ApprovalPresetStore:
             and grant.permission_mode != permission_mode
         ):
             return False, 'permission_mode_mismatch'
-        path_ok = _path_matches(grant.path_globs, arguments)
+        # Pass workspace root for path validation
+        path_ok = _path_matches(grant.path_globs, arguments, workspace_root=self.root)
         command_ok = _command_matches(grant.command_prefixes, arguments)
         if not path_ok and not command_ok:
             return False, 'path_glob_and_command_prefix_mismatch'
