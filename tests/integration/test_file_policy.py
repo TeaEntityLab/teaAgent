@@ -192,8 +192,8 @@ def test_file_policy_integrated_with_agent_runner(tmp_path):
     )
 
     result = runner.run(task='delete everything', decide=lambda _: next(call_seq))
-    # The tool call should have been blocked by file_policy
-    assert result.status.startswith('failed')
+    # After approval gate fix, file policy denials return pending_approval instead of failed
+    assert result.status == 'pending_approval'
     blocked = [
         e for e in audit.events if e.event_type in ('tool_call_blocked', 'run_failed')
     ]

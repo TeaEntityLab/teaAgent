@@ -112,7 +112,8 @@ def test_approval_handler_denies():
     )
 
     result = runner.run(task='write', decide=lambda _: _WRITE_REQUEST)
-    assert result.status.startswith('failed'), f'expected failed, got {result.status!r}'
+    # After approval gate fix, denied approvals return pending_approval instead of failed
+    assert result.status == 'pending_approval', f'expected pending_approval, got {result.status!r}'
     assert any(e.event_type == 'tool_call_denied' for e in audit.events)
 
 
@@ -126,5 +127,6 @@ def test_blocked_in_read_only_mode():
     )
 
     result = runner.run(task='write', decide=lambda _: _WRITE_REQUEST)
-    assert result.status.startswith('failed')
+    # After approval gate fix, read-only mode returns pending_approval instead of failed
+    assert result.status == 'pending_approval'
     assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
