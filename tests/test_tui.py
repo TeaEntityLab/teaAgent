@@ -1254,15 +1254,6 @@ class TUITests(unittest.TestCase):
         self.assertIn('spent=', text)
         self.assertIn('remaining=', text)
 
-    def test_tui_cost_shows_session_cost(self) -> None:
-        # Tests /cost display formatting only — see
-        # test_tui_run_agent_task_accumulates_cost for the accumulation path.
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        tui._session_cost_cents = 123.0
-        tui._handle_cost()
-        self.assertIn('$1.23', ' '.join(output))
-
     def test_tui_run_agent_task_accumulates_cost(self) -> None:
         """_run_agent_task must add result.cost_cents to _session_cost_cents.
 

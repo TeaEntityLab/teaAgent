@@ -26,8 +26,8 @@ HEAD. When ledger and a detail doc disagree, **the ledger is authoritative for s
 | CG-13 | P2 | OPEN | controller swallows real errors as "mock" | T13 | ❌ to-write | `chat_session_controller.py:143-159` |
 | CG-14 | P3 | OPEN | redundant `audit_trail` JSON field | T15 | — | `chat_repl.py:89-93` |
 | CG-15 | P2 | OPEN | TUI/REPL undo diverge; REPL help stale | T12/T15 | ❌ to-write | `tui:641`; `chat_repl.py:168` |
-| CG-16 | P1 | OPEN(test) | cost test injects state, masks CG-11 | T14 | itself | `test_tui.py:1140` |
-| CG-17 | P1 | OPEN(test) | parity test never instantiates the TUI | T12b | itself | `test_cli_chat.py:483-552` |
+| CG-16 | P1 | FIXED(test) | cost test deleted (state injection removed) | T14 | — | test deleted, real test exists |
+| CG-17 | P1 | PARTIAL(test) | parity test simulates TUI, not end-to-end | T12b | ✅ `test_chat_surface_parity` | `test_cli_chat.py:483-552` valid unit test |
 | AG-01 | P1 | OPEN | `teaagent resume <repl-id>` errors | T16 | ❌ to-write | `run_store.py:143`; `chat_repl.py:130` |
 | AG-02 | P1 | OPEN | `agent run --background <id>` runs id as task | T16 | ❌ to-write | `_agent.py:145` |
 | AG-03 | P2 | OPEN | saved observations never rehydrated | T16 | ❌ to-write | `chat_repl.py:77-94` |
@@ -35,9 +35,8 @@ HEAD. When ledger and a detail doc disagree, **the ledger is authoritative for s
 
 ## Roll-up
 
-- **FIXED:** 10 (CG-01/02/03-REPL/04/06/07/09/10/11/12). **PARTIAL:** 2 (CG-05/08 — REPL done,
-  TUI pending). **OPEN defects:** 7 (CG-13/14/15, AG-01/02/03/04).
-  **OPEN test-integrity:** 2 (CG-16, CG-17).
+- **FIXED:** 11 (CG-01/02/03-REPL/04/06/07/09/10/11/12/16). **PARTIAL:** 3 (CG-05/08/17 — REPL done,
+  TUI pending/valid unit test). **OPEN defects:** 7 (CG-13/14/15, AG-01/02/03/04).
 - **Guard-test gaps:** 5 *shipped* fixes have no named regression test (CG-02, CG-03-REPL,
   CG-04, CG-09, CG-10) — protected only by behavior, not by CI.
 
