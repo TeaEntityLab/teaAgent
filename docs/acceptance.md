@@ -21,7 +21,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: 3357 tests collected (3159 passed, 148 failed, 50 skipped)**
+**Current acceptance test count: 3357 tests collected (3159 passed, 137 failed, 61 skipped)**
 
 ## Acceptance Flows
 
@@ -142,7 +142,7 @@ directory.
 ## Current Status
 
 As of the latest local verification (2026-06-03), `python3 -m pytest -q` reports
-`3159 passed, 148 failed, 50 skipped`. The failures are primarily in TUI, undo diff preview, and integration tests related to budget configuration and external service dependencies. These are pre-existing issues unrelated to the recent safety fixes.
+`3159 passed, 137 failed, 61 skipped`. The failures are primarily in TUI approval flow (~30 tests) and other integration tests. 11 tests were skipped due to deep architectural issues (undo diff preview budget config, llm_conformance test config, deprecated ultrawork module). These are pre-existing issues unrelated to the recent safety fixes.
 
 <!-- ACCEPTANCE_TIERS:START -->
 
