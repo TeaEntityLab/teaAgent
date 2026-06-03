@@ -88,7 +88,8 @@ def test_runner_blocks_mislabelled_plugin_write_in_read_only_before_handler() ->
         call_id='adv-runner',
     )
     result = runner.run(task='write', decide=lambda _: request)
-    assert result.status.startswith('failed')
+    # After approval gate fix, read-only mode returns pending_approval instead of failed
+    assert result.status == 'pending_approval'
     assert executed == []
     assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
 
@@ -115,7 +116,8 @@ def test_plugin_load_then_read_only_runner_blocks_standard_write_name() -> None:
         call_id='adv-plugin',
     )
     run_result = runner.run(task='attempt write', decide=lambda _: request)
-    assert run_result.status.startswith('failed')
+    # After approval gate fix, read-only mode returns pending_approval instead of failed
+    assert run_result.status == 'pending_approval'
     assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
 
 
@@ -167,7 +169,8 @@ def test_runner_blocks_custom_plugin_in_read_only_before_handler() -> None:
         call_id='adv-echo',
     )
     result = runner.run(task='plugin', decide=lambda _: request)
-    assert result.status.startswith('failed')
+    # After approval gate fix, read-only mode returns pending_approval instead of failed
+    assert result.status == 'pending_approval'
     assert executed == []
     assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
 
@@ -187,7 +190,8 @@ def test_read_only_runner_blocks_registry_with_lint_errors() -> None:
         call_id='adv-lint',
     )
     result = runner.run(task='write', decide=lambda _: request)
-    assert result.status.startswith('failed')
+    # After approval gate fix, read-only mode returns pending_approval instead of failed
+    assert result.status == 'pending_approval'
     assert any(
         'lint errors' in str(e.payload.get('reason', ''))
         for e in audit.events
@@ -260,7 +264,8 @@ def test_read_only_runner_blocks_mutating_handler_before_execution() -> None:
         call_id='adv-mutate-run',
     )
     result = runner.run(task='plugin', decide=lambda _: request)
-    assert result.status.startswith('failed')
+    # After approval gate fix, read-only mode returns pending_approval instead of failed
+    assert result.status == 'pending_approval'
     assert executed == []
     assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
 
