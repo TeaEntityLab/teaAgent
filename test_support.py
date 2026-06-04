@@ -17,15 +17,20 @@ def can_bind_loopback() -> bool:
     return True
 
 
-def can_start_thread() -> bool:
-    thread = threading.Thread(target=lambda: None)
+def can_start_threads(count: int = 1) -> bool:
+    threads: list[threading.Thread] = []
     try:
-        thread.start()
+        for _ in range(count):
+            thread = threading.Thread(target=lambda: None)
+            thread.start()
+            threads.append(thread)
     except RuntimeError as exc:
         if "can't start new thread" in str(exc):
             return False
         raise
-    thread.join(timeout=1.0)
+    finally:
+        for thread in threads:
+            thread.join(timeout=1.0)
     return True
 
 
@@ -36,8 +41,8 @@ def skip_if_socket_bind_is_blocked() -> None:
         pytest.skip('sandbox forbids socket.bind() on loopback')
 
 
-def skip_if_thread_start_is_blocked() -> None:
+def skip_if_thread_start_is_blocked(count: int = 1) -> None:
     """Skip tests that require spawning worker threads when the environment forbids it."""
 
-    if not can_start_thread():
+    if not can_start_threads(count):
         pytest.skip('environment has thread resource limits')
