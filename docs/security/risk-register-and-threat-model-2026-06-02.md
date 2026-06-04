@@ -1,6 +1,6 @@
 # Risk Register & Threat Model — teaagent
 **Date:** 2026-06-02  
-**Last updated:** 2026-06-05 (SEC-04 fixed: default 500 cents, 0=no-spend, None=unlimited; tests: test_budget_zero_cents_rejects_any_spend, test_budget_none_allows_unlimited, test_budget_default_500_cents)
+**Last updated:** 2026-06-05 (SEC-04 fixed; SEC-02, SEC-07, SEC-10, DS-02, DS-05, DS-09 verified fixed with test evidence — see Fix Status §9)
 **Branch:** fix/task-dd2-001-initial-task-passthrough  
 **Scope:** Full system — CLI, TUI, REPL, MCP, subagents, Docker, audit, OAuth, approval, budget  
 **Sources:** security-risk-assessment-2026-06-02.md · defeat-scenarios-and-cascade-effects-2026-06-02.md · dependency-audit-and-security-2026-06-02.md · agent-enterprise-security-risks-2026-05-31.md · docs/threat-model.md · static source analysis
@@ -59,7 +59,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | ID | Category | Description | L | I | Score | Status | Priority |
 |---|---|---|---|---|---|---|---|
 | SEC-01 | Audit Integrity | HMAC key is ephemeral — audit chain unverifiable across restarts; SHA-256 recomputable by attacker with write access | H | H | 9 | **VERIFY/CLOSE 2026-06-05** — key persisted to `~/.teaagent/run-keys/<run_id>.key` (chmod 600) since audit.py:165; tests: `test_audit_hmac_persisted_across_instances`, `test_audit_hmac_fails_with_wrong_key`, `test_audit_key_file_permissions_readable` | — |
-| SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | **OPEN** | P0/Blocker |
+| SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | **Fixed** (2026-06-05) — `is_server_trust_expired()` enforced in hot path at `mcp_trust.py:148,168`; `test_server_trust_expiry()` in `tests/test_mcp_trust.py` | — |
 | SEC-03 | Permission | Historical: `allow_all_destructive=True` short-circuited the approval gate outside explicit full-access mode. Current branch blocks it in `prompt` mode and requires explicit broad-mode promotion for bypass callers. | L | H | 3 | **FIXED / WATCH** | P1 |
 | SEC-04 | Budget | ~~`ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap"~~ Default changed to `500`; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents` | H | H | 9 | **FIXED 2026-06-05** | — |
 | SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | **OPEN** | P2 |
@@ -82,7 +82,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | DS-12 | Permission | Empty-path approval creates implicit global workspace grant; user believes they granted path-scoped access; audit log records it as "path-scoped" masking the expansion | M | H | 6 | **FIXED 2026-06-05** | — |
 | DS-13 | Budget | ~~`0` cost cap had three incompatible semantics~~ `None`=unlimited, `0`=zero-spend, positive=cap. Default 500 cents. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_default_500_cents` | M | M | 4 | **FIXED 2026-06-05** | — |
 | DS-01 | Budget | TUI `_session_cost_cents` never incremented — `/cost` and budget bar always show `$0.00`; per-run cap still fires but cumulative cap never triggers | H | M | 6 | **OPEN** | P1 |
-| DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | **OPEN** | P2 |
+| DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | **Fixed** (2026-06-05) — TUI undo routes journal-first via `ChatSessionController.undo_last_run()` at `tui/__init__.py:860`; checkpoint fallback retained; `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py` | — |
 | DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | **OPEN** | P1 |
 | DS-04 | Audit | Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events | M | L | 2 | **OPEN** | P3 |
 | DS-06 | Testing | TUI cost test injects `_session_cost_cents` directly, tests formatter only — accumulation bug CG-11 permanently masked from CI | H | M | 6 | **OPEN** | P1 |
