@@ -222,6 +222,53 @@ grep -E '"(api_key|password|secret)"\s*:\s*"[^*]' .teaagent/audit.jsonl | head -
 
 ---
 
+## Isolation Modes (SEC-07, SEC-08)
+
+TeaAgent supports four subagent isolation modes with different security properties.  Choose the mode appropriate to your threat model.
+
+| Mode | OS-level isolation | Network isolated | Use case |
+|------|--------------------|-----------------|----------|
+| `shared` | None | No | Trusted code, same workspace |
+| `worktree` | None (git only) | No | Trusted code, separate git branch |
+| `directory-snapshot` | **None** | No | Dev/testing with trusted content only |
+| `docker` | Full (container) | Yes (`--network none`) | Production, untrusted content |
+
+### `directory-snapshot` — dev/testing only (SEC-08)
+
+`directory-snapshot` copies the workspace into a temporary directory and runs the subagent there.  **It provides no OS-level process isolation.**  The subagent:
+
+- Runs in the same process namespace as the parent
+- Can read host paths outside the snapshot (`~/.ssh/`, `/etc/`, `/proc/`)
+- Can access environment variables from the parent process
+- Can spawn arbitrary host processes
+
+**Use `directory-snapshot` only for:**
+- Local development and testing with fully trusted agent code
+- Debugging snapshot/worktree behavior without Docker
+
+**Do not use `directory-snapshot` for:**
+- Untrusted agent prompts or tools
+- Production workloads
+- Any scenario where the subagent result influences security decisions
+
+A warning is logged whenever `directory-snapshot` isolation is selected to make this boundary visible in production log streams.
+
+### `docker` — production isolation (SEC-07)
+
+The Docker isolation mode launches the subagent inside a hardened container with the following flags enforced at the code level (`subagents/_isolation.py`):
+
+| Flag | Purpose |
+|------|---------|
+| `--network none` | No outbound network access — prevents data exfiltration |
+| `--user 65534:65534` | Runs as `nobody` — no root-level file access |
+| `--cap-drop ALL` | Drops all Linux capabilities — no privilege escalation |
+| `--read-only` | Read-only root filesystem — no persistent state outside workspace |
+| `--security-opt no-new-privileges` | Blocks `setuid`/`setgid` escalation |
+
+These flags are asserted by `test_subagent_docker_container_hardened` in `tests/test_subagent_isolation.py`.
+
+---
+
 ## Process Isolation
 
 ### Dedicated user account

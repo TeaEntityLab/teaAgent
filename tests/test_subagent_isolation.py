@@ -325,5 +325,60 @@ def test_isolation_context_with_resource_limits():
     assert context.memory_limit == '512m'
 
 
+def test_subagent_docker_container_hardened():
+    """SEC-07: Docker run command must contain all required hardening flags.
+
+    Verifies --network none, --user <nonroot>, --cap-drop ALL,
+    --read-only, and --security-opt no-new-privileges are present
+    so the container cannot exfiltrate data or escalate privileges.
+    """
+    with TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        (root / 'test.py').write_text('print("hello")', encoding='utf-8')
+
+        captured_cmds: list[list[str]] = []
+
+        def _fake_run(cmd, **kwargs):
+            captured_cmds.append(list(cmd))
+            result = MagicMock()
+            result.returncode = 0
+            result.stdout = 'container-hardening-test\n'
+            result.stderr = ''
+            return result
+
+        with patch('subprocess.run', side_effect=_fake_run):
+            prepare_subagent_isolation(
+                root,
+                isolation='docker',
+                session_key='hardening-test-001',
+            )
+
+        docker_run = next(
+            (cmd for cmd in captured_cmds if len(cmd) > 1 and cmd[:2] == ['docker', 'run']),
+            None,
+        )
+        assert docker_run is not None, 'No docker run command was issued'
+
+        assert '--network' in docker_run and 'none' in docker_run, (
+            '--network none missing — container has unrestricted internet access'
+        )
+        assert '--user' in docker_run, '--user missing — container runs as root'
+        user_idx = docker_run.index('--user')
+        assert docker_run[user_idx + 1] != '0' and docker_run[user_idx + 1] != 'root', (
+            f'--user value is {docker_run[user_idx + 1]!r} — container still runs as root'
+        )
+        assert '--cap-drop' in docker_run and 'ALL' in docker_run, (
+            '--cap-drop ALL missing — container retains Linux capabilities'
+        )
+        assert '--read-only' in docker_run, (
+            '--read-only missing — container filesystem is writable'
+        )
+        assert '--security-opt' in docker_run, '--security-opt missing'
+        sec_opt_idx = docker_run.index('--security-opt')
+        assert 'no-new-privileges' in docker_run[sec_opt_idx + 1], (
+            '--security-opt no-new-privileges missing — setuid escalation possible'
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

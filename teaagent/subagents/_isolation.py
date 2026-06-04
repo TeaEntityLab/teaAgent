@@ -179,6 +179,17 @@ def prepare_subagent_isolation(
         )
 
     if isolation == 'directory-snapshot':
+        # SEC-08: directory-snapshot provides no OS-level process isolation.
+        # The subagent shares the host process namespace and can read /etc/,
+        # /proc/, ~/.ssh/, and environment variables.  Use docker isolation
+        # for untrusted content or production workloads.
+        logger.warning(
+            'directory-snapshot isolation provides no OS-level process isolation — '
+            'only a file copy of the workspace is created.  '
+            'The subagent runs in the host process namespace and can read sensitive '
+            'host paths (e.g. ~/.ssh/, /etc/).  '
+            'Use docker isolation for untrusted content or production workloads.'
+        )
         snapshots_dir = root / '.teaagent' / 'subagent-snapshots'
         snapshots_dir.mkdir(parents=True, exist_ok=True)
         snapshot_path = snapshots_dir / session_key
