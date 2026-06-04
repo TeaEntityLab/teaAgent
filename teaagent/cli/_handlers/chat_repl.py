@@ -132,11 +132,30 @@ def suspend_to_background(
     except Exception as exc:
         print(f'[TeaAgent] Warning: Could not emit suspension audit event: {exc}')
 
+    # Write a run_started event so agent_resume_command can find this run
+    try:
+        resume_store = RunStore(root)
+        resume_audit = resume_store.audit_logger(run_id=run_id)
+        observations = session_context.get('observations', [])
+        last_task = '(resumed from REPL suspension)'
+        if observations:
+            last_obs = observations[-1]
+            if isinstance(last_obs, dict) and 'task' in last_obs:
+                last_task = last_obs['task']
+        resume_audit.record(
+            event_type='run_started',
+            run_id=run_id,
+            task=last_task,
+            suspended_from='repl',
+        )
+    except Exception as exc:
+        print(f'[TeaAgent] Warning: Could not write resume event: {exc}')
+
     print('[TeaAgent] Session suspended successfully!')
     print(f'[TeaAgent] Run ID: {run_id}')
     print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
+    print('[TeaAgent] To resume: teaagent resume ' + run_id)
     print('[TeaAgent] Note: This is a suspension checkpoint, not background execution.')
-    print('[TeaAgent] (Resume from REPL session not yet supported via CLI.)')
 
     return run_id
 
@@ -181,7 +200,11 @@ def run_chat_repl(
     config: ChatAgentConfig,
     initial_task: str | None = None,
 ) -> int:
-    """Run the interactive chat REPL.
+    """Run the interactive chat REPL (legacy path).
+
+    Deprecated: production chat now routes through ChatSessionController
+    via run_tui(chat=True). This function is retained only for test
+    compatibility and will be removed in a future release.
 
     Args:
         config: Chat agent configuration
@@ -190,6 +213,14 @@ def run_chat_repl(
     Returns:
         Exit code
     """
+    import warnings
+
+    warnings.warn(
+        'run_chat_repl is deprecated; use run_tui(chat=True) via ChatSessionController',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     # Context compaction for long sessions
     compactor = ContextCompactor(
         recent_observations=3,

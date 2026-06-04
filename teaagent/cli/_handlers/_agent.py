@@ -713,8 +713,6 @@ def _execute_agent_task(
 
     # Handle git sandbox resolution
     if git_sandbox_available:
-        # Re-create sandbox with actual run_id for proper branch naming
-        git_sandbox = GitBranchSandbox(args.root, run_id=result.run_id)
         if git_sandbox.is_available():
             # Show diff summary
             try:
@@ -1285,13 +1283,7 @@ def _save_review_decisions(
                     'acp_version': '1.0.0',  # ACP protocol version
                     'mode': 'interactive_review',  # Track current mode
                     'decisions': review_decisions,
-                    'audit_trail': {
-                        'review_time': time.time(),
-                        'original_mode': suspension_data.get('mode', 'unknown'),
-                        'transition_type': 'robot_to_keyboard',
-                        'files_reviewed': len(changed_files),
-                        # audit_trail was a pre-CG-10 placeholder; real governance record is in RunStore
-                    },
+                    # audit_trail was a pre-CG-10 placeholder; real governance record is in RunStore
                 },
                 f,
                 indent=2,

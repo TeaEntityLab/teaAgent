@@ -30,6 +30,7 @@ def build_dry_run_payload(
         route=route,
         memory_limit=profile.memory_limit,
         context_profile=profile.name,
+        readonly=True,
     )
     brief = build_daily_brief(
         task=task,

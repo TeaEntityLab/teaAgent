@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from teaagent.chat_agent import ChatAgentConfig
-from teaagent.cli._handlers._agent import agent_run_task
+from teaagent.cli._handlers._agent import agent_resume_command, agent_run_task
 from teaagent.cli._handlers._chat import chat_command
 from teaagent.cli._handlers.agent_review import interactive_review_mode
 from teaagent.cli._handlers.chat_commands import execute_shell_command
@@ -20,6 +20,7 @@ from teaagent.cli._handlers.chat_repl import (
     run_chat_repl,
     suspend_to_background,
 )
+from teaagent.run_store import RunStore
 
 
 def test_print_chat_help(capsys):
@@ -38,8 +39,6 @@ def test_repl_undo_help_accurate(capsys: pytest.CaptureFixture[str]) -> None:
     assert 'journal-first' in captured.out
     assert 'checkpoint' in captured.out
     assert 'Undo all changes (using checkpoint)' not in captured.out
-
-
 
 
 def test_chat_command_with_invalid_args():
@@ -1081,9 +1080,7 @@ def test_suspend_to_background_basic(capsys):
         assert run_id  # Should return a run_id
         assert 'Suspending session as a checkpoint' in captured.out
         assert 'interactive-review' in captured.out
-        assert (
-            'resume from repl session not yet supported via cli' in captured.out.lower()
-        )
+        assert 'teaagent resume' in captured.out.lower()
         assert 'Session suspended successfully' in captured.out
 
         # Check suspension file was created
@@ -1462,3 +1459,98 @@ def test_git_sandbox_consent_updates_existing_config():
         assert config.get('git_sandbox_consent') == 'always'
         assert config.get('provider') == 'gpt'
         assert config.get('model') == 'gpt-4'
+
+
+def test_suspension_data_no_audit_trail(capsys):
+    """TICKET-15: Suspension JSON must not contain the redundant audit_trail field."""
+    import json
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {
+            'observations': [{'task': 'test task'}],
+            'compaction_count': 0,
+        }
+        targeted_files = set()
+
+        run_id = suspend_to_background(config, session_context, targeted_files)
+
+        tea_dir = Path(tmpdir) / '.teaagent'
+        suspension_file = tea_dir / f'suspension-{run_id}.json'
+        assert suspension_file.exists()
+
+        with open(suspension_file) as f:
+            data = json.load(f)
+        assert 'audit_trail' not in data, (
+            'audit_trail was removed from suspension JSON; '
+            'real governance record is in RunStore'
+        )
+
+
+def test_repl_suspend_resume_roundtrip(capsys):
+    """TICKET-16 Phase 2: Suspend a REPL session, then resume it."""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tea_dir = Path(tmpdir) / '.teaagent'
+        tea_dir.mkdir(parents=True, exist_ok=True)
+
+        config = ChatAgentConfig.from_root(tmpdir)
+        session_context = {
+            'observations': [{'task': 'test task', 'cost_cents': 0}],
+            'compaction_count': 0,
+        }
+        targeted_files = {Path(tmpdir) / 'test.txt'}
+
+        run_id = suspend_to_background(config, session_context, targeted_files)
+        assert run_id, 'suspend should return a run_id'
+
+        store = RunStore(tmpdir)
+        task = store.task_for_run(run_id)
+        assert task is not None, 'task_for_run must find the run_started event'
+        assert 'test task' in task
+        args = argparse.Namespace(
+            root=tmpdir,
+            run_id=run_id,
+            fresh_restart=False,
+            checkpoint_store=None,
+            provider='gpt',
+            model=None,
+            route_model=False,
+            permission_mode='prompt',
+            max_iterations=10,
+            max_tool_calls=10,
+            clarify=False,
+            allow_destructive=False,
+            approve_call_id=[],
+            hitl_approval=False,
+            subagent=False,
+            max_subagent_depth=1,
+            heartbeat=0.0,
+            code_analysis=False,
+            context_profile='balanced',
+            selected_skills=[],
+            max_estimated_cost_cents=0,
+            memory_limit=None,
+            auto_compact=None,
+            no_validate=True,
+            validate=False,
+            validation_profile=None,
+            require_plan=False,
+            progress=False,
+            human=False,
+            skip_plan_check=False,
+            plan_contract=None,
+        )
+
+        # Patch _execute_agent_task to avoid actually running
+        with patch('teaagent.cli._handlers._agent._execute_agent_task') as mock_execute:
+            mock_execute.return_value = 0
+            result = agent_resume_command(args)
+            assert result == 0, 'resume should succeed'
+
+            _, task_arg = mock_execute.call_args.args
+            kwargs = mock_execute.call_args.kwargs
+            assert task_arg == 'test task', (
+                f'recovered task should be "test task", got {task_arg!r}'
+            )
+            assert kwargs.get('resumed_from') == run_id
