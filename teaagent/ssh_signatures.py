@@ -100,7 +100,7 @@ def verify_message_ssh(
             key_type, key_data = parts[0], parts[1]
             principal = 'teaagent-peer'
             allowed.write_text(
-                f'{principal} {key_type} {key_data} {namespace}\n',
+                f'{principal} namespaces="{namespace}" {key_type} {key_data}\n',
                 encoding='utf-8',
             )
             sig_path.write_text(signature, encoding='utf-8')
@@ -112,14 +112,14 @@ def verify_message_ssh(
                     'verify',
                     '-f',
                     str(allowed),
-                    '-I',
-                    principal,
-                    '-n',
-                    namespace,
-                    '-s',
-                    str(sig_path),
-                    str(msg_path),
-                ],
+                '-I',
+                principal,
+                '-n',
+                namespace,
+                '-s',
+                str(sig_path),
+            ],
+                input=message.encode('utf-8'),
                 capture_output=True,
                 check=False,
                 timeout=15,
