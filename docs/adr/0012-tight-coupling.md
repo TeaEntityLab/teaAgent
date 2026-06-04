@@ -1,7 +1,8 @@
 # ADR 0012: Reduce Tight Coupling in chat_agent.py
 
 ## Status
-Proposed
+Superseded
+Owner: Platform Team
 
 ## Context
 The `ChatAgentConfig` and `run_chat_agent` function have direct dependencies on multiple backend systems:

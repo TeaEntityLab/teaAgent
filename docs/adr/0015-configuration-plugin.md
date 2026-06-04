@@ -1,7 +1,8 @@
 # ADR 0015: Replace Hard-Coded Configuration with Plugin System
 
 ## Status
-Proposed
+Rejected
+Owner: Platform Team
 
 ## Context
 The `config_loader.py` module hard-codes all configuration keys, environment variable names, and default values in a `CONFIG_KEYS` dictionary. This makes it difficult to extend configuration without modifying the core module. There's no plugin or extension mechanism for adding new configuration keys.

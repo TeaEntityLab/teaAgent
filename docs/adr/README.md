@@ -15,15 +15,15 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0007 | ANP Adapter Boundary | Accepted and Implemented | 2026-05-18 08:38:37 +0800 | 2026-05-22 00:27:39 +0800 |
 | 0008 | P4 Strategic Posture (Storage, TLS, P2P Auth) | Accepted and Implemented | 2026-05-29 21:05:06 +0800 | - |
 | 0009 | 5-Loop Governance System | Accepted and Implemented | 2026-05-27 to 2026-05-29 | - |
-| 0010 | Resolve Circular Dependencies Between approval_manager.py and policy.py | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
+| 0010 | Resolve Circular Dependencies Between approval_manager.py and policy.py | Superseded | 2026-05-30 20:00:08 +0800 | 2026-06-04 13:18:00 +0800 |
 | 0011 | Refactor ApprovalManager to Follow Single Responsibility Principle | Accepted and Implemented | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0012 | Reduce Tight Coupling in chat_agent.py | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
+| 0012 | Reduce Tight Coupling in chat_agent.py | Superseded | 2026-05-30 20:00:08 +0800 | 2026-06-04 13:18:00 +0800 |
 | 0013 | Add Abstraction Layer for Backend Systems | Accepted and Implemented | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0014 | Standardize Error Handling Across Modules | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0015 | Replace Hard-coded Configuration with Plugin System | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
+| 0014 | Standardize Error Handling Across Modules | Archived | 2026-05-30 20:00:08 +0800 | 2026-06-04 13:18:00 +0800 |
+| 0015 | Replace Hard-coded Configuration with Plugin System | Rejected | 2026-05-30 20:00:08 +0800 | 2026-06-04 13:18:00 +0800 |
 | 0016 | Add Dependency Injection for Tool Registration | Accepted and Implemented | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0017 | Standardize Backend Adapter Interfaces | Proposed | 2026-05-30 20:00:08 +0800 | 2026-06-01 16:01:28 +0800 |
-| 0018 | Async from Sync Pattern | Proposed | 2026-05-31 18:53:13 +0800 | 2026-06-01 16:01:28 +0800 |
+| 0017 | Standardize Backend Adapter Interfaces | Archived | 2026-05-30 20:00:08 +0800 | 2026-06-04 13:18:00 +0800 |
+| 0018 | Async from Sync Pattern | Accepted and Implemented | 2026-05-31 18:53:13 +0800 | 2026-06-04 13:18:00 +0800 |
 | 0019 | Phase 4 - Federated Swarm Consensus & Peer Attestations | Accepted and Implemented (Beta) | 2026-05-27 to 2026-05-29 | - |
 | 0020 | Phase 5 - Hardened Sandbox Virtualization | Accepted and Implemented (Beta) | 2026-05-27 to 2026-05-29 | - |
 | 0021 | Phase 6 - Skill Writer, Docker Monitor, Control Plane | Accepted and Implemented (Beta) | 2026-05-27 to 2026-05-29 | - |
@@ -61,14 +61,15 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 ### Operational Tooling (0021)
 - **0021**: Phase 6 - Skill Writer, Docker Monitor, Control Plane - Operational tooling
 
-### Refactoring Proposals (0010-0018)
-- **0010, 0012, 0014, 0015, 0017, 0018**: Proposed refactoring decisions (status: Proposed, not yet implemented)
-- **0011, 0013, 0016**: Implemented refactoring decisions (see individual ADRs for details)
+### Refactoring Decisions (0010-0018)
+- **0011, 0013, 0016, 0018**: Implemented or accepted refactoring decisions (see individual ADRs for details)
+- **0010, 0012, 0014, 0015, 0017**: Closed decisions (Superseded, Archived, or Rejected)
 
 ## ADR Status Legend
 
 - **Accepted and Implemented**: Decision accepted and fully implemented
 - **Accepted and Implemented (Beta)**: Decision accepted and implemented in Beta (optional hardening remaining)
+- **Superseded / Archived / Rejected**: Closed decisions with details in respective files
 - **Proposed**: Decision proposed but not yet implemented (refactoring proposals)
 
 ## Git History

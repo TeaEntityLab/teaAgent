@@ -1,7 +1,8 @@
 # ADR 0014: Standardize Error Handling Across Modules
 
 ## Status
-Proposed
+Archived
+Owner: Platform Team
 
 ## Context
 Different modules handle errors inconsistently:

@@ -1,7 +1,8 @@
 # ADR 0017: Standardize Backend Adapter Interfaces
 
 ## Status
-Proposed
+Archived
+Owner: Platform Team
 
 ## Context
 The `KnowledgeSearchBackend` and `CodeParseBackend` protocols define methods, but implementations have inconsistent signatures and behavior:

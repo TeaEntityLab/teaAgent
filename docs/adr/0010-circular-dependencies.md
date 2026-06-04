@@ -1,7 +1,8 @@
 # ADR 0010: Resolve Circular Dependencies Between approval_manager.py and policy.py
 
 ## Status
-Proposed
+Superseded
+Owner: Platform Team
 
 ## Context
 The codebase has circular dependencies between `approval_manager.py` and `policy.py`:

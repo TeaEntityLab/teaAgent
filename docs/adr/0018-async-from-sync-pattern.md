@@ -1,8 +1,8 @@
 # ADR 0018: Async-from-sync bridge for approval paths
 
 ## Status
-
-Proposed
+Accepted
+Owner: Platform Team
 
 ## Context
 
