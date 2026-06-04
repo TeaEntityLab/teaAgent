@@ -121,7 +121,7 @@ Acceptance criteria:
 
 ### DOCOPT-006: Roadmap H0 Documentation Hygiene Linkage
 
-Status: Active.
+Status: Done.
 
 Files:
 
@@ -191,22 +191,23 @@ Acceptance criteria:
 
 ### DOCOPT-010: ADR Proposed-State Cleanup
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
-Assign owners and decision dates to the six proposed ADRs or close them as
-superseded/rejected.
+Resolve the stale "six proposed ADRs" claim by checking the ADR source of truth
+and closing the index drift.
 
 Acceptance criteria:
 
-- ADR-0010, 0012, 0014, 0015, 0017, and 0018 each have owner surface and next
-  decision date.
-- ADR index reflects the state.
+- ADR 0010, 0012, 0014, 0015, 0017, and 0018 are no longer represented as
+  Proposed in the ADR index.
+- ADR 0025 reflects the implemented REPL and TUI controller state.
+- ADR index categorizes ADR 0025 under chat surfaces.
 
 ### DOCOPT-011: Coverage Omit Re-Entry Plan
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
@@ -217,10 +218,12 @@ Acceptance criteria:
 
 - 16 omit patterns listed.
 - Each has reason, risk, owner surface, target, and first smoke-test candidate.
+- `scripts/validate_docs_consistency.py` checks the ledger against
+  `pyproject.toml`.
 
 ### DOCOPT-012: Optional Dependency Audit Lane
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
@@ -231,6 +234,8 @@ Acceptance criteria:
 
 - Base audit and optional-extra audit scopes are documented separately.
 - Security workflow or nightly job has a clear optional-extra audit plan.
+- Security workflow uses a base lockfile export for PR gating and a non-blocking
+  optional-extra matrix for scheduled/manual visibility.
 
 ## P2 Work Packages
 

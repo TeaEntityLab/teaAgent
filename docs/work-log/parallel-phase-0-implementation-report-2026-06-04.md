@@ -159,6 +159,22 @@ Recommended pattern:
 | Optional dependency audit | Open | Not changed in this pass | Needs separate base/dev/optional audit policy. |
 | Coverage omit governance | Open | Not changed in this pass | Needs owner/reason/return milestone ledger. |
 
+## Follow-Up Closure Note
+
+Later on 2026-06-04, the two open governance items above were closed:
+
+- `docs/governance/coverage-omit-ledger.md` now includes every
+  `pyproject.toml` coverage omit pattern with owner, reason, risk, return
+  milestone, and smoke-test candidate.
+- `scripts/validate_docs_consistency.py` now fails when the coverage omit
+  ledger drifts from `pyproject.toml`.
+- `docs/security/dependency-audit-policy.md` and
+  `.github/workflows/security.yml` now split base, dev/lockfile, and
+  optional-extra dependency audits.
+- The base PR gate no longer uses unscoped `pip-audit --skip-editable`, which
+  could audit packages from the runner or audit-tool environment instead of the
+  TeaAgent base dependency surface.
+
 ## Prioritized Work List
 
 ### P0 - next safety and stability work
@@ -177,17 +193,18 @@ Recommended pattern:
      documents that auto mode is run-lifetime only.
    - ROI: high. It guards a trust-boundary persistence bug.
 
-3. Build the coverage omit ledger.
-   - Why: omitted paths are not automatically bad, but unowned omissions become
-     blind spots.
-   - Acceptance: every omit pattern has owner, reason, risk, and return
-     milestone.
+3. Convert coverage omit smoke candidates into direct tests.
+   - Why: the omit ledger now exists; the next risk is letting smoke candidates
+     remain indirect forever.
+   - Acceptance: each omitted security- or UX-sensitive path has direct smoke
+     coverage or a documented non-testable rationale.
    - ROI: high. It prevents silent decay in security-relevant modules.
 
-4. Split dependency audits into base, dev, and optional-extra profiles.
-   - Why: optional ecosystems are real attack surface once enabled.
-   - Acceptance: CI distinguishes base package pass/fail from optional-extra
-     vulnerability tracking and documents fix/acceptance policy.
+4. Resolve optional-extra audit findings by extra.
+   - Why: audit lanes are now separated, but optional ecosystems are real attack
+     surface once enabled.
+   - Acceptance: each optional-extra vulnerability has fix, upstream wait,
+     mitigation, or release-blocking decision with owner and date.
    - ROI: high. It avoids both false panic and false confidence.
 
 5. Assign or close proposed ADRs.
@@ -235,8 +252,8 @@ Highest ROI work:
 
 - Approval mode entry/audit ceremony.
 - Auto-mode restoration contract.
-- Coverage omit ledger.
-- Optional dependency audit split.
+- Direct smoke tests for omitted trust-sensitive modules.
+- Optional-extra dependency remediation.
 - Chat resume rehydration.
 
 Lower ROI until P0 is stable:
@@ -279,4 +296,3 @@ For this pass, minimum verification should include:
 If a future environment cannot run the full suite, the final report must name
 the blocked command, the environment reason, and the highest-risk unverified
 surface.
-

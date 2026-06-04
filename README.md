@@ -239,7 +239,9 @@ pip install -e ".[security]"
 - `telemetry`: OpenTelemetry tracing and metrics exporters.
 - `dev`: tests, linting, type checking, and pre-commit.
 - `release`: local build and distribution checks.
-- `security`: local dependency auditing with `pip-audit`.
+- `security`: local dependency auditing with `pip-audit`; see
+  `docs/security/dependency-audit-policy.md` for the base/dev/optional-extra
+  audit split.
 
 ## Quick Start
 

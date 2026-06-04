@@ -160,6 +160,77 @@ def test_validate_roadmap_status_detects_missing_h0_truth_links() -> None:
     assert 'Roadmap status missing doc-vs-HEAD guard reference.' in errors
 
 
+def test_validate_coverage_omit_ledger_passes_for_repo_docs() -> None:
+    root = Path(__file__).resolve().parents[1]
+    pyproject = (root / 'pyproject.toml').read_text(encoding='utf-8')
+    ledger = (
+        root / 'docs' / 'governance' / 'coverage-omit-ledger.md'
+    ).read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_coverage_omit_ledger(
+        pyproject_text=pyproject,
+        ledger_text=ledger,
+    )
+    assert errors == []
+
+
+def test_validate_coverage_omit_ledger_detects_missing_pattern() -> None:
+    pyproject = (
+        '[tool.coverage.run]\n'
+        'omit = [\n'
+        '    "teaagent/tui/*",\n'
+        '    "teaagent/wasm_runtime.py",\n'
+        ']\n'
+    )
+    ledger = (
+        '| Omit Pattern | Owner | Reason | Risk | Expected Return Milestone | '
+        'Smoke-Test Candidate |\n'
+        '|---|---|---|---|---|---|\n'
+        '| `teaagent/tui/*` | Platform UX Team | Hard to cover. | Medium | '
+        'Phase 1 | `tests/acceptance/test_headless_tui.py` |\n'
+    )
+    errors = _VALIDATE_MODULE.validate_coverage_omit_ledger(
+        pyproject_text=pyproject,
+        ledger_text=ledger,
+    )
+    assert any('teaagent/wasm_runtime.py' in err for err in errors)
+
+
+def test_validate_dependency_audit_policy_passes_for_repo_docs() -> None:
+    root = Path(__file__).resolve().parents[1]
+    policy = (
+        root / 'docs' / 'security' / 'dependency-audit-policy.md'
+    ).read_text(encoding='utf-8')
+    workflow = (
+        root / '.github' / 'workflows' / 'security.yml'
+    ).read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_dependency_audit_policy(
+        policy_text=policy,
+        security_workflow_text=workflow,
+    )
+    assert errors == []
+
+
+def test_validate_dependency_audit_policy_rejects_unscoped_editable_audit() -> None:
+    policy = (
+        '# Dependency Audit Policy\n'
+        '## Base Install Audit\n'
+        '## Lockfile and Dev Environment Audit\n'
+        '## Optional-Extra Runtime Audit\n'
+        'managed-google-adk managed-vertex playwright telemetry oauth wasm\n'
+    )
+    workflow = (
+        'jobs:\n'
+        '  pip-audit:\n'
+        '    steps:\n'
+        '      - run: pip-audit --skip-editable\n'
+    )
+    errors = _VALIDATE_MODULE.validate_dependency_audit_policy(
+        policy_text=policy,
+        security_workflow_text=workflow,
+    )
+    assert any('unscoped `pip-audit --skip-editable`' in err for err in errors)
+
+
 def test_validate_provider_docs_detects_stale_llm_adapter_count() -> None:
     root = Path(__file__).resolve().parents[1]
     readme = (root / 'README.md').read_text(encoding='utf-8')

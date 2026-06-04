@@ -23,6 +23,11 @@ b5225b0 Keep the suspend story honest while blocking run-id misuse
 df31010 Verify and harden 7 claimed fixes: add tests, fix gaps
 ```
 
+Second correction, 2026-06-04: this document's ADR drift row was also a
+snapshot claim. The ADR source of truth now has no live `Proposed` ADR rows, and
+ADR 0025 is implemented for REPL and TUI chat. The remaining risk is future
+doc-status drift, not six unresolved ADR decisions.
+
 This is the central fact of the last 24 hours: **the suite was repaired and the docs were partially
 re-anchored.** Do not trust any "as of 2026-06-03" claim without re-running.
 
@@ -141,7 +146,7 @@ see [Future Outlook](total-review-future-outlook-2026-06-04.md).)
 | D-2 | Local dev interpreter unsupported | `.venv` = Python **3.14.4**; `pyproject` `requires-python>=3.10` targeting 3.10–3.12 | Medium — devs test on an interpreter CI never runs |
 | D-3 | Findings ledger stale | `…ledger-2026-06-01.md` last anchored 2026-06-01; lists closed items as OPEN | Low — but it self-declares "authoritative for status" |
 | D-4 | Orphan `memory/catalog.py` | 0 importers (see §4c) | Low |
-| D-5 | 6 Proposed ADRs unexecuted | 0010/0012/0014/0015/0017/0018 | Low — decisions deferred = decisions made by default |
+| D-5 | Stale ADR status claims can mislead planning | Earlier snapshot cited 0010/0012/0014/0015/0017/0018, but current `docs/adr/README.md` has no live `Proposed` rows | Low - the live issue is guarding future status drift, not assigning six closed ADRs |
 | D-6 | 1 production stub returns fake data | `issue_intake.py:195` `# TODO: GitHub API` returns mock `ParsedIssue` instead of raising | Medium — silently misleads callers |
 
 Supersession note, 2026-06-04: D-1 was fixed in the documentation

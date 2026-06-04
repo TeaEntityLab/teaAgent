@@ -17,14 +17,14 @@ Related implementation/reflection record:
 | P0-TR-002 | P0 | Rename or consolidate runner-local `ApprovalManager` | Historical duplicate name; current code has `RunnerApprovalCoordinator` | Only one canonical approval authority name remains; runner helper name reflects workflow role |
 | P0-TR-003 | P0 | Break policy/approval lazy reverse import | Historical reverse import risk; current import-order tests pass | Shared normalization helper extracted or no reverse import remains; import-order smoke test added |
 | P0-TR-004 | P0 | Make memory canonical source structural | Historical split; current `memory_legacy.py` re-exports `memory.catalog` | One runtime implementation remains, or duplicate is quarantined with tests proving import target |
-| P0-TR-005 | P0 | Add coverage omit ledger | 16 omit patterns in `pyproject.toml` | Each omit has owner, reason, risk, and expected return milestone |
-| P0-TR-006 | P0 | Add optional-extra dependency audit policy | `google-adk` optional tree can pull vulnerable transitive deps | Security docs distinguish base audit, lockfile audit, and optional-extra audit cadence |
-| P0-TR-007 | P0 | Assign or close proposed ADRs | ADRs 0010, 0012, 0014, 0015, 0017, 0018 are Proposed | Each has owner and one of Accepted/Rejected/Superseded/Archived |
+| P0-TR-005 | P0 | Add coverage omit ledger | 16 omit patterns in `pyproject.toml`; ledger now has smoke candidates | Each omit has owner, reason, risk, expected return milestone, smoke-test candidate, and docs validator coverage |
+| P0-TR-006 | P0 | Add optional-extra dependency audit policy | `google-adk` optional tree can pull vulnerable `fastapi` / `starlette` transitive deps | Security docs and workflow distinguish base audit, dev/lockfile audit, and optional-extra audit cadence |
+| P0-TR-007 | P0 | Assign or close proposed ADRs | Source check found no current Proposed ADRs; stale docs overstated six proposed ADRs | ADR index and ADR 0025 reflect closed/proper current states |
 | P1-TR-008 | P1 | Add at least one smoke test per coverage-omitted package | TUI, tournament, validation, WASM and other paths are omitted | Smoke test exists or explicit non-testable rationale exists |
 | P1-TR-009 | P1 | Build generated docs front door | 435 Markdown files make discovery hard | `docs/INDEX.md` or equivalent links current status, risk, roadmap, tickets, ADRs, and historical evidence |
 | P1-TR-010 | P1 | Calibrate security severity levels | Review says Critical, module docs say High for similar bypasses | Shared severity rubric exists and high-risk docs are updated |
 | P1-TR-011 | P1 | Separate "behavior preservation" tests from "safety intent" tests | Current tests can preserve risky bypass behavior | Security tests assert desired contract, not only legacy behavior |
-| P1-TR-012 | P1 | Refresh dependency audit report after security workflow change | Existing dependency report predates recent optional-extra scan correction | Report states base/dev/optional audit surfaces separately |
+| P1-TR-012 | P1 | Refresh dependency audit report after security workflow change | Dependency report now has supersession note and scope-refresh successor | Report states base/dev/optional audit surfaces separately |
 
 ## Recommended Execution Order
 
@@ -89,3 +89,20 @@ Phase 0 trust repair is done only when the following are all true:
   implementation. `teaagent.memory` and `teaagent.memory_legacy` both re-export
   the same classes for compatibility. Regression guard:
   `tests/test_circular_imports.py::test_memory_catalog_canonical_export_path`.
+- 2026-06-04 — **P0-TR-005 DONE.** `docs/governance/coverage-omit-ledger.md`
+  lists all 16 `[tool.coverage.run].omit` patterns with owner, reason, risk,
+  return milestone, and smoke-test candidate. `validate_docs_consistency.py`
+  now fails when the ledger and `pyproject.toml` drift.
+- 2026-06-04 — **P0-TR-006 DONE.** The dependency audit policy and security
+  workflow now separate base, dev/lockfile, and optional-extra audit lanes. The
+  base PR gate uses `uv export --no-dev --no-emit-project` instead of unscoped
+  environment auditing. Optional extras run in a non-blocking scheduled/manual
+  matrix and remain a release-review gate.
+- 2026-06-04 — **P0-TR-007 DONE.** ADR status review found no current Proposed
+  ADRs in `docs/adr/README.md`; ADR 0010/0012/0014/0015/0017/0018 are closed
+  or accepted, and ADR 0025 now reflects implemented REPL/TUI controller
+  unification.
+- 2026-06-04 — **P1-TR-012 DONE.** The dependency audit report now has a
+  supersession note and points to
+  `docs/security/dependency-audit-scope-refresh-2026-06-04.md`, which separates
+  base, dev/lockfile, and optional-extra findings.

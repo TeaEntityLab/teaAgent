@@ -13,6 +13,15 @@ repair debt. The review is also imperfect: several counts are stale, some risk
 severities are inconsistent with local registers, and a few claims compress
 different kinds of evidence into one line.
 
+## Status Correction
+
+This fact check was measured before the ADR status cleanup on 2026-06-04. The
+current ADR index has no live `Proposed` ADR rows; ADR 0025 is now recorded as
+implemented for both REPL and TUI chat surfaces. Treat the earlier "6 proposed
+ADRs" finding as a valid stale-snapshot finding, not as the current source of
+truth. Current truth lives in `docs/adr/README.md` and
+`docs/work-log/phase-0-governance-closure-report-2026-06-04.md`.
+
 ## Baseline
 
 These facts were measured at the start of this review against `main` at commit
@@ -46,7 +55,7 @@ These facts were measured at the start of this review against `main` at commit
 | Zero forced runtime dependency posture | Confirmed | `project.dependencies = []` in `pyproject.toml`. Optional extras carry the heavy trees. |
 | Duplicate `ApprovalManager` risk exists | Confirmed | `teaagent/approval_manager.py::ApprovalManager` and `teaagent/runner/_approval_manager.py::ApprovalManager` both exist. |
 | Memory catalog divergence exists | Confirmed | `teaagent/memory_legacy.py` is canonical through `teaagent/memory/__init__.py`, while `teaagent/memory/catalog.py` remains a divergent near-copy. |
-| Proposed ADR debt exists | Confirmed | `docs/adr/README.md` lists proposed ADRs 0010, 0012, 0014, 0015, 0017, and 0018. |
+| Proposed ADR debt exists | Superseded stale snapshot | At the measured baseline this review believed ADRs 0010, 0012, 0014, 0015, 0017, and 0018 were proposed; the 2026-06-04 cleanup rechecked the ADR source of truth and found no live `Proposed` ADR rows. |
 
 ## Corrected Claims
 

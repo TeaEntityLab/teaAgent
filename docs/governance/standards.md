@@ -45,7 +45,7 @@ Security properties must be testable, not aspirational. Every security invariant
 | Type coverage | All production code annotated | `mypy --disallow-untyped-defs` (CI `lint` job) |
 | Lint | Zero errors | `ruff check .` (CI `lint` job) |
 | Format | Canonical | `ruff format --check .` (CI `lint` job) |
-| Dependency CVEs | Zero known CVEs | `pip-audit` (CI `security` job, weekly) |
+| Dependency CVEs | Zero known CVEs in base PR gate; optional-extra CVEs governed separately | `pip-audit` lanes in CI `security` job |
 | Acceptance suite | Count matches `docs/acceptance.md` | `acceptance-p0` / `acceptance-p1` CI jobs |
 | Docs consistency | Scripts pass | `validate_docs_consistency.py` (CI `use-case-matrix` job) |
 

@@ -8,6 +8,11 @@
 **STALE/RISK** - was true at a snapshot but the dynamics matter.
 **FALSE** - contradicted by the measured baseline.
 
+**Status correction, 2026-06-04:** the ADR rows below were measured before the
+ADR cleanup pass. Current truth: no live `Proposed` ADR rows remain in
+`docs/adr/README.md`, and ADR 0025 is recorded as implemented for REPL and TUI
+chat.
+
 ---
 
 ## A. Scale & velocity (CPA §1–2)
@@ -46,8 +51,8 @@
 
 | CPA claim | Measured | Verdict |
 |-----------|----------|---------|
-| 30 ADRs (20 implemented) | 31 ADR/decision files in the measured scope, 6 Proposed | VERIFIED |
-| 6 Proposed ADRs unexecuted | exactly 0010/0012/0014/0015/0017/0018 | VERIFIED exact |
+| 30 ADRs (20 implemented) | 31 ADR/decision files in the measured scope; the earlier "6 Proposed" reading is superseded by the 2026-06-04 ADR cleanup | VERIFIED for count; SUPERSEDED for current status |
+| 6 Proposed ADRs unexecuted | stale snapshot claim for 0010/0012/0014/0015/0017/0018; current ADR index has no live `Proposed` rows | SUPERSEDED |
 | 4-standard module docs (28 modules) | 28 module dirs | VERIFIED |
 | 250+ markdown / 59 dirs, "discoverability is a problem" | 456 tracked Markdown files at the current documentation pass; 421 under `docs/` | VERIFIED undercount; the discoverability critique is understated |
 | "docs are exceptional for a 27-day project" | broadly true | VERIFIED, but see [Critique](total-review-critique-and-interrogation-2026-06-04.md) on docs-as-trust-surface |

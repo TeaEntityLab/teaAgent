@@ -125,14 +125,20 @@ For untrusted workloads, set `ChildProcessCodeModeBackend.trusted_only = False` 
 
 ## Dependency management
 
-- CI runs `pip-audit` on every PR and weekly (see `.github/workflows/security.yml`).
+- Dependency auditing follows the segmented policy in
+  [dependency-audit-policy.md](../security/dependency-audit-policy.md): base
+  PR gate, weekly dev/lockfile visibility, and optional-extra release review.
+- CI runs the base `pip-audit` lane on every PR and the broader lanes on the
+  scheduled or manual security workflow (see `.github/workflows/security.yml`).
 - `uv.lock` is the lockfile. Pin CVE fixes via `[tool.uv] constraint-dependencies` in `pyproject.toml`.
 - When a Dependabot alert is resolved in-tree, dismiss it in GitHub Security → Dependabot with reason *fix already on default branch*.
-- Adding a new optional dependency requires: a stated purpose, a pin in the relevant extras group, and confirmation that `pip-audit` is clean.
+- Adding a new optional dependency requires: a stated purpose, a pin in the
+  relevant extras group, and confirmation that the base audit remains clean and
+  the relevant optional-extra audit result is documented.
 
 ```bash
-uv export --format requirements-txt -o /tmp/req.txt
-pip-audit -r /tmp/req.txt
+uv export --format requirements-txt --no-dev --no-emit-project --frozen -o /tmp/teaagent-base-requirements.txt
+pip-audit -r /tmp/teaagent-base-requirements.txt
 ```
 
 ---

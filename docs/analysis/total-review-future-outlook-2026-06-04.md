@@ -4,6 +4,12 @@
 This is the forward-looking half. It re-prioritizes the CPA's roadmap against verified ground truth, and
 gives every item a **falsifiable exit criterion** — if you can't tell when it's done, it isn't a task.
 
+**Status correction, 2026-06-04:** FO-11 was superseded by the ADR status
+cleanup. The current ADR index has no live `Proposed` ADR rows, and ADR 0025 is
+now recorded as implemented for REPL and TUI chat. The durable follow-up is not
+"assign six proposed ADRs"; it is "keep ADR status claims guarded against
+drift."
+
 ---
 
 ## 1. Trajectory call
@@ -42,7 +48,7 @@ Priorities are re-derived from evidence, **not copied from the CPA**. Severity r
 | FO-8 | **Audit + guard `DANGER_FULL_ACCESS`** | A hash-chained audit event fires on entering the mode; a test proves it cannot be enabled from config silently (requires explicit flag/confirm) |
 | FO-9 | **Re-anchor or supersede the findings ledger** | `…ledger-2026-06-01.md` either updated to HEAD or carries a "Superseded by 2026-06-04 total review" banner |
 | FO-10 | **Coverage exclusion deadlines** | Each of the 16 `omit` entries gets a one-line "why excluded + target sprint to re-include" in a tracked doc; ≥1 smoke test added per excluded module |
-| FO-11 | **Assign owners to 6 Proposed ADRs** | 0010/0012/0014/0015/0017/0018 each get an owner + decision date, or are closed as "won't do" |
+| FO-11 | **Keep ADR status claims guarded** | `docs/adr/README.md` remains the source of truth; stale analysis docs carry supersession notes; docs validation catches future volatile ADR-status claims before they become planning inputs |
 
 ### P2 — when convenient
 
@@ -62,7 +68,7 @@ Priorities are re-derived from evidence, **not copied from the CPA**. Severity r
 | Guarded docs contradicting HEAD | **≥1** (`acceptance.md`) | **0**, enforced by FO-1 | the meta-finding's kill-criterion |
 | Coverage `omit` entries | 16 | 16 → 12 → 8 (with deadlines) | shrink the unmeasured surface |
 | Same-named class collisions | 2 (`ApprovalManager`, `MemoryCatalog`) | 0 | FO-6, FO-7 |
-| Proposed ADRs without owner | 6 | 0 | deferred decisions are decisions |
+| Proposed ADRs without owner | 0 current, 6 in stale snapshot reports | 0 current and guarded | stale decision-status claims should be corrected or superseded before they drive planning |
 | Local-env Python | 3.14.4 (unsupported) | 3.12.x | test what you ship |
 | Commits/day | ~23 | stabilize 10–15 | sustainability |
 | Acceptance tests | 441 | 500+ | breadth, not just green |

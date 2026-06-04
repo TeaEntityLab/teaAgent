@@ -212,12 +212,16 @@ installs to `jaraco-context>=6.1.0` via `[tool.uv] constraint-dependencies` in
 `pyproject.toml`. `teaagent selftest` fails if an older `jaraco.context` is present
 in the environment (Dependabot alert #10 should clear after lockfile rescan).
 
-CI runs `pip-audit` on the editable install and on `uv export` output (see
-`.github/workflows/security.yml`). Local check:
+CI runs segmented `pip-audit` lanes: a strict base export gate on every PR,
+weekly dev/lockfile visibility, and non-blocking optional-extra visibility for
+scheduled/manual runs. See `.github/workflows/security.yml` and
+`docs/security/dependency-audit-policy.md`.
+
+Local base check:
 
 ```bash
-uv export --format requirements-txt -o /tmp/req.txt
-uv run pip-audit -r /tmp/req.txt
+uv export --format requirements-txt --no-dev --no-emit-project --frozen -o /tmp/teaagent-base-requirements.txt
+pip-audit -r /tmp/teaagent-base-requirements.txt
 ```
 
 **Dependabot alert #10 (CVE-2026-23949):** Resolved in-tree as of 2026-05-29 — `uv.lock`

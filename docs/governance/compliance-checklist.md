@@ -24,8 +24,9 @@ This document defines the gates that must pass for a release or a deployment to 
 | Acceptance P1 | `acceptance-p1` | `python3 scripts/run_acceptance_tier.py --tier p1` |
 | Acceptance all (main only) | `acceptance-all` | `python3 scripts/run_acceptance_tier.py --tier all` |
 | Package build + twine check | `package` | `python -m build && twine check dist/*` |
-| Dependency CVE scan (editable) | `pip-audit` | `pip-audit --skip-editable` |
-| Dependency CVE scan (lockfile) | `pip-audit` | `pip-audit -r /tmp/teaagent-uv-requirements.txt` |
+| Dependency CVE scan (base) | `pip-audit` | `uv export --format requirements-txt --no-dev --no-emit-project --frozen -o /tmp/teaagent-base-requirements.txt && pip-audit -r /tmp/teaagent-base-requirements.txt` |
+| Dependency CVE scan (dev/lockfile weekly) | `pip-audit` | `uv export --format requirements-txt --no-emit-project --frozen -o /tmp/teaagent-dev-requirements.txt && pip-audit -r /tmp/teaagent-dev-requirements.txt` |
+| Dependency CVE scan (optional extras) | `optional-extra-pip-audit` | `uv export --format requirements-txt --extra <extra> --no-dev --no-emit-project --frozen -o /tmp/teaagent-<extra>-requirements.txt && pip-audit -r /tmp/teaagent-<extra>-requirements.txt` |
 | CodeQL Python | `codeql` | GitHub-managed |
 | Docs consistency | `use-case-matrix` | `python3 scripts/validate_docs_consistency.py` |
 
@@ -38,7 +39,9 @@ This document defines the gates that must pass for a release or a deployment to 
 - [ ] `pyproject.toml` `version` matches the intended tag.
 - [ ] No entry in `## Unreleased` is a `### Breaking` change without a migration note.
 - [ ] Dependabot alerts: zero open alerts with a CVSS score ≥ 7.0. Lower-severity open alerts are acknowledged.
-- [ ] `pip-audit` shows zero CVEs in the `uv.lock` export.
+- [ ] `pip-audit` shows zero CVEs in the base export.
+- [ ] Dev/lockfile and optional-extra audit findings are reviewed according to
+      [Dependency Audit Policy](../security/dependency-audit-policy.md).
 - [ ] For MAJOR releases: the ADR that describes the breaking change is in `docs/adr/` and its status is **Accepted**.
 
 ### Gate 3 — Security review (security fixes and major releases)

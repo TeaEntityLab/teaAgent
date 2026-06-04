@@ -2,10 +2,13 @@
 
 ## Status
 
-Accepted and Implemented (Partial) - 2026-06-01
+Accepted and Implemented - 2026-06-04
 
 - **REPL (`teaagent chat`):** Implemented.
-- **TUI (`teaagent tui`):** Not yet migrated (see Consequences → Outstanding).
+- **TUI (`teaagent tui`):** Implemented through `ChatSessionController`.
+- **Remaining product hardening:** full REPL-originated suspend-to-resume
+  rehydration and broader CLI/TUI journey parity tests are tracked outside this
+  ADR.
 
 ## Context
 
@@ -54,12 +57,12 @@ governance-relevant behavior.
   `targeted_files`, shared between controller and surface.
 
 **Files:**
-- `teaagent/chat_session_controller.py` (new, ~229 lines)
-- `teaagent/cli/_handlers/chat_repl.py` (initial-task path and REPL loop now call
-  `controller.execute_task`; `/undo` calls `controller.undo_last_run`)
+- `teaagent/chat_session_controller.py`
+- `teaagent/cli/_handlers/chat_repl.py`
+- `teaagent/tui/__init__.py`
 
 **Features:**
-- One result-handling, cost, and undo implementation for the REPL.
+- One result-handling, cost, and undo implementation for the REPL and TUI.
 - Honest, audited suspension (`audit.record('session_suspended', …)`, no branch switch)
   retained in `chat_repl.py` (CG-09/CG-10).
 
@@ -71,30 +74,27 @@ both surfaces" into "fix it once." It also concentrates the governance-critical 
 
 ## Implementation
 
-Implemented for the REPL in the 2026-06-01 fix batch. Verified by the third-pass audit
-(`docs/analysis/daily-driver-third-pass-postfix-audit-2026-06-01.md`): CG-01/02/03(REPL)/
-04/09/10 confirmed fixed against current HEAD.
+Implemented for the REPL in the 2026-06-01 fix batch and for the TUI by the
+Phase 0 daily-driver repair passes completed on 2026-06-04. The current status
+page records CG-11, CG-12, CG-13, CG-15, and TASK-DD2-013 as fixed or
+regression-guarded. TUI command-path tests now cover controller-backed cost
+accumulation and undo behavior.
 
 ## Consequences
 
 ### Positive
-- REPL result/cost/undo are correct and governed.
-- New chat behavior added to the controller benefits the REPL automatically.
+- REPL and TUI result/cost/undo behavior share one governed execution path.
+- New chat behavior added to the controller benefits both interactive surfaces.
 - Governance behavior is unit-testable without a TTY.
 
-### Negative / Outstanding
-- **The TUI was not migrated** and still calls `run_chat_agent` directly
-  (`tui/__init__.py:890`). Consequently the controller's guarantees do **not** reach the
-  always-on surface:
-  - CG-11: TUI `/cost` always shows `$0.00` (counter never incremented).
-  - CG-12: the divergence the controller was meant to end is still active for the TUI.
-  - CG-15: TUI `/undo` uses git-stash while the REPL uses `UndoJournal`.
-- **`execute_task` swallows `(AttributeError, TypeError)`** to detect test mocks
-  (`:143-159`), which can silently hide a real undo-journal save failure (CG-13).
+### Remaining Risks
 
-The migration path is specified in
-`docs/specs/daily-driver-tui-controller-migration-spec-2026-06-01.md` (TICKET-12); the
-parity contract is the enforcement mechanism.
+- Full REPL-originated suspend-to-resume rehydration remains a separate Phase 2
+  task. The current honest path is `teaagent agent interactive-review <run_id>`.
+- CLI/TUI parity should keep moving from unit-level command tests into
+  cross-surface journey tests for session, cost, approval, undo, and memory.
+- Future surface-specific features must call the controller instead of
+  reintroducing direct `run_chat_agent` execution.
 
 ## Alternatives Considered
 
@@ -112,3 +112,4 @@ parity contract is the enforcement mechanism.
 - `docs/analysis/daily-driver-third-pass-postfix-audit-2026-06-01.md` (CG-11…CG-16).
 - `docs/specs/daily-driver-tui-controller-migration-spec-2026-06-01.md` (migration).
 - `docs/analysis/daily-driver-surface-parity-matrix-2026-06-01.md` (parity evidence).
+- `docs/daily-driver-current-status.md` (current daily-driver truth).

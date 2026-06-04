@@ -6,6 +6,7 @@ import subprocess
 import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from types import ModuleType
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
@@ -96,6 +97,32 @@ CATALOG_REQUIRED_FIXTURES = (
     'tests/fixtures/plugin_skill_catalog/sample_skill/SKILL.md',
     'tests/fixtures/plugin_skill_catalog/sample_plugin/plugin.json',
     'tests/fixtures/plugin_skill_catalog/external_mcp_tools.json',
+)
+COVERAGE_OMIT_HEADER_COLUMNS = (
+    'Omit Pattern',
+    'Owner',
+    'Reason',
+    'Risk',
+    'Expected Return Milestone',
+    'Smoke-Test Candidate',
+)
+COVERAGE_OMIT_ROW = re.compile(r'^\|\s*`([^`]+)`\s*\|', re.MULTILINE)
+COVERAGE_OMIT_BLOCK = re.compile(
+    r'\[tool\.coverage\.run\].*?omit\s*=\s*\[(.*?)\]',
+    re.DOTALL,
+)
+DEPENDENCY_AUDIT_POLICY_SECTIONS = (
+    'Base Install Audit',
+    'Lockfile and Dev Environment Audit',
+    'Optional-Extra Runtime Audit',
+)
+DEPENDENCY_AUDIT_HIGH_RISK_EXTRAS = (
+    'managed-google-adk',
+    'managed-vertex',
+    'playwright',
+    'telemetry',
+    'oauth',
+    'wasm',
 )
 
 
@@ -360,7 +387,80 @@ def validate_roadmap_status(roadmap_text: str) -> list[str]:
     return errors
 
 
-def _load_build_use_case_matrix_module():
+def _extract_coverage_omit_patterns(pyproject_text: str) -> set[str]:
+    match = COVERAGE_OMIT_BLOCK.search(pyproject_text)
+    if not match:
+        raise ValueError('pyproject.toml missing [tool.coverage.run] omit block.')
+    return set(re.findall(r'"([^"]+)"', match.group(1)))
+
+
+def validate_coverage_omit_ledger(
+    *, pyproject_text: str, ledger_text: str
+) -> list[str]:
+    errors: list[str] = []
+    try:
+        expected = _extract_coverage_omit_patterns(pyproject_text)
+    except ValueError as exc:
+        errors.append(str(exc))
+        expected = set()
+
+    for column in COVERAGE_OMIT_HEADER_COLUMNS:
+        if column not in ledger_text:
+            errors.append(f'Coverage omit ledger missing column: {column!r}.')
+
+    actual = set(COVERAGE_OMIT_ROW.findall(ledger_text))
+    missing = sorted(expected - actual)
+    extra = sorted(actual - expected)
+    if missing:
+        errors.append(
+            'Coverage omit ledger missing pyproject omit patterns: '
+            + ', '.join(missing)
+        )
+    if extra:
+        errors.append(
+            'Coverage omit ledger contains patterns not in pyproject.toml: '
+            + ', '.join(extra)
+        )
+    if 'TBD' in ledger_text or 'TODO' in ledger_text:
+        errors.append('Coverage omit ledger contains TBD/TODO placeholders.')
+    return errors
+
+
+def validate_dependency_audit_policy(
+    *, policy_text: str, security_workflow_text: str
+) -> list[str]:
+    errors: list[str] = []
+    for section in DEPENDENCY_AUDIT_POLICY_SECTIONS:
+        if section not in policy_text:
+            errors.append(f'Dependency audit policy missing section: {section!r}.')
+    for extra in DEPENDENCY_AUDIT_HIGH_RISK_EXTRAS:
+        if extra not in policy_text:
+            errors.append(
+                f'Dependency audit policy missing high-risk extra: {extra!r}.'
+            )
+
+    if '--no-dev --no-emit-project' not in security_workflow_text:
+        errors.append(
+            'Security workflow base lockfile audit must use '
+            '`uv export --no-dev --no-emit-project`.'
+        )
+    if 'optional-extra-pip-audit' not in security_workflow_text:
+        errors.append('Security workflow missing optional-extra pip-audit job.')
+    if '--extra ${{ matrix.extra }}' not in security_workflow_text:
+        errors.append('Security workflow optional-extra job missing matrix export.')
+    if 'continue-on-error: true' not in security_workflow_text:
+        errors.append(
+            'Security workflow optional-extra audit must be non-blocking outside release.'
+        )
+    if 'pip-audit --skip-editable' in security_workflow_text:
+        errors.append(
+            'Security workflow must not run unscoped `pip-audit --skip-editable`; '
+            'audit exported requirement surfaces instead.'
+        )
+    return errors
+
+
+def _load_build_use_case_matrix_module() -> ModuleType:
     script = Path(__file__).with_name('build_use_case_matrix.py')
     spec = spec_from_file_location('build_use_case_matrix', script)
     if spec is None or spec.loader is None:
@@ -462,6 +562,10 @@ def validate_docs_consistency(
     catalog_path: Path | None = None,
     use_cases_path: Path | None = None,
     roadmap_status_path: Path | None = None,
+    pyproject_path: Path | None = None,
+    coverage_omit_ledger_path: Path | None = None,
+    dependency_audit_policy_path: Path | None = None,
+    security_workflow_path: Path | None = None,
     check_providers: bool = True,
     check_survey: bool = True,
     check_catalog: bool = True,
@@ -484,6 +588,16 @@ def validate_docs_consistency(
     use_cases_doc_path = use_cases_path or (_REPO_ROOT / 'docs' / 'use-cases.md')
     roadmap_status_doc_path = roadmap_status_path or (
         _REPO_ROOT / 'docs' / 'roadmap-status.md'
+    )
+    pyproject_doc_path = pyproject_path or (_REPO_ROOT / 'pyproject.toml')
+    coverage_omit_ledger_doc_path = coverage_omit_ledger_path or (
+        _REPO_ROOT / 'docs' / 'governance' / 'coverage-omit-ledger.md'
+    )
+    dependency_audit_policy_doc_path = dependency_audit_policy_path or (
+        _REPO_ROOT / 'docs' / 'security' / 'dependency-audit-policy.md'
+    )
+    security_workflow_doc_path = security_workflow_path or (
+        _REPO_ROOT / '.github' / 'workflows' / 'security.yml'
     )
     architecture_text = (
         architecture_path.read_text(encoding='utf-8')
@@ -543,6 +657,42 @@ def validate_docs_consistency(
         errors.extend(validate_roadmap_status(roadmap_status_text))
     else:
         errors.append(f'Roadmap status doc not found: {roadmap_status_doc_path}')
+
+    if pyproject_doc_path.is_file() and coverage_omit_ledger_doc_path.is_file():
+        errors.extend(
+            validate_coverage_omit_ledger(
+                pyproject_text=pyproject_doc_path.read_text(encoding='utf-8'),
+                ledger_text=coverage_omit_ledger_doc_path.read_text(
+                    encoding='utf-8'
+                ),
+            )
+        )
+    else:
+        if not pyproject_doc_path.is_file():
+            errors.append(f'pyproject.toml not found: {pyproject_doc_path}')
+        if not coverage_omit_ledger_doc_path.is_file():
+            errors.append(
+                f'Coverage omit ledger not found: {coverage_omit_ledger_doc_path}'
+            )
+
+    if dependency_audit_policy_doc_path.is_file() and security_workflow_doc_path.is_file():
+        errors.extend(
+            validate_dependency_audit_policy(
+                policy_text=dependency_audit_policy_doc_path.read_text(
+                    encoding='utf-8'
+                ),
+                security_workflow_text=security_workflow_doc_path.read_text(
+                    encoding='utf-8'
+                ),
+            )
+        )
+    else:
+        if not dependency_audit_policy_doc_path.is_file():
+            errors.append(
+                f'Dependency audit policy not found: {dependency_audit_policy_doc_path}'
+            )
+        if not security_workflow_doc_path.is_file():
+            errors.append(f'Security workflow not found: {security_workflow_doc_path}')
 
     if check_survey:
         errors.extend(
@@ -624,6 +774,19 @@ def main() -> int:
     )
     parser.add_argument('--catalog-doc', default='docs/plugin-skill-catalog.md')
     parser.add_argument('--roadmap-status', default='docs/roadmap-status.md')
+    parser.add_argument('--pyproject', default='pyproject.toml')
+    parser.add_argument(
+        '--coverage-omit-ledger',
+        default='docs/governance/coverage-omit-ledger.md',
+    )
+    parser.add_argument(
+        '--dependency-audit-policy',
+        default='docs/security/dependency-audit-policy.md',
+    )
+    parser.add_argument(
+        '--security-workflow',
+        default='.github/workflows/security.yml',
+    )
     args = parser.parse_args()
 
     errors = validate_docs_consistency(
@@ -636,6 +799,10 @@ def main() -> int:
         survey_path=Path(args.survey_doc),
         catalog_path=Path(args.catalog_doc),
         roadmap_status_path=Path(args.roadmap_status),
+        pyproject_path=Path(args.pyproject),
+        coverage_omit_ledger_path=Path(args.coverage_omit_ledger),
+        dependency_audit_policy_path=Path(args.dependency_audit_policy),
+        security_workflow_path=Path(args.security_workflow),
     )
     if errors:
         for err in errors:

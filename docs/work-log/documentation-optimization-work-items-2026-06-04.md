@@ -26,9 +26,9 @@ Canonical states follow [Document State Model](../governance/document-state-mode
 | DOW-012 | P0 | Proposed | Add a guarded-claim registry for volatile prose facts. | DOW-007 | A stale full-suite prose claim can fail CI. |
 | DOW-013 | P1 | Proposed | Audit High/Critical module risks for upward links. | DOW-004 | Every P0/P1 module risk links to central risk, roadmap, ticket, or defer decision. |
 | DOW-014 | P1 | Proposed | Add required-field guard for roadmap rows. | DOW-011 | Rows missing owner/status/confidence/next gate/exit evidence fail docs tests. |
-| DOW-015 | P1 | Proposed | Assign owner and decision date to proposed ADRs. | None | ADR-0010, 0012, 0014, 0015, 0017, and 0018 have owner surface plus next decision. |
-| DOW-016 | P1 | Proposed | Document coverage omit re-entry plan. | None | Each omit pattern has reason, owner surface, target sprint, and smoke-test candidate. |
-| DOW-017 | P1 | Proposed | Document optional-extra dependency audit lane. | None | Base and optional-extra audit scopes are separated and scheduled. |
+| DOW-015 | P1 | Fixed | Resolve stale proposed-ADR status claims. | None | ADR 0010, 0012, 0014, 0015, 0017, and 0018 are closed in the ADR index; ADR 0025 reflects implemented REPL/TUI controller state. |
+| DOW-016 | P1 | Fixed | Document coverage omit re-entry plan. | None | Each omit pattern has reason, owner surface, target sprint, smoke-test candidate, and validator coverage. |
+| DOW-017 | P1 | Fixed | Document optional-extra dependency audit lane. | None | Base and optional-extra audit scopes are separated, scheduled, and reflected in the security workflow. |
 | DOW-018 | P1 | Proposed | Create successor findings ledger for June 4 status. | DOW-005 | Stale June 1 ledger rows are mapped to current state or superseded. |
 | DOW-019 | P1 | Proposed | Add "current truth" banners to stable front doors. | DOW-007 | Current truth docs clearly say what they own and what they do not own. |
 | DOW-020 | P1 | Proposed | Shorten daily-user guides that contain too much history. | DOW-019 | Guides answer command choice and recovery first; history moves to analysis. |
@@ -81,7 +81,7 @@ cx symbols --kind heading --name '*Roadmap*' --limit 120
 
 - DOW-001 through DOW-009 are fixed in the same documentation pass that created
   this ledger.
-- DOW-012 is the highest-value next implementation task because it turns the
-  `acceptance.md` contradiction into a repeatable prevention mechanism.
-- DOW-013 is the highest-value risk-governance task because module risk detail
-  currently exceeds central ownership.
+- DOW-012 remains the highest-value next documentation-validator task because it
+  generalizes guarded claims beyond coverage and dependency audit scope.
+- DOW-013 is the highest-value risk-governance follow-up because module risk
+  detail currently exceeds central ownership.

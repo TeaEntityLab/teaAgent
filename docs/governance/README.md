@@ -21,11 +21,14 @@ This directory contains the authoritative standards and process documentation fo
 | [doc-maintenance-policy-2026-06-02.md](doc-maintenance-policy-2026-06-02.md) | Short entry point for keeping the daily-driver doc corpus useful |
 | [evidence-to-principle-policy.md](evidence-to-principle-policy.md) | How to turn repository evidence into durable principles and roadmap rationale |
 | [documentation-operating-model-2026-06-04.md](documentation-operating-model-2026-06-04.md) | Claim classes, evidence hierarchy, freshness windows, guarded claims, and documentation definition of done |
+| [coverage-omit-ledger.md](coverage-omit-ledger.md) | Owner, reason, risk, return milestone, and smoke-test candidate for each coverage omit pattern |
 
 For the threat model and permission mode table, see [SECURITY.md](../../SECURITY.md).  
 For architecture decisions, see [docs/adr/](../adr/).  
 For the existing skill governance process, see [docs/skill-governance.md](../skill-governance.md).
 For the curated documentation front door, see [docs/INDEX.md](../INDEX.md).
+For dependency audit lanes, see
+[docs/security/dependency-audit-policy.md](../security/dependency-audit-policy.md).
 
 ---
 

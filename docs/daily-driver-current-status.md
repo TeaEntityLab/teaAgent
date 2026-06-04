@@ -53,6 +53,8 @@ assessment and turns it into Phase 0 trust-repair work:
 - Fact check: [analysis/project-state-cross-review-fact-check-2026-06-04.md](analysis/project-state-cross-review-fact-check-2026-06-04.md)
 - Critical questioning: [reviews/project-state-critical-questioning-2026-06-04.md](reviews/project-state-critical-questioning-2026-06-04.md)
 - Trust repair brief: [security/phase-0-trust-repair-risk-brief-2026-06-04.md](security/phase-0-trust-repair-risk-brief-2026-06-04.md)
+- Governance closure report: [work-log/phase-0-governance-closure-report-2026-06-04.md](work-log/phase-0-governance-closure-report-2026-06-04.md)
+- Dependency audit scope refresh: [security/dependency-audit-scope-refresh-2026-06-04.md](security/dependency-audit-scope-refresh-2026-06-04.md)
 - Outlook: [strategy/phase-0-to-phase-1-outlook-2026-06-04.md](strategy/phase-0-to-phase-1-outlook-2026-06-04.md)
 - Work items: [work-log/phase-0-priority-work-items-2026-06-04.md](work-log/phase-0-priority-work-items-2026-06-04.md)
 

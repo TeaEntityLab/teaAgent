@@ -61,6 +61,7 @@ follow dated evidence documents only when you need the reasoning trail.
 | [Daily-Driver Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) | Daily-driver risk, feasibility, ROI, and sequence. |
 | [Roadmap Work Items](work-log/roadmap-work-items-2026-06-04.md) | Product roadmap work items and acceptance criteria. |
 | [Phase 0 Priority Work Items](work-log/phase-0-priority-work-items-2026-06-04.md) | Trust-repair tasks derived from project-state review. |
+| [Phase 0 Governance Closure Report](work-log/phase-0-governance-closure-report-2026-06-04.md) | Closure evidence for coverage omit, dependency audit, and ADR-state governance. |
 
 ## Security And Reliability
 
@@ -69,6 +70,8 @@ follow dated evidence documents only when you need the reasoning trail.
 | Threat model | [Threat Model](threat-model.md) |
 | Security risk register | [Risk Register And Threat Model](security/risk-register-and-threat-model-2026-06-02.md) |
 | Phase 0 trust repair | [Phase 0 Trust Repair Risk Brief](security/phase-0-trust-repair-risk-brief-2026-06-04.md) |
+| Severity calibration | [Security Severity Calibration Rubric](security/severity-calibration-rubric.md) |
+| Dependency audit scope refresh | [Dependency Audit Scope Refresh](security/dependency-audit-scope-refresh-2026-06-04.md) |
 | FMEA | [FMEA](reliability/fmea-2026-06-02.md) |
 | Trust-sensitive invariants | [Trust Sensitive Invariants](reliability/trust-sensitive-invariants-2026-06-02.md) |
 | UX stability contract | [UX Stability Contract](ux-stability-contract.md) |

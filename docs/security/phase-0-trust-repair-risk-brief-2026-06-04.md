@@ -36,7 +36,8 @@ Closed or regression-guarded complications in the current branch:
 Remaining trust complications:
 
 - `DANGER_FULL_ACCESS` remains a legitimate mode and can be misused.
-- Optional managed runtimes can import a large dependency tree.
+- Optional managed runtimes can import a large dependency tree; they are now
+  separated from the base PR audit gate but still require release review.
 - Auto mode still swaps the runner approval policy to a broad policy during
   execution, so policy restoration and audit clarity remain worth reviewing.
 
@@ -48,10 +49,10 @@ Remaining trust complications:
 | TR-SEC-02 | `danger-full-access` used on real workspaces | Critical | Docs warn, but automated sandbox-only enforcement is not universal | Require explicit confirmation and isolation checks |
 | TR-SEC-03 | Duplicate approval manager names cause wrong patch target | High | Fixed in current branch; runner helper is `RunnerApprovalCoordinator` | Keep canonical-name regression guard |
 | TR-SEC-04 | Policy/approval coupling makes security boundary harder to reason about | High | Import-order tests pass; no reverse import observed in current path | Keep boundary tests and avoid shared helpers inside either side |
-| TR-SEC-05 | Optional dependency CVEs block or confuse base security scans | High | `google-adk` can pull `fastapi` / `starlette` via dev extras | Separate base audit from optional-extra audit |
+| TR-SEC-05 | Optional dependency CVEs block or confuse base security scans | High | Policy and workflow now separate base, dev/lockfile, and optional-extra audit lanes | Keep optional-extra findings visible without polluting base PR gate |
 | TR-SEC-06 | Memory canonical source is documented but duplicate code remains | Medium | Fixed in current branch; `memory_legacy.py` re-exports `memory.catalog` | Keep canonical import-path regression guard |
-| TR-SEC-07 | Coverage omit list hides security-relevant code from the gate | Medium | 16 omit patterns in `pyproject.toml` | Add why/return date and smoke tests |
-| TR-SEC-08 | Risk severity calibration is inconsistent | Medium | `DANGER_FULL_ACCESS` is High in module docs, Critical in review | Define severity rules |
+| TR-SEC-07 | Coverage omit list hides security-relevant code from the gate | Medium | Ledger now lists 16 omit patterns with owner, reason, return milestone, and smoke-test candidate | Keep validator in CI and add more direct smoke tests |
+| TR-SEC-08 | Risk severity calibration is inconsistent | Medium | Shared severity rubric exists in `docs/security/severity-calibration-rubric.md` | Keep module docs and risk rows aligned to the rubric |
 
 ## Reality Check
 
@@ -86,15 +87,17 @@ Phase 0 should not be declared complete until:
 6. Base dependency audit and optional-extra dependency audit are both documented.
 7. Security risk severity is calibrated by a shared rubric.
 
-Current branch status: items 1-4 are implemented or regression-guarded. Items
-5-7 remain Phase 0 exit blockers.
+Current branch status: items 1-7 are implemented, documented, or
+regression-guarded. Remaining Phase 0 safety work should focus on broad-mode
+entry ceremony, auto-mode policy restoration evidence, and converting
+coverage-omit smoke candidates into direct tests.
 
 ## What This Means For Users
 
 TeaAgent can already be useful for daily local agent work when users stay in
 supervised modes and value auditability. It should not be marketed as a
-production-safe autonomous harness until broad-mode ceremony, coverage-omit
-governance, optional-extra audit scope, and severity calibration are closed.
+production-safe autonomous harness until broad-mode ceremony, auto-mode policy
+restoration evidence, and remaining coverage-omit smoke tests are closed.
 
 The honest promise today is:
 

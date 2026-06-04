@@ -60,7 +60,7 @@ All blocking CI jobs must be green on the commit you intend to tag:
 - `acceptance-p1`
 - `acceptance-all`
 - `package`
-- Security `pip-audit` (editable + uv.lock)
+- Security `pip-audit` (base gate, dev/lockfile visibility, optional-extra review)
 - Security `codeql`
 
 ### 2 — Competitive landscape hygiene

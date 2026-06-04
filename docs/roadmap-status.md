@@ -1,7 +1,7 @@
 # Roadmap Status
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-04 (documentation-current-truth package linked)
+**Last updated:** 2026-06-04 (documentation-current-truth and Phase 0 governance closure linked)
 **Owner:** TBD
 
 ## Purpose
@@ -12,7 +12,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 
 | Horizon | Name | Target Outcome | Owner | Status | Confidence | Next Gate | Exit Evidence |
 |---------|------|----------------|-------|--------|------------|-----------|---------------|
-| H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | TBD | In Progress | Medium | DOCOPT-012 proposed | Risk register rows have owner/status/due date, volatile doc claims are guarded, docs checks pass |
+| H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | TBD | In Progress | Medium | DOCOPT-012 generalized guarded-claim registry | Risk register rows have owner/status/due date, volatile doc claims are guarded, docs checks pass |
 | H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | TBD | In Progress | High | M1 complete | Journey acceptance tests pass across CLI/TUI baseline |
 | H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Pending | Medium | M2 complete | Surface parity tests prove identity, permissions, audit, cost, and recovery continuity |
 | H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Pending | Medium | M3 complete | Trust-onboarding and activation-explain acceptance tests pass |
@@ -49,7 +49,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | GOV-011 | Create "do not claim" list | TBD | Pending | Medium | GOV-012 | Medium |
 | GOV-012 | Add release residual-risk summary | TBD | Pending | Medium | M0 complete | High |
 | GOV-013 | Create curated documentation front door | docs | Complete | High | GOV-014 | Low |
-| GOV-014 | Add doc-vs-HEAD guarded claim registry | docs / verification | Pending | Medium | DOCOPT-012 | High |
+| GOV-014 | Add doc-vs-HEAD guarded claim registry | docs / verification | In Progress | Medium | DOCOPT-012 | High |
 | GOV-015 | Audit High/Critical module risks for upward links | docs / module owners | Pending | Medium | DOCOPT-013 | High |
 
 ## Status Definitions
@@ -75,3 +75,5 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 - Documentation-current-truth work is tracked in
   `docs/plans/documentation-optimization-master-plan-2026-06-04.md` and
   `docs/work-log/documentation-optimization-work-items-2026-06-04.md`
+- Phase 0 governance closure evidence is tracked in
+  `docs/work-log/phase-0-governance-closure-report-2026-06-04.md`

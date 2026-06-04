@@ -3,6 +3,13 @@
 **Branch:** p0-tr-001-full-access-gate  
 **Scope:** Full dependency audit aligned with Segmented Dependency Audit Policy (Base vs. Dev/Lockfile vs. Optional-Extra).
 
+> **Supersession note, 2026-06-04:** This analysis is retained as historical
+> evidence, but its "0 CVEs across all groups" claim has been superseded by
+> [Dependency Audit Scope Refresh](../security/dependency-audit-scope-refresh-2026-06-04.md).
+> The current interpretation is: base export remains clean for the default
+> install surface, while optional/dev trees that include `managed-google-adk`
+> must review the `starlette` advisory before release packaging.
+
 ---
 
 ## Executive Summary
@@ -12,7 +19,7 @@
 | Total packages (lock) | 197 |
 | Direct dependencies | 25 (across optional groups) |
 | Transitive dependencies | 171 |
-| CVEs found (Segmented Audit) | **0** across all groups (Base, Dev/Lock, Optional) |
+| CVEs found (Segmented Audit) | Historical claim superseded; base export clean, optional/dev `starlette` advisory requires review |
 | Pre-release packages in lock | **3** (two alpha, one beta) |
 | Undeclared runtime deps | **2** (`anthropic` SDK, `pyyaml`) |
 | Orphaned lock entries | **2** (`aiohttp`, `mcp` — in lock, not required by anything) |
@@ -20,7 +27,10 @@
 | License violations | **0** (all permissive: MIT / Apache-2.0 / BSD-3) |
 | High-risk supply chain items | **2** (`opentelemetry-*-gcp` alpha versions) |
 
-**Overall posture: LOW risk.** No CVEs found in any of the audited dependency segments (Base install has zero runtime dependencies, lockfile has 0 vulnerabilities, and optional extras have 0 vulnerabilities). Licensing and version hygiene are excellent.
+**Overall posture: LOW base risk, open optional-extra risk.** The base install
+has zero runtime dependencies in the current export. Optional/dev dependency
+trees that include `managed-google-adk` pull `fastapi` / `starlette` and must be
+reviewed through the optional-extra audit lane before release packaging.
 
 ---
 
@@ -281,26 +291,35 @@ zipp                    4.1.0       (via importlib-metadata)
 
 ## 2. CVE / Vulnerability Findings (Segmented)
 
-Conforming to the [Dependency Audit Policy](security/dependency-audit-policy.md), auditing is split into three security lanes:
+Conforming to the [Dependency Audit Policy](../security/dependency-audit-policy.md),
+auditing is split into three security lanes:
 
 ### 2.1 Lane 1: Base Install Audit (CI Gate)
 *   **Scope:** Minimal core installation runtime.
-*   **Result: 0 known vulnerabilities**. 
+*   **Current result: base export clean** for the default install surface.
 *   **Detail:** Because TeaAgent enforces a zero-dependency posture for base installation (`dependencies = []`), there are no runtime dependencies, eliminating this attack surface entirely.
 
 ### 2.2 Lane 2: Lockfile and Dev Environment Audit
 *   **Scope:** Fully resolved `uv.lock` exported tree (163 resolved packages scanned).
-*   **Result: 0 known vulnerabilities**.
-*   **Details:** Scanned using `pip-audit 2.10.0` against the OSV database on 2026-06-04.
+*   **Current result: open for refresh.** This lane can include optional extras
+    through the broad `dev` extra and must not be used as the base safety
+    claim.
+*   **Details:** The 2026-06-04 scope refresh supersedes the earlier "0 known
+    vulnerabilities" statement for this lane.
 
 ### 2.3 Lane 3: Optional-Extra Runtime Audit
-*   **Scope:** Isolated extras groups: `managed-google-adk`, `wasm`, `playwright`, `oauth`, and `telemetry`.
-*   **Result: 0 known vulnerabilities exceeding CVSS 7.0 (High/Critical)**.
-*   **Details:** Scanned using `pip-audit` targeting each extra group's dependency subtree. No CVEs identified.
+*   **Scope:** Isolated extras groups: `managed-google-adk`, `managed-vertex`,
+    `wasm`, `playwright`, `oauth`, and `telemetry`.
+*   **Current result: open optional-extra finding.** `managed-google-adk`
+    currently pulls `starlette==0.52.1` through `fastapi` and must be reviewed
+    before release packaging.
+*   **Details:** See
+    [Dependency Audit Scope Refresh](../security/dependency-audit-scope-refresh-2026-06-04.md).
 
 ### 2.4 Security-Critical Packages Status
 
-All audited security-critical packages passed cleanly:
+The table below is historical evidence from the earlier audit and is no longer
+the current release gate by itself:
 
 | Package | Version | CVE Status |
 |---|---|---|
