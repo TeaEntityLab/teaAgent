@@ -163,9 +163,9 @@ def test_validate_roadmap_status_detects_missing_h0_truth_links() -> None:
 def test_validate_coverage_omit_ledger_passes_for_repo_docs() -> None:
     root = Path(__file__).resolve().parents[1]
     pyproject = (root / 'pyproject.toml').read_text(encoding='utf-8')
-    ledger = (
-        root / 'docs' / 'governance' / 'coverage-omit-ledger.md'
-    ).read_text(encoding='utf-8')
+    ledger = (root / 'docs' / 'governance' / 'coverage-omit-ledger.md').read_text(
+        encoding='utf-8'
+    )
     errors = _VALIDATE_MODULE.validate_coverage_omit_ledger(
         pyproject_text=pyproject,
         ledger_text=ledger,
@@ -195,14 +195,66 @@ def test_validate_coverage_omit_ledger_detects_missing_pattern() -> None:
     assert any('teaagent/wasm_runtime.py' in err for err in errors)
 
 
+def _repo_guarded_registry_text() -> str:
+    root = Path(__file__).resolve().parents[1]
+    return (root / 'docs' / 'governance' / 'guarded-claims-registry.md').read_text(
+        encoding='utf-8'
+    )
+
+
+def test_validate_guarded_claims_passes_for_repo_docs() -> None:
+    root = Path(__file__).resolve().parents[1]
+    errors = _VALIDATE_MODULE.validate_guarded_claims(
+        registry_text=_repo_guarded_registry_text(),
+        repo_root=root,
+    )
+    assert errors == []
+
+
+def test_validate_guarded_claims_detects_stale_failure_prose(tmp_path: Path) -> None:
+    (tmp_path / 'docs').mkdir()
+    # A current-truth front door that keeps a stale, non-zero full-suite result.
+    (tmp_path / 'docs' / 'daily-driver-current-status.md').write_text(
+        'The full suite reported 120 passed, 26 failed last week.\n',
+        encoding='utf-8',
+    )
+    errors = _VALIDATE_MODULE.validate_guarded_claims(
+        registry_text=_repo_guarded_registry_text(),
+        repo_root=tmp_path,
+    )
+    assert any('26 failed' in err for err in errors)
+
+
+def test_validate_guarded_claims_allows_green_and_exempt_lines(tmp_path: Path) -> None:
+    (tmp_path / 'docs').mkdir()
+    (tmp_path / 'docs' / 'daily-driver-current-status.md').write_text(
+        'The full suite reported 3396 passed, 0 failed, 22 skipped.\n'
+        'Historical note: an old run once had 26 failed entries.\n',
+        encoding='utf-8',
+    )
+    errors = _VALIDATE_MODULE.validate_guarded_claims(
+        registry_text=_repo_guarded_registry_text(),
+        repo_root=tmp_path,
+    )
+    assert errors == []
+
+
+def test_validate_guarded_claims_detects_missing_registry_entry(tmp_path: Path) -> None:
+    errors = _VALIDATE_MODULE.validate_guarded_claims(
+        registry_text='# Registry with no guarded document rows\n',
+        repo_root=tmp_path,
+    )
+    assert any('README.md' in err for err in errors)
+
+
 def test_validate_dependency_audit_policy_passes_for_repo_docs() -> None:
     root = Path(__file__).resolve().parents[1]
-    policy = (
-        root / 'docs' / 'security' / 'dependency-audit-policy.md'
-    ).read_text(encoding='utf-8')
-    workflow = (
-        root / '.github' / 'workflows' / 'security.yml'
-    ).read_text(encoding='utf-8')
+    policy = (root / 'docs' / 'security' / 'dependency-audit-policy.md').read_text(
+        encoding='utf-8'
+    )
+    workflow = (root / '.github' / 'workflows' / 'security.yml').read_text(
+        encoding='utf-8'
+    )
     errors = _VALIDATE_MODULE.validate_dependency_audit_policy(
         policy_text=policy,
         security_workflow_text=workflow,
@@ -219,10 +271,7 @@ def test_validate_dependency_audit_policy_rejects_unscoped_editable_audit() -> N
         'managed-google-adk managed-vertex playwright telemetry oauth wasm\n'
     )
     workflow = (
-        'jobs:\n'
-        '  pip-audit:\n'
-        '    steps:\n'
-        '      - run: pip-audit --skip-editable\n'
+        'jobs:\n  pip-audit:\n    steps:\n      - run: pip-audit --skip-editable\n'
     )
     errors = _VALIDATE_MODULE.validate_dependency_audit_policy(
         policy_text=policy,

@@ -4,6 +4,12 @@
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
 
+## First run (safe)
+
+Safe first command: `teaagent chat` (see "Recommended today" below for safe first task).
+Current status and operation guides: see the table below.
+On failure: [Recovery And Continuity Guide](recovery-and-continuity-guide.md).
+
 ## Recommended today
 
 | Need | Recommended surface | Why |

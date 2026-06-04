@@ -46,6 +46,10 @@ The TUI should be treated as an operator surface:
 - Treat `/background` in the REPL or TUI as a suspension checkpoint, not proof that work
   continues in the background.
 
+## If something goes wrong
+
+See [Recovery And Continuity Guide](recovery-and-continuity-guide.md) for undo, resume, and failure recovery paths.
+
 ## Known gaps
 
 | Gap | User-facing symptom | Safer action |

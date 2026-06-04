@@ -24,16 +24,19 @@
 **File**: `_config.py`
 **Risk**: Provider pricing is hardcoded and will drift as providers change rates.
 **Failure mode**: `estimated_cost_cents` is directionally wrong, causing incorrect budget enforcement.
+**Upstream:** [risk-register-and-threat-model-2026-06-02.md](../../security/risk-register-and-threat-model-2026-06-02.md) (SEC-04 budget enforcement; SEC-05 cost accounting)
 
 ### LLM-R-006: Retry on 401/403 wastes quota
 **File**: `_retry.py`
 **Risk**: If `DEFAULT_RETRY_CONFIG` retries on all 4xx errors, a 401 (invalid API key) or 403 (quota exceeded) will be retried N times, wasting time and potentially burning remaining credits.
 **Mitigation**: Verify that `_call_with_retry` only retries 429 + 5xx (audit the retry predicate in `_retry.py`).
+**Upstream:** [risk-register-and-threat-model-2026-06-02.md](../../security/risk-register-and-threat-model-2026-06-02.md) (budget enforcement; cost overruns)
 
 ### LLM-R-007: urllib has no connection pooling
 **File**: `_transport.py`
 **Risk**: `UrllibHTTPTransport.post_json` opens a new TCP connection per call. High-frequency short completions cause connection overhead.
 **Failure mode**: Latency, file descriptor exhaustion at high concurrency.
+**Upstream:** [phase-0-trust-repair-risk-brief-2026-06-04.md](../../security/phase-0-trust-repair-risk-brief-2026-06-04.md) (resource exhaustion boundary)
 
 ### LLM-R-008: No timeout on streaming
 **File**: `_adapters.py:215-239`

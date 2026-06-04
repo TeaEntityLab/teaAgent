@@ -23,8 +23,8 @@ Canonical states follow [Document State Model](../governance/document-state-mode
 | DOW-009 | P0 | Fixed | Add this work-item ledger. | DOW-008 | Ledger records tasks, state, dependencies, and acceptance criteria. |
 | DOW-010 | P0 | Fixed | Link new documentation governance package from front-door docs. | DOW-001, DOW-007 | Governance README, maintenance policy, current status, daily-driver index, and daily-driver plan index link the new docs. |
 | DOW-011 | P0 | Fixed | Update roadmap H0 to include documentation-current-truth work. | DOW-008 | `roadmap-status.md` references documentation optimization and doc-vs-HEAD guard work. |
-| DOW-012 | P0 | Proposed | Add a guarded-claim registry for volatile prose facts. | DOW-007 | A stale full-suite prose claim can fail CI. |
-| DOW-013 | P1 | Proposed | Audit High/Critical module risks for upward links. | DOW-004 | Every P0/P1 module risk links to central risk, roadmap, ticket, or defer decision. |
+| DOW-012 | P0 | Fixed | Add a guarded-claim registry for volatile prose facts. | DOW-007 | A stale full-suite prose claim can fail CI. |
+| DOW-013 | P1 | Fixed | Audit High/Critical module risks for upward links. | DOW-004 | Every P0/P1 module risk links to central risk, roadmap, ticket, or defer decision. |
 | DOW-014 | P1 | Proposed | Add required-field guard for roadmap rows. | DOW-011 | Rows missing owner/status/confidence/next gate/exit evidence fail docs tests. |
 | DOW-015 | P1 | Fixed | Resolve stale proposed-ADR status claims. | None | ADR 0010, 0012, 0014, 0015, 0017, and 0018 are closed in the ADR index; ADR 0025 reflects implemented REPL/TUI controller state. |
 | DOW-016 | P1 | Fixed | Document coverage omit re-entry plan. | None | Each omit pattern has reason, owner surface, target sprint, smoke-test candidate, and validator coverage. |
@@ -76,6 +76,19 @@ cx symbols --kind heading --name '*Status*' --limit 120
 cx symbols --kind heading --name '*Risk*' --limit 120
 cx symbols --kind heading --name '*Roadmap*' --limit 120
 ```
+
+## Status Log
+
+- 2026-06-04 — **DOW-012 Fixed.** Added
+  `docs/governance/guarded-claims-registry.md` and a `validate_guarded_claims`
+  guard in `scripts/validate_docs_consistency.py` that fails CI when a guarded
+  current-truth doc keeps stale non-zero full-suite failure prose. Covered by
+  `tests/test_docs_consistency.py::test_validate_guarded_claims_detects_stale_failure_prose`
+  and three sibling cases.
+- 2026-06-04 — **DOW-013 Fixed.** Audited all module risk docs; added an
+  `Upstream` link column / `Upstream:` line to every High/Critical (and adjacent
+  Medium-high) module risk so each traces to the central risk register,
+  phase-0 trust-repair brief, or severity rubric.
 
 ## Notes
 

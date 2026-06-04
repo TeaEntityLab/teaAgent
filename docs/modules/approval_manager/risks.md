@@ -4,11 +4,13 @@
 **File**: `ergonomics/_approval_state.py`, `approval_manager.py`
 **Risk**: `once` grants are removed from the store when `is_allowed()` returns `True`. If the tool then fails (exception, hook error), the grant is already consumed. The user must re-approve for any retry.
 **Failure mode**: Unexpected re-prompt on retry of a legitimately approved operation.
+**Upstream:** [risk-register-and-threat-model-2026-06-02.md](../../security/risk-register-and-threat-model-2026-06-02.md) (SEC-01 audit integrity; approval state durability)
 
 ### APR-R-002: `deny` decisions not persisted
 **File**: `approval_manager.py`
 **Risk**: JIT denials (user says "no" at the TTY prompt) are in-memory only via `JITApprovalState`. On process restart or agent resume, the denial is gone and the agent will re-prompt.
 **Failure mode**: Previously denied tools get re-prompted after restart.
+**Upstream:** [risk-register-and-threat-model-2026-06-02.md](../../security/risk-register-and-threat-model-2026-06-02.md) (access control durability; SEC-06 related)
 
 ### APR-R-003: `DANGER_FULL_ACCESS` bypasses all approval
 **Severity**: Critical (per [severity-calibration-rubric.md](../../security/severity-calibration-rubric.md))

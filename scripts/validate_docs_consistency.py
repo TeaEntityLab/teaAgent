@@ -124,6 +124,17 @@ DEPENDENCY_AUDIT_HIGH_RISK_EXTRAS = (
     'oauth',
     'wasm',
 )
+GUARDED_FULL_SUITE_DOCS = (
+    'README.md',
+    'docs/acceptance.md',
+    'docs/daily-driver-current-status.md',
+    'docs/roadmap-status.md',
+)
+GUARDED_SUITE_SUMMARY_KEYWORDS = ('passed', 'pytest', 'suite')
+GUARDED_CLAIM_EXEMPT_KEYWORDS = ('historical', 'superseded', 'example')
+GUARDED_STALE_FAILURE_PROSE = re.compile(
+    r'\b([1-9]\d*)\s+(failed|failures)\b', re.IGNORECASE
+)
 
 
 def _render_tier_markdown() -> str:
@@ -532,6 +543,46 @@ def validate_plugin_skill_catalog(
     return errors
 
 
+def validate_guarded_claims(
+    *, registry_text: str, repo_root: Path = _REPO_ROOT
+) -> list[str]:
+    """Fail when a guarded current-truth doc keeps stale full-suite failure prose.
+
+    Generalizes the documentation guards (DOW-012): a current-truth front door
+    must not assert a non-zero full-suite failure count. Historical numbers belong
+    in dated evidence docs, which are exempt by keyword.
+    """
+    errors: list[str] = []
+
+    for doc in GUARDED_FULL_SUITE_DOCS:
+        if doc not in registry_text:
+            errors.append(
+                f'Guarded-claims registry missing guarded document entry: {doc!r}.'
+            )
+
+    for doc in GUARDED_FULL_SUITE_DOCS:
+        path = repo_root / doc
+        if not path.is_file():
+            continue
+        for lineno, line in enumerate(
+            path.read_text(encoding='utf-8').splitlines(), start=1
+        ):
+            lowered = line.lower()
+            if not any(key in lowered for key in GUARDED_SUITE_SUMMARY_KEYWORDS):
+                continue
+            if any(key in lowered for key in GUARDED_CLAIM_EXEMPT_KEYWORDS):
+                continue
+            match = GUARDED_STALE_FAILURE_PROSE.search(line)
+            if match:
+                errors.append(
+                    f'Guarded claim drift in {doc}:{lineno}: stale full-suite '
+                    f'failure prose {match.group(0)!r}. Current-truth docs must '
+                    'report 0 failed or move the dated claim to evidence docs '
+                    '(see docs/governance/guarded-claims-registry.md).'
+                )
+    return errors
+
+
 def validate_survey_doc(survey_text: str) -> list[str]:
     errors: list[str] = []
     if not SURVEY_REVIEW_DATE.search(survey_text):
@@ -566,6 +617,7 @@ def validate_docs_consistency(
     coverage_omit_ledger_path: Path | None = None,
     dependency_audit_policy_path: Path | None = None,
     security_workflow_path: Path | None = None,
+    guarded_claims_registry_path: Path | None = None,
     check_providers: bool = True,
     check_survey: bool = True,
     check_catalog: bool = True,
@@ -598,6 +650,9 @@ def validate_docs_consistency(
     )
     security_workflow_doc_path = security_workflow_path or (
         _REPO_ROOT / '.github' / 'workflows' / 'security.yml'
+    )
+    guarded_claims_registry_doc_path = guarded_claims_registry_path or (
+        _REPO_ROOT / 'docs' / 'governance' / 'guarded-claims-registry.md'
     )
     architecture_text = (
         architecture_path.read_text(encoding='utf-8')
@@ -640,6 +695,20 @@ def validate_docs_consistency(
         else:
             errors.append(f'USAGE doc not found: {usage_doc_path}')
 
+    if guarded_claims_registry_doc_path.is_file():
+        errors.extend(
+            validate_guarded_claims(
+                registry_text=guarded_claims_registry_doc_path.read_text(
+                    encoding='utf-8'
+                ),
+                repo_root=_REPO_ROOT,
+            )
+        )
+    else:
+        errors.append(
+            f'Guarded-claims registry not found: {guarded_claims_registry_doc_path}'
+        )
+
     if check_survey:
         if survey_path.is_file():
             errors.extend(validate_survey_doc(survey_path.read_text(encoding='utf-8')))
@@ -662,9 +731,7 @@ def validate_docs_consistency(
         errors.extend(
             validate_coverage_omit_ledger(
                 pyproject_text=pyproject_doc_path.read_text(encoding='utf-8'),
-                ledger_text=coverage_omit_ledger_doc_path.read_text(
-                    encoding='utf-8'
-                ),
+                ledger_text=coverage_omit_ledger_doc_path.read_text(encoding='utf-8'),
             )
         )
     else:
@@ -675,7 +742,10 @@ def validate_docs_consistency(
                 f'Coverage omit ledger not found: {coverage_omit_ledger_doc_path}'
             )
 
-    if dependency_audit_policy_doc_path.is_file() and security_workflow_doc_path.is_file():
+    if (
+        dependency_audit_policy_doc_path.is_file()
+        and security_workflow_doc_path.is_file()
+    ):
         errors.extend(
             validate_dependency_audit_policy(
                 policy_text=dependency_audit_policy_doc_path.read_text(
@@ -787,6 +857,10 @@ def main() -> int:
         '--security-workflow',
         default='.github/workflows/security.yml',
     )
+    parser.add_argument(
+        '--guarded-claims-registry',
+        default='docs/governance/guarded-claims-registry.md',
+    )
     args = parser.parse_args()
 
     errors = validate_docs_consistency(
@@ -803,6 +877,7 @@ def main() -> int:
         coverage_omit_ledger_path=Path(args.coverage_omit_ledger),
         dependency_audit_policy_path=Path(args.dependency_audit_policy),
         security_workflow_path=Path(args.security_workflow),
+        guarded_claims_registry_path=Path(args.guarded_claims_registry),
     )
     if errors:
         for err in errors:

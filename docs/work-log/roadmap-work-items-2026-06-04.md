@@ -100,7 +100,19 @@ This work log turns the current strategy into concrete execution chunks.
 6. Task 6
 7. Task 7
 
-## Notes
+## Status Log
 
-- The highest-value work is still trust repair, not broad expansion.
-- Documentation should accompany code and verification, not replace them.
+- 2026-06-04 — **TASK-004 DONE** (Human Review Required: no). First-hour
+  onboarding strengthened: `docs/daily-driver-current-status.md` gained a
+  "First run (safe)" callout (safe command + where status lives + recovery
+  pointer) and `docs/tui-daily-driver-guide.md` gained an early "If something
+  goes wrong" pointer to the recovery guide.
+- 2026-06-04 — **TASK-006 DONE** (Human Review Required: no). Docs control
+  plane clarified: the dated `docs/analysis/daily-driver-review-INDEX-2026-06-01.md`
+  now carries a supersession banner pointing to the current front door
+  (`docs/INDEX.md`) and current status; `docs/governance/README.md` already
+  links the front door.
+- 2026-06-04 — **TASK-001/002/003/005 NOT STARTED.** These are
+  Human-Review-Required, high-risk behavior changes (TUI/CLI semantic drift,
+  undo honesty, cost truth, MCP/extension trust). An implementation plan is
+  pending explicit human approval before any code change.

@@ -1,6 +1,12 @@
 # Daily-Driver Review Package — Master Index
 # 2026-06-01
 
+**HISTORICAL EVIDENCE** — This index captures the 2026-06-01 review state.
+For current truth, see [docs/INDEX.md](../INDEX.md) (front door) and [docs/daily-driver-current-status.md](../daily-driver-current-status.md) (current status).
+Read this document for the reasoning trail and historical context behind decisions.
+
+---
+
 A single entry point to the 2026-06-01 review of teaagent's daily surfaces
 (TUI, `teaagent chat`, agent mode). Read in this order.
 
