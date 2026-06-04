@@ -897,5 +897,16 @@ class ShellClassifierPropertyTests(unittest.TestCase):
             )
 
 
+class TestToolRegistryBuilder(unittest.TestCase):
+    def test_builder_with_workspace_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            from teaagent.workspace_tools.builder import ToolRegistryBuilder
+
+            builder = ToolRegistryBuilder().with_root(tmp).with_workspace_tools()
+            self.assertIn("workspace", repr(builder))
+            registry = builder.build()
+            self.assertIn("workspace_list_files", registry.list_tools())
+
+
 if __name__ == '__main__':
     unittest.main()
