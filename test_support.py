@@ -19,9 +19,10 @@ def can_bind_loopback() -> bool:
 
 def can_start_threads(count: int = 1) -> bool:
     threads: list[threading.Thread] = []
+    release = threading.Event()
     try:
         for _ in range(count):
-            thread = threading.Thread(target=lambda: None)
+            thread = threading.Thread(target=release.wait)
             thread.start()
             threads.append(thread)
     except RuntimeError as exc:
@@ -29,6 +30,7 @@ def can_start_threads(count: int = 1) -> bool:
             return False
         raise
     finally:
+        release.set()
         for thread in threads:
             thread.join(timeout=1.0)
     return True
