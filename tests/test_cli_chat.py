@@ -31,6 +31,17 @@ def test_print_chat_help(capsys):
     assert '/help' in captured.out
 
 
+def test_repl_undo_help_accurate(capsys: pytest.CaptureFixture[str]) -> None:
+    """TICKET-15: REPL /undo help text must describe journal-first fallback behavior and not say only 'using checkpoint'."""
+    print_chat_help()
+    captured = capsys.readouterr()
+    assert 'journal-first' in captured.out
+    assert 'checkpoint' in captured.out
+    assert 'Undo all changes (using checkpoint)' not in captured.out
+
+
+
+
 def test_chat_command_with_invalid_args():
     """Test chat command returns an error for invalid permission mode input."""
     from argparse import Namespace
