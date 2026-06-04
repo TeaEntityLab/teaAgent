@@ -55,7 +55,7 @@ oauth = [
     "cryptography>=3.4",
 ]
 managed-google-adk = [
-    "google-adk",
+    "google-adk>=2.0.0",
 ]
 managed-vertex = [
     "google-cloud-aiplatform>=1.154.0",
@@ -63,7 +63,7 @@ managed-vertex = [
 telemetry = [
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
-    "opentelemetry-exporter-otlp-proto-http>=1.42.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.41.1",
 ]
 anthropic = [
     "anthropic>=0.40.0",
@@ -104,8 +104,8 @@ dev = [
     "tree-sitter-language-pack>=1.0.0",
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
-    "opentelemetry-exporter-otlp-proto-http>=1.42.1",
-    "google-adk",
+    "opentelemetry-exporter-otlp-proto-http>=1.41.1",
+    "google-adk>=2.0.0",
     "google-cloud-aiplatform>=1.154.0",
 ]
 

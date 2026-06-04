@@ -10,6 +10,7 @@ from teaagent.context_bus import (
     DeltaCard,
     DeltaType,
 )
+from test_support import skip_if_thread_start_is_blocked
 
 
 class TestContextBus:
@@ -208,6 +209,7 @@ class TestContextBus:
 
     def test_parallel_publish_from_threads(self):
         """Concurrent publishes use per-thread SQLite connections."""
+        skip_if_thread_start_is_blocked()
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / 'context_bus.db'
             config = ContextBusConfig(db_path=db_path, workflow_id='test-workflow')

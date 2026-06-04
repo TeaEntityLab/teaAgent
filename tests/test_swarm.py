@@ -18,6 +18,7 @@ from teaagent.swarm import (
     SwarmManager,
     SwarmReport,
 )
+from test_support import skip_if_thread_start_is_blocked
 
 
 def test_subagent_task_creation():
@@ -134,6 +135,7 @@ def test_swarm_manager_execute_empty():
 
 
 def test_swarm_manager_execute_multiple():
+    skip_if_thread_start_is_blocked()
     with tempfile.TemporaryDirectory() as tmpdir:
         manager = SwarmManager(tmpdir, max_parallel=2)
 
