@@ -173,7 +173,7 @@ def classify_shell_command_policy(
 
 
 _INSPECT_EXECUTABLES = frozenset(
-    {'pwd', 'ls', 'rg', 'grep', 'cat', 'head', 'tail', 'wc'}
+    {'pwd', 'ls', 'rg', 'grep', 'wc'}
 )
 _INSPECT_GIT_SUBCOMMANDS = frozenset(
     {'status', 'diff', 'log', 'show', 'branch', 'grep'}

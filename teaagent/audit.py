@@ -124,7 +124,7 @@ class AuditLogger:
         self._disk_error: Optional[OSError] = None
         self._last_disk_error_time: float = 0.0
         self._disk_error_cooldown_seconds: float = 30.0
-        self._chain_key: bytes = os.urandom(32)
+        self._chain_key = self._load_or_save_chain_key()
         self._audit_level = audit_level
         self._file_chmod_done = False  # Track if chmod has been done
         if self.path is not None:
@@ -161,6 +161,31 @@ class AuditLogger:
         ):
             return self._disk_error
         return None
+
+    def _load_or_save_chain_key(self) -> bytes:
+        if self.path is None:
+            return os.urandom(32)
+        run_id = self.path.stem
+        # Inline safe_run_id to avoid circular imports
+        safe_id = ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        key_dir = Path.home() / '.teaagent' / 'run-keys'
+        key_path = key_dir / f'{safe_id}.key'
+        if key_path.is_file():
+            try:
+                key = key_path.read_bytes()
+                if len(key) == 32:
+                    return key
+            except OSError:
+                pass
+        key = os.urandom(32)
+        try:
+            key_dir.mkdir(parents=True, exist_ok=True)
+            key_dir.chmod(0o700)
+            key_path.write_bytes(key)
+            key_path.chmod(0o600)
+        except OSError:
+            pass
+        return key
 
     def get_chain_key(self) -> bytes:
         """Return the per-run HMAC secret key for external chain verification."""

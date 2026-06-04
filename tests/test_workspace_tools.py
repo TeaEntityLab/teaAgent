@@ -218,11 +218,11 @@ class WorkspaceToolTests(unittest.TestCase):
 
             result = registry.execute(
                 'workspace_run_shell_inspect',
-                {'command': "cat 'literal $HOME.txt'", 'timeout_seconds': 5},
+                {'command': "grep 'ok' 'literal $HOME.txt'", 'timeout_seconds': 5},
             )
 
             self.assertEqual(result['exit_code'], 0)
-            self.assertEqual(result['stdout'], 'ok')
+            self.assertIn('ok', result['stdout'])
 
     def test_shell_inspect_rejects_mutating_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -239,12 +239,12 @@ class WorkspaceToolTests(unittest.TestCase):
 
             with self.assertRaises(ToolExecutionError):
                 registry.execute(
-                    'workspace_run_shell_inspect', {'command': 'cat /etc/passwd'}
+                    'workspace_run_shell_inspect', {'command': 'grep "root" /etc/passwd'}
                 )
 
             with self.assertRaises(ToolExecutionError):
                 registry.execute(
-                    'workspace_run_shell_inspect', {'command': 'cat ../outside.txt'}
+                    'workspace_run_shell_inspect', {'command': 'grep "ok" ../outside.txt'}
                 )
 
     def test_shell_inspect_rejects_unbalanced_quotes(self) -> None:
@@ -253,7 +253,7 @@ class WorkspaceToolTests(unittest.TestCase):
 
             with self.assertRaises(ToolExecutionError):
                 registry.execute(
-                    'workspace_run_shell_inspect', {'command': "cat 'unterminated"}
+                    'workspace_run_shell_inspect', {'command': "grep 'unterminated"}
                 )
 
     def test_shell_inspect_rejects_non_positive_timeout(self) -> None:
@@ -729,10 +729,6 @@ class ShellClassifierPropertyTests(unittest.TestCase):
         'git branch',
         'git grep pattern',
         'git grep -n pattern -- "*.py"',
-        'cat file.txt',
-        'cat "file with spaces.txt"',
-        'head -20 file.txt',
-        'tail file.txt',
         'wc -l file.txt',
     ]
 
@@ -740,6 +736,10 @@ class ShellClassifierPropertyTests(unittest.TestCase):
         'ls >output.txt',
         'ls >>output.txt',
         'cat file < input.txt',
+        'cat file.txt',
+        'cat "file with spaces.txt"',
+        'head -20 file.txt',
+        'tail file.txt',
         'echo one | grep two',
         'echo one && echo two',
         'echo one; echo two',
@@ -887,7 +887,7 @@ class ShellClassifierPropertyTests(unittest.TestCase):
             'git log',
             'git show HEAD',
             'ls -la',
-            'cat file.txt',
+            'grep pattern file.txt',
         ]
         for cmd in inspect:
             self.assertEqual(

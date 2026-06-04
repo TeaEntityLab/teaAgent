@@ -230,6 +230,15 @@ def prepare_subagent_isolation(
             f'{temp_dir}:/workspace:ro',
             '-w',
             '/workspace',
+            '--user',
+            '65534:65534',
+            '--network',
+            'none',
+            '--cap-drop',
+            'ALL',
+            '--read-only',
+            '--security-opt',
+            'no-new-privileges',
         ]
 
         # Add CPU quota if specified

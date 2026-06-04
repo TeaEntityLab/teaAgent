@@ -101,8 +101,6 @@ class BudgetMonitor:
 
         return highest_action
 
-        return BudgetAction.NONE
-
     def check_at_threshold(
         self, *, run_id: str, cost_cents: float, threshold: int
     ) -> BudgetAction:

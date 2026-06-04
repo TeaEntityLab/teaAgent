@@ -10,7 +10,7 @@ from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from ._types import ApprovalHandler, ApprovalRequest
 
 
-class ApprovalManager:
+class RunnerApprovalCoordinator:
     """Handles approval workflow for tool calls.
 
     Manages the approval process including:

@@ -12,7 +12,7 @@ from typing import Any, Optional
 from cryptography.fernet import Fernet, InvalidToken
 
 from teaagent.audit import AuditLogger
-from teaagent.hooks import HookRegistry, mcp_tool_filter_hook
+from teaagent.hooks import HookError, HookRegistry
 from teaagent.tools import ToolRegistry
 
 
@@ -145,6 +145,8 @@ def merged_tool_filters(
     allowed: set[str] = set(policy.allowed_tools)
     denied: set[str] = set(policy.denied_tools)
     for server in policy.servers.values():
+        if is_server_trust_expired(server):
+            continue
         allowed.update(server.allowed_tools)
         denied.update(server.denied_tools)
     return frozenset(allowed), frozenset(denied)
@@ -153,14 +155,26 @@ def merged_tool_filters(
 def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustPolicy:
     """Register pre-tool hooks from persisted MCP trust policy."""
     policy = load_mcp_trust_policy(root)
-    allowed, denied = merged_tool_filters(policy)
-    if not allowed and not denied:
-        return policy
     if registry.hook_registry is None:
         registry.hook_registry = HookRegistry()
-    registry.hook_registry.register_pre_hook(
-        mcp_tool_filter_hook(allowed_tools=allowed, blocked_tools=denied)
-    )
+
+    def dynamic_mcp_trust_hook(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
+        current_policy = load_mcp_trust_policy(root)
+        for server_name, server in current_policy.servers.items():
+            if (tool_name in server.allowed_tools or tool_name in server.denied_tools) and is_server_trust_expired(server):
+                raise HookError(f"Trust for MCP server '{server_name}' has expired")
+
+        allowed, denied = merged_tool_filters(current_policy)
+        if denied and tool_name in denied:
+            raise HookError(f"MCP tool '{tool_name}' is blocked")
+        if allowed and tool_name not in allowed:
+            raise HookError(
+                f"MCP tool '{tool_name}' not in allowed list. "
+                f"Allowed: {sorted(allowed)}"
+            )
+        return None
+
+    registry.hook_registry.register_pre_hook(dynamic_mcp_trust_hook)
     return policy
 
 

@@ -259,7 +259,7 @@ class HeadlessTUITests(unittest.TestCase):
             )
 
             with (
-                patch('teaagent.tui.run_chat_agent') as mock_run,
+                patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
                 patch('teaagent.tui.RunStore') as mock_store,
                 patch('teaagent.tui.create_llm_adapter'),
             ):

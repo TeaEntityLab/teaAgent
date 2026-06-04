@@ -85,6 +85,7 @@ class ChatSessionController:
         initial_observations: Optional[list[dict[str, Any]]] = None,
         resumed_from: Optional[str] = None,
         task_spec: Optional[Any] = None,
+        emit_answer: bool = True,
     ) -> ExecutionResult:
         """Execute a chat agent task with consistent behavior.
 
@@ -104,6 +105,7 @@ class ChatSessionController:
             initial_observations: Optional initial observations
             resumed_from: Optional run_id if resuming
             task_spec: Optional task specification from clarification
+            emit_answer: Whether to print the final answer/error to the output stream
 
         Returns:
             ExecutionResult with the run result and cost
@@ -132,9 +134,9 @@ class ChatSessionController:
 
         # Run the agent
         result = run_chat_agent(
-            task=task,
+            config,
+            task,
             adapter=adapter,
-            config=config,
             audit=audit,
             task_spec=task_spec,
             initial_observations=initial_observations,
@@ -144,7 +146,7 @@ class ChatSessionController:
         )
 
         # Save result to store
-        if audit and hasattr(audit, 'path') and audit.path:
+        if audit and hasattr(audit, 'path') and isinstance(audit.path, Path) and audit.path:
             store = RunStore(self.root)
             store.logger_for_result(result, audit)
 
@@ -154,10 +156,11 @@ class ChatSessionController:
             undo_journal.save_to(store.undo_path(result.run_id))
 
         # Handle result display (CG-01)
-        if result.status == 'completed' and result.final_answer:
-            self.output_fn(result.final_answer.content)
-        else:
-            self.output_fn(result.error_message or f'[{result.status}]')
+        if emit_answer:
+            if result.status == 'completed' and result.final_answer:
+                self.output_fn(result.final_answer.content)
+            else:
+                self.output_fn(result.error_message or f'[{result.status}]')
 
         # Update session state (CG-03)
         self.session_state.session_cost_cents += result.cost_cents

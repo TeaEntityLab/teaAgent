@@ -954,7 +954,6 @@ class TUITests(unittest.TestCase):
 
             controller = tui._get_chat_controller()
             controller.session_state.session_cost_cents = 123.0
-            tui._session_cost_cents = 999.0
 
             tui._handle_cost()
 
@@ -964,8 +963,6 @@ class TUITests(unittest.TestCase):
         """When controller returns 0 but local has accumulated cost, use local."""
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        controller = tui._get_chat_controller()
-        controller.session_state.session_cost_cents = 0.0
         tui._session_cost_cents = 250.0
         tui._handle_cost()
         self.assertEqual(output[-1], 'cost: $2.50')
@@ -1255,7 +1252,7 @@ class TUITests(unittest.TestCase):
             patch.object(tui, '_start_file_watcher'),
             patch.object(tui, '_load_tui_state'),
             patch.object(tui, '_save_tui_state'),
-            patch('teaagent.tui.run_chat_agent') as mock_run,
+            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
             patch('teaagent.tui.RunStore') as mock_store,
             patch('teaagent.tui.create_llm_adapter'),
         ):
@@ -1277,7 +1274,7 @@ class TUITests(unittest.TestCase):
             tui._run_agent_task('test task')
 
             _args, kwargs = mock_run.call_args
-            config = kwargs['config']
+            config = _args[0]
             self.assertEqual(config.max_estimated_cost_cents, 0)
 
     def test_tui_budget_shows_remaining(self) -> None:
@@ -1304,7 +1301,7 @@ class TUITests(unittest.TestCase):
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         with (
-            patch('teaagent.tui.run_chat_agent') as mock_run,
+            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
             patch('teaagent.tui.RunStore') as mock_store,
             patch('teaagent.tui.create_llm_adapter'),
         ):
@@ -1437,7 +1434,7 @@ class TUITests(unittest.TestCase):
             patch.object(tui, '_start_file_watcher'),
             patch.object(tui, '_load_tui_state'),
             patch.object(tui, '_save_tui_state'),
-            patch('teaagent.tui.run_chat_agent') as mock_run,
+            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
             patch('teaagent.tui.RunStore') as mock_store,
             patch('teaagent.tui.create_llm_adapter'),
         ):
@@ -1459,7 +1456,7 @@ class TUITests(unittest.TestCase):
             tui._run_agent_task('test task')
 
             _args, kwargs = mock_run.call_args
-            config = kwargs['config']
+            config = _args[0]
             self.assertEqual(config.max_estimated_cost_cents, 200)
 
     def test_tui_file_watcher_start_stop(self) -> None:

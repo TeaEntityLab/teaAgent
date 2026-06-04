@@ -93,6 +93,18 @@ def verify_audit_chain(
     every chained event is intact.  On failure the ``error`` field
     contains a human-readable description of the first violation found.
     """
+    if secret_key is None:
+        run_id = log_path.stem
+        safe_id = ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        key_path = Path.home() / '.teaagent' / 'run-keys' / f'{safe_id}.key'
+        if key_path.is_file():
+            try:
+                key = key_path.read_bytes()
+                if len(key) == 32:
+                    secret_key = key
+            except OSError:
+                pass
+
     if not log_path.is_file():
         return ChainVerificationResult(valid=True, event_count=0)
 

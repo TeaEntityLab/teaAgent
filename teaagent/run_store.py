@@ -70,6 +70,18 @@ class RunStore:
             content = audit.path.read_text(encoding='utf-8')
         atomic_write_text(target, content)
         secure_audit_file(target)
+        # SEC-01: Move the run key file as well
+        key_dir = Path.home() / '.teaagent' / 'run-keys'
+        old_key = key_dir / f'{audit.path.stem}.key'
+        new_key = key_dir / f'{safe_run_id(result.run_id)}.key'
+        if old_key.is_file():
+            try:
+                new_key.parent.mkdir(parents=True, exist_ok=True)
+                new_key.write_bytes(old_key.read_bytes())
+                new_key.chmod(0o600)
+                old_key.unlink(missing_ok=True)
+            except OSError:
+                pass
         audit.path.unlink(missing_ok=True)
         # Update the index with the new run summary
         self._update_index(target)

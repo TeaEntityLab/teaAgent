@@ -53,7 +53,18 @@ def export_compliance_bundle(
 
     chain_verification: dict[str, Any] | None = None
     if include_chain_verification and log_path is not None:
-        chain_result = verify_audit_chain(log_path)
+        secret_key: bytes | None = None
+        run_id_for_key = log_path.stem
+        safe_id = ''.join(ch for ch in run_id_for_key if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        key_path = Path.home() / '.teaagent' / 'run-keys' / f'{safe_id}.key'
+        if key_path.is_file():
+            try:
+                key = key_path.read_bytes()
+                if len(key) == 32:
+                    secret_key = key
+            except OSError:
+                pass
+        chain_result = verify_audit_chain(log_path, secret_key=secret_key)
         chain_verification = {
             'valid': chain_result.valid,
             'event_count': chain_result.event_count,

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 from teaagent import __version__
 from teaagent.audit import AuditEvent
-from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.cockpit import CockpitState
 from teaagent.context import ContextCompactor as _ContextCompactor
@@ -139,7 +139,7 @@ class TeaAgentTUI:
         enable_git_tools: bool = False,
         skill_search_dirs: Optional[list[str]] = None,
         memory_limit: int = 5,
-        max_estimated_cost_cents: int = 0,
+        max_estimated_cost_cents: int = 500,
     ) -> None:
         self.database = database
         self.provider = provider
@@ -185,18 +185,17 @@ class TeaAgentTUI:
         self._checkpoint_created: bool = False
         self._checkpoint_ref: Optional[str] = None
 
+        # Chat session controller for unified execution semantics (TASK-002)
+        self._chat_controller: Optional[ChatSessionController] = None
+        self._session_state = SessionState()
+
         # Effort throttling and budget tracking
-        self._session_cost_cents: float = 0.0
         self._effort_level: str = 'unlimited'
         self._runtime_max_cost_cents: int = 0
         self._max_cost_budget_cents: int = 0
 
         # Cockpit state for operator dashboard
         self._cockpit_state: Optional[CockpitState] = None
-
-        # Chat session controller for unified execution semantics (TASK-002)
-        self._chat_controller: Optional[ChatSessionController] = None
-        self._session_state = SessionState()
 
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
@@ -891,6 +890,14 @@ class TeaAgentTUI:
             )
         return self._chat_controller
 
+    @property
+    def _session_cost_cents(self) -> float:
+        return self._get_chat_controller().session_state.session_cost_cents
+
+    @_session_cost_cents.setter
+    def _session_cost_cents(self, val: float) -> None:
+        self._get_chat_controller().session_state.session_cost_cents = val
+
     def _current_session(self) -> Optional[ChatSession]:
         if not self.session_id:
             return None
@@ -955,48 +962,43 @@ class TeaAgentTUI:
                 LLMMessage(role=m.role, content=m.content) for m in session.messages
             ]
 
-        result = run_chat_agent(
-            task=task,
-            adapter=adapter,
-            config=ChatAgentConfig.from_root(
-                self.root,
-                model=selected_model,
-                allow_destructive=self.allow_destructive,
-                permission_mode=self.permission_mode,
-                approved_call_ids=frozenset(self.approved_call_ids),
-                enable_subagent=self.subagent,
-                max_subagent_depth=self.max_subagent_depth,
-                heartbeat_seconds=self.heartbeat_seconds,
-                stream=self.stream,
-                on_chunk=self._stream_chunk if self.stream else None,
-                stream_text_only=True,
-                approval_handler=self._approval_handler,
-                budget_prompt_handler=self._budget_prompt_handler
-                if (self.input_fn is not None)
-                else None,
-                chat_messages=chat_messages,
-                max_estimated_cost_cents=self._runtime_max_cost_cents,
-                max_iterations=self.max_iterations,
-                max_tool_calls=self.max_tool_calls,
-                enable_git_tools=self.enable_git_tools,
-                skill_search_dirs=self.skill_search_dirs,
-                memory_limit=self.memory_limit,
-            ),
-            audit=audit,
-            task_spec=task_spec,
-            initial_observations=initial_observations,
-            initial_context_extra={'resumed_from': resumed_from}
-            if resumed_from
+        config = ChatAgentConfig.from_root(
+            self.root,
+            model=selected_model,
+            allow_destructive=self.allow_destructive,
+            permission_mode=self.permission_mode,
+            approved_call_ids=frozenset(self.approved_call_ids),
+            enable_subagent=self.subagent,
+            max_subagent_depth=self.max_subagent_depth,
+            heartbeat_seconds=self.heartbeat_seconds,
+            stream=self.stream,
+            on_chunk=self._stream_chunk if self.stream else None,
+            stream_text_only=True,
+            approval_handler=self._approval_handler,
+            budget_prompt_handler=self._budget_prompt_handler
+            if (self.input_fn is not None)
             else None,
+            chat_messages=chat_messages,
+            max_estimated_cost_cents=self._runtime_max_cost_cents,
+            max_iterations=self.max_iterations,
+            max_tool_calls=self.max_tool_calls,
+            enable_git_tools=self.enable_git_tools,
+            skill_search_dirs=self.skill_search_dirs,
+            memory_limit=self.memory_limit,
         )
-        # TICKET-12 Step A: Use ChatSessionController for cost tracking (unified with CLI)
-        # This replaces the direct cost accumulation with controller-based tracking
         controller = self._get_chat_controller()
-        controller.session_state.session_cost_cents += result.cost_cents
-        self._session_cost_cents = controller.session_state.session_cost_cents
-        store.logger_for_result(result, audit)
-        if undo_journal.has_entries:
-            undo_journal.save_to(store.undo_path(result.run_id))
+        execution_result = controller.execute_task(
+            task,
+            config,
+            adapter=adapter,
+            audit=audit,
+            undo_journal=undo_journal,
+            initial_observations=initial_observations,
+            resumed_from=resumed_from,
+            task_spec=task_spec,
+            emit_answer=False,
+        )
+        result = execution_result.run_result
         self.last_run_id = result.run_id
         events = store.show_run(result.run_id)
         if not isinstance(events, list):
@@ -1292,7 +1294,7 @@ def run_tui(
     enable_git_tools: bool = False,
     skill_search_dirs: Optional[list[str]] = None,
     memory_limit: int = 5,
-    max_estimated_cost_cents: int = 0,
+    max_estimated_cost_cents: int = 500,
     # TASK-DD2-001: initial task from `teaagent chat "task"` positional arg
     initial_task: Optional[str] = None,
 ) -> int:

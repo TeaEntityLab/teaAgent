@@ -30,7 +30,7 @@ from teaagent.tool_call_context import (
 )
 from teaagent.tools import ToolRegistry
 
-from ._approval_manager import ApprovalManager
+from ._approval_manager import RunnerApprovalCoordinator
 from ._auto_mode_manager import AutoModeManager
 from ._plan_validator import PlanValidator
 from ._types import (
@@ -100,7 +100,7 @@ class AgentRunner:
 
         # Initialize manager classes
         self.approval_policy = approval_policy or ApprovalPolicy()
-        self.approval_manager = ApprovalManager(
+        self.approval_manager = RunnerApprovalCoordinator(
             approval_policy=self.approval_policy,
             approval_handler=approval_handler,
             jit_state=jit_state,

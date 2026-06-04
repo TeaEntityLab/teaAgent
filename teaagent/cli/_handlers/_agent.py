@@ -640,7 +640,7 @@ def _execute_agent_task(
             max_iterations=args.max_iterations,
             max_tool_calls=args.max_tool_calls,
             max_estimated_cost_cents=int(
-                getattr(args, 'max_estimated_cost_cents', 0) or 0
+                getattr(args, 'max_estimated_cost_cents', 500) or 500
             ),
             allow_destructive=args.allow_destructive,
             model=selected_model,
