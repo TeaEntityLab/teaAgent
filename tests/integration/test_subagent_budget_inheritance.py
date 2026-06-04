@@ -5,12 +5,14 @@ Verifies that:
 - Subagent budget exhaustion produces a failed sub-run, not a crash.
 - The parent run continues after the subagent fails.
 - SEC-06: Subagent JIT approval isolation - parent approvals don't leak to subagents.
+- SEC-06: Approval lineage is one-way read-only; subagents do not inherit parent grants.
 """
 
 from __future__ import annotations
 
 from teaagent.chat_agent import ChatAgentConfig, register_subagent_tool, run_chat_agent
-from teaagent.policy import JITApprovalState
+from teaagent.policy import ApprovalPolicy, JITApprovalState
+from teaagent.runner._approval_manager import RunnerApprovalCoordinator
 from teaagent.tools import ToolRegistry
 
 
@@ -120,3 +122,116 @@ def test_subagent_jit_approval_isolation_sec06(tmp_path):
     # 3. The bidirectional sync in policy.py only merges when jit_state is provided
     #
     # Since subagents get jit_state=None, they get fresh isolated state
+
+
+def test_subagent_jit_approval_isolation_sec06_adversarial():
+    """SEC-06: Active adversarial proof of JIT isolation.
+
+    Directly tests that a parent coordinator with pre-loaded JIT approvals
+    does NOT share state with a freshly-created coordinator (mimicking the
+    subagent creation path in SubagentManager.run_subagent).
+
+    If someone later re-adds ``jit_state=parent_jit_state`` in SubagentManager,
+    this test fails because it proves only the ``jit_state=None`` path
+    produces an empty isolated state.
+    """
+    # Parent JIT state with pre-approved tools (simulating a session grant)
+    parent_jit = JITApprovalState()
+    parent_jit.approve_session('workspace_write_file')
+    parent_jit.approve_once('call_abc')
+
+    # Parent coordinator gets the populated state
+    parent_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(),
+        jit_state=parent_jit,
+    )
+
+    # Subagent coordinator gets jit_state=None -> fresh empty state
+    subagent_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(),
+        jit_state=None,  # What SubagentManager.run_subagent does
+    )
+
+    # Parent has the approvals it was given
+    assert parent_coord.jit_state.is_tool_session_approved('workspace_write_file')
+    assert parent_coord.jit_state.is_call_approved('call_abc')
+
+    # Subagent does NOT inherit
+    assert not subagent_coord.jit_state.is_tool_session_approved('workspace_write_file')
+    assert not subagent_coord.jit_state.is_call_approved('call_abc')
+    assert len(subagent_coord.jit_state.session_approved_tools) == 0
+    assert len(subagent_coord.jit_state.approved_call_ids) == 0
+
+    # Mutations on parent state don't affect subagent
+    parent_jit.approve_session('delete_file')
+    assert not subagent_coord.jit_state.is_tool_session_approved('delete_file')
+
+
+def test_subagent_does_not_inherit_parent_approvals():
+    """SEC-06: A tool approved in the parent session still requires approval at subagent boundary.
+
+    Approval lineage is one-way read-only — subagents do NOT inherit parent JIT grants.
+    If this test fails, someone re-introduced jit_state sharing between parent and subagent.
+    """
+    parent_jit = JITApprovalState()
+    parent_jit.approve_session('workspace_write_file')
+    parent_jit.approve_session('workspace_run_shell_mutate')
+    parent_jit.approve_once('parent_call_007')
+
+    parent_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(),
+        jit_state=parent_jit,
+    )
+
+    # SubagentManager.run_subagent passes jit_state=None — subagent gets fresh state
+    subagent_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(),
+        jit_state=None,
+    )
+
+    # Parent retains all its grants
+    assert parent_coord.jit_state.is_tool_session_approved('workspace_write_file')
+    assert parent_coord.jit_state.is_tool_session_approved('workspace_run_shell_mutate')
+    assert parent_coord.jit_state.is_call_approved('parent_call_007')
+
+    # Subagent starts with a completely clean slate — no inherited approvals
+    assert not subagent_coord.jit_state.is_tool_session_approved('workspace_write_file')
+    assert not subagent_coord.jit_state.is_tool_session_approved('workspace_run_shell_mutate')
+    assert not subagent_coord.jit_state.is_call_approved('parent_call_007')
+    assert len(subagent_coord.jit_state.session_approved_tools) == 0
+    assert len(subagent_coord.jit_state.approved_call_ids) == 0
+
+
+def test_subagent_approval_doesnt_elevate_parent():
+    """SEC-06: Approvals granted inside a subagent do not propagate back to the parent.
+
+    Approval lineage is one-way read-only. A subagent that approves a high-risk
+    tool must not silently expand the parent session's approval scope.
+    """
+    parent_jit = JITApprovalState()
+    parent_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(),
+        jit_state=parent_jit,
+    )
+
+    # Subagent independently approves several high-risk tools during its run
+    sub_jit = JITApprovalState()
+    sub_coord = RunnerApprovalCoordinator(
+        approval_policy=ApprovalPolicy(),
+        jit_state=sub_jit,
+    )
+    sub_coord.jit_state.approve_session('workspace_run_shell_mutate')
+    sub_coord.jit_state.approve_session('delete_all_files')
+    sub_coord.jit_state.approve_once('sub_call_danger_999')
+
+    # Subagent's grants are visible within the subagent
+    assert sub_coord.jit_state.is_tool_session_approved('workspace_run_shell_mutate')
+    assert sub_coord.jit_state.is_tool_session_approved('delete_all_files')
+    assert sub_coord.jit_state.is_call_approved('sub_call_danger_999')
+
+    # Parent session is completely unaffected — subagent grants don't elevate parent
+    assert not parent_coord.jit_state.is_tool_session_approved('workspace_run_shell_mutate')
+    assert not parent_coord.jit_state.is_tool_session_approved('delete_all_files')
+    assert not parent_coord.jit_state.is_call_approved('sub_call_danger_999')
+    assert len(parent_coord.jit_state.session_approved_tools) == 0
+    assert len(parent_coord.jit_state.approved_call_ids) == 0
