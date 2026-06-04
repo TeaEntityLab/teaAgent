@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from typing import Iterator
 from unittest.mock import patch
 
 import pytest
 
+from teaagent.memory.file_watcher import WATCHDOG_AVAILABLE
 from teaagent.memory.pinned_file import PinnedFile, PinnedFileStorage
 
 
@@ -54,7 +56,7 @@ class TestPinnedFileStorage:
     """Test PinnedFileStorage operations."""
 
     @pytest.fixture
-    def temp_root(self) -> Path:
+    def temp_root(self) -> Iterator[Path]:
         """Create a temporary directory for testing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)
@@ -293,11 +295,13 @@ class TestPinnedFileStorage:
         assert result is False
 
 
+
+@pytest.mark.skipif(not WATCHDOG_AVAILABLE, reason="watchdog library not installed")
 class TestFileWatcher:
     """Test file watcher functionality."""
 
     @pytest.fixture
-    def temp_root(self) -> Path:
+    def temp_root(self) -> Iterator[Path]:
         """Create a temporary directory for testing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)

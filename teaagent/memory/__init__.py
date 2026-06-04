@@ -14,8 +14,8 @@ from teaagent.memory.file_watcher import FileWatcher
 from teaagent.memory.pinned_file import PinnedFile, PinnedFileStorage
 from teaagent.memory.team_memory import TeamMemory
 
-# Import from the legacy memory module
-from teaagent.memory_legacy import (
+# Import from the canonical memory catalog module
+from .catalog import (
     MemoryCatalog,
     MemoryEntry,
     memory_entries_to_prompt,
