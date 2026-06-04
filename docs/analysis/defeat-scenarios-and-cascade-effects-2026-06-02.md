@@ -72,6 +72,8 @@ TUI are on different execution paths, so any fix to the controller does not reac
 
 ### DS-02 · CG-12 — TUI never adopted `ChatSessionController`
 
+> **STATUS: Fixed 2026-06-05** — `tui/__init__.py:996` calls `controller.execute_task()`; controller initialized lazily at `:889`. Cost, undo, and task execution all route through `ChatSessionController`. Tests: `test_tui_uses_chat_session_controller_for_cost_tracking()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py`.
+
 **Ticket:** TICKET-12. **Severity:** P1 (root cause, structural).
 
 **User-facing failure.**
@@ -195,6 +197,8 @@ same event with different timestamps and fields. No reconciliation logic.
 ---
 
 ### DS-05 · CG-15 — TUI and REPL `/undo` use different mechanisms
+
+> **STATUS: Fixed 2026-06-05** — `_handle_undo()` at `tui/__init__.py:860` now routes journal-first: calls `controller.undo_last_run()` (surgical UndoJournal restore); falls back to `_restore_checkpoint()` (git-stash) only when journal is empty. The write-only journal path is now fully consumed by the undo handler. Tests: `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py::TUITests`.
 
 **Ticket:** TICKET-12. **Severity:** P2.
 
@@ -357,6 +361,8 @@ suspension JSON and the RunStore use separate storage with no bridge.
 ---
 
 ### DS-09 · AG-02 — `agent run --background <id>` silently runs the id as a literal task
+
+> **STATUS: Fixed 2026-06-05** — `agent run --background <id>` now validates the task arg against known run IDs and suspension IDs before dispatching to the LLM. Known IDs are rejected with a clear error directing the user to `agent resume` or `agent interactive-review`. Test: `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167`.
 
 **Ticket:** TICKET-16. **Severity:** P1.
 

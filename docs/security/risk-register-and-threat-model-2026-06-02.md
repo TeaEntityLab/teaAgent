@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer but has specific high-severity gaps at the audit, isolation, and budget layers. **One finding is no-go for production expansion** (SEC-02). **SEC-01, SEC-07, SEC-10 were fixed/verified 2026-06-05** (HMAC key persistence, Docker hardening, shell allowlist). **DS-12, DS-13, and SEC-04 were fixed on 2026-06-04/05** (empty-path approval rejection, budget semantics, cost default).
+teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer; most high-severity gaps have been closed. **One P0 finding remains open** (SEC-01 — ephemeral audit HMAC, status VERIFY/CLOSE pending test sign-off). **Fixed 2026-06-04/05:** SEC-02 (MCP trust expiry), SEC-04 (budget default), SEC-06 (JIT isolation), SEC-07 (Docker hardening), SEC-10 (shell allowlist), DS-02 (TUI controller routing), DS-05 (TUI undo via journal), DS-09 (background UUID rejection), DS-12 (empty-path approval), DS-13 (budget semantics). See §9 Fix Status for test evidence on each.
 
 | Severity | Count | Immediately Blocking |
 |---|---|---|
@@ -83,7 +83,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | DS-13 | Budget | ~~`0` cost cap had three incompatible semantics~~ `None`=unlimited, `0`=zero-spend, positive=cap. Default 500 cents. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_default_500_cents` | M | M | 4 | **FIXED 2026-06-05** | — |
 | DS-01 | Budget | TUI `_session_cost_cents` never incremented — `/cost` and budget bar always show `$0.00`; per-run cap still fires but cumulative cap never triggers | H | M | 6 | **OPEN** | P1 |
 | DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | **Fixed** (2026-06-05) — TUI undo routes journal-first via `ChatSessionController.undo_last_run()` at `tui/__init__.py:860`; checkpoint fallback retained; `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py` | — |
-| DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | **OPEN** | P1 |
+| DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | **Fixed** (2026-06-05) — known run/suspension IDs rejected before dispatch; `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167` | — |
 | DS-04 | Audit | Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events | M | L | 2 | **OPEN** | P3 |
 | DS-06 | Testing | TUI cost test injects `_session_cost_cents` directly, tests formatter only — accumulation bug CG-11 permanently masked from CI | H | M | 6 | **OPEN** | P1 |
 
@@ -439,13 +439,13 @@ warn_at_pct = 50
 
 ### Sprint 1 (this week) — Blockers
 
-1. **SEC-01** — Persist HMAC key to `~/.teaagent/run-keys/<run_id>.key`; pass to `verify_audit_chain()` — `teaagent/audit.py:127`, `teaagent/audit_export.py:56`
-2. **SEC-02** — Call `is_server_trust_expired()` in `merged_tool_filters()` at `mcp_trust.py:141`
-3. **SEC-04** — Change default `max_estimated_cost_cents` from `0` to `500` — `teaagent/chat_agent.py:70`
-4. **SEC-07** — Add `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges` to Docker command — `teaagent/subagents/_isolation.py:223-243`
-5. **SEC-10** — Remove `cat`, `head`, `tail` from `_INSPECT_EXECUTABLES` — `teaagent/workspace_tools/_shell.py:175-176`
+1. **SEC-01** — ~~Persist HMAC key~~ **VERIFY/CLOSE**: key persisted at `audit.py:165`; tests listed in table row. Pending test sign-off.
+2. **SEC-02** — ~~Call `is_server_trust_expired()`~~ **FIXED 2026-06-05**: enforced at `mcp_trust.py:148,168`; `test_server_trust_expiry()` passes.
+3. **SEC-04** — ~~Change default~~ **FIXED 2026-06-05**: default 500 cents, `0`=no-spend, `None`=unlimited.
+4. **SEC-07** — ~~Add Docker flags~~ **FIXED 2026-06-05**: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges` at `_isolation.py:234-241`.
+5. **SEC-10** — ~~Remove `cat/head/tail`~~ **FIXED 2026-06-05**: `_INSPECT_EXECUTABLES` = `{pwd, ls, rg, grep, wc}` at `_shell.py:175`.
 6. **SEC-16** — Delete dead loop at `budget_monitor.py:104-119` (QW — 10 min)
-7. **DS-09** — Fixed in current branch: stale `--background <id>` hint removed from REPL suspend output
+7. **DS-09** — ~~Stale hint removed~~ **FIXED 2026-06-05 (full fix)**: UUID-shaped task args rejected before LLM dispatch; `test_agent_run_background_rejects_known_run_or_suspension_id()` passes.
 8. **SC-02** — Declare `anthropic` and `pyyaml` in `pyproject.toml` (XS — 30 min)
 
 ### Sprint 2 — High priority
@@ -467,7 +467,7 @@ warn_at_pct = 50
 20. **SEC-12** — fsync failure: stderr warning + halt after 3 failures
 21. **SEC-15** — Reject `TEAAGENT_ALLOW_DEV_SIGNATURES=1` on non-loopback relay
 22. **DS-13** — ~~Use `None` as no-cap sentinel; fix zero-cap semantics~~ **FIXED 2026-06-04**: `None` is now the only unlimited sentinel; `0` means zero spend allowed. Test: `test_zero_cost_cap_blocks_positive_cost_run`
-23. **DS-05** — Unified TUI undo via controller (dependency: DS-02 / TICKET-12)
+23. **DS-05** — ~~Unified TUI undo via controller~~ **FIXED 2026-06-05**: `_handle_undo()` routes journal-first via `controller.undo_last_run()` at `tui/__init__.py:860`; `test_tui_undo_uses_journal()` passes.
 
 ### Fix Status (2026-06-04)
 
@@ -478,13 +478,30 @@ warn_at_pct = 50
 - **DS-12**: Empty-path approval rejection implemented. Empty path globs now raise `ValueError` to prevent implicit global grants. Session-scope allows `None` (no restriction); other scopes require explicit non-empty patterns. Relative paths in tool arguments are normalized via `_normalize_and_validate_path` before matching. Parent-traversal (`../`) and paths outside workspace are rejected. Tests: `test_empty_path_globs_rejected_ds12`, `test_approval_policy_rejects_empty_path`, `test_approval_policy_normalizes_relative_paths`.
 - **SEC-06**: Subagent JIT approval isolation enforced. `SubagentManager.run_subagent` omits `jit_state` when building `sub_config`, so subagents always start with a fresh empty `JITApprovalState`. Approval lineage is one-way read-only: parent grants are never copied to child; child grants never propagate back to parent. Tests: `test_subagent_jit_approval_isolation_sec06`, `test_subagent_jit_approval_isolation_sec06_adversarial`, `test_subagent_does_not_inherit_parent_approvals`, `test_subagent_approval_doesnt_elevate_parent`.
 - **SEC-04**: Default changed to 500 cents; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents`.
+- **SEC-02**: `is_server_trust_expired()` is now called in the hot path at `mcp_trust.py:148` (inside `merged_tool_filters`) and at `mcp_trust.py:168` (in the hook check). Expired servers now raise `HookError` and are excluded from allowed tools. Test: `test_server_trust_expiry()` in `tests/test_mcp_trust.py`. All 20 MCP trust tests pass.
+- **SEC-07**: Docker hardening flags added to `subagents/_isolation.py:234-241`: `--user 65534:65534`, `--network none`, `--cap-drop ALL`, `--read-only`, `--security-opt no-new-privileges`. Tests: `test_docker_isolation_with_resource_limits()`, `test_docker_isolation_without_resource_limits()` in `tests/test_subagent_isolation.py`.
+- **SEC-10**: `cat`, `head`, `tail` removed from `_INSPECT_EXECUTABLES`. Allowlist is now `{'pwd', 'ls', 'rg', 'grep', 'wc'}` at `workspace_tools/_shell.py:175`. Tests: `test_all_inspect_commands_classified_as_inspect()`, `test_safe_inspect_commands_still_allowed()`, `test_shell_inspect_rejects_mutating_command()` in `tests/test_workspace_tools.py`.
+- **DS-02**: TUI now routes all task execution through `ChatSessionController.execute_task()` at `tui/__init__.py:996`. The controller is lazily initialized via `_get_chat_controller()` (:889) and shared across cost, undo, and task calls. Tests: `test_tui_uses_chat_session_controller_for_cost_tracking()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py`.
+- **DS-05**: TUI undo now routes journal-first: `_handle_undo()` at `tui/__init__.py:860` calls `controller.undo_last_run()` first; falls back to `_restore_checkpoint()` only if journal is empty. Tests: `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py::TUITests`.
+- **DS-09**: `agent run --background <id>` now rejects task args that match known run IDs or suspension IDs, preventing silent launch of a bogus LLM task. Test: `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167`.
 
-**Still Open:**
-- SEC-01: Audit HMAC persistence needs key file permission tests
-- SEC-02: MCP trust expiry enforcement needs integration test
-- SEC-07: Docker security flags need assertion tests
-- SEC-10: Shell inspect tools need review
-- SEC-15: Dev signature mode needs production guard
+**Still Open — Active:**
+- **SEC-01**: VERIFY/CLOSE — HMAC key persisted per code at `audit.py:165`; pending final test sign-off (`test_audit_key_file_permissions_readable`). (Active — no ticket)
+- **SEC-05**: Cost field injectable via adapter context dict. (Active — no ticket; P2)
+- **SEC-09**: Multi-sig 1-hour replay window; duplicated hash function. (Active — no ticket; P2)
+- **SEC-11**: Shell mutations not tracked in undo journal. (Active — no ticket; P2)
+- **SEC-12**: fsync failure silenced. (Active — no ticket; P2)
+- **SEC-13**: Security paths mocked in tests. (Active — no ticket; P1)
+- **SEC-14**: `preapproved_call_ids` still live. (Active — no ticket; P3)
+- **SEC-15**: `TEAAGENT_ALLOW_DEV_SIGNATURES` has no production guard. (Active — no ticket; P2)
+- **SEC-16**: Dead code at `budget_monitor.py:104-119`. (Active — no ticket; QW)
+- **DS-01**: TUI cost always $0.00. (Active — TICKET-12; P1)
+- **DS-03**: Controller swallows persistence errors. (Active — TICKET-13; P2)
+- **DS-04**: Stale `audit_trail` field in suspension JSON. (Active — TICKET-15; P3)
+- **DS-06**: Cost test masks accumulation bug. (Active — TICKET-14; P1)
+- **DS-08**: `teaagent resume <id>` always errors. (Active — TICKET-16; P1)
+- **DS-10**: Suspension observations not rehydrated. (Active — TICKET-16; P2)
+- **DS-11**: Initial task silently dropped in `chat_command`. (Active — TASK-DD2-001; P1)
 
 ### Backlog — Design decisions required
 
@@ -494,6 +511,24 @@ warn_at_pct = 50
 27. **SEC-NEW3** — Behavioral contract per deployment
 28. **SEC-14** — Remove `preapproved_call_ids` in next major version
 29. **DS-04** — Remove stale `audit_trail` field from suspension JSON
+
+---
+
+## Appendix C — Unverified Ecosystem Claims (Do Not Mark Complete)
+
+The following capabilities are described in teaagent documentation or roadmap materials but have **no passing test evidence** and should not be claimed as shipped. Each item is aspirational and must be verified before any release claim.
+
+| Claim | Location | Why Not Complete | What Would Prove It |
+|---|---|---|---|
+| Cloud/background command parity | `docs/cloud-deployment.md`, `docs/roadmap-status.md` H2 | No acceptance test proves CLI/cloud run state contract is identical across surfaces | Passing acceptance test comparing run-state, permissions, audit, cost, and recovery parity between CLI and background/cloud |
+| IDE command parity | `docs/analysis/agent-ecosystem-daily-use-gap-review-2026-05-31.md` | No IDE integration code exists; parity gap not measured | Acceptance test proving equivalent task, approve, undo, and cost flows inside VS Code/JetBrains extension |
+| Extension activation explanation | `docs/roadmap-status.md` H3 / TICKET-M3 | No "explain activation" UX code path; EXT-001 still Pending | `test_extension_activation_explain_acceptance` passes for MCP, plugin, and skill onboarding flows |
+| Provider fallback day-two flow | `docs/provider-authoring.md`, model capability matrix | No test covers provider downgrade or fallback routing during a live session | Integration test: primary provider returns 5xx → fallback provider used → run completes with audit annotation |
+| Risk-mode decision table | `docs/analysis/permission-mode-risk-decision-table-2026-06-01.md` | Document exists but no acceptance test enforces the table's correctness | Mode matrix acceptance test: each mode × each tool class × each user scenario asserts expected approval behavior |
+| Workflow framework boundary | `docs/specs/` | "Workflow self-healing" described but boundary between workflow and agent loop is undocumented | Architectural decision record + acceptance test: workflow re-entry does not re-enter runner loop; bounded attempt count enforced |
+| Release evidence acceptance | `docs/release-evidence.json`, `docs/release-checklist.md` | JSON has no machine-readable schema; checklist is not CI-gated | `validate_docs_consistency.py --check-release-evidence` passes in CI; evidence bundle export passes automated format validation |
+
+**Policy:** Any PR that claims one of the above is "complete" must include the evidence column above and CI proof. Absence of test evidence = aspirational, not shipped.
 
 ---
 

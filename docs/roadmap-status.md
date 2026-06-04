@@ -1,8 +1,10 @@
 # Roadmap Status
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-04 (documentation-current-truth and Phase 0 governance closure linked)
+**Last updated:** 2026-06-05 (fixed-item evidence added; unverified claims registry added; all other status docs link here)
 **Owner:** TBD
+
+> **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/daily-driver-findings-status-ledger-2026-06-01.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
 
 ## Purpose
 
@@ -65,6 +67,31 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 - **High**: High confidence in approach and timeline
 - **Medium**: Moderate confidence, some unknowns remain
 - **Low**: Low confidence, significant unknowns or dependencies
+
+## Critical Path — Current Completion Evidence
+
+| Item | Status | Completion % | Evidence Type | Owner | Notes |
+|------|--------|:---:|---|---|---|
+| SEC-01 Audit HMAC persistence | VERIFY/CLOSE | 90% | Code + pending test | TBD | Key persisted at `audit.py:165`; test sign-off pending |
+| SEC-02 MCP trust expiry | **Fixed** | 100% | Code + passing test | — | `mcp_trust.py:148,168`; `test_server_trust_expiry()` |
+| SEC-04 Budget default | **Fixed** | 100% | Code + passing tests | — | Default 500 cents; `test_budget_zero_cents_rejects_any_spend()` |
+| SEC-06 JIT isolation | **Fixed** | 100% | Code + passing tests | — | `test_subagent_jit_approval_isolation_sec06()` |
+| SEC-07 Docker hardening | **Fixed** | 100% | Code + passing tests | — | `_isolation.py:234-241`; `test_docker_isolation_*()` |
+| SEC-10 Shell allowlist | **Fixed** | 100% | Code + passing tests | — | `_shell.py:175`; `test_all_inspect_commands_classified_as_inspect()` |
+| DS-02 TUI controller routing | **Fixed** | 100% | Code + passing tests | — | `tui/__init__.py:996`; controller-based cost/undo/task |
+| DS-05 TUI undo via journal | **Fixed** | 100% | Code + passing tests | — | `tui/__init__.py:860`; `test_tui_undo_uses_journal()` |
+| DS-09 Background UUID rejection | **Fixed** | 100% | Code + passing test | — | `test_agent_run_background_rejects_known_run_or_suspension_id()` |
+| DS-12 Empty-path approval | **Fixed** | 100% | Code + passing tests | — | `test_empty_path_globs_rejected_ds12()` |
+| DS-13 Budget zero semantics | **Fixed** | 100% | Code + passing tests | — | `None`=unlimited, `0`=no-spend |
+| DS-01 TUI cost accumulation | Active | 0% | None | TICKET-12 | `_session_cost_cents` not incremented |
+| DS-08 resume always errors | Active | 0% | None | TICKET-16 | `run_started` event schema mismatch |
+| DS-11 Initial task dropped | Active | 0% | None | TASK-DD2-001 | `chat_command` never reads `args.task` |
+| H0 Claim + risk hygiene | In Progress | 60% | Partial | TBD | Risk register updated; validation script exists; claim registry TBD |
+| M0 Risk register operational | In Progress | 70% | Partial | TBD | Register has evidence; `validate_docs_consistency.py` exists; GOV-002 pending |
+
+**Merge gate:** `python3 scripts/validate_docs_consistency.py` must pass before any PR that updates roadmap or risk register status.
+
+**Unverified ecosystem claims:** See `docs/security/risk-register-and-threat-model-2026-06-02.md` Appendix C for a full list of aspirational claims that must not be marked as shipped without test evidence.
 
 ## Notes
 
