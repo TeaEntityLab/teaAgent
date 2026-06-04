@@ -215,6 +215,28 @@ def last_chain_hash(log_path: Path) -> str:
     return GENESIS_HASH
 
 
+def read_audit_events(log_path: Path) -> list[dict]:
+    """Read all audit events from a JSONL file, skipping malformed lines.
+
+    Returns a list of parsed event dicts in file order.  Non-dict lines
+    are silently skipped.
+    """
+    if not log_path.is_file():
+        return []
+    events: list[dict] = []
+    for line in log_path.read_text(encoding='utf-8').splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            obj = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            events.append(obj)
+    return events
+
+
 def _last_chain_hash_full(log_path: Path) -> str:
     last_hash = GENESIS_HASH
     for line in log_path.read_text(encoding='utf-8').splitlines():

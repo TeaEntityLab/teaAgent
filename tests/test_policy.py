@@ -1004,7 +1004,7 @@ class MultiSigQuorumTests(unittest.TestCase):
             )
 
     @unittest.skip(
-        'Multi-sig quorum requires federated_sync which may not be available in test environment'
+        'Multi-sig quorum requires federated_sync P2P broadcast — integration test, not unit-testable'
     )
     def test_multi_sig_quorum_stub_returns_false(self) -> None:
         """Verify stub implementation returns False (no quorum)."""

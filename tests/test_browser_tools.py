@@ -93,7 +93,9 @@ class BrowserToolsFunctionalTest(unittest.TestCase):
     def test_navigate_to_url(self) -> None:
         from teaagent.browser_tools import browser_navigate
 
-        result = browser_navigate('data:text/html,<h1>Hello</h1>')
+        result = browser_navigate(
+            'data:text/html,<html><title>Hello</title><h1>Hello</h1></html>'
+        )
         self.assertEqual(result['status'], 'ok')
         self.assertIn('Hello', result['title'])
 

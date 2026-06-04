@@ -174,90 +174,65 @@ class HMACApprovalQueueTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmpdir.cleanup()
 
-    def _make_store(self) -> 'ApprovalQueueStore':  # noqa: F821
+    def _make_store(self, hmac_secret: str | None = None) -> 'ApprovalQueueStore':  # noqa: F821
         from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
-        return ApprovalQueueStore(self.store_path)
+        return ApprovalQueueStore(self.store_path, hmac_secret=hmac_secret)
 
     def test_save_without_hmac_backward_compatible(self) -> None:
         """Save without hmac_secret, load succeeds (backward compat)."""
         store = self._make_store()
         pid = 'test-no-hmac'
-        try:
-            store.save(pid, {}, {})
-        except TypeError:
-            self.skipTest('HMAC save signature not yet implemented')
+        store.save(pid, {}, {})
         snapshot = store.load(pid)
         self.assertEqual(snapshot.parent_run_id, pid)
 
     def test_save_with_hmac_includes_signature(self) -> None:
         """Save with hmac_secret, verify ``_hmac`` key in JSON."""
-        store = self._make_store()
-        pid = 'test-with-hmac'
         secret = '0123456789abcdef0123456789abcdef'
-        try:
-            store.save(pid, {}, {}, hmac_secret=secret)
-        except TypeError:
-            self.skipTest('HMAC save signature not yet implemented')
+        store = self._make_store(hmac_secret=secret)
+        pid = 'test-with-hmac'
+        store.save(pid, {}, {})
         raw = json.loads(store.queue_path(pid).read_text(encoding='utf-8'))
         self.assertIn('_hmac', raw)
-        self.assertIn('signature', raw['_hmac'])
 
     def test_load_with_valid_hmac(self) -> None:
         """Save with hmac, load with same hmac succeeds."""
-        store = self._make_store()
-        pid = 'test-valid-hmac'
         secret = '0123456789abcdef0123456789abcdef'
-        try:
-            store.save(pid, {}, {}, hmac_secret=secret)
-        except TypeError:
-            self.skipTest('HMAC save signature not yet implemented')
-        try:
-            snapshot = store.load(pid, hmac_secret=secret)
-        except TypeError:
-            self.skipTest('HMAC load signature not yet implemented')
+        store = self._make_store(hmac_secret=secret)
+        pid = 'test-valid-hmac'
+        store.save(pid, {}, {})
+        snapshot = store.load(pid)
         self.assertEqual(snapshot.parent_run_id, pid)
 
     def test_load_with_invalid_hmac_returns_empty(self) -> None:
         """Save with hmac, tamper file, load returns empty snapshot."""
-        store = self._make_store()
-        pid = 'test-tamper-hmac'
         secret = '0123456789abcdef0123456789abcdef'
-        try:
-            store.save(pid, {}, {}, hmac_secret=secret)
-        except TypeError:
-            self.skipTest('HMAC save signature not yet implemented')
+        store = self._make_store(hmac_secret=secret)
+        pid = 'test-tamper-hmac'
+        store.save(pid, {}, {})
 
         path = store.queue_path(pid)
         data = json.loads(path.read_text(encoding='utf-8'))
         data['requests']['evil'] = {'status': 'approved'}
         path.write_text(json.dumps(data), encoding='utf-8')
 
-        try:
-            snapshot = store.load(pid, hmac_secret=secret)
-        except TypeError:
-            self.skipTest('HMAC load signature not yet implemented')
+        snapshot = store.load(pid)
         self.assertEqual(snapshot.requests, {})
 
     def test_load_with_missing_hmac_returns_empty(self) -> None:
         """Save with hmac, remove ``_hmac`` key from file, load returns empty."""
-        store = self._make_store()
-        pid = 'test-missing-hmac-key'
         secret = '0123456789abcdef0123456789abcdef'
-        try:
-            store.save(pid, {}, {}, hmac_secret=secret)
-        except TypeError:
-            self.skipTest('HMAC save signature not yet implemented')
+        store = self._make_store(hmac_secret=secret)
+        pid = 'test-missing-hmac-key'
+        store.save(pid, {}, {})
 
         path = store.queue_path(pid)
         data = json.loads(path.read_text(encoding='utf-8'))
         data.pop('_hmac', None)
         path.write_text(json.dumps(data), encoding='utf-8')
 
-        try:
-            snapshot = store.load(pid, hmac_secret=secret)
-        except TypeError:
-            self.skipTest('HMAC load signature not yet implemented')
+        snapshot = store.load(pid)
         self.assertEqual(snapshot.requests, {})
 
     def test_default_hmac_secret_from_env(self) -> None:

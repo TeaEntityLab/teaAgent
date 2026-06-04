@@ -7,7 +7,7 @@ import json
 import logging
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
+from teaagent.audit_chain import read_audit_events
 from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
 
@@ -75,8 +75,7 @@ def replay_steps(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        audit = AuditLogger(path=run_path)
-        entries = audit.events
+        entries = read_audit_events(run_path)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         logger.warning('Failed to read audit log: %s', exc)
         print_json(
@@ -92,9 +91,9 @@ def replay_steps(args: argparse.Namespace) -> int:
         steps.append(
             {
                 'step_number': i,
-                'event_type': entry.event_type,
-                'timestamp': entry.created_at,
-                'summary': entry.payload.get('summary', ''),
+                'event_type': entry.get('event_type', ''),
+                'timestamp': entry.get('created_at', ''),
+                'summary': (entry.get('payload') or {}).get('summary', ''),
             }
         )
 
@@ -136,8 +135,7 @@ def replay_fork(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        audit = AuditLogger(path=run_path)
-        entries = audit.events
+        entries = read_audit_events(run_path)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         logger.warning('Failed to read audit log: %s', exc)
         print_json(
@@ -169,13 +167,13 @@ def replay_fork(args: argparse.Namespace) -> int:
         'run_id': run_id,
         'fork_step': step_number,
         'branch_name': branch_name,
-        'fork_timestamp': fork_entry.created_at,
+        'fork_timestamp': fork_entry.get('created_at', ''),
         'fork_entry': {
-            'event_id': fork_entry.event_id,
-            'event_type': fork_entry.event_type,
-            'run_id': fork_entry.run_id,
-            'created_at': fork_entry.created_at,
-            'payload': fork_entry.payload,
+            'event_id': fork_entry.get('event_id', ''),
+            'event_type': fork_entry.get('event_type', ''),
+            'run_id': fork_entry.get('run_id', ''),
+            'created_at': fork_entry.get('created_at', ''),
+            'payload': fork_entry.get('payload', {}),
         },
     }
 
@@ -200,8 +198,8 @@ def replay_fork(args: argparse.Namespace) -> int:
             'fork_step': step_number,
             'branch_name': branch_name,
             'checkpoint_path': str(checkpoint_path),
-            'fork_event_type': fork_entry.event_type,
-            'fork_summary': fork_entry.payload.get('summary', ''),
+            'fork_event_type': fork_entry.get('event_type', ''),
+            'fork_summary': (fork_entry.get('payload') or {}).get('summary', ''),
         }
     )
     return 0
