@@ -247,7 +247,7 @@ class VertexAgentRuntimeTests(unittest.TestCase):
             output = runtime.run_task('task', context={})
 
         self.assertEqual(output, 'remote-response')
-        self.assertTrue(runtime.healthy())
+        self.assertTrue(runtime.health_check())
 
 
 if __name__ == '__main__':

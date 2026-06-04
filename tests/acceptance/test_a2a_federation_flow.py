@@ -3,8 +3,6 @@ from __future__ import annotations
 import time
 import unittest
 
-import pytest
-
 from teaagent.agentcard import (
     A2AClient,
     A2ADiscoveryServer,

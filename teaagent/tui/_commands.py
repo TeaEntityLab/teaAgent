@@ -190,9 +190,9 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: status requires a run id')
             return True
         run_id = args[0]
-        store = RunStore(tui.root)  # type: ignore[assignment]
+        run_store = RunStore(tui.root)
         try:
-            tui._print_json(store.heartbeat_for_run(run_id))
+            tui._print_json(run_store.heartbeat_for_run(run_id))
         except FileNotFoundError:
             tui.output_fn(f"error: run '{run_id}' not found")
         return True
@@ -262,37 +262,40 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: resume requires a run id')
             return True
         run_id = args[0]
-        store = RunStore(tui.root)
-        if not store.run_path(run_id).is_file():
+        run_store = RunStore(tui.root)
+        if not run_store.run_path(run_id).is_file():
             tui.output_fn(f"error: run '{run_id}' not found")
             return True
         try:
-            original_task = store.task_for_run(run_id)
+            original_task = run_store.task_for_run(run_id)
         except (FileNotFoundError, ValueError) as exc:
             tui.output_fn(f'error: {exc}')
             return True
 
-        initial_observations = store.observations_for_run(run_id)
-        pending = store.pending_approval_for_run(run_id)
+        initial_observations = run_store.observations_for_run(run_id)
+        pending = run_store.pending_approval_for_run(run_id)
         if pending:
             from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
             approval_store = ApprovalPresetStore(tui.root)
             digest = pending.get('argument_digest')
-            if isinstance(digest, str) and digest:
-                if not approval_store.check_scoped_approval_digest(
+            if (
+                isinstance(digest, str)
+                and digest
+                and not approval_store.check_scoped_approval_digest(
                     run_id=run_id,
                     call_id=pending['call_id'],
                     tool_name=pending['tool_name'],
                     argument_digest=digest,
-                ):
-                    approval_store.add_scoped_approval(
-                        run_id=run_id,
-                        call_id=pending['call_id'],
-                        tool_name=pending['tool_name'],
-                        arguments=pending.get('arguments', {}),
-                        argument_digest=digest,
-                    )
+                )
+            ):
+                approval_store.add_scoped_approval(
+                    run_id=run_id,
+                    call_id=pending['call_id'],
+                    tool_name=pending['tool_name'],
+                    arguments=pending.get('arguments', {}),
+                    argument_digest=digest,
+                )
         tui.output_fn(f'resume: {run_id}')
         _safe_run_agent_task(
             tui,
@@ -633,10 +636,10 @@ def _cmd_approvals(tui: 'TeaAgentTUI', args: list[str]) -> bool:
             tui.output_fn(f'revoked: {grant_id}')
         return True
     if sub == 'pending':
-        store = RunStore(tui.root)
+        run_store = RunStore(tui.root)
         pending_runs = []
-        for summary in store.list_runs(limit=20):
-            pending = store.pending_approval_for_run(summary.run_id)
+        for summary in run_store.list_runs(limit=20):
+            pending = run_store.pending_approval_for_run(summary.run_id)
             if pending:
                 pending_runs.append(
                     {
@@ -660,8 +663,8 @@ def _cmd_memory(tui: 'TeaAgentTUI', args: list[str]) -> bool:
 
 def _cmd_runs(tui: 'TeaAgentTUI', args: list[str]) -> bool:
     """Handle runs command."""
-    store = RunStore(tui.root)
-    tui._print_json([summary.to_dict() for summary in store.list_runs()])
+    run_store = RunStore(tui.root)
+    tui._print_json([summary.to_dict() for summary in run_store.list_runs()])
     return True
 
 

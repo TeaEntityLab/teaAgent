@@ -91,7 +91,6 @@ class PreflightTests(unittest.TestCase):
             # With complexity-based routing, "review this patch for regressions" routes to gpt-4o-mini (medium complexity)
             self.assertEqual(payload['model'], 'gpt-4o-mini')
 
-
     def test_preflight_detects_run_store_corruption(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             # Create a corrupt run file to trigger health detection

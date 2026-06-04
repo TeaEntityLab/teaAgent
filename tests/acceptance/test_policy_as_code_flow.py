@@ -14,8 +14,6 @@ Acceptance criteria:
 
 from __future__ import annotations
 
-import pytest
-
 from teaagent.audit import AuditLogger
 from teaagent.file_policy import DenyRule, FilePolicy, load_file_policy
 from teaagent.policy import ApprovalPolicy, PermissionMode

@@ -25,7 +25,7 @@ class SyncCLITests(unittest.TestCase):
             self.assertEqual(result, 0)
 
     def test_sync_export_without_graph_store(self) -> None:
-        """Test sync export without graph store."""
+        """Test sync export creates the graph store path in a fresh workspace."""
         with tempfile.TemporaryDirectory() as tmp:
             output_path = Path(tmp) / 'sync.json'
             args = argparse.Namespace(
@@ -36,8 +36,8 @@ class SyncCLITests(unittest.TestCase):
 
             result = sync_export(args)
 
-            # Should fail without graph store
-            self.assertEqual(result, 1)
+            self.assertEqual(result, 0)
+            self.assertTrue(output_path.is_file())
 
     def test_sync_import_nonexistent_file(self) -> None:
         """Test sync import with nonexistent file."""

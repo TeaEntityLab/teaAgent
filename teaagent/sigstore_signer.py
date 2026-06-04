@@ -11,15 +11,17 @@ import base64
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
 try:
-    from sigstore.sign import Signer
-    from sigstore.verify import VerificationMaterials, Verifier
+    from sigstore.sign import Signer as _Signer
+    from sigstore.verify import Verifier as _Verifier
     from sigstore.verify.policy import Identity
 
+    Signer = cast(Any, _Signer)
+    Verifier = cast(Any, _Verifier)
     SIGSTORE_AVAILABLE = True
 except ImportError:
     SIGSTORE_AVAILABLE = False
@@ -115,7 +117,7 @@ class SigstoreSigner:
 
             return materials
 
-        except (ImportError, OSError, ValueError, TypeError, RuntimeError) as exc:
+        except Exception as exc:
             logger.warning('Sigstore signing failed: %s', exc)
             raise ValueError(f'Sigstore signing failed: {exc}') from exc
 
@@ -151,12 +153,12 @@ class SigstoreSigner:
             # Decode signature
             signature_bytes = base64.b64decode(signature)
 
-            # Create verification materials
-            materials = VerificationMaterials(
-                input_=bundle_bytes,
-                signature=signature_bytes,
-                certificate_pem=certificate,
-            )
+            # Package the verification inputs for the sigstore verifier.
+            materials: Any = {
+                'input_': bundle_bytes,
+                'signature': signature_bytes,
+                'certificate_pem': certificate,
+            }
 
             # Create verifier - use offline mode if requested
             if offline:
@@ -224,8 +226,10 @@ class TSBProvenanceVerifier:
         certificate = attestation.get('certificate', '')
         signer_type = attestation.get('signer', '')
 
-        if self._require_signature and not signature:
-            return False, 'No signature found in bundle attestation'
+        if not signature:
+            if self._require_signature:
+                return False, 'No signature found in bundle attestation'
+            return False, 'No valid signature found in bundle attestation'
 
         if signer_type == 'sigstore-keyless':
             if not certificate:

@@ -6,7 +6,6 @@ import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
-import pytest
 from conftest import FakeAdapter
 
 from teaagent.cli import main

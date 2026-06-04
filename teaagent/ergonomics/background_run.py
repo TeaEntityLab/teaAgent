@@ -280,20 +280,20 @@ def _refresh_process_state(
         return data
 
     pid = int(data['pid'])
-    alive = _process_exists(pid)
-
     exit_code: Optional[int] = None
-    if alive:
-        try:
-            waited_pid, status = os.waitpid(pid, os.WNOHANG)
-        except ChildProcessError:
-            waited_pid = 0
-        except OSError:
-            waited_pid = pid
-            status = 1
-        if waited_pid == pid:
-            alive = False
-            exit_code = _exit_code_from_wait_status(status)
+    try:
+        waited_pid, status = os.waitpid(pid, os.WNOHANG)
+    except ChildProcessError:
+        waited_pid = 0
+    except OSError:
+        waited_pid = 0
+        status = 1
+
+    if waited_pid == pid:
+        alive = False
+        exit_code = _exit_code_from_wait_status(status)
+    else:
+        alive = _process_exists(pid)
 
     data['alive'] = alive
     if not alive:

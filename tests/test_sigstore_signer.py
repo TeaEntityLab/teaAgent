@@ -211,8 +211,8 @@ class TSBProvenanceVerifierTests(unittest.TestCase):
             verifier = TSBProvenanceVerifier(require_signature=True)
             is_valid, message = verifier.verify_provenance(bundle_path, manifest)
 
-            self.assertTrue(is_valid)
-            self.assertIn('SSH signature present', message)
+            self.assertFalse(is_valid)
+            self.assertIn('SSH signature verification not implemented', message)
 
     def test_verify_unknown_signer(self) -> None:
         """Test verification with unknown signer type."""
@@ -230,41 +230,47 @@ class TSBProvenanceVerifierTests(unittest.TestCase):
             verifier = TSBProvenanceVerifier(require_signature=True)
             is_valid, message = verifier.verify_provenance(bundle_path, manifest)
 
-            self.assertTrue(is_valid)
-            self.assertIn('Signature present from unknown', message)
+            self.assertFalse(is_valid)
+            self.assertIn('Unsupported signer type', message)
 
     def test_verify_offline_mode(self) -> None:
         """Test verification in offline mode (air-gapped environment)."""
         if not SIGSTORE_AVAILABLE:
             self.skipTest('sigstore-python not installed')
 
-        signer = SigstoreSigner()
+        with tempfile.TemporaryDirectory() as tmp:
+            test_file = Path(tmp) / 'artifact.txt'
+            test_file.write_text('test bundle content', encoding='utf-8')
 
-        # Mock verification in offline mode
-        with patch.object(signer._signer, 'sign') as mock_sign:
-            mock_sign.return_value = Mock(
-                signature=b'test_signature',
-                certificate_pem='test_cert',
-            )
+            signer = SigstoreSigner()
 
-            result = signer.sign(self.test_file)
-
-            # Test verification in offline mode
-            with patch.object(Verifier, 'production') as mock_verifier:
-                mock_verify_instance = Mock()
-                mock_verifier.return_value = mock_verify_instance
-                mock_verify_instance.verify.return_value = Mock()
-
-                is_valid = signer.verify(
-                    self.test_file,
-                    result['signature'],
-                    result['certificate'],
-                    offline=True,
+            # Mock verification in offline mode
+            with patch('teaagent.sigstore_signer.Signer') as mock_signer_cls:
+                mock_signer = Mock()
+                mock_signer.sign.return_value = Mock(
+                    signature=b'test_signature',
+                    certificate_pem='test_cert',
                 )
+                mock_signer_cls.return_value = mock_signer
 
-                self.assertTrue(is_valid)
-                # In offline mode, verifier should still be created but skip Rekor checks
-                mock_verifier.assert_called_once()
+                result = signer.sign(test_file)
+
+                # Test verification in offline mode
+                with patch.object(Verifier, 'production') as mock_verifier:
+                    mock_verify_instance = Mock()
+                    mock_verifier.return_value = mock_verify_instance
+                    mock_verify_instance.verify.return_value = Mock()
+
+                    is_valid = signer.verify(
+                        test_file,
+                        result['signature'],
+                        result['certificate'],
+                        offline=True,
+                    )
+
+                    self.assertTrue(is_valid)
+                    # In offline mode, verifier should still be created but skip Rekor checks
+                    mock_verifier.assert_called_once()
 
     def test_verifier_offline_mode(self) -> None:
         """Test TSBProvenanceVerifier in offline mode."""

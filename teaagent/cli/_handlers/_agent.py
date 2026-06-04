@@ -1736,8 +1736,8 @@ def _start_background_run(args: argparse.Namespace) -> int:
                     'status': 'error',
                     'message': (
                         f"'{run_id_candidate}' looks like an existing run id. "
-                        f"Use `teaagent agent resume {run_id_candidate}` or "
-                        f"`teaagent agent interactive-review {run_id_candidate}` instead."
+                        f'Use `teaagent agent resume {run_id_candidate}` or '
+                        f'`teaagent agent interactive-review {run_id_candidate}` instead.'
                     ),
                 }
             )
@@ -1748,7 +1748,7 @@ def _start_background_run(args: argparse.Namespace) -> int:
                     'status': 'error',
                     'message': (
                         f"'{run_id_candidate}' looks like a suspension id. "
-                        f"Use `teaagent agent interactive-review {run_id_candidate}` "
+                        f'Use `teaagent agent interactive-review {run_id_candidate}` '
                         'to inspect it; true resume is not yet available for REPL '
                         'suspensions.'
                     ),

@@ -7,7 +7,6 @@ import json
 from contextlib import redirect_stdout, suppress
 from pathlib import Path
 
-import pytest
 from conftest import FakeAdapter
 
 from teaagent.cli import main

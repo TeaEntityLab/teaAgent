@@ -10,8 +10,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from threading import Thread
 
-import pytest
-
 from teaagent.cli import main
 
 

@@ -8,7 +8,6 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
-import pytest
 from conftest import FakeAdapter
 
 from teaagent.cli import main
@@ -1390,7 +1389,9 @@ class TUITests(unittest.TestCase):
         """_safe_run_agent_task in _commands.py should catch exceptions from _run_agent_task."""
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
-        with patch.object(tui, '_run_agent_task', side_effect=RuntimeError('API failure')):
+        with patch.object(
+            tui, '_run_agent_task', side_effect=RuntimeError('API failure')
+        ):
             from teaagent.tui._commands import _safe_run_agent_task
 
             _safe_run_agent_task(tui, 'test task')

@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from teaagent.chat_agent import ChatAgentConfig
-from teaagent.cli._handlers._chat import chat_command
 from teaagent.cli._handlers._agent import agent_run_task
+from teaagent.cli._handlers._chat import chat_command
 from teaagent.cli._handlers.agent_review import interactive_review_mode
 from teaagent.cli._handlers.chat_commands import execute_shell_command
 from teaagent.cli._handlers.chat_completion import complete_file_path, complete_symbol
@@ -1070,7 +1070,9 @@ def test_suspend_to_background_basic(capsys):
         assert run_id  # Should return a run_id
         assert 'Suspending session as a checkpoint' in captured.out
         assert 'interactive-review' in captured.out
-        assert 'resume from repl session not yet supported via cli' in captured.out.lower()
+        assert (
+            'resume from repl session not yet supported via cli' in captured.out.lower()
+        )
         assert 'Session suspended successfully' in captured.out
 
         # Check suspension file was created

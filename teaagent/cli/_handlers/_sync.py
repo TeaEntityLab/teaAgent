@@ -16,6 +16,12 @@ from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 logger = logging.getLogger(__name__)
 
 
+def _graph_store_config(root: Path) -> GraphQLiteConfig:
+    teaagent_dir = root / '.teaagent'
+    teaagent_dir.mkdir(parents=True, exist_ok=True)
+    return GraphQLiteConfig(database=str(teaagent_dir / 'graphqlite.db'))
+
+
 def sync_export(args: argparse.Namespace) -> int:
     """Export federated sync message to file for P2P transfer.
 
@@ -31,7 +37,7 @@ def sync_export(args: argparse.Namespace) -> int:
 
     # Initialize graph store
     try:
-        config = GraphQLiteConfig(database=str(root / '.teaagent' / 'graphqlite.db'))
+        config = _graph_store_config(root)
         graph_store = GraphQLiteGraphStore(config)
     except (OSError, ValueError, ImportError, sqlite3.Error) as exc:
         logger.warning('Failed to initialize graph store: %s', exc)
@@ -110,7 +116,7 @@ def sync_import(args: argparse.Namespace) -> int:
 
     # Initialize graph store
     try:
-        config = GraphQLiteConfig(database=str(root / '.teaagent' / 'graphqlite.db'))
+        config = _graph_store_config(root)
         graph_store = GraphQLiteGraphStore(config)
     except (OSError, ValueError, ImportError, sqlite3.Error) as exc:
         logger.warning('Failed to initialize graph store: %s', exc)

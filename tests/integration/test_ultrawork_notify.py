@@ -12,8 +12,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 from unittest.mock import patch
 
-import pytest
-
 from teaagent.notify import NotifyConfig, fire_notification
 from teaagent.ultrawork import UltraworkStore, WorkerRecord
 

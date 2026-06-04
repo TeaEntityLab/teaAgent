@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -303,10 +304,7 @@ class TestFileWatcher:
 
     def test_file_watcher_initialization(self, temp_root: Path) -> None:
         """Test file watcher initialization."""
-        from teaagent.memory.file_watcher import WATCHDOG_AVAILABLE, FileWatcher
-
-        if not WATCHDOG_AVAILABLE:
-            pytest.skip('watchdog library not available')
+        from teaagent.memory.file_watcher import FileWatcher
 
         callback_called = []
 
@@ -326,33 +324,53 @@ class TestFileWatcher:
 
     def test_file_watcher_start_stop(self, temp_root: Path) -> None:
         """Test starting and stopping the file watcher."""
-        from teaagent.memory.file_watcher import WATCHDOG_AVAILABLE, FileWatcher
-
-        if not WATCHDOG_AVAILABLE:
-            pytest.skip('watchdog library not available')
+        from teaagent.memory.file_watcher import FileWatcher
 
         def test_callback(file_path: str, event_type: str) -> None:
             pass
 
-        watcher = FileWatcher(
-            root=temp_root,
-            callback=test_callback,
-        )
+        class DummyObserver:
+            def __init__(self) -> None:
+                self.scheduled: list[tuple[object, str, bool]] = []
+                self.started = False
+                self.stopped = False
+                self.join_timeout: float | None = None
 
-        # Start watcher
-        watcher.start()
-        assert watcher.is_running() is True
+            def schedule(
+                self, handler: object, path: str, recursive: bool = True
+            ) -> None:
+                self.scheduled.append((handler, path, recursive))
 
-        # Stop watcher
-        watcher.stop()
-        assert watcher.is_running() is False
+            def start(self) -> None:
+                self.started = True
+
+            def stop(self) -> None:
+                self.stopped = True
+
+            def join(self, timeout: float | None = None) -> None:
+                self.join_timeout = timeout
+
+        with patch('teaagent.memory.file_watcher.Observer', DummyObserver):
+            watcher = FileWatcher(
+                root=temp_root,
+                callback=test_callback,
+            )
+
+            # Start watcher
+            watcher.start()
+            assert watcher.is_running() is True
+            assert watcher.observer.started is True
+            assert len(watcher.observer.scheduled) == 1
+
+            # Stop watcher
+            watcher.stop()
+            assert watcher.is_running() is False
+            assert watcher.observer.stopped is True
+            assert watcher.observer.join_timeout == 5
 
     def test_update_watched_files(self, temp_root: Path) -> None:
         """Test updating the set of watched files."""
-        from teaagent.memory.file_watcher import WATCHDOG_AVAILABLE, FileWatcher
-
-        if not WATCHDOG_AVAILABLE:
-            pytest.skip('watchdog library not available')
+        from teaagent.memory.file_watcher import FileWatcher
 
         def test_callback(file_path: str, event_type: str) -> None:
             pass

@@ -171,9 +171,13 @@ class HeadlessTUITests(unittest.TestCase):
                 input_fn=lambda _p: '',
                 output_fn=output.append,
             )
-            tui.handle_command('pin test.txt')
-            tui.handle_command('pinned')
-            tui.handle_command('unpin test.txt')
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_stop_file_watcher'),
+            ):
+                tui.handle_command('pin test.txt')
+                tui.handle_command('pinned')
+                tui.handle_command('unpin test.txt')
             joined = '\n'.join(output)
             self.assertIn('pinned: test.txt', joined)
             self.assertIn('unpinned: test.txt', joined)

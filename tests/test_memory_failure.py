@@ -419,9 +419,7 @@ class TestFailureCardMatching:
         assert len(matching) == 1
         assert matching[0].run_id == 'run-1'
 
-    def test_empty_task_description_produces_no_match(
-        self, temp_root: Path
-    ) -> None:
+    def test_empty_task_description_produces_no_match(self, temp_root: Path) -> None:
         """Empty task description should not produce any match."""
         storage = FailureCardStorage(temp_root)
         card = FailureCard.create(
@@ -440,9 +438,7 @@ class TestFailureCardMatching:
         )
         assert len(matching) == 0
 
-    def test_stopwords_only_task_produces_no_match(
-        self, temp_root: Path
-    ) -> None:
+    def test_stopwords_only_task_produces_no_match(self, temp_root: Path) -> None:
         """Task with only stopwords should not match any card."""
         storage = FailureCardStorage(temp_root)
         card = FailureCard.create(
@@ -461,9 +457,7 @@ class TestFailureCardMatching:
         )
         assert len(matching) == 0
 
-    def test_short_tokens_only_produces_no_match(
-        self, temp_root: Path
-    ) -> None:
+    def test_short_tokens_only_produces_no_match(self, temp_root: Path) -> None:
         """Task with tokens shorter than 3 characters should not match."""
         storage = FailureCardStorage(temp_root)
         card = FailureCard.create(

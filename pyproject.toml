@@ -88,7 +88,11 @@ dev = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
     "cryptography>=3.4",
+    "watchdog>=3.0.0",
+    "prompt-toolkit>=3.0.0",
     "playwright>=1.40",
+    "sigstore>=2.0.0",
+    "wasmer>=1.0.0",
     "pre-commit>=3",
     "pytest>=7",
     "pytest-cov>=4",
@@ -101,6 +105,8 @@ dev = [
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
     "opentelemetry-exporter-otlp-proto-http>=1.42.1",
+    "google-adk",
+    "google-cloud-aiplatform>=1.154.0",
 ]
 
 [project.scripts]
