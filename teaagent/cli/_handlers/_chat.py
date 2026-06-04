@@ -22,8 +22,6 @@ def chat_command(args: argparse.Namespace) -> int:
     max_iterations = getattr(args, 'max_iterations', 10)
     max_tool_calls = getattr(args, 'max_tool_calls', 10)
     max_estimated_cost_cents = getattr(args, 'max_estimated_cost_cents', 500)
-    if max_estimated_cost_cents is None:
-        max_estimated_cost_cents = 500
     enable_subagent = getattr(args, 'subagent', False)
     max_subagent_depth = getattr(args, 'max_subagent_depth', 1)
     heartbeat_seconds = getattr(args, 'heartbeat', 0.0)

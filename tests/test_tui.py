@@ -276,6 +276,41 @@ class TUITests(unittest.TestCase):
             self.assertEqual(payload['status'], 'pending_approval')
             self.assertFalse((Path(tmp) / 'x.txt').exists())
 
+    def test_tui_path_approval_without_path_stays_denied(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+            from teaagent.runner import ApprovalRequest
+
+            output = []
+            replies = iter(['p'])
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: next(replies),
+                output_fn=output.append,
+            )
+
+            request = ApprovalRequest(
+                call_id='c124',
+                tool_name='workspace_write_file',
+                arguments={},
+                reason='Needs approval',
+                annotations={
+                    'destructive': True,
+                    'read_only': False,
+                    'idempotent': True,
+                },
+                run_id='run-tui-124',
+            )
+
+            approved = tui._approval_handler(request)
+            self.assertFalse(approved)
+            self.assertTrue(
+                any('path-scoped grant not created' in str(line) for line in output)
+            )
+
+            store = ApprovalPresetStore(tmp)
+            self.assertEqual(store.list_grants(), [])
+
     def test_tui_scoped_approval_exact_matching(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             from teaagent.ergonomics.approval_store import ApprovalPresetStore
@@ -1260,18 +1295,18 @@ class TUITests(unittest.TestCase):
     def test_tui_effort_default_is_unlimited(self) -> None:
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=list.append)
         self.assertEqual(tui._effort_level, 'unlimited')
-        self.assertEqual(tui._max_cost_budget_cents, 0)
-        self.assertEqual(tui._runtime_max_cost_cents, 0)
+        self.assertIsNone(tui._max_cost_budget_cents)
+        self.assertIsNone(tui._runtime_max_cost_cents)
 
-    def test_tui_effort_unlimited_sets_zero_cents(self) -> None:
+    def test_tui_effort_unlimited_clears_budget(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         # Switch to low first to change from default unlimited
         tui._handle_effort(['low'])
         tui._handle_effort(['unlimited'])
         self.assertEqual(tui._effort_level, 'unlimited')
-        self.assertEqual(tui._max_cost_budget_cents, 0)
-        self.assertEqual(tui._runtime_max_cost_cents, 0)
+        self.assertIsNone(tui._max_cost_budget_cents)
+        self.assertIsNone(tui._runtime_max_cost_cents)
 
     def test_tui_effort_unlimited_shows_unlimited_text(self) -> None:
         output: list[str] = []
@@ -1284,6 +1319,7 @@ class TUITests(unittest.TestCase):
     def test_tui_budget_unlimited_shows_unlimited_text(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._max_cost_budget_cents = None
         tui._session_cost_cents = 50.0
         tui._handle_budget()
         text = ' '.join(output)
@@ -1292,7 +1328,40 @@ class TUITests(unittest.TestCase):
         self.assertNotIn('$0.00', text)
 
     def test_tui_budget_unlimited_wired_to_agent_run(self) -> None:
-        """Verify unlimited (0) is passed as max_estimated_cost_cents."""
+        """Verify unlimited (None) is passed as max_estimated_cost_cents."""
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        tui._runtime_max_cost_cents = None
+        with (
+            patch.object(tui, '_start_file_watcher'),
+            patch.object(tui, '_load_tui_state'),
+            patch.object(tui, '_save_tui_state'),
+            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
+            patch('teaagent.tui.RunStore') as mock_store,
+            patch('teaagent.tui.create_llm_adapter'),
+        ):
+            mock_run.return_value = unittest.mock.MagicMock(
+                run_id='test-run',
+                status='completed',
+                iterations=1,
+                tool_calls=0,
+                cost_cents=0.0,
+                final_answer=unittest.mock.MagicMock(content='ok'),
+                metadata={},
+                error_message=None,
+            )
+            mock_store.return_value.list_runs.return_value = []
+            mock_store.return_value.show_run.return_value = {}
+            mock_store.return_value.logger_for_result = lambda *a: None
+            mock_store.return_value.audit_logger = lambda: unittest.mock.MagicMock()
+
+            tui._run_agent_task('test task')
+
+            _args, kwargs = mock_run.call_args
+            config = _args[0]
+            self.assertIsNone(config.max_estimated_cost_cents)
+
+    def test_tui_budget_zero_wired_to_agent_run(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._runtime_max_cost_cents = 0

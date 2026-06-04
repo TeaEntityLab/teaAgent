@@ -174,7 +174,7 @@ def print_chat_help() -> None:
     print('  /drop <path>               - Remove file/directory from context')
     print('  /provider <name>           - Switch LLM provider')
     print('  /model <name>              - Switch model')
-    print('  /effort <low|normal|high>  - Set effort throttling level')
+    print('  /effort <low|normal|high|unlimited>  - Set effort throttling level')
     print('  /budget                    - Show budget status')
     print('  /checkpoint                - Create manual git checkpoint')
     print(
@@ -278,7 +278,7 @@ def run_chat_repl(
 
     # Runtime configuration for hot-swapping (avoids frozen dataclass issue)
     runtime_model = config.model
-    runtime_max_cost_cents = config.max_estimated_cost_cents or 1000
+    runtime_max_cost_cents = config.max_estimated_cost_cents
 
     # Create initial adapter (will be recreated on model swap)
     provider = (
@@ -291,8 +291,18 @@ def run_chat_repl(
 
     # Effort throttling configuration
     effort_level = 'normal'  # low, normal, high
-    max_cost_budget_cents = config.max_estimated_cost_cents or 1000  # Default $10
+    max_cost_budget_cents = config.max_estimated_cost_cents
     session_cost_cents: float = 0
+
+    def _format_budget(cents: int | None) -> str:
+        if cents is None:
+            return 'unlimited'
+        return f'${cents / 100:.2f}'
+
+    def _format_remaining(cents: int | None, spent: float) -> str:
+        if cents is None:
+            return 'unlimited'
+        return f'${max(cents - spent, 0) / 100:.2f}'
 
     # File watcher for live context synchronization
     file_watcher = None
@@ -537,7 +547,7 @@ def run_chat_repl(
                 runtime_max_cost_cents = 5000
 
             print(f'[TeaAgent] Effort level set to: {level}')
-            print(f'[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}')
+            print(f'[TeaAgent] Budget limit: {_format_budget(max_cost_budget_cents)}')
             return True
         except Exception as exc:
             print(f'[TeaAgent] Error setting effort level: {exc}')
@@ -546,10 +556,10 @@ def run_chat_repl(
     def show_effort_status() -> None:
         """Display current effort throttling status."""
         print(f'[TeaAgent] Effort level: {effort_level}')
-        print(f'[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}')
+        print(f'[TeaAgent] Budget limit: {_format_budget(max_cost_budget_cents)}')
         print(f'[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}')
         print(
-            f'[TeaAgent] Remaining budget: ${(max_cost_budget_cents - session_cost_cents) / 100:.2f}'
+            f'[TeaAgent] Remaining budget: {_format_remaining(max_cost_budget_cents, session_cost_cents)}'
         )
 
     # Automatic checkpoint creation disabled for data safety
@@ -699,9 +709,9 @@ def run_chat_repl(
             # Handle cost command
             if user_input == '/cost':
                 print(f'[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}')
-                print(f'[TeaAgent] Budget limit: ${max_cost_budget_cents / 100:.2f}')
+                print(f'[TeaAgent] Budget limit: {_format_budget(max_cost_budget_cents)}')
                 print(
-                    f'[TeaAgent] Remaining: ${(max_cost_budget_cents - session_cost_cents) / 100:.2f}'
+                    f'[TeaAgent] Remaining: {_format_remaining(max_cost_budget_cents, session_cost_cents)}'
                 )
                 continue
 

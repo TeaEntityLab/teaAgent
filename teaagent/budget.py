@@ -16,14 +16,17 @@ class RunBudget:
 
     max_iterations: int = 25
     max_tool_calls: int = 25
-    max_estimated_cost_cents: int = 100
+    max_estimated_cost_cents: int | None = 100
 
     def validate(self) -> None:
         if self.max_iterations < 1:
             raise ValueError('max_iterations must be >= 1')
         if self.max_tool_calls < 0:
             raise ValueError('max_tool_calls must be >= 0')
-        if self.max_estimated_cost_cents < 0:
+        if (
+            self.max_estimated_cost_cents is not None
+            and self.max_estimated_cost_cents < 0
+        ):
             raise ValueError('max_estimated_cost_cents must be >= 0')
 
     def check_cost_preflight(
@@ -33,7 +36,7 @@ class RunBudget:
         approx_input_chars: int,
         max_output_tokens: int,
     ) -> None:
-        if self.max_estimated_cost_cents <= 0:
+        if self.max_estimated_cost_cents is None:
             return
         estimated = estimate_cost_preflight(
             provider, model, approx_input_chars, max_output_tokens

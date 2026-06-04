@@ -45,6 +45,17 @@ class SessionGrant:
     max_uses: int = 0  # 0 means unlimited
 
 
+def _normalize_grant_patterns(
+    values: Sequence[str] | None, *, field_name: str
+) -> tuple[str, ...] | None:
+    if values is None:
+        return None
+    cleaned = tuple(str(value) for value in values if value and str(value).strip())
+    if not cleaned:
+        raise ValueError(f'{field_name} must contain at least one non-empty value')
+    return cleaned
+
+
 class ApprovalPresetStore:
     def __init__(self, root: _RootType, *, readonly: bool = False) -> None:
         if isinstance(root, ApprovalPersistence):
@@ -430,14 +441,20 @@ class ApprovalPresetStore:
         expires_at = _compute_expires_at(
             scope=scope, created_at=now, ttl_hours=ttl_hours
         )
+        normalized_path_globs = _normalize_grant_patterns(
+            path_globs, field_name='path_globs'
+        )
+        normalized_command_prefixes = _normalize_grant_patterns(
+            command_prefixes, field_name='command_prefixes'
+        )
         entry = ApprovalGrant(
             grant_id=_new_grant_id(),
             tool_name=tool_name,
             scope=scope,
             permission_mode=permission_mode,
             created_at=now,
-            path_globs=tuple(path_globs or ()),
-            command_prefixes=tuple(command_prefixes or ()),
+            path_globs=normalized_path_globs or (),
+            command_prefixes=normalized_command_prefixes or (),
             expires_at=expires_at,
         )
         with file_lock(self.path):

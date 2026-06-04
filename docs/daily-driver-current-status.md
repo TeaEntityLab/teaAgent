@@ -23,7 +23,7 @@ On failure: [Recovery And Continuity Guide](recovery-and-continuity-guide.md).
 
 - Approval governance, audit logging, plan-before-write gates, and run summaries remain the strongest parts of the project.
 - `teaagent chat` prints successful task answers and no longer marks successful tasks as failures.
-- `teaagent chat` `/cost` and `/budget` are wired to real session cost.
+- `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap.
 - `teaagent chat` `/undo` uses the undo journal and preserves unrelated manual edits.
 - TUI setup, preflight, runs, session listing, and approval commands provide useful operational coverage.
 - TUI `/cost` now accumulates via ChatSessionController (CG-11 fixed).
@@ -87,6 +87,8 @@ plan, and a work-item ledger:
 
 | Fix | What changed | Tracking |
 |-----|-------------|----------|
+| Path-scoped approval without a path now fails closed. | `p` no longer falls back to a global grant when no path can be extracted, and blank scoped patterns are rejected at the store boundary. | DS-12 / approval UX |
+| Budget semantics are explicit. | `None` means unlimited, `0` is a real zero cap, and the TUI/CLI budget displays reflect that distinction. | DS-13 / budget UX |
 | Explicit `--root` no longer overwritten by saved TUI state. | `_load_tui_state` condition was inverted (checked `'root' not in data` instead of finding saved root). Root restoration now guarded by `_root_explicit` flag, set by CLI entry points via `run_tui()`. | TASK-DD2-002 |
 | TUI undo now uses `ChatSessionController.undo_last_run()` with checkpoint fallback. | TUI `/undo` first tries undo journal (file-level restore), falls back to git-stash checkpoint. | CG-15 / TICKET-12 |
 | TUI cost display now reads from `ChatSessionController` session state (source of truth). | `_handle_cost` uses `controller.get_session_cost()` with local fallback. | CG-11 / TICKET-12 |

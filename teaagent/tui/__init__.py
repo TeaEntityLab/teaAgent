@@ -41,6 +41,31 @@ def default_adapter_factory(provider: str, model: Optional[str]) -> LLMAdapter:
     return create_llm_adapter(provider, model=model)
 
 
+def _format_budget_cents(value: int | None) -> str:
+    if value is None:
+        return 'unlimited'
+    return f'${value // 100}.{value % 100:02d}'
+
+
+def _format_remaining_cents(limit: int | None, spent_cents: float) -> str:
+    if limit is None:
+        return 'unlimited'
+    remaining = max(float(limit) - spent_cents, 0.0)
+    return f'${int(remaining // 100)}.{int(remaining % 100):02d}'
+
+
+def _effort_level_for_budget(limit: int | None) -> str:
+    if limit is None:
+        return 'unlimited'
+    if limit == 200:
+        return 'low'
+    if limit == 1000:
+        return 'normal'
+    if limit == 5000:
+        return 'high'
+    return 'custom'
+
+
 HELP_TEXT = """Commands:
   help                      Show this help.
   setup [write-env]         Guided first-session workspace setup (same as teaagent setup).
@@ -105,7 +130,7 @@ HELP_TEXT = """Commands:
   pinned                    List all pinned files.
   compact                   Compact session context to save tokens.
   cost                      Show session cost.
-  effort <low|normal|high|unlimited>  Set effort throttling level. Default is unlimited (no cost cap).
+  effort <low|normal|high|unlimited>  Set effort throttling level.
   budget                    Show budget and effort status.
   checkpoint                Create manual git checkpoint.
   undo [run_id]              Undo last agent edit (journal-first, checkpoint fallback).
@@ -139,7 +164,7 @@ class TeaAgentTUI:
         enable_git_tools: bool = False,
         skill_search_dirs: Optional[list[str]] = None,
         memory_limit: int = 5,
-        max_estimated_cost_cents: int = 500,
+        max_estimated_cost_cents: int | None = None,
     ) -> None:
         self.database = database
         self.provider = provider
@@ -190,9 +215,9 @@ class TeaAgentTUI:
         self._session_state = SessionState()
 
         # Effort throttling and budget tracking
-        self._effort_level: str = 'unlimited'
-        self._runtime_max_cost_cents: int = 0
-        self._max_cost_budget_cents: int = 0
+        self._effort_level: str = _effort_level_for_budget(max_estimated_cost_cents)
+        self._runtime_max_cost_cents: int | None = max_estimated_cost_cents
+        self._max_cost_budget_cents: int | None = max_estimated_cost_cents
 
         # Cockpit state for operator dashboard
         self._cockpit_state: Optional[CockpitState] = None
@@ -785,16 +810,9 @@ class TeaAgentTUI:
     def _handle_effort(self, args: list[str]) -> None:
         if not args:
             cost_cents = self._get_session_cost_cents()
-            remaining = self._max_cost_budget_cents - cost_cents
-            budget_str = (
-                'unlimited'
-                if self._max_cost_budget_cents == 0
-                else f'${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
-            )
-            remaining_str = (
-                'unlimited'
-                if self._max_cost_budget_cents == 0
-                else f'${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
+            budget_str = _format_budget_cents(self._max_cost_budget_cents)
+            remaining_str = _format_remaining_cents(
+                self._max_cost_budget_cents, cost_cents
             )
             self.output_fn(
                 f'effort: {self._effort_level}  '
@@ -818,28 +836,16 @@ class TeaAgentTUI:
             self._max_cost_budget_cents = 5000
             self._runtime_max_cost_cents = 5000
         else:
-            self._max_cost_budget_cents = 0
-            self._runtime_max_cost_cents = 0
-        budget_str = (
-            'unlimited'
-            if self._max_cost_budget_cents == 0
-            else f'${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
-        )
+            self._max_cost_budget_cents = None
+            self._runtime_max_cost_cents = None
+        self._effort_level = level
+        budget_str = _format_budget_cents(self._max_cost_budget_cents)
         self.output_fn(f'effort: {level}  budget={budget_str}')
 
     def _handle_budget(self) -> None:
         cost_cents = self._get_session_cost_cents()
-        remaining = self._max_cost_budget_cents - cost_cents
-        limit_str = (
-            'unlimited'
-            if self._max_cost_budget_cents == 0
-            else f'${self._max_cost_budget_cents // 100}.{self._max_cost_budget_cents % 100:02d}'
-        )
-        remaining_str = (
-            'unlimited'
-            if self._max_cost_budget_cents == 0
-            else f'${int(max(remaining, 0) // 100)}.{int(max(remaining, 0) % 100):02d}'
-        )
+        limit_str = _format_budget_cents(self._max_cost_budget_cents)
+        remaining_str = _format_remaining_cents(self._max_cost_budget_cents, cost_cents)
         self.output_fn(
             f'budget: effort={self._effort_level}  '
             f'limit={limit_str}  '
@@ -1086,12 +1092,11 @@ class TeaAgentTUI:
         elif answer == 'p':
             path = None
             if request.arguments:
-                path = (
-                    request.arguments.get('path')
-                    or request.arguments.get('TargetFile')
-                    or request.arguments.get('target_file')
-                    or request.arguments.get('AbsolutePath')
-                )
+                for key in ('path', 'TargetFile', 'target_file', 'AbsolutePath'):
+                    candidate = request.arguments.get(key)
+                    if isinstance(candidate, str) and candidate.strip():
+                        path = candidate
+                        break
             if path:
                 store.grant(
                     request.tool_name,
@@ -1104,15 +1109,10 @@ class TeaAgentTUI:
                     f'approval: registered session grant for {request.tool_name} matching path: {path}'
                 )
             else:
-                store.grant(
-                    request.tool_name,
-                    scope='session',
-                    permission_mode=self.permission_mode.value,
-                    ttl_hours=8.0,
-                )
                 self.output_fn(
-                    f'approval: registered global session grant for {request.tool_name}'
+                    f'approval: no path found in tool arguments; path-scoped grant not created for {request.tool_name}'
                 )
+                return False
             return True
         elif answer == 't':
             store.grant(
@@ -1294,7 +1294,7 @@ def run_tui(
     enable_git_tools: bool = False,
     skill_search_dirs: Optional[list[str]] = None,
     memory_limit: int = 5,
-    max_estimated_cost_cents: int = 500,
+    max_estimated_cost_cents: int | None = 500,
     # TASK-DD2-001: initial task from `teaagent chat "task"` positional arg
     initial_task: Optional[str] = None,
 ) -> int:

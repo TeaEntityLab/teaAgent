@@ -161,12 +161,11 @@ def make_cli_approval_handler(
         elif answer == 'p':
             path = None
             if request.arguments:
-                path = (
-                    request.arguments.get('path')
-                    or request.arguments.get('TargetFile')
-                    or request.arguments.get('target_file')
-                    or request.arguments.get('AbsolutePath')
-                )
+                for key in ('path', 'TargetFile', 'target_file', 'AbsolutePath'):
+                    candidate = request.arguments.get(key)
+                    if isinstance(candidate, str) and candidate.strip():
+                        path = candidate
+                        break
             if path:
                 store.grant(
                     request.tool_name,
@@ -182,9 +181,10 @@ def make_cli_approval_handler(
                 return True
             else:
                 print(
-                    '[TeaAgent] No path found in arguments, falling back to tool scope',
+                    '[TeaAgent] No path found in arguments; path-scoped grant not created',
                     file=sys.stderr,
                 )
+                return False
         elif answer == 't':
             store.grant(
                 request.tool_name,

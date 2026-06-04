@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import FrozenInstanceError
+from unittest.mock import patch
 
 from teaagent.budget import RunBudget
+from teaagent.errors import BudgetExceededError
 
 
 class RunBudgetTests(unittest.TestCase):
@@ -38,6 +40,18 @@ class RunBudgetTests(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             budget.validate()
         self.assertIn('cost_cents', str(ctx.exception))
+
+    def test_none_cost_budget_skips_preflight(self) -> None:
+        budget = RunBudget(max_estimated_cost_cents=None)
+        with patch('teaagent.budget.estimate_cost_preflight') as mock_estimate:
+            budget.check_cost_preflight('gpt', 'gpt-4o-mini', 100, 10)
+        mock_estimate.assert_not_called()
+
+    def test_zero_cost_budget_blocks_preflight(self) -> None:
+        budget = RunBudget(max_estimated_cost_cents=0)
+        with patch('teaagent.budget.estimate_cost_preflight', return_value=1):
+            with self.assertRaises(BudgetExceededError):
+                budget.check_cost_preflight('gpt', 'gpt-4o-mini', 100, 10)
 
     def test_budget_is_frozen(self) -> None:
         budget = RunBudget()

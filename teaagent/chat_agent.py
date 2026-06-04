@@ -67,7 +67,7 @@ class ChatAgentConfig:
     root: Path
     max_iterations: int = 10
     max_tool_calls: int = 10
-    max_estimated_cost_cents: int = 500
+    max_estimated_cost_cents: int | None = 500
     allow_destructive: bool = False
     model: Optional[str] = None
     permission_mode: PermissionMode = PermissionMode.PROMPT
@@ -553,15 +553,10 @@ def _create_runner_and_engine(
     Returns:
         Tuple of (runner, engine)
     """
-    cost_cap = (
-        config.max_estimated_cost_cents
-        if config.max_estimated_cost_cents >= 0
-        else RunBudget().max_estimated_cost_cents
-    )
     runner_budget = RunBudget(
         max_iterations=config.max_iterations,
         max_tool_calls=config.max_tool_calls,
-        max_estimated_cost_cents=cost_cap,
+        max_estimated_cost_cents=config.max_estimated_cost_cents,
     )
     engine = ModelDecisionEngine(
         adapter=adapter,

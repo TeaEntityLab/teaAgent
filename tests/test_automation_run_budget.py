@@ -115,6 +115,11 @@ def test_chat_agent_config_cost_cap_defaults_to_runner_budget() -> None:
 
 
 def test_chat_agent_config_cost_cap_zero_passes_through() -> None:
-    """0 should pass through as-is (unlimited / no cap)."""
+    """0 should pass through as-is as a real zero cap."""
     config = ChatAgentConfig.from_root('.', max_estimated_cost_cents=0)
     assert config.max_estimated_cost_cents == 0
+
+
+def test_chat_agent_config_cost_cap_none_passes_through() -> None:
+    config = ChatAgentConfig.from_root('.', max_estimated_cost_cents=None)
+    assert config.max_estimated_cost_cents is None

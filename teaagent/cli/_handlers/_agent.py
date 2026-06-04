@@ -632,42 +632,42 @@ def _execute_agent_task(
 
     stream_handlers = build_run_stream_handlers(args, audit)
     use_stream = stream_handlers.stream and adapter_supports_streaming(adapter)
+    max_estimated_cost_cents = getattr(args, 'max_estimated_cost_cents', 500)
+    config = ChatAgentConfig.from_root(
+        args.root,
+        max_iterations=args.max_iterations,
+        max_tool_calls=args.max_tool_calls,
+        max_estimated_cost_cents=max_estimated_cost_cents,
+        allow_destructive=args.allow_destructive,
+        model=selected_model,
+        permission_mode=resolved_permission_mode,
+        approved_call_ids=frozenset(args.approve_call_id),
+        enable_subagent=args.subagent,
+        max_subagent_depth=args.max_subagent_depth,
+        heartbeat_seconds=args.heartbeat,
+        approval_handler=approval_handler,
+        budget_prompt_handler=budget_prompt_handler,
+        checkpoint_store=checkpoint_store,
+        stream=use_stream,
+        on_chunk=stream_handlers.on_chunk,
+        stream_text_only=stream_handlers.stream_text_only,
+        code_analysis_config=(
+            CodeAnalysisConfig.from_root(args.root, enabled=True)
+            if getattr(args, 'code_analysis', False)
+            else None
+        ),
+        selected_skills=_resolve_selected_skills(args),
+        skill_prompt_mode=(
+            'index_only' if getattr(args, 'skill_index_only', False) else 'eager'
+        ),
+        require_plan=getattr(args, 'require_plan', False),
+        skip_plan_check=getattr(args, 'skip_plan_check', False),
+        validation_profile=_resolve_validation_profile(args),
+    )
     result = run_chat_agent(
         task=task,
         adapter=adapter,
-        config=ChatAgentConfig.from_root(
-            args.root,
-            max_iterations=args.max_iterations,
-            max_tool_calls=args.max_tool_calls,
-            max_estimated_cost_cents=int(
-                getattr(args, 'max_estimated_cost_cents', 500) or 500
-            ),
-            allow_destructive=args.allow_destructive,
-            model=selected_model,
-            permission_mode=resolved_permission_mode,
-            approved_call_ids=frozenset(args.approve_call_id),
-            enable_subagent=args.subagent,
-            max_subagent_depth=args.max_subagent_depth,
-            heartbeat_seconds=args.heartbeat,
-            approval_handler=approval_handler,
-            budget_prompt_handler=budget_prompt_handler,
-            checkpoint_store=checkpoint_store,
-            stream=use_stream,
-            on_chunk=stream_handlers.on_chunk,
-            stream_text_only=stream_handlers.stream_text_only,
-            code_analysis_config=(
-                CodeAnalysisConfig.from_root(args.root, enabled=True)
-                if getattr(args, 'code_analysis', False)
-                else None
-            ),
-            selected_skills=_resolve_selected_skills(args),
-            skill_prompt_mode=(
-                'index_only' if getattr(args, 'skill_index_only', False) else 'eager'
-            ),
-            require_plan=getattr(args, 'require_plan', False),
-            skip_plan_check=getattr(args, 'skip_plan_check', False),
-            validation_profile=_resolve_validation_profile(args),
-        ),
+        config=config,
         audit=audit,
         task_spec=task_spec,
         initial_observations=initial_observations,
@@ -929,15 +929,9 @@ def _execute_agent_task(
         permission_mode=resolved_permission_mode.value,
     )
     if not getattr(args, 'no_summary', False):
-        from teaagent.budget import RunBudget
         from teaagent.ergonomics.run_summary import summarize_run
         from teaagent.run_evidence import build_run_evidence_bundle
 
-        cap = (
-            int(args.max_estimated_cost_cents)
-            if int(getattr(args, 'max_estimated_cost_cents', 0) or 0) > 0
-            else RunBudget().max_estimated_cost_cents
-        )
         payload['run_summary'] = summarize_run(
             root=args.root,
             run_id=result.run_id,
@@ -945,7 +939,7 @@ def _execute_agent_task(
             cost_cents=result.cost_cents,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
-            budget_cap_cents=cap,
+            budget_cap_cents=config.max_estimated_cost_cents,
         )
         # Surface run evidence bundle when available (commands, tests, approvals, gaps)
         try:
@@ -1428,12 +1422,11 @@ def make_cli_approval_handler(
         elif answer == 'p':
             path = None
             if request.arguments:
-                path = (
-                    request.arguments.get('path')
-                    or request.arguments.get('TargetFile')
-                    or request.arguments.get('target_file')
-                    or request.arguments.get('AbsolutePath')
-                )
+                for key in ('path', 'TargetFile', 'target_file', 'AbsolutePath'):
+                    candidate = request.arguments.get(key)
+                    if isinstance(candidate, str) and candidate.strip():
+                        path = candidate
+                        break
             if path:
                 store.grant(
                     request.tool_name,
@@ -1447,16 +1440,11 @@ def make_cli_approval_handler(
                     file=sys.stderr,
                 )
             else:
-                store.grant(
-                    request.tool_name,
-                    scope='session',
-                    permission_mode=permission_mode,
-                    ttl_hours=DEFAULT_SESSION_GRANT_TTL_HOURS,
-                )
                 print(
-                    f'[TeaAgent] No path found in tool arguments. Registered global session grant for {request.tool_name}',
+                    f'[TeaAgent] No path found in tool arguments; path-scoped grant not created for {request.tool_name}',
                     file=sys.stderr,
                 )
+                return False
             return True
         elif answer == 't':
             store.grant(

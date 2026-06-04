@@ -49,6 +49,21 @@ def test_approval_preset_store(tmp_path: Path) -> None:
     assert not store.is_allowed('workspace_apply_patch', permission_mode='prompt')
 
 
+def test_approval_preset_store_rejects_blank_scoped_patterns(tmp_path: Path) -> None:
+    store = ApprovalPresetStore(tmp_path)
+    with pytest.raises(ValueError):
+        store.grant(
+            'workspace_write_file',
+            scope='session',
+            path_globs=[''],
+        )
+    with pytest.raises(ValueError):
+        store.deny(
+            'workspace_apply_patch',
+            command_prefixes=[' '],
+        )
+
+
 def test_scoped_approval_path_glob(tmp_path: Path) -> None:
     store = ApprovalPresetStore(tmp_path)
     store.grant(

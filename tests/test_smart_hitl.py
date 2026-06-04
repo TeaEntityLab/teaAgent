@@ -50,6 +50,26 @@ def test_smart_hitl_approval_p() -> None:
         assert grants[0].scope == 'session'
 
 
+def test_smart_hitl_approval_p_without_path_stays_denied() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        request = ApprovalRequest(
+            tool_name='workspace_write_file',
+            call_id='c4',
+            arguments={},
+            reason='',
+            annotations={},
+        )
+        with (
+            patch('builtins.input', return_value='p'),
+            patch('sys.stderr', new_callable=io.StringIO),
+        ):
+            handler = make_cli_approval_handler(tmp, permission_mode='prompt')
+            assert handler(request) is False
+
+        store = ApprovalPresetStore(tmp, readonly=True)
+        assert store.list_grants() == []
+
+
 def test_smart_hitl_approval_t() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         request = ApprovalRequest(

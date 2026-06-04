@@ -92,7 +92,7 @@ class AgentExecutionFactory:
         self,
         max_iterations: int = 10,
         max_tool_calls: int = 10,
-        max_estimated_cost_cents: int = 0,
+        max_estimated_cost_cents: int | None = 500,
         allow_destructive: bool = False,
         model: Optional[str] = None,
         permission_mode: PermissionMode = PermissionMode.PROMPT,

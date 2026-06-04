@@ -4,8 +4,6 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from teaagent.budget import RunBudget
-
 
 def _unique_strs(values: list[str]) -> list[str]:
     seen: set[str] = set()
@@ -83,9 +81,9 @@ def summarize_run(
     undo_path = resolved_root / '.teaagent' / 'undo' / f'{run_id}.jsonl'
     changed_paths = _changed_paths_from_undo_journal(undo_path)
 
-    if budget_cap_cents is None:
-        budget_cap_cents = RunBudget().max_estimated_cost_cents
-    remaining_cents = float(budget_cap_cents) - float(cost_cents_value)
+    remaining_cents: float | None = None
+    if budget_cap_cents is not None:
+        remaining_cents = float(budget_cap_cents) - float(cost_cents_value)
 
     summary: dict[str, Any] = {
         'tool_calls_total': tool_calls_total,
@@ -94,8 +92,12 @@ def summarize_run(
         'files_changed': changed_paths,
         'files_changed_count': len(changed_paths),
         'cost_usd': cost_cents_value / 100.0,
-        'budget_cap_usd': budget_cap_cents / 100.0,
-        'budget_remaining_usd': max(0.0, remaining_cents / 100.0),
+        'budget_cap_usd': (
+            budget_cap_cents / 100.0 if budget_cap_cents is not None else None
+        ),
+        'budget_remaining_usd': (
+            max(0.0, remaining_cents / 100.0) if remaining_cents is not None else None
+        ),
         'audit_log': f'.teaagent/runs/{run_id}.jsonl',
         'undo_command': f'teaagent undo {run_id}',
         'input_tokens': input_tokens_value,
@@ -117,11 +119,12 @@ def format_run_summary(summary: dict[str, Any]) -> str:
     input_tokens = summary.get('input_tokens', 0)
     output_tokens = summary.get('output_tokens', 0)
     total_tokens = input_tokens + output_tokens
-    cap_str = (
-        f'  Budget remaining: ${remaining:.2f} / ${cap:.2f}\n'
-        if isinstance(cap, (int, float)) and isinstance(remaining, (int, float))
-        else ''
-    )
+    if isinstance(cap, (int, float)) and isinstance(remaining, (int, float)):
+        cap_str = f'  Budget remaining: ${remaining:.2f} / ${cap:.2f}\n'
+    elif cap is None:
+        cap_str = '  Budget remaining: unlimited\n'
+    else:
+        cap_str = ''
     return (
         'Run summary:\n'
         f'  Tools called:     {tool_calls} ({tool_read} read, {tool_write} write)\n'

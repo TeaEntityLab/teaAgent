@@ -201,3 +201,11 @@ def test_budget_monitor_zero_budget_returns_none() -> None:
     )
     action = monitor.check(run_id='test-zero', cost_cents=0)
     assert action == BudgetAction.NONE
+
+
+def test_budget_monitor_none_budget_returns_none() -> None:
+    monitor = BudgetMonitor(
+        budget=RunBudget(max_estimated_cost_cents=None),
+    )
+    action = monitor.check(run_id='test-none', cost_cents=50.0)
+    assert action == BudgetAction.NONE

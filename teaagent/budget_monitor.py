@@ -77,7 +77,10 @@ class BudgetMonitor:
         Returns ``BudgetAction.NONE`` when no new threshold was crossed.
         Each threshold fires at most once per monitor instance (idempotent).
         """
-        max_cost = float(self.budget.max_estimated_cost_cents)
+        budget_cap = self.budget.max_estimated_cost_cents
+        if budget_cap is None:
+            return BudgetAction.NONE
+        max_cost = float(budget_cap)
         if max_cost <= 0:
             return BudgetAction.NONE
 
@@ -105,7 +108,10 @@ class BudgetMonitor:
         self, *, run_id: str, cost_cents: float, threshold: int
     ) -> BudgetAction:
         """Force-check a specific threshold (useful in tests)."""
-        max_cost = float(self.budget.max_estimated_cost_cents)
+        budget_cap = self.budget.max_estimated_cost_cents
+        if budget_cap is None:
+            return BudgetAction.NONE
+        max_cost = float(budget_cap)
         if max_cost <= 0:
             return BudgetAction.NONE
         percent = (cost_cents / max_cost) * 100.0
