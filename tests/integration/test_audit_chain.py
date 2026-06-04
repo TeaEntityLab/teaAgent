@@ -8,6 +8,9 @@ tampering, insertion, or deletion.
 from __future__ import annotations
 
 import json
+import stat
+from pathlib import Path
+from unittest.mock import patch
 
 from teaagent.audit import AuditLogger
 from teaagent.audit_chain import (
@@ -135,3 +138,57 @@ def test_chain_result_type():
     assert result.valid
     assert result.event_count == 5
     assert result.error is None
+
+
+# SEC-01: HMAC key persistence across instances
+
+
+def test_audit_hmac_persisted_across_instances(tmp_path):
+    """Two AuditLogger instances for the same run-id load the same persisted key
+    so that a second process can verify entries written by the first."""
+    log = tmp_path / 'run-sec01.jsonl'
+
+    with patch.object(Path, 'home', return_value=tmp_path):
+        audit1 = AuditLogger(path=log)
+        audit1.record('run_started', 'r-sec01', task='hmac-persist-test')
+        key1 = audit1.get_chain_key()
+
+        # Second instance pointing to the same log — must reload the same key
+        audit2 = AuditLogger(path=log)
+        key2 = audit2.get_chain_key()
+
+    assert key1 == key2, 'Second instance did not load the persisted key'
+    result = verify_audit_chain(log, secret_key=key2)
+    assert result.valid, result.error
+
+
+def test_audit_hmac_fails_with_wrong_key(tmp_path):
+    """Verification with the wrong key rejects HMAC-signed entries."""
+    log = tmp_path / 'run-wrongkey.jsonl'
+
+    with patch.object(Path, 'home', return_value=tmp_path):
+        audit = AuditLogger(path=log)
+        audit.record('run_started', 'r-wrongkey', task='hmac-reject-test')
+
+    # All-zeros key is deterministic and will not match the random per-run key
+    wrong_key = b'\x00' * 32
+    result = verify_audit_chain(log, secret_key=wrong_key)
+    assert not result.valid, 'Wrong key should cause HMAC verification failure'
+    assert result.error is not None
+    assert 'hmac' in result.error.lower() or 'signature' in result.error.lower()
+
+
+def test_audit_key_file_permissions_readable(tmp_path):
+    """Key file is persisted with mode 0o600 (owner-only read/write)."""
+    log = tmp_path / 'run-keyperm.jsonl'
+
+    with patch.object(Path, 'home', return_value=tmp_path):
+        AuditLogger(path=log)
+        key_path = tmp_path / '.teaagent' / 'run-keys' / f'{log.stem}.key'
+
+    assert key_path.is_file(), 'HMAC key file was not persisted to disk'
+    mode = key_path.stat().st_mode & 0o777
+    assert mode == 0o600, (
+        f'Key file {key_path} has mode {oct(mode)}, expected 0o600 '
+        '(world-readable key file would allow HMAC forgery)'
+    )

@@ -125,6 +125,9 @@ override-dependencies = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: real entry-point behavioral tests (run with -m integration)",
+]
 
 [tool.mypy]
 python_version = "3.10"

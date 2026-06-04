@@ -602,7 +602,16 @@ def test_controller_surfaces_save_failure():
 
 
 def test_chat_surface_parity(monkeypatch, capsys):
-    """Test that CLI and TUI surfaces use the same controller for consistent behavior (CG-05)."""
+    """Hollow parity test: compares two ChatSessionController instances, NOT actual CLI vs TUI paths.
+
+    INSUFFICIENT (CG-17): This test verifies that two identical controller instances produce
+    identical output when given identical mocks — which is trivially true. It does NOT verify:
+    - That run_chat_repl() actually delegates to ChatSessionController (CLI surface)
+    - That TeaAgentTUI._run_agent_task() actually delegates to ChatSessionController (TUI surface)
+    - That the TUI has no duplicated cost tracking or undo logic outside the controller
+
+    See tests/test_e2e_cli_tui_parity.py for the real behavioral parity tests (CG-17 fix).
+    """
     from unittest.mock import MagicMock, patch
 
     from teaagent.chat_session_controller import ChatSessionController, SessionState

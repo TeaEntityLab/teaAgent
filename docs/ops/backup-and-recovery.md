@@ -17,6 +17,7 @@ All persistent teaagent state lives under `.teaagent/` in the workspace root and
 | `~/.teaagent/workspace_registry.json` | Workspace index | Low | Weekly |
 | `~/.teaagent/tui_state.json` | TUI layout/history | Low | Weekly |
 | `~/.teaagent/relay-tokens.json` | Auth tokens | High | On every change |
+| `~/.teaagent/run-keys/` | Per-run HMAC signing keys | **Critical** | On every change |
 
 **Do not** back up `.teaagent/*.db` (graphqlite databases) — they are derived from source code and can be rebuilt with `teaagent agent card --rebuild-index`.
 
@@ -261,6 +262,49 @@ teaagent doctor all
 | Full host failure | Last daily backup (≤24 h) | 2 hours |
 
 Reduce RPO to seconds by enabling real-time audit log shipping (webhook or Filebeat).
+
+---
+
+---
+
+## Audit HMAC Key Management (SEC-01)
+
+### Key file location
+
+Each run writes a 32-byte random HMAC-SHA256 signing key to:
+
+```
+~/.teaagent/run-keys/<run_id>.key   (mode 0o600, dir mode 0o700)
+```
+
+The key is created on first write and reloaded on subsequent `AuditLogger` instances for the same run.  Without the key, `teaagent audit verify` can still check the SHA-256 hash chain for structural integrity but cannot verify HMAC signatures.
+
+### Why these keys are Critical
+
+If the key files are lost, audit entries can still be read, but HMAC verification will fail for any run whose key is missing.  An attacker who gains write access to the audit log but not the key file cannot forge a valid HMAC-signed chain.  Back up `~/.teaagent/run-keys/` with at least the same frequency as the audit logs themselves.
+
+### Backup
+
+Include `~/.teaagent/run-keys/` in your regular backup:
+
+```bash
+rsync -av --chmod=D700,F600 \
+  "$HOME/.teaagent/run-keys/" \
+  "$DEST/teaagent-user/run-keys/"
+```
+
+Keep backups of this directory in a location separate from the audit log files. An attacker who has both the key file and write access to the audit log can forge the HMAC chain.
+
+### Rotation
+
+HMAC keys are per-run and never reused across runs.  To rotate a compromised key:
+
+1. Delete the key file for the affected run: `rm ~/.teaagent/run-keys/<run_id>.key`
+2. The run's HMAC signatures become unverifiable (the chain hash integrity is unaffected).
+3. Note the rotation in your incident log with the run ID and timestamp.
+4. Future runs automatically generate new keys.
+
+There is no cross-run key; rotation of one run's key does not affect any other run.
 
 ---
 

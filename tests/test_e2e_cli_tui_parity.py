@@ -1,0 +1,257 @@
+"""Real CLI/TUI behavioral parity tests — CG-17 fix.
+
+The hollow test in test_cli_chat.py::test_chat_surface_parity compared two
+ChatSessionController instances and proved nothing about surface delegation.
+These tests drive the actual entry points (run_chat_repl and TeaAgentTUI)
+and verify they each delegate state mutations to ChatSessionController.
+"""
+
+from __future__ import annotations
+
+import warnings
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from teaagent.chat_agent import ChatAgentConfig
+from teaagent.chat_session_controller import ChatSessionController, SessionState
+from teaagent.runner._types import FinalAnswer, RunResult
+
+_FAKE_RESULT = RunResult(
+    run_id='parity-run-001',
+    final_answer=FinalAnswer(content='Parity answer'),
+    iterations=1,
+    tool_calls=0,
+    status='completed',
+    cost_cents=42.0,
+    input_tokens=10,
+    output_tokens=5,
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_tui(tmp_path, output_fn=None, input_fn=None):
+    from teaagent.tui import TeaAgentTUI
+
+    return TeaAgentTUI(
+        root=str(tmp_path),
+        output_fn=output_fn or (lambda _: None),
+        input_fn=input_fn,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 1 — CLI/TUI cost parity
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_cli_chat_vs_tui_same_cost_after_task(tmp_path):
+    """Both CLI controller path and TUI _run_agent_task() should record same cost.
+
+    Drives:
+    - TUI: TeaAgentTUI._run_agent_task(task) which internally calls
+           self._get_chat_controller().execute_task(...)
+    - CLI: ChatSessionController.execute_task() directly (the path run_chat_repl delegates to)
+
+    Both should credit the same cost_cents to their respective SessionState.
+    """
+    # --- TUI path ---
+    tui_output: list[str] = []
+    tui = _make_tui(tmp_path, output_fn=tui_output.append)
+
+    fake_tui_store = MagicMock()
+    fake_tui_store.audit_logger.return_value = MagicMock(path=None)
+    fake_tui_store.show_run.return_value = []
+
+    with (
+        patch('teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT),
+        patch('teaagent.chat_session_controller.RunStore'),
+        patch('teaagent.tui.RunStore', return_value=fake_tui_store),
+    ):
+        tui._run_agent_task('write hello world')
+
+    tui_cost = tui._session_cost_cents
+    assert tui_cost == 42.0, f"TUI should record 42.0 cents, got {tui_cost}"
+
+    # --- CLI controller path (what run_chat_repl delegates to) ---
+    cli_output: list[str] = []
+    config = ChatAgentConfig.from_root(str(tmp_path), model='gpt/gpt-4')
+    cli_controller = ChatSessionController(
+        root=str(tmp_path),
+        output_fn=cli_output.append,
+    )
+
+    with (
+        patch('teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT),
+        patch('teaagent.chat_session_controller.RunStore'),
+    ):
+        cli_controller.execute_task('write hello world', config)
+
+    cli_cost = cli_controller.get_session_cost()
+    assert cli_cost == 42.0, f"CLI controller should record 42.0 cents, got {cli_cost}"
+
+    # --- Parity assertion ---
+    assert cli_cost == tui_cost, (
+        f"CLI and TUI must record identical cost: CLI={cli_cost} TUI={tui_cost}"
+    )
+
+    # CLI emits the final answer via output_fn
+    assert any('Parity answer' in str(o) for o in cli_output), (
+        "CLI controller should emit final answer via output_fn"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 2 — TUI delegates execution to ChatSessionController
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_tui_chat_delegates_to_controller(tmp_path):
+    """TeaAgentTUI._run_agent_task() must call ChatSessionController.execute_task().
+
+    Verifies the TUI does NOT have its own duplicated run logic — it routes
+    all agent execution through the controller.
+    """
+    tui = _make_tui(tmp_path)
+
+    # Pre-wire controller so we can spy before _run_agent_task creates it
+    controller = tui._get_chat_controller()
+
+    execute_calls: list[tuple[str, object]] = []
+    original_execute = controller.execute_task
+
+    def spy_execute(task, config, **kwargs):
+        execute_calls.append((task, config))
+        return original_execute(task, config, **kwargs)
+
+    controller.execute_task = spy_execute
+
+    fake_tui_store = MagicMock()
+    fake_tui_store.audit_logger.return_value = MagicMock(path=None)
+    fake_tui_store.show_run.return_value = []
+
+    with (
+        patch('teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT),
+        patch('teaagent.chat_session_controller.RunStore'),
+        patch('teaagent.tui.RunStore', return_value=fake_tui_store),
+    ):
+        tui._run_agent_task('run some task')
+
+    assert len(execute_calls) == 1, (
+        f"TUI should call controller.execute_task() exactly once, called {len(execute_calls)} times"
+    )
+    assert execute_calls[0][0] == 'run some task', (
+        f"controller.execute_task() should receive the original task string, "
+        f"got: {execute_calls[0][0]!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 3 — TUI undo delegates to controller, not duplicated git logic
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_tui_undo_delegates_to_controller(tmp_path):
+    """TeaAgentTUI._handle_undo() must call controller.undo_last_run() first.
+
+    The TUI has a checkpoint fallback, but the primary path must be the
+    controller's journal-based undo.
+    """
+    tui_output: list[str] = []
+    tui = _make_tui(tmp_path, output_fn=tui_output.append)
+
+    controller = tui._get_chat_controller()
+    undo_calls: list[bool] = []
+
+    def spy_undo() -> bool:
+        undo_calls.append(True)
+        return True  # report success so checkpoint fallback is not triggered
+
+    controller.undo_last_run = spy_undo
+
+    tui._handle_undo()
+
+    assert len(undo_calls) == 1, (
+        f"TUI _handle_undo() must call controller.undo_last_run() exactly once, "
+        f"called {len(undo_calls)} times"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 4 — CLI /undo delegates to controller
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_cli_undo_delegates_to_controller(tmp_path):
+    """run_chat_repl /undo must call controller.undo_last_run(), not raw git logic.
+
+    The CLI REPL should delegate undo to the shared ChatSessionController,
+    so that undo behavior stays consistent with the TUI surface.
+    """
+    from teaagent.cli._handlers.chat_repl import run_chat_repl
+
+    undo_calls: list[bool] = []
+
+    fake_controller = MagicMock(spec=ChatSessionController)
+    fake_controller.session_state = SessionState()
+    fake_controller.undo_last_run.side_effect = lambda: (
+        undo_calls.append(True) or True
+    )
+
+    config = ChatAgentConfig.from_root(str(tmp_path))
+
+    with (
+        patch(
+            'teaagent.cli._handlers.chat_repl.ChatSessionController',
+            return_value=fake_controller,
+        ),
+        patch('teaagent.cli._handlers.chat_repl.create_llm_adapter'),
+        patch('builtins.input', side_effect=['/undo', '/exit']),
+        warnings.catch_warnings(),
+    ):
+        warnings.simplefilter('ignore', DeprecationWarning)
+        run_chat_repl(config)
+
+    assert len(undo_calls) == 1, (
+        f"CLI /undo must call controller.undo_last_run() exactly once, "
+        f"called {len(undo_calls)} times"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 5 — TUI cost property reads from controller, not local duplicate
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+def test_tui_cost_property_reads_controller_state(tmp_path):
+    """TeaAgentTUI._session_cost_cents must be sourced from the controller SessionState.
+
+    If the TUI had its own parallel cost counter, this would expose the divergence.
+    """
+    tui = _make_tui(tmp_path)
+
+    # Directly mutate the controller's session state
+    controller = tui._get_chat_controller()
+    controller.session_state.session_cost_cents = 99.5
+
+    # TUI property must reflect controller state, not a separate counter
+    assert tui._session_cost_cents == 99.5, (
+        f"TUI._session_cost_cents should read from controller.session_state, "
+        f"got {tui._session_cost_cents}"
+    )
+
+    # Mutate via TUI property — controller must see the same change
+    tui._session_cost_cents = 200.0
+    assert controller.session_state.session_cost_cents == 200.0, (
+        f"Setting TUI._session_cost_cents must update controller.session_state, "
+        f"controller sees {controller.session_state.session_cost_cents}"
+    )
