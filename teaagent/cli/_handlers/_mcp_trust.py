@@ -56,9 +56,16 @@ def _redact_sensitive(value: Any) -> Any:
 
 
 def _print_json(value: Any) -> None:
+    def _mask_leaf_values(obj: Any) -> Any:
+        if isinstance(obj, dict):
+            return {key: _mask_leaf_values(item) for key, item in obj.items()}
+        if isinstance(obj, list):
+            return [_mask_leaf_values(item) for item in obj]
+        return '[REDACTED]'
+
     print(
         json.dumps(
-            _redact_sensitive(_strip_sensitive_fields(value)),
+            _mask_leaf_values(_redact_sensitive(_strip_sensitive_fields(value))),
             ensure_ascii=False,
             indent=2,
             sort_keys=True,
