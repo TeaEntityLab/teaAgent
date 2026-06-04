@@ -388,9 +388,10 @@ class MemoryCatalog:
 
         # Add to main catalog
         entry = memory_entry_from_payload(payload)
-        if entry is not None:
-            with self._cross_process_lock():
-                append_jsonl_line(self.path, json.dumps(payload, sort_keys=True))
+        if entry is None:
+            raise RuntimeError('Failed to create memory entry from payload')
+        with self._cross_process_lock():
+            append_jsonl_line(self.path, json.dumps(payload, sort_keys=True))
 
         return entry
 
@@ -400,7 +401,7 @@ class MemoryCatalog:
         Returns:
             Dict with maintenance recommendations and statistics.
         """
-        report = {
+        report: dict[str, Any] = {
             'total_entries': 0,
             'quarantined_entries': 0,
             'stale_entries': 0,
@@ -414,7 +415,7 @@ class MemoryCatalog:
             report['total_entries'] = len(main_entries)
 
             # Check for duplicates (same content)
-            content_map = {}
+            content_map: dict[str, list[str]] = {}
             for entry in main_entries:
                 content = entry.content
                 if content in content_map:

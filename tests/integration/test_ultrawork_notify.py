@@ -7,11 +7,12 @@ executes a shell command.
 from __future__ import annotations
 
 import json
-import pytest
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 from unittest.mock import patch
+
+import pytest
 
 from teaagent.notify import NotifyConfig, fire_notification
 from teaagent.ultrawork import UltraworkStore, WorkerRecord
@@ -43,7 +44,7 @@ def _start_server():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Deprecated ultrawork module - webhook delivery timing issues")
+@pytest.mark.skip(reason='Deprecated ultrawork module - webhook delivery timing issues')
 def test_fire_notification_webhook_delivers(tmp_path):
     server, url = _start_server()
     _RECEIVED.clear()
@@ -96,7 +97,7 @@ def test_fire_notification_webhook_failure_silent():
     fire_notification(cfg, rec, event='stopped')
 
 
-@pytest.mark.skip(reason="Deprecated ultrawork module - webhook delivery timing issues")
+@pytest.mark.skip(reason='Deprecated ultrawork module - webhook delivery timing issues')
 def test_fire_notification_both_webhook_and_shell(tmp_path):
     server, url = _start_server()
     _RECEIVED.clear()
@@ -134,7 +135,7 @@ def test_notify_config_defaults():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Deprecated ultrawork module - webhook delivery timing issues")
+@pytest.mark.skip(reason='Deprecated ultrawork module - webhook delivery timing issues')
 def test_ultrawork_store_stop_fires_webhook(tmp_path):
     server, url = _start_server()
     _RECEIVED.clear()

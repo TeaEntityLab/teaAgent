@@ -58,7 +58,7 @@ def update_acceptance_status(markdown: str, passed_count: int) -> str:
     # Support both old format "X passed" and new format "X tests collected (Y passed, Z failed, W skipped)"
     old_pattern = re.compile(r'`(\d+)\s+passed`')
     new_pattern = re.compile(r'(\d+)\s+tests\s+collected\s+\([^)]+\)')
-    
+
     if old_pattern.search(markdown):
         replacement = f'`{passed_count} passed`'
         return old_pattern.sub(replacement, markdown, count=1)

@@ -26,9 +26,7 @@ from teaagent.hooks import (
 )
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
 from teaagent.workspace_tools import build_workspace_tool_registry
-
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

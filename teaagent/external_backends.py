@@ -276,7 +276,14 @@ class FallbackKnowledgeBackend:
         for name in (self.primary, self.fallback):
             try:
                 healthy.append(get_knowledge_backend(name).health(root=root))
-            except (ConnectionError, TimeoutError, OSError, ImportError, RuntimeError, Exception) as exc:
+            except (
+                ConnectionError,
+                TimeoutError,
+                OSError,
+                ImportError,
+                RuntimeError,
+                Exception,
+            ) as exc:
                 healthy.append({'backend': name, 'ok': False, 'error': str(exc)})
         return {'backends': healthy}
 

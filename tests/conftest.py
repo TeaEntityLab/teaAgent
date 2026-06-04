@@ -27,9 +27,7 @@ class FakeAdapter:
         self.requests.append(request)
         content = self.outputs.pop(0)
         # LLMResponse doesn't take cost_cents as a parameter - it's a computed property
-        return LLMResponse(
-            provider='fake', model='fake-model', content=content
-        )
+        return LLMResponse(provider='fake', model='fake-model', content=content)
 
 
 def fake_adapter(

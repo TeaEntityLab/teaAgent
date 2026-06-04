@@ -173,7 +173,11 @@ class SignatureRelayClient:
         timeout_int = int(timeout)
         try:
             with safe_urlopen(
-                url, timeout=timeout_int, data=data, headers=self._headers(), allow_http=allow_http
+                url,
+                timeout=timeout_int,
+                data=data,
+                headers=self._headers(),
+                allow_http=allow_http,
             ) as response:
                 raw = response.read().decode('utf-8')
                 if not raw.strip():
@@ -194,14 +198,18 @@ class SignatureRelayClient:
     ) -> dict[str, Any]:
         url = f'{relay_base_url.rstrip("/")}/api/v1/approval-requests'
         # Allow HTTP for localhost testing
-        allow_http = url.startswith('http://127.0.0.1') or url.startswith('http://localhost')
+        allow_http = url.startswith('http://127.0.0.1') or url.startswith(
+            'http://localhost'
+        )
         return self._request('POST', url, body=payload, allow_http=allow_http)
 
     def post_signature(
         self, submit_url: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
         # Allow HTTP for localhost testing
-        allow_http = submit_url.startswith('http://127.0.0.1') or submit_url.startswith('http://localhost')
+        allow_http = submit_url.startswith('http://127.0.0.1') or submit_url.startswith(
+            'http://localhost'
+        )
         return self._request('POST', submit_url, body=payload, allow_http=allow_http)
 
     def fetch_signatures(
@@ -212,7 +220,9 @@ class SignatureRelayClient:
             f'?request_id={request_id}'
         )
         # Allow HTTP for localhost testing
-        allow_http = url.startswith('http://127.0.0.1') or url.startswith('http://localhost')
+        allow_http = url.startswith('http://127.0.0.1') or url.startswith(
+            'http://localhost'
+        )
         result = self._request('GET', url, allow_http=allow_http)
         if not result.get('ok', False):
             return []

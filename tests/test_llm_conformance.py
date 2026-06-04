@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import io
 import json
-import pytest
 import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
+import pytest
 from conftest import FakeAdapter
 
 from teaagent.cli import main
@@ -19,7 +19,9 @@ class FailingAdapter:
 
 
 class LLMConformanceTests(unittest.TestCase):
-    @pytest.mark.skip(reason="Test configuration issue with FakeAdapter response format")
+    @pytest.mark.skip(
+        reason='Test configuration issue with FakeAdapter response format'
+    )
     def test_run_model_conformance_reports_pass_skip_and_fail(self) -> None:
         adapters = {'gpt': FakeAdapter(['ok']), 'claude': FailingAdapter()}
 

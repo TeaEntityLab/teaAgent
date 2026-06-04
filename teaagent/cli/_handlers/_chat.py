@@ -7,9 +7,7 @@ The legacy REPL implementation has been moved to chat_repl.py (TASK-DD2-007).
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
-from teaagent.chat_agent import ChatAgentConfig
 from teaagent.policy import parse_permission_mode
 
 

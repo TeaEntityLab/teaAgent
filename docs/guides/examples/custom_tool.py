@@ -73,7 +73,7 @@ def _run_query(db_path: Path, sql: str) -> dict:
     con = sqlite3.connect(db_path)
     cur = con.execute(sql)
     cols = [d[0] for d in cur.description]
-    rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+    rows = [dict(zip(cols, row, strict=False)) for row in cur.fetchall()]
     con.close()
     return {'rows': rows, 'count': len(rows)}
 

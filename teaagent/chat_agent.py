@@ -476,9 +476,9 @@ def _load_skills_and_memory(
 ) -> tuple[list[SkillIndexEntry], list[dict], list]:
     """Load skills and memory for the chat agent.
 
-        Returns:
-            Tuple of (skill_index_entries, memories, active_skills)
-        """
+    Returns:
+        Tuple of (skill_index_entries, memories, active_skills)
+    """
     if config.skill_source_profile == 'custom' and not config.skill_search_dirs:
         raise ValueError('skill_source_profile=custom requires skill_search_dirs')
     skill_index_entries: list[SkillIndexEntry] = []

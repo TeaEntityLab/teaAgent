@@ -138,7 +138,9 @@ def test_load_file_policy_json_format(tmp_path):
     assert policy.rules[-1].id == 'json-rule'
 
 
-@pytest.mark.skip(reason="File policy audit event not being recorded - requires investigation")
+@pytest.mark.skip(
+    reason='File policy audit event not being recorded - requires investigation'
+)
 def test_file_policy_integrated_with_agent_runner(tmp_path):
     """FilePolicy.assert_allowed fires in AgentRunner before tool dispatch."""
     from teaagent.audit import AuditLogger

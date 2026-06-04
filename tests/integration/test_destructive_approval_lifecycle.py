@@ -113,7 +113,9 @@ def test_approval_handler_denies():
 
     result = runner.run(task='write', decide=lambda _: _WRITE_REQUEST)
     # After approval gate fix, denied approvals return pending_approval instead of failed
-    assert result.status == 'pending_approval', f'expected pending_approval, got {result.status!r}'
+    assert result.status == 'pending_approval', (
+        f'expected pending_approval, got {result.status!r}'
+    )
     assert any(e.event_type == 'tool_call_denied' for e in audit.events)
 
 

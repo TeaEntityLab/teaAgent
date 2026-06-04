@@ -357,20 +357,26 @@ class A2ADiscoveryServer:
 class A2AClient:
     """HTTP client for A2A task delegation and card discovery."""
 
-    def __init__(self, endpoint: str, *, timeout: int = 30, allow_http: bool = False) -> None:
+    def __init__(
+        self, endpoint: str, *, timeout: int = 30, allow_http: bool = False
+    ) -> None:
         self._endpoint = endpoint.rstrip('/')
         self._timeout = timeout
         self._allow_http = allow_http
 
     @classmethod
-    def from_card(cls, card: AgentCard, *, timeout: int = 30, allow_http: bool = False) -> 'A2AClient':
+    def from_card(
+        cls, card: AgentCard, *, timeout: int = 30, allow_http: bool = False
+    ) -> 'A2AClient':
         if not card.endpoint:
             raise ValueError(f'AgentCard {card.name!r} has no endpoint')
         return cls(card.endpoint, timeout=timeout, allow_http=allow_http)
 
     def fetch_card(self) -> AgentCard:
         url = f'{self._endpoint}/.well-known/agent.json'
-        with safe_urlopen(url, timeout=self._timeout, allow_http=self._allow_http) as resp:
+        with safe_urlopen(
+            url, timeout=self._timeout, allow_http=self._allow_http
+        ) as resp:
             data = json.loads(resp.read().decode('utf-8'))
         return AgentCard.from_dict(data)
 
@@ -443,7 +449,9 @@ class FederatedAgentRegistry:
                 continue  # circuit open — skip this endpoint
             url = base_url.rstrip('/') + '/.well-known/agent.json'
             try:
-                with safe_urlopen(url, timeout=self._timeout, allow_http=self._allow_http) as resp:
+                with safe_urlopen(
+                    url, timeout=self._timeout, allow_http=self._allow_http
+                ) as resp:
                     data = json.loads(resp.read().decode('utf-8'))
                 cards.append(AgentCard.from_dict(data))
                 circuit.record_success()

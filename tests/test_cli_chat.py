@@ -5,9 +5,9 @@ from __future__ import annotations
 import argparse
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
-from unittest.mock import MagicMock
 
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.cli._handlers._chat import chat_command
@@ -530,7 +530,13 @@ def test_controller_surfaces_save_failure():
 
             # Should raise AttributeError, not swallow it
             with pytest.raises(AttributeError, match='injected'):
-                controller.execute_task('test task', adapter=None, config=mock_config, undo_journal=bad_journal, audit=mock_audit)
+                controller.execute_task(
+                    'test task',
+                    adapter=None,
+                    config=mock_config,
+                    undo_journal=bad_journal,
+                    audit=mock_audit,
+                )
 
 
 def test_chat_surface_parity(monkeypatch, capsys):

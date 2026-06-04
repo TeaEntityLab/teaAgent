@@ -204,11 +204,6 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             return True
         subcommand = args[0]
         if subcommand == 'list':
-            prefix = args[1] if len(args) > 1 else None
-            from teaagent.context import ContextCompactor
-
-            compactor = ContextCompactor(100000)  # type: ignore[call-arg]
-            # files = compactor.list_files(prefix=prefix)  # type: ignore[attr-defined]
             tui._print_json([])
         else:
             tui.output_fn(f"error: unknown context subcommand '{subcommand}'")
@@ -217,8 +212,14 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
     if action == 'daily':
         task_str: str | None = ' '.join(args) if args else None
         from teaagent.daily import build_daily_brief
+
         provider = tui.provider or 'gpt'
-        brief = build_daily_brief(task=task_str, root=tui.root, provider=provider, permission_mode=tui.permission_mode)
+        brief = build_daily_brief(
+            task=task_str,
+            root=tui.root,
+            provider=provider,
+            permission_mode=tui.permission_mode,
+        )
         tui.output_fn(f'daily: ready={brief.ready}')
         tui._print_json(brief.to_dict())
         return True
@@ -281,7 +282,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
 
     if action == 'cancel':
         if hasattr(tui, '_parallel_options') and tui._parallel_options:
-            tui._parallel_options = None
+            tui._parallel_options = None  # type: ignore[assignment]
             tui._print_json(
                 {'status': 'cancelled', 'action': 'cleared_parallel_options'}
             )

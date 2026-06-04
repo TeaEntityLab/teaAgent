@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger

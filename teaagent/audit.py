@@ -139,8 +139,8 @@ class AuditLogger:
                         if line:
                             try:
                                 last_entry = json.loads(line)
-                                if "hash" in last_entry:
-                                    self._prev_hash = last_entry["hash"]
+                                if 'hash' in last_entry:
+                                    self._prev_hash = last_entry['hash']
                                     break
                             except json.JSONDecodeError:
                                 continue

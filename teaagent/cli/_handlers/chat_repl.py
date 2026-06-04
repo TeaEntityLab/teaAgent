@@ -159,7 +159,9 @@ def print_chat_help() -> None:
     print('  /effort <low|normal|high>  - Set effort throttling level')
     print('  /budget                    - Show budget status')
     print('  /checkpoint                - Create manual git checkpoint')
-    print('  /undo                      - Undo last agent edit (journal-first; fallback to checkpoint)')
+    print(
+        '  /undo                      - Undo last agent edit (journal-first; fallback to checkpoint)'
+    )
     print(
         '  !<command>                 - DISABLED: Use full terminal for shell commands'
     )

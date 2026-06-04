@@ -5,11 +5,12 @@ from __future__ import annotations
 import io
 import json
 import sys
-import pytest
 from contextlib import redirect_stdout
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from threading import Thread
+
+import pytest
 
 from teaagent.cli import main
 
@@ -30,7 +31,9 @@ class _HookHandler(BaseHTTPRequestHandler):
         return
 
 
-@pytest.mark.skip(reason="Automation webhook delivery not firing for skipped_no_wake status - requires investigation")
+@pytest.mark.skip(
+    reason='Automation webhook delivery not firing for skipped_no_wake status - requires investigation'
+)
 def test_automation_webhook_delivery_flow(tmp_path: Path) -> None:
     _HookHandler.payloads.clear()
     server = HTTPServer(('127.0.0.1', 0), _HookHandler)

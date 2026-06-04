@@ -1,9 +1,9 @@
 """Tests for the example plugin's greeting tool."""
 
 import pytest
-from teaagent.tools import ToolRegistry
-
 from my_plugin.tools import register
+
+from teaagent.tools import ToolRegistry
 
 
 @pytest.fixture()
@@ -29,7 +29,7 @@ def test_blank_name_raises(registry: ToolRegistry) -> None:
 
 
 def test_missing_name_raises(registry: ToolRegistry) -> None:
-    with pytest.raises(Exception):  # schema validation error
+    with pytest.raises(KeyError):  # tool not registered
         registry.call('my_plugin_greet', {})
 
 

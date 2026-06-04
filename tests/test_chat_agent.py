@@ -19,7 +19,6 @@ from teaagent import (
     parse_model_decision,
     run_chat_agent,
 )
-from teaagent.audit import AUDIT_REDACTED
 from teaagent.cli import main
 from teaagent.errors import ToolPermissionError
 from teaagent.runner import ToolRequest

@@ -181,13 +181,13 @@ class IssueParser:
 
     def extract_github_issue(self, issue_url: str) -> ParsedIssue:
         """Fetch and parse a GitHub issue from URL.
-    
+
         Args:
             issue_url: GitHub issue URL
-    
+
         Returns:
             ParsedIssue with extracted fields
-    
+
         Note:
             Placeholder for future GitHub API integration.
             Returns a minimal ParsedIssue with the URL as raw text.

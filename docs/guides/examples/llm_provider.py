@@ -23,7 +23,6 @@ from teaagent.llm import (
     LLMResponseFormatError,
 )
 
-
 # ── adapter implementation ────────────────────────────────────────────────────
 
 

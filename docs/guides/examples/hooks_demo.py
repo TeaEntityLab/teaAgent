@@ -18,16 +18,13 @@ from typing import Any
 from teaagent.audit import AuditLogger
 from teaagent.budget import RunBudget
 from teaagent.hooks import (
-    HookConfig,
     HookError,
     HookRegistry,
-    format_check_hook,
     post_lint_check_hook,
 )
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
 from teaagent.workspace_tools import build_workspace_tool_registry
-
 
 # ── hook implementations ──────────────────────────────────────────────────────
 

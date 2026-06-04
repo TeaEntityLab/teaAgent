@@ -113,7 +113,9 @@ def test_main_check_mode_accepts_argv() -> None:
     # Those are separate issues from the acceptance status update logic
     # We accept non-zero result if the acceptance status was updated successfully
     # Check if acceptance.md was updated by looking for the new format
-    acceptance_content = (Path(__file__).resolve().parents[1] / 'docs' / 'acceptance.md').read_text(encoding='utf-8')
+    acceptance_content = (
+        Path(__file__).resolve().parents[1] / 'docs' / 'acceptance.md'
+    ).read_text(encoding='utf-8')
     # If it has the new format, the acceptance status update succeeded
     if 'tests collected' in acceptance_content:
         # Acceptance status update succeeded, other errors are acceptable

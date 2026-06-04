@@ -24,7 +24,7 @@ import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 
 class HookEvent(Enum):
@@ -240,7 +240,7 @@ def post_lint_check_hook(
             pass  # ruff not installed, skip
         return None
 
-    return _hook
+    return cast(PostToolUseHookFn, _hook)
 
 
 def run_tests_hook(
@@ -280,7 +280,7 @@ def run_tests_hook(
             pass
         return None
 
-    return _hook
+    return cast(PostToolUseHookFn, _hook)
 
 
 def format_check_hook(
@@ -318,7 +318,7 @@ def format_check_hook(
             pass
         return None
 
-    return _hook
+    return cast(PostToolUseHookFn, _hook)
 
 
 def shell_command_hook(
@@ -354,7 +354,7 @@ def shell_command_hook(
             ) from exc
         return None
 
-    return _hook
+    return cast(PostToolUseHookFn, _hook)
 
 
 # --- Permission System Hooks (Claude Code compatible) ---
@@ -425,7 +425,7 @@ def permission_check_hook(
 
         return None
 
-    return _hook
+    return cast(PreToolUseHookFn, _hook)
 
 
 def _match_glob(path: str, pattern: str) -> bool:
@@ -476,7 +476,7 @@ def mcp_tool_filter_hook(
 
         return None
 
-    return _hook
+    return cast(PreToolUseHookFn, _hook)
 
 
 def mcp_sampling_hook(

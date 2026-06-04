@@ -176,15 +176,15 @@ class RunStore:
             summaries.sort(key=lambda s: s.updated_at, reverse=True)
             return summaries[:limit]
         # Fallback to the old method if index doesn't exist
-        summaries = [
-            self.summarize(path)
+        return [
+            summary
             for path in sorted(
                 self.store_dir.glob('*.jsonl'),
                 key=lambda p: p.stat().st_mtime,
                 reverse=True,
             )
-        ]
-        return [summary for summary in summaries if summary is not None][:limit]
+            if (summary := self.summarize(path)) is not None
+        ][:limit]
 
     def show_run(self, run_id: str) -> list[dict[str, Any]]:
         path = self.run_path(run_id)

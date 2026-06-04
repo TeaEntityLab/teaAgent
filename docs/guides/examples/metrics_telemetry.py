@@ -25,7 +25,6 @@ from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
 from teaagent.telemetry import InMemoryMetricsSink
 from teaagent.workspace_tools import build_workspace_tool_registry
 
-
 # ── 1. Custom metric counter via InMemoryMetricsSink ──────────────────────────
 
 
