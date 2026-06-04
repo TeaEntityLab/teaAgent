@@ -28,6 +28,8 @@ Current recommended wording:
 - "Suspended" means the run stopped and left a record.
 - "Background" should mean work continues somewhere else.
 - If a path does not continue work, do not describe it as background execution.
+- In TeaAgent's current REPL and TUI flows, `/background` is a suspension checkpoint
+  with recovery guidance, not a true detached background handoff.
 
 Operator rule: if a command prints a run id, inspect it with `agent show` before assuming
 work is still running.

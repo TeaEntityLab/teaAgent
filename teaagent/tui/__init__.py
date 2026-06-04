@@ -109,7 +109,7 @@ HELP_TEXT = """Commands:
   budget                    Show budget and effort status.
   checkpoint                Create manual git checkpoint.
   undo [run_id]              Undo last agent edit (journal-first, checkpoint fallback).
-  background                Suspend session to background mode (use teaagent agent run --background).
+  background                Suspend session as a checkpoint; use interactive-review/resume on the run id.
   handoff                   Alias for background command.
   exit | quit               Leave the TUI.
 
@@ -871,7 +871,9 @@ class TeaAgentTUI:
 
     def _handle_background(self) -> None:
         self.output_fn(
-            'background: /background is not implemented in TUI. Use "teaagent agent run --background" from CLI for background tasks.'
+            'background: /background creates a suspension checkpoint, not background execution. '
+            'Use "teaagent agent interactive-review <run_id>" to inspect changes and '
+            '"teaagent agent resume <run_id>" where supported.'
         )
 
     def _get_session_store(self) -> SessionStore:

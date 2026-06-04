@@ -32,7 +32,9 @@ teaagent agent run "summarize the repository risks"
 ```
 
 Avoid treating a run id as an argument to `agent run --background`. If your intent is
-to resume or review a run, use the resume or interactive-review surface instead.
+to resume or review a run, use the resume or interactive-review surface instead. In
+the REPL/TUI suspend flow, `/background` is a checkpoint signal, not a detached
+execution promise.
 
 ## Run lifecycle
 

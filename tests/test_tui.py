@@ -1086,6 +1086,17 @@ class TUITests(unittest.TestCase):
             self.assertIn('hint', result)
             self.assertIn('git', result['hint'].lower())
 
+    def test_tui_background_command_is_honest_checkpoint(self) -> None:
+        output = []
+        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+
+        self.assertTrue(tui.handle_command('background'))
+
+        joined = '\n'.join(output).lower()
+        self.assertIn('suspension checkpoint', joined)
+        self.assertIn('interactive-review', joined)
+        self.assertNotIn('--detach', joined)
+
     def test_tui_ask_clarify_with_concrete_task_builds_spec(self) -> None:
         output = []
         adapter = FakeAdapter(['{"type":"final","content":"done"}'])

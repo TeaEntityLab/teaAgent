@@ -43,6 +43,8 @@ The TUI should be treated as an operator surface:
 - Prefer path-scoped approvals over broad grants.
 - Prefer `teaagent chat` for accurate live chat cost until TICKET-12 lands.
 - Prefer `teaagent agent interactive-review <run_id>` when a suspended run needs careful inspection.
+- Treat `/background` in the REPL or TUI as a suspension checkpoint, not proof that work
+  continues in the background.
 
 ## Known gaps
 

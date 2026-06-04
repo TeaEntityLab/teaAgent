@@ -11,7 +11,8 @@ from teaagent.ergonomics.background_run import BackgroundRunStore
 def _deprecate_ultrawork() -> None:
     print(
         "[TeaAgent WARNING] 'ultrawork' module and commands are deprecated. "
-        "Please use 'teaagent.ergonomics.background_run' and 'teaagent background' instead.",
+        "Please use 'teaagent.ergonomics.background_run' for detached worker records and "
+        "'teaagent agent run \"<task>\"' or 'teaagent agent interactive-review <run_id>' instead.",
         file=sys.stderr,
     )
 

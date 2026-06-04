@@ -46,7 +46,7 @@ reduction, feasibility, strategic leverage, and ROI.
 
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
-| Suspend/resume wording is ahead of implementation in some paths. | A user can try a printed command that does not rehydrate the run. | AG-01..AG-04 / TICKET-16 |
+| Suspend/resume wording is ahead of implementation in agent-mode follow-up paths. | A user can try a printed command that does not rehydrate the run. | AG-01..AG-04 / TICKET-16 |
 
 ## Recently fixed
 
