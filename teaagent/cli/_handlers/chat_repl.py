@@ -50,7 +50,7 @@ def suspend_to_background(
 
     root = config.root.resolve()
 
-    print('[TeaAgent] Suspending session to background mode...')
+    print('[TeaAgent] Suspending session as a checkpoint...')
 
     # Generate unique run_id
     run_id = str(uuid.uuid4())[:8]
@@ -150,7 +150,7 @@ def print_chat_help() -> None:
     print('  /compact                   - Compact session context to save tokens')
     print('  /clear                     - Clear conversation history')
     print('  /diff                      - Show git diff for current session')
-    print('  /background, /handoff       - Suspend session to background mode')
+    print('  /background, /handoff       - Suspend session as a checkpoint')
     print('  /context                   - Show targeted context files')
     print('  /add <path>                - Add file/directory to context')
     print('  /drop <path>               - Remove file/directory from context')
@@ -656,11 +656,11 @@ def run_chat_repl(
                 run_id = suspend_to_background(config, session_context, targeted_files)
                 if run_id:
                     print(
-                        '[TeaAgent] Interactive session converted to background task.'
+                        '[TeaAgent] Interactive session converted to a suspension checkpoint.'
                     )
                     print('[TeaAgent] You can now safely exit the REPL.')
                     print(
-                        f"[TeaAgent] Use 'teaagent agent run --background {run_id}' to continue execution"
+                        f'[TeaAgent] Use teaagent agent interactive-review {run_id} to inspect changes.'
                     )
                 else:
                     print('[TeaAgent] Failed to suspend session')

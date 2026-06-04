@@ -626,13 +626,14 @@ show run_abc123
 
 #### `background`
 
-Suspend the current session to a background task and return to the shell.
+Suspend the current session as a checkpoint and return to the shell.
 
 ```
 background
 ```
 
-Resume later with `teaagent resume <run_id>` or `teaagent attach <run_id>`.
+Review later with `teaagent agent interactive-review <run_id>`; true resume is only
+available where the run record supports continuity.
 
 ---
 

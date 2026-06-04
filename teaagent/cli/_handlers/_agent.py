@@ -29,7 +29,7 @@ from teaagent.model_routing import route_model
 from teaagent.plan import PlanContract
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
-from teaagent.run_store import RunStore, summarize_audit_events
+from teaagent.run_store import RunStore, safe_run_id, summarize_audit_events
 from teaagent.runner import ApprovalHandler, ApprovalRequest, RunResult
 from teaagent.sandbox import ParallelExperimentStack
 from teaagent.skill_candidates import SkillCandidateStore
@@ -1721,6 +1721,40 @@ def _start_background_run(args: argparse.Namespace) -> int:
         BackgroundRunStore,
         build_agent_run_command,
     )
+
+    run_store = RunStore(args.root, readonly=True)
+    run_id_candidate = str(args.task).strip()
+    if run_id_candidate:
+        suspension_path = (
+            Path(args.root).resolve()
+            / '.teaagent'
+            / f'suspension-{safe_run_id(run_id_candidate)}.json'
+        )
+        if run_store.run_path(run_id_candidate).is_file():
+            print_json(
+                {
+                    'status': 'error',
+                    'message': (
+                        f"'{run_id_candidate}' looks like an existing run id. "
+                        f"Use `teaagent agent resume {run_id_candidate}` or "
+                        f"`teaagent agent interactive-review {run_id_candidate}` instead."
+                    ),
+                }
+            )
+            return 2
+        if suspension_path.is_file():
+            print_json(
+                {
+                    'status': 'error',
+                    'message': (
+                        f"'{run_id_candidate}' looks like a suspension id. "
+                        f"Use `teaagent agent interactive-review {run_id_candidate}` "
+                        'to inspect it; true resume is not yet available for REPL '
+                        'suspensions.'
+                    ),
+                }
+            )
+            return 2
 
     task = _prepare_task(args, args.task)
     command = build_agent_run_command(args, task)

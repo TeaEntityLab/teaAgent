@@ -3,6 +3,14 @@
 **CG Findings:** AG-01, AG-02, AG-03, AG-04
 **Human Review Required:** governance handoff path
 
+## Progress
+
+- Phase 1 honesty patch has shipped: REPL `/background` now prints only the
+  checkpoint/review path and no longer advertises bogus continuation hints.
+- Phase 2 guard has started: `teaagent agent run --background <id>` now refuses
+  id-shaped inputs that match a known run or suspension record.
+- Full REPL-originated resume rehydration remains open.
+
 ---
 
 ## Root Cause Analysis

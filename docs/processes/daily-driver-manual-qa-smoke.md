@@ -50,8 +50,8 @@ Run in a scratch git repo with at least one committed file. Use a cheap/stub mod
 11. **Resume round-trip (AG-01).** From step 6's run id: `teaagent resume <id>`.
     - ✅ Target after TICKET-16: session rehydrates. ⚠️ Today: errors `{status:error}`.
 12. **Background misuse (AG-02).** `teaagent agent run --background <id>`.
-    - ⚠️ Today: starts a NEW run with the id as the literal task — **do not rely on this to
-      resume**. After TICKET-16: errors with "did you mean `agent resume`?".
+    - ⚠️ Today: if the argument matches a known run or suspension id, it now refuses with a
+      helpful hint instead of spawning a bogus run. True resume is still a separate task.
 13. **Review path (AG-03, works).** `teaagent agent interactive-review <id>`.
     - ✅ Expect: lists changed files with y/e/r/n/q review commands.
 14. **Governance (verified solid).** Resume a run with a pending approval but no

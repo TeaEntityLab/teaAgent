@@ -11,6 +11,7 @@ import pytest
 
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.cli._handlers._chat import chat_command
+from teaagent.cli._handlers._agent import agent_run_task
 from teaagent.cli._handlers.agent_review import interactive_review_mode
 from teaagent.cli._handlers.chat_commands import execute_shell_command
 from teaagent.cli._handlers.chat_completion import complete_file_path, complete_symbol
@@ -137,6 +138,43 @@ def test_run_chat_repl_eof(monkeypatch):
 
         result = run_chat_repl(config)
         assert result == 0
+
+
+def test_agent_run_background_rejects_known_run_or_suspension_id(capsys):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tea_dir = Path(tmpdir) / '.teaagent'
+        tea_dir.mkdir()
+        (tea_dir / 'suspension-abc12345.json').write_text('{}', encoding='utf-8')
+
+        args = argparse.Namespace(
+            root=tmpdir,
+            task='abc12345',
+            background=True,
+            provider='gpt',
+            model=None,
+            route_model=False,
+            max_iterations=10,
+            max_tool_calls=10,
+            clarify=False,
+            allow_destructive=False,
+            approve_call_id=[],
+            hitl_approval=False,
+            permission_mode='prompt',
+            subagent=False,
+            max_subagent_depth=1,
+            heartbeat=0.0,
+            code_analysis=False,
+            context_profile='balanced',
+            selected_skills=[],
+            max_estimated_cost_cents=0,
+        )
+
+        result = agent_run_task(args)
+        captured = capsys.readouterr()
+
+        assert result == 2
+        assert 'looks like a suspension id' in captured.out.lower()
+        assert 'interactive-review' in captured.out
 
 
 def test_run_chat_repl_empty_input(monkeypatch):
@@ -360,10 +398,10 @@ def test_suspend_to_background_no_branch_switch(monkeypatch, capsys):
         assert 'Created sandbox branch' not in captured.out
         # Message should clarify this is not background execution
         assert 'suspension checkpoint' in captured.out
-        # Should not mention non-existent --detach flag (TASK-DD2-006)
-        assert '--detach' not in captured.out
         # Should mention interactive-review for reviewing suspended runs
         assert 'interactive-review' in captured.out
+        # Should not advertise background continuation for the suspension id
+        assert '--background' not in captured.out
 
 
 def test_chat_session_controller_execute_task(monkeypatch, capsys):
@@ -1016,7 +1054,9 @@ def test_suspend_to_background_basic(capsys):
         captured = capsys.readouterr()
 
         assert run_id  # Should return a run_id
-        assert 'Suspending session to background mode' in captured.out
+        assert 'Suspending session as a checkpoint' in captured.out
+        assert 'interactive-review' in captured.out
+        assert 'resume from repl session not yet supported via cli' in captured.out.lower()
         assert 'Session suspended successfully' in captured.out
 
         # Check suspension file was created
