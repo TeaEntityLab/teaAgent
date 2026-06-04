@@ -785,9 +785,6 @@ class TUITests(unittest.TestCase):
         self.assertTrue(tui.handle_command('resume'))
         self.assertIn('requires a run id', output[0])
 
-    @pytest.mark.skip(
-        reason='Resume unknown run ID handling not working - requires investigation'
-    )
     def test_tui_resume_unknown_run_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = []
@@ -905,7 +902,6 @@ class TUITests(unittest.TestCase):
 
         self.assertEqual(output[0], 'TeaAgent TUI 0.1.0')
 
-    @pytest.mark.skip(reason='TUI status command not working - requires investigation')
     def test_tui_status_with_valid_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = []
@@ -955,15 +951,9 @@ class TUITests(unittest.TestCase):
             # Verify chat controller is created
             controller = tui._get_chat_controller()
             self.assertIsNotNone(controller)
+            self.assertIs(controller.session_state, tui._session_state)
             self.assertEqual(controller.session_state.session_cost_cents, 0.0)
-
-            # Simulate cost accumulation through controller (as would happen in real execution)
-            controller.session_state.session_cost_cents += 50.0
-            tui._session_cost_cents = controller.session_state.session_cost_cents
-
-            # Verify cost was tracked through controller
-            self.assertEqual(tui._session_cost_cents, 50.0)
-            self.assertEqual(controller.session_state.session_cost_cents, 50.0)
+            self.assertIs(tui._get_chat_controller(), controller)
 
     def test_tui_cost_command_shows_controller_cost(self) -> None:
         """TUI /cost should reflect controller state and keep currency formatting."""

@@ -174,11 +174,11 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: status requires a run id')
             return True
         run_id = args[0]
-        from teaagent.run_store import RunStore
-
         store = RunStore(tui.root)  # type: ignore[assignment]
-        # Simplified status check
-        tui._print_json({'run_id': run_id, 'status': 'unknown'})
+        try:
+            tui._print_json(store.heartbeat_for_run(run_id))
+        except FileNotFoundError:
+            tui.output_fn(f"error: run '{run_id}' not found")
         return True
 
     if action == 'plan':
@@ -246,6 +246,10 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: resume requires a run id')
             return True
         run_id = args[0]
+        store = RunStore(tui.root)
+        if not store.run_path(run_id).is_file():
+            tui.output_fn(f"error: run '{run_id}' not found")
+            return True
         _safe_run_agent_task(tui, '', resumed_from=run_id)
         return True
 
