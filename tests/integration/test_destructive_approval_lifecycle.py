@@ -6,6 +6,7 @@ Covers:
 - Denied call_id raises and the run fails with permission error.
 - Auto-approval via ``approval_handler`` callback.
 - DS-12: Empty path globs are rejected to prevent implicit global grants.
+- DS-12: ApprovalPolicy rejects empty-string paths and normalizes relative paths.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from __future__ import annotations
 import pytest
 
 from teaagent.audit import AuditLogger
+from teaagent.ergonomics._approval_grants import _normalize_and_validate_path
 from teaagent.ergonomics._approval_state import ApprovalPresetStore
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.runner import AgentRunner, ApprovalRequest, FinalAnswer, ToolRequest
@@ -162,3 +164,83 @@ def test_empty_path_globs_rejected_ds12(tmp_path):
     # Valid patterns should work
     grant = store.grant('workspace_write_file', path_globs=['src/**'])
     assert grant.path_globs == ('src/**',)
+
+
+def test_approval_policy_rejects_empty_path(tmp_path):
+    """DS-12: ApprovalPolicy-level path grant rejects empty and whitespace-only paths.
+
+    Regression guard: empty-string or whitespace path_globs must never create an
+    implicit global workspace grant that the user believes is path-scoped.
+    """
+    store = ApprovalPresetStore(tmp_path)
+
+    # Empty string path in path_globs must be rejected for all non-session scopes
+    for scope in ('always', 'once'):
+        with pytest.raises(ValueError, match='non-empty pattern'):
+            store.grant('workspace_write_file', path_globs=[''], scope=scope)  # type: ignore[arg-type]
+
+    # Whitespace-only entries must also be rejected (they strip to nothing)
+    with pytest.raises(ValueError, match='non-empty pattern'):
+        store.grant('workspace_write_file', path_globs=[' ', '\t', ''], scope='always')  # type: ignore[arg-type]
+
+    # None path_globs must be rejected for non-session scopes
+    with pytest.raises(ValueError, match='must be provided explicitly'):
+        store.grant('workspace_write_file', path_globs=None, scope='always')
+
+    # session-scope with None is allowed (no path restriction for temporary grants)
+    session_grant = store.grant('workspace_write_file', path_globs=None, scope='session')
+    assert session_grant.path_globs == ()
+
+    # A grant with a valid non-empty path works for session scope
+    valid_grant = store.grant('workspace_write_file', path_globs=['src/**'])
+    assert valid_grant.path_globs == ('src/**',)
+
+    # For persistent scopes (always/once), both path_globs and command_prefixes must be explicit
+    always_grant = store.grant(
+        'workspace_write_file',
+        path_globs=['src/**'],
+        command_prefixes=['git'],
+        scope='always',
+    )
+    assert always_grant.path_globs == ('src/**',)
+    assert always_grant.command_prefixes == ('git',)
+
+
+def test_approval_policy_normalizes_relative_paths(tmp_path):
+    """DS-12: Relative paths in tool arguments are normalized before approval matching.
+
+    Ensures ./foo resolves to 'foo' within workspace (not a traversal bypass),
+    ../escape is rejected, and absolute paths outside workspace are rejected.
+    """
+    workspace = tmp_path
+    (workspace / 'src').mkdir()
+    (workspace / 'src' / 'main.py').touch()
+    nested = workspace / 'a' / 'b'
+    nested.mkdir(parents=True)
+
+    # Relative ./src/main.py normalizes to src/main.py (within workspace)
+    result = _normalize_and_validate_path('./src/main.py', workspace)
+    assert result == 'src/main.py', f'expected src/main.py, got {result!r}'
+
+    # Nested relative path normalizes correctly
+    result = _normalize_and_validate_path('./a/b', workspace)
+    assert result == 'a/b', f'expected a/b, got {result!r}'
+
+    # Parent traversal is rejected — cannot escape workspace root
+    result = _normalize_and_validate_path('../escape', workspace)
+    assert result is None, '../escape must be rejected (path traversal)'
+
+    result = _normalize_and_validate_path('../../etc/passwd', workspace)
+    assert result is None, '../../etc/passwd must be rejected'
+
+    # Embedded traversal is also rejected
+    result = _normalize_and_validate_path('src/../../../etc/passwd', workspace)
+    assert result is None, 'embedded traversal must be rejected'
+
+    # Absolute path outside workspace is rejected
+    result = _normalize_and_validate_path('/tmp/evil', workspace)
+    assert result is None, 'absolute path outside workspace must be rejected'
+
+    # Plain filename without traversal is accepted
+    result = _normalize_and_validate_path('src/main.py', workspace)
+    assert result == 'src/main.py'

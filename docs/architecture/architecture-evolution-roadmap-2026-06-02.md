@@ -219,7 +219,7 @@ This is a redesign, not an optimization:
 | Result capture per subagent | ✅ `_review.py` captures output |
 | Multi-child result comparison | ❌ `_review.py` captures but does not compare children against each other |
 | Context propagation (parent observations → child) | ❌ No protocol; children start from scratch |
-| Hierarchical permission inheritance | ⚠️ Lineage struct exists; enforcement at `SubagentManager` not verified as complete |
+| Hierarchical permission inheritance | ✅ **One-way read-only** — subagents do NOT inherit parent JIT grants; subagent grants never propagate back to parent. Enforced by `SubagentManager.run_subagent` omitting `jit_state` from `sub_config` (SEC-06 fixed 2026-06-05). Tests: `test_subagent_does_not_inherit_parent_approvals`, `test_subagent_approval_doesnt_elevate_parent`. |
 | Grandchild depth limit | ⚠️ `depth` field in `SubagentLineage`; no hard ceiling at API boundary |
 
 ### 5.2 For Agent Swarms (10–50 concurrent agents)
@@ -425,7 +425,7 @@ The 5 existing loops (plan gate, tool lint, audit chain, failure card, approval 
 - [ ] `SubagentManager`: enforce `MAX_DEPTH=5` hard limit on lineage depth (configurable)
 - [ ] `_review.py`: implement multi-child result comparison — compare outputs pairwise, flag conflicts, surface to parent for resolution
 - [ ] `ContextBus`: add push notification channel (SQLite triggers or file-watch) so agents can react to peer observations without polling
-- [ ] **ADR 0030**: Hierarchical permission inheritance — document and enforce that child agents cannot hold permissions their parent does not have
+- [x] **ADR 0030**: Hierarchical permission inheritance — approval lineage is one-way read-only; subagents do not inherit parent JIT grants; child grants do not propagate to parent. Implemented 2026-06-05 (SEC-06). See `SubagentManager.run_subagent` and tests `test_subagent_does_not_inherit_parent_approvals`, `test_subagent_approval_doesnt_elevate_parent`.
 
 #### Governance Plugin System
 - [ ] Define `GovernancePlugin` protocol

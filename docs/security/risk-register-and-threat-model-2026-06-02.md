@@ -9,15 +9,15 @@
 
 ## Executive Summary
 
-teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer but has specific high-severity gaps at the audit, isolation, and budget layers. **Three findings are no-go for production expansion** (SEC-01, SEC-02, SEC-07). Three additional findings involve active security boundary violations in currently-deployed code (SEC-06, SEC-10). **DS-12, DS-13, and SEC-04 were fixed on 2026-06-04/05** (empty-path approval rejection, budget semantics, cost default).
+teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer but has specific high-severity gaps at the audit, isolation, and budget layers. **One finding is no-go for production expansion** (SEC-02). **SEC-01, SEC-07, SEC-10 were fixed/verified 2026-06-05** (HMAC key persistence, Docker hardening, shell allowlist). **DS-12, DS-13, and SEC-04 were fixed on 2026-06-04/05** (empty-path approval rejection, budget semantics, cost default).
 
 | Severity | Count | Immediately Blocking |
 |---|---|---|
-| Critical | 1 | Yes (SEC-01) |
-| High | 7 | Partial (SEC-02, SEC-07, DS-12) |
+| Critical | 0 | No (SEC-01 verified/closed) |
+| High | 5 | Partial (SEC-02) |
 | Medium | 10 | No |
 | Low | 5 | No |
-| **Total** | **24** | |
+| **Total** | **20 open** | |
 
 ---
 
@@ -58,16 +58,16 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 
 | ID | Category | Description | L | I | Score | Status | Priority |
 |---|---|---|---|---|---|---|---|
-| SEC-01 | Audit Integrity | HMAC key is ephemeral — audit chain unverifiable across restarts; SHA-256 recomputable by attacker with write access | H | H | 9 | **OPEN** | P0/Blocker |
+| SEC-01 | Audit Integrity | HMAC key is ephemeral — audit chain unverifiable across restarts; SHA-256 recomputable by attacker with write access | H | H | 9 | **VERIFY/CLOSE 2026-06-05** — key persisted to `~/.teaagent/run-keys/<run_id>.key` (chmod 600) since audit.py:165; tests: `test_audit_hmac_persisted_across_instances`, `test_audit_hmac_fails_with_wrong_key`, `test_audit_key_file_permissions_readable` | — |
 | SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | **OPEN** | P0/Blocker |
 | SEC-03 | Permission | Historical: `allow_all_destructive=True` short-circuited the approval gate outside explicit full-access mode. Current branch blocks it in `prompt` mode and requires explicit broad-mode promotion for bypass callers. | L | H | 3 | **FIXED / WATCH** | P1 |
 | SEC-04 | Budget | ~~`ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap"~~ Default changed to `500`; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents` | H | H | 9 | **FIXED 2026-06-05** | — |
 | SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | **OPEN** | P2 |
-| SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | **OPEN** | P1 |
-| SEC-07 | Isolation | Docker subagent runs as root, no `--network none`, no `--cap-drop ALL`, no seccomp — allows exfiltration and container escape | H | H | 9 | **OPEN** | P0/Blocker |
-| SEC-08 | Isolation | `directory-snapshot` mode provides only filesystem isolation, not process isolation — agent reads `/etc/`, `/proc/`, `~/.ssh/`, spawns host processes | H | M | 6 | **OPEN** | P1 |
+| SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | **FIXED 2026-06-05** | — |
+| SEC-07 | Isolation | Docker subagent runs as root, no `--network none`, no `--cap-drop ALL`, no seccomp — allows exfiltration and container escape | H | H | 9 | **FIXED 2026-06-05** — all flags present in `_isolation.py:223-242`: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges`; test: `test_subagent_docker_container_hardened`; documented in `docs/ops/security-hardening.md` | — |
+| SEC-08 | Isolation | `directory-snapshot` mode provides only filesystem isolation, not process isolation — agent reads `/etc/`, `/proc/`, `~/.ssh/`, spawns host processes | H | M | 6 | **DOCUMENTED 2026-06-05** — `logger.warning()` emitted at every `directory-snapshot` selection (`_isolation.py:181`); isolation modes table and dev-vs-production guidance added to `docs/ops/security-hardening.md` | P1 |
 | SEC-09 | Multi-sig | Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files | M | M | 4 | **OPEN** | P2 |
-| SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | **OPEN** | P1 |
+| SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | **FIXED 2026-06-05** — `_INSPECT_EXECUTABLES` contains only `{pwd, ls, rg, grep, wc}`; `cat/head/tail` absent; tests: `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | — |
 | SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | **OPEN** | P2 |
 | SEC-12 | Audit | `os.fsync()` failure caught and silenced; audit degrades to in-memory only with no operator notification; disk-full attack eliminates all log persistence | L | M | 2 | **OPEN** | P2 |
 | SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | **OPEN** | P1 |
@@ -79,7 +79,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 
 | ID | Category | Description | L | I | Score | Status | Priority |
 |---|---|---|---|---|---|---|---|
-| DS-12 | Permission | Empty-path approval creates implicit global workspace grant; user believes they granted path-scoped access; audit log records it as "path-scoped" masking the expansion | M | H | 6 | **OPEN** | P1 (Security) |
+| DS-12 | Permission | Empty-path approval creates implicit global workspace grant; user believes they granted path-scoped access; audit log records it as "path-scoped" masking the expansion | M | H | 6 | **FIXED 2026-06-05** | — |
 | DS-13 | Budget | ~~`0` cost cap had three incompatible semantics~~ `None`=unlimited, `0`=zero-spend, positive=cap. Default 500 cents. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_default_500_cents` | M | M | 4 | **FIXED 2026-06-05** | — |
 | DS-01 | Budget | TUI `_session_cost_cents` never incremented — `/cost` and budget bar always show `$0.00`; per-run cap still fires but cumulative cap never triggers | H | M | 6 | **OPEN** | P1 |
 | DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | **OPEN** | P2 |
@@ -472,11 +472,11 @@ warn_at_pct = 50
 ### Fix Status (2026-06-04)
 
 **Fixed:**
-- **DS-12**: Empty-path approval rejection implemented. Empty path globs now raise ValueError to prevent implicit global grants. Session-scope allows None (no restriction), other scopes require explicit patterns. Test: `test_empty_path_globs_rejected_ds12`.
 - **DS-13**: Budget semantics fixed. `None` is now the only unlimited sentinel; `0` means zero spend allowed. Default budget changed from 100 to 500 cents. Test: `test_zero_cost_cap_blocks_positive_cost_run`.
-- **SEC-06**: Subagent JIT approval isolation enforced. SubagentManager now creates fresh JIT state for subagents, preventing parent approvals from leaking. Test: `test_subagent_jit_approval_isolation_sec06`.
 
 **Fixed (2026-06-05):**
+- **DS-12**: Empty-path approval rejection implemented. Empty path globs now raise `ValueError` to prevent implicit global grants. Session-scope allows `None` (no restriction); other scopes require explicit non-empty patterns. Relative paths in tool arguments are normalized via `_normalize_and_validate_path` before matching. Parent-traversal (`../`) and paths outside workspace are rejected. Tests: `test_empty_path_globs_rejected_ds12`, `test_approval_policy_rejects_empty_path`, `test_approval_policy_normalizes_relative_paths`.
+- **SEC-06**: Subagent JIT approval isolation enforced. `SubagentManager.run_subagent` omits `jit_state` when building `sub_config`, so subagents always start with a fresh empty `JITApprovalState`. Approval lineage is one-way read-only: parent grants are never copied to child; child grants never propagate back to parent. Tests: `test_subagent_jit_approval_isolation_sec06`, `test_subagent_jit_approval_isolation_sec06_adversarial`, `test_subagent_does_not_inherit_parent_approvals`, `test_subagent_approval_doesnt_elevate_parent`.
 - **SEC-04**: Default changed to 500 cents; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents`.
 
 **Still Open:**
