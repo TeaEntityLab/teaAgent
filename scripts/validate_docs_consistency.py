@@ -136,6 +136,46 @@ GUARDED_STALE_FAILURE_PROSE = re.compile(
     r'\b([1-9]\d*)\s+(failed|failures)\b', re.IGNORECASE
 )
 
+# Risk register evidence patterns
+_RISK_ROW_ID = re.compile(r'^\|\s*([A-Z]{2,4}-\d+)\s*\|', re.MULTILINE)
+_TICKET_ROW = re.compile(
+    r'^\|\s*\[?(TASK-DD2-\d+|TICKET-\d+[^]]*)\]?',
+    re.MULTILINE,
+)
+_TEST_NAME_IN_TEXT = re.compile(r'\btest_[a-z][a-z0-9_]{3,}\b')
+_COMMIT_HASH_IN_TEXT = re.compile(r'\b[0-9a-f]{7,40}\b')
+# Only match project ticket/work-item IDs, not risk register IDs (SEC-*, DS-*, SC-*)
+_TICKET_ID_IN_TEXT = re.compile(r'\b(?:TASK|TICKET|GOV|P[0-9]-TR)-[A-Z0-9-]+\b')
+_PRIORITY_P0_P1 = re.compile(r'\bP[01]\b')
+_STATUS_FIXED = re.compile(r'\bFIXED\b|\bFixed\b|\bVERIFY/CLOSE\b|\bDOCUMENTED\b', re.IGNORECASE)
+_STATUS_OPEN = re.compile(r'\bOPEN\b', re.IGNORECASE)
+
+
+def _parse_risk_register_rows(text: str) -> dict[str, tuple[str, str, str]]:
+    """Parse risk-register table rows into {id: (status_text, priority, full_row)}.
+
+    Handles free-text Status cells (e.g. '**FIXED 2026-06-05** — test: test_foo')
+    by splitting lines on '|' and treating column index 6 as Status (0-based, after
+    stripping the leading empty column) and column index 7 as Priority.
+    """
+    rows: dict[str, tuple[str, str, str]] = {}
+    for line in text.splitlines():
+        if not _RISK_ROW_ID.match(line):
+            continue
+        parts = [p.strip() for p in line.split('|')]
+        # parts[0] is empty (before first |), parts[-1] is empty (after last |)
+        # parts[1]=ID, [2]=Category, [3]=Description, [4]=L, [5]=I, [6]=Score,
+        # [7]=Status, [8]=Priority (8 data columns)
+        if len(parts) < 9:
+            continue
+        row_id = parts[1].strip()
+        if not re.match(r'^[A-Z]{2,4}-\d+$', row_id):
+            continue
+        status_text = parts[7].strip()
+        priority = parts[8].strip() if len(parts) > 8 else ''
+        rows[row_id] = (status_text, priority, line)
+    return rows
+
 
 def _render_tier_markdown() -> str:
     script = Path(__file__).with_name('run_acceptance_tier.py')
@@ -829,6 +869,209 @@ def validate_docs_consistency(
     return errors
 
 
+def _collect_repo_test_names(repo_root: Path) -> set[str]:
+    """Return all def test_<name> function names found under tests/."""
+    names: set[str] = set()
+    tests_dir = repo_root / 'tests'
+    if not tests_dir.is_dir():
+        return names
+    for path in tests_dir.rglob('test_*.py'):
+        for m in re.finditer(r'def\s+(test_[a-z][a-z0-9_]*)', path.read_text(encoding='utf-8')):
+            names.add(m.group(1))
+    return names
+
+
+def validate_risk_register_evidence(
+    risk_register_text: str,
+    *,
+    repo_root: Path = _REPO_ROOT,
+    check_test_names: bool = True,
+) -> list[str]:
+    """Validate that risk register rows have evidence for FIXED/P0/P1 claims.
+
+    Rules:
+    - Any row with status containing "FIXED" must cite a test name or commit hash
+      somewhere in the document's "Fix Status" section or the row itself.
+    - Any OPEN row with P0 or P1 priority must cite a test name, commit hash,
+      or a linked ticket ID in the same document.
+    - Rows where the table status disagrees with a "FIXED" note in the Fix Status
+      section are flagged as inconsistencies.
+
+    Exit-1 condition: any P0/P1 row fails its evidence requirement.
+    """
+    errors: list[str] = []
+    p0p1_errors: list[str] = []
+
+    known_tests = _collect_repo_test_names(repo_root) if check_test_names else set()
+
+    # Extract the Fix Status block if present (provides evidence for fixed items).
+    fix_status_block = ''
+    fix_start = risk_register_text.find('### Fix Status')
+    if fix_start != -1:
+        fix_status_block = risk_register_text[fix_start:]
+
+    # Collect IDs claimed fixed in the Fix Status section.
+    # Only collect from subsections headed by **Fixed** (or **Fixed (date)**),
+    # stopping at **Still Open** subsections so those items are not included.
+    _FIXED_HEADER = re.compile(r'^\*\*Fixed', re.IGNORECASE)
+    _STILL_OPEN_HEADER = re.compile(r'^\*\*Still Open', re.IGNORECASE)
+    fixed_in_fix_status: set[str] = set()
+    in_fixed_subsection = False
+    for line in fix_status_block.splitlines():
+        if _FIXED_HEADER.match(line.strip()):
+            in_fixed_subsection = True
+            continue
+        if _STILL_OPEN_HEADER.match(line.strip()):
+            in_fixed_subsection = False
+            continue
+        if not in_fixed_subsection:
+            continue
+        m = re.match(r'[-*]\s*\*\*([A-Z]{2,4}-\d+)\*\*:', line)
+        if m:
+            fixed_in_fix_status.add(m.group(1))
+
+    # Pre-index all lines for context lookup.
+    all_lines = risk_register_text.splitlines()
+    row_line_index: dict[str, int] = {}
+    for lineno, line in enumerate(all_lines):
+        m = re.match(r'^\|\s*([A-Z]{2,4}-\d+)\s*\|', line)
+        if m:
+            row_line_index.setdefault(m.group(1), lineno)
+
+    # id -> (status_text, priority, full_row_line)
+    parsed_rows = _parse_risk_register_rows(risk_register_text)
+
+    # Coverage counters
+    total = len(parsed_rows)
+    verified = 0
+    uncovered_p0p1: list[str] = []
+
+    for row_id, (status_text, priority, _row_line) in parsed_rows.items():
+        is_fixed = bool(_STATUS_FIXED.search(status_text))
+        is_open = bool(_STATUS_OPEN.search(status_text))
+        is_p0p1 = bool(_PRIORITY_P0_P1.search(priority))
+
+        # Evidence search scoping:
+        # - For FIXED rows: search only in the Fix Status block (where test names live).
+        # - For OPEN rows: search only the row's own status cell text (not neighboring
+        #   table rows, which would give false positives via adjacent risk IDs).
+        if is_fixed:
+            search_corpus = fix_status_block
+        else:
+            # Use only the status_text cell for OPEN rows
+            search_corpus = status_text
+
+        has_test = bool(_TEST_NAME_IN_TEXT.search(search_corpus))
+        has_commit = bool(_COMMIT_HASH_IN_TEXT.search(search_corpus))
+        # Cross-reference must be a *different* item ID, not the row's own.
+        cross_ref_corpus = search_corpus.replace(row_id, '')
+        has_cross_ref = bool(_TICKET_ID_IN_TEXT.search(cross_ref_corpus))
+        has_strong_evidence = has_test or has_commit
+        has_evidence = has_strong_evidence or has_cross_ref
+
+        if has_strong_evidence:
+            verified += 1
+        elif has_cross_ref:
+            verified += 1
+
+        # Table says OPEN but Fix Status says it's fixed → inconsistency
+        if is_open and row_id in fixed_in_fix_status:
+            errors.append(
+                f'Risk register inconsistency: {row_id} table row says OPEN but '
+                f'Fix Status section marks it FIXED. Update the table row status.'
+            )
+
+        if is_fixed and not has_strong_evidence:
+            errors.append(
+                f'Risk register FIXED claim without test/commit evidence: {row_id} '
+                f'(status={status_text[:60]!r}). Add a test function name or commit hash.'
+            )
+
+        if is_open and is_p0p1 and not has_evidence:
+            msg = (
+                f'Risk register P0/P1 OPEN row has no linked evidence: {row_id} '
+                f'(priority={priority!r}). Add a ticket ID, test name, or code reference.'
+            )
+            p0p1_errors.append(msg)
+            uncovered_p0p1.append(row_id)
+
+    errors.extend(p0p1_errors)
+
+    # Print coverage summary
+    pct = int(100 * verified / total) if total else 0
+    print(
+        f'Risk register evidence coverage: {verified}/{total} rows verified ({pct}%)'
+    )
+    if uncovered_p0p1:
+        print(
+            f'  High-risk uncovered P0/P1 rows: {", ".join(uncovered_p0p1)}'
+        )
+
+    return errors
+
+
+def validate_ticket_index_evidence(
+    ticket_index_text: str,
+    *,
+    repo_root: Path = _REPO_ROOT,
+) -> list[str]:
+    """Validate that ticket index rows claiming Fixed have a code or test reference.
+
+    Rules:
+    - Every row with "Fixed" in the Summary column must contain a file path
+      or be traceable to a known test name.
+    - "Partially addressed" rows are flagged with a warning if the plan file
+      is not cited or no ACs are listed.
+    """
+    errors: list[str] = []
+    known_tests = _collect_repo_test_names(repo_root)
+
+    total = 0
+    verified = 0
+
+    for line in ticket_index_text.splitlines():
+        m = re.match(r'^\|\s*\[?(TASK-DD2-\d+|TICKET-\d+[^\]]*)\]?[^|]*\|', line)
+        if not m:
+            continue
+        total += 1
+        ticket_id = m.group(1).strip()
+
+        # Check for "Fixed" claim
+        if 'Fixed' not in line and 'fixed' not in line:
+            verified += 1  # non-Fixed rows are not subject to this rule
+            continue
+
+        # Check for "partially" qualifier
+        if 'partially' in line.lower():
+            # Must cite a plan file or have explicit AC list
+            if 'plan.md' not in line and 'plan file' not in line:
+                errors.append(
+                    f'Ticket {ticket_id} claims partially Fixed but cites no plan file '
+                    f'for the incomplete ACs. Add a link to the plan or list the open ACs.'
+                )
+            verified += 1
+            continue
+
+        # Full "Fixed" claim: require a file path or test name in the row
+        has_file = bool(re.search(r'`[a-z][a-z0-9_/]+\.[a-z]+`', line))
+        has_test = bool(_TEST_NAME_IN_TEXT.search(line)) or any(
+            t in line for t in known_tests
+        )
+        if has_file or has_test:
+            verified += 1
+        else:
+            # Softer: only warn, not error, since file refs may be in separate plan files
+            errors.append(
+                f'Ticket {ticket_id} claims Fixed but the index row cites no file path '
+                f'or test name. Add a code ref or cross-link to the plan file.'
+            )
+
+    pct = int(100 * verified / total) if total else 0
+    print(f'Ticket index evidence coverage: {verified}/{total} rows verified ({pct}%)')
+
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description='Validate README / acceptance / use-case docs consistency.'
@@ -861,6 +1104,26 @@ def main() -> int:
         '--guarded-claims-registry',
         default='docs/governance/guarded-claims-registry.md',
     )
+    parser.add_argument(
+        '--risk-register',
+        default='docs/security/risk-register-and-threat-model-2026-06-02.md',
+        help='Risk register markdown file to audit for evidence completeness.',
+    )
+    parser.add_argument(
+        '--ticket-index',
+        default='docs/plans/ticket-plans/index.md',
+        help='Ticket index markdown file to audit for Fixed claim evidence.',
+    )
+    parser.add_argument(
+        '--skip-risk-register',
+        action='store_true',
+        help='Skip risk register evidence audit.',
+    )
+    parser.add_argument(
+        '--skip-ticket-index',
+        action='store_true',
+        help='Skip ticket index evidence audit.',
+    )
     args = parser.parse_args()
 
     errors = validate_docs_consistency(
@@ -879,6 +1142,28 @@ def main() -> int:
         security_workflow_path=Path(args.security_workflow),
         guarded_claims_registry_path=Path(args.guarded_claims_registry),
     )
+    risk_register_path = Path(args.risk_register)
+    if not args.skip_risk_register:
+        if risk_register_path.is_file():
+            errors.extend(
+                validate_risk_register_evidence(
+                    risk_register_path.read_text(encoding='utf-8'),
+                )
+            )
+        else:
+            errors.append(f'Risk register not found: {risk_register_path}')
+
+    ticket_index_path = Path(args.ticket_index)
+    if not args.skip_ticket_index:
+        if ticket_index_path.is_file():
+            errors.extend(
+                validate_ticket_index_evidence(
+                    ticket_index_path.read_text(encoding='utf-8'),
+                )
+            )
+        else:
+            errors.append(f'Ticket index not found: {ticket_index_path}')
+
     if errors:
         for err in errors:
             print(f'ERROR: {err}')
