@@ -176,3 +176,13 @@ This work log turns the current strategy into concrete execution chunks.
   - **TASK-007**: Still open (competitor survey — docs/research, not code).
   Minor gap found: `docs/acceptance.md` does not explicitly link the coverage omit
   ledger at `docs/governance/coverage-omit-ledger.md`. All other claims verified.
+- 2026-06-04 — **Leaked-item closure + re-verification.** The minor gap above is
+  now fixed: `docs/acceptance.md` "Current Status" section links the coverage
+  omit ledger (`governance/coverage-omit-ledger.md`). The three TASK-DD2 plan
+  status headers flagged above are also already reconciled — 005 reads
+  "Partially Fixed" (matches index; broader git-sandbox ACs honestly open behind
+  a Human Review gate), 013/014 read "Fixed". Re-verified on Python 3.12.8: full
+  suite 3415 passed, 22 skipped, 0 failed; `scripts/validate_docs_consistency.py`
+  passes; `ruff check` and `ruff format --check` clean. No code task remains open
+  except the intentionally-deferred backlog (TASK-007 competitor survey;
+  DOW-014/018–030 P2 docs-tooling; TASK-DD2-005 broader git-sandbox ACs).

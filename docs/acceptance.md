@@ -148,6 +148,11 @@ on Python 3.12.8. Treat that full-suite number as a dated evidence snapshot, not
 as a substitute for re-running `python3 -m pytest -q` before a release or safety
 claim.
 
+Code paths intentionally excluded from coverage measurement (and therefore not
+reflected in the numbers above) are tracked, with owner, reason, risk, return
+milestone, and smoke-test candidate, in the
+[coverage omit ledger](governance/coverage-omit-ledger.md).
+
 <!-- ACCEPTANCE_TIERS:START -->
 
 ## Acceptance Tiers (P0/P1/P2)
