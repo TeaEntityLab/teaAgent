@@ -887,7 +887,8 @@ def _ensure_log_safe(value: Any) -> Any:
     if isinstance(value, dict):
         safe: dict[Any, Any] = {}
         for key, item in value.items():
-            if _is_sensitive_key(key):
+            key_text = str(key)
+            if _is_sensitive_key(key) or _looks_like_sensitive_env_name(key_text):
                 safe[key] = _REDACTED
                 continue
             safe[key] = _ensure_log_safe(item)
