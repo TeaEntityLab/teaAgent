@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 
 from teaagent import MemoryCatalog, PermissionMode, preflight
 from teaagent.cli import main
@@ -89,6 +90,23 @@ class PreflightTests(unittest.TestCase):
             self.assertEqual(payload['routing']['category'], 'review')
             # With complexity-based routing, "review this patch for regressions" routes to gpt-4o-mini (medium complexity)
             self.assertEqual(payload['model'], 'gpt-4o-mini')
+
+
+    def test_preflight_detects_run_store_corruption(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # Create a corrupt run file to trigger health detection
+            runs_dir = Path(tmp) / '.teaagent' / 'runs'
+            runs_dir.mkdir(parents=True, exist_ok=True)
+            (runs_dir / 'corrupt.jsonl').write_text('garbage data\n', encoding='utf-8')
+
+            report = preflight('test task', root=tmp, provider='gpt')
+            payload = report.to_dict()
+
+            # Preflight should report corruption in health failures
+            self.assertFalse(payload['health']['healthy'])
+            failures = payload['health'].get('failures', [])
+            failure_text = '\n'.join(failures)
+            self.assertIn('corrupt', failure_text.lower())
 
 
 if __name__ == '__main__':

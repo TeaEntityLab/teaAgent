@@ -48,6 +48,21 @@ class MemoryCatalogTests(unittest.TestCase):
 
             self.assertEqual([entry.memory_id for entry in entries], [good.memory_id])
 
+    def test_memory_catalog_health_report_tracks_corrupt_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = MemoryCatalog(tmp)
+            # Add a valid entry
+            catalog.add('valid memory entry')
+            # Write a corrupt line to memory.jsonl
+            memory_file = Path(tmp) / '.teaagent' / 'memory.jsonl'
+            with memory_file.open('a', encoding='utf-8') as f:
+                f.write('not valid json\n')
+
+            report = catalog.health_report()
+            self.assertEqual(report['corrupt_entries'], 1)
+            self.assertEqual(report['total_entries'], 1)
+            self.assertFalse(report['healthy'])
+
     def test_memory_quarantine_list_promote_maintain(self) -> None:
         """Test memory quarantine list, promote, and maintain functions (TASK-005)."""
         with tempfile.TemporaryDirectory() as tmp:

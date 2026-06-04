@@ -983,6 +983,16 @@ class TUITests(unittest.TestCase):
 
             self.assertEqual(output[-1], 'cost: $1.23')
 
+    def test_tui_cost_command_falls_back_to_local_when_controller_is_zero(self) -> None:
+        """When controller returns 0 but local has accumulated cost, use local."""
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        controller = tui._get_chat_controller()
+        controller.session_state.session_cost_cents = 0.0
+        tui._session_cost_cents = 250.0
+        tui._handle_cost()
+        self.assertEqual(output[-1], 'cost: $2.50')
+
     def test_tui_plan_command_generates_clarification(self) -> None:
         """Test TUI plan command generates task clarification."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -1369,6 +1379,35 @@ class TUITests(unittest.TestCase):
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._handle_undo()
         self.assertIn('no checkpoint', ' '.join(output))
+
+    def test_tui_handle_undo_calls_controller_first(self) -> None:
+        """_handle_undo must call ChatSessionController.undo_last_run() before checkpoint fallback."""
+        import unittest.mock
+
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        with patch.object(tui, '_get_chat_controller') as mock_get:
+            mock_controller = unittest.mock.MagicMock()
+            mock_controller.undo_last_run.return_value = True
+            mock_get.return_value = mock_controller
+
+            tui._handle_undo()
+
+            mock_controller.undo_last_run.assert_called_once()
+            # Should say journal undo completed, not fall back to checkpoint
+            self.assertIn('journal undo completed', ' '.join(output))
+
+    def test_tui_ask_safe_wrapper_handles_exception(self) -> None:
+        """_safe_run_agent_task in _commands.py should catch exceptions from _run_agent_task."""
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        with patch.object(tui, '_run_agent_task', side_effect=RuntimeError('API failure')):
+            from teaagent.tui._commands import _safe_run_agent_task
+
+            _safe_run_agent_task(tui, 'test task')
+        # Error message should be shown, not crash
+        self.assertIn('error:', ' '.join(output))
+        self.assertIn('API failure', ' '.join(output))
 
     # ── Pin / unpin / pinned ──────────────────────────────────────────────────
 

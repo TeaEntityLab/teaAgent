@@ -347,17 +347,33 @@ class RunStore:
     def health_report(self) -> dict[str, Any]:
         """Report health status including corruption count.
 
+        Scans run files for JSON validity to detect corruption.
+
         Returns:
             Dict with 'corrupt_runs' count, 'total_runs', and 'healthy' boolean
         """
         total_runs = 0
+        corrupt_runs = 0
         if self.store_dir.exists():
-            total_runs = len(list(self.store_dir.glob('*.jsonl')))
+            for run_file in sorted(self.store_dir.glob('*.jsonl')):
+                total_runs += 1
+                try:
+                    data = run_file.read_text(encoding='utf-8')
+                    if not data.strip():
+                        corrupt_runs += 1
+                        continue
+                    first_line = data.split('\n')[0].strip()
+                    if first_line:
+                        json.loads(first_line)
+                    else:
+                        corrupt_runs += 1
+                except (json.JSONDecodeError, OSError):
+                    corrupt_runs += 1
 
         return {
-            'corrupt_runs': self._corrupt_count,
-            'total_runs': total_runs - self._corrupt_count,
-            'healthy': self._corrupt_count == 0,
+            'corrupt_runs': corrupt_runs,
+            'total_runs': total_runs - corrupt_runs,
+            'healthy': corrupt_runs == 0,
         }
 
     def rebuild_index(self) -> None:

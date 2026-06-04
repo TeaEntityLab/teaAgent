@@ -772,9 +772,21 @@ class TeaAgentTUI:
             cost_cents = self._session_cost_cents
         self.output_fn(f'cost: ${cost_cents / 100:.2f}')
 
+    def _get_session_cost_cents(self) -> float:
+        """Read session cost from ChatSessionController (source of truth), fall back to local."""
+        try:
+            controller = self._get_chat_controller()
+            cost_cents = float(controller.get_session_cost())
+            if cost_cents == 0 and self._session_cost_cents > 0:
+                return self._session_cost_cents
+            return cost_cents
+        except (OSError, ValueError, TypeError, RuntimeError):
+            return self._session_cost_cents
+
     def _handle_effort(self, args: list[str]) -> None:
         if not args:
-            remaining = self._max_cost_budget_cents - self._session_cost_cents
+            cost_cents = self._get_session_cost_cents()
+            remaining = self._max_cost_budget_cents - cost_cents
             budget_str = (
                 'unlimited'
                 if self._max_cost_budget_cents == 0
@@ -788,7 +800,7 @@ class TeaAgentTUI:
             self.output_fn(
                 f'effort: {self._effort_level}  '
                 f'budget={budget_str}  '
-                f'spent=${int(self._session_cost_cents // 100)}.{int(self._session_cost_cents % 100):02d}  '
+                f'spent=${int(cost_cents // 100)}.{int(cost_cents % 100):02d}  '
                 f'remaining={remaining_str}'
             )
             return
@@ -817,7 +829,8 @@ class TeaAgentTUI:
         self.output_fn(f'effort: {level}  budget={budget_str}')
 
     def _handle_budget(self) -> None:
-        remaining = self._max_cost_budget_cents - self._session_cost_cents
+        cost_cents = self._get_session_cost_cents()
+        remaining = self._max_cost_budget_cents - cost_cents
         limit_str = (
             'unlimited'
             if self._max_cost_budget_cents == 0
@@ -831,7 +844,7 @@ class TeaAgentTUI:
         self.output_fn(
             f'budget: effort={self._effort_level}  '
             f'limit={limit_str}  '
-            f'spent=${int(self._session_cost_cents // 100)}.{int(self._session_cost_cents % 100):02d}  '
+            f'spent=${int(cost_cents // 100)}.{int(cost_cents % 100):02d}  '
             f'remaining={remaining_str}'
         )
 

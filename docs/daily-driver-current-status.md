@@ -1,5 +1,5 @@
 # Daily-Driver Current Status
-# As of 2026-06-02
+# As of 2026-06-04
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -9,7 +9,7 @@ agent mode. It is intentionally more practical than the audit corpus.
 | Need | Recommended surface | Why |
 |------|---------------------|-----|
 | Conversational local coding with cost and undo visibility | `teaagent chat` | The REPL uses the shared chat controller for result display, cost accounting, and undo journal behavior. |
-| Daily cockpit with setup, preflight, runs, and approvals | `teaagent tui --setup --root .` | The TUI is useful for status and operations, but some chat counters still lag runtime truth. |
+| Daily cockpit with setup, preflight, runs, and approvals | `teaagent tui --setup --root .` | The TUI is useful for status and operations, with unified cost tracking via ChatSessionController. |
 | Non-interactive autonomous task | `teaagent agent run "<task>"` | Best when you want audit logs, approval gates, and a run summary without a live chat loop. |
 | Resume/review a known run | `teaagent agent interactive-review <run_id>` | This is the currently reliable inspection path for suspended/background-style work. |
 
@@ -22,6 +22,9 @@ agent mode. It is intentionally more practical than the audit corpus.
 - TUI setup, preflight, runs, session listing, and approval commands provide useful operational coverage.
 - TUI `/cost` now accumulates via ChatSessionController (CG-11 fixed).
 - TUI has adopted ChatSessionController for unified execution semantics (CG-12 fixed).
+- Exception swallowing removed from ChatSessionController (CG-13 fixed).
+- Failure-card matching has stopword filtering and relevance threshold (TASK-DD2-012 fixed).
+- Memory and run store corruption warnings surfaced in preflight/daily (TASK-DD2-011 fixed).
 
 ## Document governance
 
@@ -43,18 +46,21 @@ reduction, feasibility, strategic leverage, and ROI.
 
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
-| `teaagent chat <task>` was recently wired into the TUI initial-task path. | Treat as verify/close until parser, handler, and TUI tests prove it. | TASK-DD2-001 |
 | Suspend/resume wording is ahead of implementation in some paths. | A user can try a printed command that does not rehydrate the run. | AG-01..AG-04 / TICKET-16 |
-| Controller swallows real errors as "mock" detection. | Production errors may be silently ignored. | CG-13 / TICKET-13 |
-| Redundant `audit_trail` JSON field in suspension data. | Wasted space, potential confusion. | CG-14 / TICKET-15 |
 
 ## Recently fixed
 
 | Fix | What changed | Tracking |
 |-----|-------------|----------|
 | Explicit `--root` no longer overwritten by saved TUI state. | `_load_tui_state` condition was inverted (checked `'root' not in data` instead of finding saved root). Root restoration now guarded by `_root_explicit` flag, set by CLI entry points via `run_tui()`. | TASK-DD2-002 |
-| TUI undo now uses `ChatSessionController.undo_last_run()` with checkpoint fallback. | TUI `/undo` first tries undo journal (file-level restore), falls back to git-stash checkpoint. | CG-15 / TICKET-15 |
-| TUI cost display now reads from `ChatSessionController` session state (source of truth). | `_handle_cost` uses `controller.get_session_cost()` with local fallback. | CG-03 |
+| TUI undo now uses `ChatSessionController.undo_last_run()` with checkpoint fallback. | TUI `/undo` first tries undo journal (file-level restore), falls back to git-stash checkpoint. | CG-15 / TICKET-12 |
+| TUI cost display now reads from `ChatSessionController` session state (source of truth). | `_handle_cost` uses `controller.get_session_cost()` with local fallback. | CG-11 / TICKET-12 |
+| Exception swallowing removed from `ChatSessionController`. | `try/except (AttributeError, TypeError): pass` blocks removed from `execute_task`. Fault-injection test added. | CG-13 / TICKET-13 |
+| Redundant `audit_trail` field removed from suspension data. | `audit_trail` key removed from `suspend_to_background` and reference in `_agent.py` commented out. | CG-14 / TICKET-15 |
+| TUI `/cost` and budget display now show real session cost. | TUI migrated to use `ChatSessionController` for unified cost tracking. Headless TUI path tests verify accumulation. | TASK-DD2-003 / TASK-DD2-013 |
+| Failure-card matching has stopword filtering and relevance threshold. | Matching requires 2+ significant words in common to avoid false positives from unrelated tasks. | TASK-DD2-012 |
+| Memory and run store corruption warnings surfaced. | `health_report()` methods track corrupt entries; preflight/daily show warnings for degraded state. | TASK-DD2-011 |
+| Headless TUI path tests hardened. | Tests now drive through actual command paths (cost, root, initial task, undo, approvals) rather than helper functions. | TASK-DD2-013 |
 | Run evidence summaries surfaced in agent mode payload. | `run_evidence` field added to agent run output with commands, tests, approvals, gaps. | — |
 | Updated daily-driver status docs. | Removed stale known issues, added recently-fixed section. | — |
 

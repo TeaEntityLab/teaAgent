@@ -184,23 +184,27 @@ class MemoryCatalog:
     def health_report(self) -> dict[str, Any]:
         """Report health status including corruption count.
 
+        Scans memory entries for JSON validity to detect corruption.
+
         Returns:
             Dict with 'corrupt_entries' count and 'healthy' boolean
         """
         total_lines = 0
+        corrupt_entries = 0
         if self.path.exists():
-            total_lines = len(
-                [
-                    line
-                    for line in self.path.read_text(encoding='utf-8').splitlines()
-                    if line.strip()
-                ]
-            )
+            for line in self.path.read_text(encoding='utf-8').splitlines():
+                if not line.strip():
+                    continue
+                total_lines += 1
+                try:
+                    json.loads(line)
+                except json.JSONDecodeError:
+                    corrupt_entries += 1
 
         return {
-            'corrupt_entries': self._corrupt_count,
-            'total_entries': total_lines - self._corrupt_count,
-            'healthy': self._corrupt_count == 0,
+            'corrupt_entries': corrupt_entries,
+            'total_entries': total_lines - corrupt_entries,
+            'healthy': corrupt_entries == 0,
         }
 
     def _atomic_write_entries(self, entries: List[MemoryEntry]) -> None:

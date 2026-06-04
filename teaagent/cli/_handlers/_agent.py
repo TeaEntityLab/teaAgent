@@ -955,7 +955,7 @@ def _execute_agent_task(
             if evidence.commands_run or evidence.tests or evidence.approvals:
                 payload['run_evidence'] = evidence.to_dict()
         except Exception:
-            pass
+            logger.warning('Failed to build run evidence bundle', exc_info=True)
     if plan_contract is not None:
         payload['plan_contract'] = plan_contract.to_dict()
     if resumed_from:

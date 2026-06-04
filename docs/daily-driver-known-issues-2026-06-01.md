@@ -16,29 +16,23 @@ If you used an older build, these are now corrected in `teaagent chat`:
 - `/cost` and `/budget` in the REPL now reflect real spend (CG-03).
 - `/background` no longer silently switches your git branch, and the suspension is
   recorded in the audit chain (CG-09, CG-10).
+- TUI `/cost` now reflects real session cost via `ChatSessionController` (CG-11 / TICKET-12).
+- TUI `/undo` now uses `ChatSessionController.undo_last_run()` with checkpoint fallback (CG-15 / TICKET-12).
+- Exception swallowing removed from `ChatSessionController` (CG-13 / TICKET-13).
+- Explicit `--root` no longer overwritten by saved TUI state (TASK-DD2-002).
+- Failure-card matching has stopword filtering and requires 2+ significant words (TASK-DD2-012).
+- Memory and run store corruption warnings surfaced in preflight/daily (TASK-DD2-011).
 
 ## Open issues and workarounds
 
-### 1. TUI `/cost` and the budget bar show $0.00 (cosmetic, not a spend cap)
-In `teaagent tui`, the session cost counter is not yet wired to real run cost, so
-`/cost` and the budget display read `$0.00` regardless of actual usage.
-- **2026-06-02 code note:** the working tree now includes a stop-gap that adds
-  `result.cost_cents` to the TUI session counter. Keep this issue open until the
-  active TUI path and full controller parity are tested.
-- **Impact:** display only — your provider still bills normally; the budget *cap*
-  (`--max-estimated-cost-cents`) still enforces.
-- **Workaround:** use `teaagent chat` if you need an accurate live session-cost readout,
-  or check the per-run summary / provider dashboard.
-- **Tracking:** CG-11 / TICKET-12.
-
-### 2. `/undo` behaves differently in the TUI vs the CLI
+### 1. `/undo` behaves differently in the TUI vs the CLI
 - `teaagent chat` `/undo` → surgical, restores only the last run's files (undo journal).
 - `teaagent tui` `/undo` → git-stash checkpoint restore (different mechanism/scope).
 - **Recommendation:** prefer `teaagent chat` for fine-grained undo today. In the TUI,
   create a `/checkpoint` before risky tasks.
 - **Tracking:** CG-15 / TICKET-12.
 
-### 3. Shell escape (`!command`) is intentionally disabled in the REPL
+### 2. Shell escape (`!command`) is intentionally disabled in the REPL
 This is by design — shell escape would bypass approval/audit governance.
 - **Workaround:** run shell commands in a normal terminal; let TeaAgent operate through
   its governed tools.

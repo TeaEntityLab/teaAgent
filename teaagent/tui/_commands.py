@@ -21,6 +21,23 @@ if TYPE_CHECKING:
     from teaagent.tui import TeaAgentTUI
 
 
+def _safe_run_agent_task(
+    tui: 'TeaAgentTUI',
+    task: str,
+    clarify_first: bool = False,
+    resumed_from: str | None = None,
+) -> None:
+    """Run _run_agent_task with error guard to prevent TUI crash on adapter/network errors.
+
+    Without this wrapper, an unhandled exception from the chat agent (e.g. network
+    failure, API error, corrupt store) would propagate up and crash the TUI loop.
+    """
+    try:
+        tui._run_agent_task(task, clarify_first=clarify_first, resumed_from=resumed_from)
+    except (OSError, ValueError, TypeError, RuntimeError) as exc:
+        tui.output_fn(f'error: agent task failed — {exc}')
+
+
 def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
     command = raw_command.strip()
     if not command:
@@ -50,10 +67,10 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             # Handle ask --clarify
             if args[0] == '--clarify':
                 task = ' '.join(args[1:])
-                tui._run_agent_task(task, clarify_first=True)
+                _safe_run_agent_task(tui, task, clarify_first=True)
                 return True
         task = ' '.join(args)
-        tui._run_agent_task(task)
+        _safe_run_agent_task(tui, task)
         return True
 
     if action == 'clarify':
@@ -229,7 +246,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: resume requires a run id')
             return True
         run_id = args[0]
-        tui._run_agent_task('', resumed_from=run_id)
+        _safe_run_agent_task(tui, '', resumed_from=run_id)
         return True
 
     if action == 'parallel':

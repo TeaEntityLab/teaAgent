@@ -141,6 +141,33 @@ class RunStoreTests(unittest.TestCase):
 
             self.assertEqual([summary.run_id for summary in summaries], ['run-ok'])
 
+    def test_health_report_tracks_corrupt_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            # Write a valid run
+            audit = store.audit_logger()
+            audit.record('run_started', 'run-ok', task='demo')
+            audit.record('run_completed', 'run-ok', answer='ok', metadata={})
+            store.logger_for_result(
+                RunResult(
+                    run_id='run-ok',
+                    final_answer=FinalAnswer('ok'),
+                    iterations=1,
+                    tool_calls=0,
+                    status='completed',
+                ),
+                audit,
+            )
+            # Write a corrupt run file
+            (Path(tmp) / '.teaagent' / 'runs' / 'corrupt.jsonl').write_text(
+                'not json\n', encoding='utf-8'
+            )
+
+            report = store.health_report()
+            self.assertEqual(report['corrupt_runs'], 1)
+            self.assertEqual(report['total_runs'], 2)
+            self.assertFalse(report['healthy'])
+
     def test_list_runs_skips_records_without_run_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = RunStore(tmp)

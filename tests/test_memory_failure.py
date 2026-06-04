@@ -418,3 +418,90 @@ class TestFailureCardMatching:
         # Should match because 2 significant words in common
         assert len(matching) == 1
         assert matching[0].run_id == 'run-1'
+
+    def test_empty_task_description_produces_no_match(
+        self, temp_root: Path
+    ) -> None:
+        """Empty task description should not produce any match."""
+        storage = FailureCardStorage(temp_root)
+        card = FailureCard.create(
+            run_id='run-1',
+            error_type='TypeError',
+            file_path='src/auth.py',
+            error_message='Auth error',
+            task_description='Implement OAuth2 authentication flow',
+            context_files=[],
+        )
+        storage.append(card)
+
+        matching = storage.find_matching(
+            file_paths=[],
+            task_description='',
+        )
+        assert len(matching) == 0
+
+    def test_stopwords_only_task_produces_no_match(
+        self, temp_root: Path
+    ) -> None:
+        """Task with only stopwords should not match any card."""
+        storage = FailureCardStorage(temp_root)
+        card = FailureCard.create(
+            run_id='run-1',
+            error_type='ValueError',
+            file_path='src/parser.py',
+            error_message='Parse error',
+            task_description='Handle input validation for user data',
+            context_files=[],
+        )
+        storage.append(card)
+
+        matching = storage.find_matching(
+            file_paths=[],
+            task_description='to be or not to be that is the question',
+        )
+        assert len(matching) == 0
+
+    def test_short_tokens_only_produces_no_match(
+        self, temp_root: Path
+    ) -> None:
+        """Task with tokens shorter than 3 characters should not match."""
+        storage = FailureCardStorage(temp_root)
+        card = FailureCard.create(
+            run_id='run-1',
+            error_type='TypeError',
+            file_path='src/core.py',
+            error_message='Type mismatch',
+            task_description='Fix type conversion in data pipeline',
+            context_files=[],
+        )
+        storage.append(card)
+
+        matching = storage.find_matching(
+            file_paths=[],
+            task_description='go ok hi at',
+        )
+        assert len(matching) == 0
+
+    def test_error_type_match_surfaces_without_keyword_overlap(
+        self, temp_root: Path
+    ) -> None:
+        """A card matching only on error_type should still surface (scoring = 5)."""
+        storage = FailureCardStorage(temp_root)
+        card = FailureCard.create(
+            run_id='run-1',
+            error_type='ImportError',
+            file_path='src/plugin.py',
+            error_message='Module not found',
+            task_description='Load external plugin modules',
+            context_files=[],
+        )
+        storage.append(card)
+
+        matching = storage.find_matching(
+            file_paths=[],
+            task_description='unrelated topic with no matching words foo bar baz',
+            error_type='ImportError',
+        )
+        # Error type matches, so should surface even without word overlap
+        assert len(matching) == 1
+        assert matching[0].run_id == 'run-1'
