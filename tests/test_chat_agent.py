@@ -314,7 +314,12 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(shell_result.status, 'pending_approval')
 
     def test_approval_policy_allow_all_destructive(self) -> None:
-        ApprovalPolicy(allow_all_destructive=True).assert_allowed(
+        # allow_all_destructive bypass requires an explicit full-access
+        # acknowledgment (P0-TR-001).
+        ApprovalPolicy(
+            allow_all_destructive=True,
+            full_access_acknowledged=True,
+        ).assert_allowed(
             tool_name='workspace_write_file',
             call_id='any',
             destructive=True,

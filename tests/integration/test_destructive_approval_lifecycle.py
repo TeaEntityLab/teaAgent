@@ -65,6 +65,7 @@ def test_resume_with_approved_call_id_completes():
         approval_policy=ApprovalPolicy(
             permission_mode=PermissionMode.PROMPT,
             allow_all_destructive=True,
+            full_access_acknowledged=True,
         ),
     )
 

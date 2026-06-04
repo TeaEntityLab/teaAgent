@@ -19,6 +19,7 @@ class DenialReasonCode(str, Enum):
     MULTISIG_NO_QUORUM = 'multisig_no_quorum'
     AUTO_MODE_BLOCKED = 'auto_mode_blocked'
     MISSING_STATE = 'missing_state'
+    FULL_ACCESS_NOT_ACKNOWLEDGED = 'full_access_not_acknowledged'
 
 
 class ErrorCategory(str, Enum):

@@ -102,10 +102,32 @@ def test_non_destructive_tool_never_raises() -> None:
 
 
 def test_allow_all_destructive_flag_bypasses_approval() -> None:
+    # The bypass is honored only with an explicit full-access acknowledgment
+    # (P0-TR-001).
     policy = ApprovalPolicy(
         permission_mode=PermissionMode.PROMPT,
         allow_all_destructive=True,
+        full_access_acknowledged=True,
     )
     policy.assert_allowed(
         tool_name='workspace_write_file', call_id='any', destructive=True
     )
+
+
+def test_allow_all_destructive_without_ack_blocks() -> None:
+    # Regression guard for P0-TR-001: allow_all_destructive alone must NOT
+    # silently bypass approval in prompt mode.
+    from teaagent.errors import DenialReasonCode, ToolPermissionError
+
+    policy = ApprovalPolicy(
+        permission_mode=PermissionMode.PROMPT,
+        allow_all_destructive=True,
+    )
+    try:
+        policy.assert_allowed(
+            tool_name='workspace_write_file', call_id='any', destructive=True
+        )
+    except ToolPermissionError as exc:
+        assert exc.reason_code == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
+    else:  # pragma: no cover - failure path
+        raise AssertionError('expected ToolPermissionError without acknowledgment')

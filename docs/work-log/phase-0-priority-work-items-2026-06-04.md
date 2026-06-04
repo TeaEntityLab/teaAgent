@@ -54,3 +54,18 @@ Phase 0 trust repair is done only when the following are all true:
 - Docs expose the current truth without requiring search through dated layers.
 - Security CI distinguishes base package safety from optional runtime safety.
 - Tests fail when the trust contract is weakened.
+
+## Status Log
+
+- 2026-06-04 — **P0-TR-001 DONE.** `allow_all_destructive` is now inert in
+  non-full-access modes (notably `prompt`) unless `full_access_acknowledged=True`
+  is also set. The bypass at `PermissionModeEnforcer.check` now fails safe and
+  raises `ToolPermissionError` with reason code
+  `DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED`. The two legitimate callers
+  acknowledge explicitly: auto mode (`runner/_auto_mode_manager.py`, opt-in) and
+  chat (`chat_agent.py`, gated on the `--allow-destructive` flag). No CLI/UX
+  change for existing `--allow-destructive` users. Covered by
+  `tests/test_full_access_gate.py` (enforcer, policy/manager, and auto-mode
+  layers) plus a regression guard in
+  `tests/regression/test_contract_approval.py::test_allow_all_destructive_without_ack_blocks`.
+  Full suite: 3377 passed, 22 skipped, 0 failed on Python 3.12.8.

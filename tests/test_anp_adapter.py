@@ -171,7 +171,10 @@ class ANPGovernedServiceTests(unittest.TestCase):
         service = ANPGovernedService(
             registry=build_registry(),
             audit=audit,
-            approval_policy=ApprovalPolicy(allow_all_destructive=True),
+            approval_policy=ApprovalPolicy(
+                allow_all_destructive=True,
+                full_access_acknowledged=True,
+            ),
         )
         result = service.handle_inbound(
             {

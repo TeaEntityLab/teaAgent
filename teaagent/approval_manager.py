@@ -148,9 +148,15 @@ class PermissionModeEnforcer:
         self,
         permission_mode: PermissionMode = PermissionMode.PROMPT,
         allow_all_destructive: bool = False,
+        full_access_acknowledged: bool = False,
     ) -> None:
         self.permission_mode = permission_mode
         self.allow_all_destructive = allow_all_destructive
+        # ``allow_all_destructive`` only takes effect when full-access semantics
+        # were explicitly acknowledged (P0-TR-001). A single innocuous boolean
+        # must never silently open a destructive bypass while nominally in a
+        # non-full-access mode such as ``prompt``.
+        self.full_access_acknowledged = full_access_acknowledged
 
     def check(
         self,
@@ -201,7 +207,17 @@ class PermissionModeEnforcer:
             return None
 
         if destructive and self.allow_all_destructive:
-            return None
+            if self.full_access_acknowledged:
+                return None
+            # Fail-safe: the bypass is requested but full-access semantics were
+            # not explicitly acknowledged. Fall through to a hard block instead
+            # of silently approving a destructive operation in prompt mode.
+            return (
+                f"Tool '{tool_name}' is destructive and 'allow_all_destructive' is "
+                'enabled, but full-access semantics were not explicitly acknowledged. '
+                'Use --permission-mode danger-full-access, or pass --allow-destructive '
+                '(which acknowledges full access), to proceed.'
+            )
 
         return '__continue__'
 
@@ -620,6 +636,7 @@ class ApprovalManager:
         agent_id: str = '',
         workspace_root: str = '.',
         allow_all_destructive: bool = False,
+        full_access_acknowledged: bool = False,
         preapproved_call_ids: frozenset[str] = frozenset(),
     ) -> None:
         self.permission_mode = permission_mode
@@ -630,11 +647,13 @@ class ApprovalManager:
         self.agent_id = agent_id
         self.workspace_root = workspace_root
         self.allow_all_destructive = allow_all_destructive
+        self.full_access_acknowledged = full_access_acknowledged
         self.preapproved_call_ids = preapproved_call_ids
 
         self._permission_enforcer = PermissionModeEnforcer(
             permission_mode=permission_mode,
             allow_all_destructive=allow_all_destructive,
+            full_access_acknowledged=full_access_acknowledged,
         )
         self._jit_manager = JITApprovalManager(enable_jit_prompt=enable_jit_prompt)
         self._multisig_manager = MultiSigQuorumManager(
@@ -685,6 +704,9 @@ class ApprovalManager:
                     reason_code = DenialReasonCode.PLAN_CONTRACT_DENIED
                 else:
                     reason_code = DenialReasonCode.WORKSPACE_WRITE_MODE
+            elif destructive and self.allow_all_destructive:
+                # Bypass requested without acknowledged full-access semantics.
+                reason_code = DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
             else:
                 reason_code = DenialReasonCode.MISSING_STATE
             raise ToolPermissionError(mode_result, reason_code=reason_code)

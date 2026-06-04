@@ -53,10 +53,15 @@ class AutoModeManager:
         """Get the approval policy modified for auto mode.
 
         In auto mode, allowed tools are auto-approved by setting allow_all_destructive=True.
+        Entering auto mode is itself an explicit opt-in, so full-access semantics are
+        acknowledged here (P0-TR-001); the AutoModeGuard still scopes which tools run.
         """
         if self.auto_mode_guard is None:
             return None
-        return ApprovalPolicy(allow_all_destructive=True)
+        return ApprovalPolicy(
+            allow_all_destructive=True,
+            full_access_acknowledged=True,
+        )
 
     def summary(self) -> dict[str, Any]:
         """Get a summary of auto mode activity."""

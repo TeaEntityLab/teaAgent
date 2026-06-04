@@ -93,7 +93,10 @@ class ApprovalPolicyTests(unittest.TestCase):
         )
 
     def test_prompt_mode_with_allow_all_destructive_passes(self) -> None:
-        policy = ApprovalPolicy(allow_all_destructive=True)
+        # The bypass requires an explicit full-access acknowledgment (P0-TR-001).
+        policy = ApprovalPolicy(
+            allow_all_destructive=True, full_access_acknowledged=True
+        )
         policy.assert_allowed(
             tool_name='workspace_write_file', call_id='any', destructive=True
         )

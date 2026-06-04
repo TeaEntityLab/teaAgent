@@ -591,6 +591,9 @@ def _create_runner_and_engine(
         approval_policy=ApprovalPolicy(
             preapproved_call_ids=config.approved_call_ids,
             allow_all_destructive=config.allow_destructive,
+            # The explicit --allow-destructive flag is the user's acknowledgment
+            # of full-access semantics (P0-TR-001).
+            full_access_acknowledged=config.allow_destructive,
             permission_mode=config.permission_mode,
             approval_store=approval_store,
             approval_origin_run_id=context_extra.get('resumed_from') or run_id,
