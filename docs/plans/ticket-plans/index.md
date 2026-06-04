@@ -53,7 +53,7 @@ only the daily-driver fixes:
 | [TASK-DD2-002](TASK-DD2-002-plan.md) | P1 | S | `tui/__init__.py` | Fixed: `_load_tui_state` respects explicit CLI root flag |
 | [TASK-DD2-003](TASK-DD2-003-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Fixed: make TUI cost ledger authoritative |
 | [TASK-DD2-004](TASK-DD2-004-plan.md) | P0 | M | approval helpers | Fixed: path-scoped approvals hardened with workspace-relative normalization and exact-match semantics |
-| [TASK-DD2-005](TASK-DD2-005-plan.md) | P1 | M | `_agent.py`, `git_sandbox.py` | Fixed: git sandbox lifecycle preserves sandbox object through run completion |
+| [TASK-DD2-005](TASK-DD2-005-plan.md) | P1 | M | `_agent.py`, `git_sandbox.py` | Fixed: git sandbox lifecycle preserves sandbox object through run completion (core fix). Broader ACs partially addressed — see plan file. |
 | [TASK-DD2-006](TASK-DD2-006-plan.md) | P1 | S | chat handlers, docs | Fixed: lifecycle wording made honest |
 | [TASK-DD2-007](TASK-DD2-007-plan.md) | P2 | M | chat handlers/tests | Fixed: stale chat code removed/retired |
 | [TASK-DD2-008](TASK-DD2-008-plan.md) | P1 | S | dry-run/preflight/daily | Fixed: read-only and dry-run side-effect contract enforced |

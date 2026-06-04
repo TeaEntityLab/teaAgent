@@ -1,7 +1,7 @@
 # TASK-DD2-013: Harden Headless TUI Path Tests
 
 **Priority:** P1
-**Status:** Active support ticket
+**Status:** Fixed — 17 headless TUI test methods exist in `tests/acceptance/test_headless_tui.py` (419 lines) covering cost, root, initial task, undo, approval prompt, and more. Core scope delivered (commit df31010). Verified by comprehensive audit (see docs/work-log/roadmap-work-items-2026-06-04.md).
 **Primary files:** `tests/test_tui.py`, `teaagent/tui/__init__.py`
 
 ## Problem

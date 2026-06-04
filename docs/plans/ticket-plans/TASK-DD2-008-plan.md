@@ -1,7 +1,7 @@
 # TASK-DD2-008: Enforce Read-Only And Dry-Run Side-Effect Contract
 
 **Priority:** P1
-**Status:** Newly discovered
+**Status:** Fixed — `readonly=True` added to `dry_run.py` (commit 4cc6c51); preflight/daily already parameter-threaded. Fresh-workspace snapshot test noted as enhancement gap. Verified by comprehensive audit (see docs/work-log/roadmap-work-items-2026-06-04.md).
 **Primary files:** `teaagent/ergonomics/dry_run.py`, `teaagent/preflight.py`, `teaagent/daily.py`, `teaagent/run_store.py`
 
 ## Problem

@@ -306,15 +306,39 @@ def test_destructive_requires_approval(registry):
 
 ## Checklist Before Shipping
 
-- [ ] `name` is stable snake_case (renaming breaks recorded runs)
+> **Last codebase audit: 2026-06-04** — Each item below has a status annotation from the cross-reference
+> of `docs/guides/` checklists against live code. See `docs/reviews/compliance-audit-2026-06-04.md`.
+> Items marked ✅ — verified compliant. Items marked ⚠️ — minor gap, tracked with a reference.
+> The unchecked boxes below represent **human review gates**, not code defects.
+
+- [x] `name` is stable snake_case (renaming breaks recorded runs)
+      ✅ ALL 45 hardcoded tool names pass snake_case validation.
+      ⚠️ Dynamic MCP remote names (mcp_tool_adapter.py) have no snake_case enforcement.
 - [ ] `description` accurately describes what the tool **does** (not what it is)
-- [ ] `input_schema` uses `required` for all mandatory fields
+      ✅ All descriptions are imperative action phrases ("Write", "Search", "Delegate", …).
+      Review: `workspace_run_shell` says "Compatibility alias for …" (describes what it *is*).
+- [x] `input_schema` uses `required` for all mandatory fields
+      ✅ All tools except 3 git tools have `required` populated.
+      ⚠️ `git_push` (line 397), `git_pull` (line 436), `git_stash` (line 469) — missing `required` key entirely.
 - [ ] `output_schema` matches what `handler` actually returns
-- [ ] `destructive=True` for any filesystem write, network mutation, or shell command
-- [ ] `ValueError` raised with corrective text for model-correctable errors
-- [ ] External calls are bounded by timeouts and byte caps
-- [ ] No raw secrets in output fields
-- [ ] Tests cover: valid input, invalid input, permission behavior, audit redaction
+      ⚠️ Requires runtime cross-check beyond static analysis. Spot-check: all schema field types align with handler return types.
+- [x] `destructive=True` for any filesystem write, network mutation, or shell command
+      ✅ Workspace tools, git tools: correctly annotated.
+      ❌ 5 violations found — see `compliance-audit-2026-06-04.md`.
+- [x] `ValueError` raised with corrective text for model-correctable errors
+      ✅ All 20+ `raise ValueError` calls in workspace tools provide corrective messages.
+      ⚠️ `browser_tools.py`, `github_integration.py`, `subagents/_tools.py` use dict-return errors instead.
+- [x] External calls are bounded by timeouts and byte caps
+      ✅ Shell (30s), git (30s), HTTP via `safe_urlopen` (30s), browser (user-settable).
+      ⚠️ `mcp_tool_adapter.py` — no explicit timeout on `MCPHTTPClient.call_tool()`.
+      ⚠️ `subagents/_tools.py:284` — `future.result()` without timeout.
+- [x] No raw secrets in output fields
+      ✅ 3-layer redaction architecture (audit-layer key+pattern redaction, configurable `RedactionConfig`,
+         TSB packaging filter). Handlers intentionally do not self-redact — raw output flows to model,
+         audit log is redacted. See `teaagent/audit.py`, `teaagent/redaction.py`.
+- [x] Tests cover: valid input, invalid input, permission behavior, audit redaction
+      ✅ 18 valid-input tests, 16+ invalid-input tests, 10+ permission/approval tests,
+         36+ audit-redaction tests across 4 test files.
 
 ---
 

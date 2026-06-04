@@ -1,7 +1,7 @@
 # TASK-DD2-005: Repair Git Sandbox Lifecycle
 
 **Priority:** P1
-**Status:** Active
+**Status:** Partially Fixed — core `_agent.py` fix delivered (removed sandbox re-creation in commit 4cc6c51); `git_sandbox.py` not modified. Broader ACs (run evidence persistence, stash restoration, help text alignment) need verification before full close. See verification audit at docs/work-log/roadmap-work-items-2026-06-04.md.
 **Primary files:** `teaagent/cli/_handlers/_agent.py`, `teaagent/git_sandbox.py`, `tests/test_git_tools.py`
 
 ## Problem

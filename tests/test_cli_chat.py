@@ -1210,11 +1210,6 @@ def test_interactive_review_mode_no_changes(capsys):
             'config': {},
             'session_context': {'observations_count': 0, 'compaction_count': 0},
             'targeted_files': [],
-            'audit_trail': {
-                'suspension_time': __import__('time').time(),
-                'original_mode': 'repl',
-                'transition_type': 'keyboard_to_robot',
-            },
         }
         suspension_file.write_text(json.dumps(suspension_data, indent=2))
 
@@ -1295,11 +1290,6 @@ def test_interactive_review_mode_with_changes(capsys, monkeypatch):
             'config': {},
             'session_context': {'observations_count': 0, 'compaction_count': 0},
             'targeted_files': [],
-            'audit_trail': {
-                'suspension_time': __import__('time').time(),
-                'original_mode': 'repl',
-                'transition_type': 'keyboard_to_robot',
-            },
         }
         suspension_file.write_text(json.dumps(suspension_data, indent=2))
 
@@ -1390,8 +1380,9 @@ def test_dual_mode_integration_suspension_to_review(capsys, monkeypatch):
             assert 'acp_version' in review_data
             assert review_data['acp_version'] == '1.0.0'
             assert review_data['mode'] == 'interactive_review'
-            assert 'audit_trail' in review_data
-            assert review_data['audit_trail']['transition_type'] == 'robot_to_keyboard'
+            # audit_trail was removed per TICKET-15; metadata is in review metadata
+            assert 'mode' in review_data
+            assert review_data['mode'] == 'interactive_review'
 
 
 def test_acp_state_consistency_across_modes(capsys):

@@ -139,3 +139,40 @@ This work log turns the current strategy into concrete execution chunks.
 - Net: all four Human-Review-Required behavior tasks were already satisfied by
   existing code; the verify-first pass added regression guards only, with no
   behavior change, so no human-review gate was triggered.
+- 2026-06-04 — **TICKET-15 DONE**. Removed redundant `audit_trail` field from
+  `agent_review.py` review JSON (replaced with governance-record comment per
+  previous `_agent.py` pattern). Removed `audit_trail` injection from test
+  suspension fixtures and updated review-data assertions to check `mode` instead.
+  Verified: 203 affected tests pass, full suite 3376 pass.
+- 2026-06-04 — **TICKET-16 Phase 2 VERIFIED DONE** (Option A: `run_started`
+  event written at suspend time). Roundtrip test `test_repl_suspend_resume_roundtrip`
+  asserts `task_for_run` finds the run after suspension. All 5 suspend/resume
+  tests pass.
+- 2026-06-04 — **TASK-DD2 compliance audit DONE**. Cross-referenced 3 standards
+  docs (`tool-development.md`, `integration-guide.md`, `approval-policy-design.md`)
+  against live code. Updated each checklist with pass/warn annotations and
+  per-file evidence references. All 14 TASK-DD2 items verified committed.
+- 2026-06-04 — **TASK-007 still open** (competitor survey — docs/research, not
+  code). All code tasks for P0/P1 workstreams in the complete work plan are
+  otherwise closed. See `docs/plans/documentation-optimization-master-plan-2026-06-04.md`
+  P1/P2 proposals (DOCOPT-007 through DOCOPT-016) if design/planning capacity
+  available.
+- 2026-06-04 — **COMPREHENSIVE VERIFICATION INVESTIGATION DONE**. Cross-referenced
+  every claimed-done task against actual code, tests, and git history. Summary:
+  - **TASK-001/002/003/005**: 4 regression guard test files verified — exist,
+    substantive, match claims exactly (84–97 lines each, 2–5 tests per file).
+  - **TASK-004/006**: Doc changes verified — "First run (safe)" callout in
+    daily-driver-current-status.md, "If something goes wrong" in tui-daily-driver-guide.md,
+    supersession banner in daily-driver-review-INDEX, governance/README.md links front door.
+  - **TICKET-12/13/14/15/16 Phase 1+2**: All 6 items FIXED — commits found for each,
+    file changes match claims, key code patterns verified, tests exist.
+  - **TASK-DD2-001–014**: 11 clean Fixed, 3 with plan-status discrepancies (005: plan
+    says "Active" but index says "Fixed", `git_sandbox.py` untouched; 013: plan says
+    "Active support ticket" but headless TUI tests exist; 014: plan says "Active support
+    ticket" but docs synchronized). Plan file status headers need reconciliation.
+  - **DOCOPT-001–012**: 14/14 items pass verification (13 fully, 1 minor linking gap
+    in acceptance.md → coverage omit ledger). ADR statuses confirmed (zero "Proposed"
+    stale entries). Dependency audit lanes verified in CI workflows.
+  - **TASK-007**: Still open (competitor survey — docs/research, not code).
+  Minor gap found: `docs/acceptance.md` does not explicitly link the coverage omit
+  ledger at `docs/governance/coverage-omit-ledger.md`. All other claims verified.

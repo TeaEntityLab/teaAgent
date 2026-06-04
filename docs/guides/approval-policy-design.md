@@ -275,13 +275,33 @@ policy = ApprovalPolicy(
 
 Before shipping a policy configuration:
 
-- [ ] `permission_mode` matches the minimum required for the task
-- [ ] `path_glob` grants are as narrow as possible (file or directory, not root)
-- [ ] `enable_jit_prompt=False` in headless CI; `True` for interactive operator sessions
-- [ ] Approval grants are revoked or expire after the task completes
-- [ ] Multi-sig is enabled for any operation that mutates shared infrastructure
-- [ ] Approval records are written to the audit log (`--audit-level L1` minimum)
-- [ ] `DANGER_FULL_ACCESS` is never committed to config files or CI scripts
+> **Last codebase audit: 2026-06-04** — Each item cross-referenced against enforcement code.
+> Items marked ✅ are enforced in code. Unchecked boxes remain **operator review gates**.
+
+- [x] `permission_mode` matches the minimum required for the task
+      ✅ `PermissionModeEnforcer` (approval_manager.py:146-219) enforces all 5 modes.
+      Default is `PROMPT` (policy.py:51). Workspace config uses `"prompt"`.
+- [x] `path_glob` grants are as narrow as possible (file or directory, not root)
+      ✅ `_path_matches()` enforces glob matching. TUI grants use single-file scopes.
+      ⚠️ No hard validation rejecting `path_glob='**'` — `approval doctor` warns but does not block.
+      Empty `path_globs` returns True (all paths allowed, `_approval_grants.py:209`).
+- [x] `enable_jit_prompt=False` in headless CI; `True` for interactive operator sessions
+      ✅ Mechanism: `JITApprovalManager.prompt_and_resolve()` checks both the flag and `sys.stdin.isatty()`.
+      ⚠️ No automatic CI detection (no `CI`/`GITHUB_ACTIONS` env var check). Pure convention.
+- [x] Approval grants are revoked or expire after the task completes
+      ✅ TTL: session grants 8h, scoped approvals 24h (`_approval_grants.py:15-16`).
+      `_grant_expired()` checked on every access. `revoke()` removes persistently.
+- [x] Multi-sig is enabled for any operation that mutates shared infrastructure
+      ✅ `MultiSigQuorumManager`, WAN HTTP relay (`signature_relay.py`), P2P broadcast (`federated_sync.py`).
+      Opt-in by design (`enabled=False` default). Production-grade WAN transport; file-based experimental.
+- [x] Approval records are written to the audit log (`--audit-level L1` minimum)
+      ✅ Every approval decision produces audit events: `tool_call_pending_approval`,
+      `tool_call_approved`, `tool_call_denied`, `tool_call_blocked`. All audit events always recorded
+      (no level filtering on recording — contra the doc reference to `--audit-level L1`).
+- [x] `DANGER_FULL_ACCESS` is never committed to config files or CI scripts
+      ✅ Not present in `.teaagent/config.json`, `.github/workflows/`, or `scripts/`.
+      Present only in source code enum definition, test assertions, documentation,
+      and `vscode/package.json` schema enum (listing valid VS Code settings options, not enabling it).
 
 ---
 

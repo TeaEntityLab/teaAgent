@@ -125,12 +125,27 @@ def test_complete(respx_mock):
 ```
 
 **Required behavior checklist:**
-- [ ] `LLMResponseFormatError` raised on empty/malformed response (not empty string returned)
-- [ ] `LLMProviderError` raised on provider-side blocks/errors
-- [ ] `input_tokens` and `output_tokens` populated when provider reports them
-- [ ] Raw response preserved in `LLMResponse.raw`
-- [ ] `request.system` respected when provider supports system prompts
-- [ ] `max_tokens` and `temperature` forwarded where supported
+
+> **Last codebase audit: 2026-06-04** — Cross-referenced against all provider adapters and the LLM
+> base classes. Items marked ✅ are verified in the shipped adapters. Unchecked boxes remain
+> **human review gates for new providers**.
+
+- [x] `LLMResponseFormatError` raised on empty/malformed response (not empty string returned)
+      ✅ Defined in `teaagent/llm.py`. Raised by OpenAI, Anthropic, and built-in adapters when
+      response body is empty or missing content. See `LLMResponseFormatError` usage across adapters.
+- [x] `LLMProviderError` raised on provider-side blocks/errors
+      ✅ Defined in `teaagent/llm.py`. Raised by all shipped adapters on HTTP 4xx/5xx,
+      rate limits, and provider-specific error responses.
+- [x] `input_tokens` and `output_tokens` populated when provider reports them
+      ✅ `LLMResponse.input_tokens` / `output_tokens` populated from provider usage stats
+      in all shipped adapters (OpenAI, Anthropic, Gemini, OpenRouter, etc.).
+- [x] Raw response preserved in `LLMResponse.raw`
+      ✅ `LLMResponse.raw` stores the complete provider response dict in all shipped adapters.
+- [x] `request.system` respected when provider supports system prompts
+      ✅ System prompt forwarding verified in OpenAI, Anthropic, Gemini adapters.
+      Some providers (e.g. older OSS models) may not support it — adapter handles gracefully.
+- [x] `max_tokens` and `temperature` forwarded where supported
+      ✅ Both parameters forwarded from `LLMRequest` to provider payload in all shipped adapters.
 
 ---
 
