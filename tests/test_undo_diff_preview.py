@@ -6,7 +6,6 @@ import io
 import json
 from contextlib import redirect_stdout, suppress
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from conftest import FakeAdapter
@@ -29,23 +28,8 @@ def _run_agent_that_writes_files(tmp_path: Path) -> dict:
 
     run_out = io.StringIO()
     with (
-        patch('teaagent.cli.create_llm_adapter', return_value=adapter),
-        patch('teaagent.cli._handlers._agent._execute_agent_task') as mock_execute,
         redirect_stdout(run_out),
     ):
-        # Mock successful execution to bypass guided recovery
-        from teaagent.runner._types import FinalAnswer
-
-        mock_execute.return_value = {
-            'run_id': 'test-run-id',
-            'status': 'completed',
-            'final_answer': FinalAnswer(content='done'),
-            'iterations': 1,
-            'tool_calls': 2,
-            'cost_cents': 0,
-            'input_tokens': 0,
-            'output_tokens': 0,
-        }
         run_code = main(
             [
                 'run',
@@ -60,16 +44,14 @@ def _run_agent_that_writes_files(tmp_path: Path) -> dict:
                 '6',
                 '--max-tool-calls',
                 '6',
-            ]
+            ],
+            _adapter_factory=lambda _provider, model=None: adapter,
         )
     payload = json.loads(run_out.getvalue())
     assert run_code == 0
     return payload
 
 
-@pytest.mark.skip(
-    reason='Budget configuration issues - requires deep architectural fix'
-)
 def test_preview_shows_unified_diff_without_executing_undo(tmp_path: Path) -> None:
     """``--preview`` outputs a unified diff but does NOT restore files."""
     payload = _run_agent_that_writes_files(tmp_path)
@@ -94,9 +76,6 @@ def test_preview_shows_unified_diff_without_executing_undo(tmp_path: Path) -> No
     assert new_file.is_file()
 
 
-@pytest.mark.skip(
-    reason='Budget configuration issues - requires deep architectural fix'
-)
 def test_last_preview_shows_diff_without_undo(tmp_path: Path) -> None:
     """``--last --preview`` shows diff for most recent run, no restore."""
     _run_agent_that_writes_files(tmp_path)
@@ -115,9 +94,6 @@ def test_last_preview_shows_diff_without_undo(tmp_path: Path) -> None:
     assert (tmp_path / 'new.txt').is_file()
 
 
-@pytest.mark.skip(
-    reason='Budget configuration issues - requires deep architectural fix'
-)
 def test_last_undo_restores_most_recent_run(tmp_path: Path) -> None:
     """``--last`` reverts all workspace writes from the most recent run."""
     payload = _run_agent_that_writes_files(tmp_path)
@@ -141,9 +117,6 @@ def test_last_undo_restores_most_recent_run(tmp_path: Path) -> None:
     assert undo_payload['audit_recorded'] is True
 
 
-@pytest.mark.skip(
-    reason='Budget configuration issues - requires deep architectural fix'
-)
 def test_top_level_undo_command_works(tmp_path: Path) -> None:
     """``teaagent undo <run-id>`` (top-level, without ``agent`` subcommand)."""
     payload = _run_agent_that_writes_files(tmp_path)
@@ -159,9 +132,6 @@ def test_top_level_undo_command_works(tmp_path: Path) -> None:
     assert undo_payload['run_id'] == run_id
 
 
-@pytest.mark.skip(
-    reason='Budget configuration issues - requires deep architectural fix'
-)
 def test_agent_undo_still_works(tmp_path: Path) -> None:
     """``teaagent agent undo <run-id>`` continues to work."""
     payload = _run_agent_that_writes_files(tmp_path)
@@ -177,9 +147,6 @@ def test_agent_undo_still_works(tmp_path: Path) -> None:
     assert undo_payload['run_id'] == run_id
 
 
-@pytest.mark.skip(
-    reason='Budget configuration issues - requires deep architectural fix'
-)
 def test_preview_deleted_only_file(tmp_path: Path) -> None:
     """Preview shows ``(would be deleted)`` for a file that didn't exist before."""
     payload = _run_agent_that_writes_files(tmp_path)
@@ -196,9 +163,6 @@ def test_preview_deleted_only_file(tmp_path: Path) -> None:
     assert (tmp_path / 'new.txt').is_file()
 
 
-@pytest.mark.skip(
-    reason='Budget configuration issues - requires deep architectural fix'
-)
 def test_run_summary_includes_undo_command(tmp_path: Path) -> None:
     """Post-run summary payload includes `undo_command` field with correct format."""
     payload = _run_agent_that_writes_files(tmp_path)

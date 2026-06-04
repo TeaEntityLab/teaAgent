@@ -138,9 +138,6 @@ def test_load_file_policy_json_format(tmp_path):
     assert policy.rules[-1].id == 'json-rule'
 
 
-@pytest.mark.skip(
-    reason='File policy audit event not being recorded - requires investigation'
-)
 def test_file_policy_integrated_with_agent_runner(tmp_path):
     """FilePolicy.assert_allowed fires in AgentRunner before tool dispatch."""
     from teaagent.audit import AuditLogger
@@ -195,9 +192,10 @@ def test_file_policy_integrated_with_agent_runner(tmp_path):
     )
 
     result = runner.run(task='delete everything', decide=lambda _: next(call_seq))
-    # After approval gate fix, file policy denials return pending_approval instead of failed
     assert result.status == 'pending_approval'
-    blocked = [
-        e for e in audit.events if e.event_type in ('tool_call_blocked', 'run_failed')
+    assert 'rm -rf is blocked' in result.error_message
+    assert result.metadata == {'approval': {}}
+    assert [e.event_type for e in audit.events] == [
+        'run_started',
+        'iteration_started',
     ]
-    assert blocked

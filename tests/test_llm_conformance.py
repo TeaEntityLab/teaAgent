@@ -19,9 +19,6 @@ class FailingAdapter:
 
 
 class LLMConformanceTests(unittest.TestCase):
-    @pytest.mark.skip(
-        reason='Test configuration issue with FakeAdapter response format'
-    )
     def test_run_model_conformance_reports_pass_skip_and_fail(self) -> None:
         adapters = {'gpt': FakeAdapter(['ok']), 'claude': FailingAdapter()}
 

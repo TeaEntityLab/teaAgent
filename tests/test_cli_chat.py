@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -32,10 +32,24 @@ def test_print_chat_help(capsys):
 
 
 def test_chat_command_with_invalid_args():
-    """Test chat command with invalid arguments."""
-    # Skip this test as it requires full config setup
-    # The actual functionality is tested via integration tests
-    pytest.skip('Requires full config setup')
+    """Test chat command returns an error for invalid permission mode input."""
+    from argparse import Namespace
+
+    from teaagent.cli._handlers._chat import chat_command
+
+    args = Namespace(
+        provider=None,
+        model=None,
+        root='.',
+        allow_destructive=False,
+        permission_mode='not-a-mode',
+    )
+
+    with patch('teaagent.tui.run_tui') as mock_run:
+        result = chat_command(args)
+
+    assert result == 1
+    mock_run.assert_not_called()
 
 
 def test_chat_command_smoke_test():

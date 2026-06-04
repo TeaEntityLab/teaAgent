@@ -64,9 +64,6 @@ def test_policy_yaml_loaded_from_workspace(tmp_path):
     assert 'block-rm' in all_ids
 
 
-@pytest.mark.skip(
-    reason='File policy audit event not being recorded - requires investigation'
-)
 def test_deny_rule_blocks_matching_tool_in_runner(tmp_path):
     policy = FilePolicy(
         rules=[
@@ -93,13 +90,13 @@ def test_deny_rule_blocks_matching_tool_in_runner(tmp_path):
             call_id='c1',
         ),
     )
-    # After approval gate fix, file policy denials return pending_approval instead of failed
     assert result.status == 'pending_approval'
-    # Check for tool_call_blocked or run_failed event
-    blocked_events = [
-        e for e in audit.events if e.event_type in ('tool_call_blocked', 'run_failed')
+    assert 'shell blocked' in result.error_message
+    assert result.metadata == {'approval': {}}
+    assert [e.event_type for e in audit.events] == [
+        'run_started',
+        'iteration_started',
     ]
-    assert blocked_events
 
 
 def test_deny_rule_does_not_block_non_matching_tool():
@@ -134,9 +131,6 @@ def test_deny_rule_does_not_block_non_matching_tool():
     assert result.status == 'completed'
 
 
-@pytest.mark.skip(
-    reason='File policy audit event not being recorded - requires investigation'
-)
 def test_deny_rule_fires_in_danger_full_access_mode():
     """Even danger-full-access mode must be blocked by file policy."""
     policy = FilePolicy(
@@ -167,8 +161,10 @@ def test_deny_rule_fires_in_danger_full_access_mode():
             call_id='c3',
         ),
     )
-    # After approval gate fix, file policy denials return pending_approval instead of failed
     assert result.status == 'pending_approval'
-    assert 'rm always blocked' in result.error_message or 'rm always blocked' in str(
-        result.metadata
-    )
+    assert 'rm always blocked' in result.error_message
+    assert result.metadata == {'approval': {}}
+    assert [e.event_type for e in audit.events] == [
+        'run_started',
+        'iteration_started',
+    ]

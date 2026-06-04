@@ -26,6 +26,7 @@ def _safe_run_agent_task(
     task: str,
     clarify_first: bool = False,
     resumed_from: str | None = None,
+    initial_observations: list[dict[str, object]] | None = None,
 ) -> None:
     """Run _run_agent_task with error guard to prevent TUI crash on adapter/network errors.
 
@@ -33,7 +34,12 @@ def _safe_run_agent_task(
     failure, API error, corrupt store) would propagate up and crash the TUI loop.
     """
     try:
-        tui._run_agent_task(task, clarify_first=clarify_first, resumed_from=resumed_from)
+        tui._run_agent_task(
+            task,
+            clarify_first=clarify_first,
+            resumed_from=resumed_from,
+            initial_observations=initial_observations,
+        )
     except (OSError, ValueError, TypeError, RuntimeError) as exc:
         tui.output_fn(f'error: agent task failed — {exc}')
 
@@ -89,8 +95,18 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: preflight requires a task')
             return True
         task = ' '.join(args)
-        # Simplified preflight - just return basic info
-        tui._print_json({'ready': True, 'task': task})
+        from teaagent.preflight import preflight
+
+        report = preflight(
+            task,
+            root=tui.root,
+            provider=tui.provider or 'gpt',
+            model=tui.model,
+            permission_mode=tui.permission_mode,
+            route=tui.route_model_enabled,
+            memory_limit=tui.memory_limit,
+        )
+        tui._print_json(report.to_dict())
         return True
 
     if action == 'route':
@@ -250,7 +266,40 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         if not store.run_path(run_id).is_file():
             tui.output_fn(f"error: run '{run_id}' not found")
             return True
-        _safe_run_agent_task(tui, '', resumed_from=run_id)
+        try:
+            original_task = store.task_for_run(run_id)
+        except (FileNotFoundError, ValueError) as exc:
+            tui.output_fn(f'error: {exc}')
+            return True
+
+        initial_observations = store.observations_for_run(run_id)
+        pending = store.pending_approval_for_run(run_id)
+        if pending:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            approval_store = ApprovalPresetStore(tui.root)
+            digest = pending.get('argument_digest')
+            if isinstance(digest, str) and digest:
+                if not approval_store.check_scoped_approval_digest(
+                    run_id=run_id,
+                    call_id=pending['call_id'],
+                    tool_name=pending['tool_name'],
+                    argument_digest=digest,
+                ):
+                    approval_store.add_scoped_approval(
+                        run_id=run_id,
+                        call_id=pending['call_id'],
+                        tool_name=pending['tool_name'],
+                        arguments=pending.get('arguments', {}),
+                        argument_digest=digest,
+                    )
+        tui.output_fn(f'resume: {run_id}')
+        _safe_run_agent_task(
+            tui,
+            original_task,
+            resumed_from=run_id,
+            initial_observations=initial_observations,
+        )
         return True
 
     if action == 'parallel':

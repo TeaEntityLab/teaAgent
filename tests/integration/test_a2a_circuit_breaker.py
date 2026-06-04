@@ -59,7 +59,7 @@ def test_circuit_opens_after_threshold():
         ['http://bad.local'], circuit_breaker=cb, allow_http=True
     )
 
-    with patch('teaagent.http_utils.safe_urlopen', side_effect=_fail_fetch):
+    with patch('teaagent.agentcard.safe_urlopen', side_effect=_fail_fetch):
         reg.refresh()  # failure 1
         reg.refresh()  # failure 2 → circuit opens
 
@@ -84,7 +84,7 @@ def test_open_circuit_skips_endpoint():
             raise OSError('bad')
         return _ok_fetch(url)
 
-    with patch('teaagent.http_utils.safe_urlopen', side_effect=selective_fetch):
+    with patch('teaagent.agentcard.safe_urlopen', side_effect=selective_fetch):
         reg.refresh()  # bad fails → circuit opens; good succeeds
         call_log.clear()
         reg.refresh()  # bad should be skipped
@@ -93,7 +93,6 @@ def test_open_circuit_skips_endpoint():
     assert not any('bad.local' in u for u in call_log)
 
 
-@pytest.mark.skip(reason='Circuit breaker timing issues - requires investigation')
 def test_success_resets_failure_count():
     cb = CircuitBreakerConfig(failure_threshold=3, reset_timeout_seconds=60.0)
     reg = FederatedAgentRegistry(
@@ -110,7 +109,7 @@ def test_success_resets_failure_count():
             raise OSError('flaky')
         return _ok_fetch(url)
 
-    with patch('teaagent.http_utils.safe_urlopen', side_effect=flaky):
+    with patch('teaagent.agentcard.safe_urlopen', side_effect=flaky):
         reg.refresh()  # fail 1
         reg.refresh()  # success → reset
         reg.refresh()  # success
@@ -119,14 +118,13 @@ def test_success_resets_failure_count():
     assert state == 'closed'
 
 
-@pytest.mark.skip(reason='Circuit breaker timing issues - requires investigation')
 def test_circuit_resets_after_timeout():
     cb = CircuitBreakerConfig(failure_threshold=1, reset_timeout_seconds=0.05)
     reg = FederatedAgentRegistry(
         ['http://temp-bad.local'], circuit_breaker=cb, allow_http=True
     )
 
-    with patch('teaagent.http_utils.safe_urlopen', side_effect=_fail_fetch):
+    with patch('teaagent.agentcard.safe_urlopen', side_effect=_fail_fetch):
         reg.refresh()  # opens circuit
 
     assert reg.circuit_state('http://temp-bad.local') == 'open'
@@ -135,7 +133,7 @@ def test_circuit_resets_after_timeout():
 
     # After timeout, circuit should allow a retry
     with patch(
-        'teaagent.http_utils.safe_urlopen',
+        'teaagent.agentcard.safe_urlopen',
         return_value=_ok_fetch('http://temp-bad.local'),
     ):
         reg.refresh()
@@ -143,7 +141,6 @@ def test_circuit_resets_after_timeout():
     assert reg.circuit_state('http://temp-bad.local') == 'closed'
 
 
-@pytest.mark.skip(reason='Circuit breaker timing issues - requires investigation')
 def test_no_circuit_breaker_behaves_as_before():
     """Without circuit_breaker, FederatedAgentRegistry retries every time."""
     reg = FederatedAgentRegistry(['http://always-fail.local'], allow_http=True)
@@ -155,7 +152,7 @@ def test_no_circuit_breaker_behaves_as_before():
         call_count['n'] += 1
         raise OSError('down')
 
-    with patch('teaagent.http_utils.safe_urlopen', side_effect=counting_fail):
+    with patch('teaagent.agentcard.safe_urlopen', side_effect=counting_fail):
         reg.refresh()
         reg.refresh()
         reg.refresh()
@@ -163,7 +160,6 @@ def test_no_circuit_breaker_behaves_as_before():
     assert call_count['n'] >= 3  # no skipping
 
 
-@pytest.mark.skip(reason='Circuit breaker timing issues - requires investigation')
 def test_cards_from_healthy_endpoints_still_returned():
     cb = CircuitBreakerConfig(failure_threshold=1, reset_timeout_seconds=60.0)
     reg = FederatedAgentRegistry(
@@ -179,7 +175,7 @@ def test_cards_from_healthy_endpoints_still_returned():
             raise OSError('bad')
         return _ok_fetch(url)
 
-    with patch('teaagent.http_utils.safe_urlopen', side_effect=selective):
+    with patch('teaagent.agentcard.safe_urlopen', side_effect=selective):
         errors = reg.refresh()
         cards = reg.list_cards()
 

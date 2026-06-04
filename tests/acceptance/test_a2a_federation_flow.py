@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import unittest
 
 import pytest
@@ -15,7 +16,6 @@ from test_support import skip_if_socket_bind_is_blocked
 
 
 class A2AFederationFlowAcceptanceTests(unittest.TestCase):
-    @pytest.mark.skip(reason='A2A federation flow requires investigation')
     def test_federated_discovery_routes_by_capability_and_delegates(self) -> None:
         skip_if_socket_bind_is_blocked()
         calls: list[tuple[str, dict]] = []
@@ -34,16 +34,25 @@ class A2AFederationFlowAcceptanceTests(unittest.TestCase):
         with A2ADiscoveryServer(card, port=0, task_handler=handler) as server:
             base_url = server.base_url
             registry = FederatedAgentRegistry(
-                ['http://127.0.0.1:1', base_url], ttl_seconds=60, timeout=1
+                ['http://127.0.0.1:1', base_url],
+                ttl_seconds=60,
+                timeout=1,
+                allow_http=True,
             )
-            errors = registry.refresh()
+            errors = []
+            deadline = time.monotonic() + 2.0
+            while time.monotonic() < deadline:
+                errors = registry.refresh()
+                if registry.find_by_capability('search'):
+                    break
+                time.sleep(0.05)
             dispatcher = A2ADispatcher(registry)
 
             result = dispatcher.dispatch_by_capability(
                 'find docs',
                 'search',
                 runner=lambda task, routed_card: (
-                    A2AClient.from_card(routed_card, timeout=5)
+                    A2AClient.from_card(routed_card, timeout=5, allow_http=True)
                     .delegate(task, context={'query': 'docs'})
                     .output
                 ),
