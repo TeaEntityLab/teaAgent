@@ -11,6 +11,7 @@
 **Failure mode**: Previously denied tools get re-prompted after restart.
 
 ### APR-R-003: `DANGER_FULL_ACCESS` bypasses all approval
+**Severity**: Critical (per [severity-calibration-rubric.md](../../security/severity-calibration-rubric.md))
 **File**: `approval_manager.py:32-36` (PermissionMode enum)
 **Risk**: `DANGER_FULL_ACCESS` skips every check. A user enabling it for convenience may forget it's active.
 **Failure mode**: Unintended destructive writes with no approval gate.

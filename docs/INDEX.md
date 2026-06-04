@@ -51,6 +51,7 @@ follow dated evidence documents only when you need the reasoning trail.
 | [Documentation Maintenance Policy](governance/doc-maintenance-policy-2026-06-02.md) | Short policy for adding, updating, and validating docs. |
 | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Practical rules for claim classes, freshness windows, source-of-truth conflicts, and CI guard scope. |
 | [Coverage Omit Ledger](governance/coverage-omit-ledger.md) | Governance ledger for files and directories omitted from test coverage reporting. |
+| [Architecture Decision Records](adr/README.md) | Index of ADRs and their current accepted/closed states. |
 
 ## Plans And Work
 

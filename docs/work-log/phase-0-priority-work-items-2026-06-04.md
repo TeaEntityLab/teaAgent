@@ -106,3 +106,30 @@ Phase 0 trust repair is done only when the following are all true:
   supersession note and points to
   `docs/security/dependency-audit-scope-refresh-2026-06-04.md`, which separates
   base, dev/lockfile, and optional-extra findings.
+- 2026-06-04 — **P1-TR-008 DONE.** All 16 `[tool.coverage.run].omit` patterns
+  in `pyproject.toml` have a matching row in
+  `docs/governance/coverage-omit-ledger.md` with at least one existing
+  smoke-test candidate; `scripts/validate_docs_consistency.py` reports "Docs
+  consistency check passed." Representative subset green on Python 3.12.8
+  (`tests/test_workspace_tools.py tests/test_git_tools.py tests/test_validation.py
+  tests/test_wasm_runtime.py tests/test_tsb_format.py` → 92 passed).
+- 2026-06-04 — **P1-TR-009 DONE.** `docs/INDEX.md` is the documentation front
+  door and links current status, risk register, roadmap, tickets, ADR index
+  (`adr/README.md`), and historical evidence/review. All in-doc links resolve;
+  the ADR index link was the one missing required category and is now present.
+- 2026-06-04 — **P1-TR-010 DONE.** `docs/security/severity-calibration-rubric.md`
+  defines the shared Critical/High/Medium/Low scale and the calibrated mapping
+  (`DANGER_FULL_ACCESS`, `allow_all_destructive` bypass, and audit-chain
+  forgeability are Critical). The approval-bypass class is now labeled
+  consistently across high-risk docs; `docs/modules/approval_manager/risks.md`
+  (APR-R-003) and `docs/modules/governance/risks.md` (GOV-R-001) now carry an
+  explicit `Severity: Critical` label that points back to the rubric. No
+  remaining Critical-vs-High contradiction for the bypass class.
+- 2026-06-04 — **P1-TR-011 DONE.** Safety-intent tests are separated from
+  behavior-preservation tests. The safe contract is asserted directly:
+  `tests/regression/test_contract_approval.py::test_allow_all_destructive_without_ack_blocks`
+  and `tests/test_full_access_gate.py::TestPolicyGate::test_allow_all_without_ack_raises_with_reason_code`
+  require reason code `FULL_ACCESS_NOT_ACKNOWLEDGED`, and the behavior-preservation
+  bypass test now requires explicit `full_access_acknowledged=True`. Green on
+  Python 3.12.8 (`tests/test_full_access_gate.py
+  tests/regression/test_contract_approval.py` → 28 passed).

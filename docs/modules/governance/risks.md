@@ -1,6 +1,7 @@
 # governance — Risk Vectors & Known Issues
 
 ### GOV-R-001: DANGER_FULL_ACCESS bypasses all checks
+**Severity**: Critical (per [severity-calibration-rubric.md](../../security/severity-calibration-rubric.md))
 **File**: `governance/plan_gate.py:19-25`
 **Risk**: `DANGER_FULL_ACCESS` permission mode skips the plan gate entirely. An agent in this mode can write anything without a plan.
 **Failure mode**: Accidental destructive writes.
