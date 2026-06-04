@@ -133,10 +133,10 @@ Generated: 2026-06-02 | Reviewed: 2026-06-04 | 28 modules | 103 files in this di
 | HOOK-R-001 | hooks | High | Hook registration not thread-safe |
 | HOOK-R-003 | hooks | Medium | `run_tests_hook` raises `HookError` as post-hook |
 | MCP-R-001 | mcp | Critical | MCP tool injection from untrusted server |
-| APR-R-003 | approval_manager | High | `DANGER_FULL_ACCESS` bypasses all approval |
+| APR-R-003 | approval_manager | Critical | `DANGER_FULL_ACCESS` bypasses all approval |
 | SAN-R-001 | sandbox | High | Git sandbox unavailable in detached HEAD |
 | WST-R-003 | workspace_tools | High | Shell command injection if `shell=True` |
-| GOV-R-001 | governance | High | `DANGER_FULL_ACCESS` bypasses plan gate |
+| GOV-R-001 | governance | Critical | `DANGER_FULL_ACCESS` bypasses plan gate |
 | SKL-R-001 | skills | High | Native skill runs in same process (no isolation) |
 | LLM-R-008 | llm | Medium | No timeout on streaming connections |
 | RUN-R-001 | runner | High | Policy override in auto mode — approval policy mutated in-place and never restored after auto mode exits |

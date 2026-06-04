@@ -325,6 +325,19 @@ class ChatAgentTests(unittest.TestCase):
             destructive=True,
         )
 
+        # Verify safety contract: without full_access_acknowledged, it blocks (P1-TR-011)
+        from teaagent.errors import DenialReasonCode
+        with self.assertRaises(ToolPermissionError) as ctx:
+            ApprovalPolicy(
+                allow_all_destructive=True,
+                full_access_acknowledged=False,
+            ).assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='any',
+                destructive=True,
+            )
+        self.assertEqual(ctx.exception.reason_code, DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED)
+
     def test_read_only_permission_blocks_destructive(self) -> None:
         with self.assertRaises(ToolPermissionError):
             ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY).assert_allowed(
