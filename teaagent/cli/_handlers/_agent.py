@@ -1290,7 +1290,7 @@ def _save_review_decisions(
                         'original_mode': suspension_data.get('mode', 'unknown'),
                         'transition_type': 'robot_to_keyboard',
                         'files_reviewed': len(changed_files),
-                        'suspension_data': suspension_data.get('audit_trail', {}),
+                        # audit_trail was a pre-CG-10 placeholder; real governance record is in RunStore
                     },
                 },
                 f,

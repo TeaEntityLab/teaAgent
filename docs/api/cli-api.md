@@ -76,9 +76,8 @@ Alias: `run` and `ask` are identical.
 | `--checkpoint-store PATH` | string | — | SQLite path for checkpoint storage |
 | `--dry-run` | flag | false | Plan without calling the model |
 | `--human` | flag | false | Human-friendly dry-run output |
-| `--background` | flag | false | Detach run; use `attach` to stream |
+| `--background` | flag | false | Run in background mode |
 | `--progress` | flag | false | Stream progress lines to stderr |
-| `--detach` | flag | false | Return run ID immediately |
 | `--no-stream` | flag | false | Disable token streaming |
 | `--stream-model-output` | flag | false | Stream output token-by-token |
 

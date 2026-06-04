@@ -108,7 +108,7 @@ HELP_TEXT = """Commands:
   effort <low|normal|high|unlimited>  Set effort throttling level. Default is unlimited (no cost cap).
   budget                    Show budget and effort status.
   checkpoint                Create manual git checkpoint.
-  undo                      Undo all changes (using checkpoint — use teaagent agent undo for advanced).
+  undo [run_id]              Undo last agent edit (journal-first, checkpoint fallback).
   background                Suspend session to background mode (use teaagent agent run --background).
   handoff                   Alias for background command.
   exit | quit               Leave the TUI.
@@ -974,7 +974,7 @@ class TeaAgentTUI:
             if resumed_from
             else None,
         )
-        # TASK-002: Use ChatSessionController for cost tracking (unified with CLI)
+        # TICKET-12 Step A: Use ChatSessionController for cost tracking (unified with CLI)
         # This replaces the direct cost accumulation with controller-based tracking
         controller = self._get_chat_controller()
         controller.session_state.session_cost_cents += result.cost_cents

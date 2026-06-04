@@ -28,13 +28,13 @@
 <claude-mem-context>
 # Memory Context
 
-# [teaagent] recent context, 2026-06-02 10:04am GMT+8
+# [teaagent] recent context, 2026-06-04 1:00am GMT+8
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (13,293t read) | 725,300t work | 98% savings
+Stats: 50 obs (13,372t read) | 726,159t work | 98% savings
 
 ### May 8, 2026
 S4 Generate commit message for staged changes adding interactive TUI to teaagent CLI (May 8 at 1:01 AM)
@@ -48,20 +48,8 @@ S14 User continues to explore project instructions and configuration context for
 S15 Benchmark TeaAgent against Hermes/OpenCode/ClaudeCode/Codex via DeepWiki analysis, identify gaps, and design LSP + sub-agent implementation plans (May 14 at 4:13 PM)
 S13 User asked "What instructions are you following for this project?" to understand project-specific conventions and guidelines. (May 14 at 4:13 PM)
 ### May 31, 2026
-1454 1:51p 🔵 CX CLI database access denied
-1485 1:54p 🟣 Implemented reflective dispatch for issue identification
-1486 4:45p 🟣 Implement Reflective Dispatch Mechanism
 S19 Reflective Dispatch Mechanism Implementation (May 31 at 4:46 PM)
-1487 4:47p 🔵 Locate cx-cli Executable
-1488 " 🔵 Project File Count and Listing
-1490 4:48p 🔵 cx-cli Capabilities Overview
-1492 " 🔵 Teaagent Package Structure and Python Files
-1494 4:49p 🔵 cx overview of governance module
-1499 " 🔵 cx overview of approval_manager
-1506 " 🔵 cx overview of runner module
-1511 " 🔵 cx overview of security modules
-1564 4:53p 🟣 Implemented reflective dispatch mechanism
-1565 " 🔵 Verified audit level and scope key usage
+1565 4:53p 🔵 Verified audit level and scope key usage
 1566 6:41p ✅ Git diff review and CLI smoke tests requested
 1567 10:09p 🔴 Fix undefined names in agent CLI handlers
 1568 " 🔴 Correct handling of audit events and run summaries
@@ -101,6 +89,20 @@ S19 Reflective Dispatch Mechanism Implementation (May 31 at 4:46 PM)
 1669 9:57a 🔵 Initial review of MD status
 1670 " 🔵 Rule definition for Risk Issue Roadmap
 1671 " 🔵 Current working directory confirmed
+### Jun 3, 2026
+1818 1:02p 🔵 cx-cli skill execution for project analysis
+1868 8:25p ✅ Review of all tasks in markdown files
+1869 " ✅ Recent commits and root directory listing
+1870 " 🔴 Incorrect grep pattern for markdown tasks
+1871 " ✅ Checkbox task counts in markdown files
+1872 " ✅ TASK identifier and status patterns in markdown files
+1874 8:26p ✅ Inspection of ticket plans and Heddle concept fit document
+1876 " ✅ Master index of ticket execution plans
+1877 11:56p 🔵 Pi Agent (Pi.dev) Overview
+1878 " 🔵 Reflective Research Skill Definition
+### Jun 4, 2026
+1879 12:30a 🔵 cx-cli skill execution for project review
+1880 12:31a 🔵 Initial Project Scan for Risks and UX
 
-Access 725k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 726k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

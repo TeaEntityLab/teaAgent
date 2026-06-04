@@ -84,6 +84,7 @@ class ChatSessionController:
         undo_journal: Optional[UndoJournal] = None,
         initial_observations: Optional[list[dict[str, Any]]] = None,
         resumed_from: Optional[str] = None,
+        task_spec: Optional[Any] = None,
     ) -> ExecutionResult:
         """Execute a chat agent task with consistent behavior.
 
@@ -102,6 +103,7 @@ class ChatSessionController:
             undo_journal: Optional undo journal (created if not provided)
             initial_observations: Optional initial observations
             resumed_from: Optional run_id if resuming
+            task_spec: Optional task specification from clarification
 
         Returns:
             ExecutionResult with the run result and cost
@@ -134,29 +136,22 @@ class ChatSessionController:
             adapter=adapter,
             config=config,
             audit=audit,
+            task_spec=task_spec,
             initial_observations=initial_observations,
             initial_context_extra={'resumed_from': resumed_from}
             if resumed_from
             else None,
         )
 
-        # Save result to store (skip if audit is a mock in tests)
-        try:
-            if audit and hasattr(audit, 'path') and audit.path:
-                store = RunStore(self.root)
-                store.logger_for_result(result, audit)
-        except (AttributeError, TypeError):
-            # Audit logger is likely a mock in tests
-            pass
+        # Save result to store
+        if audit and hasattr(audit, 'path') and audit.path:
+            store = RunStore(self.root)
+            store.logger_for_result(result, audit)
 
         # Save undo journal if it has entries
         if undo_journal.has_entries:
-            try:
-                store = RunStore(self.root)
-                undo_journal.save_to(store.undo_path(result.run_id))
-            except (AttributeError, TypeError):
-                # Store is likely a mock in tests
-                pass
+            store = RunStore(self.root)
+            undo_journal.save_to(store.undo_path(result.run_id))
 
         # Handle result display (CG-01)
         if result.status == 'completed' and result.final_answer:

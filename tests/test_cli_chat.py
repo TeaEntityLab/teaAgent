@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from unittest.mock import MagicMock
 
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.cli._handlers._chat import chat_command
@@ -293,6 +294,7 @@ def test_chat_repl_displays_answer(monkeypatch, capsys):
         # Mock RunStore and UndoJournal to avoid file system issues
         with (
             patch('teaagent.cli._handlers.chat_repl.RunStore') as mock_store_class,
+            patch('teaagent.chat_session_controller.RunStore'),
             patch('teaagent.cli._handlers.chat_repl.UndoJournal') as mock_journal_class,
             patch(
                 'teaagent.chat_session_controller.run_chat_agent',
@@ -358,9 +360,10 @@ def test_suspend_to_background_no_branch_switch(monkeypatch, capsys):
         assert 'Created sandbox branch' not in captured.out
         # Message should clarify this is not background execution
         assert 'suspension checkpoint' in captured.out
-        assert 'not background execution' in captured.out
-        # Should mention the correct command for background tasks
-        assert 'teaagent agent run --detach' in captured.out
+        # Should not mention non-existent --detach flag (TASK-DD2-006)
+        assert '--detach' not in captured.out
+        # Should mention interactive-review for reviewing suspended runs
+        assert 'interactive-review' in captured.out
 
 
 def test_chat_session_controller_execute_task(monkeypatch, capsys):
@@ -477,6 +480,57 @@ def test_chat_session_controller_undo(monkeypatch, capsys):
             assert any('Undo completed' in msg for msg in output_messages)
             # Should clean up journal
             assert undo_path.exists() is False  # File should be unlinked
+
+
+def test_controller_surfaces_save_failure():
+    """TICKET-13: A save failure in undo_journal is not swallowed."""
+    from unittest.mock import patch
+
+    from teaagent.chat_session_controller import ChatSessionController, SessionState
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        session_state = SessionState()
+        output_messages = []
+
+        def mock_output_fn(msg: str):
+            output_messages.append(msg)
+
+        controller = ChatSessionController(
+            root=tmpdir,
+            output_fn=mock_output_fn,
+            session_state=session_state,
+        )
+
+        # Create a bad journal that raises AttributeError on save
+        bad_journal = MagicMock()
+        bad_journal.has_entries = True
+        bad_journal.save_to.side_effect = AttributeError('injected: bad attr')
+
+        # Create a mock config
+        mock_config = MagicMock()
+        mock_config.model = 'gpt-4'
+
+        # Create a mock audit logger
+        mock_audit = MagicMock()
+        mock_audit.path = Path(tmpdir) / 'audit.jsonl'
+
+        with (
+            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
+            patch('teaagent.chat_session_controller.RunStore') as mock_store,
+        ):
+            mock_run.return_value = MagicMock(
+                status='completed',
+                cost_cents=0,
+                run_id='r1',
+                final_answer=MagicMock(content='ok'),
+                error_message=None,
+            )
+            mock_store.return_value.undo_path.return_value = Path(tmpdir) / 'undo.jsonl'
+            mock_store.return_value.logger_for_result.return_value = None
+
+            # Should raise AttributeError, not swallow it
+            with pytest.raises(AttributeError, match='injected'):
+                controller.execute_task('test task', adapter=None, config=mock_config, undo_journal=bad_journal, audit=mock_audit)
 
 
 def test_chat_surface_parity(monkeypatch, capsys):
@@ -1238,8 +1292,6 @@ def test_dual_mode_integration_suspension_to_review(capsys, monkeypatch):
         assert 'acp_version' in suspension_data
         assert suspension_data['acp_version'] == '1.0.0'
         assert suspension_data['mode'] == 'suspended_from_repl'
-        assert 'audit_trail' in suspension_data
-        assert suspension_data['audit_trail']['transition_type'] == 'keyboard_to_robot'
 
         # Step 2: Simulate background task making changes
         (Path(tmpdir) / 'test.txt').write_text('refactored content by background task')
@@ -1309,14 +1361,7 @@ def test_acp_state_consistency_across_modes(capsys):
         # Verify ACP compliance fields
         assert 'acp_version' in suspension_data
         assert 'mode' in suspension_data
-        assert 'audit_trail' in suspension_data
         assert 'timestamp' in suspension_data
-
-        # Verify audit trail structure
-        audit_trail = suspension_data['audit_trail']
-        assert 'suspension_time' in audit_trail
-        assert 'original_mode' in audit_trail
-        assert 'transition_type' in audit_trail
 
 
 def test_git_sandbox_consent_updates_existing_config():

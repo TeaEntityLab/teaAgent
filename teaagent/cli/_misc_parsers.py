@@ -690,7 +690,7 @@ def _ultrawork(
     def _deprecation_warning(args: argparse.Namespace) -> int:
         print(
             '[TeaAgent WARNING] "ultrawork" commands are deprecated. '
-            'Please use "teaagent background" or "teaagent run --detach" instead.',
+            'Please use "teaagent background" or "teaagent agent run --background" instead.',
             file=sys.stderr,
         )
         # Route to the appropriate handler based on subcommand
@@ -710,7 +710,7 @@ def _ultrawork(
     ultrawork = subparsers.add_parser(
         'ultrawork',
         help='DEPRECATED: Manage detached background agent workers (use background instead).',
-        description='DEPRECATED: Use "teaagent background" or "teaagent run --detach" instead.',
+        description='DEPRECATED: Use "teaagent background" or "teaagent agent run --background" instead.',
     )
     subs = ultrawork.add_subparsers(dest='ultrawork_command', required=True)
 

@@ -86,11 +86,6 @@ def suspend_to_background(
             for f in targeted_files
             if f.resolve().is_relative_to(root.resolve())
         ],
-        'audit_trail': {
-            'suspension_time': __import__('time').time(),
-            'original_mode': 'repl',
-            'transition_type': 'keyboard_to_robot',
-        },
     }
 
     suspension_file = tea_dir / f'suspension-{run_id}.json'
@@ -141,7 +136,7 @@ def suspend_to_background(
     print(f'[TeaAgent] Run ID: {run_id}')
     print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
     print('[TeaAgent] Note: This is a suspension checkpoint, not background execution.')
-    print(f'[TeaAgent] To run in background: teaagent agent run --detach {run_id}')
+    print('[TeaAgent] (Resume from REPL session not yet supported via CLI.)')
 
     return run_id
 
@@ -164,7 +159,7 @@ def print_chat_help() -> None:
     print('  /effort <low|normal|high>  - Set effort throttling level')
     print('  /budget                    - Show budget status')
     print('  /checkpoint                - Create manual git checkpoint')
-    print('  /undo                      - Undo all changes (using checkpoint)')
+    print('  /undo                      - Undo last agent edit (journal-first; fallback to checkpoint)')
     print(
         '  !<command>                 - DISABLED: Use full terminal for shell commands'
     )
