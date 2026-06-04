@@ -50,7 +50,11 @@ class GraphQLiteGraphStore:
         self.config = config or GraphQLiteConfig()
         try:
             self.graph = (graph_factory or load_graphqlite_graph)(self.config.database)
-        except (GraphQLiteUnavailableError, GraphQLiteRuntimeError, sqlite3.Error) as exc:
+        except (
+            GraphQLiteUnavailableError,
+            GraphQLiteRuntimeError,
+            sqlite3.Error,
+        ) as exc:
             import sys
 
             print(

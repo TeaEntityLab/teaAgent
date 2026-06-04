@@ -146,7 +146,12 @@ class ChatSessionController:
         )
 
         # Save result to store
-        if audit and hasattr(audit, 'path') and isinstance(audit.path, Path) and audit.path:
+        if (
+            audit
+            and hasattr(audit, 'path')
+            and isinstance(audit.path, Path)
+            and audit.path
+        ):
             store = RunStore(self.root)
             store.logger_for_result(result, audit)
 

@@ -158,10 +158,14 @@ def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustP
     if registry.hook_registry is None:
         registry.hook_registry = HookRegistry()
 
-    def dynamic_mcp_trust_hook(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
+    def dynamic_mcp_trust_hook(
+        tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any] | None:
         current_policy = load_mcp_trust_policy(root)
         for server_name, server in current_policy.servers.items():
-            if (tool_name in server.allowed_tools or tool_name in server.denied_tools) and is_server_trust_expired(server):
+            if (
+                tool_name in server.allowed_tools or tool_name in server.denied_tools
+            ) and is_server_trust_expired(server):
                 raise HookError(f"Trust for MCP server '{server_name}' has expired")
 
         allowed, denied = merged_tool_filters(current_policy)
@@ -170,7 +174,7 @@ def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustP
         if allowed and tool_name not in allowed:
             raise HookError(
                 f"MCP tool '{tool_name}' not in allowed list. "
-                f"Allowed: {sorted(allowed)}"
+                f'Allowed: {sorted(allowed)}'
             )
         return None
 

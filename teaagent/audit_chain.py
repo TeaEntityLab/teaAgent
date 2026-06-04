@@ -95,7 +95,9 @@ def verify_audit_chain(
     """
     if secret_key is None:
         run_id = log_path.stem
-        safe_id = ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        safe_id = (
+            ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        )
         key_path = Path.home() / '.teaagent' / 'run-keys' / f'{safe_id}.key'
         if key_path.is_file():
             try:

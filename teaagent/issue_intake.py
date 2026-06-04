@@ -190,19 +190,12 @@ class IssueParser:
 
         Note:
             Placeholder for future GitHub API integration.
-            Returns a minimal ParsedIssue with the URL as raw text.
+            Raises NotImplementedError to avoid silently returning fake data
+            that could mislead callers.
         """
-        return ParsedIssue(
-            title='GitHub Issue (API not implemented)',
-            description='',
-            issue_type=IssueType.UNKNOWN,
-            steps_to_reproduce=None,
-            expected_behavior=None,
-            actual_behavior=None,
-            affected_files=None,
-            affected_components=None,
-            priority=None,
-            raw_text=issue_url,
+        raise NotImplementedError(
+            'GitHub API integration is not yet implemented. '
+            'See https://github.com/TeaEntityLab/teaAgent for updates.'
         )
 
     def _extract_title(self, text: str) -> Optional[str]:

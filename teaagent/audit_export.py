@@ -55,7 +55,10 @@ def export_compliance_bundle(
     if include_chain_verification and log_path is not None:
         secret_key: bytes | None = None
         run_id_for_key = log_path.stem
-        safe_id = ''.join(ch for ch in run_id_for_key if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        safe_id = (
+            ''.join(ch for ch in run_id_for_key if ch.isalnum() or ch in {'-', '_'})
+            or 'run'
+        )
         key_path = Path.home() / '.teaagent' / 'run-keys' / f'{safe_id}.key'
         if key_path.is_file():
             try:

@@ -7,7 +7,7 @@
 
 | File | Line | Comment | Context | Action |
 |------|------|---------|---------|--------|
-| [`teaagent/issue_intake.py`](../../teaagent/issue_intake.py) | 195 | `# TODO: Implement GitHub API integration` | Inside `_parse_github_issue(self, issue_url)` — method returns a mock `ParsedIssue` with title "GitHub Issue (API not implemented)" and logs a warning. The entire `IssueIntake.from_github_url` flow hits this stub. | Implement GitHub API call (needs a PAT or app credential). Until then the stub should raise `NotImplementedError` rather than returning fake data that could mislead callers. |
+| [`teaagent/issue_intake.py`](../../teaagent/issue_intake.py) | 195 | `# TODO: Implement GitHub API integration` | Fixed: stub now raises `NotImplementedError` with a helpful message instead of returning fake data that could mislead callers. | Implement GitHub API call (needs a PAT or app credential) to replace the `NotImplementedError`. |
 
 ---
 
@@ -54,4 +54,5 @@ traceable without re-opening closed work.
 | Explicit `# TODO` in scripts | 9 |
 | Implicit architectural TODOs (ticketed) | 3 active, 4 fixed |
 | **Active total** | **13** |
-| **Fixed historical entries retained** | **4** |
+| `issue_intake.py:195` stub | 1 | Fixed: now raises `NotImplementedError` instead of returning fake data |
+| **Fixed historical entries retained** | **5** |

@@ -167,7 +167,9 @@ class AuditLogger:
             return os.urandom(32)
         run_id = self.path.stem
         # Inline safe_run_id to avoid circular imports
-        safe_id = ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        safe_id = (
+            ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        )
         key_dir = Path.home() / '.teaagent' / 'run-keys'
         key_path = key_dir / f'{safe_id}.key'
         if key_path.is_file():

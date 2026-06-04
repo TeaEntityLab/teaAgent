@@ -186,12 +186,9 @@ This needs to be fixed."""
 
 
 def test_parse_github_issue_placeholder(parser):
-    """Test GitHub issue parsing (placeholder)."""
-    parsed = parser.extract_github_issue('https://github.com/user/repo/issues/123')
-
-    assert parsed.title == 'GitHub Issue (API not implemented)'
-    assert 'https://github.com/user/repo/issues/123' in parsed.raw_text
-    assert parsed.issue_type == IssueType.UNKNOWN
+    """Test GitHub issue parsing raises NotImplementedError."""
+    with pytest.raises(NotImplementedError, match='GitHub API integration'):
+        parser.extract_github_issue('https://github.com/user/repo/issues/123')
 
 
 def test_parse_complex_issue(parser):

@@ -239,12 +239,14 @@ class WorkspaceToolTests(unittest.TestCase):
 
             with self.assertRaises(ToolExecutionError):
                 registry.execute(
-                    'workspace_run_shell_inspect', {'command': 'grep "root" /etc/passwd'}
+                    'workspace_run_shell_inspect',
+                    {'command': 'grep "root" /etc/passwd'},
                 )
 
             with self.assertRaises(ToolExecutionError):
                 registry.execute(
-                    'workspace_run_shell_inspect', {'command': 'grep "ok" ../outside.txt'}
+                    'workspace_run_shell_inspect',
+                    {'command': 'grep "ok" ../outside.txt'},
                 )
 
     def test_shell_inspect_rejects_unbalanced_quotes(self) -> None:
@@ -903,9 +905,9 @@ class TestToolRegistryBuilder(unittest.TestCase):
             from teaagent.workspace_tools.builder import ToolRegistryBuilder
 
             builder = ToolRegistryBuilder().with_root(tmp).with_workspace_tools()
-            self.assertIn("workspace", repr(builder))
+            self.assertIn('workspace', repr(builder))
             registry = builder.build()
-            self.assertIn("workspace_list_files", registry.list_tools())
+            self.assertIn('workspace_list_files', registry.list_tools())
 
 
 if __name__ == '__main__':

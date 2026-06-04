@@ -122,10 +122,7 @@ def add_agent_run_arguments(
         '--max-estimated-cost-cents',
         type=int,
         default=500,
-        help=(
-            'Abort the run when estimated cost exceeds this cap '
-            '(default: 500).'
-        ),
+        help=('Abort the run when estimated cost exceeds this cap (default: 500).'),
     )
     p.add_argument(
         '--clarify',

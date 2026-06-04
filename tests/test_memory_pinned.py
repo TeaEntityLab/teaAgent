@@ -295,8 +295,7 @@ class TestPinnedFileStorage:
         assert result is False
 
 
-
-@pytest.mark.skipif(not WATCHDOG_AVAILABLE, reason="watchdog library not installed")
+@pytest.mark.skipif(not WATCHDOG_AVAILABLE, reason='watchdog library not installed')
 class TestFileWatcher:
     """Test file watcher functionality."""
 

@@ -7,10 +7,10 @@ Definition-of-Done with the test name. Mirror of
 `daily-driver-execution-readiness-2026-06-01.md` Part 2, for the post-fix backlog.
 
 **Pre-flight (run once before starting):**
-- [ ] Re-anchor every `file:line` below against current HEAD (they drift).
-- [ ] Confirm `ChatSessionController.execute_task` / `SessionState` API unchanged.
-- [ ] `pytest tests/test_tui.py -q` green *before* you start (baseline = 104 passed).
-- [ ] Write each test first; it must fail against current code (proves it bites).
+- [x] Re-anchor every `file:line` below against current HEAD (they drift).
+- [x] Confirm `ChatSessionController.execute_task` / `SessionState` API unchanged.
+- [x] `pytest tests/test_tui.py -q` green *before* you start (baseline = 104 passed).
+- [x] Write each test first; it must fail against current code (proves it bites).
 
 **DoD for every ticket:** new test(s) green · `ruff` clean · `mypy` clean · manual smoke
 (`teaagent tui`, `teaagent chat`) shows corrected behavior · no acceptance regression.
@@ -23,8 +23,8 @@ Definition-of-Done with the test name. Mirror of
 - **File:** `tui/__init__.py`, in `_run_agent_task` after `store.logger_for_result(...)`
   (~`:924`).
 - **Change:** `self._session_cost_cents += result.cost_cents`.
-- **DoD:** [ ] stub adapter returning `cost_cents=137` → after one task `/cost` shows
-  `$1.37` [ ] second task accumulates [ ] `test_tui_session_cost_accumulates` green.
+- **DoD:** [x] stub adapter returning `cost_cents=137` → after one task `/cost` shows
+  `$1.37` [x] second task accumulates [x] `test_tui_session_cost_accumulates` green.
 
 **Sub-step 12b — controller delegation:**
 - **Controller change (`chat_session_controller.py`):** add `task_spec: Optional[str]=None`
@@ -36,16 +36,16 @@ Definition-of-Done with the test name. Mirror of
   resumed_from=..., emit_answer=False)`. Keep `:924-970` rendering. Make
   `self._session_cost_cents` a property over `controller.session_state.session_cost_cents`
   (or drop it and read the controller).
-- **DoD:** [ ] TUI no longer calls `run_chat_agent` directly (deprecation warning gone)
-  [ ] no double-printed answer [ ] `test_chat_surface_parity` green [ ] run-summary +
-  JSON mode unchanged [ ] cost reads from controller.
+- **DoD:** [x] TUI no longer calls `run_chat_agent` directly (deprecation warning gone)
+  [x] no double-printed answer [x] `test_chat_surface_parity` green [x] run-summary +
+  JSON mode unchanged [x] cost reads from controller.
 
 **Sub-step 12c — TUI `/undo` via journal:**
 - **File:** `_handle_undo` (`:812-813`).
 - **Change:** call `self._controller.undo_last_run()`; keep `_restore_checkpoint`
   reachable only as an explicit `checkpoint restore` verb.
-- **DoD:** [ ] TUI `/undo` restores only run-touched files (not unrelated manual edits)
-  [ ] `test_tui_undo_uses_journal` green. **Human review (touches user data).**
+- **DoD:** [x] TUI `/undo` restores only run-touched files (not unrelated manual edits)
+  [x] `test_tui_undo_uses_journal` green. **Human review (touches user data).**
 
 ---
 
@@ -56,8 +56,8 @@ Definition-of-Done with the test name. Mirror of
 - **Change:** remove mock-detection. Make store/audit injected dependencies (already
   params) and check `is None` explicitly; let genuine errors propagate or log+re-raise.
   For tests, pass real temp-dir stores or explicit fakes, not "catch the exception".
-- **DoD:** [ ] a forced `undo_journal.save_to` failure surfaces (not silent)
-  [ ] `test_controller_surfaces_save_failure` green [ ] existing controller tests still
+- **DoD:** [x] a forced `undo_journal.save_to` failure surfaces (not silent)
+  [x] `test_controller_surfaces_save_failure` green [x] existing controller tests still
   pass with real/explicit fakes. **Size:** S.
 
 ---
@@ -70,8 +70,8 @@ Definition-of-Done with the test name. Mirror of
   `test_tui_cost_display_formatting`. Add `test_tui_session_cost_accumulates`: build a
   TUI with a stub `adapter_factory` whose result carries a known `cost_cents`, run a
   task, assert `_session_cost_cents` (or controller state) rose by that amount.
-- **DoD:** [ ] new accumulation test FAILS on pre-12a code (proves it bites) [ ] passes
-  after 12a [ ] formatting test retained and renamed. **Do together with 12a.**
+- **DoD:** [x] new accumulation test FAILS on pre-12a code (proves it bites) [x] passes
+  after 12a [x] formatting test retained and renamed. **Do together with 12a.**
 
 ---
 
@@ -82,8 +82,8 @@ Definition-of-Done with the test name. Mirror of
   (`:129`).
 - **Stale help:** `chat_repl.py:168` — change `/undo  - Undo all changes (using
   checkpoint)` to describe journal-first surgical undo with checkpoint fallback.
-- **DoD:** [ ] no `audit_trail` JSON key remains [ ] help text matches `:791-800` behavior
-  [ ] `test_repl_undo_help_accurate` (assert help string) green. **Size:** XS.
+- **DoD:** [x] no `audit_trail` JSON key remains [x] help text matches `:791-800` behavior
+  [x] `test_repl_undo_help_accurate` (assert help string) green. **Size:** XS.
 
 ---
 

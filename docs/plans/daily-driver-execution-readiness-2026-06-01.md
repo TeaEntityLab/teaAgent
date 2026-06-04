@@ -38,22 +38,22 @@ clean · manual smoke shows corrected behavior · no acceptance regression.
   `session_context['observations']`.
 - **Reference impl:** the initial-task path at `:557-570` and TUI `:859-861` already do
   this correctly — mirror them.
-- **DoD checklist:** [ ] success prints answer, no "Task failed" [ ] failure prints real
-  error [ ] observation appended [ ] `test_chat_repl_displays_answer` green.
+- **DoD checklist:** [x] success prints answer, no "Task failed" [x] failure prints real
+  error [x] observation appended [x] `test_chat_repl_displays_answer` green.
 
 ### ✅ TICKET-2 / P0-2 — CG-02 (destructive undo)
 - **File:** `chat_repl.py:418` and fallback `:789-799`.
 - **Exact change:** remove both `git checkout -- .` calls. Route `/undo` to the run's
   `UndoJournal` (see TUI `:779-782`); if nothing recoverable, print "nothing to undo".
-- **DoD checklist:** [ ] manual edit to A preserved when undoing a run that touched B
-  [ ] no-checkpoint case is a byte-identical no-op [ ] `git checkout -- .` removed
-  [ ] `test_chat_repl_undo_scope` green.
+- **DoD checklist:** [x] manual edit to A preserved when undoing a run that touched B
+  [x] no-checkpoint case is a byte-identical no-op [x] `git checkout -- .` removed
+  [x] `test_chat_repl_undo_scope` green.
 
 ### ✅ TICKET-3 / P1-1 — CG-03 (real cost)
 - **Files:** `chat_repl.py:563,825` (remove `+= 10`); `tui/__init__.py:_run_agent_task`
   (increment `self._session_cost_cents += result.cost_cents`).
-- **DoD:** [ ] stub cost `137¢` → `/cost` shows `$1.37` [ ] sums across tasks
-  [ ] tokens shown [ ] parity REPL/TUI [ ] `test_session_cost_real` green. **DQ-5** (source label).
+- **DoD:** [x] stub cost `137¢` → `/cost` shows `$1.37` [x] sums across tasks
+  [x] tokens shown [x] parity REPL/TUI [x] `test_session_cost_real` green. **DQ-5** (source label).
 
 ### ✅ TICKET-3b / CG-09 + CG-10 — `/background` honesty + audit (NEW from second pass)
 - **File:** `chat_repl.py::suspend_to_background` (`:32-151`), caller `:640-658`; TUI
@@ -62,15 +62,15 @@ clean · manual smoke shows corrected behavior · no acceptance regression.
   state the switch explicitly; (b) align the printed messages with reality (no
   background execution unless wired to `agent run --detach`); (c) emit a real audit
   event via `AuditLogger` for the suspension.
-- **DoD:** [ ] no silent branch switch [ ] messages match behavior [ ] suspension
-  emits an audit-chain event [ ] `test_background_audited_and_honest` green. **DQ-1.**
+- **DoD:** [x] no silent branch switch [x] messages match behavior [x] suspension
+  emits an audit-chain event [x] `test_background_audited_and_honest` green. **DQ-1.**
 
 ### ✅ TICKET-5 / P1-3 — CG-05 (shared controller) — DO EARLY
 - **Sequencing note (from second pass):** CG-05 is the root cause that keeps spawning
   bugs (CG-09 is fresh proof). Recommend doing P0-1/P0-2 directly, then P1-3 *before*
   P1-1/P1-2/CG-09 so those land once in the shared `ChatSessionController`.
-- **DoD:** [ ] both surfaces drive one controller [ ] `test_chat_surface_parity` green
-  [ ] CG-01/02/03/09 behavior identical across surfaces. **Human review required.**
+- **DoD:** [x] both surfaces drive one controller [x] `test_chat_surface_parity` green
+  [x] CG-01/02/03/09 behavior identical across surfaces. **Human review required.**
 
 ### ✅ TICKET-6 / P1-4 — CG-06 (no clear-screen) — **DQ-3** (cheap vs full layout).
 ### ✅ TICKET-7 / P2-1 — CG-07/CG-08 (one undo vocabulary) — **DQ-6**.
@@ -99,11 +99,11 @@ Previously unassessed. Each design spec, when implemented, carries its own risk.
 
 ## Pre-flight checklist (run before starting any phase)
 
-- [ ] Re-anchor `file:line` refs against current HEAD (R-5).
-- [ ] Confirm the relevant `RunResult`/`AuditLogger`/`UndoJournal` APIs unchanged.
-- [ ] Decide the gating `DQ-#` for the phase (see open-decisions register).
-- [ ] Write the test first (each ticket names it) — falsifiable before code.
-- [ ] For P1-3 and TICKET-2/3b: schedule human review (data/governance surface).
+- [x] Re-anchor `file:line` refs against current HEAD (R-5).
+- [x] Confirm the relevant `RunResult`/`AuditLogger`/`UndoJournal` APIs unchanged.
+- [x] Decide the gating `DQ-#` for the phase (see open-decisions register).
+- [x] Write the test first (each ticket names it) — falsifiable before code.
+- [x] For P1-3 and TICKET-2/3b: schedule human review (data/governance surface).
 
 ## Recommended execution order (single source of truth)
 

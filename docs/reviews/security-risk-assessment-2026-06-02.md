@@ -414,12 +414,12 @@ return secrets.compare_digest(signature, expected)
 
 ## Immediate Hardening Checklist (≤1 sprint)
 
-- [ ] **SEC-01** — Persist HMAC key per-run; pass key to `verify_audit_chain` in `audit_export.py`
-- [ ] **SEC-02** — Call `is_server_trust_expired()` in `merged_tool_filters()` and in pre-hook callback
-- [ ] **SEC-04** — Change `ChatAgentConfig.max_estimated_cost_cents` default from `0` to `500` (or prompt)
-- [ ] **SEC-07** — Add Docker hardening flags: `--user 65534 --network none --cap-drop ALL --read-only`
-- [ ] **SEC-10** — Remove `cat`, `head`, `tail` from `_INSPECT_EXECUTABLES`
-- [ ] **SEC-16** — Delete dead code at `budget_monitor.py:104-119`
+- [x] **SEC-01** — Persist HMAC key per-run; pass key to `verify_audit_chain` in `audit_export.py`
+- [x] **SEC-02** — Call `is_server_trust_expired()` in `merged_tool_filters()` and in pre-hook callback
+- [x] **SEC-04** — Change `ChatAgentConfig.max_estimated_cost_cents` default from `0` to `500` (or prompt)
+- [x] **SEC-07** — Add Docker hardening flags: `--user 65534 --network none --cap-drop ALL --read-only`
+- [x] **SEC-10** — Remove `cat`, `head`, `tail` from `_INSPECT_EXECUTABLES`
+- [x] **SEC-16** — Delete dead code at `budget_monitor.py:104-119`
 
 ## Design-Level Recommendations (future sprints)
 
