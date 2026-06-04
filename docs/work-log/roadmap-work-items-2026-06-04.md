@@ -112,7 +112,30 @@ This work log turns the current strategy into concrete execution chunks.
   now carries a supersession banner pointing to the current front door
   (`docs/INDEX.md`) and current status; `docs/governance/README.md` already
   links the front door.
-- 2026-06-04 — **TASK-001/002/003/005 NOT STARTED.** These are
-  Human-Review-Required, high-risk behavior changes (TUI/CLI semantic drift,
-  undo honesty, cost truth, MCP/extension trust). An implementation plan is
-  pending explicit human approval before any code change.
+- 2026-06-04 — **TASK-003 VERIFIED DONE** (no behavior change). Cost truth was
+  already enforced: `ChatSessionController` is the single source of truth
+  (`get_session_cost`), the TUI reads it with a local fallback, and spend
+  accumulates additively. Verify-first regression guard:
+  `tests/test_task003_cost_truth.py` (no fake zero after real spend; honest
+  zero on free runs; additive accumulation).
+- 2026-06-04 — **TASK-001 VERIFIED DONE** (no behavior change). Both CLI
+  (`cli/_handlers/chat_repl.py`) and TUI route cost and undo through the same
+  `ChatSessionController`, so trust semantics are surface-independent.
+  Verify-first regression guard: `tests/test_task001_surface_parity.py`
+  (identical cost + undo outcomes across surfaces; only the output sink differs).
+- 2026-06-04 — **TASK-002 VERIFIED DONE** (no behavior change). Journal-based
+  undo and checkpoint restore are separated in code, help text (journal-first,
+  checkpoint fallback), cockpit availability signals (`has_undo_journal` vs
+  `has_checkpoint`), and completion wording. The selected path is derivable
+  before running from cockpit availability + the documented precedence.
+  Verify-first regression guard: `tests/test_task002_undo_honesty.py`.
+  Optional non-blocking enhancement: add a single explicit "undo will use: …"
+  pre-run line; deferred (would be a user-facing change requiring review).
+- 2026-06-04 — **TASK-005 VERIFIED DONE** (no behavior change). Trust expiry is
+  enforced at call time: `merged_tool_filters` drops expired servers' tools and
+  the registered pre-tool hook raises an explicit `HookError` (naming the
+  server) when an expired server's tool is invoked. Verify-first regression
+  guard: `tests/test_task005_trust_expiry_enforcement.py`.
+- Net: all four Human-Review-Required behavior tasks were already satisfied by
+  existing code; the verify-first pass added regression guards only, with no
+  behavior change, so no human-review gate was triggered.
