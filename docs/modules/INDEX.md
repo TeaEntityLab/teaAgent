@@ -1,6 +1,14 @@
 # TeaAgent Module Documentation Index
 
-Generated: 2026-06-02 | 28 modules | 93 documents
+Generated: 2026-06-02 | Reviewed: 2026-06-04 | 28 modules | 103 files in this directory
+
+> Supersession note, 2026-06-04: this file remains the module documentation
+> front door, but its risk summary is a generated risk inventory, not current
+> closure truth. For current user-facing status, use
+> [Daily-Driver Current Status](../daily-driver-current-status.md). For the
+> current documentation-state review and consolidation plan, use
+> [Documentation State Review](../analysis/documentation-state-review-2026-06-04.md)
+> and [Documentation Optimization Master Plan](../plans/documentation-optimization-master-plan-2026-06-04.md).
 
 ---
 
@@ -143,13 +151,16 @@ Generated: 2026-06-02 | 28 modules | 93 documents
 
 ---
 
-## Known P0/P1 Bugs (from memory)
+## Known P0/P1 Bugs (historical pointer)
 
-See `docs/daily-driver-known-issues-2026-06-01.md` for confirmed unfixed bugs:
-- **CG-01**: Chat result handling incorrect
-- **CG-02**: Destructive undo
-- **CG-03**: Fake cost display (TUI shows 0)
-- **TASK-DD2-001**: Initial task passthrough CLI→TUI (fixed in commit `47710d9`)
+The older memory-derived bug list has been superseded by later status and
+project-state reviews. Use these current front doors instead of this generated
+index when deciding whether an issue is still active:
+
+- [Daily-Driver Current Status](../daily-driver-current-status.md)
+- [Daily-Driver Review Package Index](../analysis/daily-driver-review-INDEX-2026-06-01.md)
+- [Total Review Index](../analysis/total-review-2026-06-04-INDEX.md)
+- [Ticket Execution Plans](../plans/ticket-plans/index.md)
 
 ---
 

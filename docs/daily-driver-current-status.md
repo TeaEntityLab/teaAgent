@@ -30,17 +30,44 @@ agent mode. It is intentionally more practical than the audit corpus.
 
 Use these when you need the rules behind status, risk, or document ownership:
 
+- Curated docs front door: [INDEX.md](INDEX.md)
 - Canonical states: [governance/document-state-model.md](governance/document-state-model.md)
 - Risk to ticket to roadmap flow: [governance/risk-issue-roadmap-workflow.md](governance/risk-issue-roadmap-workflow.md)
 - Document taxonomy and ownership: [governance/doc-taxonomy-and-ownership.md](governance/doc-taxonomy-and-ownership.md)
 - Maintenance entry point: [governance/doc-maintenance-policy-2026-06-02.md](governance/doc-maintenance-policy-2026-06-02.md)
+- Documentation operating model: [governance/documentation-operating-model-2026-06-04.md](governance/documentation-operating-model-2026-06-04.md)
 - Markdown corpus review: [analysis/markdown-status-review-2026-06-02.md](analysis/markdown-status-review-2026-06-02.md)
+- Documentation state review: [analysis/documentation-state-review-2026-06-04.md](analysis/documentation-state-review-2026-06-04.md)
 
 ## Current planning front door
 
 Use [plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md)
 when choosing what to implement next. It ranks the active work by user value, risk
 reduction, feasibility, strategic leverage, and ROI.
+
+## Latest project-level cross-review
+
+The newest project-level review layer fact-checks the broad "late-P0 / early-P1"
+assessment and turns it into Phase 0 trust-repair work:
+
+- Fact check: [analysis/project-state-cross-review-fact-check-2026-06-04.md](analysis/project-state-cross-review-fact-check-2026-06-04.md)
+- Critical questioning: [reviews/project-state-critical-questioning-2026-06-04.md](reviews/project-state-critical-questioning-2026-06-04.md)
+- Trust repair brief: [security/phase-0-trust-repair-risk-brief-2026-06-04.md](security/phase-0-trust-repair-risk-brief-2026-06-04.md)
+- Outlook: [strategy/phase-0-to-phase-1-outlook-2026-06-04.md](strategy/phase-0-to-phase-1-outlook-2026-06-04.md)
+- Work items: [work-log/phase-0-priority-work-items-2026-06-04.md](work-log/phase-0-priority-work-items-2026-06-04.md)
+
+## Latest documentation-state package
+
+The current documentation optimization pass adds a curated front door, a
+documentation-state review, critical questioning, an operating model, a master
+plan, and a work-item ledger:
+
+- Front door: [INDEX.md](INDEX.md)
+- State review: [analysis/documentation-state-review-2026-06-04.md](analysis/documentation-state-review-2026-06-04.md)
+- Critical questioning: [reviews/documentation-critical-questioning-2026-06-04.md](reviews/documentation-critical-questioning-2026-06-04.md)
+- Operating model: [governance/documentation-operating-model-2026-06-04.md](governance/documentation-operating-model-2026-06-04.md)
+- Master plan: [plans/documentation-optimization-master-plan-2026-06-04.md](plans/documentation-optimization-master-plan-2026-06-04.md)
+- Work items: [work-log/documentation-optimization-work-items-2026-06-04.md](work-log/documentation-optimization-work-items-2026-06-04.md)
 
 ## Known issues
 

@@ -17,6 +17,32 @@ disagree, use the active status ledgers and the governance rules below:
    Document type ownership and source-of-truth rules.
 4. **`markdown-status-review-2026-06-02.md`** *(analysis)*
    `cx`/repo review of the Markdown corpus and recommended consolidation policy.
+5. **`../INDEX.md`** *(front door)*
+   Curated documentation index for current truth, evidence, governance, plans,
+   security, reliability, guides, and validation.
+6. **`../governance/documentation-operating-model-2026-06-04.md`** *(governance)*
+   Claim classes, evidence hierarchy, freshness windows, guarded claims, and
+   documentation definition of done.
+
+## 2026-06-04 documentation-state optimization
+
+This layer reviews the whole Markdown corpus as a trust surface and adds a
+plan for reducing status drift without deleting historical evidence.
+
+1. **`documentation-state-review-2026-06-04.md`** *(analysis)*
+   Current inventory, `cx` discovery facts, drift findings, front-door model,
+   and consolidation recommendations.
+2. **`../reviews/documentation-critical-questioning-2026-06-04.md`** *(review)*
+   Critical questions about volume, guarded docs, historical/current ambiguity,
+   roadmap-risk drift, and user clarity.
+3. **`../governance/documentation-operating-model-2026-06-04.md`** *(governance)*
+   Operating model for documentation claim classes, evidence hierarchy,
+   freshness windows, guarded claims, merge policy, and DoD.
+4. **`../plans/documentation-optimization-master-plan-2026-06-04.md`** *(plans)*
+   Prioritized P0/P1/P2 plan with ROI, risk, acceptance criteria, and exit
+   conditions.
+5. **`../work-log/documentation-optimization-work-items-2026-06-04.md`** *(work log)*
+   Concrete task ledger for documentation-current-truth work.
 
 ## 2026-06-02 expansion after further code improvements
 
@@ -69,6 +95,23 @@ why behind the current priorities.
    Concrete task list with dependencies and acceptance criteria.
 8. **`../plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`** *(plans)*
    Complete execution plan ranked by risk, feasibility, ROI, and strategic leverage.
+
+## 2026-06-04 project-state cross-review
+
+This layer fact-checks a broad external-style project review against the current
+repo and records the critique, trust-repair implications, outlook, and concrete
+Phase 0 work items.
+
+1. **`project-state-cross-review-fact-check-2026-06-04.md`** *(analysis)*
+   Commit-stamped metrics, confirmed claims, corrected claims, and evidence gaps.
+2. **`../reviews/project-state-critical-questioning-2026-06-04.md`** *(review)*
+   Critical questions about approval authority, docs truth, test integrity, and optional dependency risk.
+3. **`../security/phase-0-trust-repair-risk-brief-2026-06-04.md`** *(security)*
+   Phase 0 trust-boundary risk brief with P0/P1 risk refresh.
+4. **`../strategy/phase-0-to-phase-1-outlook-2026-06-04.md`** *(strategy)*
+   Future outlook, investment view, and Phase 1 entry criteria.
+5. **`../work-log/phase-0-priority-work-items-2026-06-04.md`** *(work log)*
+   Concrete work items, ordering, human-review gates, and done criteria.
 
 ## 2026-06-02 additional guide/module supplement
 

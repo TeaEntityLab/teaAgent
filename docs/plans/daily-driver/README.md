@@ -13,6 +13,9 @@ Use the governance docs before adding another dated risk, issue, or roadmap file
 - [Risk Issue Roadmap Workflow](../../governance/risk-issue-roadmap-workflow.md)
 - [Documentation Taxonomy And Ownership](../../governance/doc-taxonomy-and-ownership.md)
 - [Markdown Status Review](../../analysis/markdown-status-review-2026-06-02.md)
+- [Documentation Operating Model](../../governance/documentation-operating-model-2026-06-04.md)
+- [Documentation State Review](../../analysis/documentation-state-review-2026-06-04.md)
+- [Documentation Optimization Master Plan](../documentation-optimization-master-plan-2026-06-04.md)
 
 ## Critical path
 
@@ -41,6 +44,7 @@ Use the governance docs before adding another dated risk, issue, or roadmap file
 | Module map | [../../modules/daily-driver-module-map-2026-06-02.md](../../modules/daily-driver-module-map-2026-06-02.md) |
 | Verification backlog | [../daily-driver-verification-backlog-2026-06-02.md](../daily-driver-verification-backlog-2026-06-02.md) |
 | More-docs log | [../../analysis/daily-driver-more-docs-log-2026-06-02.md](../../analysis/daily-driver-more-docs-log-2026-06-02.md) |
+| Documentation optimization work items | [../../work-log/documentation-optimization-work-items-2026-06-04.md](../../work-log/documentation-optimization-work-items-2026-06-04.md) |
 
 ## Ticket shape
 

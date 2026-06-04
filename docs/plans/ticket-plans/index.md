@@ -25,6 +25,17 @@ TASK-DD2-008..012 (new June 2 stability risks) <- parallel support lane
 TASK-DD2-013..014 (test/doc hardening) <- support lane
 ```
 
+## Related Documentation-Control Work
+
+The June 4 documentation optimization package is tracked outside this
+daily-driver ticket directory because it governs the whole Markdown corpus, not
+only the daily-driver fixes:
+
+- [Documentation State Review](../../analysis/documentation-state-review-2026-06-04.md)
+- [Documentation Operating Model](../../governance/documentation-operating-model-2026-06-04.md)
+- [Documentation Optimization Master Plan](../documentation-optimization-master-plan-2026-06-04.md)
+- [Documentation Optimization Work Items](../../work-log/documentation-optimization-work-items-2026-06-04.md)
+
 ---
 
 ## Tickets

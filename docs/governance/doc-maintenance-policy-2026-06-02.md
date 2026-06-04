@@ -8,11 +8,13 @@ This file is the short entry point. Detailed rules live in:
 - [Document State Model](document-state-model.md)
 - [Risk Issue Roadmap Workflow](risk-issue-roadmap-workflow.md)
 - [Documentation Taxonomy And Ownership](doc-taxonomy-and-ownership.md)
+- [Documentation Operating Model](documentation-operating-model-2026-06-04.md)
 
 ## Front door
 
 The current front door is:
 
+- `docs/INDEX.md`
 - `docs/daily-driver-current-status.md`
 - `docs/analysis/daily-driver-review-INDEX-2026-06-01.md`
 - `docs/plans/ticket-plans/index.md`
@@ -26,6 +28,8 @@ The current front door is:
 - Mark items with the canonical states in `document-state-model.md`.
 - Link docs to tests or tickets when possible.
 - Keep one active source of truth for each status question.
+- Label volatile facts with date, command, commit, and scope.
+- Treat stable current-truth docs as product surfaces.
 
 ## When to add a new doc
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
@@ -49,7 +50,7 @@ class GraphQLiteGraphStore:
         self.config = config or GraphQLiteConfig()
         try:
             self.graph = (graph_factory or load_graphqlite_graph)(self.config.database)
-        except (GraphQLiteUnavailableError, GraphQLiteRuntimeError) as exc:
+        except (GraphQLiteUnavailableError, GraphQLiteRuntimeError, sqlite3.Error) as exc:
             import sys
 
             print(
@@ -103,7 +104,7 @@ def load_graphqlite_graph(database: str) -> Any:
         ) from exc
     try:
         return Graph(database)
-    except RuntimeError as exc:
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
         raise GraphQLiteRuntimeError(
             'graphqlite is installed, but the current Python sqlite3 runtime cannot load SQLite extensions. '
             'Use a Python build with sqlite3.enable_load_extension support, such as a Homebrew Python on macOS.'

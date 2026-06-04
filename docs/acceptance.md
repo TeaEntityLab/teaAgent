@@ -141,8 +141,12 @@ directory.
 
 ## Current Status
 
-As of the latest local verification (2026-06-03), `python3 -m pytest -q` reports
-`3255 passed, 26 failed, 76 skipped`. The failures are primarily in automation webhook delivery, skill installation, provider matrix consistency, and other integration tests. 26 tests were skipped due to deep architectural issues (undo diff preview budget config, llm_conformance test config, deprecated ultrawork module, A2A circuit breaker timing, TUI feature implementation, file policy audit events, A2A federation flow). These are pre-existing issues unrelated to the recent safety fixes.
+Acceptance collection currently reports `441` acceptance tests, matching the
+headline above. The last recorded supported-interpreter full-suite verification
+in the June 4 total-review package reported `3355 passed, 0 failed, 22 skipped`
+on Python 3.12.8. Treat that full-suite number as a dated evidence snapshot, not
+as a substitute for re-running `python3 -m pytest -q` before a release or safety
+claim.
 
 <!-- ACCEPTANCE_TIERS:START -->
 
