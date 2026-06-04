@@ -144,9 +144,9 @@ Generated: 2026-06-02 | Reviewed: 2026-06-04 | 28 modules | 103 files in this di
 | SBA-R-001 | subagents | High | Path traversal in isolation session keys — no length cap on `def_name` segment |
 | SBA-R-002 | subagents | High | Directory-snapshot workspace copy exposes `.env`/secrets if not gitignored |
 | SBA-R-006 | subagents | High | Deadlock risk from nested `asyncio._lock` inside `threading._sync_lock` |
-| MEM-R-001 | memory | High | Duplicate `MemoryCatalog` implementation — divergent `memory_matches()` from `memory_legacy.py` |
-| MEM-R-002 | memory | High | Windows data corruption — no cross-process locking, concurrent writes can corrupt `memory.jsonl` |
-| MEM-R-003 | memory | High | Non-atomic rewrites in `catalog.py` — `delete_by_branch`/`delete_by_run_id` truncate file on crash |
+| MEM-R-001 | memory | Closed | Historical duplicate `MemoryCatalog` implementation; `memory_legacy.py` now re-exports `memory.catalog` |
+| MEM-R-002 | memory | Medium | Windows data corruption — no cross-process locking, concurrent writes can corrupt `memory.jsonl` |
+| MEM-R-003 | memory | Closed | Historical non-atomic rewrites; `delete_by_branch`/`delete_by_run_id` now use atomic replacement |
 | BUD-R-002 | budget | Medium | Over-budget execution — `on_prompt` returning `False` does not halt run if caller ignores return value |
 
 ---

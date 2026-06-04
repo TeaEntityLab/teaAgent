@@ -24,6 +24,7 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
     readme = tmp_path / 'README.md'
     acceptance = tmp_path / 'acceptance.md'
     matrix = tmp_path / 'matrix.md'
+    roadmap = tmp_path / 'roadmap-status.md'
     acceptance_dir = tmp_path / 'acceptance_tests'
     acceptance_dir.mkdir()
     (acceptance_dir / 'test_a.py').write_text(
@@ -45,16 +46,24 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
         encoding='utf-8',
     )
     matrix.write_text('| Use Case | Covered |\n| yes |\n', encoding='utf-8')
+    roadmap.write_text(
+        '# Roadmap Status\n\n'
+        '| H0 | Claim and risk hygiene | documentation-current-truth |\n'
+        'doc-vs-HEAD guard\n',
+        encoding='utf-8',
+    )
 
     errors = validate_docs_consistency(
         readme_path=readme,
         acceptance_doc_path=acceptance,
         use_case_matrix_path=matrix,
         acceptance_tests_dir=acceptance_dir,
+        roadmap_status_path=roadmap,
         check_providers=False,
         check_survey=False,
         check_mode_matrix=False,
         check_surface_recipes=False,
+        check_catalog=False,
     )
     assert errors == []
 
@@ -130,6 +139,25 @@ def test_validate_surface_recipes_passes_for_repo_usage() -> None:
     usage = (root / 'docs' / 'USAGE.md').read_text(encoding='utf-8')
     errors = _VALIDATE_MODULE.validate_surface_recipes(usage)
     assert errors == []
+
+
+def test_validate_roadmap_status_passes_for_repo_roadmap() -> None:
+    root = Path(__file__).resolve().parents[1]
+    roadmap = (root / 'docs' / 'roadmap-status.md').read_text(encoding='utf-8')
+    errors = _VALIDATE_MODULE.validate_roadmap_status(roadmap)
+    assert errors == []
+
+
+def test_validate_roadmap_status_detects_missing_h0_truth_links() -> None:
+    roadmap = (
+        '# Roadmap Status\n\n'
+        '| H0 | Claim and risk hygiene | Public claims are owned |\n'
+    )
+    errors = _VALIDATE_MODULE.validate_roadmap_status(roadmap)
+    assert (
+        'Roadmap status missing documentation-current-truth work reference.' in errors
+    )
+    assert 'Roadmap status missing doc-vs-HEAD guard reference.' in errors
 
 
 def test_validate_provider_docs_detects_stale_llm_adapter_count() -> None:

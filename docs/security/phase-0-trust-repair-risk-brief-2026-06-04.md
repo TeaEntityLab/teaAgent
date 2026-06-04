@@ -23,27 +23,33 @@ Confirmed trust primitives:
 - Policy-as-code can deny actions even when the global permission mode is broad.
 - Base package has no mandatory runtime dependencies.
 
-Confirmed trust complications:
+Closed or regression-guarded complications in the current branch:
 
-- `allow_all_destructive=True` bypasses destructive prompts outside
-  `danger-full-access`.
+- `allow_all_destructive=True` no longer bypasses destructive prompts in
+  `prompt` mode, even with `full_access_acknowledged=True`.
+- Runner-local approval helper naming is no longer a duplicate
+  `ApprovalManager`; it is `RunnerApprovalCoordinator`.
+- The policy/approval import-order risk is guarded by import smoke tests.
+- `memory_legacy.py` is a compatibility re-export of the canonical
+  `teaagent.memory.catalog` implementation.
+
+Remaining trust complications:
+
 - `DANGER_FULL_ACCESS` remains a legitimate mode and can be misused.
-- Two `ApprovalManager` classes exist.
-- `policy.py` and `approval_manager.py` remain coupled by a lazy reverse import.
-- Memory catalog authority is split between canonical `memory_legacy.py` and a
-  near-duplicate `memory/catalog.py`.
 - Optional managed runtimes can import a large dependency tree.
+- Auto mode still swaps the runner approval policy to a broad policy during
+  execution, so policy restoration and audit clarity remain worth reviewing.
 
 ## P0 Risk Register Refresh
 
 | ID | Risk | Severity | Current evidence | Required direction |
 | --- | --- | --- | --- | --- |
-| TR-SEC-01 | Destructive bypass outside explicit full-access mode | Critical | `allow_all_destructive=True` passes in default prompt-mode tests | Gate or remove bypass |
+| TR-SEC-01 | Destructive bypass outside explicit full-access mode | Critical | Fixed in current branch; prompt-mode bypass tests now fail closed | Keep regression guard and require explicit full-access mode for bypass callers |
 | TR-SEC-02 | `danger-full-access` used on real workspaces | Critical | Docs warn, but automated sandbox-only enforcement is not universal | Require explicit confirmation and isolation checks |
-| TR-SEC-03 | Duplicate approval manager names cause wrong patch target | High | `teaagent/approval_manager.py` and `teaagent/runner/_approval_manager.py` both define `ApprovalManager` | Rename helper or consolidate |
-| TR-SEC-04 | Policy/approval coupling makes security boundary harder to reason about | High | `policy.py` imports approval manager; approval manager lazy-imports policy helper | Extract shared normalization/helper module |
+| TR-SEC-03 | Duplicate approval manager names cause wrong patch target | High | Fixed in current branch; runner helper is `RunnerApprovalCoordinator` | Keep canonical-name regression guard |
+| TR-SEC-04 | Policy/approval coupling makes security boundary harder to reason about | High | Import-order tests pass; no reverse import observed in current path | Keep boundary tests and avoid shared helpers inside either side |
 | TR-SEC-05 | Optional dependency CVEs block or confuse base security scans | High | `google-adk` can pull `fastapi` / `starlette` via dev extras | Separate base audit from optional-extra audit |
-| TR-SEC-06 | Memory canonical source is documented but duplicate code remains | Medium | `memory_legacy.py` is exported as canonical; `memory/catalog.py` still exists | Delete, merge, or mark non-runtime |
+| TR-SEC-06 | Memory canonical source is documented but duplicate code remains | Medium | Fixed in current branch; `memory_legacy.py` re-exports `memory.catalog` | Keep canonical import-path regression guard |
 | TR-SEC-07 | Coverage omit list hides security-relevant code from the gate | Medium | 16 omit patterns in `pyproject.toml` | Add why/return date and smoke tests |
 | TR-SEC-08 | Risk severity calibration is inconsistent | Medium | `DANGER_FULL_ACCESS` is High in module docs, Critical in review | Define severity rules |
 
@@ -56,8 +62,9 @@ First tempting story:
 > "We have 3,377 tests, so the trust boundary is safe."
 
 Counterpoint: some tests preserve existing behavior even when that behavior is a
-risk. For example, the prompt-mode destructive bypass test proves current
-behavior, not desired safety.
+risk. The prompt-mode destructive bypass tests were rewritten in the current
+branch so they now prove desired safety: prompt mode fails closed even if
+`allow_all_destructive=True` and `full_access_acknowledged=True`.
 
 Second tempting story:
 
@@ -70,7 +77,7 @@ right posture is separate audit surfaces, not indifference.
 
 Phase 0 should not be declared complete until:
 
-1. No destructive bypass exists outside explicitly acknowledged full-access mode.
+1. No destructive bypass exists outside explicit full-access mode.
 2. There is one canonical approval authority name.
 3. The policy/approval circularity has been broken or formally accepted with a
    test that proves import-order stability.
@@ -79,12 +86,15 @@ Phase 0 should not be declared complete until:
 6. Base dependency audit and optional-extra dependency audit are both documented.
 7. Security risk severity is calibrated by a shared rubric.
 
+Current branch status: items 1-4 are implemented or regression-guarded. Items
+5-7 remain Phase 0 exit blockers.
+
 ## What This Means For Users
 
 TeaAgent can already be useful for daily local agent work when users stay in
 supervised modes and value auditability. It should not be marketed as a
-production-safe autonomous harness until the bypass and authority duplication
-issues are closed.
+production-safe autonomous harness until broad-mode ceremony, coverage-omit
+governance, optional-extra audit scope, and severity calibration are closed.
 
 The honest promise today is:
 

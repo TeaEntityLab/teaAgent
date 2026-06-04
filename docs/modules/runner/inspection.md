@@ -12,7 +12,7 @@ The `runner` package is the central execution harness for agent runs. It takes a
 |------|------|
 | `runner/__init__.py` | Re-exports public API |
 | `runner/_core.py` | `AgentRunner` class — the main run loop |
-| `runner/_approval_manager.py` | `ApprovalManager` — approval workflow helper |
+| `runner/_approval_manager.py` | `RunnerApprovalCoordinator` — approval workflow helper |
 | `runner/_auto_mode_manager.py` | `AutoModeManager` — auto mode guard wrapper |
 | `runner/_plan_validator.py` | `PlanValidator` — plan-before-write enforcement |
 | `runner/_types.py` | Data types: `ToolRequest`, `FinalAnswer`, `Decision`, `ApprovalRequest`, `RunResult` |
@@ -156,7 +156,7 @@ AgentRunner.run()
 
 ```
 AgentRunner
-├── has-a ApprovalManager          (runner._approval_manager)
+├── has-a RunnerApprovalCoordinator (runner._approval_manager)
 │         └── has-a ApprovalPolicy
 │         └── has-a JITApprovalState
 │         └── optional ApprovalHandler callback

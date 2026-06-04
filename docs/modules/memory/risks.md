@@ -8,17 +8,30 @@
 
 **File:** `memory/catalog.py` vs `memory_legacy.py`
 
-Both files define `MemoryEntry`, `MemoryCatalog`, `normalize_tags`, `memory_matches`, `memory_relevance_score`, `memory_entry_from_payload`, `memory_entries_to_prompt`.
+**Status 2026-06-04: Closed / regression-guarded.**
 
-- `memory/__init__.py` (line 18–23) re-exports from `memory_legacy`, making it the authoritative version.
-- `memory/catalog.py` diverges in behavior: `memory_matches()` at line 252–258 uses `normalized in content_lower` (substring, single-token). `memory_legacy.py` line 314–316 uses `all(token in haystack ...)` (all-token AND over content+tags).
-- **Risk:** A caller that imports directly from `memory.catalog` (bypassing `__init__`) gets the weaker substring matcher and lacks cross-process locking and atomic writes. Silent behavioral divergence.
+Historical risk: both files defined `MemoryEntry`, `MemoryCatalog`,
+`normalize_tags`, `memory_matches`, `memory_relevance_score`,
+`memory_entry_from_payload`, and `memory_entries_to_prompt`.
+
+Current reality:
+
+- `memory/catalog.py` is canonical.
+- `memory/__init__.py` re-exports from `memory.catalog`.
+- `memory_legacy.py` is a compatibility re-export of `memory.catalog`.
+- `tests/test_circular_imports.py::test_memory_catalog_canonical_export_path`
+  proves that public, package-level, canonical, and legacy imports resolve to
+  the same `MemoryCatalog` class.
+
+Residual risk: a future edit could accidentally reintroduce logic into
+`memory_legacy.py`. Keep the regression guard and avoid adding new behavior to
+the compatibility module.
 
 ---
 
 ### MEM-R-002: Cross-Process Lock is Unix-Only
 
-**File:** `memory_legacy.py`, lines 133–160
+**File:** `memory/catalog.py`, `_cross_process_lock()`
 
 `_cross_process_lock()` uses `fcntl.flock`. On Windows or platforms without `fcntl`:
 
@@ -27,15 +40,21 @@ except (ImportError, OSError):
     pass  # gracefully fall back to no locking
 ```
 
-This means concurrent sub-agent processes on Windows can corrupt `memory.jsonl` via torn read-modify-write cycles. The `catalog.py` version has no cross-process locking at all.
+This means concurrent sub-agent processes on Windows can corrupt
+`memory.jsonl` via torn read-modify-write cycles. The compatibility module no
+longer owns the lock implementation.
 
 ---
 
 ### MEM-R-003: `catalog.py` Uses Non-Atomic Rewrites
 
-**File:** `memory/catalog.py`, lines 160–166, 190–196
+**Status 2026-06-04: Closed for `delete_by_branch()` and `delete_by_run_id()`.**
 
-`delete_by_branch()` and `delete_by_run_id()` call `self.path.write_text(...)` directly. This is not atomic — a crash between the `write_text` open and close will truncate the file to empty or partial content. The `memory_legacy.py` version uses `_atomic_write_entries()` (`os.replace()`) to avoid this.
+`delete_by_branch()` and `delete_by_run_id()` now call `_atomic_write_entries()`,
+which writes a temp file and swaps it into place via `os.replace()`.
+
+Residual risk: other JSON-file stores in the memory module may still use direct
+read-modify-write paths and should be evaluated separately.
 
 ---
 
@@ -110,7 +129,7 @@ This approximation will over-include for CJK or emoji-heavy content (1–2 chars
 
 ### MEM-R-011: `MemoryHierarchy.search_all()` `auto_memory` Match is Substring-Only
 
-**File:** `memory_legacy.py`, lines 421–430
+**File:** `memory/catalog.py`, `MemoryHierarchy.search_all()`
 
 ```python
 if query.lower() in auto_content.lower():
@@ -133,9 +152,9 @@ Only the first 500 chars of the auto-memory file are returned as a single synthe
 
 | ID | File | Line | Severity | Description |
 |---|---|---|---|---|
-| MEM-R-001 | `memory/catalog.py` | 252–258 | High | Divergent `memory_matches()` from `memory_legacy.py` |
-| MEM-R-002 | `memory_legacy.py` | 133–160 | Medium | No cross-process locking on Windows |
-| MEM-R-003 | `memory/catalog.py` | 160–196 | High | Non-atomic file rewrite on delete operations |
+| MEM-R-001 | `memory_legacy.py` | module | Closed | Compatibility re-export; guarded by canonical import-path test |
+| MEM-R-002 | `memory/catalog.py` | `_cross_process_lock()` | Medium | No cross-process locking on Windows |
+| MEM-R-003 | `memory/catalog.py` | `delete_by_*` | Closed | Atomic rewrite now uses `os.replace()` |
 | MEM-R-004 | `memory/failure_card.py` | 247–277 | Low | Full JSON array read-write O(n) per operation |
 | MEM-R-005 | `memory/failure_card.py` | 268–277 | Medium | OSError on write silently swallowed |
 | MEM-R-006 | `memory/file_watcher.py` | 165–169 | Low | ImportError if watchdog absent and FileWatcher constructed |
@@ -143,5 +162,5 @@ Only the first 500 chars of the auto-memory file are returned as a single synthe
 | MEM-R-008 | `memory/pinned_file.py` | 162–197 | Medium | Filename-only secret detection |
 | MEM-R-009 | `memory/pinned_file.py` | 110 | Medium | `PinnedFile.from_dict()` no field validation |
 | MEM-R-010 | `memory/team_memory.py` | 54 | Low | Inaccurate token estimate for inject_prompt |
-| MEM-R-011 | `memory_legacy.py` | 421–430 | Low | Auto-memory search returns truncated content |
+| MEM-R-011 | `memory/catalog.py` | `MemoryHierarchy.search_all()` | Low | Auto-memory search returns truncated content |
 | MEM-R-012 | `memory/failure_card.py` | 406–419 | Low | `file_signature` key invisible after deserialization |

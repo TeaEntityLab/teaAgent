@@ -59,7 +59,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 |---|---|---|---|---|---|---|---|
 | SEC-01 | Audit Integrity | HMAC key is ephemeral — audit chain unverifiable across restarts; SHA-256 recomputable by attacker with write access | H | H | 9 | **OPEN** | P0/Blocker |
 | SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | **OPEN** | P0/Blocker |
-| SEC-03 | Permission | `allow_all_destructive=True` short-circuits the entire approval gate regardless of mode; any caller or config deserialization can activate it | M | H | 6 | **OPEN** | P1 |
+| SEC-03 | Permission | Historical: `allow_all_destructive=True` short-circuited the approval gate outside explicit full-access mode. Current branch blocks it in `prompt` mode and requires explicit broad-mode promotion for bypass callers. | L | H | 3 | **FIXED / WATCH** | P1 |
 | SEC-04 | Budget | `ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap" (`runner/_core.py:142`); runaway loop or prompt injection has no cost ceiling | H | H | 9 | **OPEN** | P0/Blocker |
 | SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | **OPEN** | P2 |
 | SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | **OPEN** | P1 |
@@ -125,8 +125,8 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 |---|---|---|---|---|
 | T-1: Audit log event modification | `.teaagent/runs/*.jsonl` | SHA-256 hash chain + HMAC | HMAC key ephemeral — attacker can recompute chain after modifying events (SEC-01) | CRITICAL |
 | T-2: Cost field injection via adapter context | `runner/_core.py:322-325` | None | `context['_cost_cents']` writable by adapter — prompt injection can zero it (SEC-05) | HIGH |
-| T-3: Suspension JSON audit_trail field vs RunStore divergence | `chat_repl.py:89-93` | RunStore is authoritative | Stale JSON field misleads forensic tooling (DS-04) | LOW |
-| T-4: Config file sets `allow_all_destructive=true` | `approval_manager.py:203` | None (flag is respected) | Deserialisation without strict schema validation activates total bypass (SEC-03) | HIGH |
+| T-3: Suspension JSON audit_trail field vs RunStore divergence | `chat_repl.py` | RunStore is authoritative; stale direct resume hint removed in current branch | Full resume rehydration still needs explicit continuity support (DS-04/DS-09) | LOW |
+| T-4: Config file sets `allow_all_destructive=true` | `approval_manager.py` | Prompt-mode bypass is blocked; bypass callers must use explicit broad permission mode | Config schema should still reject or warn on broad-mode persistence (SEC-03) | MEDIUM |
 | T-5: Stash conflict corrupts workspace in parallel sandboxes | `git_sandbox.py` | `stash_save` returns specific reflog selector | Already fixed in prior audit (stash@{0} hardcode) | LOW (Fixed) |
 
 #### R — Repudiation
@@ -167,7 +167,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | E-3: Docker subagent escalates as root in container | `subagents/_isolation.py:223` | None | `--user` flag absent; container runs UID 0 (SEC-07) | HIGH |
 | E-4: `directory-snapshot` subagent reads host sensitive paths | `subagents/_isolation.py:181-200` | Deprecation warning | No process isolation; can read `~/.ssh/`, env vars (SEC-08) | MEDIUM |
 | E-5: Expired MCP server retains tool access | `mcp_trust.py:141-149` | `is_server_trust_expired()` defined | Function never called in hot path (SEC-02) | HIGH |
-| E-6: `allow_all_destructive=True` bypasses entire permission model | `approval_manager.py:203` | Mode-restricted (intention only) | No gate requiring DANGER_FULL_ACCESS mode (SEC-03) | HIGH |
+| E-6: `allow_all_destructive=True` bypasses entire permission model | `approval_manager.py` | Fixed in current branch: prompt mode blocks the flag even with acknowledgement metadata | Broad modes still need entry ceremony, audit, and persistence warnings (SEC-03 follow-up) | MEDIUM |
 
 ---
 
@@ -273,8 +273,8 @@ Boundary violations:
 | **SEC-10** | Remove `cat`, `head`, `tail` from `_INSPECT_EXECUTABLES`; use `workspace_read_file` tool instead | `teaagent/workspace_tools/_shell.py:175-176` | XS (15 min) |
 | **SEC-13** | Add integration tests: full runner loop with stub adapter (real cost values); `verify_audit_chain` with correct/wrong HMAC key; test `is_server_trust_expired` is called in enforcement path | `tests/test_chat_agent.py` + new tests | M (3–5 days) |
 | **DS-12** | Validate path-scoped approval has non-empty path; reject or default-fill to CWD with explicit confirmation; log scope expansion warnings | `teaagent/approval_manager.py` (path rule creation) | S (1–2 days) |
-| **DS-09** | Remove the `--background <id>` hint from REPL suspend output; print only `interactive-review` command | `teaagent/cli/_handlers/chat_repl.py` (suspend output) | XS (15 min) |
-| **DS-06** | Rewrite TUI cost test to exercise accumulation path via `_run_agent_task` (not direct attribute injection) | `tests/test_tui.py:1140-1145` | S (1 day) |
+| **DS-09** | Fixed in current branch: remove the stale direct resume hint from REPL suspend output; print only the supported interactive-review path | `teaagent/cli/_handlers/chat_repl.py` (suspend output) | Done |
+| **DS-06** | Fixed in current branch: TUI cost/session tests exercise runtime paths instead of only direct attribute injection | `tests/test_tui.py` | Done |
 | **SEC-08** | Add runtime warning when `directory-snapshot` mode is selected: "No process isolation — not for untrusted content" | `teaagent/subagents/_isolation.py:181-200` | XS (30 min) |
 | **SC-02** | Declare `anthropic>=0.40` in `[project.optional-dependencies]`; declare `pyyaml>=6.0` in `dependencies` | `pyproject.toml` | XS (30 min) |
 
@@ -282,13 +282,13 @@ Boundary violations:
 
 | Risk ID | Fix Description | File:Line | Effort |
 |---|---|---|---|
-| **SEC-03** | Gate `allow_all_destructive=True` on `permission_mode == DANGER_FULL_ACCESS`; log prominent warning; reject in all other modes | `teaagent/approval_manager.py:203` | S (1–2 days) |
+| **SEC-03** | Fixed in current branch: prompt mode rejects `allow_all_destructive=True`; follow-up is prominent warning/audit ceremony for broad-mode entry | `teaagent/approval_manager.py` | Follow-up XS/S |
 | **SEC-09** | Reduce time bucket from 3600 to 300 seconds; deduplicate hash function to single canonical location | `teaagent/approval_manager.py:393`, `teaagent/policy.py:379-398` | S (1–2 days) |
 | **SEC-11** | When `workspace_run_shell_mutate` is in tool history, display explicit warning: "undo is partial — shell effects not reversed" | `teaagent/run_undo.py:48-55` | XS (2 hours) |
 | **SEC-12** | On consecutive `fsync()` failures, emit stderr warning; after 3 failures, raise `BudgetExceededError` or halt | `teaagent/audit.py:298-307` | S (1 day) |
 | **SEC-15** | Reject `TEAAGENT_ALLOW_DEV_SIGNATURES=1` when `multi_sig_config.enabled` and relay URL is non-loopback | `teaagent/security_env.py:12-14` | XS (1 hour) |
 | **DS-13** | Use `None` as "no cap" sentinel instead of `0`; add explicit test for `--max-estimated-cost-cents 0` | `teaagent/runner/_core.py:142`, `teaagent/cli/_handlers/chat_repl.py:255` | S (1 day) |
-| **DS-01** | One-line stop-gap: `self._session_cost_cents += result.cost_cents` in TUI `_run_agent_task` | `teaagent/tui/__init__.py:938` | XS (15 min) |
+| **DS-01** | Fixed in current branch: TUI cost accumulation is covered by runtime-path tests | `teaagent/tui/__init__.py` / `tests/test_tui.py` | Done |
 | **DS-05** | After DS-02 (TUI controller migration): unified undo via controller | `teaagent/tui/__init__.py:641` | M (pending DS-02) |
 | **SC-01** | Add `==` overrides to freeze two alpha GCP OTel packages in `[tool.uv]` | `pyproject.toml` | XS (15 min) |
 | **SC-03** | Run `uv remove aiohttp mcp`; or declare `mcp` in `[project.optional-dependencies]` if intended | `uv.lock`, `pyproject.toml` | XS (30 min) |
@@ -444,7 +444,7 @@ warn_at_pct = 50
 4. **SEC-07** — Add `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges` to Docker command — `teaagent/subagents/_isolation.py:223-243`
 5. **SEC-10** — Remove `cat`, `head`, `tail` from `_INSPECT_EXECUTABLES` — `teaagent/workspace_tools/_shell.py:175-176`
 6. **SEC-16** — Delete dead loop at `budget_monitor.py:104-119` (QW — 10 min)
-7. **DS-09** — Remove `--background <id>` hint from REPL suspend output (XS — 15 min)
+7. **DS-09** — Fixed in current branch: stale `--background <id>` hint removed from REPL suspend output
 8. **SC-02** — Declare `anthropic` and `pyyaml` in `pyproject.toml` (XS — 30 min)
 
 ### Sprint 2 — High priority
@@ -452,15 +452,15 @@ warn_at_pct = 50
 9. **DS-12** — Validate non-empty path on path-scoped approval; reject empty or confirm-expand
 10. **SEC-06** — `clone_for_subagent()` one-way JIT state sync
 11. **SEC-13** — Integration tests: real cost path, HMAC verify, trust expiry enforcement
-12. **DS-06** — Fix TUI cost test to exercise accumulation not just formatter
-13. **DS-01** — One-line TUI cost accumulation stop-gap: `+= result.cost_cents`
+12. **DS-06** — Fixed in current branch: TUI cost test exercises runtime path
+13. **DS-01** — Fixed in current branch: TUI cost accumulation stop-gap is covered
 14. **SEC-08** — Add runtime warning for `directory-snapshot` mode
 15. **SC-01** — Freeze alpha GCP OTel packages with `==` overrides in `[tool.uv]`
 16. **SC-03** — `uv remove aiohttp mcp` (or declare intentional)
 
 ### Sprint 3 — Medium priority
 
-17. **SEC-03** — Gate `allow_all_destructive` on DANGER_FULL_ACCESS mode
+17. **SEC-03** — Fixed in current branch: prompt mode blocks `allow_all_destructive`; follow-up is broad-mode entry ceremony/audit
 18. **SEC-09** — Reduce multi-sig time bucket to 300 s; deduplicate hash function
 19. **SEC-11** — UI warning when undo is partial (shell mutations in run)
 20. **SEC-12** — fsync failure: stderr warning + halt after 3 failures

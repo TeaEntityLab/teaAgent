@@ -154,7 +154,6 @@ def suspend_to_background(
     print('[TeaAgent] Session suspended successfully!')
     print(f'[TeaAgent] Run ID: {run_id}')
     print(f'[TeaAgent] To review: teaagent agent interactive-review {run_id}')
-    print('[TeaAgent] To resume: teaagent resume ' + run_id)
     print('[TeaAgent] Note: This is a suspension checkpoint, not background execution.')
 
     return run_id

@@ -1080,7 +1080,8 @@ def test_suspend_to_background_basic(capsys):
         assert run_id  # Should return a run_id
         assert 'Suspending session as a checkpoint' in captured.out
         assert 'interactive-review' in captured.out
-        assert 'teaagent resume' in captured.out.lower()
+        assert 'teaagent resume' not in captured.out.lower()
+        assert '--detach' not in captured.out.lower()
         assert 'Session suspended successfully' in captured.out
 
         # Check suspension file was created
@@ -1130,6 +1131,8 @@ def test_suspend_to_background_with_dirty_workspace(capsys):
         assert 'uncommitted changes' in captured.out.lower()
         # Should clarify it's a suspension checkpoint
         assert 'suspension checkpoint' in captured.out.lower()
+        assert 'teaagent resume' not in captured.out.lower()
+        assert '--detach' not in captured.out.lower()
 
         # Verify suspension data does NOT include sandbox branch
         tea_dir = Path(tmpdir) / '.teaagent'

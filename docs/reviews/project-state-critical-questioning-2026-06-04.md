@@ -21,13 +21,23 @@ but the sharper question is broader:
 > How many independent ways can a caller bypass approval, and are all of them
 > visible as explicit user intent?
 
-Current evidence shows:
+Original evidence showed:
 
 - `danger-full-access` is a first-class permission mode.
-- `allow_all_destructive=True` allows destructive calls in prompt mode.
+- Historically, `allow_all_destructive=True` allowed destructive calls in
+  prompt mode.
 - The security risk register already tracks SEC-03: gate
   `allow_all_destructive` on `DANGER_FULL_ACCESS`.
 - Tests currently encode the bypass as accepted behavior.
+
+Current branch update:
+
+- `allow_all_destructive=True` is now blocked in prompt mode, even when
+  `full_access_acknowledged=True`.
+- Auto mode and chat destructive mode promote explicitly to
+  `danger-full-access` before bypass semantics are honored.
+- The active regression guard is
+  `tests/test_full_access_gate.py::TestEnforcerGate::test_prompt_allow_all_with_ack_still_blocks`.
 
 This is a "truth path" issue: if a user sees prompt mode but the system is
 actually allowing all destructive operations, the project has violated its own
@@ -78,19 +88,19 @@ optional; they become real attack surface in any deployment that enables them.
 
 ### 5. ADR implementation status can become a comfort blanket
 
-ADR-0011 is described as accepted and implemented, but a second
-`ApprovalManager` class remains under `runner/_approval_manager.py`. This does
-not automatically mean the ADR failed; the runner-local class may be a workflow
-helper rather than the same authority object. Still, the duplicate name is a
-review hazard.
+ADR-0011 is described as accepted and implemented. The original review observed
+that a second `ApprovalManager` class remained under `runner/_approval_manager.py`.
+The current branch fixes the naming hazard by making the runner-local helper a
+`RunnerApprovalCoordinator`; the canonical approval authority remains
+`teaagent.approval_manager.ApprovalManager`.
 
 The critical question:
 
 > Can two classes with the same security-adjacent name exist without future
 > agents patching the wrong one?
 
-For Phase 0, that answer should be no unless the helper is renamed or explicitly
-documented as non-authoritative.
+For Phase 0, that answer should remain no. The helper has been renamed and is
+now guarded by an import/name regression test.
 
 ### 6. Velocity is now a risk multiplier
 
@@ -109,12 +119,26 @@ not increase it.
 | Acceptance Criteria | Artifact Evidence | Test Evidence | Status |
 | --- | --- | --- | --- |
 | Project-state claims are fact-checked | `project-state-cross-review-fact-check-2026-06-04.md` | Repo commands listed in the fact-check doc | Done |
-| Approval bypass is challenged | `approval_manager.py` bypass behavior documented here | `tests/test_policy.py::test_prompt_mode_with_allow_all_destructive_passes` | Active risk |
-| Duplicate authority paths are called out | `approval_manager.py`, `runner/_approval_manager.py` | Indirect coverage only | Active risk |
+| Approval bypass is challenged | `approval_manager.py` current fail-closed behavior documented here | `tests/test_full_access_gate.py::TestEnforcerGate::test_prompt_allow_all_with_ack_still_blocks` | Fixed in current branch |
+| Duplicate authority paths are called out | `approval_manager.py`, `runner/_approval_manager.py` | `tests/test_circular_imports.py::test_runner_approval_helper_is_not_named_approval_manager` | Fixed in current branch |
 | Docs sprawl is treated as a product risk | This document and existing governance docs | Docs consistency validation | Active risk |
 | Optional dependency audit scope is explicit | Security workflow behavior discussed here | `pip-audit` workflow still needs CI confirmation | Partial |
 
 ## Required Fixes
+
+1. Done in current branch: gate `allow_all_destructive` behind explicit full-access mode; continue adding audit/UX ceremony around mode entry.
+2. Done in current branch: rename runner-local approval workflow helper to
+   `RunnerApprovalCoordinator`.
+3. Remaining: turn the six proposed ADRs into owned roadmap rows with one of:
+   `Accept`, `Reject`, `Supersede`, or `Archive`.
+4. Remaining: create a docs front-door that distinguishes:
+   current truth, historical evidence, risk register, roadmap, and execution
+   tickets.
+5. Remaining: add an optional-extra audit lane for heavy managed runtimes.
+
+## Superseded Original Fix List
+
+The original review requested:
 
 1. Gate `allow_all_destructive` behind `PermissionMode.DANGER_FULL_ACCESS`, or
    rename it into an explicit emergency flag with typed confirmation and audit.

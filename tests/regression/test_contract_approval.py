@@ -101,11 +101,10 @@ def test_non_destructive_tool_never_raises() -> None:
     )
 
 
-def test_allow_all_destructive_flag_bypasses_approval() -> None:
-    # The bypass is honored only with an explicit full-access acknowledgment
-    # (P0-TR-001).
+def test_danger_full_access_flag_bypasses_approval() -> None:
+    # The bypass is honored only in danger-full-access mode.
     policy = ApprovalPolicy(
-        permission_mode=PermissionMode.PROMPT,
+        permission_mode=PermissionMode.DANGER_FULL_ACCESS,
         allow_all_destructive=True,
         full_access_acknowledged=True,
     )

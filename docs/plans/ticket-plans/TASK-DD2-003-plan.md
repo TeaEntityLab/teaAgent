@@ -1,10 +1,15 @@
 # TASK-DD2-003: Make TUI Cost Ledger Authoritative
 
 **Priority:** P1
-**Status:** Partially fixed; verify and complete
+**Status:** Fixed in current branch; release-profile verification still required
 **Primary files:** `teaagent/tui/__init__.py`, `teaagent/chat_session_controller.py`, `tests/test_tui.py`
 
 ## Problem
+
+**2026-06-04 update:** The stale problem statement below is preserved as
+historical evidence. Current code has migrated the TUI cost ledger to
+`ChatSessionController`, and `/cost` plus `/budget` read the same session cost
+source with a local compatibility fallback.
 
 The working tree now includes a stop-gap that adds `result.cost_cents` to the TUI
 session cost counter. That reduces the false-zero risk, but the TUI still calls

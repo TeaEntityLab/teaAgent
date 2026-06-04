@@ -44,8 +44,9 @@ class ApprovalPolicy:
     # CLI/TUI ``--approve-call-id`` / ``approve <call_id>`` — binds scoped approval at execute time.
     preapproved_call_ids: frozenset[str] = field(default_factory=frozenset)
     allow_all_destructive: bool = False
-    # Explicit full-access gate (P0-TR-001): ``allow_all_destructive`` is inert
-    # in prompt mode unless full-access semantics were deliberately acknowledged.
+    # Explicit full-access gate (P0-TR-001): ``allow_all_destructive`` only
+    # matters when the session has already been promoted to danger-full-access.
+    # Retained for backward-compatible caller metadata.
     full_access_acknowledged: bool = False
     permission_mode: PermissionMode = PermissionMode.PROMPT
     approval_store: ApprovalPresetStore | None = None

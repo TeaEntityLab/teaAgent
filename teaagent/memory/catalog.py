@@ -46,6 +46,8 @@ class MemoryCatalog:
         self.quarantine_path = self.root / '.teaagent' / 'memory-quarantine.jsonl'
         self.readonly = readonly
         self._corrupt_count = 0  # Track corrupt entries for health reporting
+        self._cached_entries: list[MemoryEntry] | None = None
+        self._cached_signature: tuple[int, int] | None = None
         if not readonly:
             self.path.parent.mkdir(parents=True, exist_ok=True)
         elif not self.path.parent.exists():
@@ -166,7 +168,15 @@ class MemoryCatalog:
 
     def _read_entries(self) -> List[MemoryEntry]:
         if not self.path.exists():
+            self._cached_entries = None
+            self._cached_signature = None
             return []
+
+        stat = self.path.stat()
+        signature = (stat.st_mtime_ns, stat.st_size)
+        if self._cached_entries is not None and self._cached_signature == signature:
+            return list(self._cached_entries)
+
         entries: List[MemoryEntry] = []
         for line in self.path.read_text(encoding='utf-8').splitlines():
             if not line.strip():
@@ -179,6 +189,9 @@ class MemoryCatalog:
             entry = memory_entry_from_payload(payload)
             if entry is not None:
                 entries.append(entry)
+
+        self._cached_entries = list(entries)
+        self._cached_signature = signature
         return entries
 
     def health_report(self) -> dict[str, Any]:
@@ -414,6 +427,7 @@ class MemoryCatalog:
         }
 
         # Count main catalog entries
+        main_entries: list[MemoryEntry] = []
         if self.path.exists():
             main_entries = self._read_entries()
             report['total_entries'] = len(main_entries)
@@ -448,7 +462,7 @@ class MemoryCatalog:
 
         cutoff_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
         stale_count = 0
-        for entry in self._read_entries():
+        for entry in main_entries:
             if entry.created_at < cutoff_date:
                 stale_count += 1
 

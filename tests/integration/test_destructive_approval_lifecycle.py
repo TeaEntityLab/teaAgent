@@ -56,14 +56,14 @@ def test_first_run_pauses_at_destructive_tool():
     assert result.metadata.get('approval', {}).get('call_id') == 'call-abc'
 
 
-def test_resume_with_approved_call_id_completes():
+def test_resume_with_danger_full_access_completes():
     registry = _make_registry()
     audit = AuditLogger()
     runner = AgentRunner(
         registry=registry,
         audit=audit,
         approval_policy=ApprovalPolicy(
-            permission_mode=PermissionMode.PROMPT,
+            permission_mode=PermissionMode.DANGER_FULL_ACCESS,
             allow_all_destructive=True,
             full_access_acknowledged=True,
         ),

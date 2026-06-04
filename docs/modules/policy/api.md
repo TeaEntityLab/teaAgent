@@ -6,7 +6,8 @@
 | Field | Type | Description |
 |---|---|---|
 | `preapproved_call_ids` | `frozenset[str]` | Deprecated pre-approved call ids for compatibility. |
-| `allow_all_destructive` | `bool` | Global destructive-operation bypass. |
+| `allow_all_destructive` | `bool` | Destructive-operation bypass request. It is inert in prompt mode and is only honored after promotion to an explicit full-access mode. |
+| `full_access_acknowledged` | `bool` | Compatibility metadata recording that a higher-level caller acknowledged full-access semantics; it is not sufficient by itself to bypass approval. |
 | `permission_mode` | `PermissionMode` | Active permission mode for call evaluation. |
 | `approval_store` | `ApprovalPresetStore | None` | Optional persistent approval presets. |
 | `multi_sig_config` | `MultiSigQuorumConfig` | Quorum requirements for high-risk approvals. |

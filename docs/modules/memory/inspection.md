@@ -18,17 +18,21 @@ A fifth concern, `MemoryHierarchy`, unifies the three tiers (project, personal, 
 ```
 teaagent/memory/
   __init__.py          -- public re-export surface
-  catalog.py           -- MemoryEntry, MemoryCatalog (catalog.py copy, no fcntl)
+  catalog.py           -- MemoryEntry, MemoryCatalog, MemoryHierarchy (canonical)
   failure_card.py      -- FailureCard, FailureCardStorage, AutoInvalidationRule
   file_watcher.py      -- FileWatcher, FileChangeHandler (watchdog-backed)
   pinned_file.py       -- PinnedFile, PinnedFileStorage
   team_memory.py       -- TeamMemory
 
-teaagent/memory_legacy.py  -- MemoryEntry, MemoryCatalog (canonical), MemoryHierarchy
-                              (has fcntl cross-process locking + atomic writes)
+teaagent/memory_legacy.py  -- compatibility re-export of memory.catalog
 ```
 
-> **Note:** `memory/catalog.py` is a near-duplicate of `memory_legacy.py::MemoryCatalog`. The `__init__.py` re-exports from `memory_legacy.py`, making the legacy version the authoritative implementation for `MemoryCatalog` and `MemoryEntry`.
+> **Status 2026-06-04:** `memory/catalog.py` is the authoritative
+> implementation. `memory/__init__.py` and `memory_legacy.py` both re-export the
+> same `MemoryCatalog`, `MemoryEntry`, and helper functions for compatibility.
+> The old near-duplicate implementation risk is closed, and
+> `tests/test_circular_imports.py::test_memory_catalog_canonical_export_path`
+> guards the import contract.
 
 ---
 
@@ -39,14 +43,14 @@ teaagent/memory_legacy.py  -- MemoryEntry, MemoryCatalog (canonical), MemoryHier
 | Library | Used in | Purpose |
 |---|---|---|
 | `watchdog` | `file_watcher.py` | Filesystem event monitoring (optional; `WATCHDOG_AVAILABLE` flag) |
-| `fcntl` | `memory_legacy.py` | Cross-process file locking (Unix only; graceful fallback on Windows) |
+| `fcntl` | `catalog.py` | Cross-process file locking (Unix only; graceful fallback on Windows) |
 
 ### Internal
 
 | Import | Used in | Purpose |
 |---|---|---|
-| `teaagent.audit.utc_now` | `catalog.py`, `memory_legacy.py` | Timestamp generation |
-| `teaagent.storage.append_jsonl_line` | `catalog.py`, `memory_legacy.py` | Safe JSONL append |
+| `teaagent.audit.utc_now` | `catalog.py` | Timestamp generation |
+| `teaagent.storage.append_jsonl_line` | `catalog.py` | Safe JSONL append |
 
 ---
 
@@ -60,10 +64,10 @@ from teaagent.memory import (
     PinnedFileStorage,
     FileWatcher,
     TeamMemory,
-    MemoryCatalog,          # from memory_legacy
-    MemoryEntry,            # from memory_legacy
-    memory_entries_to_prompt,  # from memory_legacy
-    memory_entry_from_payload, # from memory_legacy
+    MemoryCatalog,          # from memory.catalog
+    MemoryEntry,            # from memory.catalog
+    memory_entries_to_prompt,  # from memory.catalog
+    memory_entry_from_payload, # from memory.catalog
 )
 ```
 
@@ -84,7 +88,7 @@ from teaagent.memory import (
 
 ## Call Graph
 
-### MemoryCatalog (authoritative: `memory_legacy.py`)
+### MemoryCatalog (authoritative: `memory/catalog.py`)
 
 ```
 MemoryCatalog.add()
@@ -146,7 +150,7 @@ FileChangeHandler.on_deleted()
   -> callback(file_path, 'deleted')
 ```
 
-### MemoryHierarchy (`memory_legacy.py`)
+### MemoryHierarchy (`memory/catalog.py`)
 
 ```
 MemoryHierarchy.search_all()

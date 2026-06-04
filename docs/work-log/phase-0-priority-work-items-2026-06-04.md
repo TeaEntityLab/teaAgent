@@ -6,14 +6,17 @@
 This work log turns the cross-review and critical questioning documents into
 concrete tasks. It intentionally favors trust repair over feature expansion.
 
+Related implementation/reflection record:
+`parallel-phase-0-implementation-report-2026-06-04.md`.
+
 ## Work Items
 
 | ID | Priority | Task | Evidence | Acceptance criteria |
 | --- | --- | --- | --- | --- |
-| P0-TR-001 | P0 | Gate `allow_all_destructive` behind explicit full-access semantics | `PermissionModeEnforcer.check()` allows it in prompt mode; `tests/test_policy.py` expects pass | Prompt mode with `allow_all_destructive=True` fails unless an explicit full-access gate is present; docs and tests updated |
-| P0-TR-002 | P0 | Rename or consolidate runner-local `ApprovalManager` | Two classes named `ApprovalManager` exist | Only one canonical approval authority name remains; runner helper name reflects workflow role |
-| P0-TR-003 | P0 | Break policy/approval lazy reverse import | `approval_manager.py` lazy imports `ApprovalPolicy` for normalization | Shared normalization helper extracted; import-order smoke test added |
-| P0-TR-004 | P0 | Make memory canonical source structural | `memory_legacy.py` is exported as canonical while `memory/catalog.py` remains divergent | One runtime implementation remains, or duplicate is quarantined with tests proving import target |
+| P0-TR-001 | P0 | Gate `allow_all_destructive` behind explicit full-access semantics | Historical behavior allowed `allow_all_destructive` in prompt mode | Prompt mode with `allow_all_destructive=True` fails; legitimate bypass callers must use an explicit broad permission mode and tests cover the contract |
+| P0-TR-002 | P0 | Rename or consolidate runner-local `ApprovalManager` | Historical duplicate name; current code has `RunnerApprovalCoordinator` | Only one canonical approval authority name remains; runner helper name reflects workflow role |
+| P0-TR-003 | P0 | Break policy/approval lazy reverse import | Historical reverse import risk; current import-order tests pass | Shared normalization helper extracted or no reverse import remains; import-order smoke test added |
+| P0-TR-004 | P0 | Make memory canonical source structural | Historical split; current `memory_legacy.py` re-exports `memory.catalog` | One runtime implementation remains, or duplicate is quarantined with tests proving import target |
 | P0-TR-005 | P0 | Add coverage omit ledger | 16 omit patterns in `pyproject.toml` | Each omit has owner, reason, risk, and expected return milestone |
 | P0-TR-006 | P0 | Add optional-extra dependency audit policy | `google-adk` optional tree can pull vulnerable transitive deps | Security docs distinguish base audit, lockfile audit, and optional-extra audit cadence |
 | P0-TR-007 | P0 | Assign or close proposed ADRs | ADRs 0010, 0012, 0014, 0015, 0017, 0018 are Proposed | Each has owner and one of Accepted/Rejected/Superseded/Archived |
@@ -58,14 +61,31 @@ Phase 0 trust repair is done only when the following are all true:
 ## Status Log
 
 - 2026-06-04 — **P0-TR-001 DONE.** `allow_all_destructive` is now inert in
-  non-full-access modes (notably `prompt`) unless `full_access_acknowledged=True`
-  is also set. The bypass at `PermissionModeEnforcer.check` now fails safe and
-  raises `ToolPermissionError` with reason code
-  `DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED`. The two legitimate callers
-  acknowledge explicitly: auto mode (`runner/_auto_mode_manager.py`, opt-in) and
-  chat (`chat_agent.py`, gated on the `--allow-destructive` flag). No CLI/UX
-  change for existing `--allow-destructive` users. Covered by
+  non-full-access modes (notably `prompt`) even when
+  `full_access_acknowledged=True` is set. The acknowledgement flag records
+  ceremony metadata; it does not grant authority by itself. The bypass at
+  `PermissionModeEnforcer.check` now fails safe and raises `ToolPermissionError`
+  with reason code `DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED`. The two
+  legitimate callers promote explicitly: auto mode
+  (`runner/_auto_mode_manager.py`, opt-in) returns a `danger-full-access`
+  policy scoped by `AutoModeGuard`, and chat (`chat_agent.py`) maps the explicit
+  `--allow-destructive` user flag to `danger-full-access`. No CLI/UX change for
+  existing `--allow-destructive` users. Covered by
   `tests/test_full_access_gate.py` (enforcer, policy/manager, and auto-mode
   layers) plus a regression guard in
   `tests/regression/test_contract_approval.py::test_allow_all_destructive_without_ack_blocks`.
-  Full suite: 3377 passed, 22 skipped, 0 failed on Python 3.12.8.
+  Current verification: 3273 passed, 141 skipped, 18 subtests passed, 0 failed
+  on Python 3.12.8.
+- 2026-06-04 — **P0-TR-002 DONE.** The runner-local approval workflow helper is
+  now `RunnerApprovalCoordinator`, while the canonical authority remains
+  `teaagent.approval_manager.ApprovalManager`. `rg 'class ApprovalManager'
+  teaagent tests` returns only the canonical runtime class. Regression guard:
+  `tests/test_circular_imports.py::test_runner_approval_helper_is_not_named_approval_manager`.
+- 2026-06-04 — **P0-TR-003 VERIFY/CLOSE.** `teaagent.approval_manager` no
+  longer imports `teaagent.policy`; import-order smoke tests cover
+  policy-first and approval-manager-first load order. Remaining work is to keep
+  future normalization helpers out of either side of the policy boundary.
+- 2026-06-04 — **P0-TR-004 DONE.** `teaagent.memory.catalog` is the canonical
+  implementation. `teaagent.memory` and `teaagent.memory_legacy` both re-export
+  the same classes for compatibility. Regression guard:
+  `tests/test_circular_imports.py::test_memory_catalog_canonical_export_path`.

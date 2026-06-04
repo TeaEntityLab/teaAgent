@@ -43,6 +43,11 @@ MATRIX_SURVEY_DATE = re.compile(
     r'Landscape survey reviewed:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*', re.IGNORECASE
 )
 ARCHITECTURE_STALE_AT_COUNT = re.compile(r'10[0-4]\+\s*AT|104\+\s*AT', re.IGNORECASE)
+ROADMAP_H0_ROW = re.compile(
+    r'\|\s*H0\s*\|\s*Claim and risk hygiene\s*\|', re.IGNORECASE
+)
+ROADMAP_DOCUMENTATION_TRUTH = re.compile(r'documentation-current-truth', re.IGNORECASE)
+ROADMAP_DOC_VS_HEAD = re.compile(r'doc-vs-head', re.IGNORECASE)
 MODE_MATRIX_START = '<!-- MODE_SAFETY_MATRIX:START -->'
 MODE_MATRIX_END = '<!-- MODE_SAFETY_MATRIX:END -->'
 MODE_MATRIX_REQUIRED_TOPICS = (
@@ -342,6 +347,19 @@ def validate_matrix_open_gap_count(
     return errors
 
 
+def validate_roadmap_status(roadmap_text: str) -> list[str]:
+    errors: list[str] = []
+    if not ROADMAP_H0_ROW.search(roadmap_text):
+        errors.append('Roadmap status missing H0 claim and risk hygiene row.')
+    if not ROADMAP_DOCUMENTATION_TRUTH.search(roadmap_text):
+        errors.append(
+            'Roadmap status missing documentation-current-truth work reference.'
+        )
+    if not ROADMAP_DOC_VS_HEAD.search(roadmap_text):
+        errors.append('Roadmap status missing doc-vs-HEAD guard reference.')
+    return errors
+
+
 def _load_build_use_case_matrix_module():
     script = Path(__file__).with_name('build_use_case_matrix.py')
     spec = spec_from_file_location('build_use_case_matrix', script)
@@ -443,6 +461,7 @@ def validate_docs_consistency(
     survey_path: Path | None = None,
     catalog_path: Path | None = None,
     use_cases_path: Path | None = None,
+    roadmap_status_path: Path | None = None,
     check_providers: bool = True,
     check_survey: bool = True,
     check_catalog: bool = True,
@@ -463,6 +482,9 @@ def validate_docs_consistency(
     )
     catalog_doc_path = catalog_path or (_REPO_ROOT / 'docs' / 'plugin-skill-catalog.md')
     use_cases_doc_path = use_cases_path or (_REPO_ROOT / 'docs' / 'use-cases.md')
+    roadmap_status_doc_path = roadmap_status_path or (
+        _REPO_ROOT / 'docs' / 'roadmap-status.md'
+    )
     architecture_text = (
         architecture_path.read_text(encoding='utf-8')
         if architecture_path.is_file()
@@ -471,6 +493,11 @@ def validate_docs_consistency(
     use_cases_text = (
         use_cases_doc_path.read_text(encoding='utf-8')
         if use_cases_doc_path.is_file()
+        else ''
+    )
+    roadmap_status_text = (
+        roadmap_status_doc_path.read_text(encoding='utf-8')
+        if roadmap_status_doc_path.is_file()
         else ''
     )
 
@@ -511,6 +538,11 @@ def validate_docs_consistency(
             errors.extend(validate_plugin_skill_catalog(catalog_text))
         else:
             errors.append(f'Plugin/skill catalog not found: {catalog_doc_path}')
+
+    if roadmap_status_doc_path.is_file():
+        errors.extend(validate_roadmap_status(roadmap_status_text))
+    else:
+        errors.append(f'Roadmap status doc not found: {roadmap_status_doc_path}')
 
     if check_survey:
         errors.extend(
@@ -591,6 +623,7 @@ def main() -> int:
         '--survey-doc', default='scripts/refresh_agent_readme_survey.md'
     )
     parser.add_argument('--catalog-doc', default='docs/plugin-skill-catalog.md')
+    parser.add_argument('--roadmap-status', default='docs/roadmap-status.md')
     args = parser.parse_args()
 
     errors = validate_docs_consistency(
@@ -602,6 +635,7 @@ def main() -> int:
         usage_path=Path(args.usage_doc),
         survey_path=Path(args.survey_doc),
         catalog_path=Path(args.catalog_doc),
+        roadmap_status_path=Path(args.roadmap_status),
     )
     if errors:
         for err in errors:

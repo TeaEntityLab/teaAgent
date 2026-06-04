@@ -314,9 +314,9 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(shell_result.status, 'pending_approval')
 
     def test_approval_policy_allow_all_destructive(self) -> None:
-        # allow_all_destructive bypass requires an explicit full-access
-        # acknowledgment (P0-TR-001).
+        # allow_all_destructive bypass only works in danger-full-access mode.
         ApprovalPolicy(
+            permission_mode=PermissionMode.DANGER_FULL_ACCESS,
             allow_all_destructive=True,
             full_access_acknowledged=True,
         ).assert_allowed(
@@ -325,18 +325,21 @@ class ChatAgentTests(unittest.TestCase):
             destructive=True,
         )
 
-        # Verify safety contract: without full_access_acknowledged, it blocks (P1-TR-011)
+        # Verify safety contract: prompt mode blocks even when acknowledged.
         from teaagent.errors import DenialReasonCode
+
         with self.assertRaises(ToolPermissionError) as ctx:
             ApprovalPolicy(
                 allow_all_destructive=True,
-                full_access_acknowledged=False,
+                full_access_acknowledged=True,
             ).assert_allowed(
                 tool_name='workspace_write_file',
                 call_id='any',
                 destructive=True,
             )
-        self.assertEqual(ctx.exception.reason_code, DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED)
+        self.assertEqual(
+            ctx.exception.reason_code, DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
+        )
 
     def test_read_only_permission_blocks_destructive(self) -> None:
         with self.assertRaises(ToolPermissionError):

@@ -459,6 +459,54 @@ class TUITests(unittest.TestCase):
             self.assertEqual(resume_payload['replayed_observations'], 1)
             self.assertIn(f'resume: {run_id}', output)
 
+    def test_tui_session_clear_empties_persisted_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            from teaagent.session import ChatMessage, SessionStore
+
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+
+            self.assertTrue(tui.handle_command('session new'))
+            session_id = tui.session_id
+            self.assertIsNotNone(session_id)
+
+            store = SessionStore(tmp)
+            session = store.load(session_id)
+            self.assertIsNotNone(session)
+            assert session is not None
+            session.messages.extend(
+                [
+                    ChatMessage(role='user', content='hello'),
+                    ChatMessage(role='assistant', content='hi'),
+                ]
+            )
+            store.save(session)
+
+            self.assertTrue(tui.handle_command('session clear'))
+
+            cleared = store.load(session_id)
+            self.assertIsNotNone(cleared)
+            assert cleared is not None
+            self.assertEqual(cleared.messages, [])
+            self.assertEqual(output[-1], 'session cleared')
+
+    def test_tui_session_clear_without_active_session_reports_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=output.append,
+            )
+
+            self.assertTrue(tui.handle_command('session clear'))
+
+            self.assertEqual(output[-1], 'error: no active session')
+
     def test_tui_preflight_command_uses_current_settings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output: list[str] = []
@@ -1412,26 +1460,33 @@ class TUITests(unittest.TestCase):
             # Write a dummy run file so RunStore recognizes it in list_runs()
             run_file = store.run_path(run_id)
             run_file.write_text(
-                json.dumps({
-                    'run_id': run_id,
-                    'created_at': '2026-06-04T05:00:00Z',
-                    'event_type': 'run_started',
-                    'payload': {'task': 'do task'}
-                }) + '\n',
-                encoding='utf-8'
+                json.dumps(
+                    {
+                        'run_id': run_id,
+                        'created_at': '2026-06-04T05:00:00Z',
+                        'event_type': 'run_started',
+                        'payload': {'task': 'do task'},
+                    }
+                )
+                + '\n',
+                encoding='utf-8',
             )
 
             # Initialize journal and record the original state of touched.py
             journal = UndoJournal(tmpdir_path)
             from teaagent.audit import AuditEvent
+
             started_event = AuditEvent(
                 event_type='tool_call_started',
                 run_id=run_id,
                 payload={
                     'call_id': 'call-1',
                     'tool_name': 'workspace_write_file',
-                    'arguments': {'path': 'touched.py', 'content': "print('agent changed')"},
-                }
+                    'arguments': {
+                        'path': 'touched.py',
+                        'content': "print('agent changed')",
+                    },
+                },
             )
             journal(started_event)
             completed_event = AuditEvent(
@@ -1440,7 +1495,7 @@ class TUITests(unittest.TestCase):
                 payload={
                     'call_id': 'call-1',
                     'tool_name': 'workspace_write_file',
-                }
+                },
             )
             journal(completed_event)
 
@@ -1455,14 +1510,17 @@ class TUITests(unittest.TestCase):
             tui._handle_undo()
 
             # The touched file should be restored to its original state
-            self.assertEqual(touched_file.read_text(encoding='utf-8'), "print('original touched')")
+            self.assertEqual(
+                touched_file.read_text(encoding='utf-8'), "print('original touched')"
+            )
 
             # The manual file was not in the journal, so it must NOT be touched
-            self.assertEqual(manual_file.read_text(encoding='utf-8'), "print('user modified manual')")
+            self.assertEqual(
+                manual_file.read_text(encoding='utf-8'), "print('user modified manual')"
+            )
 
             # Check output message
             self.assertIn('journal undo completed', ' '.join(output))
-
 
     def test_tui_ask_safe_wrapper_handles_exception(self) -> None:
         """_safe_run_agent_task in _commands.py should catch exceptions from _run_agent_task."""

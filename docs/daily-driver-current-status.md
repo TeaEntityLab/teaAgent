@@ -73,7 +73,7 @@ plan, and a work-item ledger:
 
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
-| Suspend/resume wording is ahead of implementation in agent-mode follow-up paths. | A user can try a printed command that does not rehydrate the run. | AG-01..AG-04 / TICKET-16 |
+| Full REPL-originated suspend→resume rehydration is still open. | Users should inspect suspended REPL sessions with `teaagent agent interactive-review <run_id>`; real CLI resume remains Phase 2 work. | AG-03 / TICKET-16 Phase 2 |
 
 ## Recently fixed
 
@@ -88,12 +88,13 @@ plan, and a work-item ledger:
 | Failure-card matching has stopword filtering and relevance threshold. | Matching requires 2+ significant words in common to avoid false positives from unrelated tasks. | TASK-DD2-012 |
 | Memory and run store corruption warnings surfaced. | `health_report()` methods track corrupt entries; preflight/daily show warnings for degraded state. | TASK-DD2-011 |
 | Headless TUI path tests hardened. | Tests now drive through actual command paths (cost, root, initial task, undo, approvals) rather than helper functions. | TASK-DD2-013 |
+| REPL `/background` suspend output made honest. | `suspend_to_background()` now prints the working `teaagent agent interactive-review <run_id>` path and no longer advertises broken `teaagent resume` or `--detach` hints. | TICKET-16 Phase 1 |
+| TUI `session clear` now clears persisted chat messages. | The command empties the active session's `messages` list, saves it, and reports an error when no active session exists. | TUI session UX |
 | Run evidence summaries surfaced in agent mode payload. | `run_evidence` field added to agent run output with commands, tests, approvals, gaps. | — |
 | Updated daily-driver status docs. | Removed stale known issues, added recently-fixed section. | — |
 
 ## Do not rely on yet
 
-- Do not assume TUI `/undo` has the same scope as `teaagent chat` `/undo` until the TUI controller migration lands.
 - Do not use `teaagent agent run --background <run_id>` to resume; it can treat the id as a new task argument.
 - Do not treat a successful docs-only check as proof that active runtime paths were tested.
 - Do not treat newly landed stop-gaps as release-ready until the active command path is tested.

@@ -2,6 +2,18 @@
 **Priority:** P1 | **Size:** M | **CG Findings:** CG-11, CG-12, CG-15
 **Human Review Required:** touches undo + cost
 
+## Progress
+
+- 2026-06-04: Current code imports and uses `ChatSessionController` from the
+  TUI surface, stores session cost in controller state, and routes TUI `/undo`
+  through `ChatSessionController.undo_last_run()` before checkpoint fallback.
+- Verification evidence in this package includes
+  `tests/test_tui.py::test_tui_session_cost_accumulates`,
+  `tests/test_tui.py::test_tui_handle_undo_calls_controller_first`, and
+  `tests/test_tui.py::test_tui_undo_uses_journal`.
+- Treat this ticket as fixed in the current branch, with release-profile
+  verification still required before claiming production readiness.
+
 > **Land TICKET-14 first** (un-masking test). The stop-gap (Step A below) can
 > ship immediately and independently.
 

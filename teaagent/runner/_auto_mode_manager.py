@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 from teaagent.auto_mode import AutoModeConfig, AutoModeGuard
 from teaagent.errors import ToolPermissionError
-from teaagent.policy import ApprovalPolicy
+from teaagent.policy import ApprovalPolicy, PermissionMode
 
 
 class AutoModeManager:
@@ -52,13 +52,15 @@ class AutoModeManager:
     def get_auto_approve_policy(self) -> Optional[ApprovalPolicy]:
         """Get the approval policy modified for auto mode.
 
-        In auto mode, allowed tools are auto-approved by setting allow_all_destructive=True.
-        Entering auto mode is itself an explicit opt-in, so full-access semantics are
-        acknowledged here (P0-TR-001); the AutoModeGuard still scopes which tools run.
+        In auto mode, allowed tools are auto-approved by setting
+        ``allow_all_destructive=True`` and promoting the policy to
+        ``danger-full-access``. Entering auto mode is itself an explicit opt-in,
+        and the AutoModeGuard still scopes which tools run.
         """
         if self.auto_mode_guard is None:
             return None
         return ApprovalPolicy(
+            permission_mode=PermissionMode.DANGER_FULL_ACCESS,
             allow_all_destructive=True,
             full_access_acknowledged=True,
         )

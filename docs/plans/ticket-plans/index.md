@@ -42,23 +42,23 @@ only the daily-driver fixes:
 
 | Ticket | Priority | Size | File | Summary |
 |--------|----------|------|------|---------|
-| [TICKET-14](TICKET-14-plan.md) | P1 | XS | `tests/test_tui.py` | Fix masking test so CG-11 is detectable |
-| [TICKET-12 Step A](TICKET-12-plan.md) | P1 | XS (1 line) | `tui/__init__.py` | Cost stop-gap: add `+= result.cost_cents` |
-| [TICKET-12 Steps B-D](TICKET-12-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Full TUI migration to `ChatSessionController`; TUI undo → `UndoJournal` |
+| [TICKET-14](TICKET-14-plan.md) | P1 | XS | `tests/test_tui.py` | Fixed: masking test replaced with active-path cost accumulation coverage |
+| [TICKET-12 Step A](TICKET-12-plan.md) | P1 | XS (1 line) | `tui/__init__.py` | Fixed: TUI cost uses controller-backed session state |
+| [TICKET-12 Steps B-D](TICKET-12-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Fixed: TUI uses `ChatSessionController`; undo is journal-first with checkpoint fallback |
 | [TICKET-13](TICKET-13-plan.md) | P2 | S | `chat_session_controller.py` | Remove `except (AttributeError, TypeError): pass` mock-detection swallowing |
 | [TICKET-15](TICKET-15-plan.md) | P3 | XS | `chat_repl.py`, `_agent.py` | Remove redundant `audit_trail` field; fix stale `/undo` help text |
-| [TICKET-16 Phase 1](TICKET-16-plan.md) | P1 | XS | `chat_repl.py` | Print only working suspend command; remove broken hints |
+| [TICKET-16 Phase 1](TICKET-16-plan.md) | P1 | XS | `chat_repl.py` | Fixed: print only working suspend review command; remove broken hints |
 | [TICKET-16 Phase 2](TICKET-16-plan.md) | P1 | M | `chat_repl.py`, `_agent.py`, `run_store.py` | Real suspend→resume round-trip |
 | [TASK-DD2-001](TASK-DD2-001-plan.md) | P1 | S | `_chat.py`, `tui/__init__.py` | Verify/close positional task in `teaagent chat <task>` |
 | [TASK-DD2-002](TASK-DD2-002-plan.md) | P1 | S | `tui/__init__.py` | Guard `_load_tui_state` from overwriting explicit CLI root |
-| [TASK-DD2-003](TASK-DD2-003-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Make TUI cost ledger authoritative |
+| [TASK-DD2-003](TASK-DD2-003-plan.md) | P1 | M | `tui/__init__.py`, `chat_session_controller.py` | Fixed: make TUI cost ledger authoritative |
 | [TASK-DD2-004](TASK-DD2-004-plan.md) | P0 | M | approval helpers | Harden path-scoped approvals |
 | [TASK-DD2-005](TASK-DD2-005-plan.md) | P1 | M | `_agent.py`, `git_sandbox.py` | Repair git sandbox lifecycle |
 | [TASK-DD2-006](TASK-DD2-006-plan.md) | P1 | S | chat handlers, docs | Make lifecycle wording honest |
 | [TASK-DD2-007](TASK-DD2-007-plan.md) | P2 | M | chat handlers/tests | Remove or retire stale chat code |
 | [TASK-DD2-008](TASK-DD2-008-plan.md) | P1 | S | dry-run/preflight/daily | Enforce read-only and dry-run side-effect contract |
 | [TASK-DD2-009](TASK-DD2-009-plan.md) | P1 | XS | `context_pack.py` | Fix context-pack read-only truth label |
-| [TASK-DD2-010](TASK-DD2-010-plan.md) | P0 | S | `pinned_file.py` | Enforce pinned-file workspace containment |
+| [TASK-DD2-010](TASK-DD2-010-plan.md) | P0 | S | `pinned_file.py` | Fixed: enforce pinned-file workspace containment |
 | [TASK-DD2-011](TASK-DD2-011-plan.md) | P1 | S | memory/run-store/daily | Surface corrupt memory and run state |
 | [TASK-DD2-012](TASK-DD2-012-plan.md) | P2 | S | `failure_card.py` | Bound failure-card matching |
 | [TASK-DD2-013](TASK-DD2-013-plan.md) | P1 | M | `tests/test_tui.py` | Harden headless TUI path tests |

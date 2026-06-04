@@ -4,7 +4,7 @@
 
 ## Data Models
 
-### `MemoryEntry` (`memory_legacy.py`, line 21)
+### `MemoryEntry` (`memory/catalog.py`)
 
 Frozen dataclass. Canonical definition re-exported by `memory/__init__.py`.
 
@@ -91,7 +91,7 @@ Not a memory module class, but used in `ContextBus.archive_to_rag()`.
 
 ---
 
-### `MemoryCatalog` (`memory_legacy.py`, line 42)
+### `MemoryCatalog` (`memory/catalog.py`)
 
 **Constructor:**
 ```python
@@ -129,7 +129,7 @@ MemoryCatalog(root: str | Path = '.', *, readonly: bool = False)
 - **Pre:** `query` is any string.
 - **Post:** Returns entries where ALL query tokens appear in `content.lower()` or any `tag`. Ranked by relevance score descending then `created_at` descending. Returns `[]` for empty query.
 
-**Relevance scoring (memory_legacy.py):**
+**Relevance scoring (`memory/catalog.py`):**
 - +3 per token found in content
 - +2 per token found in any tag
 - +4 if `'auto-curated'` is in tags

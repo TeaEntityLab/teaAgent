@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from uuid import uuid4
 
 from teaagent import MemoryCatalog
 from teaagent.cli import main
@@ -62,6 +63,33 @@ class MemoryCatalogTests(unittest.TestCase):
             self.assertEqual(report['corrupt_entries'], 1)
             self.assertEqual(report['total_entries'], 1)
             self.assertFalse(report['healthy'])
+
+    def test_memory_catalog_refreshes_after_external_update(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = MemoryCatalog(tmp)
+            first = catalog.add('first memory entry', tags=('alpha',))
+
+            # Prime the cache with an initial read.
+            self.assertEqual(catalog.list()[0].memory_id, first.memory_id)
+
+            memory_file = Path(tmp) / '.teaagent' / 'memory.jsonl'
+            second = {
+                'memory_id': uuid4().hex,
+                'content': 'second memory entry',
+                'tags': ['beta'],
+                'created_at': first.created_at,
+                'branch_name': None,
+                'run_id': None,
+            }
+            with memory_file.open('a', encoding='utf-8') as handle:
+                handle.write(json.dumps(second, sort_keys=True) + '\n')
+
+            entries = catalog.list()
+            self.assertEqual(entries[0].content, 'second memory entry')
+            self.assertEqual(entries[1].memory_id, first.memory_id)
+            self.assertEqual(
+                catalog.search('second memory')[0].content, 'second memory entry'
+            )
 
     def test_memory_quarantine_list_promote_maintain(self) -> None:
         """Test memory quarantine list, promote, and maintain functions (TASK-005)."""

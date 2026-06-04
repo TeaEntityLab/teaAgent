@@ -175,8 +175,11 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         elif subcommand == 'clear':
             session = tui._current_session()
             if session:
-                # session.clear()  # type: ignore[attr-defined]
+                session.messages.clear()
+                tui._get_session_store().save(session)
                 tui.output_fn('session cleared')
+            else:
+                tui.output_fn('error: no active session')
         elif subcommand == 'show':
             session = tui._current_session()
             if session:

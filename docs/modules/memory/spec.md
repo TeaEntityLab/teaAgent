@@ -8,7 +8,7 @@ The memory module provides persistent, structured storage for agent knowledge ac
 
 ## Behavior Contract
 
-### MemoryCatalog (`memory/catalog.py`, `memory_legacy.py`)
+### MemoryCatalog (`memory/catalog.py`)
 
 | Guarantee | Detail |
 |---|---|
@@ -18,8 +18,8 @@ The memory module provides persistent, structured storage for agent knowledge ac
 | Tag normalization | Tags are always lowercased, stripped, deduplicated, and sorted before storage |
 | Search never returns empty for missing file | `list()` and `search()` return `[]` if the backing file does not exist — no exception |
 | Show raises `FileNotFoundError` | `show(memory_id)` raises `FileNotFoundError` if `memory_id` is not found |
-| Delete is atomic (legacy) | `delete_by_branch` and `delete_by_run_id` in `memory_legacy.py` use `os.replace()` via `_atomic_write_entries()` for crash-safe rewrites |
-| Cross-process locking (legacy) | `memory_legacy.py` wraps `delete_*` and `quarantine_*` in `_cross_process_lock()` using `fcntl.flock(LOCK_EX)` |
+| Delete is atomic | `delete_by_branch` and `delete_by_run_id` in `memory/catalog.py` use `os.replace()` via `_atomic_write_entries()` for crash-safe rewrites |
+| Cross-process locking | `memory/catalog.py` wraps `delete_*` and `quarantine_*` in `_cross_process_lock()` using `fcntl.flock(LOCK_EX)` |
 | Quarantined entries isolated | Quarantined entries are written to `memory-quarantine.jsonl`, never to the active `memory.jsonl` |
 
 ### FailureCard / FailureCardStorage (`memory/failure_card.py`)
@@ -49,7 +49,7 @@ The memory module provides persistent, structured storage for agent knowledge ac
 | Token-capped injection | `inject_prompt()` caps output at approximately `limit_tokens * 4` characters by including the most-recent entries first |
 | Missing file safe | `list()` returns `[]` if `team-memory.md` does not exist |
 
-### MemoryHierarchy (three-tier, `memory_legacy.py`)
+### MemoryHierarchy (three-tier, `memory/catalog.py`)
 
 | Guarantee | Detail |
 |---|---|

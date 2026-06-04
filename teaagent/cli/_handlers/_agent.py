@@ -712,7 +712,7 @@ def _execute_agent_task(
             return validation_exit
 
     # Handle git sandbox resolution
-    if git_sandbox_available:
+    if git_sandbox_available:  # noqa: SIM102 - keep sandbox resolution block indentation stable
         if git_sandbox.is_available():
             # Show diff summary
             try:

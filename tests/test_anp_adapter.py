@@ -17,6 +17,7 @@ from teaagent.anp_adapter import (
     ANPOutboundClient,
 )
 from teaagent.errors import BudgetExceededError
+from teaagent.policy import PermissionMode
 
 INPUT_SCHEMA = {
     'type': 'object',
@@ -172,6 +173,7 @@ class ANPGovernedServiceTests(unittest.TestCase):
             registry=build_registry(),
             audit=audit,
             approval_policy=ApprovalPolicy(
+                permission_mode=PermissionMode.DANGER_FULL_ACCESS,
                 allow_all_destructive=True,
                 full_access_acknowledged=True,
             ),

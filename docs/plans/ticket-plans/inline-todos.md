@@ -30,12 +30,16 @@ are stubs left from scaffolding and are lower priority.
 These are not inline comments but recurring patterns the audit uncovered that
 function as implicit TODOs:
 
-| Location | Pattern | Implicit TODO |
-|----------|---------|---------------|
-| `tui/__init__.py:812-814` | `_handle_undo` calls `_restore_checkpoint` (git-stash) | TICKET-12: migrate to `UndoJournal` via `ChatSessionController` |
-| `chat_session_controller.py:143-159` | `except (AttributeError, TypeError): pass` | TICKET-13: replace with proper DI; let real errors surface |
-| `chat_repl.py:89-93` | `suspension_data['audit_trail']` | TICKET-15: remove stale field |
-| `chat_repl.py:142,145` | Broken resume commands printed at suspend | TICKET-16 Phase 1: print only the working command |
+**2026-06-04 update:** Several entries in the original generated catalog are
+now fixed. They are kept below with status so the historical audit remains
+traceable without re-opening closed work.
+
+| Location | Pattern | Status / Implicit TODO |
+|----------|---------|------------------------|
+| `tui/__init__.py::_handle_undo` | `_handle_undo` called `_restore_checkpoint` (git-stash) | Fixed: TICKET-12 now routes through `ChatSessionController.undo_last_run()` before checkpoint fallback |
+| `chat_session_controller.py` | `except (AttributeError, TypeError): pass` | Fixed: TICKET-13 removed exception-swallowing mock detection |
+| `chat_repl.py` | `suspension_data['audit_trail']` | Fixed: TICKET-15 removed redundant suspension `audit_trail` |
+| `chat_repl.py::suspend_to_background` | Broken resume commands printed at suspend | Fixed: TICKET-16 Phase 1 now prints the working `interactive-review` path only |
 | `run_store.py:143-149` | `task_for_run` raises on REPL suspensions | TICKET-16 Phase 2: write `run_started` at suspend time |
 | `_chat.py:538-586` | `chat_command` ignores `args.task` | TASK-DD2-001: forward positional task to `run_tui` |
 | `tui/__init__.py:1107` | `_load_tui_state` unconditionally overwrites `self.root` | TASK-DD2-002: guard with `_root_explicit` flag |
@@ -48,5 +52,6 @@ function as implicit TODOs:
 |----------|-------|
 | Explicit `# TODO` in production (`teaagent/`) | 1 |
 | Explicit `# TODO` in scripts | 9 |
-| Implicit architectural TODOs (ticketed) | 7 |
-| **Total** | **17** |
+| Implicit architectural TODOs (ticketed) | 3 active, 4 fixed |
+| **Active total** | **13** |
+| **Fixed historical entries retained** | **4** |

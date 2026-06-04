@@ -1,9 +1,10 @@
 """Full-access gate tests for P0-TR-001.
 
 `allow_all_destructive` must be inert in non-full-access modes (notably
-``prompt``) unless full-access semantics were *explicitly acknowledged* via
-``full_access_acknowledged=True``. A single innocuous boolean must never
-silently open a destructive bypass.
+``prompt``). ``full_access_acknowledged=True`` records that a higher-level
+caller performed the full-access ceremony, but it is not sufficient by itself:
+the policy must be promoted to an explicit full-access permission mode. A
+single innocuous boolean must never silently open a destructive bypass.
 
 These tests cover the gate at three layers:
   1. ``PermissionModeEnforcer.check`` (pure unit, the chokepoint)
@@ -57,9 +58,10 @@ class TestEnforcerGate:
         assert result not in (None, '__continue__')
         assert 'full-access' in result.lower()
 
-    def test_prompt_allow_all_with_ack_passes(self) -> None:
+    def test_prompt_allow_all_with_ack_still_blocks(self) -> None:
         result = _check(allow_all_destructive=True, full_access_acknowledged=True)
-        assert result is None
+        assert result not in (None, '__continue__')
+        assert 'danger-full-access' in result.lower()
 
     def test_prompt_no_allow_all_falls_through_to_approval(self) -> None:
         # No bypass requested -> normal approval flow (sentinel continue).
@@ -87,9 +89,7 @@ class TestEnforcerGate:
         'mode',
         [PermissionMode.ALLOW, PermissionMode.DANGER_FULL_ACCESS],
     )
-    def test_full_access_modes_bypass_without_ack(
-        self, mode: PermissionMode
-    ) -> None:
+    def test_full_access_modes_bypass_without_ack(self, mode: PermissionMode) -> None:
         # ALLOW / DANGER_FULL_ACCESS are themselves explicit full-access modes;
         # they bypass at the mode level and never reach the ack gate.
         assert _check(permission_mode=mode, allow_all_destructive=False) is None
@@ -141,18 +141,17 @@ class TestPolicyGate:
             policy.assert_allowed(
                 tool_name=_DESTRUCTIVE_TOOL, call_id='c1', destructive=True
             )
-        assert (
-            ctx.value.reason_code
-            == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
-        )
+        assert ctx.value.reason_code == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
 
-    def test_allow_all_with_ack_passes(self) -> None:
+    def test_allow_all_with_ack_still_blocks_without_full_access_mode(self) -> None:
         policy = ApprovalPolicy(
             allow_all_destructive=True, full_access_acknowledged=True
         )
-        policy.assert_allowed(
-            tool_name=_DESTRUCTIVE_TOOL, call_id='c1', destructive=True
-        )
+        with pytest.raises(ToolPermissionError) as ctx:
+            policy.assert_allowed(
+                tool_name=_DESTRUCTIVE_TOOL, call_id='c1', destructive=True
+            )
+        assert ctx.value.reason_code == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
 
     def test_ack_alone_still_requires_approval(self) -> None:
         # full_access_acknowledged without allow_all_destructive does not
@@ -162,10 +161,7 @@ class TestPolicyGate:
             policy.assert_allowed(
                 tool_name=_DESTRUCTIVE_TOOL, call_id='c1', destructive=True
             )
-        assert (
-            ctx.value.reason_code
-            == DenialReasonCode.JIT_NO_APPROVAL
-        )
+        assert ctx.value.reason_code == DenialReasonCode.JIT_NO_APPROVAL
 
     def test_non_destructive_unaffected(self) -> None:
         policy = ApprovalPolicy(allow_all_destructive=True)
@@ -179,13 +175,12 @@ class TestPolicyGate:
             blocked.assert_allowed(
                 tool_name=_DESTRUCTIVE_TOOL, call_id='c1', destructive=True
             )
-        assert (
-            ctx.value.reason_code
-            == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
-        )
+        assert ctx.value.reason_code == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
 
         allowed = ApprovalManager(
-            allow_all_destructive=True, full_access_acknowledged=True
+            permission_mode=PermissionMode.DANGER_FULL_ACCESS,
+            allow_all_destructive=True,
+            full_access_acknowledged=True,
         )
         allowed.assert_allowed(
             tool_name=_DESTRUCTIVE_TOOL, call_id='c1', destructive=True
@@ -199,18 +194,15 @@ class TestPolicyGate:
 
 class TestAutoModeGate:
     def test_auto_mode_policy_acknowledges_full_access(self) -> None:
-        manager = AutoModeManager(
-            auto_mode_config=AutoModeConfig(enabled=True)
-        )
+        manager = AutoModeManager(auto_mode_config=AutoModeConfig(enabled=True))
         policy = manager.get_auto_approve_policy()
         assert policy is not None
+        assert policy.permission_mode is PermissionMode.DANGER_FULL_ACCESS
         assert policy.allow_all_destructive is True
         assert policy.full_access_acknowledged is True
 
     def test_auto_mode_policy_allows_destructive(self) -> None:
-        manager = AutoModeManager(
-            auto_mode_config=AutoModeConfig(enabled=True)
-        )
+        manager = AutoModeManager(auto_mode_config=AutoModeConfig(enabled=True))
         policy = manager.get_auto_approve_policy()
         assert policy is not None
         policy.assert_allowed(

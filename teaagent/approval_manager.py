@@ -154,10 +154,11 @@ class PermissionModeEnforcer:
     ) -> None:
         self.permission_mode = permission_mode
         self.allow_all_destructive = allow_all_destructive
-        # ``allow_all_destructive`` only takes effect when full-access semantics
-        # were explicitly acknowledged (P0-TR-001). A single innocuous boolean
-        # must never silently open a destructive bypass while nominally in a
-        # non-full-access mode such as ``prompt``.
+        # ``allow_all_destructive`` is only honored after an explicit
+        # promotion to danger-full-access (P0-TR-001). A single innocuous
+        # boolean must never silently open a destructive bypass while nominally
+        # in a non-full-access mode such as ``prompt``. The acknowledgement
+        # flag is retained for compatibility with higher-level callers.
         self.full_access_acknowledged = full_access_acknowledged
 
     def check(
@@ -209,16 +210,10 @@ class PermissionModeEnforcer:
             return None
 
         if destructive and self.allow_all_destructive:
-            if self.full_access_acknowledged:
-                return None
-            # Fail-safe: the bypass is requested but full-access semantics were
-            # not explicitly acknowledged. Fall through to a hard block instead
-            # of silently approving a destructive operation in prompt mode.
             return (
                 f"Tool '{tool_name}' is destructive and 'allow_all_destructive' is "
-                'enabled, but full-access semantics were not explicitly acknowledged. '
-                'Use --permission-mode danger-full-access, or pass --allow-destructive '
-                '(which acknowledges full access), to proceed.'
+                'enabled, but it only takes effect in danger-full-access mode. '
+                'Use --permission-mode danger-full-access to proceed.'
             )
 
         return '__continue__'
@@ -703,7 +698,7 @@ class ApprovalManager:
                 else:
                     reason_code = DenialReasonCode.WORKSPACE_WRITE_MODE
             elif destructive and self.allow_all_destructive:
-                # Bypass requested without acknowledged full-access semantics.
+                # Bypass requested outside danger-full-access mode.
                 reason_code = DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
             else:
                 reason_code = DenialReasonCode.MISSING_STATE

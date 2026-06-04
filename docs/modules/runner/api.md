@@ -218,7 +218,7 @@ def run(
 
 ---
 
-### `ApprovalManager` (runner._approval_manager)
+### `RunnerApprovalCoordinator` (runner._approval_manager)
 
 Internal helper. Not part of the public `runner` package API (not re-exported from `__init__.py`).
 
@@ -255,7 +255,7 @@ Internal helper.
 
 #### `get_auto_approve_policy() -> Optional[ApprovalPolicy]`
 
-Returns `ApprovalPolicy(allow_all_destructive=True)` when auto mode is active, `None` otherwise.
+Returns `ApprovalPolicy(permission_mode=DANGER_FULL_ACCESS, allow_all_destructive=True, full_access_acknowledged=True)` when auto mode is active, `None` otherwise. The `AutoModeGuard` still scopes which tools can use that temporary policy.
 
 #### `summary() -> dict[str, Any]`
 

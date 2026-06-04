@@ -1,6 +1,10 @@
 # TICKET-14 — Fix the Test That Masks CG-11
 **Priority:** P1 | **Size:** S | **CG Finding:** CG-16
 
+**Status 2026-06-04:** Fixed in current tests. The suite now includes
+`test_tui_session_cost_accumulates`, which drives `_run_agent_task` and asserts
+cost accumulation after two task executions.
+
 > **Land this first.** Without it, TICKET-12's cost fix will appear green
 > *before* and *after* the fix, giving no regression signal.
 

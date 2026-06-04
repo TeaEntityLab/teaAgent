@@ -12,7 +12,7 @@ if auto_approve_policy is not None:
     self.approval_policy = auto_approve_policy
 ```
 
-**Risk:** `self.approval_policy` is mutated in-place on the `AgentRunner` instance every time a tool call is processed while auto mode is active. This means the policy for subsequent non-auto-mode tool calls in the same run is permanently overwritten with `allow_all_destructive=True`. If auto mode is toggled off mid-run, the old policy is never restored.
+**Risk:** `self.approval_policy` is mutated in-place on the `AgentRunner` instance every time a tool call is processed while auto mode is active. This means the policy for subsequent non-auto-mode tool calls in the same run is permanently overwritten with a `danger-full-access` auto-approval policy. If auto mode is toggled off mid-run, the old policy is never restored.
 
 **Impact:** Destructive tools may be auto-approved after auto mode exits if the instance is reused.
 

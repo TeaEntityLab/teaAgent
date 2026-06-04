@@ -92,10 +92,12 @@ class ApprovalPolicyTests(unittest.TestCase):
             tool_name='workspace_run_shell_mutate', call_id='c1', destructive=True
         )
 
-    def test_prompt_mode_with_allow_all_destructive_passes(self) -> None:
-        # The bypass requires an explicit full-access acknowledgment (P0-TR-001).
+    def test_danger_full_access_mode_with_allow_all_destructive_passes(self) -> None:
+        # The bypass is only honored in danger-full-access mode.
         policy = ApprovalPolicy(
-            allow_all_destructive=True, full_access_acknowledged=True
+            permission_mode=PermissionMode.DANGER_FULL_ACCESS,
+            allow_all_destructive=True,
+            full_access_acknowledged=True,
         )
         policy.assert_allowed(
             tool_name='workspace_write_file', call_id='any', destructive=True
@@ -104,6 +106,7 @@ class ApprovalPolicyTests(unittest.TestCase):
     def test_prompt_mode_allow_all_destructive_without_ack_blocks(self) -> None:
         # P1-TR-011: Verify that allow_all_destructive without acknowledgment blocks.
         from teaagent.errors import DenialReasonCode
+
         policy = ApprovalPolicy(
             permission_mode=PermissionMode.PROMPT,
             allow_all_destructive=True,
@@ -113,7 +116,9 @@ class ApprovalPolicyTests(unittest.TestCase):
             policy.assert_allowed(
                 tool_name='workspace_write_file', call_id='any', destructive=True
             )
-        self.assertEqual(ctx.exception.reason_code, DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED)
+        self.assertEqual(
+            ctx.exception.reason_code, DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
+        )
 
     def test_prompt_mode_preapproved_call_id_with_store(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

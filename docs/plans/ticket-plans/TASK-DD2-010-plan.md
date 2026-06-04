@@ -1,10 +1,14 @@
 # TASK-DD2-010: Enforce Pinned-File Workspace Containment
 
 **Priority:** P0
-**Status:** Newly discovered
+**Status:** Fixed in current branch
 **Primary files:** `teaagent/memory/pinned_file.py`, `tests/test_memory_pinned.py`
 
 ## Problem
+
+**2026-06-04 update:** Current code rejects absolute paths, parent traversal,
+and symlink escapes before storing pinned files. The historical problem
+statement is kept as evidence for why the containment tests exist.
 
 Pinned-file storage accepts a path string, joins it to the workspace root, and checks
 existence. It does not clearly reject absolute paths, parent traversal, or symlink
