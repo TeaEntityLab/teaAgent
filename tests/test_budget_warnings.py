@@ -196,6 +196,7 @@ def test_budget_monitor_reset() -> None:
 
 
 def test_budget_monitor_zero_budget_returns_none() -> None:
+    """0 cap is enforced by runner; monitor returns NONE."""
     monitor = BudgetMonitor(
         budget=RunBudget(max_estimated_cost_cents=0),
     )
@@ -209,3 +210,44 @@ def test_budget_monitor_none_budget_returns_none() -> None:
     )
     action = monitor.check(run_id='test-none', cost_cents=50.0)
     assert action == BudgetAction.NONE
+
+
+def test_budget_zero_cents_rejects_any_spend() -> None:
+    """0 cap: any positive cost fails immediately at the runner level."""
+    audit = AuditLogger()
+    runner = AgentRunner(
+        registry=ToolRegistry(),
+        audit=audit,
+        budget=RunBudget(max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=0),
+    )
+
+    def decide(context: dict) -> FinalAnswer:
+        context['_cost_cents'] = 1.0
+        return FinalAnswer('ok')
+
+    result = runner.run(task='t', decide=decide, run_id='run-zero-cap')
+    assert result.status.startswith('failed:')
+    assert result.error_message is not None
+    assert 'budget' in result.error_message.lower()
+
+
+def test_budget_none_allows_unlimited() -> None:
+    """None cap: arbitrarily large cost is allowed — run completes normally."""
+    audit = AuditLogger()
+    runner = AgentRunner(
+        registry=ToolRegistry(),
+        audit=audit,
+        budget=RunBudget(max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=None),
+    )
+
+    def decide(context: dict) -> FinalAnswer:
+        context['_cost_cents'] = 999_999.0
+        return FinalAnswer('ok')
+
+    result = runner.run(task='t', decide=decide, run_id='run-none-cap')
+    assert result.status == 'completed'
+
+
+def test_budget_default_500_cents() -> None:
+    """RunBudget() default cap is exactly 500 cents."""
+    assert RunBudget().max_estimated_cost_cents == 500

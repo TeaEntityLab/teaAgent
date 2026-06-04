@@ -46,13 +46,24 @@ class SessionGrant:
 
 
 def _normalize_grant_patterns(
-    values: Sequence[str] | None, *, field_name: str
+    values: Sequence[str] | None, *, field_name: str, scope: str = 'session'
 ) -> tuple[str, ...] | None:
+    # DS-12: For session-scope grants, None means no path restriction (temporary grant)
+    # For other scopes, require explicit patterns to prevent implicit global grants
     if values is None:
-        return None
+        if scope == 'session':
+            return None
+        raise ValueError(
+            f'{field_name} must be provided explicitly for scope={scope}. '
+            f'None is not allowed to prevent implicit global grants.'
+        )
     cleaned = tuple(str(value) for value in values if value and str(value).strip())
+    # DS-12: Reject empty patterns to prevent implicit global grants
     if not cleaned:
-        raise ValueError(f'{field_name} must contain at least one non-empty value')
+        raise ValueError(
+            f'{field_name} must contain at least one non-empty pattern. '
+            f'Empty or whitespace-only patterns are not allowed to prevent implicit global grants.'
+        )
     return cleaned
 
 
@@ -442,10 +453,10 @@ class ApprovalPresetStore:
             scope=scope, created_at=now, ttl_hours=ttl_hours
         )
         normalized_path_globs = _normalize_grant_patterns(
-            path_globs, field_name='path_globs'
+            path_globs, field_name='path_globs', scope=scope
         )
         normalized_command_prefixes = _normalize_grant_patterns(
-            command_prefixes, field_name='command_prefixes'
+            command_prefixes, field_name='command_prefixes', scope=scope
         )
         entry = ApprovalGrant(
             grant_id=_new_grant_id(),
@@ -473,6 +484,11 @@ class ApprovalPresetStore:
         path_globs: Sequence[str] | None = None,
         command_prefixes: Sequence[str] | None = None,
     ) -> ApprovalGrant:
+        # DS-12: For deny scope, require explicit patterns to prevent implicit global denials
+        if path_globs is None:
+            path_globs = ()
+        if command_prefixes is None:
+            command_prefixes = ()
         return self.grant(
             tool_name,
             scope='deny',

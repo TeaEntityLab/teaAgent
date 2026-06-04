@@ -1,5 +1,6 @@
 # Risk Register & Threat Model — teaagent
 **Date:** 2026-06-02  
+**Last updated:** 2026-06-05 (SEC-04 fixed: default 500 cents, 0=no-spend, None=unlimited; tests: test_budget_zero_cents_rejects_any_spend, test_budget_none_allows_unlimited, test_budget_default_500_cents)
 **Branch:** fix/task-dd2-001-initial-task-passthrough  
 **Scope:** Full system — CLI, TUI, REPL, MCP, subagents, Docker, audit, OAuth, approval, budget  
 **Sources:** security-risk-assessment-2026-06-02.md · defeat-scenarios-and-cascade-effects-2026-06-02.md · dependency-audit-and-security-2026-06-02.md · agent-enterprise-security-risks-2026-05-31.md · docs/threat-model.md · static source analysis
@@ -8,12 +9,12 @@
 
 ## Executive Summary
 
-teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer but has specific high-severity gaps at the audit, isolation, and budget layers. **Four findings are no-go for production expansion** (SEC-01, SEC-02, SEC-04, SEC-07). Three additional findings involve active security boundary violations in currently-deployed code (DS-12, SEC-06, SEC-10).
+teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer but has specific high-severity gaps at the audit, isolation, and budget layers. **Three findings are no-go for production expansion** (SEC-01, SEC-02, SEC-07). Three additional findings involve active security boundary violations in currently-deployed code (SEC-06, SEC-10). **DS-12, DS-13, and SEC-04 were fixed on 2026-06-04/05** (empty-path approval rejection, budget semantics, cost default).
 
 | Severity | Count | Immediately Blocking |
 |---|---|---|
 | Critical | 1 | Yes (SEC-01) |
-| High | 8 | Partial (SEC-02, SEC-04, SEC-07, DS-12) |
+| High | 7 | Partial (SEC-02, SEC-07, DS-12) |
 | Medium | 10 | No |
 | Low | 5 | No |
 | **Total** | **24** | |
@@ -60,7 +61,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | SEC-01 | Audit Integrity | HMAC key is ephemeral — audit chain unverifiable across restarts; SHA-256 recomputable by attacker with write access | H | H | 9 | **OPEN** | P0/Blocker |
 | SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | **OPEN** | P0/Blocker |
 | SEC-03 | Permission | Historical: `allow_all_destructive=True` short-circuited the approval gate outside explicit full-access mode. Current branch blocks it in `prompt` mode and requires explicit broad-mode promotion for bypass callers. | L | H | 3 | **FIXED / WATCH** | P1 |
-| SEC-04 | Budget | `ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap" (`runner/_core.py:142`); runaway loop or prompt injection has no cost ceiling | H | H | 9 | **OPEN** | P0/Blocker |
+| SEC-04 | Budget | ~~`ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap"~~ Default changed to `500`; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents` | H | H | 9 | **FIXED 2026-06-05** | — |
 | SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | **OPEN** | P2 |
 | SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | **OPEN** | P1 |
 | SEC-07 | Isolation | Docker subagent runs as root, no `--network none`, no `--cap-drop ALL`, no seccomp — allows exfiltration and container escape | H | H | 9 | **OPEN** | P0/Blocker |
@@ -79,7 +80,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | ID | Category | Description | L | I | Score | Status | Priority |
 |---|---|---|---|---|---|---|---|
 | DS-12 | Permission | Empty-path approval creates implicit global workspace grant; user believes they granted path-scoped access; audit log records it as "path-scoped" masking the expansion | M | H | 6 | **OPEN** | P1 (Security) |
-| DS-13 | Budget | `0` cost cap has three incompatible semantics: parser sentinel, runtime "unlimited", REPL default-fill `1000`; `--max-estimated-cost-cents 0` silently removes cap | M | M | 4 | **OPEN** | P2 |
+| DS-13 | Budget | ~~`0` cost cap had three incompatible semantics~~ `None`=unlimited, `0`=zero-spend, positive=cap. Default 500 cents. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_default_500_cents` | M | M | 4 | **FIXED 2026-06-05** | — |
 | DS-01 | Budget | TUI `_session_cost_cents` never incremented — `/cost` and budget bar always show `$0.00`; per-run cap still fires but cumulative cap never triggers | H | M | 6 | **OPEN** | P1 |
 | DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | **OPEN** | P2 |
 | DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | **OPEN** | P1 |
@@ -152,10 +153,10 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 
 | Threat | Affected Component | Current Mitigation | Gap | Severity |
 |---|---|---|---|---|
-| D-1: Runaway LLM loop exhausts API budget | `runner/_core.py:142` | `RunBudget` caps per-run | Default `max_estimated_cost_cents=0` = unlimited (SEC-04) | HIGH |
+| D-1: Runaway LLM loop exhausts API budget | `runner/_core.py:142` | `RunBudget` caps per-run; default 500 cents | ~~Default `max_estimated_cost_cents=0` = unlimited~~ — SEC-04 fixed | MEDIUM |
 | D-2: Disk-full attack silences audit writes | `audit.py:298-307` | In-memory fallback | No operator notification; all events lost at process exit (SEC-12) | MEDIUM |
 | D-3: UUID-as-task bogus run spends real API budget | `_agent.py:145-146` | None | `agent run --background <uuid>` runs UUID as literal task (DS-09) | MEDIUM |
-| D-4: Zero budget cap interpreted as unlimited | `runner/_core.py:142`, `chat_repl.py:255` | None | `--max-estimated-cost-cents 0` removes cap (DS-13) | MEDIUM |
+| D-4: Zero budget cap interpreted as unlimited | `runner/_core.py:142` | `0`=no-spend, `None`=unlimited (DS-13 fixed) | Resolved — any positive cost raises `BudgetExceededError` when cap=0 | LOW |
 | D-5: Alpha OTel GCP packages break on lock refresh | `uv.lock` | None | Two alpha packages can introduce breaking changes between `uv lock --upgrade` (SC-01) | LOW |
 
 #### E — Elevation of Privilege
@@ -262,7 +263,7 @@ Boundary violations:
 |---|---|---|---|
 | **SEC-01** | Persist HMAC key to `~/.teaagent/run-keys/<run_id>.key` (chmod 600); pass key to `verify_audit_chain()` in `audit_export.py:56` | `teaagent/audit.py:127`, `teaagent/audit_export.py:56` | S (1–2 days) |
 | **SEC-02** | Add `is_server_trust_expired(server)` check in `merged_tool_filters()` at `mcp_trust.py:141`; add periodic policy reload every 60 s | `teaagent/mcp_trust.py:141-149` | S (1 day) |
-| **SEC-04** | Change `ChatAgentConfig.max_estimated_cost_cents` default from `0` to `500` (or prompt on first run) | `teaagent/chat_agent.py:70` | XS (30 min) |
+| **SEC-04** | ~~Change default from `0` to `500`~~ **Done 2026-06-05**: `0`=no-spend, `None`=unlimited, default=500 cents. Tests added. | `teaagent/chat_agent.py:70`, `teaagent/budget.py`, `runner/_core.py:142` | Done |
 | **SEC-07** | Add to Docker command: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges` | `teaagent/subagents/_isolation.py:223-243` | S (2–4 hours) |
 
 #### Priority 1 — Fix within sprint
@@ -287,7 +288,7 @@ Boundary violations:
 | **SEC-11** | When `workspace_run_shell_mutate` is in tool history, display explicit warning: "undo is partial — shell effects not reversed" | `teaagent/run_undo.py:48-55` | XS (2 hours) |
 | **SEC-12** | On consecutive `fsync()` failures, emit stderr warning; after 3 failures, raise `BudgetExceededError` or halt | `teaagent/audit.py:298-307` | S (1 day) |
 | **SEC-15** | Reject `TEAAGENT_ALLOW_DEV_SIGNATURES=1` when `multi_sig_config.enabled` and relay URL is non-loopback | `teaagent/security_env.py:12-14` | XS (1 hour) |
-| **DS-13** | Use `None` as "no cap" sentinel instead of `0`; add explicit test for `--max-estimated-cost-cents 0` | `teaagent/runner/_core.py:142`, `teaagent/cli/_handlers/chat_repl.py:255` | S (1 day) |
+| **DS-13** | ~~Use `None` as no-cap sentinel~~ **Done 2026-06-05**: `None`=unlimited, `0`=no-spend. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited` | `teaagent/runner/_core.py:142` | Done |
 | **DS-01** | Fixed in current branch: TUI cost accumulation is covered by runtime-path tests | `teaagent/tui/__init__.py` / `tests/test_tui.py` | Done |
 | **DS-05** | After DS-02 (TUI controller migration): unified undo via controller | `teaagent/tui/__init__.py:641` | M (pending DS-02) |
 | **SC-01** | Add `==` overrides to freeze two alpha GCP OTel packages in `[tool.uv]` | `pyproject.toml` | XS (15 min) |
@@ -465,8 +466,25 @@ warn_at_pct = 50
 19. **SEC-11** — UI warning when undo is partial (shell mutations in run)
 20. **SEC-12** — fsync failure: stderr warning + halt after 3 failures
 21. **SEC-15** — Reject `TEAAGENT_ALLOW_DEV_SIGNATURES=1` on non-loopback relay
-22. **DS-13** — Use `None` as no-cap sentinel; fix zero-cap semantics
+22. **DS-13** — ~~Use `None` as no-cap sentinel; fix zero-cap semantics~~ **FIXED 2026-06-04**: `None` is now the only unlimited sentinel; `0` means zero spend allowed. Test: `test_zero_cost_cap_blocks_positive_cost_run`
 23. **DS-05** — Unified TUI undo via controller (dependency: DS-02 / TICKET-12)
+
+### Fix Status (2026-06-04)
+
+**Fixed:**
+- **DS-12**: Empty-path approval rejection implemented. Empty path globs now raise ValueError to prevent implicit global grants. Session-scope allows None (no restriction), other scopes require explicit patterns. Test: `test_empty_path_globs_rejected_ds12`.
+- **DS-13**: Budget semantics fixed. `None` is now the only unlimited sentinel; `0` means zero spend allowed. Default budget changed from 100 to 500 cents. Test: `test_zero_cost_cap_blocks_positive_cost_run`.
+- **SEC-06**: Subagent JIT approval isolation enforced. SubagentManager now creates fresh JIT state for subagents, preventing parent approvals from leaking. Test: `test_subagent_jit_approval_isolation_sec06`.
+
+**Fixed (2026-06-05):**
+- **SEC-04**: Default changed to 500 cents; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents`.
+
+**Still Open:**
+- SEC-01: Audit HMAC persistence needs key file permission tests
+- SEC-02: MCP trust expiry enforcement needs integration test
+- SEC-07: Docker security flags need assertion tests
+- SEC-10: Shell inspect tools need review
+- SEC-15: Dev signature mode needs production guard
 
 ### Backlog — Design decisions required
 

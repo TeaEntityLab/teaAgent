@@ -143,6 +143,11 @@ class AgentRunner:
         max_cost = self.budget.max_estimated_cost_cents
         if max_cost is None:
             return
+        # 0 means zero spend allowed - any positive cost exceeds it
+        if max_cost == 0:
+            if cost_cents > 0:
+                raise BudgetExceededError('cost budget exceeded (zero cap)')
+            return
         if cost_cents > max_cost:
             raise BudgetExceededError('cost budget exceeded')
 
@@ -150,9 +155,10 @@ class AgentRunner:
         budget_cap = self.budget.max_estimated_cost_cents
         if budget_cap is None:
             return
-        max_cost = float(budget_cap)
-        if max_cost <= 0:
+        # 0 cap is enforced by _assert_cost_budget; no warnings needed
+        if budget_cap == 0:
             return
+        max_cost = float(budget_cap)
         percent = (cost_cents / max_cost) * 100.0
         for level in (50, 80, 90, 100):
             if percent < level or level in self._budget_warning_levels_emitted:

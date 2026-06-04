@@ -80,9 +80,10 @@ class BudgetMonitor:
         budget_cap = self.budget.max_estimated_cost_cents
         if budget_cap is None:
             return BudgetAction.NONE
-        max_cost = float(budget_cap)
-        if max_cost <= 0:
+        # 0 cap is enforced by runner; no warnings needed
+        if budget_cap == 0:
             return BudgetAction.NONE
+        max_cost = float(budget_cap)
 
         percent = (cost_cents / max_cost) * 100.0
         highest_action = BudgetAction.NONE
@@ -111,9 +112,10 @@ class BudgetMonitor:
         budget_cap = self.budget.max_estimated_cost_cents
         if budget_cap is None:
             return BudgetAction.NONE
-        max_cost = float(budget_cap)
-        if max_cost <= 0:
+        # 0 cap is enforced by runner; no warnings needed
+        if budget_cap == 0:
             return BudgetAction.NONE
+        max_cost = float(budget_cap)
         percent = (cost_cents / max_cost) * 100.0
         if threshold not in self._emitted_levels:
             self._emitted_levels.add(threshold)

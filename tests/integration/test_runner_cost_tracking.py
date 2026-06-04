@@ -20,12 +20,14 @@ class _StubAdapter:
         from teaagent.llm import LLMResponse
 
         self.call_count += 1
+        # Use enough tokens to generate a positive cost (stub provider uses default 0.001/0.001 rates)
+        # 10000 input + 5000 output = 15 cents, which exceeds 0 cap
         return LLMResponse(
             provider='stub',
             model='stub-model',
             content='{"type":"final","content":"done"}',
-            input_tokens=100,
-            output_tokens=50,
+            input_tokens=10000,
+            output_tokens=5000,
         )
 
 
@@ -100,3 +102,16 @@ def test_cost_reported_in_audit_run_completed(tmp_path):
     assert 'cost_cents' in payload
     assert 'input_tokens' in payload
     assert 'output_tokens' in payload
+
+
+def test_zero_cost_cap_blocks_positive_cost_run(tmp_path):
+    """0 cap means zero spend allowed - any positive cost exceeds it."""
+    from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+    from teaagent.errors import BudgetExceededError
+
+    adapter = _StubAdapter()
+    config = ChatAgentConfig.from_root(tmp_path, max_estimated_cost_cents=0)
+    result = run_chat_agent(config, 'say hello', adapter=adapter)
+    # With 0 cap, the run should fail with budget exceeded
+    assert result.status.startswith('failed:'), f'Expected failed status, got {result.status}'
+    assert 'budget' in result.error_message.lower() or 'cost' in result.error_message.lower()

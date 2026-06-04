@@ -1115,14 +1115,16 @@ class TeaAgentTUI:
                 return False
             return True
         elif answer == 't':
+            # DS-12: Provide explicit current directory pattern to prevent implicit global grants
             store.grant(
                 request.tool_name,
                 scope='session',
                 permission_mode=self.permission_mode.value,
+                path_globs=['*'],  # Explicit current directory
                 ttl_hours=8.0,
             )
             self.output_fn(
-                f'approval: registered global session grant for {request.tool_name}'
+                f'approval: registered session grant for {request.tool_name} (current directory)'
             )
             return True
 

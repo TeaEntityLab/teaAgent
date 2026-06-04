@@ -5,11 +5,15 @@ Covers:
 - Approved call_id allows the tool to execute on resume.
 - Denied call_id raises and the run fails with permission error.
 - Auto-approval via ``approval_handler`` callback.
+- DS-12: Empty path globs are rejected to prevent implicit global grants.
 """
 
 from __future__ import annotations
 
+import pytest
+
 from teaagent.audit import AuditLogger
+from teaagent.ergonomics._approval_state import ApprovalPresetStore
 from teaagent.policy import ApprovalPolicy, PermissionMode
 from teaagent.runner import AgentRunner, ApprovalRequest, FinalAnswer, ToolRequest
 from teaagent.tools import ToolAnnotations, ToolRegistry
@@ -133,3 +137,28 @@ def test_blocked_in_read_only_mode():
     # After approval gate fix, read-only mode returns pending_approval instead of failed
     assert result.status == 'pending_approval'
     assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
+
+
+def test_empty_path_globs_rejected_ds12(tmp_path):
+    """DS-12: Empty path globs are rejected to prevent implicit global grants."""
+    store = ApprovalPresetStore(tmp_path)
+
+    # Empty list should raise ValueError
+    with pytest.raises(ValueError, match='must contain at least one non-empty pattern'):
+        store.grant('workspace_write_file', path_globs=[])
+
+    # Whitespace-only list should raise ValueError
+    with pytest.raises(ValueError, match='must contain at least one non-empty pattern'):
+        store.grant('workspace_write_file', path_globs=['  ', '\t'])
+
+    # None is allowed for session-scope (temporary grants)
+    grant = store.grant('workspace_write_file', path_globs=None, scope='session')
+    assert grant.path_globs == ()
+
+    # deny() normalizes None to empty tuple, then rejects empty patterns
+    with pytest.raises(ValueError, match='must contain at least one non-empty pattern'):
+        store.deny('workspace_write_file', path_globs=None)
+
+    # Valid patterns should work
+    grant = store.grant('workspace_write_file', path_globs=['src/**'])
+    assert grant.path_globs == ('src/**',)

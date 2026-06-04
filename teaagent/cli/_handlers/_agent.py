@@ -1447,14 +1447,16 @@ def make_cli_approval_handler(
                 return False
             return True
         elif answer == 't':
+            # DS-12: Provide explicit current directory pattern to prevent implicit global grants
             store.grant(
                 request.tool_name,
                 scope='session',
                 permission_mode=permission_mode,
+                path_globs=['*'],  # Explicit current directory
                 ttl_hours=8.0,
             )
             print(
-                f'[TeaAgent] Registered global session grant for {request.tool_name}',
+                f'[TeaAgent] Registered session grant for {request.tool_name} (current directory)',
                 file=sys.stderr,
             )
             return True

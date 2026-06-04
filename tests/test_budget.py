@@ -48,10 +48,17 @@ class RunBudgetTests(unittest.TestCase):
         mock_estimate.assert_not_called()
 
     def test_zero_cost_budget_blocks_preflight(self) -> None:
+        """0 means zero spend allowed - any positive cost exceeds it."""
         budget = RunBudget(max_estimated_cost_cents=0)
         with patch('teaagent.budget.estimate_cost_preflight', return_value=1):
             with self.assertRaises(BudgetExceededError):
                 budget.check_cost_preflight('gpt', 'gpt-4o-mini', 100, 10)
+
+    def test_zero_cost_budget_allows_zero_cost(self) -> None:
+        """0 cap allows exactly zero cost."""
+        budget = RunBudget(max_estimated_cost_cents=0)
+        with patch('teaagent.budget.estimate_cost_preflight', return_value=0):
+            budget.check_cost_preflight('gpt', 'gpt-4o-mini', 100, 10)
 
     def test_budget_is_frozen(self) -> None:
         budget = RunBudget()

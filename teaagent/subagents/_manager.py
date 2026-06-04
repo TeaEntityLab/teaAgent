@@ -237,6 +237,8 @@ class SubagentManager:
                 else self._parent_config.permission_mode
             ),
             approval_handler=approval_handler,
+            # SEC-06: Don't pass jit_state to subagent - creates fresh isolated JIT state
+            # This prevents parent JIT approvals from leaking to subagents
         )
 
         lineage = SubagentLineage(

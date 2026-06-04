@@ -622,6 +622,50 @@ class RunResult:
 
 ---
 
+## `teaagent.budget` — Run Budget
+
+### `RunBudget`
+
+```python
+@dataclass(frozen=True)
+class RunBudget:
+    max_iterations: int = 25
+    max_tool_calls: int = 25
+    max_estimated_cost_cents: int | None = 500
+```
+
+Hard limits enforced by `AgentRunner` on every iteration. When any limit is
+exceeded a `BudgetExceededError` is raised and the run fails.
+
+**`max_estimated_cost_cents` semantics (as of 2026-06-05):**
+
+| Value | Meaning |
+|-------|---------|
+| `None` | Unlimited — no cost check is performed |
+| `0` | Zero spend allowed — any positive cost raises `BudgetExceededError` immediately |
+| `N > 0` | Hard cap at N cents; exceeding it raises `BudgetExceededError` |
+
+The default (`500`) gives a $5.00 hard cap per run.
+
+**Test evidence:** `test_budget_zero_cents_rejects_any_spend`,
+`test_budget_none_allows_unlimited`, `test_budget_default_500_cents`,
+`test_zero_cost_cap_blocks_positive_cost_run`.
+
+**Pre-conditions:**
+- `max_iterations >= 1`
+- `max_tool_calls >= 0`
+- `max_estimated_cost_cents is None or max_estimated_cost_cents >= 0`
+
+**`validate()`** raises `ValueError` if any pre-condition is violated.
+
+**`check_cost_preflight(provider, model, approx_input_chars, max_output_tokens)`**
+estimates the cost of a single LLM call before dispatching it. Raises
+`BudgetExceededError` when the estimate exceeds the cap. No-op when
+`max_estimated_cost_cents is None` or when the estimated cost is `0` and the
+cap is `0`.
+
+---
+
 ## `teaagent.cost_tracker` — Cost Reporting
 
 ### `CostTracker`

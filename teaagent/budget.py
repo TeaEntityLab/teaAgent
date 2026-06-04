@@ -16,7 +16,7 @@ class RunBudget:
 
     max_iterations: int = 25
     max_tool_calls: int = 25
-    max_estimated_cost_cents: int | None = 100
+    max_estimated_cost_cents: int | None = 500
 
     def validate(self) -> None:
         if self.max_iterations < 1:

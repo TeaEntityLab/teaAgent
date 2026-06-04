@@ -494,12 +494,27 @@ def approval_revoke_command(args: argparse.Namespace) -> int:
 def approval_grant_command(args: argparse.Namespace) -> int:
     def _grant() -> int:
         store = ApprovalPresetStore(args.root)
+        # DS-12: For session-scope, None is allowed (no path restriction)
+        # For other scopes, require explicit patterns
+        if args.scope == 'session':
+            path_globs = args.path_glob or None
+            command_prefixes = args.command_prefix or None
+        else:
+            # For non-session scopes, require explicit patterns
+            if not args.path_glob and not args.command_prefix:
+                print(
+                    f'[error] scope={args.scope} requires at least one path_glob or command_prefix',
+                    file=sys.stderr,
+                )
+                return 1
+            path_globs = args.path_glob or []
+            command_prefixes = args.command_prefix or []
         grant = store.grant(
             args.tool_name,
             scope=args.scope,
             permission_mode=args.permission_mode,
-            path_globs=args.path_glob or None,
-            command_prefixes=args.command_prefix or None,
+            path_globs=path_globs,
+            command_prefixes=command_prefixes,
             ttl_hours=args.ttl_hours,
         )
         print_json(grant.to_dict())
@@ -758,6 +773,7 @@ def approval_preset_command(args: argparse.Namespace) -> int:
         applied = []
         skipped = []
         for grant_config in preset['grants']:
+            # Compute signature for deduplication
             signature = (
                 grant_config['tool_name'],
                 grant_config['scope'],
@@ -768,19 +784,46 @@ def approval_preset_command(args: argparse.Namespace) -> int:
             if signature in existing_signatures:
                 skipped.append(grant_config)
                 continue
+
+            # DS-12: Ensure deny scopes have explicit patterns
             if grant_config['scope'] == 'deny':
+                path_globs = grant_config.get('path_globs') or []
+                command_prefixes = grant_config.get('command_prefixes') or []
+                if not path_globs and not command_prefixes:
+                    print(
+                        f'[warning] Skipping deny grant for {grant_config["tool_name"]}: '
+                        f'deny scope requires at least one path_glob or command_prefix',
+                        file=sys.stderr,
+                    )
+                    skipped.append(grant_config)
+                    continue
                 grant = store.deny(
                     grant_config['tool_name'],
-                    path_globs=grant_config.get('path_globs'),
-                    command_prefixes=grant_config.get('command_prefixes'),
+                    path_globs=path_globs,
+                    command_prefixes=command_prefixes,
                 )
             else:
+                # For non-deny scopes, session allows None, others require patterns
+                if grant_config['scope'] == 'session':
+                    path_globs = grant_config.get('path_globs') or None
+                    command_prefixes = grant_config.get('command_prefixes') or None
+                else:
+                    path_globs = grant_config.get('path_globs') or []
+                    command_prefixes = grant_config.get('command_prefixes') or []
+                    if not path_globs and not command_prefixes:
+                        print(
+                            f'[warning] Skipping grant for {grant_config["tool_name"]}: '
+                            f'scope={grant_config["scope"]} requires at least one path_glob or command_prefix',
+                            file=sys.stderr,
+                        )
+                        skipped.append(grant_config)
+                        continue
                 grant = store.grant(
                     grant_config['tool_name'],
                     scope=grant_config['scope'],
                     permission_mode=grant_config.get('permission_mode'),
-                    path_globs=grant_config.get('path_globs'),
-                    command_prefixes=grant_config.get('command_prefixes'),
+                    path_globs=path_globs,
+                    command_prefixes=command_prefixes,
                 )
             applied.append(grant.to_dict())
             existing_signatures.add(signature)
