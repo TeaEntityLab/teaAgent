@@ -848,8 +848,18 @@ def _sanitize_doctor_payload(value: Any) -> Any:
     if isinstance(value, dict):
         sanitized: dict[Any, Any] = {}
         for key, item in value.items():
+            key_text = str(key)
+            key_upper = key_text.strip().upper()
             if _is_sensitive_key(key):
                 sanitized[key] = _REDACTED
+                continue
+            if key_upper in {'API_TOKEN', 'AUTH', 'AUTHORIZATION'}:
+                sanitized[key] = _REDACTED
+                continue
+            if key_upper in {'ENV', 'API_KEY_ENV'} and isinstance(item, str):
+                sanitized[key] = (
+                    _REDACTED if _looks_like_sensitive_env_name(item) else item
+                )
                 continue
             sanitized[key] = _sanitize_doctor_payload(item)
         return sanitized
