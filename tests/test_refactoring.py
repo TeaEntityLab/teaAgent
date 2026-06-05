@@ -292,10 +292,30 @@ class TestTypeSafety:
 
     def test_sandbox_branch_name_type_handling(self):
         """Test that sandbox branch name is type-safe."""
+        import re
+        from pathlib import Path
 
-        # This test verifies the type fix for sandbox._branch_name access
-        # The implementation should use getattr with proper type conversion
-        pass  # Implementation verified in code review
+        root = Path(__file__).parent.parent
+        agent_path = root / 'teaagent' / 'cli' / '_handlers' / '_agent.py'
+        source = agent_path.read_text(encoding='utf-8')
+
+        # Verify getattr with default None is used to safely access _branch_name
+        getattr_match = re.search(
+            r"getattr\(\s*sandbox\s*,\s*'_branch_name'\s*,\s*None\s*\)",
+            source,
+        )
+        assert getattr_match is not None, (
+            '_branch_name should be accessed via getattr(sandbox, "_branch_name", None)'
+        )
+
+        # Verify str() conversion is applied when the value is used
+        str_conv_match = re.search(
+            r'str\(\s*branch_name\s*\)\s+if\s+branch_name\s+is\s+not\s+None',
+            source,
+        )
+        assert str_conv_match is not None, (
+            'branch_name should be converted via str() when not None for type safety'
+        )
 
 
 class TestErrorRecovery:

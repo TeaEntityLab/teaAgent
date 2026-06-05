@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import argparse
 import io
 import json
 from contextlib import redirect_stdout
 from pathlib import Path
 
 from teaagent.cli import main
+from teaagent.cli._handlers._artifact import artifact_read_command
 
 
 class TestArtifactReadCommand:
@@ -85,6 +87,39 @@ class TestArtifactReadCommand:
         result = out.getvalue().strip()
         assert len(result.encode('utf-8')) == 500
         assert result.startswith('x' * 500)
+
+    def test_cli_handler_value_error(self) -> None:
+        args = argparse.Namespace(
+            root='/nonexistent',
+            artifact_path='../etc/passwd',
+            cursor=None,
+            max_bytes=0,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = artifact_read_command(args)
+        assert rc == 1
+        payload = json.loads(out.getvalue())
+        assert payload['ok'] is False
+        assert 'error' in payload
+
+    def test_cli_handler_success(self, tmp_path: Path) -> None:
+        content = 'hello from cli handler'
+        artifact_dir = tmp_path / '.teaagent' / 'artifacts' / 'tool-results' / 'run-001'
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        (artifact_dir / 'cli-test.txt').write_text(content, encoding='utf-8')
+
+        args = argparse.Namespace(
+            root=str(tmp_path),
+            artifact_path='.teaagent/artifacts/tool-results/run-001/cli-test.txt',
+            cursor=None,
+            max_bytes=50000,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = artifact_read_command(args)
+        assert rc == 0
+        assert out.getvalue().strip() == content
 
 
 class TestArtifactListCommand:

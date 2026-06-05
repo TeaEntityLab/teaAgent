@@ -3,6 +3,8 @@
 import hashlib
 from pathlib import Path
 
+import pytest
+
 from teaagent.long_result_envelope import (
     _safe_utf8_truncate,
     readback_artifact,
@@ -198,3 +200,28 @@ class TestReadbackArtifact:
         )
         assert len(limited.encode("utf-8")) == 2000
         assert limited.startswith("x" * 2000)
+
+    # ------------------------------------------------------------------
+    # Negative-input guards
+    # ------------------------------------------------------------------
+
+    def test_negative_max_bytes_zero(self) -> None:
+        with pytest.raises(ValueError, match='max_bytes must be positive'):
+            readback_artifact(Path('.'), 'any/path', max_bytes=0)
+
+    def test_negative_max_bytes_negative(self) -> None:
+        with pytest.raises(ValueError, match='max_bytes must be positive'):
+            readback_artifact(Path('.'), 'any/path', max_bytes=-1)
+
+    def test_negative_cursor_offset(self, tmp_path: Path) -> None:
+        content = 'hello'
+        artifact_dir = tmp_path / '.teaagent' / 'artifacts' / 'tool-results' / 'run-001'
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        (artifact_dir / 'test.txt').write_text(content, encoding='utf-8')
+
+        with pytest.raises(ValueError, match='cursor offset must be >= 0'):
+            readback_artifact(
+                tmp_path,
+                '.teaagent/artifacts/tool-results/run-001/test.txt',
+                cursor='offset:-1',
+            )

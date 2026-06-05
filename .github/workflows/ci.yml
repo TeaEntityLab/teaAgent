@@ -155,6 +155,9 @@ jobs:
       - name: Type check with mypy
         run: mypy teaagent/
 
+      - name: Audit test quality
+        run: python3 scripts/audit_test_quality.py --fail-on severe
+
   governance-gate:
     runs-on: ubuntu-latest
     # Run after lint passes, before package build

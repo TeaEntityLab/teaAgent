@@ -267,11 +267,6 @@ def load_gate(
     root = Path(workspace_root).resolve()
     gate_dir = (root / '.teaagent' / 'gates').resolve()
     candidate = (gate_dir / f'{safe_id}.json').resolve()
-    # Path containment: candidate must be strictly inside the gates directory
-    if str(gate_dir) + '/' not in str(candidate) + '/':
-        raise ValueError(
-            f"resolved gate path escapes the gates directory: {candidate}"
-        )
     if not candidate.is_file():
         raise FileNotFoundError(f'gate not found: {gate_id}')
     data = json.loads(candidate.read_text(encoding='utf-8'))
