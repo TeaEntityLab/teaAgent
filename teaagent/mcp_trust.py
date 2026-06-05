@@ -42,7 +42,6 @@ class MCPTrustPolicy:
                 name: {
                     'allowed_tools': list(server.allowed_tools),
                     'denied_tools': list(server.denied_tools),
-                    'trusted': server.trusted,
                     'expires_at': server.expires_at,
                 }
                 for name, server in self.servers.items()
