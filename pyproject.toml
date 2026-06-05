@@ -52,10 +52,10 @@ playwright = [
     "playwright>=1.40",
 ]
 oauth = [
-    "cryptography>=3.4",
+    "cryptography>=48.0.0",
 ]
 audit-encryption = [
-    "cryptography>=3.4",
+    "cryptography>=48.0.0",
 ]
 managed-google-adk = [
     "google-adk>=2.0.0",
@@ -93,7 +93,7 @@ github = [
 dev = [
     "graphqlite>=0.4.4",
     "pysqlite3>=0.6.0",
-    "cryptography>=3.4",
+    "cryptography>=48.0.0",
     "watchdog>=3.0.0",
     "prompt-toolkit>=3.0.0",
     "playwright>=1.40",
