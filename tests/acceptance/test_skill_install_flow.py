@@ -122,6 +122,8 @@ def test_invalid_skill_is_blocked_from_prompt_injection(tmp_path):
 
     with patch(
         'teaagent.skill_loader._USER_SKILL_DIRS', [tmp_path / '.missing-skills']
+    ), patch(
+        'teaagent.skill_loader._BUILTIN_SKILL_DIR', tmp_path / '.no-builtin-skills'
     ):
         skills = load_skills(tmp_path)
     assert skills == []
@@ -137,6 +139,8 @@ def test_skill_loader_searches_legacy_and_plural_project_dirs(tmp_path):
 
     with patch(
         'teaagent.skill_loader._USER_SKILL_DIRS', [tmp_path / '.missing-skills']
+    ), patch(
+        'teaagent.skill_loader._BUILTIN_SKILL_DIR', tmp_path / '.no-builtin-skills'
     ):
         skills = load_skills(tmp_path)
     assert len(skills) == 1

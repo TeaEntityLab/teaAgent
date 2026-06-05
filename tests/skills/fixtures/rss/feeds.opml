@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>TeaAgent RSS Test Fixtures</title>
+    <dateModified>2026-06-04T12:00:00Z</dateModified>
+  </head>
+  <body>
+    <outline text="Small Tech Blog" title="Small Tech Blog" type="rss" xmlUrl="small_feed.xml" htmlUrl="https://example.com/small-feed"/>
+    <outline text="Large Tech Blog" title="Large Tech Blog" type="rss" xmlUrl="large_feed.xml" htmlUrl="https://example.com/large-feed"/>
+  </body>
+</opml>

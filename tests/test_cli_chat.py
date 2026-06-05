@@ -539,7 +539,7 @@ def test_chat_session_controller_undo(monkeypatch, capsys):
             # Should succeed
             assert result is True
             # Should print success message
-            assert any('Undo completed' in msg for msg in output_messages)
+            assert any('journal undo completed' in msg for msg in output_messages)
             # Should clean up journal
             assert undo_path.exists() is False  # File should be unlinked
 

@@ -1,5 +1,7 @@
 # Acceptance Coverage
 
+**Last reviewed:** 2026-06-05
+
 TeaAgent acceptance tests live under `tests/acceptance/` and verify
 user-facing workflows rather than isolated primitives. Integration tests live
 under `tests/integration/` and verify cross-component interactions.
@@ -21,7 +23,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `441 passed`**
+**Current acceptance test count: `442 passed`** (P0+P1+P2 streams finalized)
 
 ## Acceptance Flows
 
@@ -141,12 +143,17 @@ directory.
 
 ## Current Status
 
-Acceptance collection currently reports `441` acceptance tests, matching the
+Acceptance collection currently reports `442` acceptance tests, matching the
 headline above. The last recorded supported-interpreter full-suite verification
-in the June 4 total-review package reported `3355 passed, 0 failed, 22 skipped`
-on Python 3.12.8. Treat that full-suite number as a dated evidence snapshot, not
-as a substitute for re-running `python3 -m pytest -q` before a release or safety
-claim.
+in the June 5 daily-driver finalization package reported `4265 passed, 0 failed, 6 skipped`
+on Python 3.14.4 (4265 = 4090 baseline + 175 new tests across P0–P2 workstreams). Treat that full-suite
+number as a dated evidence snapshot, not as a substitute for re-running
+`python3 -m pytest -q` before a release or safety claim.
+
+Note: 12 pre-existing test failures were fixed as part of this stream — 5 caused
+by the new built-in RSS skill discovery path (patched `_BUILTIN_SKILL_DIR`), 3
+skill-candidate gate attestation gaps, and 4 memory-auto-curation tests that
+now check quarantine storage.
 
 Code paths intentionally excluded from coverage measurement (and therefore not
 reflected in the numbers above) are tracked, with owner, reason, risk, return

@@ -15,13 +15,17 @@ from teaagent.errors import (
     AgentHarnessError,
     BudgetExceededError,
     ErrorCategory,
+    InvalidToolDecision,
     RunCancelledError,
     ToolExecutionError,
     ToolPermissionError,
 )
 from teaagent.file_policy import FilePolicy
+from teaagent.long_result_envelope import DEFAULT_MAX_PREVIEW_BYTES, store_long_result
+from teaagent.phase_tracker import PhaseTracker
 from teaagent.plugins import load_plugins
 from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
+from teaagent.proof_of_use import build_proof_of_use, emit_proof_of_use_audit
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.tool_call_context import (
     ToolCallContext,
@@ -41,6 +45,33 @@ from ._types import (
     RunResult,
     ToolRequest,
 )
+
+
+def validate_tool_decision(decision_json: dict) -> tuple[bool, str]:
+    """Validate the structural integrity of a tool decision JSON dict.
+
+    Checks required fields and types before the decision reaches the
+    execution layer. Returns ``(True, "")`` when valid, or
+    ``(False, reason)`` when invalid.
+    """
+    if not isinstance(decision_json, dict):
+        return False, 'decision is not a dict'
+
+    tool_name = decision_json.get('tool_name')
+    if tool_name is None:
+        return False, 'missing required field: tool_name'
+    if not isinstance(tool_name, str):
+        return False, f'tool_name must be string, got {type(tool_name).__name__}'
+    if not tool_name.strip():
+        return False, 'tool_name must be non-empty'
+
+    arguments = decision_json.get('arguments')
+    if arguments is None:
+        return False, 'missing required field: arguments'
+    if not isinstance(arguments, dict):
+        return False, f'arguments must be dict, got {type(arguments).__name__}'
+
+    return True, ''
 
 
 class AgentRunner:
@@ -79,12 +110,14 @@ class AgentRunner:
         show_summary: bool = True,
         scratchpad: Any = None,
         decision_log: Any = None,
+        phase_tracker: Optional[PhaseTracker] = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
         self.budget = budget or RunBudget()
         self.scratchpad = scratchpad
         self.budget.validate()
+        self.phase_tracker = phase_tracker or PhaseTracker()
         self.compactor = compactor
         self.compact_after_observations = compact_after_observations
         self._compaction_warning_threshold = max(
@@ -150,6 +183,59 @@ class AgentRunner:
             return
         if cost_cents > max_cost:
             raise BudgetExceededError('cost budget exceeded')
+
+    def _check_phase_budget(
+        self,
+        *,
+        run_id: str,
+        cost_cents: float,
+        tool_calls: int,
+    ) -> None:
+        tracker = self.phase_tracker
+        phase = tracker.current_phase
+        pb = self.budget.phase_budget_for(phase)
+
+        phase_iters = tracker.phase_iterations()
+        if phase_iters > pb.max_iterations:
+            self.audit.record(
+                'phase_budget_warning',
+                run_id,
+                phase=phase.value,
+                metric='iterations',
+                current=phase_iters,
+                limit=pb.max_iterations,
+            )
+            raise BudgetExceededError(
+                f'phase {phase.value} iteration budget exceeded'
+            )
+
+        phase_tools = tracker.phase_tool_calls()
+        if phase_tools > pb.max_tool_calls:
+            self.audit.record(
+                'phase_budget_warning',
+                run_id,
+                phase=phase.value,
+                metric='tool_calls',
+                current=phase_tools,
+                limit=pb.max_tool_calls,
+            )
+            raise BudgetExceededError(
+                f'phase {phase.value} tool-call budget exceeded'
+            )
+
+        phase_cost = tracker.phase_cost_cents(cost_cents)
+        if pb.max_estimated_cost_cents is not None and phase_cost > pb.max_estimated_cost_cents:
+            self.audit.record(
+                'phase_budget_warning',
+                run_id,
+                phase=phase.value,
+                metric='cost',
+                current=phase_cost,
+                limit=pb.max_estimated_cost_cents,
+            )
+            raise BudgetExceededError(
+                f'phase {phase.value} cost budget exceeded'
+            )
 
     def _check_budget_warnings(self, *, run_id: str, cost_cents: float) -> None:
         budget_cap = self.budget.max_estimated_cost_cents
@@ -314,6 +400,7 @@ class AgentRunner:
                 context['decision_summary'] = summary
         tool_calls = len(observations)
         cost_cents = 0.0
+        self.phase_tracker.set_cost_start(cost_cents)
         input_tokens = 0
         output_tokens = 0
         started_payload: dict[str, Any] = {
@@ -343,11 +430,23 @@ class AgentRunner:
         output_tokens: int,
     ) -> RunResult:
         """Handle a FinalAnswer decision and return the run result."""
+        proof_bundle = build_proof_of_use(
+            self.audit.events, decision.content
+        )
+        enriched_metadata: dict[str, Any] = {**decision.metadata}
+        if proof_bundle.proofs:
+            enriched_metadata['proof_of_use'] = proof_bundle.to_dict()
+            self.audit.record(
+                'proof_of_use_collected',
+                run_id,
+                **emit_proof_of_use_audit(proof_bundle),
+            )
+
         self.audit.record(
             'run_completed',
             run_id,
             answer=decision.content,
-            metadata=decision.metadata,
+            metadata=enriched_metadata,
             cost_cents=cost_cents,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -363,14 +462,17 @@ class AgentRunner:
         )
         return RunResult(
             run_id=run_id,
-            final_answer=decision,
+            final_answer=FinalAnswer(
+                content=decision.content,
+                metadata=enriched_metadata,
+            ),
             iterations=iterations,
             tool_calls=tool_calls,
             status='completed',
             cost_cents=cost_cents,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            metadata=extra_meta if extra_meta else decision.metadata,
+            metadata=extra_meta if extra_meta else enriched_metadata,
         )
 
     def _handle_harness_error(
@@ -473,10 +575,13 @@ class AgentRunner:
                 tool_name=decision.tool_name,
                 arguments=decision.arguments,
             )
-        self.plan_validator.validate_write_allowed(
+        drift_error = self.plan_validator.validate_write_allowed(
             tool_name=decision.tool_name,
             context=context,
+            tool_arguments=decision.arguments,
         )
+        if drift_error:
+            raise ToolPermissionError(drift_error)
         # Auto mode: block disallowed tools, auto-approve allowed ones
         self.auto_mode_manager.validate_tool_allowed(decision.tool_name)
         auto_approve_policy = self.auto_mode_manager.get_auto_approve_policy()
@@ -583,13 +688,37 @@ class AgentRunner:
                 self.checkpoint_store.save(run_id, context)
             return tool_calls, context
 
+        _long_meta: dict[str, Any] | None = None
+        if (
+            isinstance(result, str)
+            and self.workspace_root is not None
+            and len(result.encode("utf-8")) > DEFAULT_MAX_PREVIEW_BYTES
+        ):
+            envelope = store_long_result(
+                self.workspace_root, run_id, decision.call_id, result,
+                max_preview_bytes=DEFAULT_MAX_PREVIEW_BYTES,
+            )
+            observation_result = envelope.preview
+            _long_meta = {
+                'result_truncated': envelope.truncated,
+                'result_total_bytes': envelope.total_bytes,
+                'result_preview_bytes': envelope.preview_bytes,
+                'result_artifact_path': envelope.artifact_path,
+                'result_content_hash': envelope.content_hash,
+                'result_cursor': envelope.cursor,
+            }
+        else:
+            observation_result = result
+
         tool_calls += 1
         self.auto_mode_manager.record_tool_call()
-        observation = {
+        observation: dict[str, Any] = {
             'call_id': decision.call_id,
             'tool_name': decision.tool_name,
-            'result': result,
+            'result': observation_result,
         }
+        if _long_meta is not None:
+            observation.update(_long_meta)
         context['observations'].append(observation)
         self.audit.record('tool_call_completed', run_id, **observation)
         if self.checkpoint_store is not None:
@@ -675,14 +804,25 @@ class AgentRunner:
             iterations += 1
             self.auto_mode_manager.record_iteration()
             self.audit.record('iteration_started', current_run_id, iteration=iterations)
+            self.phase_tracker.record_iteration()
             try:
                 if self.cancel_token is not None and self.cancel_token.is_set():
                     raise RunCancelledError('run cancelled by cancel token')
+                self._check_phase_budget(
+                    run_id=current_run_id,
+                    cost_cents=cost_cents,
+                    tool_calls=tool_calls,
+                )
                 self._assert_cost_budget(cost_cents)
                 decision = decide(context)
                 cost_cents = context.get('_cost_cents', cost_cents)
                 input_tokens = context.get('_input_tokens', input_tokens)
                 output_tokens = context.get('_output_tokens', output_tokens)
+                self._check_phase_budget(
+                    run_id=current_run_id,
+                    cost_cents=cost_cents,
+                    tool_calls=tool_calls,
+                )
                 self._check_budget_warnings(
                     run_id=current_run_id, cost_cents=cost_cents
                 )
@@ -703,8 +843,36 @@ class AgentRunner:
                         output_tokens,
                     )
 
+                self._check_phase_budget(
+                    run_id=current_run_id,
+                    cost_cents=cost_cents,
+                    tool_calls=tool_calls,
+                )
                 if tool_calls >= self.budget.max_tool_calls:
                     raise BudgetExceededError('tool-call budget exceeded')
+
+                # DSK-P0-007: structural validation gate for tool decisions.
+                # Prevent malformed decisions (empty tool_name, null arguments)
+                # from being silently dispatched to the tool registry.
+                if isinstance(decision, ToolRequest):
+                    valid, reason = validate_tool_decision({
+                        'tool_name': decision.tool_name,
+                        'arguments': decision.arguments,
+                        'call_id': decision.call_id,
+                    })
+                    if not valid:
+                        preview = str(decision.arguments)[:120]
+                        self.audit.record(
+                            'tool_decision_invalid',
+                            current_run_id,
+                            tool_name=decision.tool_name,
+                            reason=reason,
+                            raw_decision_preview=preview,
+                        )
+                        raise InvalidToolDecision(
+                            reason,
+                            raw_decision_preview=preview,
+                        )
 
                 tool_calls, context = self._execute_tool_decision(
                     decision,
@@ -713,6 +881,7 @@ class AgentRunner:
                     tool_calls,
                     cost_cents,
                 )
+                self.phase_tracker.record_tool_call()
             except ToolPermissionError as exc:
                 # ToolPermissionError should be treated as pending_approval, not system error
                 # This happens when approval_handler is None and we want to pause

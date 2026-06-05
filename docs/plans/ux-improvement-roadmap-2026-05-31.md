@@ -1,6 +1,13 @@
 # UX Improvement Roadmap — Community-Validated Gaps
 # 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The UX
+> items described here were absorbed into the P0-A (TUI/CLI parity), P0-B
+> (cost/budget truth), P0-C (undo/recovery), and P1-D (onboarding) workstreams.
+> For current UX work status, use `docs/daily-driver-current-status.md`. For
+> the complete prioritization, use
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`.
+
 **Status:** Reference document - not an active execution plan. Extract actionable items to backlog-priority.md as needed.
 
 **Source:** `docs/analysis/agent-market-ux-survey-2026-05-31.md` and

@@ -1,5 +1,12 @@
 # Future Roadmap, Risk, and Usability Backlog - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> Phase 0 competitive and risk survey. The roadmap items were restructured into
+> the P0–P3 priority stack in
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`. For
+> current roadmap state, use `docs/roadmap-status.md`. For horizon strategy,
+> use `docs/strategy/phase-0-to-phase-1-outlook-2026-06-04.md`.
+
 **Status:** Reference document - not an active execution plan. Extract actionable items to backlog-priority.md as needed.
 
 This backlog extends the existing TeaAgent roadmap with competitor/community

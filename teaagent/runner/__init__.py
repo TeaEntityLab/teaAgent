@@ -1,4 +1,4 @@
-from ._core import AgentRunner
+from ._core import AgentRunner, validate_tool_decision
 from ._types import (
     ApprovalHandler,
     ApprovalRequest,
@@ -20,4 +20,5 @@ __all__ = [
     'FinalAnswer',
     'RunResult',
     'ToolRequest',
+    'validate_tool_decision',
 ]

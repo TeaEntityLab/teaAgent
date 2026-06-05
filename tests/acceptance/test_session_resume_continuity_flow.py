@@ -105,8 +105,8 @@ def test_session_resume_preserves_observations_audit_and_memory(tmp_path: Path) 
     )
     assert run_started['payload']['replayed_observations'] == 1
 
-    memories = MemoryCatalog(tmp_path).search('created todo', limit=10)
+    quarantined = MemoryCatalog(tmp_path).list_quarantined(limit=10)
     assert any(
         'created todo' in memory.content and 'auto-curated' in memory.tags
-        for memory in memories
+        for memory in quarantined
     )

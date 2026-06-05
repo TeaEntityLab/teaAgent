@@ -384,5 +384,226 @@ def test_subagent_docker_container_hardened():
         )
 
 
+class SubagentPermissionInheritanceTests(unittest.TestCase):
+    """P2-A-003: Subagent permission mode must be capped for safety."""
+
+    def test_danger_full_access_parent_caps_child_to_workspace_write(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.teaagent').mkdir()
+            worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
+            worktree.mkdir(parents=True)
+            from teaagent.policy import PermissionMode
+
+            config = ChatAgentConfig(
+                root=root, permission_mode=PermissionMode.DANGER_FULL_ACCESS
+            )
+            manager = SubagentManager(
+                root=root, parent_config=config, parent_adapter=MagicMock()
+            )
+            captured_mode: list[object] = []
+            iso_ctx = IsolationContext(
+                parent_root=root,
+                child_root=worktree,
+                isolation='worktree',
+                worktree_path=worktree,
+            )
+
+            def capture_run(*args: object, **kwargs: object) -> RunResult:
+                cfg = args[0]
+                captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
+                return _stub_result('child-1')
+
+            with (
+                patch(
+                    'teaagent.subagents._manager.prepare_subagent_isolation',
+                    return_value=(iso_ctx, ''),
+                ),
+                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+                patch('teaagent.run_store.RunStore.logger_for_result'),
+            ):
+                payload = manager.run_subagent(
+                    task='test',
+                    parent_run_id='parent-1',
+                    depth=0,
+                    isolation='worktree',
+                )
+
+            self.assertEqual(payload['status'], 'completed')
+            child_mode = captured_mode[0]
+            child_mode_str = (
+                child_mode.value
+                if hasattr(child_mode, 'value')
+                else str(child_mode)
+            )
+            self.assertEqual(child_mode_str, 'workspace-write')
+
+    def test_allow_mode_parent_caps_child_to_workspace_write(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.teaagent').mkdir()
+            worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
+            worktree.mkdir(parents=True)
+            from teaagent.policy import PermissionMode
+
+            config = ChatAgentConfig(
+                root=root, permission_mode=PermissionMode.ALLOW
+            )
+            manager = SubagentManager(
+                root=root, parent_config=config, parent_adapter=MagicMock()
+            )
+            captured_mode: list[object] = []
+            iso_ctx = IsolationContext(
+                parent_root=root,
+                child_root=worktree,
+                isolation='worktree',
+                worktree_path=worktree,
+            )
+
+            def capture_run(*args: object, **kwargs: object) -> RunResult:
+                cfg = args[0]
+                captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
+                return _stub_result('child-1')
+
+            with (
+                patch(
+                    'teaagent.subagents._manager.prepare_subagent_isolation',
+                    return_value=(iso_ctx, ''),
+                ),
+                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+                patch('teaagent.run_store.RunStore.logger_for_result'),
+            ):
+                payload = manager.run_subagent(
+                    task='test',
+                    parent_run_id='parent-1',
+                    depth=0,
+                    isolation='worktree',
+                )
+
+            self.assertEqual(payload['status'], 'completed')
+            child_mode = captured_mode[0]
+            child_mode_str = (
+                child_mode.value
+                if hasattr(child_mode, 'value')
+                else str(child_mode)
+            )
+            self.assertEqual(child_mode_str, 'workspace-write')
+
+    def test_read_only_parent_does_not_elevate_child(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.teaagent').mkdir()
+            worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
+            worktree.mkdir(parents=True)
+            from teaagent.policy import PermissionMode
+
+            config = ChatAgentConfig(
+                root=root, permission_mode=PermissionMode.READ_ONLY
+            )
+            manager = SubagentManager(
+                root=root, parent_config=config, parent_adapter=MagicMock()
+            )
+            captured_mode: list[object] = []
+            iso_ctx = IsolationContext(
+                parent_root=root,
+                child_root=worktree,
+                isolation='worktree',
+                worktree_path=worktree,
+            )
+
+            def capture_run(*args: object, **kwargs: object) -> RunResult:
+                cfg = args[0]
+                captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
+                return _stub_result('child-1')
+
+            with (
+                patch(
+                    'teaagent.subagents._manager.prepare_subagent_isolation',
+                    return_value=(iso_ctx, ''),
+                ),
+                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+                patch('teaagent.run_store.RunStore.logger_for_result'),
+            ):
+                payload = manager.run_subagent(
+                    task='test',
+                    parent_run_id='parent-1',
+                    depth=0,
+                    isolation='worktree',
+                )
+
+            self.assertEqual(payload['status'], 'completed')
+            child_mode = captured_mode[0]
+            child_mode_str = (
+                child_mode.value
+                if hasattr(child_mode, 'value')
+                else str(child_mode)
+            )
+            self.assertEqual(child_mode_str, 'read-only')
+
+
+class WorkspaceCopySecretExclusionTests(unittest.TestCase):
+    """P2-A-003: workspace snapshots must exclude secret files."""
+
+    def test_env_files_excluded_from_snapshot(self) -> None:
+        from teaagent.subagents._isolation import _copy_workspace_snapshot
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.env').write_text('SECRET_KEY=abc123')
+            (root / 'app.py').write_text('print("hello")')
+            (root / '.teaagent').mkdir()
+
+            dest = Path(tmp) / 'snapshot'
+            _copy_workspace_snapshot(root, dest)
+
+            self.assertFalse((dest / '.env').exists())
+            self.assertTrue((dest / 'app.py').exists())
+
+    def test_pem_files_excluded_from_snapshot(self) -> None:
+        from teaagent.subagents._isolation import _copy_workspace_snapshot
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'id_rsa.pem').write_text('PRIVATE KEY')
+            (root / 'app.py').write_text('print("hello")')
+            (root / '.teaagent').mkdir()
+
+            dest = Path(tmp) / 'snapshot'
+            _copy_workspace_snapshot(root, dest)
+
+            self.assertFalse((dest / 'id_rsa.pem').exists())
+            self.assertTrue((dest / 'app.py').exists())
+
+    def test_credentials_files_excluded_from_snapshot(self) -> None:
+        from teaagent.subagents._isolation import _copy_workspace_snapshot
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'credentials.json').write_text('{"key":"secret"}')
+            (root / 'app.py').write_text('print("hello")')
+            (root / '.teaagent').mkdir()
+
+            dest = Path(tmp) / 'snapshot'
+            _copy_workspace_snapshot(root, dest)
+
+            self.assertFalse((dest / 'credentials.json').exists())
+            self.assertTrue((dest / 'app.py').exists())
+
+    def test_ssh_dir_excluded_from_snapshot(self) -> None:
+        from teaagent.subagents._isolation import _copy_workspace_snapshot
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.ssh').mkdir()
+            (root / '.ssh' / 'id_rsa').write_text('PRIVATE KEY')
+            (root / 'app.py').write_text('print("hello")')
+            (root / '.teaagent').mkdir()
+
+            dest = Path(tmp) / 'snapshot'
+            _copy_workspace_snapshot(root, dest)
+
+            self.assertFalse((dest / '.ssh').exists())
+
+
 if __name__ == '__main__':
     unittest.main()

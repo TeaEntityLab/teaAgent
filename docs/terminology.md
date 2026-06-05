@@ -1,5 +1,7 @@
 # TeaAgent Terminology Guide
 
+**Last reviewed:** 2026-06-05
+
 This document standardizes terminology across all TeaAgent documentation.
 
 ## Permission Modes

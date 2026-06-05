@@ -74,7 +74,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 - **Accepted and Implemented**: Decision accepted and fully implemented
 - **Accepted and Implemented (Beta)**: Decision accepted and implemented in Beta (optional hardening remaining)
 - **Superseded / Archived / Rejected**: Closed decisions with details in respective files
-- **Proposed**: Decision proposed but not yet implemented (refactoring proposals)
+- ~~**Proposed**~~: No ADRs are currently in Proposed state (all refactoring proposals were resolved June 2026; see DOCOPT-010).
 
 ## Git History
 

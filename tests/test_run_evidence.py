@@ -1,7 +1,9 @@
 """Tests for run evidence bundle extraction."""
 
+import re
 import tempfile
 
+from teaagent.redaction import RedactionConfig
 from teaagent.run_evidence import (
     ApprovalEvidence,
     CommandEvidence,
@@ -177,3 +179,127 @@ def test_build_run_evidence_bundle():
         assert bundle.tests == []
         assert bundle.approvals == []
         assert bundle.known_gaps == []
+
+
+# ── redaction-related tests ───────────────────────────────────────────
+
+
+def test_redaction_preserves_evidence_structure():
+    """Redacted audit events should not break evidence extraction."""
+    events = [
+        {
+            'event_type': 'tool_use',
+            'payload': {
+                'tool_name': 'exec',
+                'input': {'command': 'export TOKEN=Bearer [redacted]'},
+            },
+            'created_at': 1234567890.0,
+        },
+        {
+            'event_type': 'tool_use',
+            'payload': {
+                'tool_name': 'shell',
+                'input': {'command': 'echo "hello"'},
+            },
+            'created_at': 1234567891.0,
+        },
+    ]
+
+    commands = extract_commands_run(events)
+    assert len(commands) == 2
+    assert commands[0].command == 'export TOKEN=Bearer [redacted]'
+
+
+def test_redaction_carries_through_to_bundle_serialization():
+    """Redacted content in evidence survives round-trip through to_dict()."""
+    bundle = RunEvidenceBundle(
+        run_id='redacted-run',
+        commands_run=[
+            CommandEvidence(
+                command='curl -H "Authorization: Bearer [redacted]" https://api.example.com',
+                tool_name='exec',
+                exit_code=0,
+            ),
+        ],
+        approvals=[
+            ApprovalEvidence(
+                call_id='call-redacted',
+                tool_name='workspace_write_file',
+                approved=True,
+                authority_type='jit_prompt',
+                approved_by='[redacted]',
+            ),
+        ],
+        known_gaps=[
+            KnownGap(
+                category='secret_leak',
+                description='Leaked credential: [redacted-anthropic-key]',
+                severity='high',
+            ),
+        ],
+    )
+
+    data = bundle.to_dict()
+    assert data['run_id'] == 'redacted-run'
+    assert len(data['commands_run']) == 1
+    assert '[redacted]' in data['commands_run'][0]['command']
+    assert data['approvals'][0]['approved_by'] == '[redacted]'
+    assert '[redacted-anthropic-key]' in data['known_gaps'][0]['description']
+
+
+def test_redaction_marker_patterns():
+    """All standard redaction markers should be recognized in evidence output."""
+    markers = [
+        'Bearer [redacted]',
+        '[redacted]',
+        '[redacted-JWT]',
+        '[redacted-google-key]',
+        '[redacted-openai-key]',
+        '[redacted-anthropic-key]',
+        '[redacted-ssh-key]',
+        '[CUSTOM-REDACTED]',
+    ]
+    marker_pattern = re.compile(
+        r'\[redacted[^\]]*\]|Bearer \[redacted\]|\[CUSTOM-REDACTED\]'
+    )
+    for marker in markers:
+        assert marker_pattern.search(marker), f'Marker {marker!r} not matched'
+
+
+def test_redaction_config_default_all_enabled():
+    """Default RedactionConfig enables all pattern groups."""
+    cfg = RedactionConfig()
+    assert cfg.bearer_tokens is True
+    assert cfg.api_keys is True
+    assert cfg.jwt_tokens is True
+    assert cfg.aws_keys is True
+    assert cfg.github_tokens is True
+    assert cfg.query_params is True
+    assert cfg.google_keys is True
+    assert cfg.openai_keys is True
+    assert cfg.anthropic_keys is True
+    assert cfg.database_urls is True
+    assert cfg.ssh_keys is True
+
+
+def test_redaction_config_build_patterns():
+    """RedactionConfig.build_patterns() returns active patterns only."""
+    cfg = RedactionConfig(
+        bearer_tokens=False,
+        api_keys=False,
+        jwt_tokens=False,
+        aws_keys=False,
+        github_tokens=False,
+        query_params=False,
+        google_keys=False,
+        openai_keys=False,
+        anthropic_keys=False,
+        database_urls=False,
+        ssh_keys=False,
+    )
+    patterns = cfg.build_patterns()
+    assert len(patterns) == 0
+
+    cfg_full = RedactionConfig()
+    patterns_full = cfg_full.build_patterns()
+    assert len(patterns_full) > 0

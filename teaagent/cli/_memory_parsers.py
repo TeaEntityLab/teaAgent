@@ -168,6 +168,11 @@ def register(
         required=True,
         help='Attestation string for the promotion (e.g., operator confirmation).',
     )
+    quarantine_promote.add_argument(
+        '--approved-gate-id',
+        default=None,
+        help='Gate ID that has been reviewed and approved. Required to bypass the initial gate prompt.',
+    )
     quarantine_promote.set_defaults(func=handlers['quarantine_promote'])
 
     maintain = subs.add_parser('maintain', help='Memory maintenance and cleanup.')

@@ -38,7 +38,33 @@ Every meaningful action should leave a record that a maintainer or user can insp
 - Run summaries, audit events, cost ledgers, and undo records are not optional metadata.
 - If a feature cannot be explained with receipts, it is not ready to become a default path.
 
-### 3. Trust-sensitive paths outrank breadth
+### 3. Community feedback is signal, not fact
+
+Community feedback — GitHub issues, Reddit threads, Discord discussions, competitor
+changelogs — is valuable directional input but is not a validated requirements
+specification. Treat every external signal as a hypothesis to be tested against
+TeaAgent's governance contract, not as a feature request to be executed.
+
+**Why this exists**
+
+- Competitor surveys and community pain-point analyses surface recurring themes,
+  but loudness is not severity and frequency is not correctness.
+- Building directly from community sentiment without verification produces
+  reactive, incoherent roadmaps.
+- The repository already invests in dated competitor surveys, gap-watch processes,
+  and signal-to-acceptance-gap conversion (see `docs/processes/signal-to-acceptance-gap.md`).
+
+**What this means**
+
+- Every community signal must be dated, sourced, and assigned a confidence level
+  before it influences a roadmap row or acceptance criterion.
+- "The community wants X" is never sufficient justification for a feature.
+- Signal-to-action conversion requires: signal capture → gap triage → acceptance
+  gap filing → roadmap row with exit evidence.
+- Prefer closing the loop: when a signal leads to a change, document the signal
+  and the change together so future readers can trace the reasoning.
+
+### 4. Trust-sensitive paths outrank breadth
 
 The shortest path to product value is not "more features". It is "more dependable behavior in the paths people use every day".
 
@@ -53,7 +79,7 @@ The shortest path to product value is not "more features". It is "more dependabl
 - Fix semantic drift before expanding the surface.
 - Prioritize first-hour onboarding, root truth, cost truth, undo truth, and approval truth.
 
-### 4. Docs are part of the control plane
+### 5. Docs are part of the control plane
 
 TeaAgent's documentation is not a scrapbook. It is part of the operational system.
 
@@ -69,7 +95,7 @@ TeaAgent's documentation is not a scrapbook. It is part of the operational syste
 - Supersession notes should be explicit.
 - New docs should exist only when they reduce ambiguity, create a decision trail, or turn a risk into executable work.
 
-### 5. Malleability with boundaries
+### 6. Malleability with boundaries
 
 TeaAgent should let users reshape workflows without letting the harness dissolve into unreviewable entropy.
 
@@ -85,7 +111,7 @@ TeaAgent should let users reshape workflows without letting the harness dissolve
 - Runtime extension must stay reviewable and traceable.
 - The project should resist bolt-on escape hatches that weaken the governance contract.
 
-### 6. Narrow core, broad composability
+### 7. Narrow core, broad composability
 
 The core harness should stay thin even when the ecosystem grows.
 
@@ -105,6 +131,7 @@ The core harness should stay thin even when the ecosystem grows.
 |---|---|---|
 | Governance first | `README.md`, `docs/modules/INDEX.md`, `docs/governance/README.md` | Core mission, risk priorities |
 | Receipts before rhetoric | `docs/analysis/daily-driver-advice-and-recommendation-ledger-2026-06-02.md`, `docs/analysis/daily-driver-current-truth-audit-2026-06-01.md` | Run evidence, auditability |
+| Community feedback is signal, not fact | `docs/analysis/community-agent-pain-points-survey-2026-06-05.md`, `docs/processes/opencode-gap-watch.md`, `docs/processes/signal-to-acceptance-gap.md` | Signal-to-gap discipline, roadmap hygiene |
 | Trust-sensitive paths outrank breadth | `docs/reviews/daily-driver-red-team-review-2026-06-02.md`, `docs/analysis/daily-driver-third-pass-postfix-audit-2026-06-01.md` | TUI/CLI parity, root/cost/undo honesty |
 | Docs are control plane | `docs/reviews/daily-driver-docs-package-review-2026-06-02.md`, `docs/analysis/markdown-status-review-2026-06-02.md` | Supersession, status discipline |
 | Malleability with boundaries | `docs/analysis/pi-agent-ecosystem-review-2026-06-03.md`, `docs/strategy/malleable-governed-agent-harness-2026-06-03.md` | Extensibility with governance |

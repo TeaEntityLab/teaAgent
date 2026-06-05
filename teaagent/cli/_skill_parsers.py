@@ -65,6 +65,26 @@ def register(
     eval_cmd.add_argument('--root', default='.', help='Workspace root.')
     eval_cmd.set_defaults(func=handlers['candidate_eval'])
 
+    eval_real = candidate_subs.add_parser(
+        'eval-real', help='Run real-model eval on a skill candidate (optional, never blocks CI).'
+    )
+    eval_real.add_argument('candidate_id')
+    eval_real.add_argument(
+        '--model', default='gpt-4o', help='Model to use for real-model eval.'
+    )
+    eval_real.add_argument(
+        '--provider', default='gpt', help='Provider to use for real-model eval.'
+    )
+    eval_real.add_argument('--root', default='.', help='Workspace root.')
+    eval_real.set_defaults(func=handlers['candidate_eval_real'])
+
+    repair_tasks = candidate_subs.add_parser(
+        'repair-tasks', help='Show repair tasks for a failed eval candidate.'
+    )
+    repair_tasks.add_argument('candidate_id')
+    repair_tasks.add_argument('--root', default='.', help='Workspace root.')
+    repair_tasks.set_defaults(func=handlers['candidate_repair_tasks'])
+
     review = candidate_subs.add_parser('review', help='Review one candidate.')
     review.add_argument('candidate_id')
     review.add_argument('--root', default='.', help='Workspace root.')
@@ -80,6 +100,11 @@ def register(
         '--i-attest-personal-install',
         action='store_true',
         help='Required when installing a reviewed candidate into personal skills.',
+    )
+    install.add_argument(
+        '--approved-gate-id',
+        default=None,
+        help='Gate ID that has been reviewed and approved. Required to bypass the initial gate prompt.',
     )
     install.set_defaults(func=handlers['candidate_install'])
 
@@ -169,3 +194,21 @@ def register(
         help='Skip Rekor/Fulcio online verification for air-gapped environments.',
     )
     verify_tsb.set_defaults(func=handlers.get('verify_tsb'))
+
+    activate = subs.add_parser(
+        'activate',
+        help='Activate a named skill for the current session.',
+    )
+    activate.add_argument(
+        'name',
+        nargs='+',
+        help='Skill name(s) to activate.',
+    )
+    activate.add_argument('--root', default='.', help='Workspace root.')
+    activate.set_defaults(func=handlers.get('activate'))
+
+    health = candidate_subs.add_parser(
+        'health', help='Show skill ecosystem health dashboard (DSK-P2-003).'
+    )
+    health.add_argument('--root', default='.', help='Workspace root.')
+    health.set_defaults(func=handlers.get('candidate_health'))

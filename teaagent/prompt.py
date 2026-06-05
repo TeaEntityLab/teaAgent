@@ -21,6 +21,7 @@ from teaagent.tools import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
+
 DECISION_INSTRUCTIONS = """You are TeaAgent, a coding-agent harness.
 You must respond with exactly one JSON object and no prose.
 

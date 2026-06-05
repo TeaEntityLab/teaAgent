@@ -1,6 +1,11 @@
 # Competitive & Community Feedback Refresh (Delta vs 2026-05-31)
 # 2026-06-01
 
+> Supersession note, 2026-06-05: This file is historical evidence — a one-day
+> delta refresh of older surveys. For current competitive analysis, use
+> `docs/analysis/competitor-signal-survey-2026-06-04.md`. For community pain
+> points, use `docs/analysis/community-agent-pain-points-survey-2026-06-05.md`.
+
 **Purpose:** The 2026-05-31 survey (`agent-market-ux-survey-2026-05-31.md`) is
 thorough and remains the baseline. This is a short **delta** pass — one day later —
 to (a) honor the standing instruction to re-run competitive research before release

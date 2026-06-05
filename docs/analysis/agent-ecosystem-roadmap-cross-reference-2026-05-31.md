@@ -1,5 +1,10 @@
 # Agent Ecosystem Roadmap Cross-Reference - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The acceptance
+> test status tracked here is now maintained in `docs/acceptance.md` and the
+> ticket index at `docs/plans/ticket-plans/index.md`. For current daily-driver
+> status, use `docs/daily-driver-current-status.md`.
+
 **Purpose:** Cross-reference agent-ecosystem-acceptance-roadmap-2026-05-31.md with acceptance.md to identify completed items.
 
 **Last Updated:** 2026-06-01 (P0 acceptance tests created)

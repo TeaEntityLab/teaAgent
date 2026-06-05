@@ -7,6 +7,7 @@ import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
@@ -14,6 +15,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from teaagent.llm._config import PROVIDER_CONFIGS  # noqa: E402
 from teaagent.policy import PermissionMode  # noqa: E402
+from teaagent.run_evidence import check_evidence_completeness  # noqa: E402
 
 TIER_START = '<!-- ACCEPTANCE_TIERS:START -->'
 TIER_END = '<!-- ACCEPTANCE_TIERS:END -->'
@@ -860,6 +862,15 @@ def validate_docs_consistency(
 
     if roadmap_status_doc_path.is_file():
         errors.extend(validate_roadmap_status(roadmap_status_text))
+        try:
+            from validate_control_loop_freshness import validate_roadmap
+
+            errors.extend(validate_roadmap(roadmap_status_doc_path))
+        except ImportError:
+            errors.append(
+                "Cannot import validate_control_loop_freshness; "
+                "control-loop freshness check skipped."
+            )
     else:
         errors.append(f'Roadmap status doc not found: {roadmap_status_doc_path}')
 
@@ -923,6 +934,8 @@ def validate_docs_consistency(
             )
         )
 
+    errors.extend(validate_doc_cross_references(repo_root=_REPO_ROOT))
+
     try:
         status_count = _extract_acceptance_status_count(acceptance_text)
     except ValueError as exc:
@@ -961,6 +974,90 @@ def validate_docs_consistency(
                 'Acceptance tier section is out of sync with scripts/run_acceptance_tier.py. '
                 'Run: python3 scripts/sync_acceptance_tiers_doc.py'
             )
+
+    return errors
+
+
+def validate_doc_cross_references(
+    repo_root: Path = _REPO_ROOT,
+) -> list[str]:
+    """Check internal markdown links in current-truth docs for broken references.
+
+    Scans key current-truth documents for relative links to `.md` files and
+    verifies each target exists in the repository. Dated evidence docs
+    (analysis/, reviews/, work-log/) are checked but reported as warnings.
+
+    Returns errors for broken links in current-truth docs; returns empty for
+    broken links in dated evidence (non-blocking).
+    """
+    errors: list[str] = []
+
+    CURRENT_TRUTH_DOCS = (
+        repo_root / "README.md",
+        repo_root / "docs" / "INDEX.md",
+        repo_root / "docs" / "USAGE.md",
+        repo_root / "docs" / "cli.md",
+        repo_root / "docs" / "acceptance.md",
+        repo_root / "docs" / "roadmap-status.md",
+        repo_root / "docs" / "daily-driver-current-status.md",
+        repo_root / "docs" / "release-checklist.md",
+        repo_root / "docs" / "backlog-priority.md",
+        repo_root / "docs" / "maturity-matrix.md",
+        repo_root / "docs" / "terminology.md",
+        repo_root / "docs" / "architecture.md",
+    )
+
+    LINK_PATTERN = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+
+    for doc_path in CURRENT_TRUTH_DOCS:
+        if not doc_path.is_file():
+            continue
+
+        text = doc_path.read_text(encoding="utf-8")
+        doc_dir = doc_path.parent
+        rel = doc_path.relative_to(repo_root)
+
+        for match in LINK_PATTERN.finditer(text):
+            target = match.group(2)
+
+            # Skip external URLs and mailto
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+
+            # Resolve anchor-only links relative to current doc
+            if target.startswith("#"):
+                continue
+
+            # Split anchor from path
+            anchor = ""
+            if "#" in target:
+                target, anchor = target.split("#", 1)
+
+            # Skip if only anchor remains (e.g. "#section" already handled)
+            if not target:
+                continue
+
+            # Resolve relative path
+            target_path = (doc_dir / target).resolve()
+
+            # Skip absolute paths outside repo
+            try:
+                target_path.relative_to(repo_root)
+            except ValueError:
+                continue
+
+            if not target_path.exists():
+
+                errors.append(
+                    f"Broken cross-reference in {rel}: "
+                    f"[{match.group(1)}]({target}) → "
+                    f"{target_path.relative_to(repo_root)} (not found)"
+                )
+                errors.append(
+                    f"Broken cross-reference in {rel}: "
+                    f"[{match.group(1)}]({target}) → "
+                    f"{target_path.relative_to(repo_root)} (not found)"
+                )
 
     return errors
 
@@ -1144,6 +1241,82 @@ def validate_ticket_index_evidence(
     return errors
 
 
+def validate_audit_evidence_completeness(
+    run_store_root: Path,
+    *,
+    repo_root: Path = _REPO_ROOT,
+) -> list[str]:
+    """Check audit evidence completeness across stored runs.
+
+    Reads all runs from the run store, builds evidence bundles, and
+    verifies each bundle against the completeness checklist for its
+    final status.  Missing critical audit events are surfaced.
+
+    Exit-1 condition: any run with status "success" or "failure" has
+    missing required evidence fields or events.
+    """
+    errors: list[str] = []
+
+    from teaagent.run_evidence import build_run_evidence_bundle
+    from teaagent.run_store import RunStore
+
+    try:
+        store = RunStore(run_store_root)
+        runs = store.list_runs()
+    except Exception as exc:
+        errors.append(f'Unable to list runs from {run_store_root}: {exc}')
+        return errors
+
+    if not runs:
+        return errors
+
+    critical_statuses = {'success', 'failure'}
+    total_runs = 0
+    verified = 0
+
+    for run_id in runs:
+        total_runs += 1
+        try:
+            events = store.show_run(run_id)
+        except Exception:
+            continue
+
+        bundle = build_run_evidence_bundle(run_store_root, run_id)
+        status = _derive_run_status(events)
+
+        if status in critical_statuses:
+            missing = check_evidence_completeness(bundle, events, status)
+            if missing:
+                errors.append(
+                    f'Run {run_id} ({status}) incomplete evidence: '
+                    + ', '.join(missing)
+                )
+            else:
+                verified += 1
+
+    pct = int(100 * verified / total_runs) if total_runs > 0 else 0
+    print(
+        f'Audit evidence completeness: {verified}/{total_runs} '
+        f'critical runs verified ({pct}%)'
+    )
+    return errors
+
+
+def _derive_run_status(events: list[dict[str, Any]]) -> str:
+    """Derive terminal run status from audit events."""
+    for event in reversed(events):
+        event_type = str(event.get('event_type', ''))
+        if event_type == 'run_completed':
+            return 'success'
+        if event_type == 'run_failed':
+            return 'failure'
+        if event_type == 'run_cancelled':
+            return 'cancelled'
+        if event_type == 'run_paused':
+            return 'pending_approval'
+    return 'unknown'
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description='Validate README / acceptance / use-case docs consistency.'
@@ -1195,6 +1368,12 @@ def main() -> int:
         '--skip-ticket-index',
         action='store_true',
         help='Skip ticket index evidence audit.',
+    )
+    parser.add_argument(
+        '--audit-evidence-root',
+        default=None,
+        help='Root directory for audit evidence completeness check '
+        '(disabled when omitted).',
     )
     parser.add_argument(
         '--test-quality-mode',
@@ -1254,6 +1433,13 @@ def main() -> int:
         mode=args.test_quality_mode,
     )
     errors.extend(test_quality_errors)
+
+    if args.audit_evidence_root:
+        errors.extend(
+            validate_audit_evidence_completeness(
+                run_store_root=Path(args.audit_evidence_root),
+            )
+        )
 
     if errors:
         for err in errors:

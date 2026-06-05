@@ -246,7 +246,6 @@ class ModelDecisionEngine:
             try:
                 return parse_model_decision(response.content)
             except ToolValidationError as exc:
-                last_error = exc
                 if attempt >= self.max_parse_retries:
                     break
                 messages.append(LLMMessage(role='assistant', content=response.content))
@@ -727,6 +726,8 @@ def _run_chat_agent_impl(
             task=task,
             result=result,
             audit_events=audit_logger.events,
+            run_id=run_id,
+            audit=audit_logger,
         )
         return result
     finally:
@@ -780,6 +781,8 @@ def _auto_curate_memory(
     task: str,
     result: RunResult,
     audit_events: list[Any],
+    run_id: str,
+    audit: AuditLogger,
 ) -> None:
     if result.status != 'completed' or result.final_answer is None:
         return
@@ -790,11 +793,23 @@ def _auto_curate_memory(
         return
     catalog = MemoryCatalog(root)
     recent = catalog.list(limit=50)
+    quarantined_recent = catalog.list_quarantined(limit=50)
     if any(
-        entry.content == summary and 'auto-curated' in entry.tags for entry in recent
+        entry.content == summary and 'auto-curated' in entry.tags
+        for entry in recent + quarantined_recent
     ):
         return
-    catalog.add(summary, tags=('auto-curated', 'run-summary'))
+    catalog.add_quarantined(
+        summary,
+        tags=('auto-curated', 'run-summary'),
+        provenance={
+            'source_kind': 'agent_run',
+            'run_id': run_id,
+            'reason': 'auto_curated_agent_memory',
+        },
+        run_id=run_id,
+        audit_logger=audit,
+    )
 
 
 def _build_auto_curated_summary(

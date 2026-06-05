@@ -64,5 +64,5 @@ def test_memory_auto_curated_after_completed_resume(tmp_path: Path) -> None:
         assert result.final_answer.content == 'memory curated'
 
     catalog = MemoryCatalog(tmp_path)
-    entries = catalog.list(limit=10)
+    entries = catalog.list_quarantined(limit=10)
     assert any('curate' in e.content for e in entries)

@@ -90,12 +90,34 @@ def normalize_subagent_isolation(value: Any) -> str | None:
     return None
 
 
+SECRET_FILE_PATTERNS = frozenset({
+    '.env', '.env.local', '.env.production', '.env.development',
+    'credentials.json', 'credentials', '.credentials',
+    'secrets.json', 'secrets.yaml', 'secrets.yml',
+    '.netrc', '.ssh', '.gnupg',
+    'service-account.json', 'service-account-key.json',
+})
+SECRET_FILE_SUFFIXES = frozenset({
+    '.pem', '.key', '.p12', '.pfx', '.jks', '.keystore',
+    '.cer', '.crt', '.der',
+    '.token',
+})
+SECRET_DIR_PREFIXES = frozenset({'.ssh', '.gnupg', '.aws', '.gcp', '.azure'})
+
+
+def _is_secret_file(rel_path: str, name: str) -> bool:
+    if name in SECRET_FILE_PATTERNS:
+        return True
+    return any(name.endswith(suffix) for suffix in SECRET_FILE_SUFFIXES)
+
+
 def _copy_workspace_snapshot(parent_root: Path, child_root: Path) -> None:
     root = parent_root.resolve()
     dest = child_root.resolve()
     is_ignored = _load_gitignore_matcher(root)
     dest.mkdir(parents=True, exist_ok=True)
     (dest / '.teaagent').mkdir(parents=True, exist_ok=True)
+    secret_skip_count = 0
     for src in sorted(root.rglob('*')):
         if not src.is_file() or src.is_symlink():
             continue
@@ -104,9 +126,28 @@ def _copy_workspace_snapshot(parent_root: Path, child_root: Path) -> None:
             continue
         if is_ignored(rel):
             continue
+        name = src.name
+        if _is_secret_file(rel, name):
+            secret_skip_count += 1
+            logger.debug('Skipping secret file in workspace copy: %s', rel)
+            continue
+        in_secret_dir = False
+        for prefix in SECRET_DIR_PREFIXES:
+            if rel.startswith(prefix + '/') or rel == prefix:
+                in_secret_dir = True
+                break
+        if in_secret_dir:
+            secret_skip_count += 1
+            logger.debug('Skipping secret directory file in workspace copy: %s', rel)
+            continue
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, target)
+    if secret_skip_count > 0:
+        logger.info(
+            'Workspace snapshot excluded %d secret file(s) for subagent isolation',
+            secret_skip_count,
+        )
 
 
 def prepare_subagent_isolation(

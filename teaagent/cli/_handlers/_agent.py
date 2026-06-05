@@ -46,6 +46,16 @@ DEFAULT_PAGINATION_LINES = 50
 DEFAULT_SESSION_GRANT_TTL_HOURS = 8.0
 
 
+def _derive_policy_source(routing_reason: str) -> str:
+    """Derive the policy source from a routing reason string."""
+    lower = routing_reason.lower()
+    if 'explicit' in lower:
+        return 'explicit_override'
+    if 'complexity' in lower:
+        return 'complexity'
+    return 'category'
+
+
 def _display_recovery_guidance(
     result: RunResult,
     args: argparse.Namespace,
@@ -437,6 +447,24 @@ def _execute_agent_task(
         return gate_exit
     store = RunStore(args.root)
     audit = store.audit_logger()
+
+    if routing is not None:
+        _policy_source = _derive_policy_source(routing.reason)
+        _fallback_used = routing.model is None
+        audit.record(
+            'model_route',
+            run_id='pending',
+            requested_provider=args.provider,
+            requested_model=args.model or '',
+            resolved_provider=routing.provider,
+            resolved_model=routing.model or '',
+            role=routing.category,
+            routing_reason=routing.reason,
+            policy_source=_policy_source,
+            estimated_cost_cents=0.0,
+            actual_cost_cents=0.0,
+            fallback_used=_fallback_used,
+        )
 
     from teaagent.scratchpad import Scratchpad
 
@@ -1599,10 +1627,18 @@ def agent_undo_command(args: argparse.Namespace) -> int:
 
         rollback_result = git_sandbox.rollback()
         if rollback_result.success:
+            store.record_undo_applied(
+                run_id,
+                status='restored',
+                restored=[],
+                deleted=[],
+                errors=[],
+            )
             print_json(
                 {
                     'status': 'restored',
-                    'method': 'git',
+                    'method': 'checkpoint',
+                    'mechanism': 'checkpoint restore',
                     'run_id': run_id,
                     'branch': rollback_result.branch_name,
                 }
@@ -1610,7 +1646,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:
             return 0
         else:
             print(
-                f'[TeaAgent WARNING] Git rollback failed: {rollback_result.error}, falling back to UndoJournal',
+                f'[TeaAgent WARNING] checkpoint restore failed: {rollback_result.error}, falling back to UndoJournal',
                 file=sys.stderr,
             )
 
@@ -1679,6 +1715,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:
     payload = {
         'status': status,
         'method': 'journal',
+        'mechanism': 'journal undo',
         'run_id': run_id,
         'restored': result.restored,
         'deleted': result.deleted,
@@ -1705,21 +1742,31 @@ def _start_background_run(args: argparse.Namespace) -> int:
     )
 
     run_store = RunStore(args.root, readonly=True)
-    run_id_candidate = str(args.task).strip()
-    if run_id_candidate:
-        suspension_path = (
-            Path(args.root).resolve()
-            / '.teaagent'
-            / f'suspension-{safe_run_id(run_id_candidate)}.json'
-        )
-        if run_store.run_path(run_id_candidate).is_file():
+    root_path = Path(args.root).resolve()
+
+    # Check both positional arguments for run/suspension ID patterns.
+    # When --background is used without a provider (e.g. "agent run --background <id>"),
+    # the <id> lands in args.provider. When a provider is specified
+    # (e.g. "agent run gpt --background <id>"), the <id> lands in args.task.
+    candidates = []
+    for raw in (getattr(args, 'provider', None), getattr(args, 'task', None)):
+        if raw is not None:
+            stripped = str(raw).strip()
+            if stripped:
+                candidates.append(stripped)
+
+    for candidate in candidates:
+        run_path = run_store.run_path(candidate)
+        suspension_path = root_path / '.teaagent' / f'suspension-{safe_run_id(candidate)}.json'
+        if run_path.is_file():
             print_json(
                 {
                     'status': 'error',
                     'message': (
-                        f"'{run_id_candidate}' looks like an existing run id. "
-                        f'Use `teaagent agent resume {run_id_candidate}` or '
-                        f'`teaagent agent interactive-review {run_id_candidate}` instead.'
+                        f"'{candidate}' looks like an existing run id. "
+                        f'Use `teaagent agent resume {candidate}` or '
+                        f'`teaagent agent interactive-review {candidate}` instead. '
+                        '--background launches a new detached task; it is not for resuming.'
                     ),
                 }
             )
@@ -1729,8 +1776,8 @@ def _start_background_run(args: argparse.Namespace) -> int:
                 {
                     'status': 'error',
                     'message': (
-                        f"'{run_id_candidate}' looks like a suspension id. "
-                        f'Use `teaagent agent interactive-review {run_id_candidate}` '
+                        f"'{candidate}' looks like a suspension id. "
+                        f'Use `teaagent agent interactive-review {candidate}` '
                         'to inspect it; true resume is not yet available for REPL '
                         'suspensions.'
                     ),
@@ -2572,6 +2619,12 @@ def agent_daily_command(args: argparse.Namespace) -> int:
 def agent_status_command(args: argparse.Namespace) -> int:
     store = RunStore(args.root, readonly=True)
     try:
+        if getattr(args, 'evidence', False):
+            from teaagent.evidence_summary import build_evidence_summary
+
+            summary = build_evidence_summary(store, args.run_id, args.root)
+            print_json(summary.to_dict())
+            return 0
         print_json(store.heartbeat_for_run(args.run_id))
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})

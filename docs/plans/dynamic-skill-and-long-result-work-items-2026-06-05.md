@@ -23,22 +23,22 @@ P0 means the project should not claim dynamic skill reliability without it.
 
 | ID | Priority | State | Work item | Owner surface | Dependencies | Acceptance criteria |
 | --- | --- | --- | --- | --- | --- | --- |
-| DSK-P0-001 | P0 | Proposed | Add skill lifecycle state machine. | skills / audit | Existing `skill_load` events | Audit distinguishes discovered, indexed, selected, activated, resource-read, used-in-run, output-verified, superseded, and blocked. |
-| DSK-P0-002 | P0 | Proposed | Block or quarantine direct active-skill writes. | workspace tools / skill writer | DSK-P0-001 useful but not required | Writes to active skill dirs are blocked or converted into candidate proposals unless explicit dev opt-in is set. |
-| DSK-P0-003 | P0 | Proposed | Add offline RSS fixture acceptance test. | tests / skills | DSK-P0-001, fixture files | Test proves an RSS skill produces a source-backed markdown summary from fixture feeds. |
-| DSK-P0-004 | P0 | Proposed | Add long-result envelope. | tools / audit / run artifacts | Artifact storage path decision | Large RSS/WebSearch/skill outputs return preview, truncation metadata, artifact path, hash, and cursor. |
-| DSK-P0-005 | P0 | Proposed | Add output artifact validators for source-backed tasks. | tests / verifier | DSK-P0-003 | Validators check file existence, source URLs, known titles, categories, and prompt-injection resistance. |
-| DSK-P0-006 | P0 | Proposed | Add unmanaged skill explainability state. | skill loader / CLI | Existing `explain_skill_activation` | `skill explain` clearly labels candidate-installed, unmanaged direct-write, compatibility path, and shadowed skill states. |
-| DSK-P0-007 | P0 | Proposed | Make invalid tool-decision failure visible in skill flows. | chat agent / runner | Existing invalid JSON hardening | Dynamic skill tasks cannot return success when decision JSON is invalid before required output exists. |
-| DSK-P1-001 | P1 | Proposed | Add behavioral skill eval harness. | skill eval | DSK-P0-003 | Candidate eval compares with-skill vs without-skill behavior on deterministic fixtures. |
-| DSK-P1-002 | P1 | Proposed | Add skill invocation audit events. | audit / run store | DSK-P0-001 | Run evidence includes skill activation cause and final output artifact links. |
-| DSK-P1-003 | P1 | Proposed | Add explicit `activate_skill` runtime tool or command. | CLI / runner | DSK-P0-001 | User can force a skill, and audit records explicit activation. |
-| DSK-P1-004 | P1 | Proposed | Add TUI skill trust panel. | TUI | DSK-P0-006 | TUI shows reviewed, unmanaged, shadowed, and activated skill states. |
-| DSK-P1-005 | P1 | Proposed | Add long-result readback command. | CLI / workspace tools | DSK-P0-004 | User or model can read stored result artifacts by cursor/offset. |
-| DSK-P1-006 | P1 | Proposed | Add candidate repair loop after eval failure. | skill candidates | DSK-P1-001 | Failed candidate eval produces actionable repair tasks, not silent install. |
-| DSK-P2-001 | P2 | Proposed | Add built-in RSS starter skill. | skills / examples | DSK-P0-003 | Example skill passes offline RSS acceptance and documents limitations. |
-| DSK-P2-002 | P2 | Proposed | Add optional real-model dynamic skill eval profile. | eval / CI optional | DSK-P1-001 | Scheduled/manual profile measures real-model behavior without blocking PRs. |
-| DSK-P2-003 | P2 | Proposed | Add skill ecosystem health dashboard. | docs / TUI | DSK-P1-004 | Dashboard lists skill count, trust states, stale candidates, and failed evals. |
+| DSK-P0-001 | P0 | Complete | Add skill lifecycle state machine. | skills / audit | Existing `skill_load` events | Audit distinguishes discovered, indexed, selected, activated, resource-read, used-in-run, output-verified, superseded, and blocked. |
+| DSK-P0-002 | P0 | Complete | Block or quarantine direct active-skill writes. | workspace tools / skill writer | DSK-P0-001 useful but not required | Writes to active skill dirs are blocked or converted into candidate proposals unless explicit dev opt-in is set. |
+| DSK-P0-003 | P0 | Complete | Add offline RSS fixture acceptance test. | tests / skills | DSK-P0-001, fixture files | Test proves an RSS skill produces a source-backed markdown summary from fixture feeds. |
+| DSK-P0-004 | P0 | Complete | Add long-result envelope. | tools / audit / run artifacts | Artifact storage path decision | Large RSS/WebSearch/skill outputs return preview, truncation metadata, artifact path, hash, and cursor. |
+| DSK-P0-005 | P0 | Complete | Add output artifact validators for source-backed tasks. | tests / verifier | DSK-P0-003 | Validators check file existence, source URLs, known titles, categories, and prompt-injection resistance. |
+| DSK-P0-006 | P0 | Complete | Add unmanaged skill explainability state. | skill loader / CLI | Existing `explain_skill_activation` | `skill explain` clearly labels candidate-installed, unmanaged direct-write, compatibility path, and shadowed skill states. |
+| DSK-P0-007 | P0 | Complete | Make invalid tool-decision failure visible in skill flows. | chat agent / runner | Existing invalid JSON hardening | Dynamic skill tasks cannot return success when decision JSON is invalid before required output exists. |
+| DSK-P1-001 | P1 | Complete | Add behavioral skill eval harness. | skill eval | DSK-P0-003 | Candidate eval compares with-skill vs without-skill behavior on deterministic fixtures. |
+| DSK-P1-002 | P1 | Complete | Add skill invocation audit events. | audit / run store | DSK-P0-001 | Run evidence includes skill activation cause and final output artifact links. |
+| DSK-P1-003 | P1 | Complete | Add explicit `activate_skill` runtime tool or command. | CLI / runner | DSK-P0-001 | User can force a skill, and audit records explicit activation. |
+| DSK-P1-004 | P1 | Complete | Add TUI skill trust panel. | TUI | DSK-P0-006 | TUI shows reviewed, unmanaged, shadowed, and activated skill states. |
+| DSK-P1-005 | P1 | Complete | Add long-result readback command. | CLI / workspace tools | DSK-P0-004 | User or model can read stored result artifacts by cursor/offset. |
+| DSK-P1-006 | P1 | Complete | Add candidate repair loop after eval failure. | skill candidates | DSK-P1-001 | Failed candidate eval produces actionable repair tasks, not silent install. |
+| DSK-P2-001 | P2 | Complete | Add built-in RSS starter skill. | skills / examples | DSK-P0-003 | Example skill passes offline RSS acceptance and documents limitations. |
+| DSK-P2-002 | P2 | Complete | Add optional real-model dynamic skill eval profile. | eval / CI optional | DSK-P1-001 | Scheduled/manual profile measures real-model behavior without blocking PRs. |
+| DSK-P2-003 | P2 | Complete | Add skill ecosystem health dashboard. | docs / TUI | DSK-P1-004 | Dashboard lists skill count, trust states, stale candidates, and failed evals. |
 
 ## P0 Implementation Notes
 

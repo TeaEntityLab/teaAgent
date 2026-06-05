@@ -84,6 +84,8 @@ def evaluate_persistent_write(
     payload: dict[str, Any],
     source_kind: ProvenanceSourceKind,
     attested: bool = False,
+    run_id: Optional[str] = None,
+    audit_logger: Optional[Any] = None,
 ) -> ProvenanceGateResult:
     """Decide whether a durable write may proceed or must stay in quarantine."""
     digest = canonical_content_digest(substrate=substrate, payload=payload)
@@ -103,6 +105,26 @@ def evaluate_persistent_write(
                 substrate=substrate,
                 reason='skill candidates are always stored in quarantine',
             )
+        if substrate == PersistenceSubstrate.MEMORY:
+            reason = 'agent_created_memory_default_quarantine'
+            result = ProvenanceGateResult(
+                action='quarantine',
+                content_digest=digest,
+                source_kind=source_kind,
+                substrate=substrate,
+                reason=reason,
+            )
+            if audit_logger is not None and run_id is not None:
+                audit_logger.record(
+                    event_type='memory_write_quarantined',
+                    run_id=run_id,
+                    source_kind=source_kind.value,
+                    substrate=substrate.value,
+                    content_digest=digest,
+                    reason=reason,
+                    attested=attested,
+                )
+            return result
         return ProvenanceGateResult(
             action='allow',
             content_digest=digest,

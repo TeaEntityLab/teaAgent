@@ -278,27 +278,13 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         initial_observations = run_store.observations_for_run(run_id)
         pending = run_store.pending_approval_for_run(run_id)
         if pending:
-            from teaagent.ergonomics.approval_store import ApprovalPresetStore
-
-            approval_store = ApprovalPresetStore(tui.root)
-            digest = pending.get('argument_digest')
-            if (
-                isinstance(digest, str)
-                and digest
-                and not approval_store.check_scoped_approval_digest(
-                    run_id=run_id,
-                    call_id=pending['call_id'],
-                    tool_name=pending['tool_name'],
-                    argument_digest=digest,
-                )
-            ):
-                approval_store.add_scoped_approval(
-                    run_id=run_id,
-                    call_id=pending['call_id'],
-                    tool_name=pending['tool_name'],
-                    arguments=pending.get('arguments', {}),
-                    argument_digest=digest,
-                )
+            call_id = pending.get('call_id', '?')
+            tool_name = pending.get('tool_name', '?')
+            tui.output_fn(
+                f'warning: run {run_id} has a pending approval for {tool_name} '
+                f'({call_id}) — approval was NOT auto-granted on resume. '
+                f'The agent will re-request approval through the normal flow.'
+            )
         tui.output_fn(f'resume: {run_id}')
         _safe_run_agent_task(
             tui,
@@ -481,6 +467,7 @@ def _cmd_root(tui: 'TeaAgentTUI', args: list[str]) -> bool:
         tui.output_fn('error: root requires exactly one path')
         return True
     tui.root = Path(args[0]).resolve()
+    tui._root_explicit = True
     tui.output_fn(f'root: {tui.root}')
     tui._save_tui_state()
     return True
@@ -770,6 +757,20 @@ def _cmd_undo(tui: 'TeaAgentTUI', args: list[str]) -> bool:
     return True
 
 
+def _cmd_pressure(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle pressure command — print context pressure score as JSON."""
+    try:
+        from teaagent.context_pressure import compute_context_pressure
+
+        score = compute_context_pressure(tui.root)
+        import json
+
+        tui.output_fn(json.dumps(score.to_dict(), indent=2))
+    except Exception as exc:
+        tui.output_fn(f'error: could not compute context pressure — {exc}')
+    return True
+
+
 def _cmd_background(tui: 'TeaAgentTUI', args: list[str]) -> bool:
     """Handle background command."""
     tui._handle_background()
@@ -782,8 +783,167 @@ def _cmd_handoff(tui: 'TeaAgentTUI', args: list[str]) -> bool:
     return True
 
 
+def _cmd_skills(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle skills command — print loaded skill details as JSON."""
+    from teaagent.skill_loader import explain_skill_activation
+
+    explain = explain_skill_activation(tui.root, skill_prompt_mode='index_only')
+    tui._print_json(explain.to_dict())
+    return True
+
+
+def _cmd_artifact(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle artifact command — read or list stored tool result artifacts."""
+    if not args:
+        tui.output_fn('error: artifact requires a subcommand (read or list)')
+        return True
+
+    sub = args[0]
+    rest = args[1:]
+
+    if sub == 'read':
+        return _cmd_artifact_read(tui, rest)
+    if sub == 'list':
+        return _cmd_artifact_list(tui, rest)
+
+    tui.output_fn(f"error: unknown artifact subcommand '{sub}'")
+    return True
+
+
+def _cmd_artifact_read(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle artifact read — read stored artifact content."""
+    from teaagent.long_result_envelope import readback_artifact
+
+    if len(args) < 2:
+        tui.output_fn('error: artifact read requires <run_id> <tool_call_id>')
+        return True
+
+    run_id = args[0]
+    tool_call_id = args[1]
+    cursor: str | None = None
+    max_bytes: int = 50_000
+
+    i = 2
+    while i < len(args):
+        if args[i] == '--cursor' and i + 1 < len(args):
+            cursor = args[i + 1]
+            if not cursor.startswith('offset:'):
+                tui.output_fn(
+                    f"error: --cursor must have format 'offset:<N>', got '{cursor}'"
+                )
+                return True
+            try:
+                int(cursor[len('offset:'):])
+            except ValueError:
+                tui.output_fn(f"error: invalid cursor offset '{cursor}'")
+                return True
+            i += 2
+        elif args[i] == '--max-bytes' and i + 1 < len(args):
+            try:
+                max_bytes = int(args[i + 1])
+            except ValueError:
+                tui.output_fn(f"error: invalid --max-bytes value '{args[i + 1]}'")
+                return True
+            if max_bytes <= 0:
+                tui.output_fn(
+                    f"error: --max-bytes must be positive, got {max_bytes}"
+                )
+                return True
+            i += 2
+        else:
+            tui.output_fn(f"error: unexpected argument '{args[i]}'")
+            return True
+
+    artifact_path = f'.teaagent/artifacts/tool-results/{run_id}/{tool_call_id}.txt'
+    try:
+        content = readback_artifact(
+            tui.root, artifact_path, cursor=cursor, max_bytes=max_bytes
+        )
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        tui.output_fn(f'error: {exc}')
+        return True
+
+    tui.output_fn(content)
+    return True
+
+
+def _cmd_skill_diagnostics(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle skill-diagnostics command — print comprehensive skill diagnostics as JSON."""
+    from teaagent.skill_loader import get_skill_diagnostics
+
+    try:
+        diagnostics = get_skill_diagnostics(tui.root)
+    except Exception as exc:
+        tui.output_fn(f'error: skill diagnostics failed — {exc}')
+        return True
+
+    iso_status = diagnostics.get('isolation_status', {})
+    downgrade_label = iso_status.get('downgrade_label', '')
+    if downgrade_label == 'native-execution-fallback':
+        tui.output_fn(
+            '\033[93m[WARN] Skill isolation degraded: native execution fallback active. '
+            'No WASM or Docker sandbox available. Skills run on host OS.\033[0m'
+        )
+    elif downgrade_label == 'partial-isolation':
+        tui.output_fn(
+            '\033[93m[WARN] Partial skill isolation: not all sandbox backends available.\033[0m'
+        )
+    tui._print_json(diagnostics)
+    return True
+
+
+def _cmd_skill_health(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    from teaagent.skill_loader import get_skill_health
+
+    try:
+        health = get_skill_health(tui.root)
+    except Exception as exc:
+        tui.output_fn(f'error: skill health failed — {exc}')
+        return True
+    tui._print_json(health)
+    return True
+
+
+def _cmd_artifact_list(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle artifact list — list stored artifacts grouped by run_id."""
+    import json
+
+    artifact_dir = tui.root / '.teaagent' / 'artifacts' / 'tool-results'
+    if not artifact_dir.is_dir():
+        tui.output_fn('{}')
+        return True
+
+    runs: dict[str, list[dict[str, object]]] = {}
+    for run_dir in sorted(artifact_dir.iterdir()):
+        if not run_dir.is_dir():
+            continue
+        run_id = run_dir.name
+        files = []
+        for artifact_file in sorted(run_dir.iterdir()):
+            if not artifact_file.is_file():
+                continue
+            tool_call_id = artifact_file.stem
+            try:
+                size = artifact_file.stat().st_size
+            except OSError:
+                size = 0
+            files.append(
+                {
+                    'tool_call_id': tool_call_id,
+                    'path': str(artifact_file.relative_to(tui.root)),
+                    'bytes': size,
+                }
+            )
+        if files:
+            runs[run_id] = files
+
+    tui.output_fn(json.dumps(runs, indent=2))
+    return True
+
+
 # Command dispatch dictionary
 _COMMAND_DISPATCH: dict[str, typing.Callable[[TeaAgentTUI, list[str]], bool]] = {
+    'artifact': _cmd_artifact,
     'exit': _cmd_exit,
     'quit': _cmd_exit,
     'help': _cmd_help,
@@ -820,4 +980,7 @@ _COMMAND_DISPATCH: dict[str, typing.Callable[[TeaAgentTUI, list[str]], bool]] = 
     'undo': _cmd_undo,
     'background': _cmd_background,
     'handoff': _cmd_handoff,
+    'skills': _cmd_skills,
+    'skill-diagnostics': _cmd_skill_diagnostics,
+    'skill-health': _cmd_skill_health,
 }

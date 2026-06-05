@@ -1,0 +1,478 @@
+"""P0-A-001 & P0-A-003: Headless command-path tests for TUI semantic parity.
+
+These tests verify that TUI commands (ask, run, /cost, /undo, root, resume)
+delegate to ChatSessionController rather than bypassing it with local state.
+
+P0-A-003 tests verify fallback wording: journal undo, checkpoint restore,
+or nothing-to-undo messages are explicitly labeled.
+"""
+
+from __future__ import annotations
+
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+from teaagent.tui import TeaAgentTUI
+from teaagent.tui._commands import _safe_run_agent_task
+
+
+def _make_controller_mock(
+    *, undo_last_run: bool = False, session_cost: float = 0.0
+) -> MagicMock:
+    controller = MagicMock()
+    controller.undo_last_run.return_value = undo_last_run
+    controller.get_session_cost.return_value = session_cost
+    controller.session_state.session_cost_cents = session_cost
+    return controller
+
+
+class AskRunCommandPathTests(unittest.TestCase):
+
+    def _setup_tui_with_controller_mock(
+        self) -> tuple[TeaAgentTUI, MagicMock, list[str]]:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        controller = _make_controller_mock()
+        controller.execute_task.return_value = MagicMock(
+            run_result=MagicMock(
+                run_id='test-run-123',
+                status='completed',
+                iterations=1,
+                tool_calls=0,
+                cost_cents=0.0,
+                input_tokens=10,
+                output_tokens=5,
+                final_answer=MagicMock(content='test output'),
+                metadata={},
+                error_message=None,
+            ),
+            cost_cents=0.0,
+        )
+        tui._chat_controller = controller
+        return tui, controller, output
+
+    def test_ask_calls_controller_execute_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tui, controller, _output = self._setup_tui_with_controller_mock()
+            tui.root = Path(tmp)
+
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_load_tui_state'),
+                patch.object(tui, '_save_tui_state'),
+                patch('teaagent.tui.create_llm_adapter'),
+                patch('teaagent.tui.RunStore') as mock_store_class,
+            ):
+                mock_store = MagicMock()
+                mock_store.show_run.return_value = []
+                mock_store.logger_for_result = MagicMock()
+                mock_store.audit_logger.return_value = MagicMock()
+                mock_store_class.return_value = mock_store
+
+                tui.handle_command('ask test task')
+
+            controller.execute_task.assert_called_once()
+            self.assertEqual(controller.execute_task.call_args[0][0], 'test task')
+
+    def test_run_calls_controller_execute_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tui, controller, _output = self._setup_tui_with_controller_mock()
+            tui.root = Path(tmp)
+
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_load_tui_state'),
+                patch.object(tui, '_save_tui_state'),
+                patch('teaagent.tui.create_llm_adapter'),
+                patch('teaagent.tui.RunStore') as mock_store_class,
+            ):
+                mock_store = MagicMock()
+                mock_store.show_run.return_value = []
+                mock_store.logger_for_result = MagicMock()
+                mock_store.audit_logger.return_value = MagicMock()
+                mock_store_class.return_value = mock_store
+
+                tui.handle_command('run another task')
+
+            controller.execute_task.assert_called_once()
+            self.assertEqual(controller.execute_task.call_args[0][0], 'another task')
+
+    def test_ask_does_not_bypass_controller(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tui, controller, _output = self._setup_tui_with_controller_mock()
+            tui.root = Path(tmp)
+
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_load_tui_state'),
+                patch.object(tui, '_save_tui_state'),
+                patch('teaagent.tui.create_llm_adapter'),
+                patch('teaagent.tui.RunStore') as mock_store_class,
+            ):
+                mock_store = MagicMock()
+                mock_store.show_run.return_value = []
+                mock_store.logger_for_result = MagicMock()
+                mock_store.audit_logger.return_value = MagicMock()
+                mock_store_class.return_value = mock_store
+
+                tui.handle_command('ask verify controller path')
+
+            controller.execute_task.assert_called_once()
+
+    def test_safe_wrapper_catches_exceptions_and_preserves_controller(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        controller = _make_controller_mock()
+        tui._chat_controller = controller
+
+        with patch.object(tui, '_run_agent_task', side_effect=RuntimeError('boom')):
+            _safe_run_agent_task(tui, 'test task')
+
+        self.assertIn('error:', ' '.join(output))
+        self.assertIn('boom', ' '.join(output))
+
+
+class CostCommandPathTests(unittest.TestCase):
+
+    def test_cost_reads_from_controller_get_session_cost(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with patch.object(tui, '_get_chat_controller') as mock_get:
+            controller = _make_controller_mock(session_cost=350.0)
+            mock_get.return_value = controller
+
+            tui._handle_cost()
+
+            controller.get_session_cost.assert_called_once()
+            self.assertIn('cost: $3.50', output[-1])
+
+    def test_cost_falls_back_to_local_when_controller_is_zero(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with patch.object(tui, '_get_chat_controller') as mock_get:
+            controller = _make_controller_mock(session_cost=0.0)
+            mock_get.return_value = controller
+            tui._session_cost_cents = 250.0
+
+            tui._handle_cost()
+
+            self.assertIn('cost: $2.50', output[-1])
+
+    def test_cost_command_path_via_handle_command(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with patch.object(tui, '_get_chat_controller') as mock_get:
+            controller = _make_controller_mock(session_cost=123.0)
+            mock_get.return_value = controller
+
+            tui.handle_command('cost')
+
+            controller.get_session_cost.assert_called()
+            self.assertIn('cost: $1.23', output[-1])
+
+    def test_cost_slash_alias_uses_same_controller_path(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with patch.object(tui, '_get_chat_controller') as mock_get:
+            controller = _make_controller_mock(session_cost=42.0)
+            mock_get.return_value = controller
+
+            tui.handle_command('/cost')
+
+            controller.get_session_cost.assert_called()
+            self.assertIn('cost: $0.42', output[-1])
+
+
+class UndoCommandPathTests(unittest.TestCase):
+
+    def test_undo_calls_controller_undo_last_run(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with patch.object(tui, '_get_chat_controller') as mock_get:
+            controller = _make_controller_mock(undo_last_run=True)
+            mock_get.return_value = controller
+
+            tui._handle_undo()
+
+            controller.undo_last_run.assert_called_once()
+
+    def test_undo_journal_wording(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with patch.object(tui, '_get_chat_controller') as mock_get:
+            controller = _make_controller_mock(undo_last_run=True)
+            mock_get.return_value = controller
+
+            tui._handle_undo()
+
+            self.assertIn('journal undo completed', output[-1])
+
+    def test_undo_checkpoint_wording(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with (
+            patch.object(tui, '_get_chat_controller') as mock_get,
+            patch.object(tui, '_restore_checkpoint', return_value=True),
+        ):
+            controller = _make_controller_mock(undo_last_run=False)
+            mock_get.return_value = controller
+
+            tui._handle_undo()
+
+            self.assertIn('checkpoint restore completed', output[-1])
+
+    def test_undo_nothing_wording(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with (
+            patch.object(tui, '_get_chat_controller') as mock_get,
+            patch.object(tui, '_restore_checkpoint', return_value=False),
+        ):
+            controller = _make_controller_mock(undo_last_run=False)
+            mock_get.return_value = controller
+
+            tui._handle_undo()
+
+            self.assertIn('nothing to undo', output[-1])
+
+    def test_undo_checkpoint_wording_mentions_stale_journal(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with (
+            patch.object(tui, '_get_chat_controller') as mock_get,
+            patch.object(tui, '_restore_checkpoint', return_value=True),
+        ):
+            controller = _make_controller_mock(undo_last_run=False)
+            mock_get.return_value = controller
+
+            tui._handle_undo()
+
+            joined = ' '.join(output)
+            self.assertIn('checkpoint restore', joined)
+            self.assertIn('stale undo journal', joined)
+
+    def test_undo_without_controller_is_handled(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        with (
+            patch.object(
+                tui, '_get_chat_controller',
+                side_effect=RuntimeError('no controller'),
+            ),
+            patch.object(tui, '_restore_checkpoint', return_value=False),
+            self.assertRaises(RuntimeError),
+        ):
+            tui._handle_undo()
+
+
+class RootCommandPathTests(unittest.TestCase):
+
+    def test_root_before_controller_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp1, tempfile.TemporaryDirectory() as tmp2:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp1, input_fn=lambda _: '', output_fn=output.append
+            )
+
+            tui.handle_command(f'root {tmp2}')
+
+            self.assertEqual(tui.root, Path(tmp2).resolve())
+            controller = tui._get_chat_controller()
+            self.assertEqual(controller.root, Path(tmp2).resolve())
+
+    def test_root_after_controller_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp1, tempfile.TemporaryDirectory() as tmp2:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp1, input_fn=lambda _: '', output_fn=output.append
+            )
+
+            controller1 = tui._get_chat_controller()
+            self.assertEqual(controller1.root, Path(tmp1).resolve())
+
+            tui.handle_command(f'root {tmp2}')
+            self.assertEqual(tui.root, Path(tmp2).resolve())
+            self.assertEqual(controller1.root, Path(tmp1).resolve())
+
+    def test_root_command_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output: list[str] = []
+            tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+            tui.handle_command(f'root {tmp}')
+
+            self.assertIn(f'root: {Path(tmp).resolve()}', output)
+
+
+class ResumeCommandPathTests(unittest.TestCase):
+
+    def test_resume_goes_through_controller_execute_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp, input_fn=lambda _: '', output_fn=output.append
+            )
+            controller = _make_controller_mock()
+            controller.execute_task.return_value = MagicMock(
+                run_result=MagicMock(
+                    run_id='test-resume-456',
+                    status='completed',
+                    iterations=1,
+                    tool_calls=0,
+                    cost_cents=0.0,
+                    input_tokens=5,
+                    output_tokens=3,
+                    final_answer=MagicMock(content='resumed output'),
+                    metadata={},
+                    error_message=None,
+                ),
+                cost_cents=0.0,
+            )
+            tui._chat_controller = controller
+
+            from teaagent.run_store import RunStore
+
+            store = RunStore(tmp)
+            run_id = 'resume-test-789'
+            run_path = store.run_path(run_id)
+            run_path.parent.mkdir(parents=True, exist_ok=True)
+            run_path.write_text(
+                json.dumps({
+                    'run_id': run_id,
+                    'created_at': '2026-06-05T00:00:00Z',
+                    'event_type': 'run_started',
+                    'payload': {'task': 'resumed task content'},
+                }) + '\n',
+                encoding='utf-8',
+            )
+
+            with (
+                patch.object(tui, '_start_file_watcher'),
+                patch.object(tui, '_load_tui_state'),
+                patch.object(tui, '_save_tui_state'),
+                patch('teaagent.tui.create_llm_adapter'),
+                patch('teaagent.tui.RunStore') as mock_store_class,
+            ):
+                mock_store = MagicMock()
+                mock_store.show_run.return_value = []
+                mock_store.logger_for_result = MagicMock()
+                mock_store.audit_logger.return_value = MagicMock()
+                mock_store_class.return_value = mock_store
+
+                tui.handle_command(f'resume {run_id}')
+
+            controller.execute_task.assert_called_once()
+            self.assertEqual(
+                controller.execute_task.call_args[0][0], 'resumed task content'
+            )
+
+    def test_resume_requires_run_id(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+        controller = _make_controller_mock()
+        tui._chat_controller = controller
+
+        tui.handle_command('resume')
+
+        self.assertIn('requires a run id', output[-1])
+        controller.execute_task.assert_not_called()
+
+    def test_resume_unknown_run_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp, input_fn=lambda _: '', output_fn=output.append
+            )
+            controller = _make_controller_mock()
+            tui._chat_controller = controller
+
+            tui.handle_command('resume no-such-run-id')
+
+            self.assertIn('error:', output[-1])
+            controller.execute_task.assert_not_called()
+
+
+class SessionCostStateTests(unittest.TestCase):
+
+    def test_session_cost_cents_property_delegates_to_controller(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        controller = tui._get_chat_controller()
+        controller.session_state.session_cost_cents = 500.0
+
+        self.assertEqual(tui._session_cost_cents, 500.0)
+
+    def test_session_cost_cents_setter_delegates_to_controller(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        tui._session_cost_cents = 750.0
+
+        controller = tui._get_chat_controller()
+        self.assertEqual(controller.session_state.session_cost_cents, 750.0)
+
+    def test_get_session_cost_cents_uses_controller(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        controller = tui._get_chat_controller()
+        controller.session_state.session_cost_cents = 333.0
+
+        result = tui._get_session_cost_cents()
+        self.assertEqual(result, 333.0)
+
+    def test_run_agent_task_accumulates_cost_in_controller(self) -> None:
+        output: list[str] = []
+        tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
+
+        controller = tui._get_chat_controller()
+        self.assertEqual(controller.session_state.session_cost_cents, 0.0)
+
+        with (
+            patch.object(tui, '_start_file_watcher'),
+            patch.object(tui, '_load_tui_state'),
+            patch.object(tui, '_save_tui_state'),
+            patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
+            patch('teaagent.tui.RunStore') as mock_store_class,
+            patch('teaagent.tui.create_llm_adapter'),
+        ):
+            mock_run.return_value = MagicMock(
+                run_id='cost-test-run',
+                status='completed',
+                iterations=1,
+                tool_calls=0,
+                cost_cents=175.0,
+                input_tokens=100,
+                output_tokens=50,
+                final_answer=MagicMock(content='done'),
+                metadata={},
+                error_message=None,
+            )
+            mock_store = MagicMock()
+            mock_store.show_run.return_value = []
+            mock_store.logger_for_result = MagicMock()
+            mock_store.audit_logger.return_value = MagicMock()
+            mock_store_class.return_value = mock_store
+
+            tui._run_agent_task('cost accum task')
+
+        self.assertEqual(tui._session_cost_cents, 175.0)
+        self.assertEqual(controller.session_state.session_cost_cents, 175.0)
+
+
+if __name__ == '__main__':
+    unittest.main()

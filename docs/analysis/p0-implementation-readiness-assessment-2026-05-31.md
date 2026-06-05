@@ -1,5 +1,11 @@
 # P0 Implementation Readiness Assessment - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The P0 items
+> assessed here were re-scoped into the daily-driver workstreams (P0-A through
+> P0-D) in `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`.
+> For current implementation status, use `docs/daily-driver-current-status.md`
+> and `docs/plans/ticket-plans/index.md`.
+
 **Purpose:** Assess whether the 3 P0 items in backlog-priority.md are ready for implementation
 
 ---

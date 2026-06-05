@@ -1,5 +1,15 @@
 # Comprehensive Repository Audit — 2026-05-29
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> first deep audit pass. Individual findings were absorbed into the risk
+> register (`docs/security/risk-register-and-threat-model-2026-06-02.md`),
+> ticket plans, and the Phase 0 trust repair work. For the latest project-level
+> assessment, use `docs/analysis/project-state-cross-review-fact-check-2026-06-04.md`
+> and `docs/security/phase-0-trust-repair-risk-brief-2026-06-04.md`. The
+> governance closure report at
+> `docs/work-log/phase-0-governance-closure-report-2026-06-04.md` tracks which
+> items were fixed or verified.
+
 **Mode:** reflective-dispatch → reflective-review + reflective-risk gate  
 **Strictness:** L3 (engineering) with L4 notes for WAN-exposed surfaces  
 **Scope:** Full harness — security, concurrency, docs, tests, cost/ops  

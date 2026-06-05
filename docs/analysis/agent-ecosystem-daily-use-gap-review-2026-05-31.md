@@ -1,5 +1,12 @@
 # Agent Ecosystem and Daily-Use Gap Review - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The gap
+> analysis was absorbed into the daily-driver workstreams (P0-A through P3-A)
+> and the competitor survey. For current competitive analysis, use
+> `docs/analysis/competitor-signal-survey-2026-06-04.md`. For active work
+> prioritization, use
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`.
+
 This review asks a product question rather than an implementation question:
 what would TeaAgent still be missing if evaluated as a modern agent-system
 participant and as a daily tool for an end user?

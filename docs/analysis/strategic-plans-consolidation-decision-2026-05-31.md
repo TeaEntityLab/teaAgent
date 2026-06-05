@@ -1,5 +1,12 @@
 # Strategic Plans Consolidation Decision - 2026-05-31
 
+> Supersession note, 2026-06-05: This decision document is historical evidence.
+> The consolidation was completed: active work moved to
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`, strategic
+> docs to `docs/strategy/`, and governance rules to
+> `docs/governance/documentation-operating-model-2026-06-04.md`. The indexed
+> plans remain as archived reference material.
+
 **Purpose:** Decide whether to consolidate strategic plans into backlog-priority.md or keep them as reference documents.
 
 ---

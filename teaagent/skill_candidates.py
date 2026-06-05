@@ -21,6 +21,7 @@ from teaagent.skill_candidate_artifacts import (
 )
 from teaagent.skill_eval import load_eval_report, run_offline_eval, write_eval_report
 from teaagent.skill_eval_dataset import write_default_eval_dataset
+from teaagent.skill_repair import generate_repair_tasks, write_repair_tasks
 from teaagent.skill_review import review_skill
 from teaagent.storage import atomic_write_text
 
@@ -157,6 +158,8 @@ class SkillCandidateStore:
         if report.passed:
             return self.show(candidate_id)
         summary = '; '.join(report.failures[:3]) or 'offline eval failed'
+        tasks = generate_repair_tasks(report, self._dir(candidate_id))
+        write_repair_tasks(self._dir(candidate_id), tasks)
         return self.set_review(candidate_id, status='eval_failed', summary=summary)
 
     def set_review(

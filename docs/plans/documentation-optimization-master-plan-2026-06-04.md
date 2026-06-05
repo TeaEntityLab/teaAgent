@@ -139,7 +139,7 @@ Acceptance criteria:
 
 ### DOCOPT-007: Guarded-Claim Registry
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
@@ -156,9 +156,9 @@ Initial claim types:
 
 Acceptance criteria:
 
-- Registry format documented.
-- At least one prose full-suite claim is guarded.
-- A deliberately stale acceptance/full-suite phrase fails the test.
+- Registry format documented. ✅ (`docs/governance/guarded-claims-registry.md`)
+- At least one prose full-suite claim is guarded. ✅ (`validate_guarded_claims` enforces full-suite failure prose on README, acceptance, daily-driver-current-status, roadmap-status)
+- A deliberately stale acceptance/full-suite phrase fails the test. ✅ (`GUARDED_STALE_FAILURE_PROSE` regex rejects `N failed` with `N > 0`)
 
 ### DOCOPT-008: Module Risk Upward-Link Audit
 

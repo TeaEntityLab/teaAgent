@@ -1,5 +1,10 @@
 # Implementation Plan Overlap Review - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The plan
+> overlap analysis was resolved by the consolidation into
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md` which
+> provides a single prioritized work plan with explicit deduplication.
+
 **Purpose:** Review external implementation_plan.md for overlaps with in-repo governance-hardening.md and other plans.
 
 ---

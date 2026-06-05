@@ -1,5 +1,10 @@
 # Daily-Driver Current Truth Audit
 
+> Supersession note, 2026-06-05: This audit has been superseded by
+> `docs/daily-driver-current-status.md` (updated 2026-06-05) which is the
+> canonical current-truth source. This file remains as historical evidence
+> from the 2026-06-01 assessment.
+
 Date: 2026-06-01
 
 Scope: TUI mode, TUI chat mode, `teaagent chat`, and agent mode. This document is

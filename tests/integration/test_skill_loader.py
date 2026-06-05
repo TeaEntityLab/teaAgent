@@ -75,6 +75,7 @@ def test_load_skills_empty_when_no_project_dir(tmp_path, monkeypatch):
     import teaagent.skill_loader as sl
 
     monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [tmp_path / 'nonexistent_user_skills'])
+    monkeypatch.setattr(sl, '_BUILTIN_SKILL_DIR', tmp_path / 'nonexistent_builtin')
     skills = load_skills(tmp_path)
     assert skills == []
 
@@ -84,6 +85,7 @@ def test_load_skills_skips_dirs_without_skill_md(tmp_path, monkeypatch):
     import teaagent.skill_loader as sl
 
     monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [tmp_path / 'nonexistent_user_skills'])
+    monkeypatch.setattr(sl, '_BUILTIN_SKILL_DIR', tmp_path / 'nonexistent_builtin')
 
     skill_dir = tmp_path / '.opencode' / 'skill'
     (skill_dir / 'no-skill-md').mkdir(parents=True, exist_ok=True)
@@ -157,6 +159,72 @@ def test_preferred_dirs_override_default_discovery_order(tmp_path):
     shared = [s for s in skills if s.name == 'shared']
     assert len(shared) == 1
     assert 'from custom' in shared[0].content
+
+
+def test_get_skill_diagnostics_includes_isolation_status(tmp_path, monkeypatch):
+    """P2-A-002: skill diagnostics must report isolation status."""
+    from teaagent.skill_loader import get_skill_diagnostics
+
+    monkeypatch.setattr(
+        'teaagent.skill_loader._build_isolation_status',
+        lambda: {
+            'available_backends': ['docker'],
+            'wasm_available': False,
+            'docker_available': True,
+            'downgrade_label': 'partial-isolation',
+            'warnings': ['WASM runtime not installed'],
+        },
+    )
+    diagnostics = get_skill_diagnostics(tmp_path)
+    iso = diagnostics.get('isolation_status', {})
+    assert 'available_backends' in iso
+    assert 'downgrade_label' in iso
+    assert 'warnings' in iso
+
+
+def test_isolation_status_native_fallback_warning(tmp_path, monkeypatch):
+    """P2-A-002: when neither WASM nor Docker is available, warn prominently."""
+    from teaagent.skill_loader import get_skill_diagnostics
+
+    monkeypatch.setattr(
+        'teaagent.skill_loader._build_isolation_status',
+        lambda: {
+            'available_backends': [],
+            'wasm_available': False,
+            'docker_available': False,
+            'downgrade_label': 'native-execution-fallback',
+            'warnings': [
+                'Skill isolation degraded: neither WASM (wasmer) nor Docker is available.'
+            ],
+        },
+    )
+    diagnostics = get_skill_diagnostics(tmp_path)
+    iso = diagnostics['isolation_status']
+    assert iso['downgrade_label'] == 'native-execution-fallback'
+    assert len(iso['warnings']) == 1
+    assert 'degraded' in iso['warnings'][0]
+
+
+def test_isolation_status_full_isolation(tmp_path, monkeypatch):
+    """P2-A-002: full-isolation when both WASM and Docker available."""
+    from teaagent.skill_loader import get_skill_diagnostics
+
+    monkeypatch.setattr(
+        'teaagent.skill_loader._build_isolation_status',
+        lambda: {
+            'available_backends': ['wasm', 'docker'],
+            'wasm_available': True,
+            'docker_available': True,
+            'downgrade_label': 'full-isolation',
+            'warnings': [],
+        },
+    )
+    diagnostics = get_skill_diagnostics(tmp_path)
+    iso = diagnostics['isolation_status']
+    assert iso['downgrade_label'] == 'full-isolation'
+    assert iso['wasm_available'] is True
+    assert iso['docker_available'] is True
+    assert iso['warnings'] == []
 
 
 def test_extended_profile_discovers_codex_dir(tmp_path, monkeypatch):

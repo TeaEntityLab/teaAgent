@@ -10,6 +10,11 @@ Safe first command: `teaagent chat` (see "Recommended today" below for safe firs
 Current status and operation guides: see the table below.
 On failure: [Recovery And Continuity Guide](recovery-and-continuity-guide.md).
 
+**Recommended roadmap:** The [complete daily-driver work plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md)
+is the master work plan — it ranks all active work by user value, risk reduction,
+feasibility, strategic leverage, and ROI. Start there when choosing what to implement
+or what to expect next.
+
 ## Recommended today
 
 | Need | Recommended surface | Why |
@@ -23,7 +28,7 @@ On failure: [Recovery And Continuity Guide](recovery-and-continuity-guide.md).
 
 - Approval governance, audit logging, plan-before-write gates, and run summaries remain the strongest parts of the project.
 - `teaagent chat` prints successful task answers and no longer marks successful tasks as failures.
-- `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap.
+- `teaagent chat` `/cost` and `/budget` are wired to real session cost. Budget semantics are explicit: `None` means unlimited, while `0` is a real zero cap. Cost display labels whether the value is actual, estimated, or unavailable.
 - `teaagent chat` `/undo` uses the undo journal and preserves unrelated manual edits.
 - TUI setup, preflight, runs, session listing, and approval commands provide useful operational coverage.
 - TUI `/cost` now accumulates via ChatSessionController (CG-11 fixed).
@@ -31,6 +36,9 @@ On failure: [Recovery And Continuity Guide](recovery-and-continuity-guide.md).
 - Exception swallowing removed from ChatSessionController (CG-13 fixed).
 - Failure-card matching has stopword filtering and relevance threshold (TASK-DD2-012 fixed).
 - Memory and run store corruption warnings surfaced in preflight/daily (TASK-DD2-011 fixed).
+- TUI ask/run/cost/undo/root/resume commands all delegate to ChatSessionController (P0-A-001). Headless command-path tests (24 tests in `test_tui_command_path.py`) verify each command goes through the controller.
+- TUI undo output explicitly labels fallback: "journal undo completed", "checkpoint restore completed", or "nothing to undo" (P0-A-003).
+- TUI help text includes a "TUI Command Reference" section documenting controller-backed command semantics (P0-A-004).
 
 ## Document governance
 
@@ -131,6 +139,9 @@ bug or that TeaAgent has already fixed the class.
 
 | Fix | What changed | Tracking |
 |-----|-------------|----------|
+| Cost display now labels actual vs estimated vs unavailable vs unlimited. | BudgetState includes explicit `cost_state` field; TUI /cost, /budget, run summary, and evidence bundle all use the same 4 cost states consistently. UI never implies actual cost when only an estimate is available. | P0-B-001 through P0-B-003 |
+| Cost state propagated to all surfaces. | RunEvidenceSummary, RunEvidenceBundle, run_summary.py, TUI /cost and /budget commands all show cost_state label with the canonical set: actual, estimated, unavailable, unlimited. | P0-B-001 |
+| Cost accumulation tests added. | `tests/test_tui_cost.py` covers 4 cost states, cost/budget consistency, multi-task accumulation, evidence bundle fields, and run summary cost_state. | P0-B-002 |
 | Path-scoped approval without a path now fails closed. | `p` no longer falls back to a global grant when no path can be extracted, and blank scoped patterns are rejected at the store boundary. | DS-12 / approval UX |
 | Budget semantics are explicit. | `None` means unlimited, `0` is a real zero cap, and the TUI/CLI budget displays reflect that distinction. | DS-13 / budget UX |
 | Explicit `--root` no longer overwritten by saved TUI state. | `_load_tui_state` condition was inverted (checked `'root' not in data` instead of finding saved root). Root restoration now guarded by `_root_explicit` flag, set by CLI entry points via `run_tui()`. | TASK-DD2-002 |
@@ -146,6 +157,7 @@ bug or that TeaAgent has already fixed the class.
 | TUI `session clear` now clears persisted chat messages. | The command empties the active session's `messages` list, saves it, and reports an error when no active session exists. | TUI session UX |
 | Run evidence summaries surfaced in agent mode payload. | `run_evidence` field added to agent run output with commands, tests, approvals, gaps. | — |
 | Updated daily-driver status docs. | Removed stale known issues, added recently-fixed section. | — |
+| TUI/CLI semantic parity (P0-A). | Headless command-path tests (24 tests) verify ask/run/cost/undo/root/resume delegate to ChatSessionController. TUI undo output labels journal vs checkpoint fallback. Help text includes controller-backed command reference. | P0-A-001, P0-A-002, P0-A-003, P0-A-004 |
 
 ## Do not rely on yet
 

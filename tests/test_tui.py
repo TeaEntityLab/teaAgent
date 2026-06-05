@@ -350,7 +350,8 @@ class TUITests(unittest.TestCase):
             # Verify legacy bare approved_call_ids in TUI is empty
             self.assertNotIn('c123', tui.approved_call_ids)
 
-    def test_tui_resume_creates_precise_scoped_approval(self) -> None:
+    def test_tui_resume_does_not_auto_approve_pending(self) -> None:
+        """TUI resume warns about pending approval but does NOT auto-grant it."""
         with tempfile.TemporaryDirectory() as tmp:
             from teaagent.ergonomics.approval_store import ApprovalPresetStore
             from teaagent.run_store import RunStore
@@ -359,7 +360,6 @@ class TUITests(unittest.TestCase):
             run_store = RunStore(tmp)
             run_id = 'run-resume-456'
 
-            # Setup a persisted run with a pending approval using the audit logger
             audit = run_store.audit_logger(run_id)
             audit.record('run_started', run_id, task='ask write file')
 
@@ -378,7 +378,6 @@ class TUITests(unittest.TestCase):
                 annotations={'destructive': True},
             )
 
-            # Build TUI
             tui = TeaAgentTUI(
                 root=tmp,
                 input_fn=lambda _prompt: 'exit',
@@ -388,17 +387,20 @@ class TUITests(unittest.TestCase):
                 ),
             )
 
-            # 2. Trigger TUI resume
             self.assertTrue(tui.handle_command(f'resume {run_id}'))
 
-            # Verify exact scoped approval record exists in the store
+            # No scoped approval should have been created
             approval_store = ApprovalPresetStore(tmp)
             records = approval_store.list_scoped_approvals_for_run(run_id)
-            self.assertEqual(len(records), 1)
-            self.assertEqual(records[0].call_id, 'c456')
-            self.assertEqual(records[0].tool_name, 'workspace_write_file')
+            self.assertEqual(len(records), 0)
 
-            # Verify that legacy bare approved_call_ids in TUI is empty
+            # The output should contain a warning about the pending approval
+            warning_text = 'warning: run run-resume-456 has a pending approval'
+            self.assertTrue(
+                any(warning_text in line for line in output),
+                f'Expected warning in output: {output}',
+            )
+
             self.assertNotIn('c456', tui.approved_call_ids)
 
     def test_tui_clarify_command(self) -> None:
@@ -1037,18 +1039,20 @@ class TUITests(unittest.TestCase):
 
             controller = tui._get_chat_controller()
             controller.session_state.session_cost_cents = 123.0
+            tui._max_cost_budget_cents = 1000  # set cap for deterministic state
 
             tui._handle_cost()
 
-            self.assertEqual(output[-1], 'cost: $1.23')
+            self.assertEqual(output[-1], 'cost: $1.23 (estimated)')
 
     def test_tui_cost_command_falls_back_to_local_when_controller_is_zero(self) -> None:
         """When controller returns 0 but local has accumulated cost, use local."""
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         tui._session_cost_cents = 250.0
+        tui._max_cost_budget_cents = 1000  # set cap for deterministic state
         tui._handle_cost()
-        self.assertEqual(output[-1], 'cost: $2.50')
+        self.assertEqual(output[-1], 'cost: $2.50 (estimated)')
 
     def test_tui_plan_command_generates_clarification(self) -> None:
         """Test TUI plan command generates task clarification."""

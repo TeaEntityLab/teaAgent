@@ -1,6 +1,11 @@
 # AI Coding Agent — Market UX Survey & Community Feedback Synthesis
 # 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The UX
+> survey findings were absorbed into the competitor signal survey
+> (`docs/analysis/competitor-signal-survey-2026-06-04.md`) and the community
+> pain-point survey (`docs/analysis/community-agent-pain-points-survey-2026-06-05.md`).
+
 **Method:** Web research across Reddit (r/LocalLLaMA, r/ChatGPT, r/programming,
 r/MachineLearning), Hacker News, GitHub Discussions, Product Hunt, and
 aggregator sources. Read-only synthesis. All claims are sourced.

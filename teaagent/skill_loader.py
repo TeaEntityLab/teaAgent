@@ -35,6 +35,11 @@ from teaagent.skill_candidate_artifacts import (
     REQUIRED_CANDIDATE_ARTIFACTS,
     validate_candidate_artifacts,
 )
+from teaagent.skill_lifecycle import (
+    SkillLifecycleState,
+    SkillLifecycleTracker,
+    classify_governance_status,
+)
 from teaagent.skill_review import SkillReviewResult, review_skill
 
 _PROJECT_SKILL_DIRS = [
@@ -58,8 +63,27 @@ _EXTENDED_USER_SKILL_DIRS = [
     Path.home() / '.gemini' / 'skills',
     Path.home() / '.hermes' / 'skills',
 ]
+_BUILTIN_SKILL_DIR = Path(__file__).resolve().parent / 'skills' / 'builtin'
 _SKILL_FILENAME = 'SKILL.md'
 _MAX_SKILL_BYTES = 32_768  # 32 KB per skill — guard against runaway includes
+
+
+def _read_activated_skills(root: str | Path) -> frozenset[str]:
+    config_path = Path(root) / '.teaagent' / 'activated-skills.json'
+    if not config_path.is_file():
+        return frozenset()
+    import json
+
+    try:
+        data = json.loads(config_path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return frozenset()
+    if not isinstance(data, dict):
+        return frozenset()
+    names = data.get('activated_skills', [])
+    if not isinstance(names, list):
+        return frozenset()
+    return frozenset(str(n).strip() for n in names if str(n).strip())
 
 
 @dataclass(frozen=True)
@@ -141,6 +165,9 @@ def _discover_skill_dirs(
     for user_dir in user_dirs:
         if user_dir.is_dir():
             result.append(user_dir)
+    # Built-in skills are lowest priority (after project/user/opencode)
+    if _BUILTIN_SKILL_DIR.is_dir():
+        result.append(_BUILTIN_SKILL_DIR)
     return result
 
 
@@ -370,8 +397,8 @@ def load_skills_with_report(
 
 
 def _installed_candidate_artifact_errors(skill_dir: Path) -> list[str]:
-    artifact_names = set(REQUIRED_CANDIDATE_ARTIFACTS) - {_SKILL_FILENAME}
-    present = {path.name for path in skill_dir.iterdir() if path.name in artifact_names}
+    json_artifact_names = set(REQUIRED_CANDIDATE_ARTIFACTS) - {_SKILL_FILENAME, 'REFERENCE.md'}
+    present = {path.name for path in skill_dir.iterdir() if path.name in json_artifact_names}
     if not present:
         return []
     return validate_candidate_artifacts(skill_dir)
@@ -418,8 +445,9 @@ class SkillLoadedRecord:
     estimated_tokens: int
     reason: str
     governance_status: str = (
-        'unknown'  # 'candidate_installed', 'direct_write', 'unknown'
+        'unknown'  # candidate_installed | direct_write | compatibility_path | unmanaged
     )
+    lifecycle_state: str = 'unknown'
 
 
 @dataclass(frozen=True)
@@ -456,6 +484,7 @@ class SkillActivationExplain:
                     'estimated_tokens': item.estimated_tokens,
                     'reason': item.reason,
                     'governance_status': item.governance_status,
+                    'lifecycle_state': item.lifecycle_state,
                 }
                 for item in self.loaded
             ],
@@ -541,6 +570,7 @@ def explain_skill_activation(
     extra_skill_dirs: Optional[list[Path]] = None,
     preferred_dirs: Optional[list[str | Path]] = None,
     source_profile: SkillSourceProfile = 'default',
+    lifecycle_tracker: Optional[SkillLifecycleTracker] = None,
 ) -> SkillActivationExplain:
     """Explain which skills load, which are shadowed, and token contribution."""
     skill_dirs = discover_skill_search_dirs(
@@ -551,6 +581,14 @@ def explain_skill_activation(
     )
     by_name = _discover_skill_name_paths(skill_dirs)
     shadowed = _shadow_records(by_name)
+
+    if lifecycle_tracker is not None:
+        for name, paths in by_name.items():
+            lifecycle_tracker.set_state(
+                name,
+                SkillLifecycleState.DISCOVERED.value,
+                source_path=str(paths[0][0]) if paths else '',
+            )
 
     if skill_prompt_mode == 'index_only':
         index = discover_skill_index(
@@ -580,27 +618,34 @@ def explain_skill_activation(
         )
 
     if selected_names is not None and not selected_names:
-        report = load_skills_with_report(
-            root,
-            extra_skill_dirs=extra_skill_dirs,
-            preferred_dirs=preferred_dirs,
-            source_profile=source_profile,
-            selected_names=frozenset(),
-        )
-        return SkillActivationExplain(
-            selection_mode='none',
-            selected_names=(),
-            loaded=(),
-            shadowed=shadowed,
-            skipped=tuple(report.skipped),
-            warnings=tuple(report.warnings),
-            searched_dirs=tuple(report.searched_dirs),
-            estimated_skill_tokens=0,
-            index_count=0,
-            write_targets={},
-        )
+        activated = _read_activated_skills(root)
+        if activated:
+            selected_names = activated
+        else:
+            report = load_skills_with_report(
+                root,
+                extra_skill_dirs=extra_skill_dirs,
+                preferred_dirs=preferred_dirs,
+                source_profile=source_profile,
+                selected_names=frozenset(),
+            )
+            return SkillActivationExplain(
+                selection_mode='none',
+                selected_names=(),
+                loaded=(),
+                shadowed=shadowed,
+                skipped=tuple(report.skipped),
+                warnings=tuple(report.warnings),
+                searched_dirs=tuple(report.searched_dirs),
+                estimated_skill_tokens=0,
+                index_count=0,
+                write_targets={},
+            )
 
     if selected_names is not None:
+        activated = _read_activated_skills(root)
+        if activated:
+            selected_names = selected_names | activated
         report = load_skills_with_report(
             root,
             extra_skill_dirs=extra_skill_dirs,
@@ -622,29 +667,27 @@ def explain_skill_activation(
         names = ()
 
     loaded_rows: list[SkillLoadedRecord] = []
+    root_path = Path(root).resolve()
     for skill in report.skills:
         source_dir = skill.path.parent.parent
-        # Candidate-installed skills keep provenance beside SKILL.md. A missing
-        # bundle is still useful telemetry: it means the skill came from direct
-        # directory discovery rather than the reviewed candidate workflow.
         skill_dir = skill.path.parent
-        provenance_path = skill_dir / 'provenance.json'
-        governance_status = 'direct_write'
-        if provenance_path.is_file():
-            try:
-                import json
-
-                provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
-                if provenance.get('installed_via') == 'candidate' or (
-                    provenance.get('install_scope') in {'project', 'personal'}
-                    and all(
-                        (skill_dir / name).is_file()
-                        for name in REQUIRED_CANDIDATE_ARTIFACTS
-                    )
-                ):
-                    governance_status = 'candidate_installed'
-            except (OSError, json.JSONDecodeError):
-                pass
+        governance_status = classify_governance_status(
+            skill_dir=skill_dir,
+            source_dir=source_dir,
+            root=root_path,
+        )
+        lifecycle_state = SkillLifecycleState.ACTIVATED.value
+        if lifecycle_tracker is not None:
+            lifecycle_tracker.transition(
+                skill.name,
+                SkillLifecycleState.ACTIVATED.value,
+                reason=(
+                    f'selected explicitly (--skill {skill.name})'
+                    if mode == 'selected'
+                    else 'first match in search order (eager load)'
+                ),
+                source_path=str(skill.path),
+            )
         loaded_rows.append(
             SkillLoadedRecord(
                 name=skill.name,
@@ -657,6 +700,7 @@ def explain_skill_activation(
                     else 'first match in search order (eager load)'
                 ),
                 governance_status=governance_status,
+                lifecycle_state=lifecycle_state,
             )
         )
     total = estimate_skill_prompt_tokens(report.skills)
@@ -680,3 +724,322 @@ def explain_skill_activation(
         index_count=0,
         write_targets=write_targets,
     )
+
+
+def get_skill_diagnostics(root: str | Path) -> dict:
+    """Return a comprehensive diagnostics dictionary for all skill subsystems.
+
+    Aggregates data from skill activation, candidates, long-result artifacts,
+    and output validation into a single structured dict suitable for TUI panels
+    and slash-command handlers.
+
+    Parameters
+    ----------
+    root:
+        Workspace root directory.
+
+    Returns
+    -------
+    dict
+        Keys: ``loaded_skills``, ``active_skill``, ``shadowed_skills``,
+        ``skipped``, ``warnings``, ``searched_dirs``, ``governance_status``,
+        ``candidates``, ``candidate_count``, ``long_result_artifacts``,
+        ``output_verification``, ``isolation_status``.
+    """
+    root_path = Path(root).resolve()
+
+    # ── isolation status (P2-A-002) ──────────────────────────────────────
+    isolation_status = _build_isolation_status()
+
+    # ── skill activation ──────────────────────────────────────────────────
+    activation = explain_skill_activation(
+        root_path,
+        selected_names=frozenset({'__diagnostics_probe__'}),
+    )
+
+    loaded_skills: list[dict] = []
+    governance_status: dict[str, str] = {}
+    for rec in activation.loaded:
+        loaded_skills.append(
+            {
+                'name': rec.name,
+                'path': str(rec.path),
+                'source_dir': str(rec.source_dir),
+                'governance_status': rec.governance_status,
+                'lifecycle_state': rec.lifecycle_state,
+                'reason': rec.reason,
+                'estimated_tokens': rec.estimated_tokens,
+            }
+        )
+        governance_status[rec.name] = rec.governance_status
+
+    # Determine "active" skill — the first loaded skill, if any.
+    active_skill: dict | None = loaded_skills[0] if loaded_skills else None
+
+    shadowed_skills: list[dict] = [
+        {
+            'name': s.name,
+            'winner_path': str(s.winner_path),
+            'shadowed_path': str(s.shadowed_path),
+            'winner_source': s.winner_source,
+            'shadowed_source': s.shadowed_source,
+        }
+        for s in activation.shadowed
+    ]
+
+    skipped: list[dict] = [
+        {
+            'name': s.skill_name,
+            'path': str(s.skill_path),
+            'reason': s.reason,
+        }
+        for s in activation.skipped
+    ]
+
+    warnings: list[dict] = [
+        {
+            'name': w.skill_name,
+            'path': str(w.skill_path),
+            'message': w.message,
+        }
+        for w in activation.warnings
+    ]
+
+    # ── skill candidates ──────────────────────────────────────────────────
+    from teaagent.skill_candidates import SkillCandidateStore
+
+    candidate_store = SkillCandidateStore(root_path, readonly=True)
+    try:
+        candidates_raw = candidate_store.list()
+    except Exception:
+        candidates_raw = []
+
+    candidates: list[dict] = [
+        {
+            'candidate_id': c.candidate_id,
+            'name': c.name,
+            'description': c.description,
+            'status': c.status,
+            'source_run_id': c.source_run_id,
+            'review_summary': c.review_summary,
+        }
+        for c in candidates_raw
+    ]
+
+    # ── long-result artifacts ─────────────────────────────────────────────
+    artifact_dir = root_path / '.teaagent' / 'artifacts' / 'tool-results'
+    long_result_artifacts: dict[str, dict] = {}
+    if artifact_dir.is_dir():
+        for run_dir in sorted(artifact_dir.iterdir()):
+            if not run_dir.is_dir():
+                continue
+            run_id = run_dir.name
+            try:
+                files = sorted(
+                    f for f in run_dir.iterdir() if f.is_file()
+                )
+            except OSError:
+                files = []
+            long_result_artifacts[run_id] = {
+                'run_id': run_id,
+                'artifact_count': len(files),
+                'artifact_paths': [
+                    str(f.relative_to(root_path)) for f in files
+                ],
+            }
+
+    # ── output verification ───────────────────────────────────────────────
+    # Report which validators are registered, not their results on
+    # inspected files (no model-call → safe to run).
+    output_verification: dict = {
+        'validators_available': [
+            'FileExistsValidator',
+            'SourceUrlValidator',
+            'KnownTitleValidator',
+            'CategoryValidator',
+            'PromptInjectionValidator',
+        ],
+        'status': 'available' if bool(loaded_skills) else 'no_skills_loaded',
+    }
+
+    return {
+        'loaded_skills': loaded_skills,
+        'active_skill': active_skill,
+        'shadowed_skills': shadowed_skills,
+        'skipped': skipped,
+        'warnings': warnings,
+        'searched_dirs': [str(d) for d in activation.searched_dirs],
+        'governance_status': governance_status,
+        'candidates': candidates,
+        'candidate_count': len(candidates),
+        'long_result_artifacts': long_result_artifacts,
+        'output_verification': output_verification,
+        'isolation_status': isolation_status,
+    }
+
+
+def _build_isolation_status() -> dict:
+    """Check WASM and Docker availability for skill isolation diagnostics.
+
+    Returns a dict with ``available_backends``, ``warnings``, and a
+    ``downgrade_label`` that the TUI can render prominently when no
+    container/VM isolation is available.
+    """
+    wasm_ok = False
+    docker_ok = False
+
+    try:
+        from teaagent.wasm_runtime import is_wasm_available
+
+        wasm_ok = is_wasm_available()
+    except ImportError:
+        pass
+
+    try:
+        from teaagent.mcp_trust import is_docker_available
+
+        docker_ok = is_docker_available()
+    except ImportError:
+        pass
+
+    available = []
+    if wasm_ok:
+        available.append('wasm')
+    if docker_ok:
+        available.append('docker')
+
+    warnings = []
+    if not wasm_ok and not docker_ok:
+        warnings.append(
+            'Skill isolation degraded: neither WASM (wasmer) nor Docker is available. '
+            'Skills will execute natively on the host with subprocess isolation only — '
+            'no OS-level sandboxing is active.'
+        )
+    elif not wasm_ok:
+        warnings.append('WASM runtime (wasmer) not installed; WASM skills will fall back to native execution.')
+    elif not docker_ok:
+        warnings.append('Docker not available; container-isolated skills will fall back to native execution.')
+
+    return {
+        'available_backends': available,
+        'wasm_available': wasm_ok,
+        'docker_available': docker_ok,
+        'downgrade_label': (
+            'native-execution-fallback'
+            if not wasm_ok and not docker_ok
+            else 'partial-isolation'
+            if not (wasm_ok and docker_ok)
+            else 'full-isolation'
+        ),
+        'warnings': warnings,
+    }
+
+
+def get_skill_health(root: str | Path) -> dict:
+    """Return a skill ecosystem health dashboard (DSK-P2-003).
+
+    Builds on ``get_skill_diagnostics()`` to produce structured JSON with:
+    total_skills, governance_distribution, shadowed_count, candidate_summary,
+    stale_candidates, failed_evals, warnings, and skipped.
+
+    Parameters
+    ----------
+    root:
+        Workspace root directory.
+
+    Returns
+    -------
+    dict
+        Keys: ``total_skills``, ``loaded_skills_count``,
+        ``governance_distribution``, ``shadowed_count``,
+        ``candidate_summary``, ``stale_candidates``, ``failed_evals``,
+        ``warnings``, ``skipped``.
+    """
+    from datetime import datetime, timezone
+
+    from teaagent.skill_candidates import SkillCandidateStore
+    from teaagent.skill_eval import load_eval_report
+
+    root_path = Path(root).resolve()
+
+    diagnostics = get_skill_diagnostics(root_path)
+
+    # ── governance distribution ────────────────────────────────────────
+    gov_statuses: dict[str, str] = diagnostics.get('governance_status', {})
+    gov_dist = {
+        'direct_write': 0,
+        'candidate_installed': 0,
+        'compatibility_path': 0,
+        'unmanaged': 0,
+    }
+    for status in gov_statuses.values():
+        if status in gov_dist:
+            gov_dist[status] += 1
+
+    # ── total skill index count ─────────────────────────────────────────
+    total_skills = len(
+        discover_skill_index(root_path)
+    )
+
+    # ── candidates: summary, stale, failed evals ────────────────────────
+    store = SkillCandidateStore(root_path, readonly=True)
+    try:
+        candidates = store.list()
+    except Exception:
+        candidates = []
+
+    now = datetime.now(timezone.utc)
+    stale: list[dict] = []
+    failed_evals: list[dict] = []
+    candidate_summary: dict[str, int] = {
+        'total': len(candidates),
+        'proposed': 0,
+        'eval_failed': 0,
+        'review_failed': 0,
+        'review_passed': 0,
+        'installed': 0,
+    }
+
+    for c in candidates:
+        if c.status in candidate_summary:
+            candidate_summary[c.status] += 1
+        # Stale detection: not installed + older than 7 days
+        try:
+            updated = datetime.fromisoformat(c.updated_at)
+        except (ValueError, TypeError):
+            updated = now
+        if c.status not in ('installed',) and (now - updated).days >= 7:
+            stale.append(
+                {
+                    'name': c.name,
+                    'candidate_id': c.candidate_id,
+                    'status': c.status,
+                    'updated_at': c.updated_at,
+                }
+            )
+        # Failed eval detail loading
+        if c.status == 'eval_failed':
+            candidate_dir = store.candidate_dir(c.candidate_id)
+            try:
+                report = load_eval_report(candidate_dir)
+            except Exception:
+                report = None
+            failed_evals.append(
+                {
+                    'name': c.name,
+                    'candidate_id': c.candidate_id,
+                    'failures': list(report.failures) if report and report.failures else [],
+                }
+            )
+
+    return {
+        'total_skills': total_skills,
+        'loaded_skills_count': len(diagnostics.get('loaded_skills', [])),
+        'governance_distribution': gov_dist,
+        'shadowed_count': len(diagnostics.get('shadowed_skills', [])),
+        'candidate_summary': candidate_summary,
+        'stale_candidates': stale,
+        'failed_evals': failed_evals,
+        'warnings': diagnostics.get('warnings', []),
+        'skipped': diagnostics.get('skipped', []),
+    }

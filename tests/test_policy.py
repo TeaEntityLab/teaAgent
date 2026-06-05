@@ -1075,5 +1075,131 @@ class MultiSigQuorumTests(unittest.TestCase):
         self.assertFalse(result)
 
 
+    # P0-D-001: Workspace root containment
+    def test_workspace_root_allows_path_within_root(self) -> None:
+        """Path arguments within workspace root are allowed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.ALLOW,
+                workspace_root=tmp,
+            )
+            # Path within root must be allowed
+            policy.assert_allowed(
+                tool_name='workspace_write_file',
+                call_id='c1',
+                destructive=True,
+                arguments={'path': 'src/test.txt'},
+            )
+
+    def test_workspace_root_blocks_path_escaping_via_parent_traversal(
+        self,
+    ) -> None:
+        """Path arguments escaping workspace via ../ are blocked."""
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                workspace_root=tmp,
+            )
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_write_file',
+                    call_id='c1',
+                    destructive=True,
+                    arguments={'path': '../etc/passwd'},
+                )
+            self.assertIn('outside workspace root', str(ctx.exception))
+
+    def test_workspace_root_blocks_absolute_path_outside_root(self) -> None:
+        """Absolute paths outside workspace root are blocked."""
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                workspace_root=tmp,
+            )
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_write_file',
+                    call_id='c1',
+                    destructive=True,
+                    arguments={'path': '/etc/passwd'},
+                )
+            self.assertIn('outside workspace root', str(ctx.exception))
+
+    def test_workspace_root_does_not_block_non_path_tools(self) -> None:
+        """Non-path tools (e.g. shell inspect) are not blocked by root check."""
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = ApprovalPolicy(
+                permission_mode=PermissionMode.PROMPT,
+                workspace_root=tmp,
+            )
+            # workspace_run_shell_inspect has no 'path' argument — should not trigger root check
+            with self.assertRaises(ToolPermissionError) as ctx:
+                policy.assert_allowed(
+                    tool_name='workspace_run_shell_inspect',
+                    call_id='c1',
+                    destructive=True,
+                    arguments={'command': 'ls'},
+                )
+            # Should fail because no JIT/prompt handler, not because of root containment
+            self.assertNotIn('outside workspace root', str(ctx.exception))
+
+
+class EmptyPathScopeTests(unittest.TestCase):
+    """P0-D-002: Empty path grants are rejected or clearly classified."""
+
+    def test_empty_path_globs_rejected_in_grant(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            with self.assertRaises(ValueError) as ctx:
+                store.grant(
+                    tool_name='workspace_write_file',
+                    scope='always',
+                    path_globs=[''],
+                )
+            self.assertIn('non-empty pattern', str(ctx.exception))
+
+    def test_whitespace_only_path_globs_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            with self.assertRaises(ValueError) as ctx:
+                store.grant(
+                    tool_name='workspace_write_file',
+                    scope='always',
+                    path_globs=['   ', '\t'],
+                )
+            self.assertIn('non-empty pattern', str(ctx.exception))
+
+    def test_root_path_globs_dot_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            grant = store.grant(
+                tool_name='workspace_write_file',
+                scope='always',
+                path_globs=['.', 'src/**'],
+            )
+            self.assertIsNotNone(grant)
+            self.assertIn('.', grant.path_globs)
+            self.assertIn('src/**', grant.path_globs)
+
+    def test_root_path_globs_star_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from teaagent.ergonomics.approval_store import ApprovalPresetStore
+
+            store = ApprovalPresetStore(tmpdir)
+            grant = store.grant(
+                tool_name='workspace_write_file',
+                scope='always',
+                path_globs=['*'],
+            )
+            self.assertIsNotNone(grant)
+            self.assertIn('*', grant.path_globs)
+
+
 if __name__ == '__main__':
     unittest.main()

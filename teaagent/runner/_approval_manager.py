@@ -105,6 +105,8 @@ class RunnerApprovalCoordinator:
                 run_id,
                 call_id=approval_request.call_id,
                 tool_name=approval_request.tool_name,
+                authority_type='jit_prompt',
+                approved_by='user',
             )
             return True
         else:
@@ -133,6 +135,7 @@ class RunnerApprovalCoordinator:
         blocked_payload.pop('run_id', None)
         if reason_code is not None:
             blocked_payload['reason_code'] = reason_code
+        blocked_payload['authority_type'] = reason_code or 'policy_blocked'
         audit.record(
             'tool_call_blocked',
             run_id,

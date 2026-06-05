@@ -26,20 +26,20 @@ If a feature does not improve one of those answers, defer it until Phase 1.
 
 | ID | Priority | State | Pain addressed | Work item | Owner surface | Acceptance criteria |
 | --- | --- | --- | --- | --- | --- | --- |
-| CPP-P0-001 | P0 | Proposed | Routing opacity, cost surprise | Add route evidence panel to run summary. | model routing / run evidence | Summary shows requested/resolved model, role, reason, fallback, and cost. |
-| CPP-P0-002 | P0 | Proposed | Long-task drift | Add goal checkpoint receipt. | runner / run store | Long task records objective, accepted plan/spec, current task, blockers, and next gate. |
-| CPP-P0-003 | P0 | Proposed | Memory pollution | Add memory write quarantine rule for agent-created project memory. | memory / approval | Agent-created durable project memory is pending review by default. |
-| CPP-P0-004 | P0 | Proposed | Review cost/noise | Add review artifact minimum schema. | review / subagents | Review cannot close without evidence paths, findings state, and residual risk. |
-| CPP-P0-005 | P0 | Proposed | Hook/permission confusion | Add approval authority receipt. | approval / audit | Every approved risky action records approving mechanism and exact scope. |
-| CPP-P0-006 | P0 | Proposed | Skill/MCP supply chain | Add dynamic asset provenance summary. | skills / MCP / audit | Run evidence shows loaded skills/MCP servers, source path, trust state, and revocation status. |
-| CPP-P0-007 | P0 | Proposed | Fake success | Add proof-of-use requirement for skill-backed outputs. | skills / runner | A skill-backed final answer links source artifact, command/tool call, output hash, and verification. |
-| CPP-P0-008 | P0 | Proposed | Overeager edits | Add intent-drift pre-write check for high-risk runs. | plan gate / policy | New files or broad edits outside accepted scope require explicit gate packet. |
-| CPP-P1-001 | P1 | Proposed | Review cost/noise | Add review repeat suppression. | review / evidence | Re-review identifies repeated findings and marks superseded or still-active state. |
-| CPP-P1-002 | P1 | Proposed | Cost surprise | Add phase budget thresholds. | budget / model routing | Plan, execute, review, and synthesis phases can warn or stop separately. |
-| CPP-P1-003 | P1 | Proposed | Context rot | Add context pressure score. | context bus / TUI | TUI shows stale files, token pressure, large artifacts, memory count, and compaction risk. |
-| CPP-P1-004 | P1 | Proposed | Memory poisoning | Add untrusted-source memory tests. | tests / memory | Web/tool/MCP output cannot become project memory without review. |
-| CPP-P1-005 | P1 | Proposed | Spec process overhead | Add risk-adaptive spec exemption UX. | plan gate / CLI | Low-risk tasks can proceed with explicit exemption receipt and no heavy spec ceremony. |
-| CPP-P2-001 | P2 | Proposed | Cross-agent observability | Add control-plane cockpit. | TUI | One panel summarizes route, memory, review, skill, spec, goal, approval, and cost. |
+| CPP-P0-001 | P0 | Complete | Routing opacity, cost surprise | Add route evidence panel to run summary. | model routing / run evidence | Summary shows requested/resolved model, role, reason, fallback, and cost. |
+| CPP-P0-002 | P0 | Complete | Long-task drift | Add goal checkpoint receipt. | runner / run store | Long task records objective, accepted plan/spec, current task, blockers, and next gate. |
+| CPP-P0-003 | P0 | Complete | Memory pollution | Add memory write quarantine rule for agent-created project memory. | memory / approval | Agent-created durable project memory is pending review by default. |
+| CPP-P0-004 | P0 | Complete | Review cost/noise | Add review artifact minimum schema. | review / subagents | Review cannot close without evidence paths, findings state, and residual risk. |
+| CPP-P0-005 | P0 | Complete | Hook/permission confusion | Add approval authority receipt. | approval / audit | Every approved risky action records approving mechanism and exact scope. |
+| CPP-P0-006 | P0 | Complete | Skill/MCP supply chain | Add dynamic asset provenance summary. | skills / MCP / audit | Run evidence shows loaded skills/MCP servers, source path, trust state, and revocation status. |
+| CPP-P0-007 | P0 | Complete | Fake success | Add proof-of-use requirement for skill-backed outputs. | skills / runner | A skill-backed final answer links source artifact, command/tool call, output hash, and verification. |
+| CPP-P0-008 | P0 | Complete | Overeager edits | Add intent-drift pre-write check for high-risk runs. | plan gate / policy | New files or broad edits outside accepted scope require explicit gate packet. |
+| CPP-P1-001 | P1 | Complete | Review cost/noise | Add review repeat suppression. | review / evidence | Re-review identifies repeated findings and marks superseded or still-active state. |
+| CPP-P1-002 | P1 | Complete | Cost surprise | Add phase budget thresholds. | budget / model routing | Plan, execute, review, and synthesis phases can warn or stop separately. |
+| CPP-P1-003 | P1 | Complete | Context rot | Add context pressure score. | context bus / TUI | TUI shows stale files, token pressure, large artifacts, memory count, and compaction risk. |
+| CPP-P1-004 | P1 | Complete | Memory poisoning | Add untrusted-source memory tests. | tests / memory | Web/tool/MCP output cannot become project memory without review. |
+| CPP-P1-005 | P1 | Complete | Spec process overhead | Add risk-adaptive spec exemption UX. | plan gate / CLI | Low-risk tasks can proceed with explicit exemption receipt and no heavy spec ceremony. |
+| CPP-P2-001 | P2 | Complete | Cross-agent observability | Add control-plane cockpit. | TUI | One panel summarizes route, memory, review, skill, spec, goal, approval, and cost. |
 
 ## Priority Rationale
 

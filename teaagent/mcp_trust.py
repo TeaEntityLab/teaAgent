@@ -162,11 +162,19 @@ def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustP
         tool_name: str, arguments: dict[str, Any]
     ) -> dict[str, Any] | None:
         current_policy = load_mcp_trust_policy(root)
+
+        # P2-A-001: Enforce trust expiry at call time for every server,
+        # regardless of whether the tool appears in allow/deny lists.
         for server_name, server in current_policy.servers.items():
-            if (
-                tool_name in server.allowed_tools or tool_name in server.denied_tools
-            ) and is_server_trust_expired(server):
-                raise HookError(f"Trust for MCP server '{server_name}' has expired")
+            if not server.trusted:
+                raise HookError(
+                    f"MCP server '{server_name}' is not trusted"
+                )
+            if is_server_trust_expired(server):
+                raise HookError(
+                    f"Trust for MCP server '{server_name}' has expired "
+                    f"(expired at {server.expires_at})"
+                )
 
         allowed, denied = merged_tool_filters(current_policy)
         if denied and tool_name in denied:
@@ -266,6 +274,52 @@ def revoke_server_trust(
         # Remove server entry
         del policy.servers[server]
     return policy
+
+
+def check_mcp_server_trust_at_call_time(
+    root: str | Path,
+    tool_name: str,
+    server_name: str,
+) -> None:
+    """Enforce MCP trust expiry at call time — rejects expired trust entries.
+
+    This is the call-time guard that MUST be invoked before executing any
+    MCP tool.  It inspects the persisted trust policy and raises
+    ``HookError`` when the server's trust window has elapsed, regardless
+    of whether the tool appears in allow/deny lists.
+
+    Raises:
+        HookError: If the server trust has expired or the server is not trusted.
+    """
+    policy = load_mcp_trust_policy(root)
+    server = policy.servers.get(server_name)
+    if server is None:
+        # Unknown server — let the existing tool-filter hook decide.
+        return
+    if not server.trusted:
+        raise HookError(
+            f"MCP server '{server_name}' is not trusted. "
+            f"Use 'teaagent mcp-trust trust --server {server_name}' to grant trust."
+        )
+    if is_server_trust_expired(server):
+        raise HookError(
+            f"Trust for MCP server '{server_name}' has expired "
+            f"(expired at {server.expires_at}). "
+            f"Use 'teaagent mcp-trust trust --server {server_name}' to renew."
+        )
+
+
+def is_docker_available() -> bool:
+    """Check whether Docker is installed and reachable."""
+    import subprocess
+
+    result = subprocess.run(
+        ['docker', '--version'],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
 
 
 def check_unknown_tool_prompt(

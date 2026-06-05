@@ -1,5 +1,10 @@
 # P0 Acceptance Test Gaps - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The gaps
+> documented here were addressed in the Phase 0 trust repair work. For current
+> acceptance coverage, use `docs/acceptance.md`. For implementation status,
+> use `docs/plans/ticket-plans/index.md`.
+
 **Purpose:** Document P0 acceptance test gaps identified in agent-ecosystem roadmap cross-reference
 
 ---

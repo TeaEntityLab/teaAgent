@@ -1,5 +1,12 @@
 # Governance Hardening Plan (in-repo)
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> earliest governance pass (2026-05-28). The governance loops were hardened in
+> Phase 0 work. For current governance rules, use
+> `docs/governance/documentation-operating-model-2026-06-04.md` and
+> `docs/governance/README.md`. For closure evidence, use
+> `docs/work-log/phase-0-governance-closure-report-2026-06-04.md`.
+
 Last updated: 2026-05-28 (Phase 4–6 verification)
 
 ## Goal

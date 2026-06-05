@@ -1,5 +1,12 @@
 # Comprehensive Plan — All Aspects — 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> Phase 0 audit pass. For current work prioritization, use
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md` which
+> consolidates all active workstreams with risk, feasibility, and ROI scoring.
+> Individual audit findings from this document were absorbed into the risk
+> register, ticket plans, and governance closure report.
+
 **Purpose:** Master plan index consolidating all open risks across six
 dimensions: Security, Reliability, Maintainability, Test Coverage,
 Documentation, and Operational. Each plan is self-contained with acceptance

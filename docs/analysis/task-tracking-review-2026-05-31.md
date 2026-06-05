@@ -1,5 +1,9 @@
 # Task Tracking Review - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. Task
+> tracking is now maintained via `docs/plans/ticket-plans/index.md` and
+> the work-log ledger. For current task status, use the ticket index.
+
 **Purpose:** Review all task-tracking markdown files across the project to identify inconsistencies, completion status, and action items.
 
 ---

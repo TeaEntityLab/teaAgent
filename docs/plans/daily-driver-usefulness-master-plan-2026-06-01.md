@@ -1,5 +1,11 @@
 # Daily-Driver Usefulness Master Plan
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> first daily-driver pass (2026-06-01). The work was restructured and
+> reprioritized in
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`. For
+> current status, use `docs/daily-driver-current-status.md`.
+
 Date: 2026-06-01
 
 Goal: make TeaAgent reasonably useful for daily TUI, TUI chat, CLI chat, and agent-mode

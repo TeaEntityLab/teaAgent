@@ -1,6 +1,11 @@
 # Daily-Driver Execution Readiness
 # 2026-06-01
 
+> Supersession note, 2026-06-05: This file is historical evidence. The tickets
+> described here were implemented and shipped. For current implementation
+> status, use `docs/daily-driver-current-status.md` and
+> `docs/plans/ticket-plans/index.md`.
+
 **Status: ✅ COMPLETE** - All tickets implemented and shipped (2026-05-31 session)
 
 **Purpose.** Make the backlog *actually executable* by a developer (or an agent) without

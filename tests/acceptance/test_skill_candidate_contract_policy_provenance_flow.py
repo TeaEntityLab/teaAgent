@@ -18,6 +18,20 @@ from teaagent.skill_candidate_artifacts import (
 from teaagent.skill_loader import load_skills_with_report
 
 
+def _approve_install_gate(tmp_path: Path, candidate_id: str) -> str:
+    """Create and approve a review gate for skill install, returning gate_id."""
+    from teaagent.governance.plan_gate import approve_gate, require_review_gate
+
+    gate = require_review_gate(
+        target_type='skill_install',
+        target_name=candidate_id,
+        risk_reason='test install',
+        workspace_root=str(tmp_path),
+    )
+    approve_gate(gate.gate_id, approver='test', workspace_root=str(tmp_path))
+    return gate.gate_id
+
+
 def _propose_candidate(tmp_path: Path) -> str:
     run_out = io.StringIO()
     with (
@@ -125,6 +139,7 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
         '# Instructions\nChanged after review.\n',
         encoding='utf-8',
     )
+    gate_id = _approve_install_gate(tmp_path, candidate_id)
     install_out = io.StringIO()
     with redirect_stdout(install_out):
         tampered_code = main(
@@ -135,6 +150,8 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
                 candidate_id,
                 '--scope',
                 'project',
+                '--approved-gate-id',
+                gate_id,
                 '--root',
                 str(tmp_path),
             ]
@@ -149,6 +166,7 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
         encoding='utf-8',
     )
     (candidate_dir / 'interaction_policy.json').unlink()
+    gate_id = _approve_install_gate(tmp_path, candidate_id)
     install_out = io.StringIO()
     with redirect_stdout(install_out):
         blocked_code = main(
@@ -159,6 +177,8 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
                 candidate_id,
                 '--scope',
                 'project',
+                '--approved-gate-id',
+                gate_id,
                 '--root',
                 str(tmp_path),
             ]
@@ -176,6 +196,7 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
         created_at='2026-05-24T00:00:00Z',
     )
 
+    gate_id = _approve_install_gate(tmp_path, candidate_id)
     install_out = io.StringIO()
     with redirect_stdout(install_out):
         assert (
@@ -187,6 +208,8 @@ def test_skill_candidate_contract_policy_provenance_flow(tmp_path: Path) -> None
                     candidate_id,
                     '--scope',
                     'project',
+                    '--approved-gate-id',
+                    gate_id,
                     '--root',
                     str(tmp_path),
                 ]
@@ -253,8 +276,9 @@ def test_personal_skill_candidate_install_requires_attestation(
             ]
         )
     assert blocked_code == 1
-    assert 'i-attest-personal-install' in blocked_out.getvalue()
+    assert 'approved-gate-id' in blocked_out.getvalue()
 
+    gate_id = _approve_install_gate(tmp_path, candidate_id)
     install_out = io.StringIO()
     with redirect_stdout(install_out):
         assert (
@@ -267,6 +291,8 @@ def test_personal_skill_candidate_install_requires_attestation(
                     '--scope',
                     'personal',
                     '--i-attest-personal-install',
+                    '--approved-gate-id',
+                    gate_id,
                     '--root',
                     str(tmp_path),
                 ]

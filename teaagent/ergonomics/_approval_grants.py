@@ -48,9 +48,21 @@ class ApprovalGrant:
             payload['path_globs'] = list(self.path_globs)
         if self.command_prefixes:
             payload['command_prefixes'] = list(self.command_prefixes)
-        if self.expires_at:
-            payload['expires_at'] = self.expires_at
+        payload['expires_at'] = self.expires_at
         return payload
+
+    @property
+    def path_scope_label(self) -> str:
+        """Classify path scope for audit and cockpit surfaces.
+
+        Returns a human-readable label that distinguishes unrestricted
+        grants (empty path_globs) from explicitly scoped ones. This
+        prevents ambiguous path grants from silently becoming broad
+        approval.
+        """
+        if not self.path_globs:
+            return 'unrestricted (all paths)'
+        return f'scoped: {", ".join(self.path_globs)}'
 
 
 @dataclass(frozen=True)

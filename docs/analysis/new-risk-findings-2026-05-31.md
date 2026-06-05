@@ -1,5 +1,12 @@
 # New Risk Findings — 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. All findings
+> were absorbed into the risk register
+> (`docs/security/risk-register-and-threat-model-2026-06-02.md`) and tracked
+> through the Phase 0 trust repair work. For current risk status, use the risk
+> register. For closure evidence, use
+> `docs/work-log/phase-0-governance-closure-report-2026-06-04.md`.
+
 **Method:** cx-cli semantic navigation + grep pattern sweep across 312 source
 files + 158 MD docs. Read-only audit. No code changes.
 

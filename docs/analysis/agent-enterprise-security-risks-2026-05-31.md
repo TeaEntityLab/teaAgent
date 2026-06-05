@@ -1,6 +1,12 @@
 # Enterprise Security Risk Landscape — AI Coding Agents
 # 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The security
+> risks described here were absorbed into the risk register
+> (`docs/security/risk-register-and-threat-model-2026-06-02.md`) and the
+> Phase 0 trust repair brief
+> (`docs/security/phase-0-trust-repair-risk-brief-2026-06-04.md`).
+
 **Purpose:** Evidence-based risk inventory of the industry-wide security
 failures in AI coding agents, mapped to teaagent's controls and gaps.
 Informs `docs/plans/ux-improvement-roadmap-2026-05-31.md` item UX4.1.

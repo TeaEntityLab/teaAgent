@@ -1,5 +1,11 @@
 # Governance Hardening Open Decisions - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The
+> governance decisions described here were resolved in the Phase 0 governance
+> closure. For current governance rules, use
+> `docs/governance/documentation-operating-model-2026-06-04.md`. For closure
+> evidence, use `docs/work-log/phase-0-governance-closure-report-2026-06-04.md`.
+
 **Purpose:** Address open decisions from governance-hardening.md
 
 ---

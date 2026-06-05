@@ -11,22 +11,22 @@ Canonical states follow `docs/governance/document-state-model.md`.
 
 | ID | Priority | State | Control loop | Work item | Owner surface | Acceptance criteria |
 | --- | --- | --- | --- | --- | --- | --- |
-| SCL-P0-001 | P0 | Proposed | Spec-first | Add spec binding to high-risk runs. | plan gate / runner | High-risk mutating run records `spec_id` and `spec_hash` or explicit exemption. |
-| SCL-P0-002 | P0 | Proposed | Spec-first | Add repository grounding check for specs. | docs/specs / plan gate | Spec-to-plan transition records files searched and assumptions confirmed. |
-| SCL-P0-003 | P0 | Proposed | Dynamic workflow | Link dynamic skill lifecycle work as first H3 proof. | skills | DSK-P0 items remain the first ecosystem-trust spine. |
-| SCL-P0-004 | P0 | Proposed | Loop / goal | Define persisted goal record. | run store / context bus | Goal links objective, spec, tasks, runs, blockers, cost, review, and evidence. |
-| SCL-P0-005 | P0 | Proposed | Model routing | Add `model_route` audit receipt. | model routing / budget | Run evidence records requested model, resolved model, route reason, policy source, estimate, and actual cost. |
-| SCL-P0-006 | P0 | Proposed | Synthesis review | Define synthesis review artifact. | subagents / review | Review findings have state, severity, evidence path, and false-positive handling. |
-| SCL-P0-007 | P0 | Proposed | Human review | Define human review gate packet. | approval / policy | Irreversible paths expose spec, diff, tools, cost, tests, risks, and rollback. |
-| SCL-P1-001 | P1 | Proposed | Precise memory | Add typed memory metadata. | memory | Memory entries have scope, owner, source run, freshness, TTL, confidence, and review state. |
-| SCL-P1-002 | P1 | Proposed | Precise memory | Add memory quarantine/promote flow. | memory / CLI | Agent-written durable memory requires review before project-wide use. |
-| SCL-P1-003 | P1 | Proposed | Loop / goal | Add `teaagent goal status`. | CLI / run store | CLI shows objective, active phase, cost, blockers, and next gate. |
-| SCL-P1-004 | P1 | Proposed | Model routing | Add role routing tests. | tests / model routing | Plan, execution, review, and security roles resolve expected model classes. |
-| SCL-P1-005 | P1 | Proposed | Synthesis review | Add high-risk review requirement. | runner / governance | High-risk goal cannot close without synthesis review or documented waiver. |
-| SCL-P1-006 | P1 | Proposed | Human review | Attach gate packet to skill install and memory promotion. | skills / memory / approval | Risky persistence changes cannot proceed without review packet. |
-| SCL-P2-001 | P2 | Proposed | All loops | Add TUI control cockpit. | TUI | TUI summarizes spec, goal, model, memory, review, and gates for active run. |
-| SCL-P2-002 | P2 | Proposed | All loops | Add release evidence bundle. | release / docs | Release bundle includes seven-loop evidence status. |
-| SCL-P2-003 | P2 | Proposed | All loops | Add control-loop freshness validator. | docs validation | Current docs fail if roadmap rows omit control-loop links or status. |
+| SCL-P0-001 | P0 | Complete | Spec-first | Add spec binding to high-risk runs. | plan gate / runner | High-risk mutating run records `spec_id` and `spec_hash` or explicit exemption. |
+| SCL-P0-002 | P0 | Complete | Spec-first | Add repository grounding check for specs. | docs/specs / plan gate | Spec-to-plan transition records files searched and assumptions confirmed. |
+| SCL-P0-003 | P0 | Complete | Dynamic workflow | Link dynamic skill lifecycle work as first H3 proof. | skills | DSK-P0 items remain the first ecosystem-trust spine. |
+| SCL-P0-004 | P0 | Complete | Loop / goal | Define persisted goal record. | run store / context bus | Goal links objective, spec, tasks, runs, blockers, cost, review, and evidence. |
+| SCL-P0-005 | P0 | Complete | Model routing | Add `model_route` audit receipt. | model routing / budget | Run evidence records requested model, resolved model, route reason, policy source, estimate, and actual cost. |
+| SCL-P0-006 | P0 | Complete | Synthesis review | Define synthesis review artifact. | subagents / review | Review findings have state, severity, evidence path, and false-positive handling. |
+| SCL-P0-007 | P0 | Complete | Human review | Define human review gate packet. | approval / policy | Irreversible paths expose spec, diff, tools, cost, tests, risks, and rollback. |
+| SCL-P1-001 | P1 | Complete | Precise memory | Add typed memory metadata. | memory | Memory entries have scope, owner, source run, freshness, TTL, confidence, and review state. |
+| SCL-P1-002 | P1 | Complete | Precise memory | Add memory quarantine/promote flow. | memory / CLI | Agent-written durable memory requires review before project-wide use. |
+| SCL-P1-003 | P1 | Complete | Loop / goal | Add `teaagent goal status`. | CLI / run store | CLI shows objective, active phase, cost, blockers, and next gate. |
+| SCL-P1-004 | P1 | Complete | Model routing | Add role routing tests. | tests / model routing | Plan, execution, review, and security roles resolve expected model classes. |
+| SCL-P1-005 | P1 | Complete | Synthesis review | Add high-risk review requirement. | runner / governance | High-risk goal cannot close without synthesis review or documented waiver. |
+| SCL-P1-006 | P1 | Complete | Human review | Attach gate packet to skill install and memory promotion. | skills / memory / approval | Risky persistence changes cannot proceed without review packet. |
+| SCL-P2-001 | P2 | Complete | All loops | Add TUI control cockpit. | TUI | TUI summarizes spec, goal, model, memory, review, and gates for active run. |
+| SCL-P2-002 | P2 | Complete | All loops | Add release evidence bundle. | release / docs | Release bundle includes seven-loop evidence status. |
+| SCL-P2-003 | P2 | Complete | All loops | Add control-loop freshness validator. | docs validation | Current docs fail if roadmap rows omit control-loop links or status. |
 
 ## P0 Execution Detail
 

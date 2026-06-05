@@ -109,6 +109,13 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
 
 
 def agent_daily_command(args: argparse.Namespace) -> int:
+    if getattr(args, 'stale_check', False):
+        from teaagent.cockpit import assess_stale_workspace
+
+        report = assess_stale_workspace(args.root)
+        print_json(report.to_dict())
+        return 0 if not report.dirty_git and not report.diverged_from_main else 2
+
     from teaagent.daily import build_daily_brief
 
     brief = build_daily_brief(

@@ -1,5 +1,10 @@
 # Competitive Positioning Plan — 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. For current
+> competitive analysis, use `docs/analysis/competitor-signal-survey-2026-06-04.md`
+> and `docs/strategy/teaagent-product-principles-2026-06-04.md`. For active work,
+> use `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`.
+
 **Status:** Reference document - not an active execution plan. Extract actionable items to backlog-priority.md as needed.
 
 **Source:** `docs/analysis/agent-competitive-risks-2026-05-31.md` and

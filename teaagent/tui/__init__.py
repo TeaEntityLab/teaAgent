@@ -14,8 +14,12 @@ from teaagent import __version__
 from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
-from teaagent.cockpit import CockpitState
+from teaagent.cockpit import CockpitState, ControlCockpitState, build_control_cockpit
 from teaagent.context import ContextCompactor as _ContextCompactor
+from teaagent.context_pressure import (
+    ContextPressureScore,
+    compute_context_pressure,
+)
 from teaagent.graphqlite_store import (
     GraphQLiteConfig,
     GraphQLiteGraphStore,
@@ -31,6 +35,11 @@ from teaagent.sandbox import (
     ParallelExperimentStack,
 )
 from teaagent.session import ChatMessage, ChatSession, SessionStore
+from teaagent.skill_loader import (
+    SkillActivationExplain,
+    discover_skill_index,
+    explain_skill_activation,
+)
 
 InputFn = Callable[[str], str]
 OutputFn = Callable[..., None]
@@ -136,9 +145,33 @@ HELP_TEXT = """Commands:
   undo [run_id]              Undo last agent edit (journal-first, checkpoint fallback).
   background                Suspend session as a checkpoint; use interactive-review/resume on the run id.
   handoff                   Alias for background command.
+  skill-diagnostics         Show comprehensive skill diagnostics: loaded, shadowed,
+                             candidates, artifacts, output verification (JSON).
+  skill-health              Show skill ecosystem health dashboard (JSON).
   exit | quit               Leave the TUI.
 
 Slash aliases (/daily, /plan, /run, …) are accepted for the same commands.
+
+TUI Command Reference — Controller-Backed Commands (P0-A)
+  All task-execution commands delegate to ChatSessionController for unified
+  result handling, cost tracking, and undo behavior.
+
+  ask <task>                 Execute a task through ChatSessionController.
+                             Cost accumulates in controller session state.
+  run <task>                 Alias for ask; same controller path.
+  cost  (/cost)              Display session cost from controller-owned state.
+                             Reads ChatSessionController.get_session_cost().
+  undo  (/undo)              Undo via controller undo journal (file-level restore).
+                             Falls back to git-stash checkpoint when no journal exists.
+                             Output explicitly labels which method was used:
+                               - "journal undo completed" (file-level restore)
+                               - "checkpoint restore completed" (git-level restore)
+                               - "nothing to undo" (no journal or checkpoint)
+  root <path>                Set workspace root. Controller picks up new root
+                             when created; existing controller instances retain
+                             their construction-time root.
+  resume <run_id>            Re-run original task from a persisted run through
+                             ChatSessionController.execute_task().
 """
 
 
@@ -222,6 +255,65 @@ class TeaAgentTUI:
         # Cockpit state for operator dashboard
         self._cockpit_state: Optional[CockpitState] = None
 
+        # Approve path scopes from CLI (e.g. --approve-path src/)
+        self._approved_path_globs: list[str] = []
+
+        # Control cockpit state (CPP-P2-001 / SCL-P2-001)
+        self._control_cockpit: Optional[ControlCockpitState] = None
+
+        # Context pressure score (CPP-P1-003)
+        self._context_pressure: Optional[ContextPressureScore] = None
+
+        # Skill activation explain cache (DSK-P1-004)
+        self._skill_explain: Optional[SkillActivationExplain] = None
+
+    def _determine_cost_state(self) -> str:
+        """Determine the cost display state label.
+
+        Returns one of:
+          - ``'actual'``: confirmed cost from provider/budget system
+          - ``'estimated'``: projected cost based on token count (default)
+          - ``'unavailable'``: cost tracking not supported for this adapter
+          - ``'unlimited'``: no budget cap configured (None = unlimited)
+        """
+        if self._max_cost_budget_cents is None:
+            return 'unlimited'
+        # TeaAgent uses token-count estimation; actual would require
+        # provider billing API integration which is not yet implemented.
+        # Mark unavailable only when cost is exactly zero and tracking
+        # has never accumulated (fresh session with cap but no usage).
+        cost = self._get_session_cost_cents()
+        if cost > 0:
+            return 'estimated'
+        return 'unavailable'
+
+    def _refresh_control_cockpit(self) -> None:
+        """Refresh the control cockpit from workspace data sources."""
+        try:
+            self._control_cockpit = build_control_cockpit(
+                self.root,
+                permission_mode=self.permission_mode.value,
+                cost_cents=self._get_session_cost_cents(),
+                cost_limit_cents=self._max_cost_budget_cents,
+                cost_state='estimated' if self._max_cost_budget_cents is None else 'actual',
+            )
+        except Exception:
+            self._control_cockpit = None
+
+        self._refresh_cockpit_state()
+
+    def _refresh_cockpit_state(self) -> None:
+        approval_scope_parts = [self.permission_mode.value]
+        if self._approved_path_globs:
+            approval_scope_parts.append(f'(scoped: {", ".join(self._approved_path_globs)})')
+        try:
+            self._cockpit_state = CockpitState(
+                workspace_root=str(self.root),
+                approval_scope=' '.join(approval_scope_parts),
+            )
+        except Exception:
+            self._cockpit_state = None
+
     def _should_use_split_pane(self) -> bool:
         """Check if terminal is large enough for split-pane layout."""
         try:
@@ -236,6 +328,11 @@ class TeaAgentTUI:
             columns, lines = shutil.get_terminal_size()
         except (OSError, ValueError):
             return
+
+        try:
+            self._context_pressure = compute_context_pressure(self.root)
+        except Exception:
+            self._context_pressure = None
 
         # Print header (no clear screen - CG-06 fix)
         print('=' * columns)
@@ -273,6 +370,12 @@ class TeaAgentTUI:
         # Cockpit state (blocked approvals, harness health, budget, recoverable)
         print('\n[Cockpit]')
         if self._cockpit_state:
+            # Active root and approval scope
+            if self._cockpit_state.workspace_root:
+                print(f'  Workspace Root: {self._cockpit_state.workspace_root}')
+            if self._cockpit_state.approval_scope:
+                print(f'  Approval Scope: {self._cockpit_state.approval_scope}')
+
             # Blocked approvals
             if self._cockpit_state.approvals.blocked_count > 0:
                 print(
@@ -285,8 +388,8 @@ class TeaAgentTUI:
 
             # Harness health
             if self._cockpit_state.harness_health.overall != 'unknown':
-                health = self._cockpit_state.harness_health.overall
-                print(f'  Harness Health: {health.upper()}')
+                overall_health = self._cockpit_state.harness_health.overall
+                print(f'  Harness Health: {overall_health.upper()}')
                 if self._cockpit_state.harness_health.errors:
                     print(
                         f'    Errors: {len(self._cockpit_state.harness_health.errors)}'
@@ -296,7 +399,8 @@ class TeaAgentTUI:
             if self._cockpit_state.budget.status != 'unknown':
                 budget = self._cockpit_state.budget
                 print(f'  Budget: {budget.status.upper()}')
-                print(f'    Spent: ${budget.spent_cents / 100:.2f}')
+                cost_label = budget.cost_state.replace('_', ' ')
+                print(f'    Spent: ${budget.spent_cents / 100:.2f} ({cost_label})')
                 if budget.limit_cents:
                     print(f'    Limit: ${budget.limit_cents / 100:.2f}')
                 if budget.remaining_cents is not None:
@@ -311,6 +415,83 @@ class TeaAgentTUI:
                 print('  Checkpoint: Available')
             if self._cockpit_state.recoverable.has_suspended_session:
                 print('  Suspended Session: Available')
+
+        # Control Cockpit (CPP-P2-001 / SCL-P2-001)
+        if self._control_cockpit:
+            cc = self._control_cockpit
+            print('\n[Control Cockpit]')
+
+            # Spec/Goal
+            if cc.goal:
+                goal = cc.goal
+                objective = goal.get('objective', '')
+                if len(objective) > 60:
+                    objective = objective[:57] + '...'
+                print(f'  Goal: {goal.get("status", "?")} — {objective}')
+                blockers = goal.get('blockers', [])
+                if isinstance(blockers, list) and blockers:
+                    print(f'  Blockers: {len(blockers)}')
+            elif cc.spec:
+                spec = cc.spec
+                print(f'  Spec: {spec.get("spec_id", "")[:12]}')
+            else:
+                print('  Spec/Goal: none')
+
+            # Model Route
+            if cc.model_route:
+                mr = cc.model_route
+                print(f'  Model: {mr.get("provider", "?")}/{mr.get("model", "default")} (est. ${mr.get("estimated_cost_cents", 0) / 100:.2f})')
+            else:
+                print(f'  Model: {self.provider}/{self.model or "default"} (no route)')
+
+            # Memory
+            mem = cc.memory
+            print(f'  Memory: {mem.get("total_entries", 0)} entries')
+
+            # Review
+            if cc.review:
+                review = cc.review
+                print(f'  Review: {review.get("review_ids_count", 0)} reviews, gate={review.get("latest_review_status", "?")}')
+
+            # Skills
+            skill = cc.skill
+            gov = skill.get('governance_status', {})
+            gov_summary = '/'.join(sorted(set(gov.values()))) if gov else 'none'
+            print(f'  Skills: {skill.get("loaded_count", 0)} loaded, {skill.get("shadowed_count", 0)} shadowed, {skill.get("candidate_count", 0)} candidates')
+            print(f'    Governance: {gov_summary}')
+
+            # Approval
+            app = cc.approval
+            print(f'  Approval: {app.get("pending_count", 0)} pending, {app.get("blocked_count", 0)} blocked, mode={app.get("mode", "?")}')
+
+            # Cost
+            cost = cc.cost
+            spent = cost.get('spent_cents', 0.0)
+            limit = cost.get('limit_cents')
+            state = cost.get('state', 'unavailable')
+            limit_str = f'${limit / 100:.2f}' if limit else 'unlimited'
+            print(f'  Cost: ${spent / 100:.2f} / {limit_str} ({state})')
+
+        # Context Pressure (CPP-P1-003)
+        if self._context_pressure:
+            pressure = self._context_pressure
+            ratio_pct = pressure.token_usage_ratio * 100
+            color_label = pressure.usage_level.upper()
+            print('\n[Context Pressure]')
+            print(f'  Token Usage: {ratio_pct:.1f}% ({color_label})')
+            print(f'  Estimated Total: {pressure.estimated_total_tokens:,} tokens')
+            if pressure.max_context_tokens:
+                print(f'  Max Context: {pressure.max_context_tokens:,} tokens')
+            else:
+                print('  Max Context: unknown')
+            print(f'  Memory Entries: {pressure.memory_count}')
+            print(f'  Pinned Files: {pressure.files_pinned}')
+            print(f'  Recent Runs: {pressure.recent_runs}')
+            print(f'  Large Artifacts: {len(pressure.large_artifacts)}')
+            if pressure.recommendations:
+                top_recs = pressure.recommendations[:3]
+                for rec in top_recs:
+                    print(f'  → {rec}')
 
         # Parallel experiments panel
         if self._parallel_stack and self._parallel_options:
@@ -342,12 +523,116 @@ class TeaAgentTUI:
             from teaagent.memory import MemoryCatalog
 
             memory = MemoryCatalog(self.root, readonly=True)
-            memories = memory.list(limit=3)
-            print(f'\nMemory Entries: {len(memories)}')
-            for mem in memories:
-                print(f'  - {mem.memory_id[:8]}: {mem.content[:30]}...')
+            mem_entries = memory.list(limit=3)
+            print(f'\nMemory Entries: {len(mem_entries)}')
+            for mem_entry in mem_entries:
+                print(f'  - {mem_entry.memory_id[:8]}: {mem_entry.content[:30]}...')
         except Exception:
             print('\nMemory Entries: (unavailable)')
+
+        # Skills panel (DSK-P1-004) extended with diagnostics (DSK-P2-001)
+        try:
+            self._skill_explain = explain_skill_activation(
+                self.root, skill_prompt_mode='index_only'
+            )
+            index_count = self._skill_explain.index_count
+            shadowed_count = len(self._skill_explain.shadowed)
+            print(f'\nSkills Loaded: {index_count}')
+            if index_count > 0:
+                skill_index = discover_skill_index(self.root)
+                from teaagent.skill_lifecycle import (
+                    SkillLifecycleState,
+                    classify_governance_status,
+                )
+
+                for _idx, entry in enumerate(skill_index[:5]):
+                    skill_dir = entry.path.parent
+                    source_dir = skill_dir.parent
+                    gov = classify_governance_status(
+                        skill_dir=skill_dir,
+                        source_dir=source_dir,
+                        root=self.root,
+                    )
+                    lifecycle = SkillLifecycleState.DISCOVERED.value
+                    print(f'  - {entry.name} ({gov}, {lifecycle})')
+                if index_count > 5:
+                    remaining = index_count - 5
+                    print(f'  ... and {remaining} more (use /skills for full list)')
+
+            # Shadowed skills
+            if shadowed_count > 0:
+                print(f'  Shadowed: {shadowed_count}')
+                for s in self._skill_explain.shadowed[:3]:
+                    print(
+                        f'    - {s.name}: winner={s.winner_source}, '
+                        f'shadowed={s.shadowed_source}'
+                    )
+                if shadowed_count > 3:
+                    print(f'    ... and {shadowed_count - 3} more shadowed')
+
+            # Candidate store
+            try:
+                from teaagent.skill_candidates import SkillCandidateStore
+
+                candidate_store = SkillCandidateStore(
+                    self.root, readonly=True
+                )
+                candidates = candidate_store.list()
+                if candidates:
+                    print(f'  Candidates: {len(candidates)}')
+                    for c in candidates[:3]:
+                        print(f'    - {c.name}: {c.status}')
+            except Exception:
+                pass
+
+            # Long-result artifacts
+            artifact_dir = self.root / '.teaagent' / 'artifacts' / 'tool-results'
+            if artifact_dir.is_dir():
+                total_files = 0
+                run_ids = []
+                for run_dir in sorted(artifact_dir.iterdir()):
+                    if run_dir.is_dir():
+                        run_ids.append(run_dir.name)
+                        artifact_files = [
+                            f for f in run_dir.iterdir()
+                            if f.is_file()
+                        ]
+                        total_files += len(artifact_files)
+                if total_files > 0:
+                    print(
+                        f'  Long-Result Artifacts: {total_files} file(s) '
+                        f'across {len(run_ids)} run(s)'
+                    )
+
+            # Output verification status
+            print(
+                '  Output Verification: available (FileExists, SourceUrl, '
+                'KnownTitle, Category, PromptInjection)'
+            )
+
+            # Skill ecosystem health summary (DSK-P2-003)
+            try:
+                from teaagent.skill_loader import get_skill_health
+
+                health = get_skill_health(self.root)
+                gov = health.get('governance_distribution', {})
+                print(
+                    '  Health: '
+                    f"{health.get('total_skills', 0)} skills, "
+                    f"gov={gov.get('direct_write', 0)}d/{gov.get('candidate_installed', 0)}c/"
+                    f"{gov.get('compatibility_path', 0)}p/{gov.get('unmanaged', 0)}u, "
+                    f"shadowed={health.get('shadowed_count', 0)}, "
+                    f"candidates={health['candidate_summary']['total']}/{health['candidate_summary']['installed']}, "
+                    f"stale={len(health.get('stale_candidates', []))}, "
+                    f"eval_failed={len(health.get('failed_evals', []))}"
+                )
+            except Exception:
+                pass
+
+            if index_count > 0 or shadowed_count > 0 or (artifact_dir.is_dir() and total_files > 0):
+                print('  (use /skill-diagnostics for full JSON report)')
+        except Exception:
+            print('\nSkills Loaded: (unavailable)')
 
         print('=' * columns)
         print()
@@ -445,7 +730,9 @@ class TeaAgentTUI:
     def handle_command(self, raw_command: str) -> bool:
         from teaagent.tui._commands import _handle_tui_command
 
-        return _handle_tui_command(self, raw_command)
+        result = _handle_tui_command(self, raw_command)
+        self._refresh_control_cockpit()
+        return result
 
     def _handle_memory(self, args: list[str]) -> None:
         if not args:
@@ -794,7 +1081,8 @@ class TeaAgentTUI:
         cost_cents = controller.get_session_cost()
         if cost_cents == 0 and self._session_cost_cents > 0:
             cost_cents = self._session_cost_cents
-        self.output_fn(f'cost: ${cost_cents / 100:.2f}')
+        cost_state = self._determine_cost_state()
+        self.output_fn(f'cost: ${cost_cents / 100:.2f} ({cost_state})')
 
     def _get_session_cost_cents(self) -> float:
         """Read session cost from ChatSessionController (source of truth), fall back to local."""
@@ -846,11 +1134,13 @@ class TeaAgentTUI:
         cost_cents = self._get_session_cost_cents()
         limit_str = _format_budget_cents(self._max_cost_budget_cents)
         remaining_str = _format_remaining_cents(self._max_cost_budget_cents, cost_cents)
+        cost_state = self._determine_cost_state()
         self.output_fn(
             f'budget: effort={self._effort_level}  '
             f'limit={limit_str}  '
             f'spent=${int(cost_cents // 100)}.{int(cost_cents % 100):02d}  '
-            f'remaining={remaining_str}'
+            f'remaining={remaining_str}  '
+            f'cost_state={cost_state}'
         )
 
     def _handle_checkpoint(self) -> None:

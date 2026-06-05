@@ -265,6 +265,74 @@ def memory_quarantine_list_command(args: argparse.Namespace) -> int:
 def memory_quarantine_promote_command(args: argparse.Namespace) -> int:
     """Promote a quarantined memory entry with attestation (TASK-005)."""
     catalog = MemoryCatalog(args.root)
+
+    approved_gate_id = getattr(args, 'approved_gate_id', None)
+
+    if approved_gate_id:
+        from teaagent.governance.plan_gate import load_gate
+
+        try:
+            gate = load_gate(approved_gate_id, workspace_root=args.root)
+        except FileNotFoundError:
+            print_json({'status': 'error', 'message': f'approved gate not found: {approved_gate_id}'})
+            return 1
+        if gate.decision != 'approved':
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f'gate {approved_gate_id} is not approved '
+                    f'(current: {gate.decision})',
+                }
+            )
+            return 1
+        if not gate.approver.strip():
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f'gate {approved_gate_id} has no approver',
+                }
+            )
+            return 1
+        if gate.target_type != 'memory_promote':
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f'gate {approved_gate_id} target_type is '
+                    f'{gate.target_type}, expected memory_promote',
+                }
+            )
+            return 1
+        if gate.target_name != getattr(args, 'memory_id', ''):
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f'gate {approved_gate_id} target_name is '
+                    f'{gate.target_name}, expected {getattr(args, "memory_id", "")}',
+                }
+            )
+            return 1
+    else:
+        risk_reason = (
+            f'Promoting quarantined memory {args.memory_id} '
+            f'with attestation: {args.attestation}'
+        )
+        from teaagent.governance.plan_gate import require_review_gate
+
+        gate = require_review_gate(
+            target_type='memory_promote',
+            target_name=getattr(args, 'memory_id', ''),
+            risk_reason=risk_reason,
+            workspace_root=args.root,
+        )
+        print_json(
+            {
+                'status': 'gate_required',
+                'gate': gate.to_dict(),
+                'hint': f'Review then approve the gate, then retry with --approved-gate-id {gate.gate_id}',
+            }
+        )
+        return 1
+
     try:
         entry = catalog.promote_quarantined(
             args.memory_id,

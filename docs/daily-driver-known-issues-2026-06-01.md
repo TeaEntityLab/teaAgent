@@ -13,15 +13,17 @@ If you used an older build, these are now corrected in `teaagent chat`:
 - The REPL no longer reports completed tasks as "failed", and prints the answer (CG-01).
 - `/undo` no longer wipes all uncommitted changes — it restores only files the run
   touched, via the undo journal (CG-02).
-- `/cost` and `/budget` in the REPL now reflect real spend (CG-03).
+- `/cost` and `/budget` in the REPL now reflect real spend with cost_state label (CG-03).
 - `/background` no longer silently switches your git branch, and the suspension is
   recorded in the audit chain (CG-09, CG-10).
-- TUI `/cost` now reflects real session cost via `ChatSessionController` (CG-11 / TICKET-12).
+- TUI `/cost` now reflects real session cost via `ChatSessionController` and shows cost_state (CG-11 / TICKET-12).
 - TUI `/undo` now uses `ChatSessionController.undo_last_run()` with checkpoint fallback (CG-15 / TICKET-12).
 - Exception swallowing removed from `ChatSessionController` (CG-13 / TICKET-13).
 - Explicit `--root` no longer overwritten by saved TUI state (TASK-DD2-002).
 - Failure-card matching has stopword filtering and requires 2+ significant words (TASK-DD2-012).
 - Memory and run store corruption warnings surfaced in preflight/daily (TASK-DD2-011).
+- Cost display now has 4 canonical states (actual, estimated, unavailable, unlimited) used consistently across TUI /cost, /budget, run summary, and evidence bundle. UI never implies actual cost when only token-count estimates are available (P0-B-001 through P0-B-004).
+- Cost accumulation tests added — `tests/test_tui_cost.py` covers state labels, multi-run accumulation, and cross-surface consistency (P0-B-002).
 
 ## Open issues and workarounds
 

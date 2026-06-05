@@ -7,6 +7,8 @@ CLI and TUI surfaces can use to execute chat agent tasks with consistent behavio
 
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -17,6 +19,8 @@ from teaagent.llm import create_llm_adapter
 from teaagent.run_store import RunStore
 from teaagent.run_undo import UndoJournal
 from teaagent.runner._types import RunResult
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -62,6 +66,7 @@ class ChatSessionController:
         *,
         output_fn: Callable[[str], None],
         session_state: Optional[SessionState] = None,
+        _store_factory: Optional[Callable[[], RunStore]] = None,
     ):
         """Initialize the controller.
 
@@ -69,10 +74,22 @@ class ChatSessionController:
             root: Workspace root directory
             output_fn: Function to output messages (print for CLI, self.output_fn for TUI)
             session_state: Optional shared session state
+            _store_factory: Optional factory for RunStore (test seam)
         """
         self.root = Path(root).resolve()
         self.output_fn = output_fn
         self.session_state = session_state or SessionState()
+        self._store_factory = _store_factory
+
+    def _create_store(self) -> RunStore:
+        """Create a RunStore instance (uses factory if set, else default).
+
+        This is a test/mocking seam. Tests can inject a _store_factory that
+        returns a mock or a specially configured store to simulate failures.
+        """
+        if self._store_factory is not None:
+            return self._store_factory()
+        return RunStore(self.root)
 
     def execute_task(
         self,
@@ -146,19 +163,34 @@ class ChatSessionController:
         )
 
         # Save result to store
+        store = self._create_store()
         if (
             audit
             and hasattr(audit, 'path')
             and isinstance(audit.path, Path)
             and audit.path
         ):
-            store = RunStore(self.root)
-            store.logger_for_result(result, audit)
+            try:
+                store.logger_for_result(result, audit)
+            except (OSError, RuntimeError) as exc:
+                logger.warning(
+                    'Persistence failure: could not save run result to store '
+                    '(run_id=%s): %s',
+                    result.run_id,
+                    exc,
+                )
 
         # Save undo journal if it has entries
         if undo_journal.has_entries:
-            store = RunStore(self.root)
-            undo_journal.save_to(store.undo_path(result.run_id))
+            try:
+                undo_journal.save_to(store.undo_path(result.run_id))
+            except (OSError, RuntimeError) as exc:
+                logger.warning(
+                    'Persistence failure: could not save undo journal '
+                    '(run_id=%s): %s',
+                    result.run_id,
+                    exc,
+                )
 
         # Handle result display (CG-01)
         if emit_answer:
@@ -189,7 +221,7 @@ class ChatSessionController:
             True if undo succeeded, False otherwise
         """
         try:
-            store = RunStore(self.root)
+            store = self._create_store()
             run_id = store.latest_run_with_undo()
             if run_id is None:
                 self.output_fn('[TeaAgent] Nothing to undo - no undo journal found')
@@ -205,21 +237,22 @@ class ChatSessionController:
 
             if result.ok:
                 self.output_fn(
-                    f'[TeaAgent] Undo completed: restored {len(result.restored)} file(s)'
+                    f'[TeaAgent] journal undo completed: restored {len(result.restored)} file(s)'
                 )
                 if result.deleted:
-                    self.output_fn(f'[TeaAgent] Deleted {len(result.deleted)} file(s)')
+                    self.output_fn(f'[TeaAgent] journal undo: deleted {len(result.deleted)} file(s)')
                 undo_path.unlink(missing_ok=True)
                 return True
             else:
                 self.output_fn(
-                    f'[TeaAgent] Undo partially completed: {len(result.errors)} error(s)'
+                    f'[TeaAgent] journal undo partially completed: {len(result.errors)} error(s)'
                 )
                 for error in result.errors:
                     self.output_fn(f'  - {error}')
                 return False
-        except Exception as exc:
-            self.output_fn(f'[TeaAgent] Error in undo: {exc}')
+        except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+            logger.warning('Undo persistence failure: %s', exc)
+            self.output_fn(f'[TeaAgent] journal undo error: {exc}')
             return False
 
     def get_session_cost(self) -> float:

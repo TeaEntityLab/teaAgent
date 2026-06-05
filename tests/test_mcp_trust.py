@@ -5,16 +5,24 @@ import tempfile
 import time
 from unittest.mock import MagicMock
 
+import pytest
+
+from teaagent.hooks import HookError
 from teaagent.mcp_trust import (
     MCPServerTrust,
     MCPTrustPolicy,
+    apply_mcp_trust_hooks,
+    check_mcp_server_trust_at_call_time,
     check_unknown_tool_prompt,
+    is_docker_available,
     is_server_trust_expired,
     load_mcp_trust_policy,
+    merged_tool_filters,
     revoke_server_trust,
     save_mcp_trust_policy,
     update_server_tools,
 )
+from teaagent.tools import ToolRegistry
 
 
 def test_mcp_trust_policy_serialization():
@@ -127,6 +135,206 @@ def test_check_unknown_tool_prompt():
         check_unknown_tool_prompt(policy, 'unknown_server_tool', server='server1')
         is True
     )
+
+
+class TestCheckMCPServerTrustAtCallTime:
+    """P2-A-001: Call-time MCP trust expiry enforcement."""
+
+    def test_unknown_server_passes_through(self, tmp_path):
+        """Unknown server should not raise — delegated to existing tool-filter hook."""
+        check_mcp_server_trust_at_call_time(
+            tmp_path, 'some_tool', 'unknown_server'
+        )
+
+    def test_not_trusted_server_raises(self, tmp_path):
+        """A server that exists but is not trusted must raise HookError."""
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['untrusted_srv'] = MCPServerTrust(trusted=False)
+            save_mcp_trust_policy(tmp_path, policy)
+
+            with pytest.raises(HookError, match='not trusted'):
+                check_mcp_server_trust_at_call_time(
+                    tmp_path, 'any_tool', 'untrusted_srv'
+                )
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+    def test_expired_trust_raises(self, tmp_path):
+        """An expired server trust must raise HookError regardless of tool lists."""
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['expired_srv'] = MCPServerTrust(
+                trusted=True,
+                expires_at=time.time() - 1,
+                allowed_tools=['allowed_tool'],
+            )
+            save_mcp_trust_policy(tmp_path, policy)
+
+            with pytest.raises(HookError, match='has expired'):
+                check_mcp_server_trust_at_call_time(
+                    tmp_path, 'allowed_tool', 'expired_srv'
+                )
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+    def test_valid_trust_passes(self, tmp_path):
+        """A trusted server with future expiry should not raise."""
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['good_srv'] = MCPServerTrust(
+                trusted=True,
+                expires_at=time.time() + 3600,
+            )
+            save_mcp_trust_policy(tmp_path, policy)
+
+            check_mcp_server_trust_at_call_time(
+                tmp_path, 'any_tool', 'good_srv'
+            )
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+
+class TestHookBlocksUntrustedServer:
+    """P2-A-001: The pre-tool hook must block tools from untrusted/expired servers."""
+
+    def test_hook_blocks_untrusted_server_tool(self, tmp_path):
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['bad'] = MCPServerTrust(
+                trusted=False,
+                allowed_tools=['dangerous_tool'],
+            )
+            save_mcp_trust_policy(tmp_path, policy)
+
+            registry = ToolRegistry()
+            registry.hook_registry = None
+            apply_mcp_trust_hooks(registry, tmp_path)
+            assert registry.hook_registry is not None
+
+            with pytest.raises(HookError, match='not trusted'):
+                registry.hook_registry.run_pre_hooks('dangerous_tool', {})
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+    def test_hook_blocks_expired_server_tool(self, tmp_path):
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['stale'] = MCPServerTrust(
+                trusted=True,
+                expires_at=time.time() - 10,
+                allowed_tools=['stale_tool'],
+            )
+            save_mcp_trust_policy(tmp_path, policy)
+
+            registry = ToolRegistry()
+            registry.hook_registry = None
+            apply_mcp_trust_hooks(registry, tmp_path)
+            assert registry.hook_registry is not None
+
+            with pytest.raises(HookError, match='has expired'):
+                registry.hook_registry.run_pre_hooks('stale_tool', {})
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+    def test_hook_allows_validly_trusted_server_tool(self, tmp_path):
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['good'] = MCPServerTrust(
+                trusted=True,
+                expires_at=time.time() + 3600,
+                allowed_tools=['good_tool'],
+            )
+            save_mcp_trust_policy(tmp_path, policy)
+
+            registry = ToolRegistry()
+            registry.hook_registry = None
+            apply_mcp_trust_hooks(registry, tmp_path)
+
+            result = registry.hook_registry.run_pre_hooks('good_tool', {})
+            assert result == {} or result is None
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+    def test_hook_blocks_expired_server_with_empty_lists(self, tmp_path):
+        """Even if a server has no allow/deny lists, expired trust should block."""
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['expired_no_lists'] = MCPServerTrust(
+                trusted=True,
+                expires_at=time.time() - 10,
+            )
+            save_mcp_trust_policy(tmp_path, policy)
+
+            registry = ToolRegistry()
+            registry.hook_registry = None
+            apply_mcp_trust_hooks(registry, tmp_path)
+
+            with pytest.raises(HookError, match='has expired'):
+                registry.hook_registry.run_pre_hooks('any_tool', {})
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+    def test_merged_tool_filters_excludes_expired_server(self, tmp_path):
+        """merged_tool_filters should skip expired server entries."""
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode()
+        os.environ['TEAAGENT_MCP_TRUST_KEY'] = key
+        try:
+            policy = MCPTrustPolicy()
+            policy.servers['live'] = MCPServerTrust(
+                trusted=True,
+                expires_at=time.time() + 3600,
+                allowed_tools=['live_tool'],
+            )
+            policy.servers['dead'] = MCPServerTrust(
+                trusted=True,
+                expires_at=time.time() - 10,
+                allowed_tools=['dead_tool'],
+            )
+            save_mcp_trust_policy(tmp_path, policy)
+
+            loaded = load_mcp_trust_policy(tmp_path)
+            allowed, denied = merged_tool_filters(loaded)
+            assert 'live_tool' in allowed
+            assert 'dead_tool' not in allowed
+        finally:
+            del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+
+class TestDockerAvailability:
+    def test_is_docker_available_returns_bool(self):
+        result = is_docker_available()
+        assert isinstance(result, bool)
 
 
 def test_mcp_trust_policy_persistence():

@@ -1,5 +1,11 @@
 # Daily-Driver Second-Pass Task Plan
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> second daily-driver review pass. The tasks were absorbed into the P0-A
+> through P1-D workstreams in
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`. For
+> implementation status, use `docs/plans/ticket-plans/index.md`.
+
 Date: 2026-06-01
 
 Goal: convert the latest second-pass review into small reviewable engineering

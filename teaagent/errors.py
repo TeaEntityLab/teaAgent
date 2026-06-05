@@ -20,6 +20,7 @@ class DenialReasonCode(str, Enum):
     AUTO_MODE_BLOCKED = 'auto_mode_blocked'
     MISSING_STATE = 'missing_state'
     FULL_ACCESS_NOT_ACKNOWLEDGED = 'full_access_not_acknowledged'
+    SKILL_WRITE_BLOCKED = 'skill_write_blocked'
 
 
 class ErrorCategory(str, Enum):
@@ -116,6 +117,35 @@ class ToolExecutionError(AgentHarnessError):
             hint=hint
             or 'Check that the workspace path is writable and the command is valid.',
         )
+
+
+class InvalidToolDecision(AgentHarnessError):
+    """Raised when a tool decision fails structural validation.
+
+    This occurs when the model produces a tool decision JSON that, while
+    parseable, lacks required fields or has incorrect types (e.g., null
+    arguments, empty tool_name). The decision is rejected before execution
+    to prevent silent failures in skill flows and agent runs.
+    """
+
+    category = ErrorCategory.MODEL_LOGIC
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        hint: Optional[str] = None,
+        raw_decision_preview: Optional[str] = None,
+    ) -> None:
+        super().__init__(
+            message,
+            hint=hint
+            or (
+                'The model produced a structurally invalid tool decision. '
+                'Check the system prompt instructions and retry with a more capable model.'
+            ),
+        )
+        self.raw_decision_preview: Optional[str] = raw_decision_preview
 
 
 class RunCancelledError(AgentHarnessError):

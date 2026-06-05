@@ -12,6 +12,7 @@ import concurrent.futures
 import hashlib
 import json
 import logging
+import os
 import re
 import shlex
 import sys
@@ -28,6 +29,63 @@ if TYPE_CHECKING:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Protected skill directory patterns (DSK-P0-002)
+# ---------------------------------------------------------------------------
+
+_PROTECTED_SKILL_PATTERNS = (
+    '.config/agent/skills',
+    '.claude/skills',
+    '.opencode/skill',
+    '.opencode/skills',
+)
+
+_CANDIDATE_SKILL_PREFIX = '.teaagent/skill-candidates'
+
+
+def is_protected_skill_path(workspace_root: Path, target_path: Path) -> bool:
+    """Return True if *target_path* resides under a protected active-skill directory.
+
+    Protected directories match one of the ``_PROTECTED_SKILL_PATTERNS``
+    relative to *workspace_root*.  The candidate install path
+    ``.teaagent/skill-candidates/`` is explicitly excluded so proposals
+    continue to work.
+    """
+    try:
+        relative = target_path.resolve().relative_to(workspace_root.resolve())
+    except (ValueError, OSError):
+        return False
+
+    relative_str = str(relative)
+
+    # Candidate path is always allowed.
+    if relative_str.startswith(_CANDIDATE_SKILL_PREFIX + '/') or relative_str == _CANDIDATE_SKILL_PREFIX:
+        return False
+
+    for pattern in _PROTECTED_SKILL_PATTERNS:
+        pattern_prefix = pattern + '/'
+        if relative_str.startswith(pattern_prefix) or relative_str == pattern:
+            return True
+
+    return False
+
+
+def _is_skill_dev_opt_in(workspace_root: str | Path) -> bool:
+    """Check whether the skill-dev opt-in is active.
+
+    Returns True when either the ``TEAAGENT_SKILL_DEV_OPT_IN`` environment
+    variable is set to a truthy value, or the ``skill_dev_opt_in`` key is
+    set to ``true`` in the workspace config (``.teaagent/config.json``).
+    """
+    env_val = os.environ.get('TEAAGENT_SKILL_DEV_OPT_IN')
+    if env_val is not None:
+        return env_val.strip().lower() in {'1', 'true', 'yes'}
+
+    from teaagent.config_loader import load_workspace_config
+
+    cfg = load_workspace_config(workspace_root)
+    return bool(cfg.get('skill_dev_opt_in', False))
 
 
 class PermissionMode(str, Enum):
@@ -686,6 +744,15 @@ class ApprovalManager:
             description=description,
             handler=handler,
         )
+        # P0-D-001: Validate tool path arguments are within workspace root.
+        # Run before the early-return for ALLOW/DANGER_FULL_ACCESS so that
+        # root containment is enforced regardless of permission mode.
+        if destructive and arguments and isinstance(arguments, dict):
+            self._assert_paths_in_workspace(tool_name, call_id, arguments)
+            # DSK-P0-002: Block writes to active skill directories unless
+            # the dev opt-in is active.
+            self._assert_skill_path_not_protected(tool_name, call_id, arguments)
+
         if mode_result is None:
             return
         if mode_result != '__continue__':
@@ -758,6 +825,66 @@ class ApprovalManager:
             f"Tool call '{call_id}' for '{tool_name}' requires explicit approval.",
             reason_code=reason_code,
         )
+
+    # Path argument keys checked for workspace containment.
+    _PATH_ARGUMENT_KEYS = ('path', 'file_path', 'target_path', 'file')
+
+    def _assert_paths_in_workspace(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any],
+    ) -> None:
+        """Check that tool path arguments stay within workspace_root.
+
+        Raises ToolPermissionError if any path argument resolves outside
+        the workspace root. This ensures explicit workspace root takes
+        precedence over saved/imported state.
+        """
+        root_path = Path(self.workspace_root).resolve()
+        for key in self._PATH_ARGUMENT_KEYS:
+            raw = arguments.get(key)
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            try:
+                target = (root_path / raw).resolve()
+                target.relative_to(root_path)
+            except (ValueError, OSError):
+                raise ToolPermissionError(
+                    f"Tool '{tool_name}' target path '{raw}' is outside "
+                    f"workspace root '{self.workspace_root}'. "
+                    "Explicit workspace root must take precedence "
+                    "over any saved state.",
+                    reason_code=DenialReasonCode.WORKSPACE_WRITE_MODE,
+                ) from None
+
+    def _assert_skill_path_not_protected(
+        self,
+        tool_name: str,
+        call_id: str,
+        arguments: dict[str, Any],
+    ) -> None:
+        """Raise ToolPermissionError when a write targets a protected skill directory.
+
+        Does nothing when the skill-dev opt-in is active (env var or config).
+        """
+        if _is_skill_dev_opt_in(self.workspace_root):
+            return
+
+        root_path = Path(self.workspace_root).resolve()
+        for key in self._PATH_ARGUMENT_KEYS:
+            raw = arguments.get(key)
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            target = root_path / raw
+            if is_protected_skill_path(root_path, target):
+                raise ToolPermissionError(
+                    f"Write to active skill directory '{raw}' is blocked. "
+                    "Use the candidate install flow instead: skills are "
+                    "managed through .teaagent/skill-candidates/. See docs "
+                    "for --skill-dev-opt-in to bypass.",
+                    reason_code=DenialReasonCode.SKILL_WRITE_BLOCKED,
+                )
 
     def approve_once(self, call_id: str) -> None:
         """Approve a single tool call (one-time use)."""
@@ -964,4 +1091,5 @@ __all__ = [
     '_verify_ssh_signature',
     '_normalize_shell_arg',
     'format_denial_message',
+    'is_protected_skill_path',
 ]

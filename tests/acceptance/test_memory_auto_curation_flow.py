@@ -34,8 +34,8 @@ def test_completed_run_auto_curates_memory(tmp_path: Path) -> None:
     )
 
     assert result.status == 'completed'
-    memories = MemoryCatalog(tmp_path).list(limit=5)
-    assert memories, 'expected at least one memory entry'
+    memories = MemoryCatalog(tmp_path).list_quarantined(limit=5)
+    assert memories, 'expected at least one quarantined memory entry'
     latest = memories[0]
     assert 'Summarize README' in latest.content
     assert 'summarized README' in latest.content
@@ -68,7 +68,7 @@ def test_auto_curated_memory_deduplicates_identical_summary(tmp_path: Path) -> N
 
     assert first.status == 'completed'
     assert second.status == 'completed'
-    memories = MemoryCatalog(tmp_path).list(limit=20)
+    memories = MemoryCatalog(tmp_path).list_quarantined(limit=20)
     matches = [m for m in memories if 'Outcome: summarized README' in m.content]
     assert len(matches) == 1
 
@@ -85,6 +85,6 @@ def test_auto_curated_memory_not_written_for_pending_approval(tmp_path: Path) ->
     )
 
     assert result.status == 'pending_approval'
-    memories = MemoryCatalog(tmp_path).list(limit=10)
-    auto_curated = [m for m in memories if 'auto-curated' in m.tags]
+    quarantined = MemoryCatalog(tmp_path).list_quarantined(limit=10)
+    auto_curated = [m for m in quarantined if 'auto-curated' in m.tags]
     assert auto_curated == []

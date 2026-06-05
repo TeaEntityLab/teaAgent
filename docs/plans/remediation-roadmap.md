@@ -1,5 +1,12 @@
 # Remediation Roadmap — Post-Audit 2026-05-29
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> first audit pass. The P0–P4 items were absorbed into the daily-driver
+> workstreams and the Phase 0 trust repair work. For current prioritization,
+> use `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`.
+> For closure evidence, use
+> `docs/work-log/phase-0-governance-closure-report-2026-06-04.md`.
+
 Phased plan derived from `docs/analysis/comprehensive-audit-2026-05-29.md`.  
 Principle: **smallest verifiable step** per phase; no big-bang refactors.
 

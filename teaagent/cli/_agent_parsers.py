@@ -282,7 +282,12 @@ def add_agent_run_arguments(
     p.add_argument(
         '--background',
         action='store_true',
-        help=('Run detached; use agent attach <run_id> --follow to stream events.'),
+        help=(
+            'Launch task as a detached subprocess; '
+            'use agent attach <run_id> --follow to stream events. '
+            'This is NOT for resuming or suspending a run — '
+            'use agent resume or interactive-review instead.'
+        ),
     )
     p.add_argument(
         '--progress',
@@ -584,6 +589,12 @@ def _daily(
         action='store_true',
         help='Write .teaagent/daily/YYYY-MM-DD.md from the daily brief.',
     )
+    p.add_argument(
+        '--stale-check',
+        action='store_true',
+        help='Show only stale workspace indicators (git dirty, branch divergence, '
+        'pending approvals, unreviewed skill candidates).',
+    )
     defaults: dict[str, object] = {'func': handler, 'agent_command': 'daily'}
     if top_level:
         defaults['command'] = 'agent'
@@ -641,9 +652,9 @@ def _interactive_review(
 ) -> None:  # type: ignore[type-arg]
     p = subs.add_parser(
         'interactive-review',
-        help='Interactive review mode for background task results.',
+        help='Interactive review mode for suspended task results.',
     )
-    p.add_argument('run_id', help='Background task run ID to review.')
+    p.add_argument('run_id', help='Suspended task run ID to review.')
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
@@ -798,6 +809,11 @@ def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
     p.add_argument('run_id', help='Run id to inspect.')
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument(
+        '--evidence',
+        action='store_true',
+        help='Show run evidence summary (changed files, commands, tests, approvals, costs, rollback).',
     )
     p.set_defaults(func=handler)
 

@@ -1,5 +1,11 @@
 # Competitor Community Feedback Synthesis - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The
+> synthesis was refreshed in the competitor signal survey
+> (`docs/analysis/competitor-signal-survey-2026-06-04.md`) and the community
+> pain-point survey
+> (`docs/analysis/community-agent-pain-points-survey-2026-06-05.md`).
+
 This synthesis converts mainstream agent-system signals and community feedback
 into roadmap pressure for TeaAgent. It is not a popularity contest. The goal is
 to identify failure modes that daily users repeatedly notice in coding agents:

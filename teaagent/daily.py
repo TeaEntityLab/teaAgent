@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.cockpit import StaleWorkspaceReport, assess_stale_workspace
 from teaagent.context import CompactionManager
 from teaagent.context_pack import ContextPack
 from teaagent.llm import estimate_cost_preflight
@@ -155,6 +156,7 @@ class DailyBrief:
     harness_health: HarnessHealthReport
     recent_runs: list[RunRollup]
     recommendations: list[DailyRecommendation]
+    stale_workspace: StaleWorkspaceReport = field(default_factory=StaleWorkspaceReport)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -169,6 +171,7 @@ class DailyBrief:
             'harness_health': self.harness_health.to_dict(),
             'recent_runs': [run.to_dict() for run in self.recent_runs],
             'recommendations': [item.to_dict() for item in self.recommendations],
+            'stale_workspace': self.stale_workspace.to_dict(),
         }
 
 
@@ -341,6 +344,7 @@ def build_daily_brief(
         token_budget=token_budget,
         harness_health=harness_health,
     )
+    stale_workspace = assess_stale_workspace(root)
     return DailyBrief(
         task=task,
         provider=provider,
@@ -353,6 +357,7 @@ def build_daily_brief(
         harness_health=harness_health,
         recent_runs=recent_runs,
         recommendations=recommendations,
+        stale_workspace=stale_workspace,
     )
 
 

@@ -40,6 +40,7 @@ from ._approval_subagents import (
     approval_subagents_list_command,
     approval_subagents_prune_command,
 )
+from ._artifact import artifact_list_command, artifact_read_command
 from ._audit import (
     audit_decrypt_command,
     audit_export_command,
@@ -133,6 +134,7 @@ from ._gateway import (
     gateway_list_command,
     gateway_start_command,
 )
+from ._goal import goal_list_command, goal_status_command
 from ._marketplace import (
     skill_install_marketplace_command,
     skill_marketplace_list_command,
@@ -196,6 +198,7 @@ from ._plugin import (
     plugin_show_command,
     plugin_verify_command,
 )
+from ._release import release_evidence_command
 from ._replay import (
     replay_fork,
     replay_list,
@@ -211,13 +214,17 @@ from ._sandbox import (
     sandbox_wasm_contract_command,
 )
 from ._skill import (
+    skill_activate_command,
     skill_candidate_eval_command,
+    skill_candidate_eval_real_command,
     skill_candidate_install_command,
     skill_candidate_list_command,
     skill_candidate_propose_command,
+    skill_candidate_repair_tasks_command,
     skill_candidate_review_command,
     skill_candidate_show_command,
     skill_explain_command,
+    skill_health_command,
 )
 from ._skill_publish import (
     skill_publish_command,
@@ -233,6 +240,8 @@ from ._sync import (
 from ._tool import tool_inspect_command, tool_lint_command, tool_list_command
 
 __all__ = [
+    'artifact_list_command',
+    'artifact_read_command',
     'agent_attach_command',
     'agent_card_command',
     'approval_audit_command',
@@ -368,11 +377,15 @@ __all__ = [
     'ultrawork_stop_command',
     'workspace_openapi_command',
     'workspace_tools_metadata',
+    'skill_activate_command',
     'skill_candidate_install_command',
     'skill_explain_command',
+    'skill_health_command',
     'skill_candidate_list_command',
     'skill_candidate_propose_command',
+    'skill_candidate_repair_tasks_command',
     'skill_candidate_eval_command',
+    'skill_candidate_eval_real_command',
     'skill_candidate_review_command',
     'skill_candidate_show_command',
     'cloud_submit_command',
@@ -382,6 +395,8 @@ __all__ = [
     'cloud_capabilities_command',
     'gateway_start_command',
     'gateway_list_command',
+    'goal_list_command',
+    'goal_status_command',
     'skill_publish_command',
     'skill_search_command',
     'skill_marketplace_list_command',
@@ -396,6 +411,7 @@ __all__ = [
     'sync_signature_submit_command',
     'sync_status',
     'replay_list',
+    'release_evidence_command',
     'replay_steps',
     'replay_fork',
     'replay_resume',

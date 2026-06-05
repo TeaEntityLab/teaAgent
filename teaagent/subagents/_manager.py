@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +26,11 @@ from teaagent.subagents._types import (
     SubagentLineage,
     SubagentSession,
 )
+
+logger = logging.getLogger(__name__)
+
+UNSAFE_PARENT_MODES = frozenset({'allow', 'danger-full-access'})
+MAX_CHILD_PERMISSION = 'workspace-write'
 
 
 def _lineage_or_none(
@@ -221,6 +227,30 @@ class SubagentManager:
                 workspace_root=self._root,
             )
 
+        # P2-A-003: Cap permission mode inheritance.
+        # Child agents must never silently inherit unsafe authority from the
+        # parent.  If the parent runs in allow/danger-full-access mode and the
+        # subagent definition does not explicitly set its own permission mode,
+        # the child is capped at workspace-write.
+        inherited_mode = (
+            sub_def.permission_mode
+            if sub_def and sub_def.permission_mode is not None
+            else self._parent_config.permission_mode
+        )
+        parent_mode_str = str(
+            getattr(self._parent_config.permission_mode, 'value', self._parent_config.permission_mode)
+        )
+        if (
+            sub_def is None or sub_def.permission_mode is None
+        ) and parent_mode_str in UNSAFE_PARENT_MODES:
+            logger.warning(
+                'Subagent %s inheriting from parent in %s mode — capping permission to %s',
+                def_used,
+                parent_mode_str,
+                MAX_CHILD_PERMISSION,
+            )
+            inherited_mode = MAX_CHILD_PERMISSION
+
         sub_config = replace(
             self._parent_config,
             root=iso_ctx.child_root,
@@ -231,14 +261,8 @@ class SubagentManager:
                 if sub_def and sub_def.model
                 else self._parent_config.model
             ),
-            permission_mode=(
-                sub_def.permission_mode
-                if sub_def and sub_def.permission_mode is not None
-                else self._parent_config.permission_mode
-            ),
+            permission_mode=inherited_mode,
             approval_handler=approval_handler,
-            # Omit jit_state so subagent gets a fresh isolated JITApprovalState,
-            # preventing parent JIT approvals from leaking across the boundary
         )
 
         lineage = SubagentLineage(

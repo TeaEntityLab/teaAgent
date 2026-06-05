@@ -77,6 +77,11 @@ CONFIG_KEYS: dict[str, dict[str, Any]] = {
         'default': 'default',
         'type': str,
     },
+    'skill_dev_opt_in': {
+        'env': 'TEAAGENT_SKILL_DEV_OPT_IN',
+        'default': False,
+        'type': bool,
+    },
 }
 
 

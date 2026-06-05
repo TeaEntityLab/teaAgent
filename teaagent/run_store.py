@@ -20,6 +20,8 @@ class RunSummary:
     updated_at: str
     path: Path
     final_answer: Optional[str] = None
+    cost_cents: float = 0.0
+    resumable: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -30,6 +32,8 @@ class RunSummary:
             'updated_at': self.updated_at,
             'path': str(self.path),
             'final_answer': self.final_answer,
+            'cost_cents': self.cost_cents,
+            'resumable': self.resumable,
         }
 
 
@@ -121,6 +125,8 @@ class RunStore:
                         updated_at=data['updated_at'],
                         path=Path(data['path']),
                         final_answer=data.get('final_answer'),
+                        cost_cents=data.get('cost_cents', 0.0),
+                        resumable=data.get('resumable', False),
                     )
                 )
             except (json.JSONDecodeError, KeyError, TypeError):
@@ -331,6 +337,7 @@ class RunStore:
         task = ''
         status = 'unknown'
         final_answer = None
+        cost_cents = 0.0
         created_at = events[0].get('created_at', utc_now())
         updated_at = events[-1].get('created_at', created_at)
         for event in events:
@@ -342,10 +349,15 @@ class RunStore:
             elif event_type == 'run_completed':
                 status = 'completed'
                 final_answer = payload.get('answer')
+                cost_cents = float(payload.get('cost_cents', 0.0))
             elif event_type == 'run_failed':
                 status = f'failed:{payload.get("category", "unknown")}'
+                cost_cents = float(payload.get('cost_cents', 0.0))
             elif event_type == 'run_paused':
                 status = payload.get('status', 'paused')
+        resumable = not (
+            status == 'completed' or status.startswith('failed:')
+        ) and status != 'unknown'
         return RunSummary(
             run_id=run_id,
             task=task,
@@ -354,6 +366,8 @@ class RunStore:
             updated_at=updated_at,
             path=path,
             final_answer=final_answer,
+            cost_cents=cost_cents,
+            resumable=resumable,
         )
 
     def health_report(self) -> dict[str, Any]:

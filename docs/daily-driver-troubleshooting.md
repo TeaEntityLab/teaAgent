@@ -11,7 +11,7 @@ Symptom-first guide for the daily TeaAgent surfaces.
 | A resume command errors. | Run task/observations may not be stored for that path. | `teaagent agent show <run_id>` then `teaagent agent interactive-review <run_id>`. | AG-01 |
 | `agent run --background <id>` starts odd work. | The id can be parsed as a new task. | Stop and use review/resume command. | AG-02 |
 | TUI opens in the wrong repo. | Saved state may have overwritten explicit root. | Restart with `teaagent tui --root .` and verify visible root. | TASK-DD2-002 |
-| `/undo` affects more than expected. | Checkpoint/stash undo is different from undo journal. | Inspect git status and recover manually if needed. | CG-15 |
+| `/undo` affects more than expected. | Checkpoint restore (git-level) is different from journal undo (file-level). Check which mechanism was used in the output payload (`method`/`mechanism` fields). | Inspect git status and recover manually if needed. If journal undo was expected, verify the undo journal exists for the run. | CG-15 |
 | A test says cost works but live TUI does not. | Test may inject the state it claims to verify. | Add a path-level test through the user command. | CG-16 |
 | Approval prompt has no path. | Path scope fallback is too broad or ambiguous. | Reject and rerun with narrower scope. | PATH-GATE |
 | CLI says background but no work continues. | Lifecycle wording drift. | Treat as suspended and inspect the run id. | TICKET-16 |

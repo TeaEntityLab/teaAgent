@@ -46,6 +46,8 @@ from teaagent.cli._handlers import (
     approval_subagents_list_command,
     approval_subagents_prune_command,
     approval_why_denied_command,
+    artifact_list_command,
+    artifact_read_command,
     audit_decrypt_command,
     audit_export_command,
     audit_list_command,
@@ -114,6 +116,8 @@ from teaagent.cli._handlers import (
     experiment_select,
     gateway_list_command,
     gateway_start_command,
+    goal_list_command,
+    goal_status_command,
     graphqlite_migrate,
     graphqlite_query,
     graphqlite_smoke,
@@ -152,6 +156,7 @@ from teaagent.cli._handlers import (
     recall_command,
     recipes_list_command,
     recipes_run_command,
+    release_evidence_command,
     replay_fork,
     replay_list,
     replay_resume,
@@ -166,13 +171,17 @@ from teaagent.cli._handlers import (
     session_resume_command,
     session_show_command,
     setup_command,
+    skill_activate_command,
     skill_candidate_eval_command,
+    skill_candidate_eval_real_command,
     skill_candidate_install_command,
     skill_candidate_list_command,
     skill_candidate_propose_command,
+    skill_candidate_repair_tasks_command,
     skill_candidate_review_command,
     skill_candidate_show_command,
     skill_explain_command,
+    skill_health_command,
     skill_install_marketplace_command,
     skill_marketplace_list_command,
     skill_publish_command,
@@ -266,17 +275,20 @@ def main(
 
 def build_parser() -> argparse.ArgumentParser:
     from teaagent.cli._agent_parsers import register as register_agent
+    from teaagent.cli._artifact_parsers import register as register_artifact
     from teaagent.cli._cloud_parsers import register as register_cloud
     from teaagent.cli._consensus_parsers import register as register_consensus
     from teaagent.cli._control_plane_parsers import register as register_control_plane
     from teaagent.cli._cost_parsers import register as register_cost
     from teaagent.cli._ergonomics_parsers import register as register_ergonomics
     from teaagent.cli._gateway_parsers import register as register_gateway
+    from teaagent.cli._goal_parsers import register as register_goal
     from teaagent.cli._mcp_parsers import register as register_mcp
     from teaagent.cli._memory_parsers import register as register_memory
     from teaagent.cli._misc_parsers import register as register_misc
     from teaagent.cli._model_parsers import register as register_model
     from teaagent.cli._plugin_parsers import register as register_plugin
+    from teaagent.cli._release_parsers import register as register_release
     from teaagent.cli._sandbox_parsers import register as register_sandbox
     from teaagent.cli._skill_parsers import register as register_skill
     from teaagent.cli._tool_parsers import register as register_tool
@@ -379,12 +391,16 @@ def build_parser() -> argparse.ArgumentParser:
     register_skill(
         subparsers,
         {
+            'activate': skill_activate_command,
             'candidate_propose': skill_candidate_propose_command,
+            'candidate_repair_tasks': skill_candidate_repair_tasks_command,
             'candidate_eval': skill_candidate_eval_command,
+            'candidate_eval_real': skill_candidate_eval_real_command,
             'candidate_list': skill_candidate_list_command,
             'candidate_show': skill_candidate_show_command,
             'candidate_review': skill_candidate_review_command,
             'candidate_install': skill_candidate_install_command,
+            'candidate_health': skill_health_command,
             'explain': skill_explain_command,
             'publish': skill_publish_command,
             'search': skill_search_command,
@@ -408,6 +424,13 @@ def build_parser() -> argparse.ArgumentParser:
             'list': tool_list_command,
             'inspect': tool_inspect_command,
             'lint': tool_lint_command,
+        },
+    )
+    register_artifact(
+        subparsers,
+        {
+            'read': artifact_read_command,
+            'list': artifact_list_command,
         },
     )
     register_consensus(
@@ -598,6 +621,17 @@ def build_parser() -> argparse.ArgumentParser:
         {
             'cost_report': cost_report_command,
         },
+    )
+    register_goal(
+        subparsers,
+        {
+            'list': goal_list_command,
+            'status': goal_status_command,
+        },
+    )
+    register_release(
+        subparsers,
+        {'evidence': release_evidence_command},
     )
 
     return parser

@@ -1,5 +1,5 @@
 # TeaAgent Documentation Index
-# 2026-06-04
+# 2026-06-05
 
 This is the curated front door for TeaAgent documentation. It is intentionally
 not an exhaustive file list. Use it to find the current source of truth, then
@@ -47,6 +47,24 @@ follow dated evidence documents only when you need the reasoning trail.
 | Seven control loops product direction | [Seven Control Loops Product Direction](strategy/seven-control-loops-product-direction-2026-06-05.md) |
 | Seven control loops critical questioning | [Seven Control Loops Critical Questioning](reviews/seven-control-loops-critical-questioning-2026-06-05.md) |
 | Community agent pain points | [Community Agent Pain Points Survey](analysis/community-agent-pain-points-survey-2026-06-05.md) |
+| Phase 0-to-1 outlook | [Phase 0 To Phase 1 Outlook](strategy/phase-0-to-phase-1-outlook-2026-06-04.md) |
+| Malleable governed agent harness | [Malleable Governed Agent Harness](strategy/malleable-governed-agent-harness-2026-06-03.md) |
+| Daily-driver roadmap rationale | [Daily-Driver Roadmap Rationale](strategy/daily-driver-roadmap-rationale-2026-06-04.md) |
+| Daily-driver critique and counterarguments | [Daily-Driver Critique And Counterarguments](reviews/daily-driver-critique-and-counterarguments-2026-06-04.md) |
+| Daily-driver docs package review | [Daily-Driver Docs Package Review](reviews/daily-driver-docs-package-review-2026-06-02.md) |
+| Daily-driver red-team review | [Daily-Driver Red Team Review](reviews/daily-driver-red-team-review-2026-06-02.md) |
+
+## Processes
+
+| Process | Document |
+|---|---|
+| Signal-to-acceptance-gap conversion | [Signal To Acceptance Gap](processes/signal-to-acceptance-gap.md) |
+| Competitor gap watch | [OpenCode Gap Watch](processes/opencode-gap-watch.md) |
+| Community presence and dev-rel | [Community Presence](processes/community-presence.md) |
+| Post-fix re-audit | [Postfix Reaudit Process](processes/postfix-reaudit-process.md) |
+| Daily-driver verification | [Daily-Driver Verification](processes/daily-driver-verification.md) |
+| Daily-driver manual QA smoke | [Daily-Driver Manual QA Smoke](processes/daily-driver-manual-qa-smoke.md) |
+| Quarterly competitor refresh | [Release Checklist](release-checklist.md) |
 
 ## Governance
 
@@ -77,6 +95,23 @@ follow dated evidence documents only when you need the reasoning trail.
 | [Seven Control Loops Work Items](plans/seven-control-loops-work-items-2026-06-05.md) | Cross-cutting task ledger for spec-first, dynamic workflow, goal loops, model routing, review, memory, and human gates. |
 | [Seven Control Loops Integration Map](architecture/seven-control-loops-teaagent-integration-map-2026-06-05.md) | Architecture map for integrating the seven control loops into existing TeaAgent surfaces. |
 | [Community Pain Points Response Plan](plans/community-pain-points-response-plan-2026-06-05.md) | Work plan for routing opacity, memory pollution, review cost, long-task drift, hook confusion, skill/MCP risk, and fake success. |
+
+### Historical Reference Plans
+
+The following plans are historical evidence from earlier passes. They have
+supersession notes linking to current work. Use them for reasoning trail, not
+for current status.
+
+| Plan | Historical value |
+| --- | --- |
+| [Competitive Positioning Plan](plans/competitive-positioning-plan-2026-05-31.md) | May 2026 competitive baseline; superseded by [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-04.md). |
+| [Remediation Roadmap](plans/remediation-roadmap.md) | Post-audit remediation from 2026-05-29; absorbed into Phase 0 trust repair. |
+| [Governance Hardening](plans/governance-hardening.md) | Early governance plan (2026-05-28); superseded by [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md). |
+| [Comprehensive Plan All Aspects](plans/comprehensive-plan-all-aspects-2026-05-31.md) | Phase 0 audit consolidation; superseded by [Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md). |
+| [UX Improvement Roadmap](plans/ux-improvement-roadmap-2026-05-31.md) | Early UX gap survey; absorbed into P0-A through P1-D workstreams. |
+| [System Transparency Engineering Plan](plans/system-transparency-engineering-plan-2026-05-31.md) | Transparency pass; absorbed into P0-B, P0-D, P1-B, P2-B. |
+| [Future Roadmap Backlog](plans/future-roadmap-risk-usability-backlog-2026-05-31.md) | Phase 0 horizon roadmap; restructured into P0–P3 priority stack. |
+| [Agent Ecosystem Acceptance Roadmap](plans/agent-ecosystem-acceptance-roadmap-2026-05-31.md) | Early ecosystem roadmap; acceptance tracking now in ticket index. |
 
 ## Security And Reliability
 
@@ -110,6 +145,10 @@ follow dated evidence documents only when you need the reasoning trail.
 - Stable entry points and ledgers own current truth.
 - If a dated document contradicts a stable current source, prefer the stable
   source and add a supersession note if the contradiction could mislead.
+- Supersession notes follow the convention defined in
+  [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md):
+  `> Supersession note, YYYY-MM-DD: This file is historical evidence. For current
+  status, use <new-source>. The relevant item is now <State> because <short evidence>.`
 - Test counts, full-suite claims, dependency audit results, and competitor
   observations must include a date, command, and commit or they should be
   treated as stale.
@@ -122,5 +161,6 @@ After governance-sensitive documentation edits, run:
 
 ```bash
 python3 scripts/validate_docs_consistency.py
+python3 scripts/detect_stale_plans.py
 python3 -m pytest tests/test_docs_consistency.py tests/acceptance/test_docs_acceptance_count_accuracy.py -q
 ```

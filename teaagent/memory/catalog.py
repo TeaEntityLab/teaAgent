@@ -4,8 +4,9 @@ import json
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator, List
+from typing import Any, Iterator, List, Literal, cast
 from uuid import uuid4
 
 from teaagent.audit import utc_now
@@ -15,6 +16,91 @@ from teaagent.storage import append_jsonl_line
 def _create_memory_hierarchy(root: str | Path) -> 'MemoryHierarchy':
     """Factory function to create memory hierarchy."""
     return MemoryHierarchy(root)
+
+
+@dataclass
+class MemoryMeta:
+    """Typed metadata for memory entries.
+
+    Carries scope, ownership, freshness, confidence, and review state.
+    """
+
+    scope: Literal['project', 'personal', 'auto']
+    owner: str  # run_id or user
+    source_run_id: str | None = None
+    freshness_score: float = 1.0
+    ttl_days: int | None = 30
+    confidence: float = 0.0
+    review_state: Literal[
+        'pending', 'approved', 'rejected', 'quarantined', 'promoted'
+    ] = 'pending'
+
+    def __post_init__(self) -> None:
+        if self.freshness_score < 0.0 or self.freshness_score > 1.0:
+            raise ValueError(
+                f'freshness_score must be 0.0-1.0, got {self.freshness_score}'
+            )
+        if self.confidence < 0.0 or self.confidence > 1.0:
+            raise ValueError(
+                f'confidence must be 0.0-1.0, got {self.confidence}'
+            )
+        _valid_review = {
+            'pending', 'approved', 'rejected', 'quarantined', 'promoted',
+        }
+        if self.review_state not in _valid_review:
+            raise ValueError(
+                f"Invalid review_state '{self.review_state}'. "
+                f'Must be one of: {sorted(_valid_review)}'
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'scope': self.scope,
+            'owner': self.owner,
+            'source_run_id': self.source_run_id,
+            'freshness_score': self.freshness_score,
+            'ttl_days': self.ttl_days,
+            'confidence': self.confidence,
+            'review_state': self.review_state,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> MemoryMeta:
+        return cls(
+            scope=data.get('scope', 'auto'),
+            owner=data.get('owner', 'unknown'),
+            source_run_id=data.get('source_run_id'),
+            freshness_score=float(data.get('freshness_score', 1.0)),
+            ttl_days=data.get('ttl_days', 30),
+            confidence=float(data.get('confidence', 0.0)),
+            review_state=data.get('review_state', 'pending'),
+        )
+
+
+def compute_freshness(created_at: str, ttl_days: int | None = 30) -> float:
+    """Compute freshness score from 1.0 (new) decaying to 0.0 at TTL.
+
+    Args:
+        created_at: ISO-format datetime string.
+        ttl_days: Days after which freshness reaches 0.0.
+                  None means always fresh (returns 1.0).
+
+    Returns:
+        Freshness score clamped to [0.0, 1.0].
+    """
+    if ttl_days is None or ttl_days <= 0:
+        return 1.0
+    try:
+        created = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        age_days = (now - created).total_seconds() / 86400.0
+        if age_days <= 0:
+            return 1.0
+        if age_days >= ttl_days:
+            return 0.0
+        return round(1.0 - (age_days / ttl_days), 4)
+    except (ValueError, TypeError):
+        return 0.5  # Conservative fallback for unparseable timestamps
 
 
 @dataclass(frozen=True)
@@ -27,9 +113,10 @@ class MemoryEntry:
     created_at: str = field(default_factory=utc_now)
     branch_name: str | None = None  # Git branch name for memory isolation
     run_id: str | None = None  # Run ID for memory isolation
+    meta: MemoryMeta | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             'memory_id': self.memory_id,
             'content': self.content,
             'tags': list(self.tags),
@@ -37,6 +124,9 @@ class MemoryEntry:
             'branch_name': self.branch_name,
             'run_id': self.run_id,
         }
+        if self.meta is not None:
+            result['meta'] = self.meta.to_dict()
+        return result
 
 
 class MemoryCatalog:
@@ -62,6 +152,7 @@ class MemoryCatalog:
         tags: tuple[str, ...] = (),
         branch_name: str | None = None,
         run_id: str | None = None,
+        meta: MemoryMeta | None = None,
     ) -> MemoryEntry:
         if self.readonly:
             raise RuntimeError('Cannot add memory in readonly mode')
@@ -71,6 +162,7 @@ class MemoryCatalog:
             tags=normalize_tags(tags),
             branch_name=branch_name,
             run_id=run_id,
+            meta=meta,
         )
         if not entry.content:
             raise ValueError('memory content cannot be empty')
@@ -85,6 +177,8 @@ class MemoryCatalog:
         provenance: dict[str, Any],
         branch_name: str | None = None,
         run_id: str | None = None,
+        meta: MemoryMeta | None = None,
+        audit_logger: Any | None = None,
     ) -> MemoryEntry:
         if self.readonly:
             raise RuntimeError('Cannot add quarantined memory in readonly mode')
@@ -94,6 +188,7 @@ class MemoryCatalog:
             tags=normalize_tags(tags),
             branch_name=branch_name,
             run_id=run_id,
+            meta=meta,
         )
         if not entry.content:
             raise ValueError('memory content cannot be empty')
@@ -103,6 +198,24 @@ class MemoryCatalog:
             'provenance': provenance,
         }
         append_jsonl_line(self.quarantine_path, json.dumps(row, sort_keys=True))
+        if audit_logger is not None:
+            effective_run_id = run_id or entry.run_id
+            if effective_run_id:
+                audit_logger.record(
+                    event_type='memory_write_quarantined',
+                    run_id=effective_run_id,
+                    content_digest=(
+                        provenance.get('content_digest', '')
+                        if isinstance(provenance, dict)
+                        else ''
+                    ),
+                    quarantine_reason=(
+                        provenance.get('reason', 'unknown')
+                        if isinstance(provenance, dict)
+                        else 'unknown'
+                    ),
+                    memory_id=entry.memory_id,
+                )
         return entry
 
     def list(self, *, limit: int = 20) -> List[MemoryEntry]:
@@ -352,12 +465,16 @@ class MemoryCatalog:
         memory_id: str,
         *,
         attestation: str,
+        audit_logger: Any | None = None,
+        run_id: str | None = None,
     ) -> MemoryEntry:
         """Promote a quarantined memory entry to the main catalog.
 
         Args:
             memory_id: ID of the quarantined memory entry to promote.
             attestation: Attestation string for the promotion (e.g., operator confirmation).
+            audit_logger: Optional audit logger for emitting promotion events.
+            run_id: Optional run ID for audit.
 
         Returns:
             The promoted memory entry.
@@ -410,7 +527,79 @@ class MemoryCatalog:
         with self._cross_process_lock():
             append_jsonl_line(self.path, json.dumps(payload, sort_keys=True))
 
+        if audit_logger is not None:
+            effective_run_id = run_id or entry.run_id
+            if effective_run_id:
+                audit_logger.record(
+                    event_type='memory_write_promoted',
+                    run_id=effective_run_id,
+                    memory_id=entry.memory_id,
+                    attestation=attestation,
+                )
+
         return entry
+
+    def set_review_state(
+        self, memory_id: str, state: str, attestation: str
+    ) -> MemoryEntry:
+        """Set review state on a memory entry, updating or creating its meta.
+
+        Args:
+            memory_id: ID of the memory entry.
+            state: New review state (pending/approved/rejected/quarantined/promoted).
+            attestation: Attestation string (e.g. operator/run identifier).
+
+        Returns:
+            The updated memory entry.
+
+        Raises:
+            RuntimeError: If in readonly mode.
+            ValueError: If the state is invalid.
+            FileNotFoundError: If the memory_id is not found.
+        """
+        if self.readonly:
+            raise RuntimeError('Cannot set review state in readonly mode')
+        _valid = {'pending', 'approved', 'rejected', 'quarantined', 'promoted'}
+        if state not in _valid:
+            raise ValueError(
+                f"Invalid review state '{state}'. Must be one of: {sorted(_valid)}"
+            )
+
+        with self._cross_process_lock():
+            entries = self._read_entries()
+            for i, entry in enumerate(entries):
+                if entry.memory_id == memory_id:
+                    existing = entry.meta
+                    new_meta = MemoryMeta(
+                        scope=existing.scope if existing else 'auto',
+                        owner=existing.owner if existing else attestation,
+                        source_run_id=(
+                            existing.source_run_id if existing else None
+                        ),
+                        freshness_score=(
+                            existing.freshness_score if existing else 1.0
+                        ),
+                        ttl_days=existing.ttl_days if existing else 30,
+                        confidence=existing.confidence if existing else 0.0,
+                        review_state=cast(
+                            Literal['pending', 'approved', 'rejected', 'quarantined', 'promoted'],
+                            state,
+                        ),
+                    )
+                    new_entry = MemoryEntry(
+                        memory_id=entry.memory_id,
+                        content=entry.content,
+                        tags=entry.tags,
+                        created_at=entry.created_at,
+                        branch_name=entry.branch_name,
+                        run_id=entry.run_id,
+                        meta=new_meta,
+                    )
+                    entries[i] = new_entry
+                    self._atomic_write_entries(entries)
+                    return new_entry
+
+        raise FileNotFoundError(f"memory '{memory_id}' not found")
 
     def maintain_dry_run(self) -> dict[str, Any]:
         """Perform a dry-run maintenance report without executing actions.
@@ -496,6 +685,13 @@ def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
         return None
     if run_id is not None and not isinstance(run_id, str):
         return None
+    meta: MemoryMeta | None = None
+    meta_payload = payload.get('meta')
+    if isinstance(meta_payload, dict):
+        try:
+            meta = MemoryMeta.from_dict(meta_payload)
+        except (ValueError, TypeError):
+            meta = None  # Degrade safely on malformed meta
     return MemoryEntry(
         memory_id=memory_id,
         content=content,
@@ -503,6 +699,7 @@ def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:
         created_at=created_at,
         branch_name=branch_name,
         run_id=run_id,
+        meta=meta,
     )
 
 

@@ -33,12 +33,61 @@ documents may keep their historical numbers; current-truth front doors may not.
 | `docs/daily-driver-current-status.md` | The "what can I trust today" front door. |
 | `docs/roadmap-status.md` | Current roadmap and claim-hygiene status. |
 
+## Guarded Claim: cross-reference integrity
+
+- **Claim class**: internal markdown cross-references in current-truth docs.
+- **Rule**: every relative link to a `.md` file in the guarded documents must
+  resolve to an existing file in the repository. Broken links fail validation.
+- **Guarded documents**: `README.md`, `docs/INDEX.md`, `docs/USAGE.md`,
+  `docs/cli.md`, `docs/acceptance.md`, `docs/roadmap-status.md`,
+  `docs/daily-driver-current-status.md`, `docs/release-checklist.md`,
+  `docs/backlog-priority.md`, `docs/maturity-matrix.md`, `docs/terminology.md`,
+  `docs/architecture.md`.
+- **Validator function**: `validate_doc_cross_references` in
+  `scripts/validate_docs_consistency.py`.
+
+## Guarded Claim: plan staleness
+
+- **Claim class**: plan documents lacking date markers or supersession notes.
+- **Rule**: every plan in `docs/plans/` must have a `Last updated` /
+  `Last reviewed` / `Date:` marker or a `Supersession note` within 90 days.
+  Files in `ticket-plans/` are exempt (task execution ledgers, not plans).
+- **Validator script**: `python3 scripts/detect_stale_plans.py`
+- **CI integration**: informational only (not yet blocking); plans older than
+  90 days without updates are reported.
+
+## Guarded Claim: provider count drift
+
+- **Claim class**: provider count in README, architecture.md, and USAGE.md.
+- **Rule**: the provider count in all three documents must match
+  `len(PROVIDER_CONFIGS)` at runtime.
+- **Validator function**: `validate_provider_docs_consistency` in
+  `scripts/validate_docs_consistency.py`.
+
+## Guarded Claim: acceptance count accuracy
+
+- **Claim class**: acceptance test count in docs/acceptance.md.
+- **Rule**: `docs/acceptance.md` passed count must match `pytest --collect-only`
+  count for `tests/acceptance/`.
+- **Validator function**: `validate_docs_consistency` compares
+  `_extract_acceptance_status_count` with `_collect_acceptance_test_count`.
+
+## Guarded Claim: review date coherence
+
+- **Claim class**: competitor survey review dates across documentation.
+- **Rule**: survey, use-case-matrix, plugin-skill-catalog, and use-cases docs
+  must all reference the same review date. Date drift across documents fails
+  validation.
+- **Validator function**: `validate_date_coherence` in
+  `scripts/validate_docs_consistency.py`.
+
 ## Re-Entry Rules
 
-- Adding a guarded document requires a same-commit row in the table above and a
-  matching entry in `GUARDED_FULL_SUITE_DOCS` in
-  `scripts/validate_docs_consistency.py`.
+- Adding a guarded document requires a same-commit row in the relevant table
+  above and a matching entry in the corresponding validator.
 - Adding a new guarded claim class requires a new section here and a matching
   validator function with a unit test in `tests/test_docs_consistency.py`.
 - Historical, dated numbers belong in evidence documents, not in the guarded
   current-truth front doors above.
+- Plan staleness checks are informational (non-blocking in CI) until the
+  corpus stabilizes; current-truth cross-reference checks are blocking.

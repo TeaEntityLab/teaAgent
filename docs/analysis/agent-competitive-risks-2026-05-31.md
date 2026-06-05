@@ -1,6 +1,12 @@
 # Competitive Risk Analysis — AI Coding Agent Market
 # 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The
+> competitive risk analysis was refreshed in
+> `docs/analysis/competitor-signal-survey-2026-06-04.md`. For current risk
+> register entries, use
+> `docs/security/risk-register-and-threat-model-2026-06-02.md`.
+
 **Purpose:** Map the competitive landscape's failure modes to teaagent's
 strategic risks. Separate evidence from inference. Inform prioritization.
 

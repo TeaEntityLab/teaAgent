@@ -1,5 +1,12 @@
 # System Transparency Engineering Plan - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> Phase 0 transparency pass. The transparency items were absorbed into P0-B
+> (cost/budget truth), P0-D (root/approval truth), P1-B (run evidence), and
+> P2-B (docs as control plane). For current status, use
+> `docs/daily-driver-current-status.md` and
+> `docs/governance/documentation-operating-model-2026-06-04.md`.
+
 This plan turns the 2026-05-31 transparency risk audit into reviewable work. The
 goal is to make TeaAgent easier to inspect, safer to operate, and harder to
 misrepresent through stale claims.

@@ -1,5 +1,11 @@
 # System Transparency Risk Audit - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> Phase 0 transparency pass. The audit findings were absorbed into the risk
+> register and the transparency workstreams (P0-B, P0-D, P1-B, P2-B). For
+> current documentation governance, use
+> `docs/governance/documentation-operating-model-2026-06-04.md`.
+
 This audit converts the current Markdown and codebase state into a risk register
 for making TeaAgent more transparent, controllable, and systematically
 engineered.

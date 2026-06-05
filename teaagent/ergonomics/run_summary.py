@@ -85,6 +85,13 @@ def summarize_run(
     if budget_cap_cents is not None:
         remaining_cents = float(budget_cap_cents) - float(cost_cents_value)
 
+    # ── cost state derivation (P0-B) ──────────────────────────────────
+    cost_state: str = 'unavailable'
+    if budget_cap_cents is None:
+        cost_state = 'unlimited'
+    elif cost_cents_value > 0:
+        cost_state = 'estimated'
+
     summary: dict[str, Any] = {
         'tool_calls_total': tool_calls_total,
         'tool_calls_read': read_calls,
@@ -92,6 +99,7 @@ def summarize_run(
         'files_changed': changed_paths,
         'files_changed_count': len(changed_paths),
         'cost_usd': cost_cents_value / 100.0,
+        'cost_state': cost_state,
         'budget_cap_usd': (
             budget_cap_cents / 100.0 if budget_cap_cents is not None else None
         ),
@@ -112,6 +120,7 @@ def format_run_summary(summary: dict[str, Any]) -> str:
     tool_write = summary.get('tool_calls_write', 0)
     files_changed = summary.get('files_changed_count', 0)
     cost = summary.get('cost_usd', 0.0)
+    cost_state = summary.get('cost_state', 'unavailable')
     cap = summary.get('budget_cap_usd')
     remaining = summary.get('budget_remaining_usd')
     audit_log = summary.get('audit_log', '')
@@ -129,7 +138,7 @@ def format_run_summary(summary: dict[str, Any]) -> str:
         'Run summary:\n'
         f'  Tools called:     {tool_calls} ({tool_read} read, {tool_write} write)\n'
         f'  Files changed:    {files_changed}\n'
-        f'  Cost:             ${cost:.3f} ({total_tokens:,} tokens)\n'
+        f'  Cost:             ${cost:.3f} ({total_tokens:,} tokens) [{cost_state}]\n'
         f'{cap_str}'
         f'  Audit log:        {audit_log}\n'
         f'  Undo:             {undo_cmd}\n'

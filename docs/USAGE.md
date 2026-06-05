@@ -32,6 +32,28 @@ teaagent run gpt "quick fix" --permission-mode workspace-write --skip-plan-check
 teaagent agent undo --last --root .
 ```
 
+### First chat run (interactive REPL)
+
+After setup and a successful read-only run, start an interactive chat session:
+
+```bash
+# Start TUI with setup (one-time per workspace)
+teaagent tui --setup --root .
+
+# Inside the TUI, start a chat session:
+chat on
+ask What files are in this project?
+```
+
+For a lighter REPL without the full TUI:
+
+```bash
+teaagent chat
+```
+
+Both follow the same permission modes. Start with `read-only` for inspection;
+move to `workspace-write` or `prompt` when you need edits or shell commands.
+
 ### Scoped approvals
 
 Session grants expire after 8h by default; use separate grants per constraint:
@@ -118,6 +140,8 @@ teaagent mcp serve --http --port 7330 --root .
 teaagent tui --setup --root .
 # then: setup write-env | daily | ask | runs
 ```
+
+For more recovery scenarios (read-only write block, budget exceeded, undo unavailable, approval blocked), see [Recovery And Continuity Guide](recovery-and-continuity-guide.md).
 
 ## Table of Contents
 
@@ -876,6 +900,62 @@ The agent paused because it wants to use a destructive tool (file write, shell c
 1. Resume with `--approve-call-id`: `teaagent agent resume <provider> <run_id> --approve-call-id <call_id>`
 2. Re-run with `--allow-destructive`
 3. Re-run with `--permission-mode workspace-write` (allows file writes but not shell mutation)
+
+### Permission denied: read-only mode
+
+The agent cannot write files or run shell mutate commands because the permission mode is `read-only`:
+
+```
+"tool execution blocked: permission mode read-only does not allow workspace_write_file"
+```
+
+This is intentional. To allow writes:
+
+```bash
+# Allow file writes but still block shell mutation (safe for editing)
+teaagent agent run gpt "update docs" --permission-mode workspace-write --root .
+
+# Prompt for approval on destructive actions (default for daily work)
+teaagent agent run gpt "fix tests" --permission-mode prompt --root .
+```
+
+In TUI: `permission workspace-write` or `permission prompt`.
+
+### Budget exceeded / iteration limit reached
+
+The run stopped because it hit the iteration or cost limit. Adjust the limits:
+
+```bash
+# Increase iterations (default varies by mode)
+teaagent agent run gpt "your task" --max-iterations 50
+
+# Set explicit cost cap in cents
+teaagent agent run gpt "your task" --max-estimated-cost-cents 500
+
+# Use leaner context to reduce token pressure
+teaagent agent run gpt "your task" --context-profile lean
+```
+
+Preflight first to estimate token budget before a full run:
+
+```bash
+teaagent agent preflight gpt "your task" --root .
+# Check token_budget.green|yellow|red pressure level
+```
+
+### Undo not available / nothing to undo
+
+`teaagent undo --last` or `/undo` shows "nothing to undo." Common causes:
+
+| Cause | Recovery |
+|-------|----------|
+| The run made no file changes. | Inspect with `teaagent agent show <run_id>`. No files were modified. |
+| Undo journal was cleaned up. | Use `git diff` / `git checkout` for manual recovery. |
+| Checkpoint restore (git-level) was used. | A full workspace revert may have also reverted unrelated edits. Commit unrelated work before undo next time. |
+
+The undo output always labels which mechanism was used (`journal undo` vs `checkpoint restore`) so you know the scope.
+
+For more recovery details, see [Recovery And Continuity Guide](recovery-and-continuity-guide.md).
 
 ### Status "failed:system"
 

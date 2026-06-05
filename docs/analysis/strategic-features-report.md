@@ -1,5 +1,12 @@
 # Strategic Features Analysis Report
 
+> Supersession note, 2026-06-05: This file is historical evidence from the
+> earliest assessment pass (2026-05-28). The strategic features described here
+> were re-evaluated in later analysis and consolidated into the daily-driver
+> work plan. For current strategy, use
+> `docs/strategy/teaagent-product-principles-2026-06-04.md` and
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`.
+
 **Date:** 2026-05-28  
 **Scope:** Remote SSH-signed vote relay, external WASM skill CI, multi-tenant hosted control plane, and critical TeaAgent architecture context.
 

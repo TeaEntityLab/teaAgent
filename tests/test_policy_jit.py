@@ -146,7 +146,9 @@ class ApprovalPolicyJITTests(unittest.TestCase):
         """Test JIT prompt with explain choice."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         jit_state = JITApprovalState()
-        arguments = {'path': '/tmp/test.txt'}
+        # Use a path within workspace root (default '.') so path containment
+        # doesn't pre-empt the JIT prompt
+        arguments = {'path': 'test.txt'}
 
         with (
             patch('sys.stdin.isatty', return_value=True),

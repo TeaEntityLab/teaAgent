@@ -1,5 +1,12 @@
 # Agent Ecosystem Acceptance Roadmap - 2026-05-31
 
+> Supersession note, 2026-06-05: This file is historical evidence. The
+> acceptance roadmap items were absorbed into the daily-driver workstreams
+> (P0-A through P2-C) and the Phase 0 trust repair work. For current acceptance
+> coverage, use `docs/acceptance.md`. For active work, use
+> `docs/plans/ticket-plans/index.md` and
+> `docs/plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md`.
+
 **Status:** Partially implemented - See `docs/analysis/agent-ecosystem-roadmap-cross-reference-2026-05-31.md` for detailed status
 
 **Update 2026-06-01:** P0 acceptance tests created for Issue-to-Plan Intake, Plan Review and Revision, Guided Recovery, Execution evidence summary, and Daily cockpit parity.

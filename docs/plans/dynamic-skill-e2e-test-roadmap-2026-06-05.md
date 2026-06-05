@@ -24,6 +24,8 @@ Related June 5 documentation package:
 
 ### P0 - Prove the Lifecycle, Not the Claim
 
+> **Status: Complete** — Lifecycle state machine implemented in `skill_lifecycle.py`, activation explain via `explain_skill_activation()`, shadowed skill detection, governance classification.
+
 #### DSK-P0-001: Skill Lifecycle State Machine
 
 Define explicit states:
@@ -57,6 +59,8 @@ ROI:
 Risk:
 
 - Low. Mostly metadata and tests.
+
+> **Status: Complete** — Active skill write guard implemented via provenance gate and protected path rules in `skill_candidates.py`.
 
 #### DSK-P0-002: Block or Quarantine Direct Active Skill Writes
 
@@ -94,6 +98,8 @@ Risk:
 
 - Medium. Existing users may intentionally keep shared skills in `.opencode`.
   Provide explicit opt-in and migration notes.
+
+> **Status: Complete** — Offline fixtures under `tests/skills/fixtures/rss/`, acceptance test `test_skill_rss_fixtures.py`, plus built-in RSS starter skill at `teaagent/skills/builtin/rss-summary/`.
 
 #### DSK-P0-003: RSS Fixture Acceptance Test
 
@@ -134,6 +140,8 @@ Risk:
 
 - Low if offline fixtures are used.
 
+> **Status: Complete** — `LongResultEnvelope` in `long_result_envelope.py` with preview, truncation, artifact path, hash, and cursor. Readback via CLI `artifact read` handler.
+
 #### DSK-P0-004: Long Result Envelope
 
 Add a standard envelope for large tool results:
@@ -170,6 +178,8 @@ Risk:
 
 ### P1 - Make Generated Skills Actually Useful
 
+> **Status: Complete** — `SkillCandidateEval` in `skill_eval.py` with `without_skill` / `with_skill` modes, fixture-based assertions.
+
 #### DSK-P1-001: Behavioral Skill Eval Harness
 
 Extend candidate eval from structural checks to behavioral checks.
@@ -205,6 +215,8 @@ Risk:
 
 - Medium. Requires a scripted adapter or deterministic model harness for CI.
 
+> **Status: Complete** — Skill lifecycle audit events (`skill_indexed`, `skill_selected`, `skill_activated`, etc.) emitted through `SkillLifecycleTracker`.
+
 #### DSK-P1-002: Skill Invocation Audit
 
 Add first-class events:
@@ -233,6 +245,8 @@ ROI:
 Risk:
 
 - Low to medium. Event naming must remain stable.
+
+> **Status: Complete** — `activate_skill` runtime tool registered when skills exist, with `skill_name` enum validation and audit event.
 
 #### DSK-P1-003: Dedicated Skill Activation Tool
 
@@ -288,6 +302,8 @@ Risk:
 
 ### P2 - UX and Daily-Driver Improvements
 
+> **Status: Complete** — TUI diagnostics panel via `get_skill_diagnostics()` in `skill_loader.py`, `/skill-diagnostics` TUI command, enhanced skills panel.
+
 #### DSK-P2-001: TUI Skill Diagnostics Panel
 
 Show:
@@ -307,6 +323,8 @@ ROI:
 Risk:
 
 - Medium. TUI space is limited.
+
+> **Status: Complete** — Built-in RSS starter skill at `teaagent/skills/builtin/rss-summary/` with SKILL.md, offline fixtures, and acceptance tests.
 
 #### DSK-P2-002: RSS Summary Built-In Starter Skill
 
