@@ -905,6 +905,28 @@ def _ensure_log_safe(value: Any) -> Any:
         return safe
     if isinstance(value, list):
         return [_ensure_log_safe(item) for item in value]
+    if isinstance(value, str) and _looks_like_sensitive_string(value):
+        return _REDACTED
+    return value
+
+
+def _strict_log_sanitize(value: Any) -> Any:
+    """Final conservative sanitizer before logging JSON."""
+    if isinstance(value, dict):
+        sanitized: dict[Any, Any] = {}
+        for key, item in value.items():
+            key_text = str(key)
+            if _is_sensitive_key(key) or _looks_like_sensitive_env_name(key_text):
+                sanitized[key] = _REDACTED
+            else:
+                sanitized[key] = _strict_log_sanitize(item)
+        return sanitized
+    if isinstance(value, list):
+        return [_strict_log_sanitize(item) for item in value]
+    if isinstance(value, str) and _looks_like_sensitive_string(value):
+        return _REDACTED
+    return value
+        return [_ensure_log_safe(item) for item in value]
     if isinstance(value, str) and (
         _looks_like_sensitive_string(value) or _looks_like_sensitive_env_name(value)
     ):
@@ -920,6 +942,7 @@ def print_json(value: Any) -> None:
     # Final defense-in-depth pass at the logging sink.
     safe_value = _redact_sensitive_fields(_sanitize_doctor_payload(safe_value))
     safe_value = _ensure_log_safe(safe_value)
+    safe_value = _strict_log_sanitize(safe_value)
     print(
         json.dumps(
             safe_value, ensure_ascii=False, sort_keys=True, default=_json_default
