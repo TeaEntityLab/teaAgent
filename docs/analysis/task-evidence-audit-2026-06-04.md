@@ -5,6 +5,12 @@
 **Method:** grep test names in `tests/`, check commit SHAs in `git log`, cross-reference doc claims  
 **Canonical evidence bar:** "Fixed" requires a test function name or commit hash; "Active/In Progress" requires a ticket ID or code ref
 
+**Status update — 2026-06-05:** The original audit table captured a pre-fix
+snapshot for SEC-04, SEC-06, DS-12, and DS-13. Current canonical status lives in
+`docs/roadmap-status.md`: all four are fixed with regression evidence. This file
+preserves the audit trail below, but rows that previously said "table row not
+updated" have been reconciled so automated readers do not re-open closed risk.
+
 ---
 
 ## 1. Audit Process
@@ -43,9 +49,9 @@ For each status claim in the source documents:
 | SEC-01 | P0/Blocker | OPEN | NOT VERIFIED | No test guards audit HMAC persistence across restarts | 🔴 HIGH |
 | SEC-02 | P0/Blocker | OPEN | NOT VERIFIED | No test exercises `is_server_trust_expired()` at call time | 🔴 HIGH |
 | SEC-03 | P1 | FIXED/WATCH | Test evidence | `test_first_run_pauses_at_destructive_tool`, `test_resume_with_danger_full_access_completes` (`tests/integration/test_destructive_approval_lifecycle.py:49,63`); `tests/test_full_access_gate.py` | 🟡 MEDIUM |
-| SEC-04 | P0/Blocker | OPEN | NOT VERIFIED | `runner/_core.py:142` default still 0-as-unlimited; no test asserts cap fires at default | 🔴 HIGH |
+| SEC-04 | P0/Blocker | FIXED | Test evidence | Default cap is finite and `0` is a real zero-spend cap; see `test_zero_cost_budget_blocks_preflight`, `test_zero_cost_cap_blocks_positive_cost_run`, and budget/TUI focused tests | 🟢 LOW |
 | SEC-05 | P2 | OPEN | NOT VERIFIED | No test guards cost side-channel via adapter context dict | 🟡 MEDIUM |
-| SEC-06 | P1 | **OPEN** (table) / **FIXED** (header, Fix Status section) | Test evidence | `test_subagent_jit_approval_isolation_sec06` + `test_subagent_jit_approval_isolation_sec06_adversarial` (`tests/integration/test_subagent_budget_inheritance.py:91,126`) | 🔴 HIGH — **table row not updated** |
+| SEC-06 | P1 | FIXED | Test evidence | `test_subagent_jit_approval_isolation_sec06` + `test_subagent_jit_approval_isolation_sec06_adversarial` (`tests/integration/test_subagent_budget_inheritance.py:91,126`) | 🟢 LOW |
 | SEC-07 | P0/Blocker | OPEN | NOT VERIFIED | No test asserts Docker flags `--network none`, `--cap-drop ALL`, seccomp | 🔴 HIGH |
 | SEC-08 | P1 | OPEN | NOT VERIFIED | No test verifies directory-snapshot isolation vs `/etc/`, `/proc/` access | 🟡 MEDIUM |
 | SEC-09 | P2 | OPEN | NOT VERIFIED | Multi-sig 1-hour replay window; no test exercises replay attack | 🟢 LOW |
@@ -61,8 +67,8 @@ For each status claim in the source documents:
 
 | ID | Priority | Claimed Status | Evidence Type | Evidence Link | Risk Level |
 |---|---|---|---|---|---|
-| DS-12 | P1 | **OPEN** (table) / **FIXED** (header, Fix Status section) | Test evidence | `test_empty_path_globs_rejected_ds12` (`tests/integration/test_destructive_approval_lifecycle.py:142`) | 🔴 HIGH — **table row not updated to FIXED** |
-| DS-13 | P2 | **OPEN** (table) / **FIXED** (header, Fix Status section) | Test evidence | `test_zero_cost_cap_blocks_positive_cost_run` (`tests/integration/test_runner_cost_tracking.py:107`); `test_zero_cost_budget_blocks_preflight` (`tests/test_budget.py:50`) | 🟡 MEDIUM — **table row not updated to FIXED** |
+| DS-12 | P1 | FIXED | Test evidence | `test_empty_path_globs_rejected_ds12`, `test_approval_preset_store_rejects_blank_scoped_patterns`, `test_smart_hitl_approval_p_without_path_stays_denied`, `test_tui_path_approval_without_path_stays_denied` | 🟢 LOW |
+| DS-13 | P2 | FIXED | Test evidence | `test_zero_cost_cap_blocks_positive_cost_run` (`tests/integration/test_runner_cost_tracking.py:107`); `test_zero_cost_budget_blocks_preflight` (`tests/test_budget.py:50`); TUI/CLI budget pass-through tests | 🟢 LOW |
 | DS-01 | P1 | OPEN | NOT VERIFIED | TUI `_session_cost_cents` accumulation bug; DS-13 fixed budget semantics but DS-01 is a separate TUI accumulation path | 🔴 HIGH |
 | DS-05 | P2 | OPEN | NOT VERIFIED | TUI/REPL undo divergence; no test shows same command has consistent blast radius | 🟡 MEDIUM |
 | DS-06 | P1 | OPEN | NOT VERIFIED | TUI cost test still injects state directly; accumulation path not covered by CI | 🟡 MEDIUM |
@@ -161,24 +167,20 @@ These are the claims with the highest combination of priority, no test evidence,
 
 | Rank | ID | Source | Claim | Why High Risk |
 |---|---|---|---|---|
-| 1 | **DS-12 table row** | Risk register table | Row still says **OPEN** despite header and Fix Status section saying FIXED (2026-06-04) | Direct inconsistency in the same file; auditors and automated tools will read the table row, not the header note |
-| 2 | **DS-13 table row** | Risk register table | Same inconsistency — OPEN in table, FIXED in header | Same reason as above |
-| 3 | **SEC-06 table row** | Risk register table | OPEN in table, FIXED in header and Fix Status section | Same reason; creates false impression that JIT isolation is still broken |
-| 4 | **SEC-01** | Risk register | Audit chain forgeable (HMAC ephemeral) — P0 blocker | No test, no commit, no timeline; still blocking production expansion |
-| 5 | **SEC-02** | Risk register | MCP trust expiry not checked — P0 blocker | No test exercises the expired-trust call path |
-| 6 | **SEC-04** | Risk register | Budget default 0="no cap" — P0 blocker | DS-13 fixed `0`=zero-spend, but SEC-04's runner default path not separately tested |
-| 7 | **SEC-07** | Risk register | Docker runs as root, no network isolation — P0 blocker | No test, no remediation plan |
-| 8 | **SEC-10** | Risk register | `cat`/`head`/`tail` in inspect executables — P1 | Can read `~/.ssh/id_rsa`; no fix plan, no test |
-| 9 | **SEC-13** | Risk register | Security paths mocked in tests — P1 | Confirmed to have hidden bugs before; no remediation date |
-| 10 | **DS-01** | Risk register | TUI cost bar always $0.00 — P1 | Different from DS-13 (semantics); the TUI accumulation path still open |
-| 11 | **DS-09** | Risk register | `agent run --background <uuid>` misuse — P1 | No guard, no test |
-| 12 | **SC-02** | Risk register | `anthropic`/`pyyaml` undeclared — P1 | Silent ImportError risk; no test guards importability |
-| 13 | **M0 Pending** | Roadmap | Risk register operational gate — listed as Pending despite `validate_docs_consistency.py` existing | GOV-002 through GOV-012 all still Pending; M0 conditions not fully met |
-| 14 | **GOV-002 through GOV-012** | Roadmap | All Pending, no owners, no ticket IDs | 11 consecutive governance items with zero evidence |
-| 15 | **H2 Pending** | Roadmap | Multi-surface continuity — no surface-parity tests | Identity/cost/recovery continuity across CLI+TUI+IDE unverified |
-| 16 | **H3 Pending** | Roadmap | Ecosystem trust — no MCP trust-onboarding tests | Extension activation explain not implemented |
-| 17 | **TASK-DD2-005 partial** | Ticket index | Broader ACs partially addressed | No test names listed for the un-addressed ACs |
-| 18 | **TICKET-16 Phase 2** | Ticket index | Real suspend→resume round-trip claimed Fixed | No dedicated integration test name cited for the round-trip path |
+| 1 | **SEC-01** | Risk register | Audit chain forgeable (HMAC ephemeral) — P0 blocker | No test, no commit, no timeline; still blocking production expansion |
+| 2 | **SEC-02** | Risk register | MCP trust expiry not checked — P0 blocker | No test exercises the expired-trust call path |
+| 3 | **SEC-07** | Risk register | Docker runs as root, no network isolation — P0 blocker | No test, no remediation plan |
+| 4 | **SEC-10** | Risk register | `cat`/`head`/`tail` in inspect executables — P1 | Can read sensitive local files; no fix plan, no test |
+| 5 | **SEC-13** | Risk register | Security paths mocked in tests — P1 | Confirmed to have hidden bugs before; no remediation date |
+| 6 | **DS-01** | Risk register | TUI cost bar always $0.00 — P1 | Different from DS-13 (semantics); the TUI accumulation path still open |
+| 7 | **DS-09** | Risk register | `agent run --background <uuid>` misuse — P1 | No guard, no test |
+| 8 | **SC-02** | Risk register | `anthropic`/`pyyaml` undeclared — P1 | Silent ImportError risk; no test guards importability |
+| 9 | **M0 Pending** | Roadmap | Risk register operational gate — listed as Pending despite `validate_docs_consistency.py` existing | GOV-002 through GOV-012 all still Pending; M0 conditions not fully met |
+| 10 | **GOV-002 through GOV-012** | Roadmap | All Pending, no owners, no ticket IDs | 11 consecutive governance items with zero evidence |
+| 11 | **H2 Pending** | Roadmap | Multi-surface continuity — no surface-parity tests | Identity/cost/recovery continuity across CLI+TUI+IDE unverified |
+| 12 | **H3 Pending** | Roadmap | Ecosystem trust — no MCP trust-onboarding tests | Extension activation explain not implemented |
+| 13 | **TASK-DD2-005 partial** | Ticket index | Broader ACs partially addressed | No test names listed for the un-addressed ACs |
+| 14 | **TICKET-16 Phase 2** | Ticket index | Real suspend→resume round-trip claimed Fixed | No dedicated integration test name cited for the round-trip path |
 
 ---
 

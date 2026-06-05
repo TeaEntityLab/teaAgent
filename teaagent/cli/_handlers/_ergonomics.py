@@ -494,8 +494,8 @@ def approval_revoke_command(args: argparse.Namespace) -> int:
 def approval_grant_command(args: argparse.Namespace) -> int:
     def _grant() -> int:
         store = ApprovalPresetStore(args.root)
-        # DS-12: For session-scope, None is allowed (no path restriction)
-        # For other scopes, require explicit patterns
+        # Session-scope: None means no path restriction (temporary grant).
+        # Other scopes require explicit patterns to prevent implicit global grants.
         if args.scope == 'session':
             path_globs = args.path_glob or None
             command_prefixes = args.command_prefix or None
@@ -507,8 +507,8 @@ def approval_grant_command(args: argparse.Namespace) -> int:
                     file=sys.stderr,
                 )
                 return 1
-            path_globs = args.path_glob or []
-            command_prefixes = args.command_prefix or []
+            path_globs = args.path_glob or None
+            command_prefixes = args.command_prefix or None
         grant = store.grant(
             args.tool_name,
             scope=args.scope,
@@ -785,10 +785,10 @@ def approval_preset_command(args: argparse.Namespace) -> int:
                 skipped.append(grant_config)
                 continue
 
-            # DS-12: Ensure deny scopes have explicit patterns
+            # Deny scope requires explicit patterns to prevent implicit global denials
             if grant_config['scope'] == 'deny':
-                path_globs = grant_config.get('path_globs') or []
-                command_prefixes = grant_config.get('command_prefixes') or []
+                path_globs = grant_config.get('path_globs') or None
+                command_prefixes = grant_config.get('command_prefixes') or None
                 if not path_globs and not command_prefixes:
                     print(
                         f'[warning] Skipping deny grant for {grant_config["tool_name"]}: '
@@ -808,8 +808,8 @@ def approval_preset_command(args: argparse.Namespace) -> int:
                     path_globs = grant_config.get('path_globs') or None
                     command_prefixes = grant_config.get('command_prefixes') or None
                 else:
-                    path_globs = grant_config.get('path_globs') or []
-                    command_prefixes = grant_config.get('command_prefixes') or []
+                    path_globs = grant_config.get('path_globs') or None
+                    command_prefixes = grant_config.get('command_prefixes') or None
                     if not path_globs and not command_prefixes:
                         print(
                             f'[warning] Skipping grant for {grant_config["tool_name"]}: '

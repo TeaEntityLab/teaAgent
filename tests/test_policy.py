@@ -428,7 +428,11 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
         """_save must chmod approvals.json to 0o600 after every write."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             mode = store.path.stat().st_mode & 0o777
             self.assertEqual(
                 mode, 0o600, f'approvals.json should be 0o600 but got {oct(mode)}'
@@ -508,7 +512,11 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
         """check_security_health reports error when approvals.json mode is too open."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')  # create the file
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )  # create the file
             store.path.chmod(0o644)
             result = store.check_security_health()
             approvals_check = next(
@@ -570,7 +578,11 @@ class TrustBoundaryPermissionsTests(unittest.TestCase):
         """check_security_health reports error when approvals.json is owned by wrong user."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')  # create the file
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )  # create the file
             result = store.check_security_health()
             approvals_ownership_check = next(
                 (
@@ -674,7 +686,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
             # Write something to trigger file creation first, then corrupt it
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             store.path.write_text('{bad json', encoding='utf-8')
             result = store.check_security_health()
             content_check = next(
@@ -691,7 +707,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         """check_security_health must report error when top-level is not a dict."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             store.path.write_text('[1, 2, 3]', encoding='utf-8')
             result = store.check_security_health()
             content_check = next(
@@ -708,7 +728,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             store.path.write_text(
                 json.dumps(
                     {'grants': 'not-a-list', 'audit': [], 'scoped_approvals': []}
@@ -728,7 +752,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         """Normal approvals.json must get ok=True for the content check."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             result = store.check_security_health()
             content_check = next(
                 (c for c in result['checks'] if c['name'] == 'approvals_file_content'),
@@ -741,11 +769,19 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         """Mutating paths must not silently replace a corrupt approvals.json."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             store.path.write_text('{bad json', encoding='utf-8')
 
             with self.assertRaises(IOError):
-                store.grant(tool_name='workspace_write_file', scope='once')
+                store.grant(
+                    tool_name='workspace_write_file',
+                    scope='once',
+                    path_globs=['src/**'],
+                )
 
             self.assertEqual(store.path.read_text(encoding='utf-8'), '{bad json')
 
@@ -753,7 +789,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         """--repair-store semantics: a valid store is inspected, not reset."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             before = store.path.read_text(encoding='utf-8')
 
             result = store.repair_store()
@@ -766,7 +806,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         """Corrupt store repair must preserve the bad file in a timestamped backup."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             store.path.write_text('{bad json', encoding='utf-8')
 
             result = store.repair_store()
@@ -784,7 +828,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         """Explicit healthy-store reset is allowed only as a distinct audit event."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
 
             result = store.repair_store(reset_healthy=True)
 
@@ -799,7 +847,11 @@ class TrustBoundaryRegressionTests(unittest.TestCase):
         """Multiple repairs within the same second must create distinct backup files."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ApprovalPresetStore(tmpdir)
-            store.grant(tool_name='shell_exec', scope='once')
+            store.grant(
+                tool_name='shell_exec',
+                scope='once',
+                command_prefixes=['pytest '],
+            )
             store.path.write_text('{bad json', encoding='utf-8')
 
             result1 = store.repair_store()

@@ -1115,7 +1115,7 @@ class TeaAgentTUI:
                 return False
             return True
         elif answer == 't':
-            # DS-12: Provide explicit current directory pattern to prevent implicit global grants
+            # Use explicit current-directory pattern to prevent implicit global grants
             store.grant(
                 request.tool_name,
                 scope='session',

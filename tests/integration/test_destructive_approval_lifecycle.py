@@ -157,8 +157,8 @@ def test_empty_path_globs_rejected_ds12(tmp_path):
     grant = store.grant('workspace_write_file', path_globs=None, scope='session')
     assert grant.path_globs == ()
 
-    # deny() normalizes None to empty tuple, then rejects empty patterns
-    with pytest.raises(ValueError, match='must contain at least one non-empty pattern'):
+    # deny() without any explicit scope is rejected to avoid global denials
+    with pytest.raises(ValueError, match='must be provided explicitly'):
         store.deny('workspace_write_file', path_globs=None)
 
     # Valid patterns should work
@@ -188,7 +188,9 @@ def test_approval_policy_rejects_empty_path(tmp_path):
         store.grant('workspace_write_file', path_globs=None, scope='always')
 
     # session-scope with None is allowed (no path restriction for temporary grants)
-    session_grant = store.grant('workspace_write_file', path_globs=None, scope='session')
+    session_grant = store.grant(
+        'workspace_write_file', path_globs=None, scope='session'
+    )
     assert session_grant.path_globs == ()
 
     # A grant with a valid non-empty path works for session scope

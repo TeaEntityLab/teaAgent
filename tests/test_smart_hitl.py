@@ -90,5 +90,5 @@ def test_smart_hitl_approval_t() -> None:
         grants = store.list_grants()
         assert len(grants) == 1
         assert grants[0].tool_name == 'workspace_write_file'
-        assert not grants[0].path_globs
+        assert grants[0].path_globs == ('*',)
         assert grants[0].scope == 'session'

@@ -70,7 +70,7 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | **FIXED 2026-06-05** — `_INSPECT_EXECUTABLES` contains only `{pwd, ls, rg, grep, wc}`; `cat/head/tail` absent; tests: `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | — |
 | SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | **OPEN** | P2 |
 | SEC-12 | Audit | `os.fsync()` failure caught and silenced; audit degrades to in-memory only with no operator notification; disk-full attack eliminates all log persistence | L | M | 2 | **OPEN** | P2 |
-| SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | **OPEN** | P1 |
+| SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | **OPEN** — remediation plan in §9; target tests include `tests/test_chat_agent.py`, audit HMAC persistence/wrong-key tests, and MCP trust-expiry enforcement tests | P1 |
 | SEC-14 | Permission | `preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification | L | L | 1 | **OPEN** | P3 |
 | SEC-15 | Multi-sig | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment | L | M | 2 | **OPEN** | P2 |
 | SEC-16 | Code Quality | Dead code at `budget_monitor.py:104-119` after early return — maintenance hazard that could accidentally activate on refactor | H | L | 3 | **OPEN** | QW |
@@ -81,18 +81,18 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 |---|---|---|---|---|---|---|---|
 | DS-12 | Permission | Empty-path approval creates implicit global workspace grant; user believes they granted path-scoped access; audit log records it as "path-scoped" masking the expansion | M | H | 6 | **FIXED 2026-06-05** | — |
 | DS-13 | Budget | ~~`0` cost cap had three incompatible semantics~~ `None`=unlimited, `0`=zero-spend, positive=cap. Default 500 cents. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_default_500_cents` | M | M | 4 | **FIXED 2026-06-05** | — |
-| DS-01 | Budget | TUI `_session_cost_cents` never incremented — `/cost` and budget bar always show `$0.00`; per-run cap still fires but cumulative cap never triggers | H | M | 6 | **OPEN** | P1 |
+| DS-01 | Budget | Historical: TUI `_session_cost_cents` never incremented — `/cost` and budget bar always showed `$0.00`; per-run cap still fired but cumulative cap never triggered | H | M | 6 | **FIXED 2026-06-05** — runtime-path TUI tests in `tests/test_tui.py`; see TICKET-12 | — |
 | DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | **Fixed** (2026-06-05) — TUI undo routes journal-first via `ChatSessionController.undo_last_run()` at `tui/__init__.py:860`; checkpoint fallback retained; `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py` | — |
 | DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | **Fixed** (2026-06-05) — known run/suspension IDs rejected before dispatch; `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167` | — |
 | DS-04 | Audit | Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events | M | L | 2 | **OPEN** | P3 |
-| DS-06 | Testing | TUI cost test injects `_session_cost_cents` directly, tests formatter only — accumulation bug CG-11 permanently masked from CI | H | M | 6 | **OPEN** | P1 |
+| DS-06 | Testing | Historical: TUI cost test injected `_session_cost_cents` directly and tested formatter only, masking CG-11 from CI | H | M | 6 | **FIXED 2026-06-05** — active-path TUI cost/session tests in `tests/test_tui.py`; see TICKET-14 | — |
 
 ### 2.3 Supply Chain Findings (SC-*)
 
 | ID | Category | Description | L | I | Score | Status | Priority |
 |---|---|---|---|---|---|---|---|
 | SC-01 | Dependencies | Two alpha packages in production lock (`opentelemetry-exporter-gcp-logging==1.12.0a0`, `opentelemetry-resourcedetector-gcp==1.12.0a0`) can break between lock refreshes | M | L | 2 | **OPEN** | P2 |
-| SC-02 | Dependencies | `anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit` | H | M | 6 | **OPEN** | P1 |
+| SC-02 | Dependencies | `anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit` | H | M | 6 | **OPEN** — TASK-DD2-015 dependency declaration/import-check follow-up; fix target: `pyproject.toml` | P1 |
 | SC-03 | Dependencies | `aiohttp` and `mcp` SDK in lock as orphans — not declared, not imported in core; add 22 transitive packages to attack surface unnecessarily | H | L | 3 | **OPEN** | P2 |
 
 ---

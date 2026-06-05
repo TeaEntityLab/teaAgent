@@ -145,12 +145,15 @@ half includes:
 
 `approval_manager.py` at 74% has its missing 89 lines concentrated in:
 
-- Lines 294–313: path-scope rule creation — the exact path where DS-12 (empty-path → global grant) lives
+- Lines 294–313: path-scope rule creation — the historical path where DS-12
+  (empty-path to global grant) lived; current regression coverage exists in the
+  preset store, smart HITL, and TUI approval paths.
 - Lines 326–376: approval matching with glob evaluation
 - Lines 405–481: session-scope grant lifecycle
 
-These are the security-critical paths. A test that verifies an empty-path approval does
-NOT create a wildcard grant does not exist anywhere in the test suite (confirmed by grep).
+These are security-critical paths. The original audit found no test for
+empty-path approval widening; current coverage now verifies blank patterns are
+rejected and path-scoped interactive approval without a path stays denied.
 
 ---
 
@@ -314,10 +317,10 @@ acceptance tests exist, not that they pass.
 | `sandbox/_git_branch` ↔ real git | `test_git_sandbox.py` | Medium — real git, happy path only |
 | `REPL suspend` ↔ `resume command` | **NOT TESTED** | Missing |
 | `TUI _run_agent_task` ↔ `controller` | **NOT TESTED** | Missing (DS-02 / CG-12) |
-| `Approval empty-path` ↔ `permission scope` | **NOT TESTED** | Missing (DS-12) |
+| `Approval empty-path` ↔ `permission scope` | `test_empty_path_globs_rejected_ds12`, `test_smart_hitl_approval_p_without_path_stays_denied`, `test_tui_path_approval_without_path_stays_denied` | Good — fixed with store and surface regression tests |
 | `agent_resume_command` ↔ `RunStore` | **NOT TESTED** | Missing (DS-08) |
 | `--background <id>` disambiguation | **NOT TESTED** | Missing (DS-09) |
-| `cost_cap=0` ↔ `runner budget guard` | `test_automation_run_budget.py:117` | Shallow — no behavior assertion |
+| `cost_cap=0` ↔ `runner budget guard` | `test_zero_cost_budget_blocks_preflight`, `test_zero_cost_cap_blocks_positive_cost_run`, `test_tui_budget_zero_wired_to_agent_run` | Good — zero cap is enforced and surfaced |
 
 ### 4.2 Integration Test Anti-Pattern: Mocked Infrastructure
 
@@ -361,8 +364,8 @@ should use a real temp-directory-backed store, not a mock.
 | Persistence failure in `undo_journal.save_to` | `chat_session_controller.py:153–159` | DS-03 |
 | `store.task_for_run()` raises `ValueError` for REPL suspension id | `_agent.py:217` | DS-08 |
 | `agent run --background <uuid>` treats UUID as task string | `_agent.py:145–146` | DS-09 |
-| Empty path in path-scoped approval rule creation | `approval_manager.py:294–313` | DS-12 |
-| `cost_cap == 0` treated as unlimited in runner | `runner/_core.py:142` | DS-13 |
+| Empty path in path-scoped approval rule creation | Store, CLI HITL, and TUI approval paths | DS-12 fixed; keep legacy `approval_manager.py` audit on watch |
+| `cost_cap == 0` treated as unlimited in runner | Runner, preflight, chat config, and TUI wiring | DS-13 fixed; keep budget display accumulation on watch separately |
 | TUI `/undo` invokes `_restore_checkpoint` instead of `UndoJournal` | `tui/__init__.py:641` | DS-05 |
 | Observations not rehydrated on `interactive-review` | `_agent.py:239–244` | DS-10 |
 
@@ -424,7 +427,7 @@ These gaps have confirmed live bugs or security issues with no CI detector:
 |----------|--------|-------------|
 | P0 | `cli/_handlers/_chat.py` | Drive `chat_command()` with `args.task='task'`; assert TUI receives it |
 | P0 | `cli/_handlers/_agent.py` | Test `agent_resume_command` with a REPL-originated suspension id |
-| P0 | `approval_manager.py` | Test that empty-path approval raises `ValueError` or defaults to cwd |
+| P0 | approval surfaces | Maintain DS-12 regression coverage for blank patterns, missing extracted path, and persistent-scope explicit pattern requirements |
 | P0 | `chat_session_controller.py` | Test persistence failure → user still sees task result |
 
 ### 6.3 High-Priority Additions (P1 — Address within 1 sprint)
@@ -432,7 +435,7 @@ These gaps have confirmed live bugs or security issues with no CI detector:
 | Priority | What | Why |
 |----------|------|-----|
 | P1 | Rewrite `test_chat_surface_parity` to instantiate `TeaAgentTUI` | CG-17: hollow parity |
-| P1 | Test `cost_cap=0` at `runner._core` level | DS-13: user sets 0, gets unlimited |
+| P1 | Keep `cost_cap=0` regression at runner/preflight/TUI levels | DS-13 is fixed; future risk is reintroducing coercion through CLI/TUI defaults |
 | P1 | Test TUI `/undo` consumes `UndoJournal` (not `_restore_checkpoint`) | DS-05 |
 | P1 | Test `agent run --background <uuid>` warns/errors | DS-09 |
 | P1 | Cover `sandbox/_git_branch.py` conflict paths | DS-05 amplifier |
@@ -783,7 +786,16 @@ def test_chat_command_passes_initial_task_to_tui(tmp_path):
 
 ### DS-12 · UXD-005 — Empty-path approval must not create global grant
 
-**Status:** OPEN. Zero tests found for this path.
+**Status:** FIXED / VERIFY-CLOSE. The original audit found zero tests for this
+path; current coverage exists at the store boundary and interactive approval
+surfaces.
+
+Regression evidence:
+
+- `tests/integration/test_destructive_approval_lifecycle.py::test_empty_path_globs_rejected_ds12`
+- `tests/test_ergonomics.py::test_approval_preset_store_rejects_blank_scoped_patterns`
+- `tests/test_smart_hitl.py::test_smart_hitl_approval_p_without_path_stays_denied`
+- `tests/test_tui.py::test_tui_path_approval_without_path_stays_denied`
 
 ```python
 @pytest.mark.regression
@@ -808,8 +820,15 @@ def test_approval_empty_path_does_not_create_global_grant(tmp_path):
 
 ### DS-13 · UXD-007 — cost_cap=0 must not mean unlimited
 
-**Status:** OPEN. `test_chat_agent_config_cost_cap_zero_passes_through` exists but doesn't
-test runtime behaviour — it only verifies the config value is preserved in transit.
+**Status:** FIXED / VERIFY-CLOSE. `None` is unlimited; `0` is a real zero-spend
+cap. Current tests cover preflight, runner/runtime behavior, and TUI wiring.
+
+Regression evidence:
+
+- `tests/test_budget.py::test_zero_cost_budget_blocks_preflight`
+- `tests/integration/test_runner_cost_tracking.py::test_zero_cost_cap_blocks_positive_cost_run`
+- `tests/test_tui.py::test_tui_budget_zero_wired_to_agent_run`
+- `tests/test_automation_run_budget.py::test_chat_agent_config_cost_cap_none_passes_through`
 
 ```python
 @pytest.mark.regression

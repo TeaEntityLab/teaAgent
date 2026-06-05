@@ -515,7 +515,14 @@ teaagent agent run "refactor the auth module"
 
 ## DS-12 · UXD-005 — Empty path in approval creates implicit global grant
 
-**Severity:** P1 (security) | **Ticket:** Not yet ticketed | **Status:** OPEN
+**Severity:** P1 (security) | **Ticket:** Not yet ticketed | **Status:** FIXED / VERIFY-CLOSE
+
+**Current status — 2026-06-05:** This is no longer a live behavior in the
+current code path. Blank scoped patterns are rejected by `ApprovalPresetStore`,
+path-scoped interactive approval without an extractable path returns denied, and
+non-session persistent grants require at least one explicit `path_glob` or
+`command_prefix`. Keep this catalog entry as a trace signature for old runs and
+for regression triage.
 
 ### Reproduce
 
@@ -540,11 +547,18 @@ for line in sys.stdin:
 "
 ```
 
-### Root cause
+### Historical root cause
 
 `ApprovalManager` creates an `ApprovalRule` with no path restriction when `path_scope` is empty or None. The rule-matching logic then grants the approval for any path.
 
-### Workaround
+### Regression evidence
+
+- `tests/integration/test_destructive_approval_lifecycle.py::test_empty_path_globs_rejected_ds12`
+- `tests/test_ergonomics.py::test_approval_preset_store_rejects_blank_scoped_patterns`
+- `tests/test_smart_hitl.py::test_smart_hitl_approval_p_without_path_stays_denied`
+- `tests/test_tui.py::test_tui_path_approval_without_path_stays_denied`
+
+### Workaround for older versions
 
 **Reject any approval prompt where the path field is empty.** Deny the request, then re-run the task with an explicit path specified in the prompt. Inspect `audit.jsonl` for any past empty-scope grants and revoke them by restarting the session.
 
@@ -556,17 +570,22 @@ In `prompt` permission mode, this silently converts a scoped approval into a ses
 
 ## DS-13 · UXD-007 — `0` cost cap means "unlimited", not "block all"
 
-**Severity:** P2 | **Ticket:** Not yet ticketed | **Status:** OPEN
+**Severity:** P2 | **Ticket:** Not yet ticketed | **Status:** FIXED / VERIFY-CLOSE
+
+**Current status — 2026-06-05:** The current budget model uses `None` as the
+only unlimited sentinel. `0` is a real zero-spend cap and blocks any positive
+preflight or runtime estimate. CLI, chat, and TUI paths preserve `None` and `0`
+instead of coercing them to defaults.
 
 ### Reproduce
 
 ```bash
 teaagent chat --max-estimated-cost-cents 0 "expensive task"
-# Expected: no spend allowed
-# Actual: unlimited spend (0 is the "no cap" sentinel)
+# Expected/current: no spend allowed
+# Historical bug: unlimited spend (0 was the "no cap" sentinel)
 ```
 
-### Where it appears in logs
+### Historical log signature
 
 No log or warning. The `<= 0` check at `runner/_core.py:142` silently skips the budget check.
 
@@ -579,12 +598,19 @@ grep -n "max_estimated_cost_cents\|<= 0\|or 1000" \
   /Users/teee/dev/teaagent/teaagent/chat_repl.py 2>/dev/null | head -20
 ```
 
-Three independent interpretations of `0`:
+Historical independent interpretations of `0`:
 - `runner/_core.py:142`: `<= 0` → unlimited
 - `chat_repl.py:255`: `or 1000` → treat 0 as $10 default
 - Parser: `0` is the default sentinel for "not set"
 
-### Workaround
+### Regression evidence
+
+- `tests/test_budget.py::test_zero_cost_budget_blocks_preflight`
+- `tests/integration/test_runner_cost_tracking.py::test_zero_cost_cap_blocks_positive_cost_run`
+- `tests/test_automation_run_budget.py::test_chat_agent_config_cost_cap_none_passes_through`
+- `tests/test_tui.py::test_tui_budget_zero_wired_to_agent_run`
+
+### Workaround for older versions
 
 Do not use `0` as a budget sentinel. To enforce a tight cap, use a small non-zero value:
 

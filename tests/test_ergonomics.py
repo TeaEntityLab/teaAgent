@@ -45,8 +45,12 @@ def test_approval_preset_store(tmp_path: Path) -> None:
     store = ApprovalPresetStore(tmp_path)
     store.grant('workspace_write_file', scope='session')
     assert store.is_allowed('workspace_write_file', permission_mode='prompt')
-    store.deny('workspace_apply_patch')
-    assert not store.is_allowed('workspace_apply_patch', permission_mode='prompt')
+    store.deny('workspace_apply_patch', path_globs=['src/**'])
+    assert not store.is_allowed(
+        'workspace_apply_patch',
+        permission_mode='prompt',
+        arguments={'path': 'src/example.py'},
+    )
 
 
 def test_approval_preset_store_rejects_blank_scoped_patterns(tmp_path: Path) -> None:
@@ -209,19 +213,24 @@ def test_approval_check_reports_deny_before_allow(tmp_path: Path) -> None:
 
 def test_approval_check_does_not_consume_once(tmp_path: Path) -> None:
     store = ApprovalPresetStore(tmp_path)
-    store.grant('workspace_write_file', scope='once')
-    first = store.check('workspace_write_file', permission_mode='prompt')
-    second = store.check('workspace_write_file', permission_mode='prompt')
+    args = {'path': 'src/example.py'}
+    store.grant('workspace_write_file', scope='once', path_globs=['src/**'])
+    first = store.check('workspace_write_file', permission_mode='prompt', **args)
+    second = store.check('workspace_write_file', permission_mode='prompt', **args)
     assert first['decision'] == 'allow'
     assert second['decision'] == 'allow'
     assert len(store.list_grants()) == 1
-    assert store.is_allowed('workspace_write_file', permission_mode='prompt')
-    assert not store.is_allowed('workspace_write_file', permission_mode='prompt')
+    assert store.is_allowed(
+        'workspace_write_file', permission_mode='prompt', arguments=args
+    )
+    assert not store.is_allowed(
+        'workspace_write_file', permission_mode='prompt', arguments=args
+    )
 
 
 def test_approval_revoke_removes_grant(tmp_path: Path) -> None:
     store = ApprovalPresetStore(tmp_path)
-    grant = store.grant('workspace_write_file', scope='always')
+    grant = store.grant('workspace_write_file', scope='always', path_globs=['src/**'])
     assert store.revoke(grant.grant_id)
     assert store.list_grants() == []
     assert not store.revoke(grant.grant_id)
@@ -249,7 +258,7 @@ def test_migrate_grant_id_writes_audit(tmp_path: Path) -> None:
     assert not any(row.get('action') == 'migrate_grant_id' for row in audit)
 
     # Mutating operation should trigger migration
-    store.grant('workspace_read_file', scope='always')
+    store.grant('workspace_read_file', scope='always', path_globs=['README.md'])
     audit = store.audit_tail(5)
     assert any(row.get('action') == 'migrate_grant_id' for row in audit)
 
@@ -281,9 +290,14 @@ def test_legacy_once_grant_without_grant_id_is_consumed(tmp_path: Path) -> None:
 
 def test_scoped_approval_once_consumed(tmp_path: Path) -> None:
     store = ApprovalPresetStore(tmp_path)
-    store.grant('workspace_write_file', scope='once')
-    assert store.is_allowed('workspace_write_file', permission_mode='prompt')
-    assert not store.is_allowed('workspace_write_file', permission_mode='prompt')
+    args = {'path': 'src/example.py'}
+    store.grant('workspace_write_file', scope='once', path_globs=['src/**'])
+    assert store.is_allowed(
+        'workspace_write_file', permission_mode='prompt', arguments=args
+    )
+    assert not store.is_allowed(
+        'workspace_write_file', permission_mode='prompt', arguments=args
+    )
 
 
 def test_cli_approval_handler_honors_run_root(
@@ -296,7 +310,9 @@ def test_cli_approval_handler_honors_run_root(
     workspace.mkdir()
     other_cwd = tmp_path / 'other'
     other_cwd.mkdir()
-    ApprovalPresetStore(workspace).grant('workspace_write_file', scope='always')
+    ApprovalPresetStore(workspace).grant(
+        'workspace_write_file', scope='always', path_globs=['src/**']
+    )
     handler = make_cli_approval_handler(workspace, permission_mode='prompt')
     request = ApprovalRequest(
         call_id='call-1',
@@ -786,7 +802,9 @@ def test_legacy_approval_list_returns_stable_id_without_migration(
 
     # Mutating operations should still trigger migration
     writable_store = ApprovalPresetStore(tmp_path, readonly=False)
-    writable_store.grant('workspace_read_file', scope='always')
+    writable_store.grant(
+        'workspace_read_file', scope='always', path_globs=['README.md']
+    )
 
     # Now file should be modified with migration
     current_content = approvals_path.read_text(encoding='utf-8')
