@@ -155,9 +155,7 @@ def validate_test_quality(tests_dir: Path, mode: str = 'report') -> list[str]:
 
         # Warn if more than 10% of tests have no assertions
         if total_tests > 0 and no_assert_tests / total_tests > 0.1:
-            finding = (
-                f'Test quality: {no_assert_tests}/{total_tests} tests ({no_assert_tests/total_tests*100:.1f}%) have no assertions. Threshold is 10%.'
-            )
+            finding = f'Test quality: {no_assert_tests}/{total_tests} tests ({no_assert_tests / total_tests * 100:.1f}%) have no assertions. Threshold is 10%.'
             findings.append(finding)
             if mode == 'strict':
                 errors.append(finding)
@@ -169,11 +167,11 @@ def validate_test_quality(tests_dir: Path, mode: str = 'report') -> list[str]:
 
             path_str = _repo_relative(metrics.path)
             if 'security' in path_str or 'audit' in path_str:
-                no_assert_count = sum(1 for count in metrics.assertion_counts.values() if count == 0)
+                no_assert_count = sum(
+                    1 for count in metrics.assertion_counts.values() if count == 0
+                )
                 if no_assert_count > 0:
-                    finding = (
-                        f'Test quality: {path_str} has {no_assert_count} tests with no assertions in security/audit path.'
-                    )
+                    finding = f'Test quality: {path_str} has {no_assert_count} tests with no assertions in security/audit path.'
                     findings.append(finding)
                     if mode == 'strict':
                         errors.append(finding)
@@ -243,7 +241,9 @@ _COMMIT_HASH_IN_TEXT = re.compile(r'\b[0-9a-f]{7,40}\b')
 # Only match project ticket/work-item IDs, not risk register IDs (SEC-*, DS-*, SC-*)
 _TICKET_ID_IN_TEXT = re.compile(r'\b(?:TASK|TICKET|GOV|P[0-9]-TR)-[A-Z0-9-]+\b')
 _PRIORITY_P0_P1 = re.compile(r'\bP[01]\b')
-_STATUS_FIXED = re.compile(r'\bFIXED\b|\bFixed\b|\bVERIFY/CLOSE\b|\bDOCUMENTED\b', re.IGNORECASE)
+_STATUS_FIXED = re.compile(
+    r'\bFIXED\b|\bFixed\b|\bVERIFY/CLOSE\b|\bDOCUMENTED\b', re.IGNORECASE
+)
 _STATUS_OPEN = re.compile(r'\bOPEN\b', re.IGNORECASE)
 
 
@@ -1078,13 +1078,9 @@ def validate_risk_register_evidence(
 
     # Print coverage summary
     pct = int(100 * verified / total) if total else 0
-    print(
-        f'Risk register evidence coverage: {verified}/{total} rows verified ({pct}%)'
-    )
+    print(f'Risk register evidence coverage: {verified}/{total} rows verified ({pct}%)')
     if uncovered_p0p1:
-        print(
-            f'  High-risk uncovered P0/P1 rows: {", ".join(uncovered_p0p1)}'
-        )
+        print(f'  High-risk uncovered P0/P1 rows: {", ".join(uncovered_p0p1)}')
 
     return errors
 

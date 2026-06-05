@@ -75,9 +75,7 @@ def test_run_events_delivered_to_webhook(tmp_path):
         audit.add_sink(sink)
         adapter = _StubAdapter()
         config = ChatAgentConfig.from_root(tmp_path)
-        result = run_chat_agent(
-            config, 'hello', adapter=adapter, audit=audit
-        )
+        result = run_chat_agent(config, 'hello', adapter=adapter, audit=audit)
 
         assert result.status == 'completed'
         event_types = {json.loads(r['body'])['event_type'] for r in _Collector.received}

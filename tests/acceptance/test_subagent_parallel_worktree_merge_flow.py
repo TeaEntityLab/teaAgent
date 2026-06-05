@@ -110,7 +110,9 @@ class SubagentParallelWorktreeMergeFlowTests(unittest.TestCase):
                 root=root, parent_config=config, parent_adapter=MagicMock()
             )
 
-            def fake_child_run(config, task, adapter, audit, *args, **kwargs) -> RunResult:
+            def fake_child_run(
+                config, task, adapter, audit, *args, **kwargs
+            ) -> RunResult:
                 child_root = config.root
                 (child_root / 'feature.txt').write_text(
                     'child worktree change\n', encoding='utf-8'

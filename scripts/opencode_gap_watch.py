@@ -104,7 +104,9 @@ def update_tracking_log(findings, escalation_triggers, update_docs=False):
         new_entry = f'\n## {datetime.now().strftime("%Y-%m-%d")}\n\n'
         new_entry += f'**Findings:** {findings}\n\n'
         if escalation_triggers:
-            new_entry += f'**Escalation Required:** Yes\n**Triggers:** {escalation_triggers}\n\n'
+            new_entry += (
+                f'**Escalation Required:** Yes\n**Triggers:** {escalation_triggers}\n\n'
+            )
         else:
             new_entry += '**Escalation Required:** No\n\n'
 

@@ -38,8 +38,8 @@ def collect_pytest_nodes(tests_dir: Path) -> list[str]:
     )
 
     if result.returncode != 0:
-        error_msg = f"pytest collection failed: {result.stderr}"
-        print(f"Error: {error_msg}", file=sys.stderr)
+        error_msg = f'pytest collection failed: {result.stderr}'
+        print(f'Error: {error_msg}', file=sys.stderr)
         raise RuntimeError(error_msg)
 
     lines = result.stdout.strip().splitlines()
@@ -57,7 +57,11 @@ def collect_pytest_nodes(tests_dir: Path) -> list[str]:
 
 def discover_test_files(tests_dir: Path) -> list[Path]:
     """Discover all Python test files in the directory."""
-    if tests_dir.is_file() and tests_dir.name.startswith('test_') and tests_dir.suffix == '.py':
+    if (
+        tests_dir.is_file()
+        and tests_dir.name.startswith('test_')
+        and tests_dir.suffix == '.py'
+    ):
         return [tests_dir]
     return list(tests_dir.rglob('test_*.py'))
 
@@ -129,13 +133,21 @@ def _is_pytest_context_manager(node: ast.AST) -> bool:
 def _is_construction_assert_expr(expr: ast.AST) -> bool:
     if isinstance(expr, ast.Call):
         return _is_construction_assert_call(expr)
-    if not isinstance(expr, ast.Compare) or len(expr.ops) != 1 or len(expr.comparators) != 1:
+    if (
+        not isinstance(expr, ast.Compare)
+        or len(expr.ops) != 1
+        or len(expr.comparators) != 1
+    ):
         return False
 
     left = expr.left
     right = expr.comparators[0]
     op = expr.ops[0]
-    if isinstance(op, ast.IsNot) and isinstance(right, ast.Constant) and right.value is None:
+    if (
+        isinstance(op, ast.IsNot)
+        and isinstance(right, ast.Constant)
+        and right.value is None
+    ):
         return True
     if isinstance(op, ast.Eq) and isinstance(left, ast.Call):
         return isinstance(left.func, ast.Name) and left.func.id == 'type'
@@ -150,12 +162,14 @@ def scan_test_file(file_path: Path) -> FileMetrics:
         source = file_path.read_text(encoding='utf-8')
         tree = ast.parse(source, filename=str(file_path))
     except SyntaxError as e:
-        print(f"Warning: syntax error in {file_path}: {e}", file=sys.stderr)
+        print(f'Warning: syntax error in {file_path}: {e}', file=sys.stderr)
         metrics.has_syntax_error = True
         return metrics
 
     for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test_'):
+        if isinstance(
+            node, (ast.FunctionDef, ast.AsyncFunctionDef)
+        ) and node.name.startswith('test_'):
             test_name = node.name
             metrics.test_functions.append(test_name)
 
@@ -166,7 +180,9 @@ def scan_test_file(file_path: Path) -> FileMetrics:
                 decorator_name = _decorator_name(decorator)
                 if decorator_name.endswith(('skip', 'skipif', 'skipIf')):
                     has_skip = True
-                    has_skip_reason = has_skip_reason or _decorator_has_reason(decorator)
+                    has_skip_reason = has_skip_reason or _decorator_has_reason(
+                        decorator
+                    )
             metrics.skip_decorators[test_name] = has_skip
             metrics.skip_reasons[test_name] = has_skip_reason
 
@@ -179,7 +195,9 @@ def scan_test_file(file_path: Path) -> FileMetrics:
             assert_count = 0
             weak_patterns = []
             mock_count = 0
-            pass_only = bool(node.body) and all(isinstance(stmt, ast.Pass) for stmt in node.body)
+            pass_only = bool(node.body) and all(
+                isinstance(stmt, ast.Pass) for stmt in node.body
+            )
             construction_asserts = 0
 
             for child in ast.walk(node):
@@ -191,7 +209,10 @@ def scan_test_file(file_path: Path) -> FileMetrics:
                 if isinstance(child, ast.Assert):
                     assert_count += 1
                     # Check for assert True
-                    if isinstance(child.test, ast.Constant) and child.test.value is True:
+                    if (
+                        isinstance(child.test, ast.Constant)
+                        and child.test.value is True
+                    ):
                         weak_patterns.append('assert_true')
                     if _is_construction_assert_expr(child.test):
                         construction_asserts += 1
@@ -199,7 +220,9 @@ def scan_test_file(file_path: Path) -> FileMetrics:
                 # Count unittest assertion methods (self.assertEqual, etc.)
                 if isinstance(child, ast.Call):
                     # Check for unittest assertion methods
-                    if isinstance(child.func, ast.Attribute) and child.func.attr.startswith('assert'):
+                    if isinstance(
+                        child.func, ast.Attribute
+                    ) and child.func.attr.startswith('assert'):
                         assert_count += 1
                         if _is_construction_assert_call(child):
                             construction_asserts += 1
@@ -289,7 +312,8 @@ def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[st
                 'total_assertions': sum(metrics.assertion_counts.values()),
                 'avg_assertions_per_test': (
                     sum(metrics.assertion_counts.values()) / len(metrics.test_functions)
-                    if metrics.test_functions else 0
+                    if metrics.test_functions
+                    else 0
                 ),
                 'tests_with_zero_assertions': sum(
                     1 for count in metrics.assertion_counts.values() if count == 0
@@ -303,17 +327,22 @@ def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[st
                 'total_mocks': sum(metrics.mock_counts.values()),
                 'avg_mocks_per_test': (
                     sum(metrics.mock_counts.values()) / len(metrics.test_functions)
-                    if metrics.test_functions else 0
+                    if metrics.test_functions
+                    else 0
                 ),
                 'mock_only_tests': sum(
-                    1 for patterns in metrics.weak_patterns.values()
+                    1
+                    for patterns in metrics.weak_patterns.values()
                     if 'mock_only' in patterns
                 ),
             },
-            'risk_flags': list(set(
-                pattern for patterns in metrics.weak_patterns.values()
-                for pattern in patterns
-            )),
+            'risk_flags': list(
+                set(
+                    pattern
+                    for patterns in metrics.weak_patterns.values()
+                    for pattern in patterns
+                )
+            ),
             'recommended_action': 'none' if not metrics.weak_patterns else 'review',
         }
         files_data.append(file_data)
@@ -325,7 +354,8 @@ def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[st
         'files': files_data,
         'summary': {
             'high_risk_files': sum(
-                1 for file_data in files_data
+                1
+                for file_data in files_data
                 if file_data['tier'] == 'P0' and file_data['risk_flags']
             ),
             'medium_risk_files': sum(1 for f in files_data if f['risk_flags']),
@@ -342,27 +372,27 @@ def metrics_to_json(all_metrics: list[FileMetrics], total_nodes: int) -> dict[st
 def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str:
     """Convert metrics to Markdown report."""
     lines = [
-        "# Test Intent Audit",
-        "",
-        f"**Audit Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
-        "",
-        "## Executive Summary",
-        "",
-        f"- Total tests collected: {total_nodes}",
-        f"- Total test files: {len([m for m in all_metrics if not m.has_syntax_error])}",
-        f"- Total test functions: {sum(len(m.test_functions) for m in all_metrics)}",
-        f"- Tests with docstrings: {sum(len(m.docstrings) for m in all_metrics)}",
-        f"- Total assertions: {sum(sum(m.assertion_counts.values()) for m in all_metrics)}",
-        f"- Tests with weak patterns: {sum(len(m.weak_patterns) for m in all_metrics)}",
-        f"- Tests with skip decorators: {sum(sum(m.skip_decorators.values()) for m in all_metrics)}",
-        f"- Total mock calls: {sum(sum(m.mock_counts.values()) for m in all_metrics)}",
-        "",
-        "## High-Risk Findings",
-        "",
-        "Files with tests having no assertions:",
-        "",
-        "| File | Tests with No Assertions |",
-        "|------|---------------------------|",
+        '# Test Intent Audit',
+        '',
+        f'**Audit Date:** {datetime.now(timezone.utc).strftime("%Y-%m-%d")}',
+        '',
+        '## Executive Summary',
+        '',
+        f'- Total tests collected: {total_nodes}',
+        f'- Total test files: {len([m for m in all_metrics if not m.has_syntax_error])}',
+        f'- Total test functions: {sum(len(m.test_functions) for m in all_metrics)}',
+        f'- Tests with docstrings: {sum(len(m.docstrings) for m in all_metrics)}',
+        f'- Total assertions: {sum(sum(m.assertion_counts.values()) for m in all_metrics)}',
+        f'- Tests with weak patterns: {sum(len(m.weak_patterns) for m in all_metrics)}',
+        f'- Tests with skip decorators: {sum(sum(m.skip_decorators.values()) for m in all_metrics)}',
+        f'- Total mock calls: {sum(sum(m.mock_counts.values()) for m in all_metrics)}',
+        '',
+        '## High-Risk Findings',
+        '',
+        'Files with tests having no assertions:',
+        '',
+        '| File | Tests with No Assertions |',
+        '|------|---------------------------|',
     ]
 
     # Add high-risk files (no assertions)
@@ -371,45 +401,56 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
             name for name, count in metrics.assertion_counts.items() if count == 0
         ]
         if no_assert_tests:
-            lines.append(f"| {_repo_relative(metrics.path)} | {len(no_assert_tests)} |")
+            lines.append(f'| {_repo_relative(metrics.path)} | {len(no_assert_tests)} |')
 
-    lines.extend([
-        "",
-        "## Per-File Audit",
-        "",
-        "| File | Tests | Docstrings | Assertions | Avg Asserts/Test | Mocks | Risk Flags |",
-        "|------|-------|------------|------------|-----------------|-------|------------|",
-    ])
+    lines.extend(
+        [
+            '',
+            '## Per-File Audit',
+            '',
+            '| File | Tests | Docstrings | Assertions | Avg Asserts/Test | Mocks | Risk Flags |',
+            '|------|-------|------------|------------|-----------------|-------|------------|',
+        ]
+    )
 
     # Add per-file metrics
     for metrics in all_metrics:
         if metrics.has_syntax_error:
             continue
 
-        risk_flags = ','.join(set(
-            pattern for patterns in metrics.weak_patterns.values()
-            for pattern in patterns
-        )) if metrics.weak_patterns else 'none'
-
-        lines.append(
-            f"| {_repo_relative(metrics.path)} | "
-            f"{len(metrics.test_functions)} | "
-            f"{len(metrics.docstrings)} | "
-            f"{sum(metrics.assertion_counts.values())} | "
-            f"{sum(metrics.assertion_counts.values()) / len(metrics.test_functions) if metrics.test_functions else 0:.1f} | "
-            f"{sum(metrics.mock_counts.values())} | "
-            f"{risk_flags} |"
+        risk_flags = (
+            ','.join(
+                set(
+                    pattern
+                    for patterns in metrics.weak_patterns.values()
+                    for pattern in patterns
+                )
+            )
+            if metrics.weak_patterns
+            else 'none'
         )
 
-    lines.extend([
-        "",
-        "## Remediation Queue",
-        "",
-        "Prioritized by risk (security/audit paths first, then P0 acceptance, then others):",
-        "",
-        "| Priority | File | Issue | Action |",
-        "|----------|------|-------|--------|",
-    ])
+        lines.append(
+            f'| {_repo_relative(metrics.path)} | '
+            f'{len(metrics.test_functions)} | '
+            f'{len(metrics.docstrings)} | '
+            f'{sum(metrics.assertion_counts.values())} | '
+            f'{sum(metrics.assertion_counts.values()) / len(metrics.test_functions) if metrics.test_functions else 0:.1f} | '
+            f'{sum(metrics.mock_counts.values())} | '
+            f'{risk_flags} |'
+        )
+
+    lines.extend(
+        [
+            '',
+            '## Remediation Queue',
+            '',
+            'Prioritized by risk (security/audit paths first, then P0 acceptance, then others):',
+            '',
+            '| Priority | File | Issue | Action |',
+            '|----------|------|-------|--------|',
+        ]
+    )
 
     # Add remediation queue (prioritized by path patterns)
     remediation_items = []
@@ -430,7 +471,9 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
             priority = 'P2'
 
         # Determine issue and action
-        no_assert_count = sum(1 for count in metrics.assertion_counts.values() if count == 0)
+        no_assert_count = sum(
+            1 for count in metrics.assertion_counts.values() if count == 0
+        )
         if no_assert_count > 0:
             issue = f'{no_assert_count} tests with no assertions'
             action = 'Add behavior assertions'
@@ -442,37 +485,39 @@ def metrics_to_markdown(all_metrics: list[FileMetrics], total_nodes: int) -> str
 
     # Add top 20 items to avoid overwhelming the report
     for priority, path_str, issue, action in remediation_items[:20]:
-        lines.append(f"| {priority} | {path_str} | {issue} | {action} |")
+        lines.append(f'| {priority} | {path_str} | {issue} | {action} |')
 
     if len(remediation_items) > 20:
-        lines.append(f"| ... | {len(remediation_items) - 20} more files | ... | ... |")
+        lines.append(f'| ... | {len(remediation_items) - 20} more files | ... | ... |')
 
-    lines.extend([
-        "",
-        "## Methodology",
-        "",
-        "This audit uses AST analysis to scan test files for:",
-        "- Test function discovery",
-        "- Docstring presence",
-        "- Assertion counting",
-        "- Mock usage detection",
-        "- Weak pattern identification (no assertions, assert True, mock-only, construction-only, undocumented skip)",
-        "",
-        "Weak patterns detected:",
-        "- `no_assertions`: Test functions with zero assert statements",
-        "- `placeholder`: Test functions whose body is only `pass`",
-        "- `assert_true`: Tests using `assert True` without meaningful checks",
-        "- `mock_only`: Tests with mocks but no state/output assertions",
-        "- `construction_only`: Tests whose assertions only prove object construction or truthiness",
-        "- `undocumented_skip`: Skipped tests without an explicit pytest skip reason",
-        "",
-        "## Next Steps",
-        "",
-        "1. Review files with high-risk findings",
-        "2. Add behavior assertions to construction-only tests",
-        "3. Document skip reasons for optional dependencies",
-        "4. Remove or implement placeholder tests",
-    ])
+    lines.extend(
+        [
+            '',
+            '## Methodology',
+            '',
+            'This audit uses AST analysis to scan test files for:',
+            '- Test function discovery',
+            '- Docstring presence',
+            '- Assertion counting',
+            '- Mock usage detection',
+            '- Weak pattern identification (no assertions, assert True, mock-only, construction-only, undocumented skip)',
+            '',
+            'Weak patterns detected:',
+            '- `no_assertions`: Test functions with zero assert statements',
+            '- `placeholder`: Test functions whose body is only `pass`',
+            '- `assert_true`: Tests using `assert True` without meaningful checks',
+            '- `mock_only`: Tests with mocks but no state/output assertions',
+            '- `construction_only`: Tests whose assertions only prove object construction or truthiness',
+            '- `undocumented_skip`: Skipped tests without an explicit pytest skip reason',
+            '',
+            '## Next Steps',
+            '',
+            '1. Review files with high-risk findings',
+            '2. Add behavior assertions to construction-only tests',
+            '3. Document skip reasons for optional dependencies',
+            '4. Remove or implement placeholder tests',
+        ]
+    )
 
     return '\n'.join(lines)
 
@@ -483,18 +528,16 @@ def main() -> int:
         '--tests-dir',
         type=Path,
         default=Path('tests'),
-        help='Directory containing tests (default: tests)'
+        help='Directory containing tests (default: tests)',
     )
     parser.add_argument(
         '--format',
         choices=['json', 'markdown'],
         default='markdown',
-        help='Output format (default: markdown)'
+        help='Output format (default: markdown)',
     )
     parser.add_argument(
-        '--output',
-        type=Path,
-        help='Output file path (default: stdout)'
+        '--output', type=Path, help='Output file path (default: stdout)'
     )
     parser.add_argument(
         '--fail-on',
@@ -506,16 +549,16 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.tests_dir.exists():
-        print(f"Error: test directory not found: {args.tests_dir}", file=sys.stderr)
+        print(f'Error: test directory not found: {args.tests_dir}', file=sys.stderr)
         return 1
 
     # Collect pytest nodes
     nodes = collect_pytest_nodes(args.tests_dir)
-    print(f"Collected {len(nodes)} test nodes", file=sys.stderr)
+    print(f'Collected {len(nodes)} test nodes', file=sys.stderr)
 
     # Discover test files
     test_files = discover_test_files(args.tests_dir)
-    print(f"Discovered {len(test_files)} test files", file=sys.stderr)
+    print(f'Discovered {len(test_files)} test files', file=sys.stderr)
 
     # Scan test files with AST
     all_metrics = []
@@ -523,25 +566,25 @@ def main() -> int:
         metrics = scan_test_file(test_file)
         all_metrics.append(metrics)
 
-    print(f"Scanned {len(all_metrics)} test files", file=sys.stderr)
+    print(f'Scanned {len(all_metrics)} test files', file=sys.stderr)
 
     # Print summary for verification
     total_tests = sum(len(m.test_functions) for m in all_metrics)
     total_with_docstrings = sum(len(m.docstrings) for m in all_metrics)
     total_assertions = sum(sum(m.assertion_counts.values()) for m in all_metrics)
 
-    print(f"Total test functions: {total_tests}", file=sys.stderr)
-    print(f"Tests with docstrings: {total_with_docstrings}", file=sys.stderr)
-    print(f"Total assertions: {total_assertions}", file=sys.stderr)
+    print(f'Total test functions: {total_tests}', file=sys.stderr)
+    print(f'Tests with docstrings: {total_with_docstrings}', file=sys.stderr)
+    print(f'Total assertions: {total_assertions}', file=sys.stderr)
 
     # Summary of weak patterns
     total_weak = sum(len(m.weak_patterns) for m in all_metrics)
     total_skips = sum(sum(m.skip_decorators.values()) for m in all_metrics)
     total_mocks = sum(sum(m.mock_counts.values()) for m in all_metrics)
 
-    print(f"Tests with weak patterns: {total_weak}", file=sys.stderr)
-    print(f"Tests with skip decorators: {total_skips}", file=sys.stderr)
-    print(f"Total mock calls: {total_mocks}", file=sys.stderr)
+    print(f'Tests with weak patterns: {total_weak}', file=sys.stderr)
+    print(f'Tests with skip decorators: {total_skips}', file=sys.stderr)
+    print(f'Total mock calls: {total_mocks}', file=sys.stderr)
 
     severe_findings = [
         (_repo_relative(metrics.path), test_name, patterns)
@@ -551,7 +594,10 @@ def main() -> int:
             'placeholder' in patterns
             or 'mock_only' in patterns
             or (
-                ('security' in _repo_relative(metrics.path) or 'audit' in _repo_relative(metrics.path))
+                (
+                    'security' in _repo_relative(metrics.path)
+                    or 'audit' in _repo_relative(metrics.path)
+                )
                 and 'no_assertions' in patterns
             )
         )
@@ -562,19 +608,19 @@ def main() -> int:
         json_data = metrics_to_json(all_metrics, len(nodes))
         if args.output:
             args.output.write_text(json.dumps(json_data, indent=2), encoding='utf-8')
-            print(f"JSON report written to {args.output}", file=sys.stderr)
+            print(f'JSON report written to {args.output}', file=sys.stderr)
         else:
             print(json.dumps(json_data, indent=2))
     elif args.format == 'markdown':
         markdown_data = metrics_to_markdown(all_metrics, len(nodes))
         if args.output:
             args.output.write_text(markdown_data, encoding='utf-8')
-            print(f"Markdown report written to {args.output}", file=sys.stderr)
+            print(f'Markdown report written to {args.output}', file=sys.stderr)
         else:
             print(markdown_data)
 
     if args.fail_on == 'severe' and severe_findings:
-        print(f"Severe test quality findings: {len(severe_findings)}", file=sys.stderr)
+        print(f'Severe test quality findings: {len(severe_findings)}', file=sys.stderr)
         return 1
 
     return 0

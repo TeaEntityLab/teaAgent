@@ -1053,7 +1053,10 @@ class CLITests(unittest.TestCase):
         if not CRYPTO_AVAILABLE:
             with tempfile.TemporaryDirectory() as tmp:
                 audit_path = Path(tmp) / 'test-run.jsonl'
-                audit_path.write_text('{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8')
+                audit_path.write_text(
+                    '{"event_id": "1", "payload": {"encrypted": "fake"}}',
+                    encoding='utf-8',
+                )
 
                 decrypt_output = io.StringIO()
                 with redirect_stdout(decrypt_output):
@@ -1064,7 +1067,9 @@ class CLITests(unittest.TestCase):
                 self.assertEqual(result['status'], 'error')
                 self.assertIn('cryptography', result['message'].lower())
         else:
-            self.skipTest('cryptography is available, cannot test missing dependency case')
+            self.skipTest(
+                'cryptography is available, cannot test missing dependency case'
+            )
 
     def test_audit_decrypt_missing_file(self) -> None:
         """Test that audit decrypt command handles missing audit file."""
@@ -1093,7 +1098,12 @@ class CLITests(unittest.TestCase):
 
             # Create logger with L3 to generate real encrypted log with correct hashes
             logger = AuditLogger(path=audit_path, audit_level='L3')
-            logger.record('tool_call', 'test-run', sensitive_data='secret_value', tool_name='test_tool')
+            logger.record(
+                'tool_call',
+                'test-run',
+                sensitive_data='secret_value',
+                tool_name='test_tool',
+            )
 
             # Save the encryption key
             key_path.write_bytes(logger._encryption_key)
@@ -1101,7 +1111,9 @@ class CLITests(unittest.TestCase):
             # Decrypt with key
             decrypt_output = io.StringIO()
             with redirect_stdout(decrypt_output):
-                decrypt_code = main(['audit', 'decrypt', str(audit_path), '--key', str(key_path)])
+                decrypt_code = main(
+                    ['audit', 'decrypt', str(audit_path), '--key', str(key_path)]
+                )
             result = json.loads(decrypt_output.getvalue())
 
             self.assertEqual(decrypt_code, 0)
@@ -1118,14 +1130,18 @@ class CLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / '.teaagent' / 'audit.jsonl'
             audit_path.parent.mkdir(parents=True)
-            audit_path.write_text('{"event_id": "1", "event_type": "test"}', encoding='utf-8')
+            audit_path.write_text(
+                '{"event_id": "1", "event_type": "test"}', encoding='utf-8'
+            )
 
             pub_key_path = Path(tmp) / 'id_rsa.pub'
             pub_key_path.write_text('ssh-rsa AAAAB...', encoding='utf-8')
 
             verify_output = io.StringIO()
             with redirect_stdout(verify_output):
-                verify_code = main(['audit', 'verify', '--root', tmp, '--signature', str(pub_key_path)])
+                verify_code = main(
+                    ['audit', 'verify', '--root', tmp, '--signature', str(pub_key_path)]
+                )
             output = verify_output.getvalue()
 
             self.assertEqual(verify_code, 1)
@@ -1140,18 +1156,31 @@ class CLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / '.teaagent' / 'audit.jsonl'
             audit_path.parent.mkdir(parents=True)
-            audit_path.write_text('{"event_id": "1", "event_type": "test"}', encoding='utf-8')
+            audit_path.write_text(
+                '{"event_id": "1", "event_type": "test"}', encoding='utf-8'
+            )
 
             private_key_path = Path(tmp) / 'id_rsa'
             private_key_path.write_text('private key content', encoding='utf-8')
 
             # Mock the SSH signature helper to return a valid signature
             with patch('teaagent.cli._handlers._audit.sign_message_ssh') as mock_sign:
-                mock_sign.return_value = '-----BEGIN SIGNATURE-----\ntest signature\n-----END SIGNATURE-----'
+                mock_sign.return_value = (
+                    '-----BEGIN SIGNATURE-----\ntest signature\n-----END SIGNATURE-----'
+                )
 
                 verify_output = io.StringIO()
                 with redirect_stdout(verify_output):
-                    verify_code = main(['audit', 'verify', '--root', tmp, '--signature', str(private_key_path)])
+                    verify_code = main(
+                        [
+                            'audit',
+                            'verify',
+                            '--root',
+                            tmp,
+                            '--signature',
+                            str(private_key_path),
+                        ]
+                    )
                 output = verify_output.getvalue()
 
                 self.assertEqual(verify_code, 0)

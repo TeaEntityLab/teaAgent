@@ -16,10 +16,7 @@ def test_scan_test_file_detects_placeholder():
     """Test that audit tool detects placeholder tests with no assertions."""
     with tempfile.TemporaryDirectory() as tmp:
         test_file = Path(tmp) / 'test_placeholder.py'
-        test_file.write_text(
-            'def test_coming_soon():\n    pass\n',
-            encoding='utf-8'
-        )
+        test_file.write_text('def test_coming_soon():\n    pass\n', encoding='utf-8')
 
         metrics = scan_test_file(test_file)
 
@@ -32,10 +29,7 @@ def test_scan_test_file_detects_assert_true():
     """Test that audit tool detects assert True."""
     with tempfile.TemporaryDirectory() as tmp:
         test_file = Path(tmp) / 'test_assert_true.py'
-        test_file.write_text(
-            'def test_weak():\n    assert True\n',
-            encoding='utf-8'
-        )
+        test_file.write_text('def test_weak():\n    assert True\n', encoding='utf-8')
 
         metrics = scan_test_file(test_file)
 
@@ -50,7 +44,7 @@ def test_scan_test_file_detects_mock_only():
         test_file = Path(tmp) / 'test_mock_only.py'
         test_file.write_text(
             'from unittest.mock import Mock\n\ndef test_mock_only():\n    mock_obj = Mock()\n    mock_obj.method()\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -66,7 +60,7 @@ def test_scan_test_file_counts_assertions():
         test_file = Path(tmp) / 'test_assertions.py'
         test_file.write_text(
             'def test_multiple_asserts():\n    assert 1 == 1\n    assert 2 == 2\n    assert 3 == 3\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -82,7 +76,7 @@ def test_scan_test_file_detects_docstrings():
         test_file = Path(tmp) / 'test_docstring.py'
         test_file.write_text(
             'def test_with_docstring():\n    """This test has a docstring."""\n    assert True\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -97,8 +91,7 @@ def test_scan_test_file_handles_syntax_error():
     with tempfile.TemporaryDirectory() as tmp:
         test_file = Path(tmp) / 'test_syntax_error.py'
         test_file.write_text(
-            'def test_broken(\n    # Missing closing paren\n',
-            encoding='utf-8'
+            'def test_broken(\n    # Missing closing paren\n', encoding='utf-8'
         )
 
         metrics = scan_test_file(test_file)
@@ -113,7 +106,7 @@ def test_scan_test_file_counts_mocks():
         test_file = Path(tmp) / 'test_mocks.py'
         test_file.write_text(
             'from unittest.mock import Mock, MagicMock, patch\n\ndef test_with_mocks():\n    m1 = Mock()\n    m2 = MagicMock()\n    with patch("some.module"): pass\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -128,7 +121,7 @@ def test_scan_test_file_ignores_non_test_functions():
         test_file = Path(tmp) / 'test_mixed.py'
         test_file.write_text(
             'def helper_function():\n    pass\n\ndef test_real_test():\n    assert True\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -144,7 +137,7 @@ def test_scan_test_file_counts_unittest_assertions():
         test_file = Path(tmp) / 'test_unittest.py'
         test_file.write_text(
             'import unittest\n\nclass TestExample(unittest.TestCase):\n    def test_example(self):\n        self.assertEqual(1, 1)\n        self.assertTrue(True)\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -160,7 +153,7 @@ def test_scan_test_file_counts_class_based_tests():
         test_file = Path(tmp) / 'test_class_based.py'
         test_file.write_text(
             'import unittest\n\nclass TestAudit(unittest.TestCase):\n    def test_event_has_fields(self):\n        self.assertTrue(True)\n\n    def test_event_id_unique(self):\n        self.assertTrue(False)\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -178,7 +171,7 @@ def test_scan_test_file_counts_async_tests():
         test_file = Path(tmp) / 'test_async.py'
         test_file.write_text(
             'import pytest\n\nasync def test_async_example():\n    assert True\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -204,7 +197,7 @@ def test_scan_test_file_detects_construction_only_tests():
             'def test_constructs_object():\n'
             '    value = object()\n'
             '    assert isinstance(value, object)\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -224,7 +217,7 @@ def test_scan_test_file_detects_none_and_type_construction_assertions():
             'def test_type_only():\n'
             '    value = "x"\n'
             '    assert type(value) == str\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -245,7 +238,7 @@ def test_scan_test_file_detects_undocumented_skip():
             '@pytest.mark.skip(reason="needs optional service")\n'
             'def test_skip_with_reason():\n'
             '    assert 1 == 1\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         metrics = scan_test_file(test_file)
@@ -282,12 +275,14 @@ def test_collect_pytest_nodes_keeps_class_based_node_ids():
             'class TestNodeCollection:\n'
             '    def test_inside_class(self):\n'
             '        assert True\n',
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
         nodes = collect_pytest_nodes(tests_dir)
 
-        assert any(node.endswith('::TestNodeCollection::test_inside_class') for node in nodes)
+        assert any(
+            node.endswith('::TestNodeCollection::test_inside_class') for node in nodes
+        )
 
 
 def test_collect_pytest_nodes_raises_on_failure():
@@ -299,6 +294,6 @@ def test_collect_pytest_nodes_raises_on_failure():
 
         try:
             collect_pytest_nodes(invalid_dir)
-            raise AssertionError("Expected RuntimeError to be raised")
+            raise AssertionError('Expected RuntimeError to be raised')
         except RuntimeError as e:
             assert 'pytest collection failed' in str(e)

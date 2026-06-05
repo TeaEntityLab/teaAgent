@@ -70,8 +70,7 @@ def update_metrics_tracking(metrics, update_docs=False):
 
     # Check if all metrics are placeholders - skip document update if so
     all_placeholders = all(
-        v == 'TBD' or (isinstance(v, list) and len(v) == 0)
-        for v in metrics.values()
+        v == 'TBD' or (isinstance(v, list) and len(v) == 0) for v in metrics.values()
     )
     if all_placeholders:
         print('All metrics are placeholders - skipping document update')

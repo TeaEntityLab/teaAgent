@@ -196,7 +196,9 @@ def test_subagent_does_not_inherit_parent_approvals():
 
     # Subagent starts with a completely clean slate — no inherited approvals
     assert not subagent_coord.jit_state.is_tool_session_approved('workspace_write_file')
-    assert not subagent_coord.jit_state.is_tool_session_approved('workspace_run_shell_mutate')
+    assert not subagent_coord.jit_state.is_tool_session_approved(
+        'workspace_run_shell_mutate'
+    )
     assert not subagent_coord.jit_state.is_call_approved('parent_call_007')
     assert len(subagent_coord.jit_state.session_approved_tools) == 0
     assert len(subagent_coord.jit_state.approved_call_ids) == 0
@@ -230,7 +232,9 @@ def test_subagent_approval_doesnt_elevate_parent():
     assert sub_coord.jit_state.is_call_approved('sub_call_danger_999')
 
     # Parent session is completely unaffected — subagent grants don't elevate parent
-    assert not parent_coord.jit_state.is_tool_session_approved('workspace_run_shell_mutate')
+    assert not parent_coord.jit_state.is_tool_session_approved(
+        'workspace_run_shell_mutate'
+    )
     assert not parent_coord.jit_state.is_tool_session_approved('delete_all_files')
     assert not parent_coord.jit_state.is_call_approved('sub_call_danger_999')
     assert len(parent_coord.jit_state.session_approved_tools) == 0

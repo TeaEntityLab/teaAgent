@@ -354,7 +354,11 @@ def test_subagent_docker_container_hardened():
             )
 
         docker_run = next(
-            (cmd for cmd in captured_cmds if len(cmd) > 1 and cmd[:2] == ['docker', 'run']),
+            (
+                cmd
+                for cmd in captured_cmds
+                if len(cmd) > 1 and cmd[:2] == ['docker', 'run']
+            ),
             None,
         )
         assert docker_run is not None, 'No docker run command was issued'

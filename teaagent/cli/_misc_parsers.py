@@ -608,7 +608,9 @@ def _audit(
             'decrypt',
             help='Decrypt an L3 audit log file (requires cryptography library).',
         )
-        decrypt_cmd.add_argument('audit_path', help='Path to the audit log file to decrypt.')
+        decrypt_cmd.add_argument(
+            'audit_path', help='Path to the audit log file to decrypt.'
+        )
         decrypt_cmd.add_argument(
             '--key',
             default=None,

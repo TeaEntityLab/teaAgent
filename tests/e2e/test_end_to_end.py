@@ -30,9 +30,7 @@ class EndToEndTests(unittest.TestCase):
             audit = store.audit_logger()
 
             result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    root, max_iterations=3, max_tool_calls=2
-                ),
+                ChatAgentConfig.from_root(root, max_iterations=3, max_tool_calls=2),
                 'read hello',
                 adapter=adapter,
                 audit=audit,
@@ -57,9 +55,7 @@ class EndToEndTests(unittest.TestCase):
             audit = store.audit_logger()
 
             result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    root, max_iterations=2, max_tool_calls=1
-                ),
+                ChatAgentConfig.from_root(root, max_iterations=2, max_tool_calls=1),
                 'write file',
                 adapter=adapter,
                 audit=audit,

@@ -709,7 +709,9 @@ def run_chat_repl(
             # Handle cost command
             if user_input == '/cost':
                 print(f'[TeaAgent] Session cost: ${session_cost_cents / 100:.2f}')
-                print(f'[TeaAgent] Budget limit: {_format_budget(max_cost_budget_cents)}')
+                print(
+                    f'[TeaAgent] Budget limit: {_format_budget(max_cost_budget_cents)}'
+                )
                 print(
                     f'[TeaAgent] Remaining: {_format_remaining(max_cost_budget_cents, session_cost_cents)}'
                 )

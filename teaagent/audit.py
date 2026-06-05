@@ -18,6 +18,7 @@ from teaagent.storage import file_lock
 
 try:
     from cryptography.fernet import Fernet
+
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
@@ -136,17 +137,18 @@ class AuditLogger:
         self._file_chmod_done = False  # Track if chmod has been done
 
         # Encryption setup for L3 audit logs
-        self._encryption_key = encryption_key
+        self._encryption_key: Optional[bytes] = encryption_key
         self._fernet: Optional[Any] = None
         if audit_level == 'L3':
             if not CRYPTO_AVAILABLE:
                 raise ValueError(
                     'L3 audit level requires cryptography library. Install with: pip install cryptography'
                 )
-            if encryption_key is None:
+            if self._encryption_key is None:
                 # Generate a new encryption key if not provided
                 self._encryption_key = self._load_or_save_encryption_key()
             try:
+                assert self._encryption_key is not None
                 self._fernet = Fernet(self._encryption_key)
             except Exception as exc:
                 raise ValueError(f'Failed to initialize L3 encryption: {exc}') from exc
@@ -231,7 +233,9 @@ class AuditLogger:
                 if len(key) == 44:  # Fernet key length
                     return key
             except OSError as exc:
-                raise ValueError(f'Failed to load encryption key from {key_path}: {exc}') from exc
+                raise ValueError(
+                    f'Failed to load encryption key from {key_path}: {exc}'
+                ) from exc
 
         key = Fernet.generate_key()
         try:
@@ -240,7 +244,9 @@ class AuditLogger:
             key_path.write_bytes(key)
             key_path.chmod(0o600)
         except OSError as exc:
-            raise ValueError(f'Failed to save encryption key to {key_path}: {exc}') from exc
+            raise ValueError(
+                f'Failed to save encryption key to {key_path}: {exc}'
+            ) from exc
         return key
 
     def get_chain_key(self) -> bytes:
@@ -384,8 +390,12 @@ class AuditLogger:
                             raise ValueError('L3 encryption not initialized')
                         try:
                             payload_json = json.dumps(event.payload, sort_keys=True)
-                            encrypted_bytes = self._fernet.encrypt(payload_json.encode('utf-8'))
-                            payload_to_write = {'encrypted': encrypted_bytes.decode('utf-8')}
+                            encrypted_bytes = self._fernet.encrypt(
+                                payload_json.encode('utf-8')
+                            )
+                            payload_to_write = {
+                                'encrypted': encrypted_bytes.decode('utf-8')
+                            }
                         except Exception as exc:
                             raise ValueError(f'L3 encryption failed: {exc}') from exc
 
@@ -409,7 +419,9 @@ class AuditLogger:
                         entry_data = json.loads(canonical)
                         entry_data['hash'] = current_hash
                         entry_data['chain_hmac'] = chain_hmac
-                        handle.write(json.dumps(entry_data, sort_keys=True).rstrip('\n') + '\n')
+                        handle.write(
+                            json.dumps(entry_data, sort_keys=True).rstrip('\n') + '\n'
+                        )
                         handle.flush()
                         os.fsync(handle.fileno())
                     # Only chmod once at file creation
@@ -543,7 +555,8 @@ class AuditLogger:
         if encryption_key is None:
             run_id = audit_path.stem
             safe_id = (
-                ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+                ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'})
+                or 'run'
             )
             key_dir = Path.home() / '.teaagent' / 'audit-encryption'
             key_path = key_dir / f'{safe_id}.enc'
@@ -556,13 +569,17 @@ class AuditLogger:
                 if len(encryption_key) != 44:  # Fernet key length
                     raise ValueError(f'Invalid encryption key length at {key_path}')
             except OSError as exc:
-                raise ValueError(f'Failed to load encryption key from {key_path}: {exc}') from exc
+                raise ValueError(
+                    f'Failed to load encryption key from {key_path}: {exc}'
+                ) from exc
 
         # Initialize Fernet with the key
         try:
             fernet = Fernet(encryption_key)
         except Exception as exc:
-            raise ValueError(f'Failed to initialize Fernet with provided key: {exc}') from exc
+            raise ValueError(
+                f'Failed to initialize Fernet with provided key: {exc}'
+            ) from exc
 
         # Read and decrypt the audit log
         try:
@@ -624,7 +641,9 @@ class AuditLogger:
                         decrypted_json = decrypted_bytes.decode('utf-8')
                         event['payload'] = json.loads(decrypted_json)
                     except Exception as exc:
-                        raise ValueError(f'Failed to decrypt event {event.get("event_id")}: {exc}') from exc
+                        raise ValueError(
+                            f'Failed to decrypt event {event.get("event_id")}: {exc}'
+                        ) from exc
 
                 decrypted_events.append(event)
 
@@ -636,7 +655,9 @@ class AuditLogger:
             }
 
         except OSError as exc:
-            raise ValueError(f'Failed to read audit log from {audit_path}: {exc}') from exc
+            raise ValueError(
+                f'Failed to read audit log from {audit_path}: {exc}'
+            ) from exc
         except json.JSONDecodeError as exc:
             raise ValueError(f'Failed to parse audit log JSON: {exc}') from exc
 

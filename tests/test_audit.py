@@ -382,6 +382,7 @@ class AuditLoggerTests(unittest.TestCase):
 
             # Verify chain integrity is maintained under concurrent writes
             from teaagent.audit_chain import verify_audit_chain
+
             result = verify_audit_chain(path)
             self.assertTrue(result.valid, f'Chain validation failed: {result.error}')
 
@@ -496,6 +497,7 @@ class AuditChainVerificationTests(unittest.TestCase):
 
             # Mock CRYPTO_AVAILABLE to False
             import teaagent.audit as audit_module
+
             original_available = audit_module.CRYPTO_AVAILABLE
             try:
                 audit_module.CRYPTO_AVAILABLE = False
@@ -519,6 +521,7 @@ class AuditChainVerificationTests(unittest.TestCase):
             # Monkey-patch encrypt to simulate encryption failure
             def failing_encrypt(data):
                 raise Exception('Simulated encryption failure')
+
             logger._fernet.encrypt = failing_encrypt
 
             # Recording should fail
@@ -530,10 +533,13 @@ class AuditChainVerificationTests(unittest.TestCase):
         """Test that decrypt fails when cryptography is not available."""
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / 'audit.jsonl'
-            audit_path.write_text('{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8')
+            audit_path.write_text(
+                '{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8'
+            )
 
             # Mock CRYPTO_AVAILABLE to False
             import teaagent.audit as audit_module
+
             original_available = audit_module.CRYPTO_AVAILABLE
             try:
                 audit_module.CRYPTO_AVAILABLE = False
@@ -550,7 +556,9 @@ class AuditChainVerificationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / 'test-run.jsonl'
-            audit_path.write_text('{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8')
+            audit_path.write_text(
+                '{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8'
+            )
 
             with self.assertRaises(ValueError) as ctx:
                 AuditLogger.decrypt_audit_log(audit_path)
@@ -570,17 +578,26 @@ class AuditChainVerificationTests(unittest.TestCase):
 
             # Create logger with L3 to generate real encrypted log with correct hashes
             logger = AuditLogger(path=audit_path, audit_level='L3')
-            logger.record('tool_call', 'test-run', sensitive_data='secret_value', tool_name='test_tool')
+            logger.record(
+                'tool_call',
+                'test-run',
+                sensitive_data='secret_value',
+                tool_name='test_tool',
+            )
 
             # Get the encryption key from the logger
             encryption_key = logger._encryption_key
 
             # Decrypt the log
-            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=encryption_key)
+            result = AuditLogger.decrypt_audit_log(
+                audit_path, encryption_key=encryption_key
+            )
 
             self.assertEqual(result['total_events'], 1)
             self.assertEqual(len(result['events']), 1)
-            self.assertEqual(result['events'][0]['payload']['sensitive_data'], 'secret_value')
+            self.assertEqual(
+                result['events'][0]['payload']['sensitive_data'], 'secret_value'
+            )
             self.assertEqual(result['events'][0]['payload']['tool_name'], 'test_tool')
             # Chain verification should pass with real hashes
             self.assertTrue(result['chain_valid'])
@@ -601,15 +618,24 @@ class AuditChainVerificationTests(unittest.TestCase):
 
                 # Create logger with L3 to generate real encrypted log with correct hashes
                 logger = AuditLogger(path=audit_path, audit_level='L3')
-                logger.record('tool_call', 'test-run', sensitive_data='secret_value', tool_name='test_tool')
+                logger.record(
+                    'tool_call',
+                    'test-run',
+                    sensitive_data='secret_value',
+                    tool_name='test_tool',
+                )
 
                 # Decrypt without providing key (should autoload)
                 result = AuditLogger.decrypt_audit_log(audit_path)
 
                 self.assertEqual(result['total_events'], 1)
                 self.assertEqual(len(result['events']), 1)
-                self.assertEqual(result['events'][0]['payload']['sensitive_data'], 'secret_value')
-                self.assertEqual(result['events'][0]['payload']['tool_name'], 'test_tool')
+                self.assertEqual(
+                    result['events'][0]['payload']['sensitive_data'], 'secret_value'
+                )
+                self.assertEqual(
+                    result['events'][0]['payload']['tool_name'], 'test_tool'
+                )
                 # Chain verification should pass with real hashes
                 self.assertTrue(result['chain_valid'])
         finally:
@@ -632,7 +658,9 @@ class AuditChainVerificationTests(unittest.TestCase):
             logger.record('test', 'test-run', data='plaintext')
 
             # Decrypt should handle unencrypted payload gracefully
-            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=Fernet.generate_key())
+            result = AuditLogger.decrypt_audit_log(
+                audit_path, encryption_key=Fernet.generate_key()
+            )
 
             self.assertEqual(result['total_events'], 1)
             self.assertEqual(len(result['events']), 1)
@@ -663,7 +691,9 @@ class AuditChainVerificationTests(unittest.TestCase):
             audit_path.write_text(json.dumps(tampered_line), encoding='utf-8')
 
             # Decrypt should detect tampering
-            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=encryption_key)
+            result = AuditLogger.decrypt_audit_log(
+                audit_path, encryption_key=encryption_key
+            )
 
             self.assertEqual(result['total_events'], 1)
             # Chain verification should fail due to tampering

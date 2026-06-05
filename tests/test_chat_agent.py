@@ -47,9 +47,7 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    root, max_iterations=3, max_tool_calls=2
-                ),
+                ChatAgentConfig.from_root(root, max_iterations=3, max_tool_calls=2),
                 'read hello',
                 adapter=adapter,
             )
@@ -231,9 +229,7 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    tmp, approval_handler=lambda _request: True
-                ),
+                ChatAgentConfig.from_root(tmp, approval_handler=lambda _request: True),
                 'write',
                 adapter=adapter,
             )

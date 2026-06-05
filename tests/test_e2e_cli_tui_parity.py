@@ -69,14 +69,16 @@ def test_cli_chat_vs_tui_same_cost_after_task(tmp_path):
     fake_tui_store.show_run.return_value = []
 
     with (
-        patch('teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT),
+        patch(
+            'teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT
+        ),
         patch('teaagent.chat_session_controller.RunStore'),
         patch('teaagent.tui.RunStore', return_value=fake_tui_store),
     ):
         tui._run_agent_task('write hello world')
 
     tui_cost = tui._session_cost_cents
-    assert tui_cost == 42.0, f"TUI should record 42.0 cents, got {tui_cost}"
+    assert tui_cost == 42.0, f'TUI should record 42.0 cents, got {tui_cost}'
 
     # --- CLI controller path (what run_chat_repl delegates to) ---
     cli_output: list[str] = []
@@ -87,22 +89,24 @@ def test_cli_chat_vs_tui_same_cost_after_task(tmp_path):
     )
 
     with (
-        patch('teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT),
+        patch(
+            'teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT
+        ),
         patch('teaagent.chat_session_controller.RunStore'),
     ):
         cli_controller.execute_task('write hello world', config)
 
     cli_cost = cli_controller.get_session_cost()
-    assert cli_cost == 42.0, f"CLI controller should record 42.0 cents, got {cli_cost}"
+    assert cli_cost == 42.0, f'CLI controller should record 42.0 cents, got {cli_cost}'
 
     # --- Parity assertion ---
     assert cli_cost == tui_cost, (
-        f"CLI and TUI must record identical cost: CLI={cli_cost} TUI={tui_cost}"
+        f'CLI and TUI must record identical cost: CLI={cli_cost} TUI={tui_cost}'
     )
 
     # CLI emits the final answer via output_fn
     assert any('Parity answer' in str(o) for o in cli_output), (
-        "CLI controller should emit final answer via output_fn"
+        'CLI controller should emit final answer via output_fn'
     )
 
 
@@ -137,18 +141,20 @@ def test_tui_chat_delegates_to_controller(tmp_path):
     fake_tui_store.show_run.return_value = []
 
     with (
-        patch('teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT),
+        patch(
+            'teaagent.chat_session_controller.run_chat_agent', return_value=_FAKE_RESULT
+        ),
         patch('teaagent.chat_session_controller.RunStore'),
         patch('teaagent.tui.RunStore', return_value=fake_tui_store),
     ):
         tui._run_agent_task('run some task')
 
     assert len(execute_calls) == 1, (
-        f"TUI should call controller.execute_task() exactly once, called {len(execute_calls)} times"
+        f'TUI should call controller.execute_task() exactly once, called {len(execute_calls)} times'
     )
     assert execute_calls[0][0] == 'run some task', (
-        f"controller.execute_task() should receive the original task string, "
-        f"got: {execute_calls[0][0]!r}"
+        f'controller.execute_task() should receive the original task string, '
+        f'got: {execute_calls[0][0]!r}'
     )
 
 
@@ -179,8 +185,8 @@ def test_tui_undo_delegates_to_controller(tmp_path):
     tui._handle_undo()
 
     assert len(undo_calls) == 1, (
-        f"TUI _handle_undo() must call controller.undo_last_run() exactly once, "
-        f"called {len(undo_calls)} times"
+        f'TUI _handle_undo() must call controller.undo_last_run() exactly once, '
+        f'called {len(undo_calls)} times'
     )
 
 
@@ -202,9 +208,7 @@ def test_cli_undo_delegates_to_controller(tmp_path):
 
     fake_controller = MagicMock(spec=ChatSessionController)
     fake_controller.session_state = SessionState()
-    fake_controller.undo_last_run.side_effect = lambda: (
-        undo_calls.append(True) or True
-    )
+    fake_controller.undo_last_run.side_effect = lambda: undo_calls.append(True) or True
 
     config = ChatAgentConfig.from_root(str(tmp_path))
 
@@ -221,8 +225,8 @@ def test_cli_undo_delegates_to_controller(tmp_path):
         run_chat_repl(config)
 
     assert len(undo_calls) == 1, (
-        f"CLI /undo must call controller.undo_last_run() exactly once, "
-        f"called {len(undo_calls)} times"
+        f'CLI /undo must call controller.undo_last_run() exactly once, '
+        f'called {len(undo_calls)} times'
     )
 
 
@@ -245,13 +249,13 @@ def test_tui_cost_property_reads_controller_state(tmp_path):
 
     # TUI property must reflect controller state, not a separate counter
     assert tui._session_cost_cents == 99.5, (
-        f"TUI._session_cost_cents should read from controller.session_state, "
-        f"got {tui._session_cost_cents}"
+        f'TUI._session_cost_cents should read from controller.session_state, '
+        f'got {tui._session_cost_cents}'
     )
 
     # Mutate via TUI property — controller must see the same change
     tui._session_cost_cents = 200.0
     assert controller.session_state.session_cost_cents == 200.0, (
-        f"Setting TUI._session_cost_cents must update controller.session_state, "
-        f"controller sees {controller.session_state.session_cost_cents}"
+        f'Setting TUI._session_cost_cents must update controller.session_state, '
+        f'controller sees {controller.session_state.session_cost_cents}'
     )

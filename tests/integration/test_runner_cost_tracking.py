@@ -112,5 +112,10 @@ def test_zero_cost_cap_blocks_positive_cost_run(tmp_path):
     config = ChatAgentConfig.from_root(tmp_path, max_estimated_cost_cents=0)
     result = run_chat_agent(config, 'say hello', adapter=adapter)
     # With 0 cap, the run should fail with budget exceeded
-    assert result.status.startswith('failed:'), f'Expected failed status, got {result.status}'
-    assert 'budget' in result.error_message.lower() or 'cost' in result.error_message.lower()
+    assert result.status.startswith('failed:'), (
+        f'Expected failed status, got {result.status}'
+    )
+    assert (
+        'budget' in result.error_message.lower()
+        or 'cost' in result.error_message.lower()
+    )

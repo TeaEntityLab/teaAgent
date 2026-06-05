@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 try:
     from github import Auth, Github
     from github.GithubException import GithubException
+
     GITHUB_AVAILABLE = True
 except ImportError:
     GITHUB_AVAILABLE = False
@@ -247,7 +248,9 @@ class IssueParser:
 
             # Add labels as metadata
             if issue_obj.labels:
-                issue_text += f'\n\nLabels: {", ".join(label.name for label in issue_obj.labels)}'
+                issue_text += (
+                    f'\n\nLabels: {", ".join(label.name for label in issue_obj.labels)}'
+                )
 
             # Parse using the existing parse method
             return self.parse(issue_text, source='github')

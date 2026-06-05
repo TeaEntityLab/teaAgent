@@ -218,7 +218,9 @@ def test_budget_zero_cents_rejects_any_spend() -> None:
     runner = AgentRunner(
         registry=ToolRegistry(),
         audit=audit,
-        budget=RunBudget(max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=0),
+        budget=RunBudget(
+            max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=0
+        ),
     )
 
     def decide(context: dict) -> FinalAnswer:
@@ -237,7 +239,9 @@ def test_budget_none_allows_unlimited() -> None:
     runner = AgentRunner(
         registry=ToolRegistry(),
         audit=audit,
-        budget=RunBudget(max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=None),
+        budget=RunBudget(
+            max_iterations=3, max_tool_calls=0, max_estimated_cost_cents=None
+        ),
     )
 
     def decide(context: dict) -> FinalAnswer:

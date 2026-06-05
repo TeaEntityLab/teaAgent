@@ -83,10 +83,40 @@ def _read_json(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _load_env_file(root: str | Path) -> None:
+    """Load ``.teaagent/env`` into ``os.environ`` without overwriting existing vars.
+
+    This makes API keys written by ``teaagent setup --write-env`` available
+    to the LLM adapter layer without requiring the user to manually
+    ``source .teaagent/env`` in their shell.
+    """
+    env_path = Path(root).resolve() / '.teaagent' / 'env'
+    if not env_path.is_file():
+        return
+    for raw_line in env_path.read_text(encoding='utf-8').splitlines():
+        line = raw_line.strip()
+        if not line.startswith('export '):
+            continue
+        assignment = line[len('export '):]
+        key, sep, raw_value = assignment.partition('=')
+        if not sep:
+            continue
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        value = raw_value.strip()
+        # shlex.quote() wraps in single quotes; unstrip them
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        if value:
+            os.environ[key] = value
+
+
 def load_workspace_defaults(root: str | Path = '.') -> dict[str, Any]:
     """Merge ``.teaagent/config.toml`` then ``config.json`` with env overrides."""
     root_path = Path(root).resolve()
     tea_dir = root_path / '.teaagent'
+    _load_env_file(root_path)
     merged = dict(DEFAULT_KEYS)
     toml_path = tea_dir / 'config.toml'
     json_path = tea_dir / 'config.json'

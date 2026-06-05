@@ -249,7 +249,10 @@ def audit_decrypt_command(args: argparse.Namespace) -> int:
         key_path = Path(args.key).expanduser()
         if not key_path.exists():
             print_json(
-                {'status': 'error', 'message': f'Encryption key not found at {key_path}'}
+                {
+                    'status': 'error',
+                    'message': f'Encryption key not found at {key_path}',
+                }
             )
             return 1
         try:
