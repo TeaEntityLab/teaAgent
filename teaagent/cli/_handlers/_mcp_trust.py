@@ -76,7 +76,7 @@ def _print_json(value: Any) -> None:
 
 def mcp_trust_list_command(args: argparse.Namespace) -> int:
     policy = load_mcp_trust_policy(args.root)
-    _print_json({'ok': True, 'policy': policy.to_dict()})
+    _print_json({'ok': True, 'policy': policy.to_public_dict()})
     return 0
 
 
@@ -98,7 +98,7 @@ def mcp_trust_inspect_command(args: argparse.Namespace) -> int:
             }
         )
         return 0
-    _print_json({'ok': True, 'policy': policy.to_dict()})
+    _print_json({'ok': True, 'policy': policy.to_public_dict()})
     return 0
 
 
@@ -110,7 +110,7 @@ def mcp_trust_allow_command(args: argparse.Namespace) -> int:
     else:
         update_global_tools(policy, allow=tools)
     save_mcp_trust_policy(args.root, policy)
-    _print_json({'ok': True, 'policy': policy.to_dict()})
+    _print_json({'ok': True, 'policy': policy.to_public_dict()})
     return 0
 
 
@@ -122,5 +122,5 @@ def mcp_trust_deny_command(args: argparse.Namespace) -> int:
     else:
         update_global_tools(policy, deny=tools)
     save_mcp_trust_policy(args.root, policy)
-    _print_json({'ok': True, 'policy': policy.to_dict()})
+    _print_json({'ok': True, 'policy': policy.to_public_dict()})
     return 0
