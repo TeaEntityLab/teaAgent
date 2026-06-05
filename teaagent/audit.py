@@ -35,7 +35,6 @@ _GENESIS_HASH = 'genesis'
 
 AUDIT_REDACTED = '[redacted]'
 AUDIT_TRUNCATED = '[truncated]'
-AUDIT_ENCRYPTED = '[encrypted]'
 
 # Audit level tiers for tiered logging
 AuditLevel = Literal['L0', 'L1', 'L2', 'L3']
@@ -507,8 +506,10 @@ class AuditLogger:
             }
 
     @staticmethod
-    def decrypt_audit_log(audit_path: Path, encryption_key: Optional[bytes] = None) -> list[dict[str, Any]]:
-        """Decrypt an L3 audit log file.
+    def decrypt_audit_log(
+        audit_path: Path, encryption_key: Optional[bytes] = None
+    ) -> dict[str, Any]:
+        """Decrypt an L3 audit log file and verify chain integrity.
 
         Args:
             audit_path: Path to the audit log file
@@ -516,7 +517,8 @@ class AuditLogger:
                            ~/.teaagent/audit-encryption/<run_id>.enc
 
         Returns:
-            List of decrypted audit event dictionaries
+            Dict with 'events' (list of decrypted audit event dictionaries),
+            'chain_valid' (bool), 'chain_errors' (list[str]), and 'total_events' (int)
 
         Raises:
             ValueError: If decryption fails or key cannot be loaded
@@ -575,7 +577,46 @@ class AuditLogger:
 
                 decrypted_events.append(event)
 
-            return decrypted_events
+            # Verify chain integrity
+            chain_errors = []
+            prev_hash = _GENESIS_HASH
+            for i, event in enumerate(decrypted_events):
+                event_hash = event.get('hash')
+                event_prev_hash = event.get('prev_hash')
+
+                if event_prev_hash != prev_hash:
+                    chain_errors.append(
+                        f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})'
+                    )
+
+                # Verify the hash matches the content
+                canonical = json.dumps(
+                    {
+                        'event_id': event.get('event_id'),
+                        'event_type': event.get('event_type'),
+                        'run_id': event.get('run_id'),
+                        'created_at': event.get('created_at'),
+                        'payload': event.get('payload'),
+                        'prev_hash': event_prev_hash,
+                    },
+                    sort_keys=True,
+                    separators=(',', ':'),
+                )
+                computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+
+                if event_hash != computed_hash:
+                    chain_errors.append(
+                        f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})'
+                    )
+
+                prev_hash = event_hash or computed_hash
+
+            return {
+                'events': decrypted_events,
+                'chain_valid': len(chain_errors) == 0,
+                'chain_errors': chain_errors,
+                'total_events': len(decrypted_events),
+            }
 
         except OSError as exc:
             raise ValueError(f'Failed to read audit log from {audit_path}: {exc}') from exc

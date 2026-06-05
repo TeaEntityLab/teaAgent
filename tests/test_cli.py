@@ -1079,6 +1079,57 @@ class CLITests(unittest.TestCase):
             self.assertEqual(result['status'], 'error')
             self.assertIn('not found', result['message'].lower())
 
+    def test_audit_decrypt_includes_chain_validation(self) -> None:
+        """Test that audit decrypt command includes chain validation in output."""
+        from teaagent.audit import CRYPTO_AVAILABLE
+
+        if not CRYPTO_AVAILABLE:
+            self.skipTest('cryptography not available')
+
+        from cryptography.fernet import Fernet
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'test-run.jsonl'
+            key_path = Path(tmp) / 'key.enc'
+
+            # Generate and save encryption key
+            key = Fernet.generate_key()
+            key_path.write_bytes(key)
+
+            # Create encrypted audit log
+            fernet = Fernet(key)
+            payload = {'sensitive_data': 'secret_value', 'tool_name': 'test_tool'}
+            encrypted_bytes = fernet.encrypt(json.dumps(payload).encode('utf-8'))
+            encrypted_str = encrypted_bytes.decode('utf-8')
+
+            event = {
+                'event_id': 'evt-1',
+                'event_type': 'tool_call',
+                'run_id': 'test-run',
+                'created_at': '2024-01-01T00:00:00Z',
+                'payload': {'encrypted': encrypted_str},
+                'prev_hash': '0',
+                'hash': 'abc123',
+                'chain_hmac': 'hmac123',
+            }
+
+            audit_path.write_text(json.dumps(event), encoding='utf-8')
+
+            # Decrypt with key
+            decrypt_output = io.StringIO()
+            with redirect_stdout(decrypt_output):
+                decrypt_code = main(['audit', 'decrypt', str(audit_path), '--key', str(key_path)])
+            result = json.loads(decrypt_output.getvalue())
+
+            self.assertEqual(decrypt_code, 0)
+            self.assertEqual(result['status'], 'ok')
+            self.assertIn('chain_valid', result)
+            self.assertIn('chain_errors', result)
+            self.assertIn('event_count', result)
+            self.assertIn('events', result)
+            # Chain validation should fail due to dummy hashes
+            self.assertFalse(result['chain_valid'])
+
 
 if __name__ == '__main__':
     unittest.main()

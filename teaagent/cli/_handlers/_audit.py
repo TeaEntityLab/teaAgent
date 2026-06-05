@@ -283,12 +283,14 @@ def audit_decrypt_command(args: argparse.Namespace) -> int:
             return 1
 
     try:
-        decrypted_events = AuditLogger.decrypt_audit_log(audit_path, encryption_key)
+        result = AuditLogger.decrypt_audit_log(audit_path, encryption_key)
         print_json(
             {
                 'status': 'ok',
-                'event_count': len(decrypted_events),
-                'events': decrypted_events,
+                'event_count': result['total_events'],
+                'chain_valid': result['chain_valid'],
+                'chain_errors': result['chain_errors'],
+                'events': result['events'],
             }
         )
         return 0

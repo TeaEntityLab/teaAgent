@@ -526,11 +526,15 @@ class AuditChainVerificationTests(unittest.TestCase):
             audit_path.write_text(json.dumps(event), encoding='utf-8')
 
             # Decrypt with explicitly provided key
-            decrypted_events = AuditLogger.decrypt_audit_log(audit_path, encryption_key=key)
+            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=key)
 
-            self.assertEqual(len(decrypted_events), 1)
-            self.assertEqual(decrypted_events[0]['payload'], payload)
-            self.assertEqual(decrypted_events[0]['event_id'], 'evt-1')
+            self.assertEqual(result['total_events'], 1)
+            self.assertEqual(len(result['events']), 1)
+            self.assertEqual(result['events'][0]['payload'], payload)
+            self.assertEqual(result['events'][0]['event_id'], 'evt-1')
+            # Chain verification should fail due to dummy hashes
+            self.assertFalse(result['chain_valid'])
+            self.assertGreater(len(result['chain_errors']), 0)
 
     def test_decrypt_audit_log_autoload_key(self) -> None:
         """Test decryption with automatic key loading from ~/.teaagent/audit-encryption/."""
@@ -572,11 +576,14 @@ class AuditChainVerificationTests(unittest.TestCase):
                 audit_path.write_text(json.dumps(event), encoding='utf-8')
 
                 # Decrypt without providing key (should autoload)
-                decrypted_events = AuditLogger.decrypt_audit_log(audit_path)
+                result = AuditLogger.decrypt_audit_log(audit_path)
 
-                self.assertEqual(len(decrypted_events), 1)
-                self.assertEqual(decrypted_events[0]['payload'], payload)
-                self.assertEqual(decrypted_events[0]['event_id'], 'evt-1')
+                self.assertEqual(result['total_events'], 1)
+                self.assertEqual(len(result['events']), 1)
+                self.assertEqual(result['events'][0]['payload'], payload)
+                self.assertEqual(result['events'][0]['event_id'], 'evt-1')
+                # Chain verification should fail due to dummy hashes
+                self.assertFalse(result['chain_valid'])
         finally:
             # Restore original HOME
             if original_home is not None:
@@ -607,10 +614,13 @@ class AuditChainVerificationTests(unittest.TestCase):
             audit_path.write_text(json.dumps(event), encoding='utf-8')
 
             # Decrypt should handle unencrypted payload gracefully
-            decrypted_events = AuditLogger.decrypt_audit_log(audit_path, encryption_key=Fernet.generate_key())
+            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=Fernet.generate_key())
 
-            self.assertEqual(len(decrypted_events), 1)
-            self.assertEqual(decrypted_events[0]['payload'], {'data': 'plaintext'})
+            self.assertEqual(result['total_events'], 1)
+            self.assertEqual(len(result['events']), 1)
+            self.assertEqual(result['events'][0]['payload'], {'data': 'plaintext'})
+            # Chain verification should fail due to dummy hashes
+            self.assertFalse(result['chain_valid'])
 
 
 if __name__ == '__main__':

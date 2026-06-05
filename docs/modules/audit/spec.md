@@ -71,12 +71,15 @@ from teaagent.audit import AuditLogger
 from pathlib import Path
 
 # Decrypt with automatic key loading from ~/.teaagent/audit-encryption/<run_id>.enc
-decrypted_events = AuditLogger.decrypt_audit_log(Path('.teaagent/audit.jsonl'))
+result = AuditLogger.decrypt_audit_log(Path('.teaagent/audit.jsonl'))
+events = result['events']
+chain_valid = result['chain_valid']
+chain_errors = result['chain_errors']
 
 # Decrypt with explicit key
 from cryptography.fernet import Fernet
 key = Fernet.generate_key()
-decrypted_events = AuditLogger.decrypt_audit_log(Path('.teaagent/audit.jsonl'), encryption_key=key)
+result = AuditLogger.decrypt_audit_log(Path('.teaagent/audit.jsonl'), encryption_key=key)
 ```
 
 ### CLI Decryption
@@ -88,6 +91,16 @@ teaagent audit decrypt .teaagent/audit.jsonl
 # Decrypt with explicit key file
 teaagent audit decrypt .teaagent/audit.jsonl --key ~/.teaagent/audit-encryption/custom-key.enc
 ```
+
+### Chain Integrity Verification
+
+The `decrypt_audit_log` method and CLI command automatically verify the hash chain integrity during decryption. The output includes:
+- `chain_valid`: Boolean indicating whether the chain is intact
+- `chain_errors`: List of any hash chain validation errors
+- `total_events`: Total number of events in the log
+- `events`: The decrypted event list
+
+If `chain_valid` is `false`, the audit log may have been tampered with. Run `teaagent audit verify` for detailed verification.
 
 ### Key Storage
 
