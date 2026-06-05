@@ -21,7 +21,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `440 passed`**
+**Current acceptance test count: `441 passed`**
 
 ## Acceptance Flows
 

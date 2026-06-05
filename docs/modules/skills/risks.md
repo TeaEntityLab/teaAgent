@@ -30,3 +30,38 @@
 **File**: `skill_rag.py`
 **Risk**: If skill descriptions are similar, semantic routing may invoke the wrong skill.
 **Failure mode**: Unexpected behavior; hard to debug since skill name is not shown by default.
+
+### SKL-R-007: Direct active-skill writes bypass candidate governance
+**File**: `skill_writer.py`, `workspace_tools/_files.py`, `skill_loader.py`
+**Risk**: An agent can write a `SKILL.md` directly into an active discovery
+directory such as `.opencode/skill/` or `.config/agent/skills/`. The loader will
+discover it, but no candidate artifacts, offline eval, review, or install
+provenance prove that it is safe or useful.
+**Failure mode**: The UI reports a skill as available even though it is an
+unreviewed direct write. Users may mistake compatibility discovery for a
+governed TeaAgent skill lifecycle.
+**Mitigation**: Treat missing candidate provenance as `direct_write` in
+explainability output; block or quarantine direct writes to active skill
+directories by default; allow reviewed installs through `skill candidate
+install`.
+
+### SKL-R-008: Skill loaded does not prove skill used
+**File**: `chat_agent.py`, `skill_loader.py`
+**Risk**: Agent Skills can be injected into the prompt but ignored by the model,
+especially when the model fails to read supporting resources or emits invalid
+tool-decision JSON.
+**Failure mode**: A run claims a skill-based task succeeded, but the skill only
+appeared in context and did not drive the output.
+**Mitigation**: Add explicit `skill_activated`, `skill_resource_read`, and
+`skill_output_verified` audit events; add user-forced activation; compare
+with-skill and without-skill behavior in candidate evals.
+
+### SKL-R-009: Long skill or web results lose required evidence
+**File**: `workspace_tools/_files.py`, `chat_agent.py`, future web/RSS tools
+**Risk**: Long RSS/WebSearch/skill results can be truncated or summarized before
+the model sees the evidence required for a faithful answer.
+**Failure mode**: The model writes a plausible summary from a partial preview,
+or creates a placeholder helper script and claims completion.
+**Mitigation**: Standardize a long-result envelope with preview, truncation
+metadata, full artifact path, content hash, cursor, and compaction-preserved
+source IDs. Acceptance tests must verify final output against fixture sources.

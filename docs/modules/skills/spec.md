@@ -2,7 +2,17 @@
 
 ## Purpose
 
-Discovers, routes, and executes skill tool modules — reusable, composable agent behaviors packaged as Python or WASM files. Skills are isolated from the main agent and run in sandboxed environments.
+Discovers, routes, evaluates, installs, and in some cases executes reusable
+agent capabilities. TeaAgent currently has two related skill surfaces:
+
+1. **Agent Skills prompt packages**: directories containing `SKILL.md` and
+   optional references/scripts/assets. These are discovered by `skill_loader.py`
+   and injected into agent context.
+2. **Executable skill tools**: Python/WASM/Docker callable modules handled by
+   `skill_executor.py` and `skill_router.py`.
+
+The daily-driver skill path should prefer the governed Agent Skills candidate
+workflow before a skill becomes active in a project.
 
 ## Behavior Contract
 
@@ -19,9 +29,30 @@ Discovers, routes, and executes skill tool modules — reusable, composable agen
 5. **Result wrapping** — always returns `SkillExecutionResult(success, sandbox_type, output, error)`.
 
 ### Skill Loading (`skill_loader.py`)
-1. **Discovery** — scans `~/.teaagent/skills/` and project `.teaagent/skills/` for skill directories.
-2. **Manifest parsing** — reads `skill.yaml` or `manifest.json` for metadata.
-3. **RAG indexing** — indexes skill descriptions for semantic routing via `skill_rag.py`.
+1. **Discovery** — scans project and user skill directories in priority order (first match wins per skill name):
+   - Project scope: `.config/agent/skills/`, `.claude/skills/`, `.opencode/skill/`, `.opencode/skills/`
+   - User scope: `~/.config/agent/skills/`, `~/.claude/skills/`, `~/.config/opencode/skills/`
+2. **Review gate** — loads only `SKILL.md` files that pass `review_skill()`.
+3. **Candidate artifact gate** — installed candidate bundles with policy,
+   provenance, cost, or contract artifacts must pass artifact validation.
+4. **Prompt mode** — eager mode loads full skill text; index-only mode exposes
+   metadata without injecting full instructions.
+5. **Explainability** — `explain_skill_activation()` reports loaded skills,
+   shadowed paths, searched directories, token estimates, governance status, and
+   expected project write targets.
+
+### Skill Candidate Governance (`skill_candidates.py`)
+1. **Proposal** — creates a quarantined candidate under `.teaagent/skill-candidates/`.
+2. **Artifact bundle** — requires `SKILL.md`, `REFERENCE.md`,
+   `tool_call_contract.json`, `cost_profile.json`, `interaction_policy.json`,
+   and `provenance.json`.
+3. **Offline eval** — validates artifacts, size, review findings, provenance,
+   reference content, and candidate-specific `eval_dataset.json` checks.
+4. **Review** — a candidate must pass review before installation.
+5. **Install** — project installs write to `.config/agent/skills/<name>`;
+   personal installs require explicit personal-install attestation.
+6. **Provenance** — installed candidates record install scope and candidate
+   origin so CLI/TUI can distinguish reviewed skills from direct writes.
 
 ### Skill Router (`skill_router.py`)
 1. **Semantic matching** — `SkillRouter.route(query)` returns ranked skills by description similarity.
@@ -32,3 +63,8 @@ Discovers, routes, and executes skill tool modules — reusable, composable agen
 - Skill execution never modifies the main agent's workspace directly (isolation guarantee).
 - `SkillExecutionResult.success=False` always has a non-empty `error` string.
 - Native execution timeout is enforced (subprocess or thread limit).
+- A reviewed candidate install must carry provenance next to `SKILL.md`.
+- A loaded active skill without candidate provenance should be treated as an
+  unmanaged/direct-write skill for explainability and review purposes.
+- "Skill loaded" does not imply "skill used"; runtime activation and output
+  verification require separate audit evidence.

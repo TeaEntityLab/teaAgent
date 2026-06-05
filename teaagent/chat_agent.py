@@ -246,6 +246,7 @@ class ModelDecisionEngine:
             try:
                 return parse_model_decision(response.content)
             except ToolValidationError as exc:
+                last_error = exc
                 if attempt >= self.max_parse_retries:
                     break
                 messages.append(LLMMessage(role='assistant', content=response.content))
@@ -263,6 +264,17 @@ class ModelDecisionEngine:
         fallback = _plain_text_answer_fallback(context, last_response_content)
         if fallback is not None:
             return fallback
+        # For workspace tasks where fallback doesn't apply, raise explicit error
+        # instead of masking as success with invalid_model_decision_json
+        task = str(context.get('task', ''))
+        if not _looks_like_simple_answer_task(task):
+            raise RuntimeError(
+                f'Model decision JSON parsing failed after {self.max_parse_retries} attempts. '
+                f'This indicates the model is not producing valid tool decisions for a workspace task. '
+                f'Recovery hint: Check if the task is clear, try a simpler task, '
+                f'or adjust the model/system prompt to ensure valid JSON output.'
+            )
+        # For simple tasks, keep the old behavior as fallback
         return FinalAnswer(
             content='{"status":"error","action":"wait","reason":"invalid_model_decision_json"}',
             metadata={'decision_fallback': 'invalid_model_decision_json'},

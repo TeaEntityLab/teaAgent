@@ -293,6 +293,7 @@ def _record_installed_provenance(
 
     payload.update(
         {
+            'installed_via': 'candidate',
             'installed_at': utc_now(),
             'install_scope': scope,
             'personal_install_attested': personal_attested,

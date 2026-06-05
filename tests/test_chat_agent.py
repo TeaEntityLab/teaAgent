@@ -80,7 +80,7 @@ class ChatAgentTests(unittest.TestCase):
             adapter = FakeAdapter(['bad', 'still bad', 'also bad'])
             result = run_chat_agent(
                 ChatAgentConfig.from_root(tmp),
-                'say done',
+                'what is 2+2',
                 adapter=adapter,
             )
             self.assertEqual(result.status, 'completed')
@@ -118,16 +118,13 @@ class ChatAgentTests(unittest.TestCase):
             adapter = FakeAdapter([answer, answer, answer])
             result = run_chat_agent(
                 ChatAgentConfig.from_root(tmp),
-                'read note.txt',
+                'modify the workspace file',
                 adapter=adapter,
             )
-
-            self.assertEqual(result.status, 'completed')
-            self.assertIn('"status":"error"', result.final_answer.content)
-            self.assertEqual(
-                result.final_answer.metadata.get('decision_fallback'),
-                'invalid_model_decision_json',
-            )
+            # Should raise RuntimeError for workspace tasks and be caught as failed:system
+            self.assertEqual(result.status, 'failed:system')
+            self.assertIn('Model decision JSON parsing failed', result.error_message)
+            self.assertIn('Recovery hint:', result.error_message)
 
     def test_chat_agent_can_use_code_analysis_tools_when_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -417,6 +417,9 @@ class SkillLoadedRecord:
     source_dir: Path
     estimated_tokens: int
     reason: str
+    governance_status: str = (
+        'unknown'  # 'candidate_installed', 'direct_write', 'unknown'
+    )
 
 
 @dataclass(frozen=True)
@@ -439,6 +442,7 @@ class SkillActivationExplain:
     searched_dirs: tuple[Path, ...]
     estimated_skill_tokens: int
     index_count: int
+    write_targets: dict[str, str]  # skill_name -> write_target_path
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -451,6 +455,7 @@ class SkillActivationExplain:
                     'source_dir': str(item.source_dir),
                     'estimated_tokens': item.estimated_tokens,
                     'reason': item.reason,
+                    'governance_status': item.governance_status,
                 }
                 for item in self.loaded
             ],
@@ -459,8 +464,8 @@ class SkillActivationExplain:
                     'name': item.name,
                     'winner_path': str(item.winner_path),
                     'shadowed_path': str(item.shadowed_path),
-                    'winner_source': item.winner_source,
-                    'shadowed_source': item.shadowed_source,
+                    'winner_source': str(item.winner_source),
+                    'shadowed_source': str(item.shadowed_source),
                 }
                 for item in self.shadowed
             ],
@@ -483,6 +488,7 @@ class SkillActivationExplain:
             'searched_dirs': [str(path) for path in self.searched_dirs],
             'estimated_skill_tokens': self.estimated_skill_tokens,
             'index_count': self.index_count,
+            'write_targets': self.write_targets,
         }
 
 
@@ -570,6 +576,7 @@ def explain_skill_activation(
             searched_dirs=tuple(report.searched_dirs),
             estimated_skill_tokens=0,
             index_count=len(index),
+            write_targets={},
         )
 
     if selected_names is not None and not selected_names:
@@ -590,6 +597,7 @@ def explain_skill_activation(
             searched_dirs=tuple(report.searched_dirs),
             estimated_skill_tokens=0,
             index_count=0,
+            write_targets={},
         )
 
     if selected_names is not None:
@@ -616,6 +624,27 @@ def explain_skill_activation(
     loaded_rows: list[SkillLoadedRecord] = []
     for skill in report.skills:
         source_dir = skill.path.parent.parent
+        # Candidate-installed skills keep provenance beside SKILL.md. A missing
+        # bundle is still useful telemetry: it means the skill came from direct
+        # directory discovery rather than the reviewed candidate workflow.
+        skill_dir = skill.path.parent
+        provenance_path = skill_dir / 'provenance.json'
+        governance_status = 'direct_write'
+        if provenance_path.is_file():
+            try:
+                import json
+
+                provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
+                if provenance.get('installed_via') == 'candidate' or (
+                    provenance.get('install_scope') in {'project', 'personal'}
+                    and all(
+                        (skill_dir / name).is_file()
+                        for name in REQUIRED_CANDIDATE_ARTIFACTS
+                    )
+                ):
+                    governance_status = 'candidate_installed'
+            except (OSError, json.JSONDecodeError):
+                pass
         loaded_rows.append(
             SkillLoadedRecord(
                 name=skill.name,
@@ -627,9 +656,18 @@ def explain_skill_activation(
                     if mode == 'selected'
                     else 'first match in search order (eager load)'
                 ),
+                governance_status=governance_status,
             )
         )
     total = estimate_skill_prompt_tokens(report.skills)
+    # Compute write targets based on skill_writer logic
+    root_path = Path(root).resolve()
+    write_targets: dict[str, str] = {}
+    for skill in report.skills:
+        skill_name = skill.name
+        # SkillWriter writes to .config/agent/skills
+        write_target = root_path / '.config' / 'agent' / 'skills' / skill_name
+        write_targets[skill_name] = str(write_target)
     return SkillActivationExplain(
         selection_mode=mode,
         selected_names=names,
@@ -640,4 +678,5 @@ def explain_skill_activation(
         searched_dirs=tuple(report.searched_dirs),
         estimated_skill_tokens=total,
         index_count=0,
+        write_targets=write_targets,
     )
