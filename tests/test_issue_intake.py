@@ -186,9 +186,16 @@ This needs to be fixed."""
 
 
 def test_parse_github_issue_placeholder(parser):
-    """Test GitHub issue parsing raises NotImplementedError."""
-    with pytest.raises(NotImplementedError, match='GitHub API integration'):
-        parser.extract_github_issue('https://github.com/user/repo/issues/123')
+    """Test GitHub issue parsing raises ValueError when library not available."""
+    # Mock the GITHUB_AVAILABLE flag to simulate library not installed
+    import teaagent.issue_intake as issue_intake_module
+    original_available = issue_intake_module.GITHUB_AVAILABLE
+    try:
+        issue_intake_module.GITHUB_AVAILABLE = False
+        with pytest.raises(ValueError, match='PyGithub is not installed'):
+            parser.extract_github_issue('https://github.com/user/repo/issues/123')
+    finally:
+        issue_intake_module.GITHUB_AVAILABLE = original_available
 
 
 def test_parse_complex_issue(parser):

@@ -330,9 +330,9 @@ class TSBVerifierTests(unittest.TestCase):
             'ssh', message.lower(), f'Error message should mention SSH: {message}'
         )
         self.assertIn(
-            'not implemented',
+            'not yet supported',
             message.lower(),
-            f'Error message should mention not implemented: {message}',
+            f'Error message should indicate SSH is not yet supported: {message}',
         )
 
     def test_verify_tampered_tsb(self) -> None:

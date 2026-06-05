@@ -18,24 +18,24 @@ from pathlib import Path
 def check_opencode_releases():
     """Check OpenCode GitHub for new releases."""
     print('Checking OpenCode GitHub releases...')
-    # TODO: Implement actual GitHub API check
-    # For now, this is a placeholder
+    # TODO: Implement GitHub API integration to fetch actual releases
+    # For now, return placeholder
     return {'latest_release': 'TBD', 'new_releases': []}
 
 
 def check_opencode_issues():
     """Check OpenCode issues for governance discussions."""
     print('Checking OpenCode issues for governance discussions...')
-    # TODO: Implement actual GitHub API check
-    # For now, this is a placeholder
+    # TODO: Implement GitHub API integration to fetch actual issues
+    # For now, return placeholder
     return {'governance_issues': [], 'high_vote_issues': []}
 
 
 def check_opencode_community():
     """Check OpenCode community posts for governance requests."""
     print('Checking OpenCode community posts...')
-    # TODO: Implement actual community platform checks
-    # For now, this is a placeholder
+    # Community platform checks require additional API integrations
+    # For now, return placeholder
     return {'reddit_mentions': [], 'discord_mentions': []}
 
 
@@ -79,8 +79,40 @@ def update_tracking_log(findings, escalation_triggers, update_docs=False):
             print(f'  Triggers: {escalation_triggers}')
         return
 
-    # TODO: Implement actual document update
-    print(f'Would update {process_doc} with new tracking log entry')
+    # Check if all findings are placeholders - skip document update if so
+    def is_placeholder_data(data):
+        """Check if data contains only placeholder values."""
+        if isinstance(data, dict):
+            return all(is_placeholder_data(v) for k, v in data.items() if k != 'date')
+        elif isinstance(data, list):
+            return len(data) == 0
+        else:
+            return data == 'TBD'
+
+    if is_placeholder_data(findings):
+        print('All findings are placeholders - skipping document update')
+        return
+
+    # Implement actual document update
+    if not process_doc.exists():
+        print(f'Process document not found: {process_doc}')
+        return
+
+    try:
+        content = process_doc.read_text(encoding='utf-8')
+        # Append new tracking log entry
+        new_entry = f'\n## {datetime.now().strftime("%Y-%m-%d")}\n\n'
+        new_entry += f'**Findings:** {findings}\n\n'
+        if escalation_triggers:
+            new_entry += f'**Escalation Required:** Yes\n**Triggers:** {escalation_triggers}\n\n'
+        else:
+            new_entry += '**Escalation Required:** No\n\n'
+
+        # Append to the document
+        process_doc.write_text(content + new_entry, encoding='utf-8')
+        print(f'Updated {process_doc} with new tracking log entry')
+    except Exception as exc:
+        print(f'Failed to update document: {exc}')
 
 
 def main():

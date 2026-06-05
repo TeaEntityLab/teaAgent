@@ -18,40 +18,40 @@ from pathlib import Path
 def check_github_metrics():
     """Check GitHub stars and activity."""
     print('Checking GitHub metrics...')
-    # TODO: Implement actual GitHub API check
-    # For now, this is a placeholder
+    # TODO: Implement GitHub API integration to fetch actual metrics
+    # For now, return placeholder
     return {'stars': 'TBD', 'recent_activity': []}
 
 
 def check_reddit_mentions():
     """Check Reddit mentions of TeaAgent."""
     print('Checking Reddit mentions...')
-    # TODO: Implement actual Reddit API check
-    # For now, this is a placeholder
+    # Reddit API requires additional integration
+    # For now, return placeholder
     return {'mentions': [], 'governance_discussions': []}
 
 
 def check_hacker_news():
     """Check Hacker News for TeaAgent posts."""
     print('Checking Hacker News...')
-    # TODO: Implement actual HN API check
-    # For now, this is a placeholder
+    # HN API requires additional integration
+    # For now, return placeholder
     return {'posts': [], 'upvotes': []}
 
 
 def check_dev_to():
     """Check Dev.to for TeaAgent content."""
     print('Checking Dev.to...')
-    # TODO: Implement actual Dev.to API check
-    # For now, this is a placeholder
+    # Dev.to API requires additional integration
+    # For now, return placeholder
     return {'posts': [], 'views': []}
 
 
 def scan_competitor_communities():
     """Scan competitor communities for governance discussions."""
     print('Scanning competitor communities for governance discussions...')
-    # TODO: Implement actual community scanning
-    # For now, this is a placeholder
+    # Community scanning requires additional integrations
+    # For now, return placeholder
     return {'governance_discussions': [], 'opportunities': []}
 
 
@@ -68,8 +68,34 @@ def update_metrics_tracking(metrics, update_docs=False):
         print(f'  Dev.to Views: {metrics.get("dev_to_views", "TBD")}')
         return
 
-    # TODO: Implement actual document update
-    print(f'Would update {process_doc} with new metrics')
+    # Check if all metrics are placeholders - skip document update if so
+    all_placeholders = all(
+        v == 'TBD' or (isinstance(v, list) and len(v) == 0)
+        for v in metrics.values()
+    )
+    if all_placeholders:
+        print('All metrics are placeholders - skipping document update')
+        return
+
+    # Implement actual document update
+    if not process_doc.exists():
+        print(f'Process document not found: {process_doc}')
+        return
+
+    try:
+        content = process_doc.read_text(encoding='utf-8')
+        # Append new metrics entry
+        new_entry = f'\n## {datetime.now().strftime("%Y-%m")}\n\n'
+        new_entry += f'**GitHub Stars:** {metrics.get("github_stars", "TBD")}\n'
+        new_entry += f'**Reddit Mentions:** {metrics.get("reddit_mentions", "TBD")}\n'
+        new_entry += f'**HN Upvotes:** {metrics.get("hn_upvotes", "TBD")}\n'
+        new_entry += f'**Dev.to Views:** {metrics.get("dev_to_views", "TBD")}\n\n'
+
+        # Append to the document
+        process_doc.write_text(content + new_entry, encoding='utf-8')
+        print(f'Updated {process_doc} with new metrics')
+    except Exception as exc:
+        print(f'Failed to update document: {exc}')
 
 
 def identify_posting_opportunities(findings):

@@ -255,12 +255,9 @@ class TSBProvenanceVerifier:
                 return False, f'Sigstore verification failed: {exc}'
 
         elif signer_type == 'ssh':
-            # SSH signature verification is not yet implemented
-            # Reject SSH signatures until proper cryptographic verification is available
-            return (
-                False,
-                'SSH signature verification not implemented. Use Sigstore keyless signing or implement SSH verification.',
-            )
+            # SSH signatures are not yet supported for verification
+            # Trust policy (allowed_signers, trusted keys) must be implemented first
+            return False, 'SSH signature verification is not yet supported. Use sigstore-keyless signing instead.'
 
         else:
             # Unknown signer type - reject for security

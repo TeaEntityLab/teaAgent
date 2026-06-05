@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from teaagent.audit import AuditLogger
 from teaagent.audit_chain import verify_audit_chain
 from teaagent.audit_export import export_compliance_bundle, write_compliance_bundle
 from teaagent.cli._output import print_json
@@ -252,3 +253,48 @@ def audit_export_command(args: argparse.Namespace) -> int:
     else:
         print_json(bundle)
     return 0
+
+
+def audit_decrypt_command(args: argparse.Namespace) -> int:
+    """Decrypt an L3 audit log file."""
+    audit_path = Path(args.audit_path)
+
+    if not audit_path.exists():
+        print_json(
+            {'status': 'error', 'message': f'Audit log not found at {audit_path}'}
+        )
+        return 1
+
+    # Load encryption key if provided
+    encryption_key = None
+    if args.key:
+        key_path = Path(args.key).expanduser()
+        if not key_path.exists():
+            print_json(
+                {'status': 'error', 'message': f'Encryption key not found at {key_path}'}
+            )
+            return 1
+        try:
+            encryption_key = key_path.read_bytes()
+        except OSError as exc:
+            print_json(
+                {'status': 'error', 'message': f'Failed to read encryption key: {exc}'}
+            )
+            return 1
+
+    try:
+        decrypted_events = AuditLogger.decrypt_audit_log(audit_path, encryption_key)
+        print_json(
+            {
+                'status': 'ok',
+                'event_count': len(decrypted_events),
+                'events': decrypted_events,
+            }
+        )
+        return 0
+    except ValueError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+    except Exception as exc:
+        print_json({'status': 'error', 'message': f'Decryption failed: {exc}'})
+        return 1

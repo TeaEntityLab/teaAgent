@@ -22,7 +22,7 @@ Provides tamper-evident, append-only audit logging with SHA-256 hash chaining, H
 | L0 | `event_type`, `timestamp` only — metrics |
 | L1 | All metadata fields; strips `arguments`, `result`, `content`, `output`, `input`, `reasoning` |
 | L2 | Full payload with pattern-based redaction applied (default) |
-| L3 | Full payload, no redaction — plaintext at rest, no encryption |
+| L3 | Full payload, no redaction — encrypted at rest using Fernet (AES-128 in CBC mode) |
 
 ## State Machine
 
@@ -51,10 +51,47 @@ record(event_type, run_id, **payload)
 - `events[0].prev_hash == "genesis"`
 - Audit file permissions never exceed `0o600`
 - `self._lock` and `file_lock` are never held simultaneously
-- Redaction runs before persistence at all audit levels
+- Redaction runs before persistence at all non-L3 audit levels (L0-L2); L3 skips redaction
 
 ## Known Caveats
 
-- L3 stores full content in plaintext; no encryption at rest is implemented.
+- L3 encryption key is stored on the same host (~/.teaagent/audit-encryption/), so encryption protects against log file copying but not host/user compromise.
+- L3 logs can be decrypted using `AuditLogger.decrypt_audit_log()` or the `teaagent audit decrypt` CLI command for post-mortem analysis.
 - Redaction is best-effort for structured data; a novel credential format may escape patterns.
 - `chain_hmac` uses `hmac.new()` (Python 3.14+ deprecates `hmac.new`; see `audit_chain.py:78`).
+
+## L3 Decryption
+
+L3 audit logs are encrypted at rest using Fernet (AES-128 in CBC mode). To decrypt L3 logs for post-mortem analysis:
+
+### Programmatic Decryption
+
+```python
+from teaagent.audit import AuditLogger
+from pathlib import Path
+
+# Decrypt with automatic key loading from ~/.teaagent/audit-encryption/<run_id>.enc
+decrypted_events = AuditLogger.decrypt_audit_log(Path('.teaagent/audit.jsonl'))
+
+# Decrypt with explicit key
+from cryptography.fernet import Fernet
+key = Fernet.generate_key()
+decrypted_events = AuditLogger.decrypt_audit_log(Path('.teaagent/audit.jsonl'), encryption_key=key)
+```
+
+### CLI Decryption
+
+```bash
+# Decrypt with automatic key loading
+teaagent audit decrypt .teaagent/audit.jsonl
+
+# Decrypt with explicit key file
+teaagent audit decrypt .teaagent/audit.jsonl --key ~/.teaagent/audit-encryption/custom-key.enc
+```
+
+### Key Storage
+
+- Encryption keys are stored in `~/.teaagent/audit-encryption/<run_id>.enc`
+- Keys are 44 bytes (Fernet key length)
+- Key directory permissions: `0o700`
+- Key file permissions: `0o600`

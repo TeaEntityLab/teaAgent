@@ -7,17 +7,19 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from teaagent.sigstore_signer import (
+    SIGSTORE_AVAILABLE,
+    TSBProvenanceVerifier,
+)
+
 try:
     from sigstore.verify import Verifier
 
-    from teaagent.sigstore_signer import (
-        SIGSTORE_AVAILABLE,
-        SigstoreSigner,
-        TSBProvenanceVerifier,
-    )
+    from teaagent.sigstore_signer import SigstoreSigner
 except ImportError:
     SIGSTORE_AVAILABLE = False
     Verifier = None  # type: ignore
+    SigstoreSigner = None  # type: ignore
 
 
 @unittest.skipIf(not SIGSTORE_AVAILABLE, 'sigstore-python not installed')
@@ -123,6 +125,29 @@ class SigstoreSignerTests(unittest.TestCase):
                     issuer='https://accounts.google.com',
                 )
 
+    def test_verify_offline_mode(self) -> None:
+        """Test verification in offline mode (air-gapped)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = Path(tmp) / 'bundle.tsb'
+            bundle_path.write_bytes(b'test bundle content')
+
+            with patch('teaagent.sigstore_signer.Verifier') as mock_verifier_cls:
+                mock_verifier = Mock()
+                mock_verifier.verify.return_value = Mock()
+                mock_verifier_cls.production.return_value = mock_verifier
+
+                signer = SigstoreSigner()
+                result = signer.verify(
+                    bundle_path,
+                    signature='dGVzdF9zaWduYXR1cmU=',
+                    certificate='test_certificate',
+                    offline=True,
+                )
+
+                self.assertTrue(result)
+                # Verify that production verifier was called (offline mode still uses production verifier)
+                mock_verifier_cls.production.assert_called_once()
+
 
 @unittest.skipIf(not SIGSTORE_AVAILABLE, 'sigstore-python not installed')
 class TSBProvenanceVerifierTests(unittest.TestCase):
@@ -195,25 +220,6 @@ class TSBProvenanceVerifierTests(unittest.TestCase):
             self.assertFalse(is_valid)
             self.assertIn('requires certificate', message)
 
-    def test_verify_ssh_signature_present(self) -> None:
-        """Test SSH signature verification (placeholder)."""
-        with tempfile.TemporaryDirectory() as tmp:
-            bundle_path = Path(tmp) / 'bundle.tsb'
-            bundle_path.write_bytes(b'test bundle')
-
-            manifest = {
-                'attestation': {
-                    'author_signature': 'test_signature',
-                    'signer': 'ssh',
-                }
-            }
-
-            verifier = TSBProvenanceVerifier(require_signature=True)
-            is_valid, message = verifier.verify_provenance(bundle_path, manifest)
-
-            self.assertFalse(is_valid)
-            self.assertIn('SSH signature verification not implemented', message)
-
     def test_verify_unknown_signer(self) -> None:
         """Test verification with unknown signer type."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -233,60 +239,33 @@ class TSBProvenanceVerifierTests(unittest.TestCase):
             self.assertFalse(is_valid)
             self.assertIn('Unsupported signer type', message)
 
-    def test_verify_offline_mode(self) -> None:
-        """Test verification in offline mode (air-gapped environment)."""
-        if not SIGSTORE_AVAILABLE:
-            self.skipTest('sigstore-python not installed')
 
+@unittest.skipIf(TSBProvenanceVerifier is None, 'TSBProvenanceVerifier not available')
+class SSHSignatureTests(unittest.TestCase):
+    """Tests for SSH signature verification (doesn't require sigstore)."""
+
+    def test_verify_ssh_signature_not_supported(self) -> None:
+        """Test SSH signature verification is not yet supported."""
         with tempfile.TemporaryDirectory() as tmp:
-            test_file = Path(tmp) / 'artifact.txt'
-            test_file.write_text('test bundle content', encoding='utf-8')
+            bundle_path = Path(tmp) / 'bundle.tsb'
+            bundle_path.write_bytes(b'test bundle')
 
-            signer = SigstoreSigner()
+            manifest = {
+                'attestation': {
+                    'author_signature': 'test_signature',
+                    'signer': 'ssh',
+                }
+            }
 
-            # Mock verification in offline mode
-            with patch('teaagent.sigstore_signer.Signer') as mock_signer_cls:
-                mock_signer = Mock()
-                mock_signer.sign.return_value = Mock(
-                    signature=b'test_signature',
-                    certificate_pem='test_cert',
-                )
-                mock_signer_cls.return_value = mock_signer
+            verifier = TSBProvenanceVerifier(require_signature=True)
+            is_valid, message = verifier.verify_provenance(bundle_path, manifest)
 
-                result = signer.sign(test_file)
+            self.assertFalse(is_valid)
+            self.assertIn('not yet supported', message.lower())
 
-                # Test verification in offline mode
-                with patch.object(Verifier, 'production') as mock_verifier:
-                    mock_verify_instance = Mock()
-                    mock_verifier.return_value = mock_verify_instance
-                    mock_verify_instance.verify.return_value = Mock()
 
-                    is_valid = signer.verify(
-                        test_file,
-                        result['signature'],
-                        result['certificate'],
-                        offline=True,
-                    )
-
-                    self.assertTrue(is_valid)
-                    # In offline mode, verifier should still be created but skip Rekor checks
-                    mock_verifier.assert_called_once()
-
-    def test_verifier_offline_mode(self) -> None:
-        """Test TSBProvenanceVerifier in offline mode."""
-        if not SIGSTORE_AVAILABLE:
-            self.skipTest('sigstore-python not installed')
-
-        verifier = TSBProvenanceVerifier(
-            require_signature=True,
-            identity='test@example.com',
-            issuer='https://accounts.google.com',
-            offline=True,
-        )
-
-        self.assertTrue(verifier._offline)
-        self.assertEqual(verifier._identity, 'test@example.com')
-        self.assertEqual(verifier._issuer, 'https://accounts.google.com')
+class OIDCTokenDetectionTests(unittest.TestCase):
+    """Tests for OIDC token detection (doesn't require sigstore)."""
 
     def test_detect_ci_oidc_token_github_actions(self) -> None:
         """Test OIDC token detection for GitHub Actions."""

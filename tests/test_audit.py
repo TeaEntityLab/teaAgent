@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import stat
 import tempfile
 import threading
@@ -13,12 +14,16 @@ from teaagent.audit import (
     AUDIT_FILE_MODE,
     AUDIT_REDACTED,
     AUDIT_TRUNCATED,
+    CRYPTO_AVAILABLE,
     MAX_AUDIT_STRING_LENGTH,
     AuditEvent,
     AuditLogger,
     utc_now,
 )
 from teaagent.audit_chain import verify_audit_chain
+
+if CRYPTO_AVAILABLE:
+    from cryptography.fernet import Fernet
 
 
 def file_mode(path: Path) -> int:
@@ -422,6 +427,190 @@ class AuditChainVerificationTests(unittest.TestCase):
             result = verify_audit_chain(audit_path)
             self.assertTrue(result.valid)
             self.assertEqual(result.event_count, 0)
+
+    def test_l3_encryption_requires_cryptography(self) -> None:
+        """Test that L3 audit level fails when cryptography is not available."""
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'audit.jsonl'
+
+            # Mock CRYPTO_AVAILABLE to False
+            import teaagent.audit as audit_module
+            original_available = audit_module.CRYPTO_AVAILABLE
+            try:
+                audit_module.CRYPTO_AVAILABLE = False
+                with self.assertRaises(ValueError) as ctx:
+                    AuditLogger(path=audit_path, audit_level='L3')
+                self.assertIn('cryptography library', str(ctx.exception))
+            finally:
+                audit_module.CRYPTO_AVAILABLE = original_available
+
+    def test_l3_encryption_fails_closed_on_error(self) -> None:
+        """Test that L3 encryption fails closed when encryption fails."""
+        if not CRYPTO_AVAILABLE:
+            self.skipTest('cryptography not available')
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'audit.jsonl'
+
+            # Create logger with L3
+            logger = AuditLogger(path=audit_path, audit_level='L3')
+
+            # Monkey-patch encrypt to simulate encryption failure
+            def failing_encrypt(data):
+                raise Exception('Simulated encryption failure')
+            logger._fernet.encrypt = failing_encrypt
+
+            # Recording should fail
+            with self.assertRaises(ValueError) as ctx:
+                logger.record('test_event', 'run-1', key='value')
+            self.assertIn('encryption failed', str(ctx.exception).lower())
+
+    def test_decrypt_audit_log_requires_cryptography(self) -> None:
+        """Test that decrypt fails when cryptography is not available."""
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'audit.jsonl'
+            audit_path.write_text('{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8')
+
+            # Mock CRYPTO_AVAILABLE to False
+            import teaagent.audit as audit_module
+            original_available = audit_module.CRYPTO_AVAILABLE
+            try:
+                audit_module.CRYPTO_AVAILABLE = False
+                with self.assertRaises(ValueError) as ctx:
+                    AuditLogger.decrypt_audit_log(audit_path)
+                self.assertIn('cryptography library', str(ctx.exception))
+            finally:
+                audit_module.CRYPTO_AVAILABLE = original_available
+
+    def test_decrypt_audit_log_missing_key(self) -> None:
+        """Test that decrypt fails when encryption key is not found."""
+        if not CRYPTO_AVAILABLE:
+            self.skipTest('cryptography not available')
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'test-run.jsonl'
+            audit_path.write_text('{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8')
+
+            with self.assertRaises(ValueError) as ctx:
+                AuditLogger.decrypt_audit_log(audit_path)
+            self.assertIn('Encryption key not found', str(ctx.exception))
+
+    def test_decrypt_audit_log_success(self) -> None:
+        """Test successful decryption of L3 audit log."""
+        if not CRYPTO_AVAILABLE:
+            self.skipTest('cryptography not available')
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'test-run.jsonl'
+
+            # Generate encryption key
+            key = Fernet.generate_key()
+
+            # Create encrypted audit log
+            fernet = Fernet(key)
+            payload = {'sensitive_data': 'secret_value', 'tool_name': 'test_tool'}
+            encrypted_bytes = fernet.encrypt(json.dumps(payload).encode('utf-8'))
+            encrypted_str = encrypted_bytes.decode('utf-8')
+
+            event = {
+                'event_id': 'evt-1',
+                'event_type': 'tool_call',
+                'run_id': 'test-run',
+                'created_at': '2024-01-01T00:00:00Z',
+                'payload': {'encrypted': encrypted_str},
+                'prev_hash': '0',
+                'hash': 'abc123',
+                'chain_hmac': 'hmac123',
+            }
+
+            audit_path.write_text(json.dumps(event), encoding='utf-8')
+
+            # Decrypt with explicitly provided key
+            decrypted_events = AuditLogger.decrypt_audit_log(audit_path, encryption_key=key)
+
+            self.assertEqual(len(decrypted_events), 1)
+            self.assertEqual(decrypted_events[0]['payload'], payload)
+            self.assertEqual(decrypted_events[0]['event_id'], 'evt-1')
+
+    def test_decrypt_audit_log_autoload_key(self) -> None:
+        """Test decryption with automatic key loading from ~/.teaagent/audit-encryption/."""
+        if not CRYPTO_AVAILABLE:
+            self.skipTest('cryptography not available')
+
+        original_home = os.environ.get('HOME')
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                # Set HOME to temp directory for this test
+                os.environ['HOME'] = tmp
+
+                audit_path = Path(tmp) / 'test-run.jsonl'
+                key_dir = Path(tmp) / '.teaagent' / 'audit-encryption'
+                key_dir.mkdir(parents=True)
+                key_path = key_dir / 'test-run.enc'
+
+                # Generate and save encryption key
+                key = Fernet.generate_key()
+                key_path.write_bytes(key)
+
+                # Create encrypted audit log
+                fernet = Fernet(key)
+                payload = {'sensitive_data': 'secret_value', 'tool_name': 'test_tool'}
+                encrypted_bytes = fernet.encrypt(json.dumps(payload).encode('utf-8'))
+                encrypted_str = encrypted_bytes.decode('utf-8')
+
+                event = {
+                    'event_id': 'evt-1',
+                    'event_type': 'tool_call',
+                    'run_id': 'test-run',
+                    'created_at': '2024-01-01T00:00:00Z',
+                    'payload': {'encrypted': encrypted_str},
+                    'prev_hash': '0',
+                    'hash': 'abc123',
+                    'chain_hmac': 'hmac123',
+                }
+
+                audit_path.write_text(json.dumps(event), encoding='utf-8')
+
+                # Decrypt without providing key (should autoload)
+                decrypted_events = AuditLogger.decrypt_audit_log(audit_path)
+
+                self.assertEqual(len(decrypted_events), 1)
+                self.assertEqual(decrypted_events[0]['payload'], payload)
+                self.assertEqual(decrypted_events[0]['event_id'], 'evt-1')
+        finally:
+            # Restore original HOME
+            if original_home is not None:
+                os.environ['HOME'] = original_home
+            elif 'HOME' in os.environ:
+                del os.environ['HOME']
+
+    def test_decrypt_audit_log_unencrypted_payload(self) -> None:
+        """Test that decrypt handles unencrypted payloads (non-L3 logs)."""
+        if not CRYPTO_AVAILABLE:
+            self.skipTest('cryptography not available')
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'test-run.jsonl'
+
+            # Create unencrypted audit log (L2 or lower)
+            event = {
+                'event_id': 'evt-1',
+                'event_type': 'test',
+                'run_id': 'test-run',
+                'created_at': '2024-01-01T00:00:00Z',
+                'payload': {'data': 'plaintext'},
+                'prev_hash': '0',
+                'hash': 'abc123',
+                'chain_hmac': 'hmac123',
+            }
+
+            audit_path.write_text(json.dumps(event), encoding='utf-8')
+
+            # Decrypt should handle unencrypted payload gracefully
+            decrypted_events = AuditLogger.decrypt_audit_log(audit_path, encryption_key=Fernet.generate_key())
+
+            self.assertEqual(len(decrypted_events), 1)
+            self.assertEqual(decrypted_events[0]['payload'], {'data': 'plaintext'})
 
 
 if __name__ == '__main__':

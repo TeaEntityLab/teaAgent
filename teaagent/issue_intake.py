@@ -7,6 +7,7 @@ and extract structured information for plan generation.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +17,13 @@ from typing import Any, Optional
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
+
+try:
+    from github import Auth, Github
+    from github.GithubException import GithubException
+    GITHUB_AVAILABLE = True
+except ImportError:
+    GITHUB_AVAILABLE = False
 
 
 class IssueType(Enum):
@@ -188,15 +196,65 @@ class IssueParser:
         Returns:
             ParsedIssue with extracted fields
 
-        Note:
-            Placeholder for future GitHub API integration.
-            Raises NotImplementedError to avoid silently returning fake data
-            that could mislead callers.
+        Raises:
+            ValueError: If GitHub library is not available or token is missing
+            GithubException: If GitHub API call fails
         """
-        raise NotImplementedError(
-            'GitHub API integration is not yet implemented. '
-            'See https://github.com/TeaEntityLab/teaAgent for updates.'
-        )
+        if not GITHUB_AVAILABLE:
+            raise ValueError(
+                'PyGithub is not installed. Install with: pip install PyGithub'
+            )
+
+        # Get GitHub token from environment
+        token = os.getenv('GITHUB_TOKEN')
+        if not token:
+            raise ValueError(
+                'GITHUB_TOKEN environment variable is required for GitHub API access. '
+                'Set it with: export GITHUB_TOKEN=your_token_here'
+            )
+
+        # Parse URL to extract owner/repo/issue_number
+        # Expected format: https://github.com/owner/repo/issues/123
+        parts = issue_url.rstrip('/').split('/')
+        if len(parts) < 7 or parts[2] != 'github.com' or parts[5] != 'issues':
+            raise ValueError(
+                f'Invalid GitHub issue URL format: {issue_url}. '
+                'Expected: https://github.com/owner/repo/issues/123'
+            )
+
+        owner = parts[3]
+        repo = parts[4]
+        try:
+            issue_number = int(parts[6])
+        except ValueError as exc:
+            raise ValueError(
+                f'Invalid issue number in URL: {issue_url}. '
+                'Issue number must be numeric.'
+            ) from exc
+
+        try:
+            # Authenticate with token
+            auth = Auth.Token(token)
+            g = Github(auth=auth)
+
+            # Fetch the issue
+            repo_obj = g.get_repo(f'{owner}/{repo}')
+            issue_obj = repo_obj.get_issue(issue_number)
+
+            # Build issue text from GitHub issue data
+            issue_text = f'# {issue_obj.title}\n\n'
+            issue_text += issue_obj.body or ''
+
+            # Add labels as metadata
+            if issue_obj.labels:
+                issue_text += f'\n\nLabels: {", ".join(label.name for label in issue_obj.labels)}'
+
+            # Parse using the existing parse method
+            return self.parse(issue_text, source='github')
+
+        except GithubException as exc:
+            logger.error('GitHub API error: %s', exc)
+            raise ValueError(f'Failed to fetch GitHub issue: {exc}') from exc
 
     def _extract_title(self, text: str) -> Optional[str]:
         """Extract title from issue text."""

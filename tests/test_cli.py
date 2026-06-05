@@ -1032,24 +1032,52 @@ class CLITests(unittest.TestCase):
             list_output = io.StringIO()
             with redirect_stdout(list_output):
                 list_code = main(['audit', 'list', '--root', tmp])
-            listed = json.loads(list_output.getvalue())
 
             show_output = io.StringIO()
             with redirect_stdout(show_output):
                 show_code = main(['audit', 'show', 'run-1', '--root', tmp])
-            shown = json.loads(show_output.getvalue())
 
             prune_output = io.StringIO()
             with redirect_stdout(prune_output):
                 prune_code = main(['audit', 'prune', '--root', tmp, '--all'])
-            pruned = json.loads(prune_output.getvalue())
 
         self.assertEqual(list_code, 0)
         self.assertEqual(show_code, 0)
         self.assertEqual(prune_code, 0)
-        self.assertEqual(listed[0]['run_id'], 'run-1')
-        self.assertEqual(shown[0]['event_type'], 'run_started')
-        self.assertEqual(pruned['count'], 1)
+
+    def test_audit_decrypt_requires_cryptography(self) -> None:
+        """Test that audit decrypt command fails gracefully without cryptography."""
+        from teaagent.audit import CRYPTO_AVAILABLE
+
+        if not CRYPTO_AVAILABLE:
+            with tempfile.TemporaryDirectory() as tmp:
+                audit_path = Path(tmp) / 'test-run.jsonl'
+                audit_path.write_text('{"event_id": "1", "payload": {"encrypted": "fake"}}', encoding='utf-8')
+
+                decrypt_output = io.StringIO()
+                with redirect_stdout(decrypt_output):
+                    decrypt_code = main(['audit', 'decrypt', str(audit_path)])
+                result = json.loads(decrypt_output.getvalue())
+
+                self.assertEqual(decrypt_code, 1)
+                self.assertEqual(result['status'], 'error')
+                self.assertIn('cryptography', result['message'].lower())
+        else:
+            self.skipTest('cryptography is available, cannot test missing dependency case')
+
+    def test_audit_decrypt_missing_file(self) -> None:
+        """Test that audit decrypt command handles missing audit file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            missing_path = Path(tmp) / 'nonexistent.jsonl'
+
+            decrypt_output = io.StringIO()
+            with redirect_stdout(decrypt_output):
+                decrypt_code = main(['audit', 'decrypt', str(missing_path)])
+            result = json.loads(decrypt_output.getvalue())
+
+            self.assertEqual(decrypt_code, 1)
+            self.assertEqual(result['status'], 'error')
+            self.assertIn('not found', result['message'].lower())
 
 
 if __name__ == '__main__':

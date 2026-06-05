@@ -46,6 +46,7 @@ def register(
         serve_handler=handlers.get('audit_serve'),
         verify_handler=handlers.get('audit_verify'),
         export_handler=handlers.get('audit_export'),
+        decrypt_handler=handlers.get('audit_decrypt'),
     )
     _env(
         subparsers,
@@ -514,6 +515,7 @@ def _audit(
     serve_handler: Optional[Callable] = None,
     verify_handler: Optional[Callable] = None,
     export_handler: Optional[Callable] = None,
+    decrypt_handler: Optional[Callable] = None,
 ) -> None:
     audit = subparsers.add_parser('audit', help='Inspect and prune run audit logs.')
     subs = audit.add_subparsers(dest='audit_command', required=True)
@@ -600,6 +602,19 @@ def _audit(
             help='Skip hash-chain verification.',
         )
         export_cmd.set_defaults(func=export_handler)
+
+    if decrypt_handler is not None:
+        decrypt_cmd = subs.add_parser(
+            'decrypt',
+            help='Decrypt an L3 audit log file (requires cryptography library).',
+        )
+        decrypt_cmd.add_argument('audit_path', help='Path to the audit log file to decrypt.')
+        decrypt_cmd.add_argument(
+            '--key',
+            default=None,
+            help='Path to encryption key file. If omitted, loads from ~/.teaagent/audit-encryption/<run_id>.enc',
+        )
+        decrypt_cmd.set_defaults(func=decrypt_handler)
 
 
 def _graphqlite(
