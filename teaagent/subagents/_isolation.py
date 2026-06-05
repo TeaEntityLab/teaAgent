@@ -143,11 +143,6 @@ def _copy_workspace_snapshot(parent_root: Path, child_root: Path) -> None:
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, target)
-    if secret_skip_count > 0:
-        logger.info(
-            'Workspace snapshot excluded %d secret file(s) for subagent isolation',
-            secret_skip_count,
-        )
 
 
 def prepare_subagent_isolation(
