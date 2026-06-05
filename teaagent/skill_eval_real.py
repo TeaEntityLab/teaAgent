@@ -88,7 +88,7 @@ def run_real_model_eval(
 
         for title in case.expected_titles:
             if title not in output:
-                case_failures.append(f"missing expected title: {title!r}")
+                case_failures.append(f'missing expected title: {title!r}')
 
         if case.expected_row_count is not None:
             actual_rows = len([ln for ln in output.split('\n') if ln.strip()])
@@ -102,15 +102,11 @@ def run_real_model_eval(
             try:
                 json.loads(output)
             except json.JSONDecodeError:
-                case_failures.append(
-                    'expected valid JSON but output is not parseable'
-                )
+                case_failures.append('expected valid JSON but output is not parseable')
 
         for pattern in case.reject_patterns:
             if pattern.lower() in output.lower():
-                case_failures.append(
-                    f"output contains rejected pattern: {pattern!r}"
-                )
+                case_failures.append(f'output contains rejected pattern: {pattern!r}')
 
         passed = not case_failures
         eval_results.append(

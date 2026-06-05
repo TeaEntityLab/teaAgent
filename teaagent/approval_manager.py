@@ -60,7 +60,10 @@ def is_protected_skill_path(workspace_root: Path, target_path: Path) -> bool:
     relative_str = str(relative)
 
     # Candidate path is always allowed.
-    if relative_str.startswith(_CANDIDATE_SKILL_PREFIX + '/') or relative_str == _CANDIDATE_SKILL_PREFIX:
+    if (
+        relative_str.startswith(_CANDIDATE_SKILL_PREFIX + '/')
+        or relative_str == _CANDIDATE_SKILL_PREFIX
+    ):
         return False
 
     for pattern in _PROTECTED_SKILL_PATTERNS:
@@ -853,8 +856,8 @@ class ApprovalManager:
                 raise ToolPermissionError(
                     f"Tool '{tool_name}' target path '{raw}' is outside "
                     f"workspace root '{self.workspace_root}'. "
-                    "Explicit workspace root must take precedence "
-                    "over any saved state.",
+                    'Explicit workspace root must take precedence '
+                    'over any saved state.',
                     reason_code=DenialReasonCode.WORKSPACE_WRITE_MODE,
                 ) from None
 
@@ -880,9 +883,9 @@ class ApprovalManager:
             if is_protected_skill_path(root_path, target):
                 raise ToolPermissionError(
                     f"Write to active skill directory '{raw}' is blocked. "
-                    "Use the candidate install flow instead: skills are "
-                    "managed through .teaagent/skill-candidates/. See docs "
-                    "for --skill-dev-opt-in to bypass.",
+                    'Use the candidate install flow instead: skills are '
+                    'managed through .teaagent/skill-candidates/. See docs '
+                    'for --skill-dev-opt-in to bypass.',
                     reason_code=DenialReasonCode.SKILL_WRITE_BLOCKED,
                 )
 

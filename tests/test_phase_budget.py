@@ -43,9 +43,7 @@ class PhaseBudgetTests(unittest.TestCase):
 
 class RunBudgetPhaseResolutionTests(unittest.TestCase):
     def test_phase_budget_for_returns_specific_when_configured(self) -> None:
-        plan_budget = PhaseBudget(
-            phase=Phase.PLAN, max_iterations=3, max_tool_calls=2
-        )
+        plan_budget = PhaseBudget(phase=Phase.PLAN, max_iterations=3, max_tool_calls=2)
         budget = RunBudget(
             max_iterations=25,
             max_tool_calls=25,
@@ -86,9 +84,7 @@ class RunBudgetPhaseResolutionTests(unittest.TestCase):
         self.assertIsNone(resolved.max_estimated_cost_cents)
 
     def test_multiple_phase_budgets_coexist(self) -> None:
-        plan_budget = PhaseBudget(
-            phase=Phase.PLAN, max_iterations=3, max_tool_calls=2
-        )
+        plan_budget = PhaseBudget(phase=Phase.PLAN, max_iterations=3, max_tool_calls=2)
         exec_budget = PhaseBudget(
             phase=Phase.EXECUTE, max_iterations=10, max_tool_calls=8
         )
@@ -97,9 +93,7 @@ class RunBudgetPhaseResolutionTests(unittest.TestCase):
         )
         self.assertEqual(budget.phase_budget_for(Phase.PLAN).max_iterations, 3)
         self.assertEqual(budget.phase_budget_for(Phase.EXECUTE).max_iterations, 10)
-        self.assertEqual(
-            budget.phase_budget_for(Phase.REVIEW).max_iterations, 25
-        )
+        self.assertEqual(budget.phase_budget_for(Phase.REVIEW).max_iterations, 25)
 
 
 class RunBudgetValidationTests(unittest.TestCase):
@@ -349,9 +343,7 @@ class AgentRunnerPhaseBudgetIntegrationTests(unittest.TestCase):
 
         def decide_never_finish(ctx):
             counter['n'] += 1
-            return ToolRequest(
-                tool_name='echo', arguments={'msg': f'hi{counter["n"]}'}
-            )
+            return ToolRequest(tool_name='echo', arguments={'msg': f'hi{counter["n"]}'})
 
         result = runner.run(
             task='test', decide=decide_never_finish, run_id='run-phase-iter3'
@@ -374,9 +366,7 @@ class AgentRunnerPhaseBudgetIntegrationTests(unittest.TestCase):
 
         result = runner.run(
             task='test',
-            decide=lambda ctx: ToolRequest(
-                tool_name='echo', arguments={'msg': 'hi'}
-            ),
+            decide=lambda ctx: ToolRequest(tool_name='echo', arguments={'msg': 'hi'}),
             run_id='run-phase-tools',
         )
         self.assertIn('failed', result.status)
@@ -425,18 +415,12 @@ class AgentRunnerPhaseBudgetIntegrationTests(unittest.TestCase):
 
         def decide_never_finish(ctx):
             counter['n'] += 1
-            return ToolRequest(
-                tool_name='echo', arguments={'msg': f'hi{counter["n"]}'}
-            )
+            return ToolRequest(tool_name='echo', arguments={'msg': f'hi{counter["n"]}'})
 
-        runner.run(
-            task='test', decide=decide_never_finish, run_id='run-phase-audit'
-        )
+        runner.run(task='test', decide=decide_never_finish, run_id='run-phase-audit')
 
         warning_events = [
-            e
-            for e in runner.audit.events
-            if e.event_type == 'phase_budget_warning'
+            e for e in runner.audit.events if e.event_type == 'phase_budget_warning'
         ]
         self.assertEqual(len(warning_events), 1)
         event = warning_events[0]
@@ -478,9 +462,7 @@ class AgentRunnerPhaseBudgetIntegrationTests(unittest.TestCase):
         def decide_with_transition(ctx):
             if runner.phase_tracker.current_phase == Phase.PLAN:
                 runner.phase_tracker.transition(Phase.EXECUTE, total_cost_cents=0.0)
-                return ToolRequest(
-                    tool_name='echo', arguments={'msg': 'transitioning'}
-                )
+                return ToolRequest(tool_name='echo', arguments={'msg': 'transitioning'})
             return FinalAnswer(content='done')
 
         result = runner.run(

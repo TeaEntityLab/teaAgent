@@ -88,8 +88,10 @@ def test_skill_candidate_propose_review_install_flow(tmp_path: Path) -> None:
     from teaagent.governance.plan_gate import approve_gate, require_review_gate
 
     gate = require_review_gate(
-        target_type='skill_install', target_name=candidate_id,
-        risk_reason='test install', workspace_root=str(tmp_path),
+        target_type='skill_install',
+        target_name=candidate_id,
+        risk_reason='test install',
+        workspace_root=str(tmp_path),
     )
     approve_gate(gate.gate_id, approver='test', workspace_root=str(tmp_path))
     install_out = io.StringIO()

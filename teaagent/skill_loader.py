@@ -397,8 +397,13 @@ def load_skills_with_report(
 
 
 def _installed_candidate_artifact_errors(skill_dir: Path) -> list[str]:
-    json_artifact_names = set(REQUIRED_CANDIDATE_ARTIFACTS) - {_SKILL_FILENAME, 'REFERENCE.md'}
-    present = {path.name for path in skill_dir.iterdir() if path.name in json_artifact_names}
+    json_artifact_names = set(REQUIRED_CANDIDATE_ARTIFACTS) - {
+        _SKILL_FILENAME,
+        'REFERENCE.md',
+    }
+    present = {
+        path.name for path in skill_dir.iterdir() if path.name in json_artifact_names
+    }
     if not present:
         return []
     return validate_candidate_artifacts(skill_dir)
@@ -835,17 +840,13 @@ def get_skill_diagnostics(root: str | Path) -> dict:
                 continue
             run_id = run_dir.name
             try:
-                files = sorted(
-                    f for f in run_dir.iterdir() if f.is_file()
-                )
+                files = sorted(f for f in run_dir.iterdir() if f.is_file())
             except OSError:
                 files = []
             long_result_artifacts[run_id] = {
                 'run_id': run_id,
                 'artifact_count': len(files),
-                'artifact_paths': [
-                    str(f.relative_to(root_path)) for f in files
-                ],
+                'artifact_paths': [str(f.relative_to(root_path)) for f in files],
             }
 
     # ── output verification ───────────────────────────────────────────────
@@ -916,9 +917,13 @@ def _build_isolation_status() -> dict:
             'no OS-level sandboxing is active.'
         )
     elif not wasm_ok:
-        warnings.append('WASM runtime (wasmer) not installed; WASM skills will fall back to native execution.')
+        warnings.append(
+            'WASM runtime (wasmer) not installed; WASM skills will fall back to native execution.'
+        )
     elif not docker_ok:
-        warnings.append('Docker not available; container-isolated skills will fall back to native execution.')
+        warnings.append(
+            'Docker not available; container-isolated skills will fall back to native execution.'
+        )
 
     return {
         'available_backends': available,
@@ -977,9 +982,7 @@ def get_skill_health(root: str | Path) -> dict:
             gov_dist[status] += 1
 
     # ── total skill index count ─────────────────────────────────────────
-    total_skills = len(
-        discover_skill_index(root_path)
-    )
+    total_skills = len(discover_skill_index(root_path))
 
     # ── candidates: summary, stale, failed evals ────────────────────────
     store = SkillCandidateStore(root_path, readonly=True)
@@ -1028,7 +1031,9 @@ def get_skill_health(root: str | Path) -> dict:
                 {
                     'name': c.name,
                     'candidate_id': c.candidate_id,
-                    'failures': list(report.failures) if report and report.failures else [],
+                    'failures': list(report.failures)
+                    if report and report.failures
+                    else [],
                 }
             )
 

@@ -66,7 +66,8 @@ def register(
     eval_cmd.set_defaults(func=handlers['candidate_eval'])
 
     eval_real = candidate_subs.add_parser(
-        'eval-real', help='Run real-model eval on a skill candidate (optional, never blocks CI).'
+        'eval-real',
+        help='Run real-model eval on a skill candidate (optional, never blocks CI).',
     )
     eval_real.add_argument('candidate_id')
     eval_real.add_argument(

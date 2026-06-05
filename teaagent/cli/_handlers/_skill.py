@@ -187,7 +187,12 @@ def skill_candidate_install_command(args: argparse.Namespace) -> int:
         try:
             gate = load_gate(approved_gate_id, workspace_root=args.root)
         except FileNotFoundError:
-            _print_json({'status': 'error', 'message': f'approved gate not found: {approved_gate_id}'})
+            _print_json(
+                {
+                    'status': 'error',
+                    'message': f'approved gate not found: {approved_gate_id}',
+                }
+            )
             return 1
         if gate.decision != 'approved':
             _print_json(
@@ -312,15 +317,19 @@ def skill_candidate_repair_tasks_command(args: argparse.Namespace) -> int:
     store = SkillCandidateStore(args.root, readonly=True)
     candidate_dir = store.candidate_dir(args.candidate_id)
     if not candidate_dir.is_dir():
-        _print_json({'status': 'error', 'message': f'candidate not found: {args.candidate_id}'})
+        _print_json(
+            {'status': 'error', 'message': f'candidate not found: {args.candidate_id}'}
+        )
         return 1
     from teaagent.skill_repair import load_repair_tasks
 
     tasks = load_repair_tasks(candidate_dir)
-    _print_json({
-        'status': 'ok',
-        'candidate_id': args.candidate_id,
-        'repair_tasks': [t.to_dict() for t in tasks],
-        'total': len(tasks),
-    })
+    _print_json(
+        {
+            'status': 'ok',
+            'candidate_id': args.candidate_id,
+            'repair_tasks': [t.to_dict() for t in tasks],
+            'total': len(tasks),
+        }
+    )
     return 0 if not tasks else 1  # return 1 when there are outstanding repair tasks

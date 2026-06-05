@@ -18,10 +18,12 @@ class ValidateToolDecisionTests(unittest.TestCase):
     """Unit tests for validate_tool_decision() structural checks."""
 
     def test_valid_tool_decision(self) -> None:
-        valid, reason = validate_tool_decision({
-            'tool_name': 'workspace_read_file',
-            'arguments': {'path': 'foo.py'},
-        })
+        valid, reason = validate_tool_decision(
+            {
+                'tool_name': 'workspace_read_file',
+                'arguments': {'path': 'foo.py'},
+            }
+        )
         self.assertTrue(valid)
         self.assertEqual(reason, '')
 
@@ -31,26 +33,32 @@ class ValidateToolDecisionTests(unittest.TestCase):
         self.assertIn('tool_name', reason)
 
     def test_empty_tool_name(self) -> None:
-        valid, reason = validate_tool_decision({
-            'tool_name': '',
-            'arguments': {'a': 1},
-        })
+        valid, reason = validate_tool_decision(
+            {
+                'tool_name': '',
+                'arguments': {'a': 1},
+            }
+        )
         self.assertFalse(valid)
         self.assertIn('non-empty', reason)
 
     def test_whitespace_only_tool_name(self) -> None:
-        valid, reason = validate_tool_decision({
-            'tool_name': '   ',
-            'arguments': {'a': 1},
-        })
+        valid, reason = validate_tool_decision(
+            {
+                'tool_name': '   ',
+                'arguments': {'a': 1},
+            }
+        )
         self.assertFalse(valid)
         self.assertIn('non-empty', reason)
 
     def test_tool_name_not_string(self) -> None:
-        valid, reason = validate_tool_decision({
-            'tool_name': 42,
-            'arguments': {'a': 1},
-        })
+        valid, reason = validate_tool_decision(
+            {
+                'tool_name': 42,
+                'arguments': {'a': 1},
+            }
+        )
         self.assertFalse(valid)
         self.assertIn('must be string', reason)
 
@@ -60,26 +68,32 @@ class ValidateToolDecisionTests(unittest.TestCase):
         self.assertIn('arguments', reason)
 
     def test_arguments_is_none(self) -> None:
-        valid, reason = validate_tool_decision({
-            'tool_name': 'echo',
-            'arguments': None,
-        })
+        valid, reason = validate_tool_decision(
+            {
+                'tool_name': 'echo',
+                'arguments': None,
+            }
+        )
         self.assertFalse(valid)
         self.assertIn('arguments', reason)
 
     def test_arguments_is_string(self) -> None:
-        valid, reason = validate_tool_decision({
-            'tool_name': 'echo',
-            'arguments': 'not-a-dict',
-        })
+        valid, reason = validate_tool_decision(
+            {
+                'tool_name': 'echo',
+                'arguments': 'not-a-dict',
+            }
+        )
         self.assertFalse(valid)
         self.assertIn('must be dict', reason)
 
     def test_arguments_is_list(self) -> None:
-        valid, reason = validate_tool_decision({
-            'tool_name': 'echo',
-            'arguments': [1, 2, 3],
-        })
+        valid, reason = validate_tool_decision(
+            {
+                'tool_name': 'echo',
+                'arguments': [1, 2, 3],
+            }
+        )
         self.assertFalse(valid)
         self.assertIn('must be dict', reason)
 
@@ -107,11 +121,14 @@ class InvalidToolDecisionExceptionTests(unittest.TestCase):
         self.assertIn('structurally invalid', str(exc))
 
     def test_raw_decision_preview(self) -> None:
-        exc = InvalidToolDecision('empty tool_name', raw_decision_preview='{"tool_name":""}')
+        exc = InvalidToolDecision(
+            'empty tool_name', raw_decision_preview='{"tool_name":""}'
+        )
         self.assertEqual(exc.raw_decision_preview, '{"tool_name":""}')
 
     def test_subclass_of_agent_harness_error(self) -> None:
         from teaagent.errors import AgentHarnessError
+
         exc = InvalidToolDecision('test')
         self.assertIsInstance(exc, AgentHarnessError)
 
@@ -135,7 +152,9 @@ class AgentRunnerInvalidDecisionIntegrationTest(unittest.TestCase):
                 'required': ['out'],
             },
             annotations=ToolAnnotations(
-                read_only=True, destructive=False, idempotent=True,
+                read_only=True,
+                destructive=False,
+                idempotent=True,
             ),
             handler=lambda args: {'out': args['msg']},
         )
@@ -191,10 +210,12 @@ class AgentRunnerInvalidDecisionIntegrationTest(unittest.TestCase):
     def test_valid_tool_request_proceeds_normally(self) -> None:
         runner = self._make_runner()
 
-        calls = iter([
-            ToolRequest(tool_name='echo', arguments={'msg': 'hi'}, call_id='c1'),
-            FinalAnswer(content='done'),
-        ])
+        calls = iter(
+            [
+                ToolRequest(tool_name='echo', arguments={'msg': 'hi'}, call_id='c1'),
+                FinalAnswer(content='done'),
+            ]
+        )
         result = runner.run(
             task='echo something',
             decide=lambda _ctx: next(calls),
@@ -216,8 +237,7 @@ class AgentRunnerInvalidDecisionIntegrationTest(unittest.TestCase):
             run_id='run-audit-test',
         )
         decision_events = [
-            e for e in runner.audit.events
-            if e.event_type == 'tool_decision_invalid'
+            e for e in runner.audit.events if e.event_type == 'tool_decision_invalid'
         ]
         self.assertEqual(len(decision_events), 1)
         event = decision_events[0]
@@ -236,10 +256,7 @@ class AgentRunnerInvalidDecisionIntegrationTest(unittest.TestCase):
             ),
             run_id='run-audit-fail',
         )
-        failed_events = [
-            e for e in runner.audit.events
-            if e.event_type == 'run_failed'
-        ]
+        failed_events = [e for e in runner.audit.events if e.event_type == 'run_failed']
         self.assertGreaterEqual(len(failed_events), 1)
         self.assertEqual(
             failed_events[0].payload.get('category'),

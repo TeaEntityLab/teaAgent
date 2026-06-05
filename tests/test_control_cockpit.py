@@ -156,7 +156,10 @@ class BuildControlCockpitTests(unittest.TestCase):
 class ControlCockpitRenderingTests(unittest.TestCase):
     def _render_cockpit(self, tui: TeaAgentTUI) -> str:
         buffer = StringIO()
-        with patch('sys.stdout', buffer), patch('shutil.get_terminal_size', return_value=(120, 30)):
+        with (
+            patch('sys.stdout', buffer),
+            patch('shutil.get_terminal_size', return_value=(120, 30)),
+        ):
             tui._print_state_panel()
         return buffer.getvalue()
 
@@ -231,7 +234,11 @@ class ControlCockpitRenderingTests(unittest.TestCase):
             output_fn=lambda _: None,
         )
         tui._control_cockpit = ControlCockpitState(
-            spec={'spec_id': 'spec-xyz-123', 'spec_hash': 'deadbeef', 'spec_exemption': None},
+            spec={
+                'spec_id': 'spec-xyz-123',
+                'spec_hash': 'deadbeef',
+                'spec_exemption': None,
+            },
             goal=None,
             model_route=None,
         )

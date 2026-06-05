@@ -183,13 +183,11 @@ def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustP
         # regardless of whether the tool appears in allow/deny lists.
         for server_name, server in current_policy.servers.items():
             if not server.trusted:
-                raise HookError(
-                    f"MCP server '{server_name}' is not trusted"
-                )
+                raise HookError(f"MCP server '{server_name}' is not trusted")
             if is_server_trust_expired(server):
                 raise HookError(
                     f"Trust for MCP server '{server_name}' has expired "
-                    f"(expired at {server.expires_at})"
+                    f'(expired at {server.expires_at})'
                 )
 
         allowed, denied = merged_tool_filters(current_policy)
@@ -320,7 +318,7 @@ def check_mcp_server_trust_at_call_time(
     if is_server_trust_expired(server):
         raise HookError(
             f"Trust for MCP server '{server_name}' has expired "
-            f"(expired at {server.expires_at}). "
+            f'(expired at {server.expires_at}). '
             f"Use 'teaagent mcp-trust trust --server {server_name}' to renew."
         )
 

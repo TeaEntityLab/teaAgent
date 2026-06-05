@@ -295,7 +295,9 @@ class TeaAgentTUI:
                 permission_mode=self.permission_mode.value,
                 cost_cents=self._get_session_cost_cents(),
                 cost_limit_cents=self._max_cost_budget_cents,
-                cost_state='estimated' if self._max_cost_budget_cents is None else 'actual',
+                cost_state='estimated'
+                if self._max_cost_budget_cents is None
+                else 'actual',
             )
         except Exception:
             self._control_cockpit = None
@@ -305,7 +307,9 @@ class TeaAgentTUI:
     def _refresh_cockpit_state(self) -> None:
         approval_scope_parts = [self.permission_mode.value]
         if self._approved_path_globs:
-            approval_scope_parts.append(f'(scoped: {", ".join(self._approved_path_globs)})')
+            approval_scope_parts.append(
+                f'(scoped: {", ".join(self._approved_path_globs)})'
+            )
         try:
             self._cockpit_state = CockpitState(
                 workspace_root=str(self.root),
@@ -440,7 +444,9 @@ class TeaAgentTUI:
             # Model Route
             if cc.model_route:
                 mr = cc.model_route
-                print(f'  Model: {mr.get("provider", "?")}/{mr.get("model", "default")} (est. ${mr.get("estimated_cost_cents", 0) / 100:.2f})')
+                print(
+                    f'  Model: {mr.get("provider", "?")}/{mr.get("model", "default")} (est. ${mr.get("estimated_cost_cents", 0) / 100:.2f})'
+                )
             else:
                 print(f'  Model: {self.provider}/{self.model or "default"} (no route)')
 
@@ -451,18 +457,24 @@ class TeaAgentTUI:
             # Review
             if cc.review:
                 review = cc.review
-                print(f'  Review: {review.get("review_ids_count", 0)} reviews, gate={review.get("latest_review_status", "?")}')
+                print(
+                    f'  Review: {review.get("review_ids_count", 0)} reviews, gate={review.get("latest_review_status", "?")}'
+                )
 
             # Skills
             skill = cc.skill
             gov = skill.get('governance_status', {})
             gov_summary = '/'.join(sorted(set(gov.values()))) if gov else 'none'
-            print(f'  Skills: {skill.get("loaded_count", 0)} loaded, {skill.get("shadowed_count", 0)} shadowed, {skill.get("candidate_count", 0)} candidates')
+            print(
+                f'  Skills: {skill.get("loaded_count", 0)} loaded, {skill.get("shadowed_count", 0)} shadowed, {skill.get("candidate_count", 0)} candidates'
+            )
             print(f'    Governance: {gov_summary}')
 
             # Approval
             app = cc.approval
-            print(f'  Approval: {app.get("pending_count", 0)} pending, {app.get("blocked_count", 0)} blocked, mode={app.get("mode", "?")}')
+            print(
+                f'  Approval: {app.get("pending_count", 0)} pending, {app.get("blocked_count", 0)} blocked, mode={app.get("mode", "?")}'
+            )
 
             # Cost
             cost = cc.cost
@@ -574,9 +586,7 @@ class TeaAgentTUI:
             try:
                 from teaagent.skill_candidates import SkillCandidateStore
 
-                candidate_store = SkillCandidateStore(
-                    self.root, readonly=True
-                )
+                candidate_store = SkillCandidateStore(self.root, readonly=True)
                 candidates = candidate_store.list()
                 if candidates:
                     print(f'  Candidates: {len(candidates)}')
@@ -593,10 +603,7 @@ class TeaAgentTUI:
                 for run_dir in sorted(artifact_dir.iterdir()):
                     if run_dir.is_dir():
                         run_ids.append(run_dir.name)
-                        artifact_files = [
-                            f for f in run_dir.iterdir()
-                            if f.is_file()
-                        ]
+                        artifact_files = [f for f in run_dir.iterdir() if f.is_file()]
                         total_files += len(artifact_files)
                 if total_files > 0:
                     print(
@@ -618,18 +625,22 @@ class TeaAgentTUI:
                 gov = health.get('governance_distribution', {})
                 print(
                     '  Health: '
-                    f"{health.get('total_skills', 0)} skills, "
-                    f"gov={gov.get('direct_write', 0)}d/{gov.get('candidate_installed', 0)}c/"
-                    f"{gov.get('compatibility_path', 0)}p/{gov.get('unmanaged', 0)}u, "
-                    f"shadowed={health.get('shadowed_count', 0)}, "
-                    f"candidates={health['candidate_summary']['total']}/{health['candidate_summary']['installed']}, "
-                    f"stale={len(health.get('stale_candidates', []))}, "
-                    f"eval_failed={len(health.get('failed_evals', []))}"
+                    f'{health.get("total_skills", 0)} skills, '
+                    f'gov={gov.get("direct_write", 0)}d/{gov.get("candidate_installed", 0)}c/'
+                    f'{gov.get("compatibility_path", 0)}p/{gov.get("unmanaged", 0)}u, '
+                    f'shadowed={health.get("shadowed_count", 0)}, '
+                    f'candidates={health["candidate_summary"]["total"]}/{health["candidate_summary"]["installed"]}, '
+                    f'stale={len(health.get("stale_candidates", []))}, '
+                    f'eval_failed={len(health.get("failed_evals", []))}'
                 )
             except Exception:
                 pass
 
-            if index_count > 0 or shadowed_count > 0 or (artifact_dir.is_dir() and total_files > 0):
+            if (
+                index_count > 0
+                or shadowed_count > 0
+                or (artifact_dir.is_dir() and total_files > 0)
+            ):
                 print('  (use /skill-diagnostics for full JSON report)')
         except Exception:
             print('\nSkills Loaded: (unavailable)')

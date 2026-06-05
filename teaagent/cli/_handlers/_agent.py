@@ -1757,7 +1757,9 @@ def _start_background_run(args: argparse.Namespace) -> int:
 
     for candidate in candidates:
         run_path = run_store.run_path(candidate)
-        suspension_path = root_path / '.teaagent' / f'suspension-{safe_run_id(candidate)}.json'
+        suspension_path = (
+            root_path / '.teaagent' / f'suspension-{safe_run_id(candidate)}.json'
+        )
         if run_path.is_file():
             print_json(
                 {

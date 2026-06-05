@@ -1074,7 +1074,6 @@ class MultiSigQuorumTests(unittest.TestCase):
 
         self.assertFalse(result)
 
-
     # P0-D-001: Workspace root containment
     def test_workspace_root_allows_path_within_root(self) -> None:
         """Path arguments within workspace root are allowed."""

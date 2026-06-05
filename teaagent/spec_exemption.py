@@ -56,12 +56,12 @@ class SpecExemptionReceipt:
         if self.reason not in _VALID_REASONS:
             raise ValueError(
                 f"Invalid exemption reason '{self.reason}'. "
-                f"Must be one of: {sorted(_VALID_REASONS)}"
+                f'Must be one of: {sorted(_VALID_REASONS)}'
             )
         if self.risk_level not in _VALID_RISK_LEVELS:
             raise ValueError(
                 f"Invalid risk_level '{self.risk_level}'. "
-                f"Must be one of: {sorted(_VALID_RISK_LEVELS)}"
+                f'Must be one of: {sorted(_VALID_RISK_LEVELS)}'
             )
 
     def to_dict(self) -> dict[str, Any]:
@@ -113,7 +113,7 @@ def grant_spec_exemption(
     if risk_level not in _VALID_RISK_LEVELS:
         raise ValueError(
             f"Invalid risk_level '{risk_level}'. Must be one of "
-            f"{sorted(_VALID_RISK_LEVELS)}"
+            f'{sorted(_VALID_RISK_LEVELS)}'
         )
     if reason not in _VALID_REASONS:
         raise ValueError(
@@ -321,9 +321,7 @@ class ExemptionDetector:
         if permission_mode == 'danger-full-access':
             return None
 
-        if permission_mode == 'read-only' or _has_read_only_keyword(
-            task_description
-        ):
+        if permission_mode == 'read-only' or _has_read_only_keyword(task_description):
             return _build_read_only_exemption(task_description, changed_files)
 
         if _all_files_are_docs(changed_files):

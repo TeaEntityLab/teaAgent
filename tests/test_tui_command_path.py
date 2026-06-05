@@ -30,9 +30,9 @@ def _make_controller_mock(
 
 
 class AskRunCommandPathTests(unittest.TestCase):
-
     def _setup_tui_with_controller_mock(
-        self) -> tuple[TeaAgentTUI, MagicMock, list[str]]:
+        self,
+    ) -> tuple[TeaAgentTUI, MagicMock, list[str]]:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         controller = _make_controller_mock()
@@ -136,7 +136,6 @@ class AskRunCommandPathTests(unittest.TestCase):
 
 
 class CostCommandPathTests(unittest.TestCase):
-
     def test_cost_reads_from_controller_get_session_cost(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
@@ -191,7 +190,6 @@ class CostCommandPathTests(unittest.TestCase):
 
 
 class UndoCommandPathTests(unittest.TestCase):
-
     def test_undo_calls_controller_undo_last_run(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
@@ -269,7 +267,8 @@ class UndoCommandPathTests(unittest.TestCase):
 
         with (
             patch.object(
-                tui, '_get_chat_controller',
+                tui,
+                '_get_chat_controller',
                 side_effect=RuntimeError('no controller'),
             ),
             patch.object(tui, '_restore_checkpoint', return_value=False),
@@ -279,13 +278,13 @@ class UndoCommandPathTests(unittest.TestCase):
 
 
 class RootCommandPathTests(unittest.TestCase):
-
     def test_root_before_controller_creation(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp1, tempfile.TemporaryDirectory() as tmp2:
+        with (
+            tempfile.TemporaryDirectory() as tmp1,
+            tempfile.TemporaryDirectory() as tmp2,
+        ):
             output: list[str] = []
-            tui = TeaAgentTUI(
-                root=tmp1, input_fn=lambda _: '', output_fn=output.append
-            )
+            tui = TeaAgentTUI(root=tmp1, input_fn=lambda _: '', output_fn=output.append)
 
             tui.handle_command(f'root {tmp2}')
 
@@ -294,11 +293,12 @@ class RootCommandPathTests(unittest.TestCase):
             self.assertEqual(controller.root, Path(tmp2).resolve())
 
     def test_root_after_controller_creation(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp1, tempfile.TemporaryDirectory() as tmp2:
+        with (
+            tempfile.TemporaryDirectory() as tmp1,
+            tempfile.TemporaryDirectory() as tmp2,
+        ):
             output: list[str] = []
-            tui = TeaAgentTUI(
-                root=tmp1, input_fn=lambda _: '', output_fn=output.append
-            )
+            tui = TeaAgentTUI(root=tmp1, input_fn=lambda _: '', output_fn=output.append)
 
             controller1 = tui._get_chat_controller()
             self.assertEqual(controller1.root, Path(tmp1).resolve())
@@ -318,13 +318,10 @@ class RootCommandPathTests(unittest.TestCase):
 
 
 class ResumeCommandPathTests(unittest.TestCase):
-
     def test_resume_goes_through_controller_execute_task(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output: list[str] = []
-            tui = TeaAgentTUI(
-                root=tmp, input_fn=lambda _: '', output_fn=output.append
-            )
+            tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
             controller = _make_controller_mock()
             controller.execute_task.return_value = MagicMock(
                 run_result=MagicMock(
@@ -350,12 +347,15 @@ class ResumeCommandPathTests(unittest.TestCase):
             run_path = store.run_path(run_id)
             run_path.parent.mkdir(parents=True, exist_ok=True)
             run_path.write_text(
-                json.dumps({
-                    'run_id': run_id,
-                    'created_at': '2026-06-05T00:00:00Z',
-                    'event_type': 'run_started',
-                    'payload': {'task': 'resumed task content'},
-                }) + '\n',
+                json.dumps(
+                    {
+                        'run_id': run_id,
+                        'created_at': '2026-06-05T00:00:00Z',
+                        'event_type': 'run_started',
+                        'payload': {'task': 'resumed task content'},
+                    }
+                )
+                + '\n',
                 encoding='utf-8',
             )
 
@@ -393,9 +393,7 @@ class ResumeCommandPathTests(unittest.TestCase):
     def test_resume_unknown_run_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output: list[str] = []
-            tui = TeaAgentTUI(
-                root=tmp, input_fn=lambda _: '', output_fn=output.append
-            )
+            tui = TeaAgentTUI(root=tmp, input_fn=lambda _: '', output_fn=output.append)
             controller = _make_controller_mock()
             tui._chat_controller = controller
 
@@ -406,7 +404,6 @@ class ResumeCommandPathTests(unittest.TestCase):
 
 
 class SessionCostStateTests(unittest.TestCase):
-
     def test_session_cost_cents_property_delegates_to_controller(self) -> None:
         output: list[str] = []
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)

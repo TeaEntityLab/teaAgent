@@ -61,6 +61,7 @@ def test_release_evidence_seven_loop_fields(tmp_path):
         assert isinstance(evidence['receipts'], list)
         assert isinstance(evidence.get('trace_id', ''), str)
 
+
 def test_seven_loop_spec_first_trace(tmp_path):
     """Verify that _check_spec_first returns a trace_id pointing to the source file."""
     governance = tmp_path / 'docs' / 'governance'

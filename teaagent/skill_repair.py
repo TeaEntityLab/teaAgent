@@ -36,7 +36,13 @@ class RepairTask:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> RepairTask:
-        return cls(**{k: v for k, v in payload.items() if k in {'area', 'description', 'severity', 'eval_failure'}})
+        return cls(
+            **{
+                k: v
+                for k, v in payload.items()
+                if k in {'area', 'description', 'severity', 'eval_failure'}
+            }
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -104,7 +110,7 @@ def _map_structural_failure(failure: str) -> RepairTask | None:
 
     # Behavioral eval failures detected by prefix
     if failure.startswith('missing expected title: '):
-        title = failure[len('missing expected title: '):].strip().strip("'")
+        title = failure[len('missing expected title: ') :].strip().strip("'")
         return RepairTask(
             area='eval_case',
             description=f"Ensure the skill output includes expected title '{title}'",
@@ -130,7 +136,7 @@ def _map_structural_failure(failure: str) -> RepairTask | None:
         )
 
     if failure.startswith('output contains rejected pattern: '):
-        rest = failure[len('output contains rejected pattern: '):].strip().strip("'")
+        rest = failure[len('output contains rejected pattern: ') :].strip().strip("'")
         return RepairTask(
             area='eval_case',
             description=f"Remove pattern '{rest}' from the skill output; it matches rejected/injection patterns",
@@ -162,9 +168,7 @@ def generate_repair_tasks(
     for failure in eval_report.failures:
         # Check if this failure comes from a behavioral eval case failure
         # (those are already covered by per-result handling below)
-        is_behavioral = any(
-            failure in r.failures for r in eval_report.results
-        )
+        is_behavioral = any(failure in r.failures for r in eval_report.results)
         if is_behavioral:
             continue
         task = _map_structural_failure(failure)

@@ -205,9 +205,7 @@ class AgentRunner:
                 current=phase_iters,
                 limit=pb.max_iterations,
             )
-            raise BudgetExceededError(
-                f'phase {phase.value} iteration budget exceeded'
-            )
+            raise BudgetExceededError(f'phase {phase.value} iteration budget exceeded')
 
         phase_tools = tracker.phase_tool_calls()
         if phase_tools > pb.max_tool_calls:
@@ -219,12 +217,13 @@ class AgentRunner:
                 current=phase_tools,
                 limit=pb.max_tool_calls,
             )
-            raise BudgetExceededError(
-                f'phase {phase.value} tool-call budget exceeded'
-            )
+            raise BudgetExceededError(f'phase {phase.value} tool-call budget exceeded')
 
         phase_cost = tracker.phase_cost_cents(cost_cents)
-        if pb.max_estimated_cost_cents is not None and phase_cost > pb.max_estimated_cost_cents:
+        if (
+            pb.max_estimated_cost_cents is not None
+            and phase_cost > pb.max_estimated_cost_cents
+        ):
             self.audit.record(
                 'phase_budget_warning',
                 run_id,
@@ -233,9 +232,7 @@ class AgentRunner:
                 current=phase_cost,
                 limit=pb.max_estimated_cost_cents,
             )
-            raise BudgetExceededError(
-                f'phase {phase.value} cost budget exceeded'
-            )
+            raise BudgetExceededError(f'phase {phase.value} cost budget exceeded')
 
     def _check_budget_warnings(self, *, run_id: str, cost_cents: float) -> None:
         budget_cap = self.budget.max_estimated_cost_cents
@@ -430,9 +427,7 @@ class AgentRunner:
         output_tokens: int,
     ) -> RunResult:
         """Handle a FinalAnswer decision and return the run result."""
-        proof_bundle = build_proof_of_use(
-            self.audit.events, decision.content
-        )
+        proof_bundle = build_proof_of_use(self.audit.events, decision.content)
         enriched_metadata: dict[str, Any] = {**decision.metadata}
         if proof_bundle.proofs:
             enriched_metadata['proof_of_use'] = proof_bundle.to_dict()
@@ -692,10 +687,13 @@ class AgentRunner:
         if (
             isinstance(result, str)
             and self.workspace_root is not None
-            and len(result.encode("utf-8")) > DEFAULT_MAX_PREVIEW_BYTES
+            and len(result.encode('utf-8')) > DEFAULT_MAX_PREVIEW_BYTES
         ):
             envelope = store_long_result(
-                self.workspace_root, run_id, decision.call_id, result,
+                self.workspace_root,
+                run_id,
+                decision.call_id,
+                result,
                 max_preview_bytes=DEFAULT_MAX_PREVIEW_BYTES,
             )
             observation_result = envelope.preview
@@ -855,11 +853,13 @@ class AgentRunner:
                 # Prevent malformed decisions (empty tool_name, null arguments)
                 # from being silently dispatched to the tool registry.
                 if isinstance(decision, ToolRequest):
-                    valid, reason = validate_tool_decision({
-                        'tool_name': decision.tool_name,
-                        'arguments': decision.arguments,
-                        'call_id': decision.call_id,
-                    })
+                    valid, reason = validate_tool_decision(
+                        {
+                            'tool_name': decision.tool_name,
+                            'arguments': decision.arguments,
+                            'call_id': decision.call_id,
+                        }
+                    )
                     if not valid:
                         preview = str(decision.arguments)[:120]
                         self.audit.record(

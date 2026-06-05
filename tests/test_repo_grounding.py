@@ -203,9 +203,7 @@ def test_spec_binding_to_dict_round_trip():
 
 
 def test_spec_binding_defaults():
-    binding = SpecBinding(
-        spec_id='s', spec_hash='h', plan_id='p', plan_hash='h2'
-    )
+    binding = SpecBinding(spec_id='s', spec_hash='h', plan_id='p', plan_hash='h2')
     assert binding.searched_files == []
     assert binding.confirmed_assumptions == []
     assert binding.transitioned_at  # auto-filled

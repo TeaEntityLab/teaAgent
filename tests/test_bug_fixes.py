@@ -156,9 +156,7 @@ class TestResourceLeakFixes:
         import re
         from pathlib import Path
 
-        ad_path = (
-            Path(__file__).parent.parent / 'teaagent' / 'automation_delivery.py'
-        )
+        ad_path = Path(__file__).parent.parent / 'teaagent' / 'automation_delivery.py'
         source = ad_path.read_text(encoding='utf-8')
         matches = re.findall(r'with\s+safe_urlopen\(', source)
         assert len(matches) >= 1, (
@@ -229,8 +227,8 @@ class TestAssertionFailureFixes:
         # If this count changes, the test fails so the change is deliberate.
         assert len(bare_asserts) == 3, (
             f'Expected 3 bare assert statements in mcp_http/, '
-            f'found {len(bare_asserts)}:\n' +
-            '\n'.join(f'{f}:{ln}: {txt}' for f, ln, txt in bare_asserts)
+            f'found {len(bare_asserts)}:\n'
+            + '\n'.join(f'{f}:{ln}: {txt}' for f, ln, txt in bare_asserts)
         )
 
 
@@ -389,7 +387,7 @@ class TestLoggingImprovements:
         # Check for pattern where sink class name is included in exception
         # logging: f'Audit sink {sink.__class__.__name__} failed: {exc}'
         match = re.search(
-            r"sink\.__class__\.__name__",
+            r'sink\.__class__\.__name__',
             source,
         )
         assert match is not None, (

@@ -833,7 +833,7 @@ def _cmd_artifact_read(tui: 'TeaAgentTUI', args: list[str]) -> bool:
                 )
                 return True
             try:
-                int(cursor[len('offset:'):])
+                int(cursor[len('offset:') :])
             except ValueError:
                 tui.output_fn(f"error: invalid cursor offset '{cursor}'")
                 return True
@@ -845,9 +845,7 @@ def _cmd_artifact_read(tui: 'TeaAgentTUI', args: list[str]) -> bool:
                 tui.output_fn(f"error: invalid --max-bytes value '{args[i + 1]}'")
                 return True
             if max_bytes <= 0:
-                tui.output_fn(
-                    f"error: --max-bytes must be positive, got {max_bytes}"
-                )
+                tui.output_fn(f'error: --max-bytes must be positive, got {max_bytes}')
                 return True
             i += 2
         else:

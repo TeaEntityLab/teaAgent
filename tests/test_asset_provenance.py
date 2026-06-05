@@ -105,41 +105,30 @@ class TestAssetProvenanceBundle:
 class TestRevocationStatusForSkill:
     def test_blocked_is_revoked(self) -> None:
         assert (
-            _revocation_status_for_skill(
-                'test', SkillLifecycleState.BLOCKED.value
-            )
+            _revocation_status_for_skill('test', SkillLifecycleState.BLOCKED.value)
             == 'revoked'
         )
 
     def test_superseded_is_revoked(self) -> None:
         assert (
-            _revocation_status_for_skill(
-                'test', SkillLifecycleState.SUPERSEDED.value
-            )
+            _revocation_status_for_skill('test', SkillLifecycleState.SUPERSEDED.value)
             == 'revoked'
         )
 
     def test_activated_is_active(self) -> None:
         assert (
-            _revocation_status_for_skill(
-                'test', SkillLifecycleState.ACTIVATED.value
-            )
+            _revocation_status_for_skill('test', SkillLifecycleState.ACTIVATED.value)
             == 'active'
         )
 
     def test_discovered_is_active(self) -> None:
         assert (
-            _revocation_status_for_skill(
-                'test', SkillLifecycleState.DISCOVERED.value
-            )
+            _revocation_status_for_skill('test', SkillLifecycleState.DISCOVERED.value)
             == 'active'
         )
 
     def test_unknown_state_returns_unknown(self) -> None:
-        assert (
-            _revocation_status_for_skill('test', 'bogus_state')
-            == 'unknown'
-        )
+        assert _revocation_status_for_skill('test', 'bogus_state') == 'unknown'
 
 
 class TestCollectProvenance:
@@ -149,9 +138,12 @@ class TestCollectProvenance:
         assert bundle.records == []
 
     def test_collects_skills_from_activation(self, tmp_path: Path) -> None:
-        _install_skill(tmp_path, '.config/agent/skills', 'alpha',
-                       'Alpha skill body content here.')
-        explain = explain_skill_activation(tmp_path, selected_names=frozenset(['alpha']))
+        _install_skill(
+            tmp_path, '.config/agent/skills', 'alpha', 'Alpha skill body content here.'
+        )
+        explain = explain_skill_activation(
+            tmp_path, selected_names=frozenset(['alpha'])
+        )
 
         bundle = collect_provenance(tmp_path, skill_activation=explain)
         assert len(bundle.records) == 1
@@ -159,17 +151,21 @@ class TestCollectProvenance:
         assert record.asset_type == 'skill'
         assert record.name == 'alpha'
         assert record.governance_status in (
-            'direct_write', 'candidate_installed', 'compatibility_path',
+            'direct_write',
+            'candidate_installed',
+            'compatibility_path',
             'unmanaged',
         )
         assert record.activation_status == 'activated'
         assert record.revocation_status == 'active'
 
     def test_collects_shadowed_paths(self, tmp_path: Path) -> None:
-        _install_skill(tmp_path, '.config/agent/skills', 'beta',
-                       'Beta skill first.winner.')
-        _install_skill(tmp_path, '.claude/skills', 'beta',
-                       'Beta skill second.shadowed.')
+        _install_skill(
+            tmp_path, '.config/agent/skills', 'beta', 'Beta skill first.winner.'
+        )
+        _install_skill(
+            tmp_path, '.claude/skills', 'beta', 'Beta skill second.shadowed.'
+        )
         explain = explain_skill_activation(tmp_path, selected_names=frozenset(['beta']))
 
         bundle = collect_provenance(tmp_path, skill_activation=explain)
@@ -193,7 +189,8 @@ class TestCollectProvenance:
             },
         ]
         bundle = collect_provenance(
-            Path('/tmp'), mcp_servers=mcp_servers,
+            Path('/tmp'),
+            mcp_servers=mcp_servers,
         )
         assert len(bundle.records) == 2
 
@@ -221,9 +218,12 @@ class TestCollectProvenance:
         assert record.activation_status == 'pending'
 
     def test_lifecycle_tracker_affects_state(self, tmp_path: Path) -> None:
-        _install_skill(tmp_path, '.config/agent/skills', 'delta',
-                       'Delta skill body content here.')
-        explain = explain_skill_activation(tmp_path, selected_names=frozenset(['delta']))
+        _install_skill(
+            tmp_path, '.config/agent/skills', 'delta', 'Delta skill body content here.'
+        )
+        explain = explain_skill_activation(
+            tmp_path, selected_names=frozenset(['delta'])
+        )
 
         tracker = SkillLifecycleTracker()
         tracker.transition(
@@ -242,8 +242,9 @@ class TestCollectProvenance:
         assert record.revocation_status == 'revoked'
 
     def test_collects_both_skills_and_mcp(self, tmp_path: Path) -> None:
-        _install_skill(tmp_path, '.config/agent/skills', 'dual',
-                       'Dual skill body content here.')
+        _install_skill(
+            tmp_path, '.config/agent/skills', 'dual', 'Dual skill body content here.'
+        )
         explain = explain_skill_activation(tmp_path, selected_names=frozenset(['dual']))
 
         bundle = collect_provenance(

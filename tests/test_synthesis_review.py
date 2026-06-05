@@ -85,9 +85,7 @@ class TestReviewFindingStateTransitions:
         )
 
     def test_verified_to_fixed(self) -> None:
-        assert ReviewFindingState.VERIFIED.can_transition_to(
-            ReviewFindingState.FIXED
-        )
+        assert ReviewFindingState.VERIFIED.can_transition_to(ReviewFindingState.FIXED)
 
     def test_verified_cannot_go_to_proposed(self) -> None:
         assert not ReviewFindingState.VERIFIED.can_transition_to(
@@ -213,14 +211,25 @@ class TestReviewFinding:
         assert f.superseded_by == 'f-003'
 
     def test_from_dict_invalid_state_raises(self) -> None:
-        d = {'finding_id': 'f', 'state': 'bogus', 'severity': 'low',
-             'category': 'style', 'message': 'm', 'evidence_path': 'x'}
+        d = {
+            'finding_id': 'f',
+            'state': 'bogus',
+            'severity': 'low',
+            'category': 'style',
+            'message': 'm',
+            'evidence_path': 'x',
+        }
         with pytest.raises(ValueError, match='Invalid finding state'):
             ReviewFinding.from_dict(d)
 
     def test_from_dict_missing_state_defaults_to_proposed(self) -> None:
-        d = {'finding_id': 'f', 'severity': 'low', 'category': 'style',
-             'message': 'm', 'evidence_path': 'x'}
+        d = {
+            'finding_id': 'f',
+            'severity': 'low',
+            'category': 'style',
+            'message': 'm',
+            'evidence_path': 'x',
+        }
         f = ReviewFinding.from_dict(d)
         assert f.state == ReviewFindingState.PROPOSED
 
@@ -278,12 +287,20 @@ class TestResidualRisk:
             description='d', severity='high', mitigation='m', accepted=True
         )
         d = r.to_dict()
-        assert d == {'description': 'd', 'severity': 'high',
-                     'mitigation': 'm', 'accepted': True}
+        assert d == {
+            'description': 'd',
+            'severity': 'high',
+            'mitigation': 'm',
+            'accepted': True,
+        }
 
     def test_from_dict(self) -> None:
-        d = {'description': 'd', 'severity': 'medium', 'mitigation': 'm',
-             'accepted': False}
+        d = {
+            'description': 'd',
+            'severity': 'medium',
+            'mitigation': 'm',
+            'accepted': False,
+        }
         r = ResidualRisk.from_dict(d)
         assert r.description == 'd'
         assert r.severity == 'medium'
@@ -291,8 +308,9 @@ class TestResidualRisk:
         assert r.accepted is False
 
     def test_serialization_roundtrip(self) -> None:
-        r = ResidualRisk(description='X', severity='high', mitigation='Y',
-                         accepted=True)
+        r = ResidualRisk(
+            description='X', severity='high', mitigation='Y', accepted=True
+        )
         raw = json.dumps(r.to_dict(), sort_keys=True)
         loaded = json.loads(raw)
         r2 = ResidualRisk.from_dict(loaded)
@@ -323,14 +341,18 @@ class TestSynthesisReviewArtifact:
     def test_construction_full(self) -> None:
         findings = [
             ReviewFinding(
-                finding_id='f-001', state=ReviewFindingState.PROPOSED,
-                severity='high', category='security',
-                message='Issue', evidence_path='src/x.py',
+                finding_id='f-001',
+                state=ReviewFindingState.PROPOSED,
+                severity='high',
+                category='security',
+                message='Issue',
+                evidence_path='src/x.py',
             ),
         ]
         risks = [
-            ResidualRisk(description='R', severity='low',
-                         mitigation='M', accepted=True),
+            ResidualRisk(
+                description='R', severity='low', mitigation='M', accepted=True
+            ),
         ]
         s = SynthesisReviewArtifact(
             review_id='sr-001',
@@ -371,14 +393,18 @@ class TestSynthesisReviewArtifact:
             files_reviewed=['f.py'],
             findings=[
                 ReviewFinding(
-                    finding_id='f1', state=ReviewFindingState.VERIFIED,
-                    severity='medium', category='functional',
-                    message='msg', evidence_path='f.py',
+                    finding_id='f1',
+                    state=ReviewFindingState.VERIFIED,
+                    severity='medium',
+                    category='functional',
+                    message='msg',
+                    evidence_path='f.py',
                 ),
             ],
             residual_risk=[
-                ResidualRisk(description='r', severity='low',
-                             mitigation='m', accepted=False),
+                ResidualRisk(
+                    description='r', severity='low', mitigation='m', accepted=False
+                ),
             ],
             recommended_gate_state='reject',
         )
@@ -442,15 +468,20 @@ class TestSynthesisReviewArtifact:
             tests_reviewed=['test_a.py'],
             findings=[
                 ReviewFinding(
-                    finding_id='f1', state=ReviewFindingState.PROPOSED,
-                    severity='critical', category='security',
-                    message='vuln', evidence_path='a.py',
+                    finding_id='f1',
+                    state=ReviewFindingState.PROPOSED,
+                    severity='critical',
+                    category='security',
+                    message='vuln',
+                    evidence_path='a.py',
                 ),
             ],
             residual_risk=[
                 ResidualRisk(
-                    description='uncovered', severity='medium',
-                    mitigation='manual QA', accepted=True,
+                    description='uncovered',
+                    severity='medium',
+                    mitigation='manual QA',
+                    accepted=True,
                 ),
             ],
             recommended_gate_state='approve',
@@ -475,9 +506,12 @@ class TestSynthesisReviewArtifact:
             files_reviewed=['f.py'],
             findings=[
                 ReviewFinding(
-                    finding_id='f1', state=ReviewFindingState.PROPOSED,
-                    severity='low', category='style',
-                    message='msg', evidence_path='f.py',
+                    finding_id='f1',
+                    state=ReviewFindingState.PROPOSED,
+                    severity='low',
+                    category='style',
+                    message='msg',
+                    evidence_path='f.py',
                 ),
             ],
         )
@@ -486,7 +520,9 @@ class TestSynthesisReviewArtifact:
         d2['findings'] = [
             {
                 **f,
-                'state': f['state'].value if hasattr(f['state'], 'value') else f['state'],
+                'state': f['state'].value
+                if hasattr(f['state'], 'value')
+                else f['state'],
             }
             for f in d2['findings']
         ]
@@ -535,9 +571,12 @@ class TestBuildSynthesisReview:
 
     def test_build_with_supplemental_findings(self) -> None:
         finding = ReviewFinding(
-            finding_id='f-001', state=ReviewFindingState.PROPOSED,
-            severity='high', category='security',
-            message='Hardcoded secret', evidence_path='config.py',
+            finding_id='f-001',
+            state=ReviewFindingState.PROPOSED,
+            severity='high',
+            category='security',
+            message='Hardcoded secret',
+            evidence_path='config.py',
         )
         artifact = build_synthesis_review(
             target_run_id='run-1',
@@ -545,8 +584,9 @@ class TestBuildSynthesisReview:
             supplemental_findings=[finding],
             files_reviewed=['config.py'],
             residual_risk=[
-                ResidualRisk(description='r', severity='low',
-                             mitigation='m', accepted=False),
+                ResidualRisk(
+                    description='r', severity='low', mitigation='m', accepted=False
+                ),
             ],
             recommended_gate_state='reject',
         )
@@ -586,13 +626,19 @@ class TestCloseSynthesisReview:
             (root / 'src' / 'main.py').write_text('code')
 
             finding = ReviewFinding(
-                finding_id='f1', state=ReviewFindingState.VERIFIED,
-                severity='medium', category='functional',
-                message='ok', evidence_path='src/main.py',
+                finding_id='f1',
+                state=ReviewFindingState.VERIFIED,
+                severity='medium',
+                category='functional',
+                message='ok',
+                evidence_path='src/main.py',
             )
             review = SynthesisReviewArtifact(
-                review_id='sr-1', target_run_id='run-1', target_goal_id='g1',
-                reviewer_role='oracle', findings=[finding],
+                review_id='sr-1',
+                target_run_id='run-1',
+                target_goal_id='g1',
+                reviewer_role='oracle',
+                findings=[finding],
                 recommended_gate_state='approve',
             )
             errors = close_synthesis_review(review, workspace_root=root)
@@ -600,13 +646,19 @@ class TestCloseSynthesisReview:
 
     def test_missing_evidence_path(self) -> None:
         finding = ReviewFinding(
-            finding_id='f1', state=ReviewFindingState.PROPOSED,
-            severity='high', category='security',
-            message='no evidence', evidence_path='',
+            finding_id='f1',
+            state=ReviewFindingState.PROPOSED,
+            severity='high',
+            category='security',
+            message='no evidence',
+            evidence_path='',
         )
         review = SynthesisReviewArtifact(
-            review_id='sr-1', target_run_id='run-1', target_goal_id='g1',
-            reviewer_role='subagent', findings=[finding],
+            review_id='sr-1',
+            target_run_id='run-1',
+            target_goal_id='g1',
+            reviewer_role='subagent',
+            findings=[finding],
         )
         errors = close_synthesis_review(review)
         assert len(errors) == 1
@@ -614,13 +666,19 @@ class TestCloseSynthesisReview:
 
     def test_unresolvable_evidence_path(self) -> None:
         finding = ReviewFinding(
-            finding_id='f1', state=ReviewFindingState.PROPOSED,
-            severity='high', category='security',
-            message='bad path', evidence_path='nonexistent/file.txt',
+            finding_id='f1',
+            state=ReviewFindingState.PROPOSED,
+            severity='high',
+            category='security',
+            message='bad path',
+            evidence_path='nonexistent/file.txt',
         )
         review = SynthesisReviewArtifact(
-            review_id='sr-1', target_run_id='run-1', target_goal_id='g1',
-            reviewer_role='subagent', findings=[finding],
+            review_id='sr-1',
+            target_run_id='run-1',
+            target_goal_id='g1',
+            reviewer_role='subagent',
+            findings=[finding],
         )
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -630,13 +688,19 @@ class TestCloseSynthesisReview:
 
     def test_audit_event_id_is_valid_format(self) -> None:
         finding = ReviewFinding(
-            finding_id='f1', state=ReviewFindingState.PROPOSED,
-            severity='medium', category='functional',
-            message='audit ref', evidence_path='run-abc:42',
+            finding_id='f1',
+            state=ReviewFindingState.PROPOSED,
+            severity='medium',
+            category='functional',
+            message='audit ref',
+            evidence_path='run-abc:42',
         )
         review = SynthesisReviewArtifact(
-            review_id='sr-1', target_run_id='run-1', target_goal_id='g1',
-            reviewer_role='subagent', findings=[finding],
+            review_id='sr-1',
+            target_run_id='run-1',
+            target_goal_id='g1',
+            reviewer_role='subagent',
+            findings=[finding],
         )
         errors = close_synthesis_review(review)
         assert errors == []
@@ -650,14 +714,19 @@ class TestCloseSynthesisReview:
             evidence_file.write_text('{}')
 
             finding = ReviewFinding(
-                finding_id='f1', state=ReviewFindingState.PROPOSED,
-                severity='medium', category='functional',
+                finding_id='f1',
+                state=ReviewFindingState.PROPOSED,
+                severity='medium',
+                category='functional',
                 message='artifact ref',
                 evidence_path='.teaagent/subagent-reviews/evidence.json',
             )
             review = SynthesisReviewArtifact(
-                review_id='sr-1', target_run_id='run-1', target_goal_id='g1',
-                reviewer_role='subagent', findings=[finding],
+                review_id='sr-1',
+                target_run_id='run-1',
+                target_goal_id='g1',
+                reviewer_role='subagent',
+                findings=[finding],
             )
             errors = close_synthesis_review(review, workspace_root=root)
             assert errors == []
@@ -668,13 +737,19 @@ class TestCloseSynthesisReview:
             (root / 'x.py').write_text('code')
 
             finding = ReviewFinding(
-                finding_id='f1', state=ReviewFindingState.PROPOSED,
-                severity='low', category='style',
-                message='ok', evidence_path='x.py',
+                finding_id='f1',
+                state=ReviewFindingState.PROPOSED,
+                severity='low',
+                category='style',
+                message='ok',
+                evidence_path='x.py',
             )
             review = SynthesisReviewArtifact(
-                review_id='sr-1', target_run_id='run-1', target_goal_id='g1',
-                reviewer_role='subagent', findings=[finding],
+                review_id='sr-1',
+                target_run_id='run-1',
+                target_goal_id='g1',
+                reviewer_role='subagent',
+                findings=[finding],
                 recommended_gate_state='approve',
             )
             review.recommended_gate_state = 'bogus'
@@ -683,18 +758,27 @@ class TestCloseSynthesisReview:
 
     def test_multiple_errors_aggregated(self) -> None:
         f1 = ReviewFinding(
-            finding_id='f1', state=ReviewFindingState.PROPOSED,
-            severity='high', category='security',
-            message='no path', evidence_path='',
+            finding_id='f1',
+            state=ReviewFindingState.PROPOSED,
+            severity='high',
+            category='security',
+            message='no path',
+            evidence_path='',
         )
         f2 = ReviewFinding(
-            finding_id='f2', state=ReviewFindingState.PROPOSED,
-            severity='medium', category='functional',
-            message='bad path', evidence_path='no/such/file',
+            finding_id='f2',
+            state=ReviewFindingState.PROPOSED,
+            severity='medium',
+            category='functional',
+            message='bad path',
+            evidence_path='no/such/file',
         )
         review = SynthesisReviewArtifact(
-            review_id='sr-1', target_run_id='run-1', target_goal_id='g1',
-            reviewer_role='subagent', findings=[f1, f2],
+            review_id='sr-1',
+            target_run_id='run-1',
+            target_goal_id='g1',
+            reviewer_role='subagent',
+            findings=[f1, f2],
         )
         errors = close_synthesis_review(review)
         assert len(errors) == 2
@@ -737,9 +821,12 @@ class TestAuditEventHelpers:
     def test_record_review_finding_proposed(self) -> None:
         mock = MagicMock()
         finding = ReviewFinding(
-            finding_id='f1', state=ReviewFindingState.PROPOSED,
-            severity='high', category='security',
-            message='vuln', evidence_path='x.py',
+            finding_id='f1',
+            state=ReviewFindingState.PROPOSED,
+            severity='high',
+            category='security',
+            message='vuln',
+            evidence_path='x.py',
         )
         record_review_finding_proposed(mock, 'run-1', finding)
         mock.record.assert_called_once()
@@ -751,9 +838,12 @@ class TestAuditEventHelpers:
     def test_record_review_finding_verified(self) -> None:
         mock = MagicMock()
         finding = ReviewFinding(
-            finding_id='f2', state=ReviewFindingState.VERIFIED,
-            severity='medium', category='functional',
-            message='checked', evidence_path='y.py',
+            finding_id='f2',
+            state=ReviewFindingState.VERIFIED,
+            severity='medium',
+            category='functional',
+            message='checked',
+            evidence_path='y.py',
         )
         record_review_finding_verified(mock, 'run-1', finding)
         mock.record.assert_called_once()
@@ -764,18 +854,25 @@ class TestAuditEventHelpers:
     def test_record_review_closed(self) -> None:
         mock = MagicMock()
         review = SynthesisReviewArtifact(
-            review_id='sr-1', target_run_id='r-1', target_goal_id='g-1',
-            reviewer_role='oracle', recommended_gate_state='approve',
+            review_id='sr-1',
+            target_run_id='r-1',
+            target_goal_id='g-1',
+            reviewer_role='oracle',
+            recommended_gate_state='approve',
             findings=[
                 ReviewFinding(
-                    finding_id='f1', state=ReviewFindingState.VERIFIED,
-                    severity='low', category='style',
-                    message='m', evidence_path='z.py',
+                    finding_id='f1',
+                    state=ReviewFindingState.VERIFIED,
+                    severity='low',
+                    category='style',
+                    message='m',
+                    evidence_path='z.py',
                 ),
             ],
             residual_risk=[
-                ResidualRisk(description='r', severity='medium',
-                             mitigation='mit', accepted=True),
+                ResidualRisk(
+                    description='r', severity='medium', mitigation='mit', accepted=True
+                ),
             ],
         )
         record_review_closed(mock, 'run-1', review, error_count=0)
@@ -799,8 +896,12 @@ class TestImmutability:
         import dataclasses
 
         f = ReviewFinding(
-            finding_id='f1', state=ReviewFindingState.PROPOSED,
-            severity='low', category='style', message='m', evidence_path='x',
+            finding_id='f1',
+            state=ReviewFindingState.PROPOSED,
+            severity='low',
+            category='style',
+            message='m',
+            evidence_path='x',
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
             f.finding_id = 'new'  # type: ignore[misc]

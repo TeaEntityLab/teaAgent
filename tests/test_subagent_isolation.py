@@ -432,9 +432,7 @@ class SubagentPermissionInheritanceTests(unittest.TestCase):
             self.assertEqual(payload['status'], 'completed')
             child_mode = captured_mode[0]
             child_mode_str = (
-                child_mode.value
-                if hasattr(child_mode, 'value')
-                else str(child_mode)
+                child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
             )
             self.assertEqual(child_mode_str, 'workspace-write')
 
@@ -446,9 +444,7 @@ class SubagentPermissionInheritanceTests(unittest.TestCase):
             worktree.mkdir(parents=True)
             from teaagent.policy import PermissionMode
 
-            config = ChatAgentConfig(
-                root=root, permission_mode=PermissionMode.ALLOW
-            )
+            config = ChatAgentConfig(root=root, permission_mode=PermissionMode.ALLOW)
             manager = SubagentManager(
                 root=root, parent_config=config, parent_adapter=MagicMock()
             )
@@ -483,9 +479,7 @@ class SubagentPermissionInheritanceTests(unittest.TestCase):
             self.assertEqual(payload['status'], 'completed')
             child_mode = captured_mode[0]
             child_mode_str = (
-                child_mode.value
-                if hasattr(child_mode, 'value')
-                else str(child_mode)
+                child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
             )
             self.assertEqual(child_mode_str, 'workspace-write')
 
@@ -534,9 +528,7 @@ class SubagentPermissionInheritanceTests(unittest.TestCase):
             self.assertEqual(payload['status'], 'completed')
             child_mode = captured_mode[0]
             child_mode_str = (
-                child_mode.value
-                if hasattr(child_mode, 'value')
-                else str(child_mode)
+                child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
             )
             self.assertEqual(child_mode_str, 'read-only')
 

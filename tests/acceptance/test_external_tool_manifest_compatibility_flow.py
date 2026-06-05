@@ -151,10 +151,11 @@ def test_external_skill_package_with_extra_metadata_loads(tmp_path: Path) -> Non
     )
     (skill_dir / 'README.md').write_text('extra metadata docs', encoding='utf-8')
 
-    with patch(
-        'teaagent.skill_loader._USER_SKILL_DIRS', [tmp_path / '.missing-skills']
-    ), patch(
-        'teaagent.skill_loader._BUILTIN_SKILL_DIR', tmp_path / '.no-builtin-skills'
+    with (
+        patch('teaagent.skill_loader._USER_SKILL_DIRS', [tmp_path / '.missing-skills']),
+        patch(
+            'teaagent.skill_loader._BUILTIN_SKILL_DIR', tmp_path / '.no-builtin-skills'
+        ),
     ):
         skills = load_skills(tmp_path)
     assert len(skills) == 1

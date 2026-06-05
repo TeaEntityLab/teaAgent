@@ -186,8 +186,7 @@ class ChatSessionController:
                 undo_journal.save_to(store.undo_path(result.run_id))
             except (OSError, RuntimeError) as exc:
                 logger.warning(
-                    'Persistence failure: could not save undo journal '
-                    '(run_id=%s): %s',
+                    'Persistence failure: could not save undo journal (run_id=%s): %s',
                     result.run_id,
                     exc,
                 )
@@ -240,7 +239,9 @@ class ChatSessionController:
                     f'[TeaAgent] journal undo completed: restored {len(result.restored)} file(s)'
                 )
                 if result.deleted:
-                    self.output_fn(f'[TeaAgent] journal undo: deleted {len(result.deleted)} file(s)')
+                    self.output_fn(
+                        f'[TeaAgent] journal undo: deleted {len(result.deleted)} file(s)'
+                    )
                 undo_path.unlink(missing_ok=True)
                 return True
             else:

@@ -601,8 +601,12 @@ def _collect_seven_loop_evidence(
         'dynamic_skill': _check_dynamic_skill(root, evidence_context=evidence_context),
         'loop_goal': _check_loop_goal(root, evidence_context=evidence_context),
         'model_routing': _check_model_routing(root, evidence_context=evidence_context),
-        'synthesis_review': _check_synthesis_review(root, evidence_context=evidence_context),
-        'precise_memory': _check_precise_memory(root, evidence_context=evidence_context),
+        'synthesis_review': _check_synthesis_review(
+            root, evidence_context=evidence_context
+        ),
+        'precise_memory': _check_precise_memory(
+            root, evidence_context=evidence_context
+        ),
         'human_review': _check_human_review(root, evidence_context=evidence_context),
     }
 
@@ -668,13 +672,17 @@ def build_release_evidence_bundle(
         'git_commit': git_info.get('commit', ''),
         'run_profile': profile,
     }
-    seven_loop = _collect_seven_loop_evidence(repo_root, evidence_context=evidence_context)
+    seven_loop = _collect_seven_loop_evidence(
+        repo_root, evidence_context=evidence_context
+    )
 
     # Artifact hashes
     artifacts = _collect_artifacts(repo_root)
 
     # Compute evidence status fields
-    commands_ok = all(c.get('exit_code', -1) == 0 for c in commands) if commands else True
+    commands_ok = (
+        all(c.get('exit_code', -1) == 0 for c in commands) if commands else True
+    )
     collection_ok = bool(git_info.get('commit')) and bool(
         pytest_counts.get('suite_collected') is not None
     )

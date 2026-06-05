@@ -38,8 +38,7 @@ def test_load_env_file_loads_exports(tmp_path: Path) -> None:
     env = tmp_path / '.teaagent' / 'env'
     env.parent.mkdir(parents=True)
     env.write_text(
-        'export OPENCODEZEN_API_KEY=sk-test123\n'
-        'export ANTHROPIC_API_KEY=sk-ant-test\n',
+        'export OPENCODEZEN_API_KEY=sk-test123\nexport ANTHROPIC_API_KEY=sk-ant-test\n',
         encoding='utf-8',
     )
     os.environ.pop('OPENCODEZEN_API_KEY', None)
@@ -49,7 +48,9 @@ def test_load_env_file_loads_exports(tmp_path: Path) -> None:
     assert os.environ['ANTHROPIC_API_KEY'] == 'sk-ant-test'
 
 
-def test_load_env_file_does_not_overwrite_existing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_env_file_does_not_overwrite_existing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     env = tmp_path / '.teaagent' / 'env'
     env.parent.mkdir(parents=True)
     env.write_text(
@@ -65,10 +66,7 @@ def test_load_env_file_skips_non_export_lines(tmp_path: Path) -> None:
     env = tmp_path / '.teaagent' / 'env'
     env.parent.mkdir(parents=True)
     env.write_text(
-        '# comment line\n'
-        'export SECRET_KEY=real-value\n'
-        'echo hello\n'
-        'PATH=/usr/bin\n',
+        '# comment line\nexport SECRET_KEY=real-value\necho hello\nPATH=/usr/bin\n',
         encoding='utf-8',
     )
     os.environ.pop('SECRET_KEY', None)
@@ -131,8 +129,7 @@ def test_load_env_file_skips_lines_without_equals(tmp_path: Path) -> None:
     env = tmp_path / '.teaagent' / 'env'
     env.parent.mkdir(parents=True)
     env.write_text(
-        'export JUST_A_KEY\n'
-        'export ALSO=valid\n',
+        'export JUST_A_KEY\nexport ALSO=valid\n',
         encoding='utf-8',
     )
     os.environ.pop('JUST_A_KEY', None)
@@ -147,9 +144,7 @@ def test_load_env_file_loaded_via_load_workspace_defaults_does_not_break_existin
 ) -> None:
     tea = tmp_path / '.teaagent'
     tea.mkdir()
-    (tea / 'env').write_text(
-        'export MY_KEY=from-file\n', encoding='utf-8'
-    )
+    (tea / 'env').write_text('export MY_KEY=from-file\n', encoding='utf-8')
     # Same key set in real environment — must win
     monkeypatch.setenv('MY_KEY', 'from-env')
     load_workspace_defaults(tmp_path)
@@ -172,15 +167,15 @@ def test_load_env_file_loaded_via_load_workspace_defaults_with_complex_value(
 ) -> None:
     tea = tmp_path / '.teaagent'
     tea.mkdir()
-    (tea / 'env').write_text(
-        'export TOKEN=ghp_abc123!@#\n', encoding='utf-8'
-    )
+    (tea / 'env').write_text('export TOKEN=ghp_abc123!@#\n', encoding='utf-8')
     os.environ.pop('TOKEN', None)
     load_workspace_defaults(tmp_path)
     assert os.environ['TOKEN'] == 'ghp_abc123!@#'
 
 
-def test_load_env_file_default_root_is_dot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_env_file_default_root_is_dot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     env = tmp_path / '.teaagent' / 'env'
     env.parent.mkdir(parents=True)

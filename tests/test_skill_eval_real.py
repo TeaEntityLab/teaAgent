@@ -15,7 +15,9 @@ from teaagent.skill_eval_real import (
 
 def test_real_eval_report_path() -> None:
     candidate_dir = Path('/tmp/test-candidate')
-    assert real_eval_report_path(candidate_dir) == candidate_dir / 'eval_report_real.json'
+    assert (
+        real_eval_report_path(candidate_dir) == candidate_dir / 'eval_report_real.json'
+    )
 
 
 def test_write_and_load_real_eval_report(tmp_path: Path) -> None:

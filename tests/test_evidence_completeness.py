@@ -26,7 +26,13 @@ from teaagent.run_store import RunStore
 
 def test_checklist_returns_all_statuses():
     checklist = evidence_completeness_checklist()
-    expected_statuses = {'success', 'failure', 'cancelled', 'pending_approval', 'unknown'}
+    expected_statuses = {
+        'success',
+        'failure',
+        'cancelled',
+        'pending_approval',
+        'unknown',
+    }
     assert set(checklist.keys()) == expected_statuses
 
 
@@ -60,11 +66,17 @@ def test_complete_success_bundle_passes():
         commands_run=[CommandEvidence(command='ls', tool_name='exec')],
         tests=[TestEvidence(test_name='t1', test_file='f.py', status='passed')],
         approvals=[ApprovalEvidence(call_id='c1', tool_name='w', approved=True)],
-        routes=[ModelRouteEvidence(
-            requested_provider='p', requested_model='m',
-            resolved_provider='p', resolved_model='m',
-            role='r', routing_reason='test', policy_source='test',
-        )],
+        routes=[
+            ModelRouteEvidence(
+                requested_provider='p',
+                requested_model='m',
+                resolved_provider='p',
+                resolved_model='m',
+                role='r',
+                routing_reason='test',
+                policy_source='test',
+            )
+        ],
         known_gaps=[KnownGap(category='test', description='d', severity='low')],
         workspace_root='/tmp',
         cost_cents=100,
@@ -159,21 +171,55 @@ def test_evidence_categories_default_zero():
 def test_evidence_categories_in_to_dict():
     s = RunEvidenceSummary(
         run_id='test-cat',
-        evidence_categories={'verified': 3, 'claimed': 1, 'not_tested': 0, 'known_failure': 2},
+        evidence_categories={
+            'verified': 3,
+            'claimed': 1,
+            'not_tested': 0,
+            'known_failure': 2,
+        },
     )
     d = s.to_dict()
-    assert d['evidence_categories'] == {'verified': 3, 'claimed': 1, 'not_tested': 0, 'known_failure': 2}
+    assert d['evidence_categories'] == {
+        'verified': 3,
+        'claimed': 1,
+        'not_tested': 0,
+        'known_failure': 2,
+    }
 
 
 def test_summarize_run_events_tracks_categories():
     events = [
         {'event_type': 'run_started', 'timestamp': 'T1'},
-        {'event_type': 'test_run', 'payload': {'status': 'passed', 'test_name': 't1', 'test_file': 'f.py'}},
-        {'event_type': 'test_run', 'payload': {'status': 'passed', 'test_name': 't2', 'test_file': 'f.py'}},
-        {'event_type': 'test_run', 'payload': {'status': 'failed', 'test_name': 't3', 'test_file': 'f.py'}},
-        {'event_type': 'test_run', 'payload': {'status': 'skipped', 'test_name': 't4', 'test_file': 'f.py'}},
-        {'event_type': 'tool_call_completed', 'payload': {'tool_name': 'workspace_write_file', 'arguments': {'path': 'x.py'}}},
-        {'event_type': 'tool_call_completed', 'payload': {'tool_name': 'workspace_write_file', 'arguments': {'path': 'y.py'}}},
+        {
+            'event_type': 'test_run',
+            'payload': {'status': 'passed', 'test_name': 't1', 'test_file': 'f.py'},
+        },
+        {
+            'event_type': 'test_run',
+            'payload': {'status': 'passed', 'test_name': 't2', 'test_file': 'f.py'},
+        },
+        {
+            'event_type': 'test_run',
+            'payload': {'status': 'failed', 'test_name': 't3', 'test_file': 'f.py'},
+        },
+        {
+            'event_type': 'test_run',
+            'payload': {'status': 'skipped', 'test_name': 't4', 'test_file': 'f.py'},
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'payload': {
+                'tool_name': 'workspace_write_file',
+                'arguments': {'path': 'x.py'},
+            },
+        },
+        {
+            'event_type': 'tool_call_completed',
+            'payload': {
+                'tool_name': 'workspace_write_file',
+                'arguments': {'path': 'y.py'},
+            },
+        },
         {'event_type': 'run_failed', 'payload': {'message': 'fail'}},
         {'event_type': 'run_completed', 'timestamp': 'T2'},
     ]
@@ -188,8 +234,16 @@ def test_summarize_run_events_tracks_categories():
 def test_build_evidence_summary_includes_categories():
     events = [
         {'run_id': 'r', 'event_type': 'run_started', 'timestamp': 'T1'},
-        {'run_id': 'r', 'event_type': 'test_run', 'payload': {'status': 'passed', 'test_name': 't1', 'test_file': 'f.py'}},
-        {'run_id': 'r', 'event_type': 'test_run', 'payload': {'status': 'failed', 'test_name': 't2', 'test_file': 'f.py'}},
+        {
+            'run_id': 'r',
+            'event_type': 'test_run',
+            'payload': {'status': 'passed', 'test_name': 't1', 'test_file': 'f.py'},
+        },
+        {
+            'run_id': 'r',
+            'event_type': 'test_run',
+            'payload': {'status': 'failed', 'test_name': 't2', 'test_file': 'f.py'},
+        },
         {'run_id': 'r', 'event_type': 'run_completed', 'timestamp': 'T2'},
     ]
     with tempfile.TemporaryDirectory() as tmpdir:

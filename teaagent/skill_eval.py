@@ -326,13 +326,13 @@ def run_offline_eval(
 
         for title in case.expected_titles:
             if title not in output:
-                case_failures.append(f"missing expected title: {title!r}")
+                case_failures.append(f'missing expected title: {title!r}')
 
         if case.expected_row_count is not None:
             actual_rows = len([ln for ln in output.split('\n') if ln.strip()])
             if actual_rows != case.expected_row_count:
                 case_failures.append(
-                    f"row count mismatch: expected {case.expected_row_count}, got {actual_rows}"
+                    f'row count mismatch: expected {case.expected_row_count}, got {actual_rows}'
                 )
 
         if case.expected_json:
@@ -343,7 +343,7 @@ def run_offline_eval(
 
         for pattern in case.reject_patterns:
             if pattern.lower() in output.lower():
-                case_failures.append(f"output contains rejected pattern: {pattern!r}")
+                case_failures.append(f'output contains rejected pattern: {pattern!r}')
 
         passed = not case_failures
         eval_results.append(
@@ -358,9 +358,7 @@ def run_offline_eval(
     checks.append('fixture_validation')
 
     skill_md_hash = (
-        hashlib.sha256(skill_md.encode('utf-8')).hexdigest()
-        if skill_md
-        else ''
+        hashlib.sha256(skill_md.encode('utf-8')).hexdigest() if skill_md else ''
     )
 
     expected_formats = _detect_expected_formats(skill_md)
@@ -369,7 +367,7 @@ def run_offline_eval(
         for fmt_name, fmt_key in expected_formats.items():
             if not any(_output_matches_format(o, fmt_key) for o in passing_outputs):
                 failures.append(
-                    f"output does not reflect SKILL.md format requirements: "
+                    f'output does not reflect SKILL.md format requirements: '
                     f"'{fmt_name}' format expected but not found in any passing case output"
                 )
 

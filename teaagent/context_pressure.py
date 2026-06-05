@@ -147,9 +147,7 @@ def compute_context_pressure(
             f'high memory count ({memory_count}); consider pruning or reviewing'
         )
     if files_pinned > 10:
-        recommendations.append(
-            f'{files_pinned} pinned files — review for relevance'
-        )
+        recommendations.append(f'{files_pinned} pinned files — review for relevance')
     if large_artifacts:
         recommendations.append(
             f'{len(large_artifacts)} large file(s) detected '

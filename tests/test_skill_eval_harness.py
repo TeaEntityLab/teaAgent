@@ -172,17 +172,23 @@ def test_run_offline_eval_on_fixture(tmp_path: Path) -> None:
     assert report.summary['total_cases'] == 4
     assert report.summary['passed_cases'] >= 0
 
-    markdown_result = next(r for r in report.results if r.case_name == 'markdown_titles_check')
+    markdown_result = next(
+        r for r in report.results if r.case_name == 'markdown_titles_check'
+    )
     assert markdown_result.passed is True
     assert 'Quarterly Report' in markdown_result.output
 
-    json_result = next(r for r in report.results if r.case_name == 'json_structure_check')
+    json_result = next(
+        r for r in report.results if r.case_name == 'json_structure_check'
+    )
     assert json_result.passed is True
 
     rss_result = next(r for r in report.results if r.case_name == 'rss_structure_check')
     assert rss_result.passed is True
 
-    injection_result = next(r for r in report.results if r.case_name == 'reject_injection')
+    injection_result = next(
+        r for r in report.results if r.case_name == 'reject_injection'
+    )
     assert injection_result.passed is True
 
 

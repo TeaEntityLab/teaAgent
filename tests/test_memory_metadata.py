@@ -95,23 +95,17 @@ class ComputeFreshnessTests(unittest.TestCase):
         self.assertAlmostEqual(compute_freshness(now_iso, ttl_days=30), 1.0, places=2)
 
     def test_half_ttl_elapsed(self) -> None:
-        half_ago = (
-            datetime.now(timezone.utc) - timedelta(days=15)
-        ).isoformat()
+        half_ago = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
         score = compute_freshness(half_ago, ttl_days=30)
         self.assertAlmostEqual(score, 0.5, delta=0.05)
 
     def test_at_ttl_boundary(self) -> None:
-        at_ttl = (
-            datetime.now(timezone.utc) - timedelta(days=30)
-        ).isoformat()
+        at_ttl = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         score = compute_freshness(at_ttl, ttl_days=30)
         self.assertAlmostEqual(score, 0.0, delta=0.01)
 
     def test_past_ttl(self) -> None:
-        past = (
-            datetime.now(timezone.utc) - timedelta(days=60)
-        ).isoformat()
+        past = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
         self.assertAlmostEqual(compute_freshness(past, ttl_days=30), 0.0)
 
     def test_ttl_none_always_fresh(self) -> None:
@@ -128,20 +122,22 @@ class ComputeFreshnessTests(unittest.TestCase):
 
 class MemoryEntryMetaSerializationTests(unittest.TestCase):
     def test_entry_without_meta_serializes_cleanly(self) -> None:
-        entry = MemoryEntry(
-            memory_id='mem-1', content='hello', tags=('test',)
-        )
+        entry = MemoryEntry(memory_id='mem-1', content='hello', tags=('test',))
         d = entry.to_dict()
         self.assertNotIn('meta', d)
         self.assertEqual(d['memory_id'], 'mem-1')
 
     def test_entry_with_meta_roundtrip(self) -> None:
         meta = MemoryMeta(
-            scope='project', owner='run-1',
-            freshness_score=0.9, confidence=0.7,
+            scope='project',
+            owner='run-1',
+            freshness_score=0.9,
+            confidence=0.7,
         )
         entry = MemoryEntry(
-            memory_id='mem-2', content='world', meta=meta,
+            memory_id='mem-2',
+            content='world',
+            meta=meta,
         )
         d = entry.to_dict()
         self.assertIn('meta', d)
@@ -195,8 +191,11 @@ class MemoryCatalogMetaIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             catalog = MemoryCatalog(tmp)
             meta = MemoryMeta(
-                scope='project', owner='run-99',
-                freshness_score=0.8, confidence=0.6, review_state='approved',
+                scope='project',
+                owner='run-99',
+                freshness_score=0.8,
+                confidence=0.6,
+                review_state='approved',
             )
             entry = catalog.add('hello', meta=meta)
             self.assertEqual(entry.meta.scope, 'project')
@@ -216,8 +215,10 @@ class MemoryCatalogMetaIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             catalog = MemoryCatalog(tmp)
             meta = MemoryMeta(
-                scope='auto', owner='agent-007',
-                review_state='quarantined', confidence=0.3,
+                scope='auto',
+                owner='agent-007',
+                review_state='quarantined',
+                confidence=0.3,
             )
             entry = catalog.add_quarantined(
                 'quarantine test',
@@ -231,8 +232,10 @@ class MemoryCatalogMetaIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             catalog = MemoryCatalog(tmp)
             meta = MemoryMeta(
-                scope='project', owner='run-1',
-                review_state='pending', confidence=0.5,
+                scope='project',
+                owner='run-1',
+                review_state='pending',
+                confidence=0.5,
             )
             entry = catalog.add('review me', meta=meta)
 
@@ -263,17 +266,13 @@ class MemoryCatalogMetaIntegrationTests(unittest.TestCase):
             catalog = MemoryCatalog(tmp)
             entry = catalog.add('test')
             with self.assertRaises(ValueError):
-                catalog.set_review_state(
-                    entry.memory_id, 'bogus', attestation='x'
-                )
+                catalog.set_review_state(entry.memory_id, 'bogus', attestation='x')
 
     def test_set_review_state_not_found(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             catalog = MemoryCatalog(tmp)
             with self.assertRaises(FileNotFoundError):
-                catalog.set_review_state(
-                    'nonexistent', 'approved', attestation='x'
-                )
+                catalog.set_review_state('nonexistent', 'approved', attestation='x')
 
     def test_set_review_state_readonly_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -285,6 +284,7 @@ class MemoryCatalogMetaIntegrationTests(unittest.TestCase):
 class MemoryEntryImportTests(unittest.TestCase):
     def test_memory_entry_importable(self) -> None:
         from teaagent import MemoryEntry  # noqa: F811
+
         self.assertTrue(callable(getattr(MemoryEntry, 'to_dict', None)))
 
 

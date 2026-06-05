@@ -136,27 +136,35 @@ class SkillLifecycleTracker:
 # ---------------------------------------------------------------------------
 
 # Project-relative primary skill dirs (candidate workflow capable).
-_PRIMARY_PROJECT_RELS = frozenset({
-    '.config/agent/skills',
-    '.opencode/skill',
-})
+_PRIMARY_PROJECT_RELS = frozenset(
+    {
+        '.config/agent/skills',
+        '.opencode/skill',
+    }
+)
 
 # Project-relative compatibility dirs (Claude / OpenCode plural aliases).
-_COMPAT_PROJECT_RELS = frozenset({
-    '.claude/skills',
-    '.opencode/skills',
-})
+_COMPAT_PROJECT_RELS = frozenset(
+    {
+        '.claude/skills',
+        '.opencode/skills',
+    }
+)
 
 # User primary dirs (resolved absolute paths).
-_USER_PRIMARY_PATHS: frozenset[str] = frozenset({
-    str(Path.home() / '.config' / 'agent' / 'skills'),
-    str(Path.home() / '.config' / 'opencode' / 'skills'),
-})
+_USER_PRIMARY_PATHS: frozenset[str] = frozenset(
+    {
+        str(Path.home() / '.config' / 'agent' / 'skills'),
+        str(Path.home() / '.config' / 'opencode' / 'skills'),
+    }
+)
 
 # User compatibility dirs.
-_USER_COMPAT_PATHS: frozenset[str] = frozenset({
-    str(Path.home() / '.claude' / 'skills'),
-})
+_USER_COMPAT_PATHS: frozenset[str] = frozenset(
+    {
+        str(Path.home() / '.claude' / 'skills'),
+    }
+)
 
 
 def classify_governance_status(

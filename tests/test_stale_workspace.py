@@ -7,15 +7,34 @@ from teaagent.cockpit import StaleWorkspaceReport, assess_stale_workspace
 
 
 def _init_git_repo(path: Path) -> None:
-    subprocess.run(['git', 'init', '--initial-branch=main'], cwd=path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.name', 'test'], cwd=path, check=True, capture_output=True)
-    subprocess.run(['git', 'config', 'user.email', 'test@test.local'], cwd=path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'init', '--initial-branch=main'],
+        cwd=path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'test'],
+        cwd=path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@test.local'],
+        cwd=path,
+        check=True,
+        capture_output=True,
+    )
 
 
 def _make_initial_commit(path: Path) -> None:
     (path / 'README.md').write_text('# test\n')
-    subprocess.run(['git', 'add', 'README.md'], cwd=path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'initial'], cwd=path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'README.md'], cwd=path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'], cwd=path, check=True, capture_output=True
+    )
 
 
 # ── test_stale_report_dataclass ─────────────────────────────────────────────
@@ -99,7 +118,12 @@ def test_assess_branch_name(tmp_path: Path):
     _init_git_repo(tmp_path)
     _make_initial_commit(tmp_path)
 
-    subprocess.run(['git', 'checkout', '-b', 'feature/foo'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'checkout', '-b', 'feature/foo'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
     report = assess_stale_workspace(tmp_path)
     assert report.branch == 'feature/foo'
 
@@ -129,15 +153,24 @@ def test_assess_divergence_from_main(tmp_path: Path):
 
     # Create a local commit so branch is ahead
     (tmp_path / 'local.txt').write_text('local\n')
-    subprocess.run(['git', 'add', 'local.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'local change'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'local.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'local change'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Create origin/main reference pointing back to initial commit
     main_hash = subprocess.run(
         ['git', 'rev-parse', 'main~1'], cwd=tmp_path, capture_output=True, text=True
     ).stdout.strip()
     subprocess.run(
-        ['git', 'update-ref', 'refs/remotes/origin/main', main_hash], cwd=tmp_path, check=True
+        ['git', 'update-ref', 'refs/remotes/origin/main', main_hash],
+        cwd=tmp_path,
+        check=True,
     )
 
     report = assess_stale_workspace(tmp_path)
@@ -161,15 +194,31 @@ def test_assess_behind_main(tmp_path: Path):
     ).stdout.strip()
 
     (tmp_path / 'upstream.txt').write_text('upstream\n')
-    subprocess.run(['git', 'add', 'upstream.txt'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(['git', 'commit', '-m', 'upstream change'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'add', 'upstream.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'upstream change'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Point origin/main to the upstream commit, rewind local to original
     upstream_hash = subprocess.run(
         ['git', 'rev-parse', 'HEAD'], cwd=tmp_path, capture_output=True, text=True
     ).stdout.strip()
-    subprocess.run(['git', 'update-ref', 'refs/remotes/origin/main', upstream_hash], cwd=tmp_path, check=True)
-    subprocess.run(['git', 'reset', '--hard', main_hash], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'update-ref', 'refs/remotes/origin/main', upstream_hash],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(
+        ['git', 'reset', '--hard', main_hash],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
 
     report = assess_stale_workspace(tmp_path)
     assert report.diverged_from_main is True
@@ -212,7 +261,9 @@ def test_assess_candidate_count(tmp_path: Path):
         d = candidates_dir / cid
         d.mkdir()
         (d / 'candidate.json').write_text(
-            json.dumps({'candidate_id': cid, 'name': cid, 'description': '', 'status': status})
+            json.dumps(
+                {'candidate_id': cid, 'name': cid, 'description': '', 'status': status}
+            )
         )
     report = assess_stale_workspace(tmp_path)
     # installed should not be counted; 3 unreviewed

@@ -73,9 +73,7 @@ class TestStoreSaveFailure:
             mock_config = MagicMock()
             mock_config.model = 'gpt/gpt-4'
 
-            with patch(
-                'teaagent.chat_session_controller.run_chat_agent'
-            ) as mock_run:
+            with patch('teaagent.chat_session_controller.run_chat_agent') as mock_run:
                 mock_run.return_value = _make_success_result()
 
                 with caplog.at_level(logging.WARNING):
@@ -123,9 +121,7 @@ class TestStoreSaveFailure:
             mock_config = MagicMock()
             mock_config.model = 'gpt/gpt-4'
 
-            with patch(
-                'teaagent.chat_session_controller.run_chat_agent'
-            ) as mock_run:
+            with patch('teaagent.chat_session_controller.run_chat_agent') as mock_run:
                 mock_run.return_value = _make_success_result()
 
                 with caplog.at_level(logging.WARNING):
@@ -172,9 +168,7 @@ class TestUndoSaveFailure:
 
             with (
                 patch('teaagent.chat_session_controller.RunStore') as mock_store_cls,
-                patch(
-                    'teaagent.chat_session_controller.run_chat_agent'
-                ) as mock_run,
+                patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
             ):
                 mock_store = MagicMock()
                 mock_store_cls.return_value = mock_store
@@ -194,8 +188,7 @@ class TestUndoSaveFailure:
 
             assert result.run_result.status == 'completed'
             assert any(
-                'Persistence failure: could not save undo journal'
-                in record.message
+                'Persistence failure: could not save undo journal' in record.message
                 for record in caplog.records
             )
 
@@ -222,9 +215,7 @@ class TestUndoSaveFailure:
 
             with (
                 patch('teaagent.chat_session_controller.RunStore') as mock_store_cls,
-                patch(
-                    'teaagent.chat_session_controller.run_chat_agent'
-                ) as mock_run,
+                patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
             ):
                 mock_store = MagicMock()
                 mock_store_cls.return_value = mock_store
@@ -244,8 +235,7 @@ class TestUndoSaveFailure:
 
             assert result.run_result.status == 'completed'
             assert any(
-                'Persistence failure: could not save undo journal'
-                in record.message
+                'Persistence failure: could not save undo journal' in record.message
                 for record in caplog.records
             )
 
@@ -277,9 +267,7 @@ class TestStoreSaveAttributeErrorStillPropagates:
 
             with (
                 patch('teaagent.chat_session_controller.RunStore') as mock_store_cls,
-                patch(
-                    'teaagent.chat_session_controller.run_chat_agent'
-                ) as mock_run,
+                patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
             ):
                 mock_store = MagicMock()
                 mock_store_cls.return_value = mock_store
@@ -311,9 +299,7 @@ class TestUndoLastRunPersistence:
                 output_fn=lambda msg: output_messages.append(msg),
             )
 
-            with patch(
-                'teaagent.chat_session_controller.RunStore'
-            ) as mock_store_cls:
+            with patch('teaagent.chat_session_controller.RunStore') as mock_store_cls:
                 mock_store = MagicMock()
                 mock_store_cls.return_value = mock_store
                 mock_store.latest_run_with_undo.side_effect = OSError(
@@ -328,10 +314,7 @@ class TestUndoLastRunPersistence:
                 'Undo persistence failure' in record.message
                 for record in caplog.records
             )
-            assert any(
-                'journal undo error' in msg
-                for msg in output_messages
-            )
+            assert any('journal undo error' in msg for msg in output_messages)
 
     def test_undo_last_run_valueerror_is_logged(self, caplog):
         """ValueError in undo_last_run should log warning and return False."""
@@ -343,9 +326,7 @@ class TestUndoLastRunPersistence:
                 output_fn=lambda msg: output_messages.append(msg),
             )
 
-            with patch(
-                'teaagent.chat_session_controller.RunStore'
-            ) as mock_store_cls:
+            with patch('teaagent.chat_session_controller.RunStore') as mock_store_cls:
                 mock_store = MagicMock()
                 mock_store_cls.return_value = mock_store
                 mock_store.latest_run_with_undo.side_effect = ValueError(

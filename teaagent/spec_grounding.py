@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 # ── file reference extraction ────────────────────────────────────────────
 
-_BACKTICK_PATH = re.compile(r'`([^`\s]+\.(?:py|ts|tsx|js|jsx|rs|go|java|rb|md|json|yaml|yml|toml|cfg|ini|sh|sql))`')
+_BACKTICK_PATH = re.compile(
+    r'`([^`\s]+\.(?:py|ts|tsx|js|jsx|rs|go|java|rb|md|json|yaml|yml|toml|cfg|ini|sh|sql))`'
+)
 _BRACKET_PATH = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 _PLAIN_PATH = re.compile(r'(?<!\w)(?:\.\/|(?:\w+\/)+)[\w./-]+\.\w+(?!\w)')
 
@@ -161,7 +163,9 @@ def perform_grounding_check(
     # Validate each referenced file exists in the workspace
     missing_files: list[str] = []
     for raw in files_searched:
-        candidate = (ws / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
+        candidate = (
+            (ws / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
+        )
         try:
             candidate.relative_to(ws)
         except ValueError:

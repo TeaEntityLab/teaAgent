@@ -471,9 +471,21 @@ class TUIEvidenceSummaryCostTests(unittest.TestCase):
         with patch('teaagent.evidence_summary.RunStore') as mock_store_cls:
             mock_store = unittest.mock.MagicMock()
             mock_store.show_run.return_value = [
-                {'event_type': 'run_started', 'payload': {}, 'created_at': '2026-01-01T00:00:00'},
-                {'event_type': 'tool_call', 'payload': {'estimated_cost_cents': 150}, 'created_at': '2026-01-01T00:01:00'},
-                {'event_type': 'run_completed', 'payload': {'cost_cents': 0}, 'created_at': '2026-01-01T00:02:00'},
+                {
+                    'event_type': 'run_started',
+                    'payload': {},
+                    'created_at': '2026-01-01T00:00:00',
+                },
+                {
+                    'event_type': 'tool_call',
+                    'payload': {'estimated_cost_cents': 150},
+                    'created_at': '2026-01-01T00:01:00',
+                },
+                {
+                    'event_type': 'run_completed',
+                    'payload': {'cost_cents': 0},
+                    'created_at': '2026-01-01T00:02:00',
+                },
             ]
             mock_store_cls.return_value = mock_store
 
@@ -489,8 +501,16 @@ class TUIEvidenceSummaryCostTests(unittest.TestCase):
         with patch('teaagent.evidence_summary.RunStore') as mock_store_cls:
             mock_store = unittest.mock.MagicMock()
             mock_store.show_run.return_value = [
-                {'event_type': 'run_started', 'payload': {}, 'created_at': '2026-01-01T00:00:00'},
-                {'event_type': 'run_completed', 'payload': {'cost_cents': 500}, 'created_at': '2026-01-01T00:02:00'},
+                {
+                    'event_type': 'run_started',
+                    'payload': {},
+                    'created_at': '2026-01-01T00:00:00',
+                },
+                {
+                    'event_type': 'run_completed',
+                    'payload': {'cost_cents': 500},
+                    'created_at': '2026-01-01T00:02:00',
+                },
             ]
             mock_store_cls.return_value = mock_store
 

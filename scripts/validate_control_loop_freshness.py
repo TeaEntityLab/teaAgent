@@ -21,56 +21,61 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 # ---- Patterns ----
 
 # Table-row ID patterns
-_CL_ID_PATTERN = re.compile(r"(?:SCL|CPP|DSK)-P\d+-\d+")
+_CL_ID_PATTERN = re.compile(r'(?:SCL|CPP|DSK)-P\d+-\d+')
 
 # Status labels (text + emoji equivalents)
-_VALID_STATUSES = frozenset({
-    # Text labels
-    "Not Started", "In Progress", "Complete", "Blocked",
-    "Proposed", "Pending", "On Hold",
-    # Emoji equivalents
-    "\U0001f534",  # 🔴 Not Started / Blocked
-    "\U0001f7e1",  # 🟡 In Progress
-    "\U0001f7e2",  # 🟢 Complete
-    "\u23f3",      # ⏳ Pending
-})
+_VALID_STATUSES = frozenset(
+    {
+        # Text labels
+        'Not Started',
+        'In Progress',
+        'Complete',
+        'Blocked',
+        'Proposed',
+        'Pending',
+        'On Hold',
+        # Emoji equivalents
+        '\U0001f534',  # 🔴 Not Started / Blocked
+        '\U0001f7e1',  # 🟡 In Progress
+        '\U0001f7e2',  # 🟢 Complete
+        '\u23f3',  # ⏳ Pending
+    }
+)
 
 # Status markers that count as "present" — substring match on the row.
 # We use the text labels as primary since the roadmap uses them.
 _STATUS_MARKERS = (
-    "Not Started",
-    "In Progress",
-    "Complete",
-    "Blocked",
-    "Proposed",
-    "Pending",
-    "On Hold",
-    "\U0001f534",  # 🔴
-    "\U0001f7e1",  # 🟡
-    "\U0001f7e2",  # 🟢
-    "\u23f3",      # ⏳
+    'Not Started',
+    'In Progress',
+    'Complete',
+    'Blocked',
+    'Proposed',
+    'Pending',
+    'On Hold',
+    '\U0001f534',  # 🔴
+    '\U0001f7e1',  # 🟡
+    '\U0001f7e2',  # 🟢
+    '\u23f3',  # ⏳
 )
 
 # H2 section headings that trigger control-loop ID checking.
 _CONTROL_LOOP_SECTION_KEYWORDS = (
-    "ecosystem trust",
-    "dynamic skill",
-    "seven control loop",
-    "community pain point",
-    "cross-horizon",
+    'ecosystem trust',
+    'dynamic skill',
+    'seven control loop',
+    'community pain point',
+    'cross-horizon',
 )
 
 # Lines that look like a table row with an ID column and at least 3 data columns.
-_TABLE_ROW_RE = re.compile(
-    r"^\|\s*([A-Z][A-Z0-9-]+)\s*\|[^|]+\|[^|]+\|[^|]+\|"
-)
+_TABLE_ROW_RE = re.compile(r'^\|\s*([A-Z][A-Z0-9-]+)\s*\|[^|]+\|[^|]+\|[^|]+\|')
 
 # Status column extraction: the 5th column (0-indexed from split).
 # Row format: | ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |
 _STATUS_COLUMN_INDEX = 3  # 0=empty, 1=ID, 2=WorkItem, 3=Owner, 4=Status
 
 # Heading detection
-_HEADING_RE = re.compile(r"^##\s+(.+)")
+_HEADING_RE = re.compile(r'^##\s+(.+)')
 
 
 # ---- Core logic ----
@@ -91,7 +96,9 @@ def _parse_control_loop_sections(
         h_match = _HEADING_RE.match(line)
         if h_match:
             heading_lower = h_match.group(1).lower()
-            in_section = any(kw in heading_lower for kw in _CONTROL_LOOP_SECTION_KEYWORDS)
+            in_section = any(
+                kw in heading_lower for kw in _CONTROL_LOOP_SECTION_KEYWORDS
+            )
             continue
         if in_section:
             scoped.add(idx)
@@ -100,7 +107,7 @@ def _parse_control_loop_sections(
 
 def _extract_status(row_line: str) -> str | None:
     """Extract the status value from a table row."""
-    parts = [p.strip() for p in row_line.split("|")]
+    parts = [p.strip() for p in row_line.split('|')]
     # parts[0] is empty, parts[1]=ID, parts[2]=WorkItem, parts[3]=Owner, parts[4]=Status
     if len(parts) > _STATUS_COLUMN_INDEX + 1:
         return parts[_STATUS_COLUMN_INDEX + 1]
@@ -125,10 +132,10 @@ def validate_roadmap(path: Path, *, verbose: bool = False) -> list[str]:
     errors: list[str] = []
 
     if not path.is_file():
-        errors.append(f"File not found: {path}")
+        errors.append(f'File not found: {path}')
         return errors
 
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding='utf-8')
     lines = text.splitlines()
 
     scoped_lines, total_lines = _parse_control_loop_sections(lines)
@@ -145,7 +152,7 @@ def validate_roadmap(path: Path, *, verbose: bool = False) -> list[str]:
             continue
 
         # Exclude header row
-        if line.startswith("| ID |"):
+        if line.startswith('| ID |'):
             continue
 
         rows_checked += 1
@@ -157,29 +164,29 @@ def validate_roadmap(path: Path, *, verbose: bool = False) -> list[str]:
 
         if in_scope and not has_id:
             errors.append(
-                f"{path.name}:{lineno}: missing control-loop ID "
-                f"(SCL/CPP/DSK-P*) in control-loop section row: "
-                f"{line[:80].strip()}"
+                f'{path.name}:{lineno}: missing control-loop ID '
+                f'(SCL/CPP/DSK-P*) in control-loop section row: '
+                f'{line[:80].strip()}'
             )
             rows_missing_id += 1
             row_ok = False
 
         if not has_status:
             errors.append(
-                f"{path.name}:{lineno}: missing status marker "
-                f"in row: {line[:80].strip()}"
+                f'{path.name}:{lineno}: missing status marker '
+                f'in row: {line[:80].strip()}'
             )
             rows_missing_status += 1
             row_ok = False
 
         if verbose:
-            status_str = "PASS" if row_ok else "FAIL"
-            scope_str = "CL" if in_scope else "--"
-            id_str = "ID" if has_id else "--"
-            st_str = "STATUS" if has_status else "NO_STATUS"
+            status_str = 'PASS' if row_ok else 'FAIL'
+            scope_str = 'CL' if in_scope else '--'
+            id_str = 'ID' if has_id else '--'
+            st_str = 'STATUS' if has_status else 'NO_STATUS'
             print(
-                f"  [{status_str}] L{lineno} [{scope_str}] [{id_str}] [{st_str}] "
-                f"{_extract_status(line) or '?'}"
+                f'  [{status_str}] L{lineno} [{scope_str}] [{id_str}] [{st_str}] '
+                f'{_extract_status(line) or "?"}'
             )
 
         if row_ok:
@@ -187,10 +194,10 @@ def validate_roadmap(path: Path, *, verbose: bool = False) -> list[str]:
 
     if verbose or rows_missing_id or rows_missing_status:
         print(
-            f"Rows checked: {rows_checked}, "
-            f"ok: {rows_ok}, "
-            f"missing control-loop ID: {rows_missing_id}, "
-            f"missing status: {rows_missing_status}"
+            f'Rows checked: {rows_checked}, '
+            f'ok: {rows_ok}, '
+            f'missing control-loop ID: {rows_missing_id}, '
+            f'missing status: {rows_missing_status}'
         )
 
     return errors
@@ -201,17 +208,17 @@ def validate_roadmap(path: Path, *, verbose: bool = False) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Validate control-loop freshness in roadmap-status.md."
+        description='Validate control-loop freshness in roadmap-status.md.'
     )
     parser.add_argument(
-        "--check-file",
-        default=str(_REPO_ROOT / "docs" / "roadmap-status.md"),
-        help="Path to the roadmap file to check.",
+        '--check-file',
+        default=str(_REPO_ROOT / 'docs' / 'roadmap-status.md'),
+        help='Path to the roadmap file to check.',
     )
     parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Print every row, not just failures.",
+        '--verbose',
+        action='store_true',
+        help='Print every row, not just failures.',
     )
     args = parser.parse_args(argv)
 
@@ -219,12 +226,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if errors:
         for err in errors:
-            print(f"ERROR: {err}", file=sys.stderr)
+            print(f'ERROR: {err}', file=sys.stderr)
         return 1
 
-    print("Control-loop freshness check passed.")
+    print('Control-loop freshness check passed.')
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

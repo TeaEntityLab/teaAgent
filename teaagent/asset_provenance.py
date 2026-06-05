@@ -151,9 +151,7 @@ def collect_provenance(
         if isinstance(skill_activation, SkillActivationExplain):
             shadow_map: dict[str, list[str]] = {}
             for shadow in skill_activation.shadowed:
-                shadow_map.setdefault(shadow.name, []).append(
-                    str(shadow.shadowed_path)
-                )
+                shadow_map.setdefault(shadow.name, []).append(str(shadow.shadowed_path))
 
             for loaded in skill_activation.loaded:
                 lifecycle_state = loaded.lifecycle_state
@@ -212,9 +210,9 @@ def collect_provenance(
                     asset_type='mcp_server',
                     name=name,
                     source_path=source_path,
-                    governance_status='remote' if endpoint.startswith(
-                        ('http://', 'https://')
-                    ) else 'local',
+                    governance_status='remote'
+                    if endpoint.startswith(('http://', 'https://'))
+                    else 'local',
                     activation_status=activation_status,
                     revocation_status=revocation_status,
                     shadowed_paths=[],

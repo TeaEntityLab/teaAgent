@@ -24,8 +24,12 @@ def test_goal_list_empty():
 
 def test_goal_list_with_goals():
     with tempfile.TemporaryDirectory() as tmpdir:
-        g1 = GoalRecord(goal_id='g-test-001', objective='Refactor auth module', status='active')
-        g2 = GoalRecord(goal_id='g-test-002', objective='Add new API endpoint', status='completed')
+        g1 = GoalRecord(
+            goal_id='g-test-001', objective='Refactor auth module', status='active'
+        )
+        g2 = GoalRecord(
+            goal_id='g-test-002', objective='Add new API endpoint', status='completed'
+        )
         _save_goal(Path(tmpdir), g1)
         _save_goal(Path(tmpdir), g2)
 

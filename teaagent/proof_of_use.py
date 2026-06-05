@@ -21,7 +21,7 @@ def _utc_iso_now() -> str:
 
 def _compute_output_hash(content: str) -> str:
     """Compute a ``sha256:<hexdigest>`` hash of *content*."""
-    return f"sha256:{hashlib.sha256(content.encode('utf-8')).hexdigest()}"
+    return f'sha256:{hashlib.sha256(content.encode("utf-8")).hexdigest()}'
 
 
 # ---------------------------------------------------------------------------
@@ -57,17 +57,17 @@ class ProofOfUse:
     tool_name: str
     output_hash: str
     verified: bool = False
-    verified_at: str = ""
+    verified_at: str = ''
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "source_skill_name": self.source_skill_name,
-            "source_artifact_path": self.source_artifact_path,
-            "tool_call_id": self.tool_call_id,
-            "tool_name": self.tool_name,
-            "output_hash": self.output_hash,
-            "verified": self.verified,
-            "verified_at": self.verified_at,
+            'source_skill_name': self.source_skill_name,
+            'source_artifact_path': self.source_artifact_path,
+            'tool_call_id': self.tool_call_id,
+            'tool_name': self.tool_name,
+            'output_hash': self.output_hash,
+            'verified': self.verified,
+            'verified_at': self.verified_at,
         }
 
 
@@ -86,14 +86,14 @@ class ProofOfUseBundle:
     """
 
     proofs: list[ProofOfUse] = field(default_factory=list)
-    final_answer_hash: str = ""
-    final_answer_preview: str = ""
+    final_answer_hash: str = ''
+    final_answer_preview: str = ''
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "proofs": [p.to_dict() for p in self.proofs],
-            "final_answer_hash": self.final_answer_hash,
-            "final_answer_preview": self.final_answer_preview,
+            'proofs': [p.to_dict() for p in self.proofs],
+            'final_answer_hash': self.final_answer_hash,
+            'final_answer_preview': self.final_answer_preview,
         }
 
 
@@ -111,12 +111,12 @@ def _audit_events_to_dicts(
     for ev in events:
         if isinstance(ev, dict):
             result.append(ev)
-        elif hasattr(ev, "event_type") and hasattr(ev, "payload"):
+        elif hasattr(ev, 'event_type') and hasattr(ev, 'payload'):
             result.append(
                 {
-                    "event_type": ev.event_type,
-                    "payload": ev.payload if isinstance(ev.payload, dict) else {},
-                    "created_at": getattr(ev, "created_at", ""),
+                    'event_type': ev.event_type,
+                    'payload': ev.payload if isinstance(ev.payload, dict) else {},
+                    'created_at': getattr(ev, 'created_at', ''),
                 }
             )
         else:
@@ -130,20 +130,20 @@ def _skill_output_verification_time(
 ) -> tuple[bool, str]:
     """Return ``(verified, verified_at)`` by scanning lifecycle transitions."""
     for ev in events:
-        if ev.get("event_type") != "skill_lifecycle_transition":
+        if ev.get('event_type') != 'skill_lifecycle_transition':
             continue
-        payload = ev.get("payload") or {}
+        payload = ev.get('payload') or {}
         if not isinstance(payload, dict):
             continue
         if (
-            payload.get("skill_name") == skill_name
-            and payload.get("to_state") == SkillLifecycleState.OUTPUT_VERIFIED.value
+            payload.get('skill_name') == skill_name
+            and payload.get('to_state') == SkillLifecycleState.OUTPUT_VERIFIED.value
         ):
-            verified_at = payload.get("created_at") or ev.get("created_at") or ""
+            verified_at = payload.get('created_at') or ev.get('created_at') or ''
             if not verified_at:
                 verified_at = _utc_iso_now()
             return True, str(verified_at)
-    return False, ""
+    return False, ''
 
 
 def _build_proofs_from_events(
@@ -164,18 +164,18 @@ def _build_proofs_from_events(
     # --- collect skill data from lifecycle transitions ----------------------
     used_skills: dict[str, str] = {}  # skill_name -> source_path
     for ev in events:
-        if ev.get("event_type") != "skill_lifecycle_transition":
+        if ev.get('event_type') != 'skill_lifecycle_transition':
             continue
-        payload = ev.get("payload") or {}
+        payload = ev.get('payload') or {}
         if not isinstance(payload, dict):
             continue
-        to_state = payload.get("to_state", "")
+        to_state = payload.get('to_state', '')
         if to_state in {
             SkillLifecycleState.USED_IN_RUN.value,
             SkillLifecycleState.OUTPUT_VERIFIED.value,
         }:
-            name = payload.get("skill_name", "")
-            path = payload.get("source_path", "")
+            name = payload.get('skill_name', '')
+            path = payload.get('source_path', '')
             if name:
                 used_skills[name] = path
 
@@ -188,20 +188,20 @@ def _build_proofs_from_events(
     seen_call_ids: set[str] = set()
 
     for ev in events:
-        if ev.get("event_type") != "tool_call_completed":
+        if ev.get('event_type') != 'tool_call_completed':
             continue
-        payload = ev.get("payload") or {}
+        payload = ev.get('payload') or {}
         if not isinstance(payload, dict):
             continue
-        call_id = payload.get("call_id", "")
+        call_id = payload.get('call_id', '')
         if call_id in seen_call_ids:
             continue
-        tool_name = payload.get("tool_name", "")
-        result = payload.get("result")
-        result_str = str(result) if result is not None else ""
+        tool_name = payload.get('tool_name', '')
+        result = payload.get('result')
+        result_str = str(result) if result is not None else ''
 
         # Match: if any known skill name appears in the tool name or result
-        matched_skill = ""
+        matched_skill = ''
         for skill_name, _source_path in used_skills.items():
             if skill_name in tool_name or skill_name in result_str:
                 matched_skill = skill_name
@@ -210,9 +210,7 @@ def _build_proofs_from_events(
         if not matched_skill:
             continue
 
-        verified, verified_at = _skill_output_verification_time(
-            events, matched_skill
-        )
+        verified, verified_at = _skill_output_verification_time(events, matched_skill)
         proofs.append(
             ProofOfUse(
                 source_skill_name=matched_skill,
@@ -235,32 +233,32 @@ def _fallback_proofs(events: list[dict[str, Any]]) -> list[ProofOfUse]:
     seen_call_ids: set[str] = set()
 
     for ev in events:
-        if ev.get("event_type") != "tool_call_completed":
+        if ev.get('event_type') != 'tool_call_completed':
             continue
-        payload = ev.get("payload") or {}
+        payload = ev.get('payload') or {}
         if not isinstance(payload, dict):
             continue
-        call_id = payload.get("call_id", "")
+        call_id = payload.get('call_id', '')
         if call_id in seen_call_ids:
             continue
-        tool_name = payload.get("tool_name", "")
-        result = payload.get("result")
-        result_str = str(result) if result is not None else ""
+        tool_name = payload.get('tool_name', '')
+        result = payload.get('result')
+        result_str = str(result) if result is not None else ''
 
         # Simple heuristic: check if tool_name or result contains common
         # skill-related keywords.
-        if "skill" not in tool_name.lower() and "skill" not in result_str.lower():
+        if 'skill' not in tool_name.lower() and 'skill' not in result_str.lower():
             continue
 
         proofs.append(
             ProofOfUse(
-                source_skill_name="",
-                source_artifact_path="",
+                source_skill_name='',
+                source_artifact_path='',
                 tool_call_id=call_id,
                 tool_name=tool_name,
                 output_hash=_compute_output_hash(result_str),
                 verified=False,
-                verified_at="",
+                verified_at='',
             )
         )
         seen_call_ids.add(call_id)
@@ -309,11 +307,11 @@ def build_proof_of_use(
                 # Synthesise a transition event so the proof builder can find it.
                 events.append(
                     {
-                        "event_type": "skill_lifecycle_transition",
-                        "payload": {
-                            "skill_name": skill_name,
-                            "to_state": state,
-                            "source_path": "",
+                        'event_type': 'skill_lifecycle_transition',
+                        'payload': {
+                            'skill_name': skill_name,
+                            'to_state': state,
+                            'source_path': '',
                         },
                     }
                 )
@@ -343,8 +341,8 @@ def emit_proof_of_use_audit(bundle: ProofOfUseBundle) -> dict[str, Any]:
         ``final_answer_preview``, and ``proof_count``.
     """
     return {
-        "proofs": [p.to_dict() for p in bundle.proofs],
-        "final_answer_hash": bundle.final_answer_hash,
-        "final_answer_preview": bundle.final_answer_preview,
-        "proof_count": len(bundle.proofs),
+        'proofs': [p.to_dict() for p in bundle.proofs],
+        'final_answer_hash': bundle.final_answer_hash,
+        'final_answer_preview': bundle.final_answer_preview,
+        'proof_count': len(bundle.proofs),
     }

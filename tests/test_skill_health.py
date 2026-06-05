@@ -76,7 +76,11 @@ def _add_eval_report(
         'candidate_name': candidate_dir.name,
         'passed': passed,
         'results': [],
-        'summary': {'total_cases': 2, 'passed_cases': 2 if passed else 0, 'failed_cases': 0 if passed else 2},
+        'summary': {
+            'total_cases': 2,
+            'passed_cases': 2 if passed else 0,
+            'failed_cases': 0 if passed else 2,
+        },
         'created_at': datetime.now(timezone.utc).isoformat(),
         'checks': ['required_artifacts', 'skill_size'],
         'failures': failures,
@@ -120,12 +124,22 @@ class TestSkillHealthWithCandidates:
     def test_skill_health_with_candidates(self, tmp_path: Path) -> None:
         now = datetime.now(timezone.utc)
         _add_candidate(tmp_path, 'c1', 'alpha', 'proposed', updated_at=now.isoformat())
-        _add_candidate(tmp_path, 'c2', 'beta', 'eval_failed', updated_at=now.isoformat())
-        _add_candidate(tmp_path, 'c3', 'gamma', 'review_passed', updated_at=now.isoformat())
+        _add_candidate(
+            tmp_path, 'c2', 'beta', 'eval_failed', updated_at=now.isoformat()
+        )
+        _add_candidate(
+            tmp_path, 'c3', 'gamma', 'review_passed', updated_at=now.isoformat()
+        )
         _add_candidate(tmp_path, 'c4', 'delta', 'installed', updated_at=now.isoformat())
-        _add_candidate(tmp_path, 'c5', 'epsilon', 'review_failed', updated_at=now.isoformat())
+        _add_candidate(
+            tmp_path, 'c5', 'epsilon', 'review_failed', updated_at=now.isoformat()
+        )
 
-        _add_eval_report(tmp_path / '.teaagent' / 'skill-candidates' / 'c2', passed=False, failures=['Missing required field', 'SKILL.md too short'])
+        _add_eval_report(
+            tmp_path / '.teaagent' / 'skill-candidates' / 'c2',
+            passed=False,
+            failures=['Missing required field', 'SKILL.md too short'],
+        )
 
         health = get_skill_health(tmp_path)
         cs = health['candidate_summary']
@@ -147,10 +161,18 @@ class TestSkillHealthWithCandidates:
         eight_days_ago = (now - timedelta(days=8)).isoformat()
         six_days_ago = (now - timedelta(days=6)).isoformat()
 
-        _add_candidate(tmp_path, 's1', 'stale_proposed', 'proposed', updated_at=eight_days_ago)
-        _add_candidate(tmp_path, 's2', 'stale_failed', 'eval_failed', updated_at=eight_days_ago)
-        _add_candidate(tmp_path, 's3', 'fresh_proposed', 'proposed', updated_at=six_days_ago)
-        _add_candidate(tmp_path, 's4', 'installed_old', 'installed', updated_at=eight_days_ago)
+        _add_candidate(
+            tmp_path, 's1', 'stale_proposed', 'proposed', updated_at=eight_days_ago
+        )
+        _add_candidate(
+            tmp_path, 's2', 'stale_failed', 'eval_failed', updated_at=eight_days_ago
+        )
+        _add_candidate(
+            tmp_path, 's3', 'fresh_proposed', 'proposed', updated_at=six_days_ago
+        )
+        _add_candidate(
+            tmp_path, 's4', 'installed_old', 'installed', updated_at=eight_days_ago
+        )
 
         health = get_skill_health(tmp_path)
         assert len(health['stale_candidates']) == 2
@@ -159,11 +181,16 @@ class TestSkillHealthWithCandidates:
 
     def test_skill_health_candidate_with_eval_failures(self, tmp_path: Path) -> None:
         now = datetime.now(timezone.utc)
-        _add_candidate(tmp_path, 'c1', 'bad_skill', 'eval_failed', updated_at=now.isoformat())
+        _add_candidate(
+            tmp_path, 'c1', 'bad_skill', 'eval_failed', updated_at=now.isoformat()
+        )
         _add_eval_report(
             tmp_path / '.teaagent' / 'skill-candidates' / 'c1',
             passed=False,
-            failures=['provenance.json missing content_digest', 'REFERENCE.md too short'],
+            failures=[
+                'provenance.json missing content_digest',
+                'REFERENCE.md too short',
+            ],
         )
 
         health = get_skill_health(tmp_path)
@@ -176,7 +203,9 @@ class TestSkillHealthWithCandidates:
 
     def test_skill_health_failed_eval_no_report_file(self, tmp_path: Path) -> None:
         now = datetime.now(timezone.utc)
-        _add_candidate(tmp_path, 'c1', 'no_report', 'eval_failed', updated_at=now.isoformat())
+        _add_candidate(
+            tmp_path, 'c1', 'no_report', 'eval_failed', updated_at=now.isoformat()
+        )
         # Do NOT add eval_report.json — simulates missing report
 
         health = get_skill_health(tmp_path)
@@ -195,9 +224,13 @@ class TestCLISkillHealthCommand:
         assert isinstance(output['total_skills'], int)
         assert output['candidate_summary']['total'] == 0
 
-    def test_cli_skill_health_command_with_candidates(self, tmp_path: Path, capsys) -> None:
+    def test_cli_skill_health_command_with_candidates(
+        self, tmp_path: Path, capsys
+    ) -> None:
         now = datetime.now(timezone.utc)
-        _add_candidate(tmp_path, 'c1', 'alpha', 'review_passed', updated_at=now.isoformat())
+        _add_candidate(
+            tmp_path, 'c1', 'alpha', 'review_passed', updated_at=now.isoformat()
+        )
         _add_candidate(tmp_path, 'c2', 'beta', 'installed', updated_at=now.isoformat())
 
         args = argparse.Namespace(root=str(tmp_path))

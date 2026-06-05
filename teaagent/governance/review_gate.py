@@ -265,7 +265,9 @@ def build_review_gate(
     return ReviewGate(
         blocked=blocked,
         reason=reason,
-        risk_level=RiskLevel.HIGH.value if is_high_risk_goal(goal) else RiskLevel.LOW.value,
+        risk_level=RiskLevel.HIGH.value
+        if is_high_risk_goal(goal)
+        else RiskLevel.LOW.value,
     )
 
 

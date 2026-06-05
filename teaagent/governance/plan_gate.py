@@ -98,18 +98,18 @@ def assert_write_scope(
 
     # Normalize to POSIX and reject traversal
     norm_path = PurePath(file_path).as_posix()
-    parts = norm_path.split("/")
-    if ".." in parts:
+    parts = norm_path.split('/')
+    if '..' in parts:
         return (
             f"Path traversal detected in write target '{file_path}'. "
-            f"Write target must be within the plan scope."
+            f'Write target must be within the plan scope.'
         )
 
     for target in file_targets:
         norm_target = PurePath(target).as_posix()
         if norm_path == norm_target:
             return None
-        if norm_path.startswith(norm_target + "/"):
+        if norm_path.startswith(norm_target + '/'):
             return None
 
     rel_path = ''
@@ -120,8 +120,8 @@ def assert_write_scope(
 
     return (
         f"Intent drift: tool '{tool_name}' targeting '{file_path}' is outside "
-        f"the approved plan scope. Plan file targets: {sorted(file_targets)}. "
-        f"Plan: {rel_path}. Update the plan or use an explicit gate packet."
+        f'the approved plan scope. Plan file targets: {sorted(file_targets)}. '
+        f'Plan: {rel_path}. Update the plan or use an explicit gate packet.'
     )
 
 
@@ -248,13 +248,11 @@ def require_review_gate(
 def _validate_gate_id(gate_id: str) -> str:
     """Validate *gate_id* is a well-formed UUID and return it."""
     if not isinstance(gate_id, str) or not gate_id.strip():
-        raise ValueError(f"gate_id must be a non-empty UUID string, got {gate_id!r}")
+        raise ValueError(f'gate_id must be a non-empty UUID string, got {gate_id!r}')
     try:
         uuid_mod.UUID(gate_id.strip())
     except (ValueError, AttributeError) as exc:
-        raise ValueError(
-            f"gate_id must be a valid UUID, got {gate_id!r}"
-        ) from exc
+        raise ValueError(f'gate_id must be a valid UUID, got {gate_id!r}') from exc
     return gate_id.strip()
 
 

@@ -26,9 +26,7 @@ def _make_fake_explain(
             source_dir=Path(f'/tmp/skill-{i}'),
             estimated_tokens=500,
             reason='mock',
-            governance_status=(
-                'candidate_installed' if with_governance else 'unknown'
-            ),
+            governance_status=('candidate_installed' if with_governance else 'unknown'),
             lifecycle_state='activated',
         )
         for i in range(loaded_count)
@@ -60,9 +58,7 @@ class TuiSkillPanelTests(unittest.TestCase):
         ):
             tui.handle_command('skills')
 
-        json_lines = [
-            line for line in output if line.strip().startswith('{')
-        ]
+        json_lines = [line for line in output if line.strip().startswith('{')]
         self.assertGreaterEqual(len(json_lines), 1)
         parsed = json.loads(json_lines[0])
         self.assertIsInstance(parsed, dict)
@@ -79,9 +75,7 @@ class TuiSkillPanelTests(unittest.TestCase):
         ):
             tui.handle_command('skills')
 
-        json_lines = [
-            line for line in output if line.strip().startswith('{')
-        ]
+        json_lines = [line for line in output if line.strip().startswith('{')]
         parsed = json.loads(json_lines[0])
         loaded = parsed.get('loaded', [])
         self.assertEqual(len(loaded), 5)
@@ -98,9 +92,7 @@ class TuiSkillPanelTests(unittest.TestCase):
         ):
             tui.handle_command('skills')
 
-        json_lines = [
-            line for line in output if line.strip().startswith('{')
-        ]
+        json_lines = [line for line in output if line.strip().startswith('{')]
         parsed = json.loads(json_lines[0])
         loaded = parsed.get('loaded', [])
         self.assertGreaterEqual(len(loaded), 1)
@@ -140,17 +132,15 @@ class TuiSkillPanelTests(unittest.TestCase):
 
         with (
             patch(
-                'teaagent.tui.__init__.explain_skill_activation',
+                'teaagent.tui.explain_skill_activation',
                 return_value=fake_explain,
             ),
             patch(
-                'teaagent.tui.__init__.discover_skill_index',
+                'teaagent.tui.discover_skill_index',
                 return_value=skill_entries,
             ),
         ):
-            tui._print_state_panel = (
-                lambda self=None: None
-            )  # suppress actual print
+            tui._print_state_panel = lambda self=None: None  # suppress actual print
             tui._skill_explain = fake_explain
 
             # Simulate the Skills section print directly
@@ -168,7 +158,15 @@ class TuiSkillPanelTests(unittest.TestCase):
                 source_dir=skill_entries[0].path.parent.parent,
                 root=tui.root,
             )
-            self.assertIn(gov, ('candidate_installed', 'direct_write', 'compatibility_path', 'unmanaged'))
+            self.assertIn(
+                gov,
+                (
+                    'candidate_installed',
+                    'direct_write',
+                    'compatibility_path',
+                    'unmanaged',
+                ),
+            )
 
             lifecycle = SkillLifecycleState.DISCOVERED.value
             self.assertEqual(lifecycle, 'discovered')

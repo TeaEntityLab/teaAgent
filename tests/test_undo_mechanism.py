@@ -51,7 +51,6 @@ def _run_agent_that_writes_files(tmp_path: Path) -> dict:
 
 
 class TestJournalUndoOutput:
-
     def test_journal_undo_output_contains_journal(self, tmp_path: Path) -> None:
         _run_agent_that_writes_files(tmp_path)
 
@@ -99,10 +98,7 @@ class TestJournalUndoOutput:
 
 
 class TestCheckpointFallbackOutput:
-
-    def test_checkpoint_fallback_output(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_checkpoint_fallback_output(self, tmp_path: Path, monkeypatch) -> None:
         _run_agent_that_writes_files(tmp_path)
 
         from teaagent.run_store import RunStore
@@ -138,9 +134,7 @@ class TestCheckpointFallbackOutput:
         )
         assert undo_payload['status'] == 'restored'
 
-    def test_old_method_git_never_appears(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_old_method_git_never_appears(self, tmp_path: Path, monkeypatch) -> None:
         _run_agent_that_writes_files(tmp_path)
 
         from teaagent.run_store import RunStore
@@ -174,7 +168,6 @@ class TestCheckpointFallbackOutput:
 
 
 class TestUndoPreview:
-
     def test_undo_preview_shows_files(self, tmp_path: Path) -> None:
         _run_agent_that_writes_files(tmp_path)
 
@@ -202,9 +195,7 @@ class TestUndoPreview:
 
         preview_out = io.StringIO()
         with redirect_stdout(preview_out):
-            preview_code = main(
-                ['undo', run_id, '--preview', '--root', str(tmp_path)]
-            )
+            preview_code = main(['undo', run_id, '--preview', '--root', str(tmp_path)])
         preview_text = preview_out.getvalue()
 
         assert preview_code == 0

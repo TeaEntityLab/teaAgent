@@ -59,31 +59,45 @@ class TestIsHighRiskGoal:
         assert is_high_risk_goal(goal) is False
 
     def test_spec_id_prefix_sec(self):
-        goal = GoalRecord(goal_id='g-spec', objective='Fix something', spec_id='sec-audit-log')
+        goal = GoalRecord(
+            goal_id='g-spec', objective='Fix something', spec_id='sec-audit-log'
+        )
         assert is_high_risk_goal(goal) is True
 
     def test_spec_id_prefix_auth(self):
-        goal = GoalRecord(goal_id='g-spec2', objective='Fix something', spec_id='auth-oauth-flow')
+        goal = GoalRecord(
+            goal_id='g-spec2', objective='Fix something', spec_id='auth-oauth-flow'
+        )
         assert is_high_risk_goal(goal) is True
 
     def test_spec_id_prefix_prod(self):
-        goal = GoalRecord(goal_id='g-spec3', objective='Fix something', spec_id='prod-hotfix')
+        goal = GoalRecord(
+            goal_id='g-spec3', objective='Fix something', spec_id='prod-hotfix'
+        )
         assert is_high_risk_goal(goal) is True
 
     def test_spec_id_prefix_deploy(self):
-        goal = GoalRecord(goal_id='g-spec4', objective='Fix something', spec_id='deploy-rollback')
+        goal = GoalRecord(
+            goal_id='g-spec4', objective='Fix something', spec_id='deploy-rollback'
+        )
         assert is_high_risk_goal(goal) is True
 
     def test_spec_id_prefix_migration(self):
-        goal = GoalRecord(goal_id='g-spec5', objective='Fix something', spec_id='migration-v3')
+        goal = GoalRecord(
+            goal_id='g-spec5', objective='Fix something', spec_id='migration-v3'
+        )
         assert is_high_risk_goal(goal) is True
 
     def test_spec_id_prefix_compliance(self):
-        goal = GoalRecord(goal_id='g-spec6', objective='Fix something', spec_id='compliance-gdpr')
+        goal = GoalRecord(
+            goal_id='g-spec6', objective='Fix something', spec_id='compliance-gdpr'
+        )
         assert is_high_risk_goal(goal) is True
 
     def test_benign_spec_id(self):
-        goal = GoalRecord(goal_id='g-spec-safe', objective='Fix something', spec_id='feat-buttons')
+        goal = GoalRecord(
+            goal_id='g-spec-safe', objective='Fix something', spec_id='feat-buttons'
+        )
         assert is_high_risk_goal(goal) is False
 
     def test_high_risk_task_id(self):
@@ -441,9 +455,7 @@ class TestReviewGateDataclass:
             diff_summary='+10 lines',
             tool_calls=[{'tool': 'write', 'path': '/tmp/x'}],
             cost_summary={'estimated': 0.05},
-            review_findings=[
-                {'severity': 'high', 'message': 'possible data leak'}
-            ],
+            review_findings=[{'severity': 'high', 'message': 'possible data leak'}],
             rollback_path='.teaagent/gates/g-round.json',
             decision='pending',
             approver='',
@@ -637,6 +649,7 @@ class TestSkillInstallGateFlow:
 
             # Valid UUID but no file on disk should raise FileNotFoundError
             import uuid
+
             valid_uuid = str(uuid.uuid4())
             with pytest.raises(FileNotFoundError, match='gate not found'):
                 load_gate(valid_uuid, workspace_root=tmp)

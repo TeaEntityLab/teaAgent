@@ -41,11 +41,13 @@ class MemoryMeta:
                 f'freshness_score must be 0.0-1.0, got {self.freshness_score}'
             )
         if self.confidence < 0.0 or self.confidence > 1.0:
-            raise ValueError(
-                f'confidence must be 0.0-1.0, got {self.confidence}'
-            )
+            raise ValueError(f'confidence must be 0.0-1.0, got {self.confidence}')
         _valid_review = {
-            'pending', 'approved', 'rejected', 'quarantined', 'promoted',
+            'pending',
+            'approved',
+            'rejected',
+            'quarantined',
+            'promoted',
         }
         if self.review_state not in _valid_review:
             raise ValueError(
@@ -573,16 +575,18 @@ class MemoryCatalog:
                     new_meta = MemoryMeta(
                         scope=existing.scope if existing else 'auto',
                         owner=existing.owner if existing else attestation,
-                        source_run_id=(
-                            existing.source_run_id if existing else None
-                        ),
-                        freshness_score=(
-                            existing.freshness_score if existing else 1.0
-                        ),
+                        source_run_id=(existing.source_run_id if existing else None),
+                        freshness_score=(existing.freshness_score if existing else 1.0),
                         ttl_days=existing.ttl_days if existing else 30,
                         confidence=existing.confidence if existing else 0.0,
                         review_state=cast(
-                            Literal['pending', 'approved', 'rejected', 'quarantined', 'promoted'],
+                            Literal[
+                                'pending',
+                                'approved',
+                                'rejected',
+                                'quarantined',
+                                'promoted',
+                            ],
                             state,
                         ),
                     )

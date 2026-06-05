@@ -108,9 +108,7 @@ class DiagnosticsLoadedSkillsTests(unittest.TestCase):
         ):
             tui.handle_command('skill-diagnostics')
 
-        json_lines = [
-            line for line in output if line.strip().startswith('{')
-        ]
+        json_lines = [line for line in output if line.strip().startswith('{')]
         self.assertGreaterEqual(len(json_lines), 1)
         parsed = json.loads(json_lines[0])
         self.assertIsInstance(parsed, dict)

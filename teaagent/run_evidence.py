@@ -215,7 +215,9 @@ class RunEvidenceBundle:
             ],
             'workspace_root': self.workspace_root,
             'goal_id': self.goal_id,
-            'proof_of_use': self.proof_of_use.to_dict() if self.proof_of_use is not None else None,
+            'proof_of_use': self.proof_of_use.to_dict()
+            if self.proof_of_use is not None
+            else None,
             'undo_available': self.undo_available,
             'undo_mechanism': self.undo_mechanism,
             'undo_outcome': self.undo_outcome,
@@ -370,12 +372,8 @@ def extract_routes(events: list[dict[str, Any]]) -> list[ModelRouteEvidence]:
                     role=payload.get('role', ''),
                     routing_reason=payload.get('routing_reason', ''),
                     policy_source=payload.get('policy_source', ''),
-                    estimated_cost_cents=float(
-                        payload.get('estimated_cost_cents', 0)
-                    ),
-                    actual_cost_cents=float(
-                        payload.get('actual_cost_cents', 0)
-                    ),
+                    estimated_cost_cents=float(payload.get('estimated_cost_cents', 0)),
+                    actual_cost_cents=float(payload.get('actual_cost_cents', 0)),
                     fallback_used=bool(payload.get('fallback_used', False)),
                     timestamp=event.get('created_at'),
                 )
@@ -410,9 +408,7 @@ def extract_provenance(events: list[dict[str, Any]]) -> list[ProvenanceRecord]:
                         source_path=record.get('source_path', ''),
                         governance_status=record.get('governance_status', 'unknown'),
                         activation_status=record.get('activation_status', 'unknown'),
-                        revocation_status=record.get(
-                            'revocation_status', 'unknown'
-                        ),
+                        revocation_status=record.get('revocation_status', 'unknown'),
                         shadowed_paths=list(record.get('shadowed_paths', [])),
                         loaded_at=record.get('loaded_at', 0.0),
                     )
@@ -420,7 +416,9 @@ def extract_provenance(events: list[dict[str, Any]]) -> list[ProvenanceRecord]:
     return records
 
 
-def _derive_activation_cause(reason: str, event_type: str, payload: dict[str, Any]) -> str:
+def _derive_activation_cause(
+    reason: str, event_type: str, payload: dict[str, Any]
+) -> str:
     """Derive the skill activation cause from the transition reason or event payload.
 
     Returns one of ``'explicit'``, ``'auto'``, ``'context'``, or ``'session'``.
@@ -663,7 +661,7 @@ def build_run_evidence_bundle(
     # final answer content at this point (RunStore only stores events), so
     # we pass an empty string.  Full proof-of-use with final-answer hash is
     # attached during _handle_final_answer.
-    proof_of_use = build_proof_of_use(events, "")
+    proof_of_use = build_proof_of_use(events, '')
     provenance = extract_provenance(events)
     skill_activations = extract_skill_activations(events)
 
@@ -778,7 +776,7 @@ def check_evidence_completeness(
 
     for item in expected:
         if item.startswith('event:'):
-            event_name = item[len('event:'):]
+            event_name = item[len('event:') :]
             if event_name not in event_types:
                 missing.append(f'missing audit event: {event_name}')
             continue

@@ -90,18 +90,39 @@ def normalize_subagent_isolation(value: Any) -> str | None:
     return None
 
 
-SECRET_FILE_PATTERNS = frozenset({
-    '.env', '.env.local', '.env.production', '.env.development',
-    'credentials.json', 'credentials', '.credentials',
-    'secrets.json', 'secrets.yaml', 'secrets.yml',
-    '.netrc', '.ssh', '.gnupg',
-    'service-account.json', 'service-account-key.json',
-})
-SECRET_FILE_SUFFIXES = frozenset({
-    '.pem', '.key', '.p12', '.pfx', '.jks', '.keystore',
-    '.cer', '.crt', '.der',
-    '.token',
-})
+SECRET_FILE_PATTERNS = frozenset(
+    {
+        '.env',
+        '.env.local',
+        '.env.production',
+        '.env.development',
+        'credentials.json',
+        'credentials',
+        '.credentials',
+        'secrets.json',
+        'secrets.yaml',
+        'secrets.yml',
+        '.netrc',
+        '.ssh',
+        '.gnupg',
+        'service-account.json',
+        'service-account-key.json',
+    }
+)
+SECRET_FILE_SUFFIXES = frozenset(
+    {
+        '.pem',
+        '.key',
+        '.p12',
+        '.pfx',
+        '.jks',
+        '.keystore',
+        '.cer',
+        '.crt',
+        '.der',
+        '.token',
+    }
+)
 SECRET_DIR_PREFIXES = frozenset({'.ssh', '.gnupg', '.aws', '.gcp', '.azure'})
 
 

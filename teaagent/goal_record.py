@@ -36,7 +36,9 @@ class GoalRecord:
 
     goal_id: str  # UUID
     objective: str
-    status: str = 'proposed'  # proposed | active | completed | failed | blocked | abandoned
+    status: str = (
+        'proposed'  # proposed | active | completed | failed | blocked | abandoned
+    )
     spec_id: str = ''
     spec_hash: str = ''
     task_ids: list[str] = field(default_factory=list)
@@ -67,7 +69,9 @@ class GoalRecord:
             'human_gate_ids': list(self.human_gate_ids),
             'blockers': list(self.blockers),
             'next_gate': self.next_gate,
-            'spec_exemption': (self.spec_exemption.to_dict() if self.spec_exemption else None),
+            'spec_exemption': (
+                self.spec_exemption.to_dict() if self.spec_exemption else None
+            ),
             'created_at': self.created_at,
             'updated_at': self.updated_at,
         }
@@ -139,7 +143,7 @@ class GoalStore:
         if goal.status not in VALID_STATUSES:
             raise ValueError(
                 f"Invalid goal status '{goal.status}'. Must be one of: "
-                f"{', '.join(sorted(VALID_STATUSES))}"
+                f'{", ".join(sorted(VALID_STATUSES))}'
             )
 
         path = self._goal_path(goal.goal_id)
@@ -237,21 +241,15 @@ class GoalStore:
                 requires_review_before_close,
             )
 
-            blocked, reason = requires_review_before_close(
-                goal, waivers=waivers
-            )
+            blocked, reason = requires_review_before_close(goal, waivers=waivers)
             if blocked:
-                raise ValueError(
-                    f"Cannot close high-risk goal '{goal_id}': {reason}"
-                )
+                raise ValueError(f"Cannot close high-risk goal '{goal_id}': {reason}")
 
         goal.status = new_status
         self.save(goal)
         return goal
 
-    def record_goal_event(
-        self, goal_id: str, event_type: str, **payload: Any
-    ) -> None:
+    def record_goal_event(self, goal_id: str, event_type: str, **payload: Any) -> None:
         """Record a goal lifecycle event (goal_set, goal_updated, etc.).
 
         This appends a single audit event to the goal's audit log and

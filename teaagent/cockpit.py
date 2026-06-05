@@ -98,7 +98,9 @@ class CockpitState:
 
     # P0-D-003: Active workspace root and approval scope for surface visibility.
     workspace_root: str = ''
-    approval_scope: str = ''  # e.g. 'prompt', 'workspace-write (scoped: src/**)', 'allow'
+    approval_scope: str = (
+        ''  # e.g. 'prompt', 'workspace-write (scoped: src/**)', 'allow'
+    )
 
     last_updated: Optional[float] = None
 
@@ -265,6 +267,7 @@ def _count_unreviewed_candidates(root: Path) -> int:
     for meta_path in sorted(candidates_dir.glob('*/candidate.json')):
         try:
             import json
+
             payload = json.loads(meta_path.read_text(encoding='utf-8'))
         except (OSError, json.JSONDecodeError):
             continue
@@ -289,11 +292,32 @@ class ControlCockpitState:
     spec: dict | None = None
     goal: dict | None = None
     model_route: dict | None = None
-    memory: dict = field(default_factory=lambda: {'total_entries': 0, 'last_entry_summary': ''})
+    memory: dict = field(
+        default_factory=lambda: {'total_entries': 0, 'last_entry_summary': ''}
+    )
     review: dict | None = None
-    skill: dict = field(default_factory=lambda: {'loaded_count': 0, 'shadowed_count': 0, 'candidate_count': 0, 'governance_status': {}})
-    approval: dict = field(default_factory=lambda: {'pending_count': 0, 'blocked_count': 0, 'mode': 'prompt'})
-    cost: dict = field(default_factory=lambda: {'spent_cents': 0.0, 'limit_cents': None, 'state': 'unavailable'})
+    skill: dict = field(
+        default_factory=lambda: {
+            'loaded_count': 0,
+            'shadowed_count': 0,
+            'candidate_count': 0,
+            'governance_status': {},
+        }
+    )
+    approval: dict = field(
+        default_factory=lambda: {
+            'pending_count': 0,
+            'blocked_count': 0,
+            'mode': 'prompt',
+        }
+    )
+    cost: dict = field(
+        default_factory=lambda: {
+            'spent_cents': 0.0,
+            'limit_cents': None,
+            'state': 'unavailable',
+        }
+    )
     last_updated: Optional[float] = None
 
 
@@ -347,7 +371,9 @@ def build_control_cockpit(
             cockpit.spec = {
                 'spec_id': latest.spec_id or '',
                 'spec_hash': latest.spec_hash or '',
-                'spec_exemption': latest.spec_exemption.to_dict() if latest.spec_exemption else None,
+                'spec_exemption': latest.spec_exemption.to_dict()
+                if latest.spec_exemption
+                else None,
             }
     except Exception:
         pass
@@ -373,7 +399,9 @@ def build_control_cockpit(
         if cockpit.goal:
             review_ids = cockpit.goal.get('review_ids', [])
             cockpit.review = {
-                'review_ids_count': len(review_ids) if isinstance(review_ids, list) else 0,
+                'review_ids_count': len(review_ids)
+                if isinstance(review_ids, list)
+                else 0,
                 'latest_review_status': 'unknown',
             }
     except Exception:
@@ -391,7 +419,12 @@ def build_control_cockpit(
             'governance_status': diag.get('governance_status', {}),
         }
     except Exception:
-        cockpit.skill = {'loaded_count': 0, 'shadowed_count': 0, 'candidate_count': 0, 'governance_status': {}}
+        cockpit.skill = {
+            'loaded_count': 0,
+            'shadowed_count': 0,
+            'candidate_count': 0,
+            'governance_status': {},
+        }
 
     # ── approval ──
     pending = _count_quarantine_lines(root_path)

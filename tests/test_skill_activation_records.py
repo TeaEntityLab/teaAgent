@@ -67,13 +67,18 @@ def _tool_call_completed_event(
 
 
 class TestExtractSkillActivations:
-
     def test_from_lifecycle_transitions(self):
         events = [
-            _skill_lifecycle_event('code-review', reason='first match in search order (eager load)',
-                                   source_path='/skills/code-review/SKILL.md'),
-            _skill_lifecycle_event('testing', reason='selected explicitly (--skill testing)',
-                                   source_path='/skills/testing/SKILL.md'),
+            _skill_lifecycle_event(
+                'code-review',
+                reason='first match in search order (eager load)',
+                source_path='/skills/code-review/SKILL.md',
+            ),
+            _skill_lifecycle_event(
+                'testing',
+                reason='selected explicitly (--skill testing)',
+                source_path='/skills/testing/SKILL.md',
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 2
@@ -86,7 +91,9 @@ class TestExtractSkillActivations:
 
     def test_explicit_activation_cause(self):
         events = [
-            _skill_lifecycle_event('refactoring', reason='selected explicitly (--skill refactoring)'),
+            _skill_lifecycle_event(
+                'refactoring', reason='selected explicitly (--skill refactoring)'
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -94,7 +101,9 @@ class TestExtractSkillActivations:
 
     def test_auto_activation_cause(self):
         events = [
-            _skill_lifecycle_event('git-workflow', reason='first match in search order (eager load)'),
+            _skill_lifecycle_event(
+                'git-workflow', reason='first match in search order (eager load)'
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -102,7 +111,9 @@ class TestExtractSkillActivations:
 
     def test_context_activation_cause(self):
         events = [
-            _skill_lifecycle_event('mcp-integration', reason='loaded from session context'),
+            _skill_lifecycle_event(
+                'mcp-integration', reason='loaded from session context'
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -110,7 +121,9 @@ class TestExtractSkillActivations:
 
     def test_session_activation_cause(self):
         events = [
-            _skill_lifecycle_event('p0-agent-harness', reason='loaded from workspace config'),
+            _skill_lifecycle_event(
+                'p0-agent-harness', reason='loaded from workspace config'
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -118,8 +131,12 @@ class TestExtractSkillActivations:
 
     def test_dedup_by_skill_name_first_wins(self):
         events = [
-            _skill_lifecycle_event('code-review', reason='eager load', created_at=100.0),
-            _skill_lifecycle_event('code-review', reason='explicit selection', created_at=200.0),
+            _skill_lifecycle_event(
+                'code-review', reason='eager load', created_at=100.0
+            ),
+            _skill_lifecycle_event(
+                'code-review', reason='explicit selection', created_at=200.0
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -129,7 +146,9 @@ class TestExtractSkillActivations:
         events = [
             _skill_lifecycle_event('code-review', to_state='discovered'),
             _skill_lifecycle_event('code-review', to_state='selected'),
-            _skill_lifecycle_event('code-review', to_state='activated', reason='eager load'),
+            _skill_lifecycle_event(
+                'code-review', to_state='activated', reason='eager load'
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -137,8 +156,9 @@ class TestExtractSkillActivations:
 
     def test_sku_activated_event_type(self):
         events = [
-            _skill_activated_event('custom-skill', cause='explicit',
-                                   source_path='/custom/skill.md'),
+            _skill_activated_event(
+                'custom-skill', cause='explicit', source_path='/custom/skill.md'
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -163,7 +183,9 @@ class TestExtractSkillActivations:
 
     def test_activated_at_is_iso_timestamp(self):
         events = [
-            _skill_lifecycle_event('code-review', reason='eager load', created_at=1717545600.0),
+            _skill_lifecycle_event(
+                'code-review', reason='eager load', created_at=1717545600.0
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
@@ -174,11 +196,17 @@ class TestExtractSkillActivations:
     def test_with_artifact_link_from_tool_call_completed(self):
         events = [
             _skill_lifecycle_event('code-review', reason='eager load'),
-            _tool_call_completed_event('code-review', artifact_path='.teaagent/artifacts/tool-results/run-1/call-1.txt'),
+            _tool_call_completed_event(
+                'code-review',
+                artifact_path='.teaagent/artifacts/tool-results/run-1/call-1.txt',
+            ),
         ]
         records = extract_skill_activations(events)
         assert len(records) == 1
-        assert records[0].output_artifact_link == '.teaagent/artifacts/tool-results/run-1/call-1.txt'
+        assert (
+            records[0].output_artifact_link
+            == '.teaagent/artifacts/tool-results/run-1/call-1.txt'
+        )
 
     def test_without_artifact_link_when_no_match(self):
         events = [
@@ -208,7 +236,9 @@ class TestExtractSkillActivations:
 
     def test_mixed_event_types_both_handled(self):
         events = [
-            _skill_lifecycle_event('code-review', reason='eager load', created_at=100.0),
+            _skill_lifecycle_event(
+                'code-review', reason='eager load', created_at=100.0
+            ),
             _skill_activated_event('testing', cause='explicit', created_at=200.0),
         ]
         records = extract_skill_activations(events)
@@ -218,7 +248,9 @@ class TestExtractSkillActivations:
 
     def test_dedup_across_event_types(self):
         events = [
-            _skill_lifecycle_event('code-review', reason='eager load', created_at=100.0),
+            _skill_lifecycle_event(
+                'code-review', reason='eager load', created_at=100.0
+            ),
             _skill_activated_event('code-review', cause='explicit', created_at=200.0),
         ]
         records = extract_skill_activations(events)
@@ -235,7 +267,6 @@ class TestExtractSkillActivations:
 
 
 class TestSkillActivationRecordSerialization:
-
     def test_to_dict(self):
         record = SkillActivationRecord(
             skill_name='code-review',
@@ -265,7 +296,6 @@ class TestSkillActivationRecordSerialization:
 
 
 class TestRunEvidenceBundleSkillActivations:
-
     def test_bundle_includes_skill_activations_in_to_dict(self):
         from teaagent.run_evidence import RunEvidenceBundle
 

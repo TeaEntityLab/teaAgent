@@ -16,9 +16,11 @@ class TestArtifactReadCommand:
         with redirect_stdout(out):
             exit_code = main(
                 [
-                    'artifact', 'read',
+                    'artifact',
+                    'read',
                     '.teaagent/artifacts/tool-results/nope/nope.txt',
-                    '--root', str(tmp_path),
+                    '--root',
+                    str(tmp_path),
                 ]
             )
         assert exit_code == 1
@@ -37,9 +39,11 @@ class TestArtifactReadCommand:
         with redirect_stdout(out):
             exit_code = main(
                 [
-                    'artifact', 'read',
+                    'artifact',
+                    'read',
                     '.teaagent/artifacts/tool-results/run-001/call-001.txt',
-                    '--root', str(tmp_path),
+                    '--root',
+                    str(tmp_path),
                 ]
             )
         assert exit_code == 0
@@ -56,11 +60,15 @@ class TestArtifactReadCommand:
         with redirect_stdout(out):
             exit_code = main(
                 [
-                    'artifact', 'read',
+                    'artifact',
+                    'read',
                     '.teaagent/artifacts/tool-results/run-001/call-offset.txt',
-                    '--cursor', 'offset:5',
-                    '--max-bytes', '10',
-                    '--root', str(tmp_path),
+                    '--cursor',
+                    'offset:5',
+                    '--max-bytes',
+                    '10',
+                    '--root',
+                    str(tmp_path),
                 ]
             )
         assert exit_code == 0
@@ -77,10 +85,13 @@ class TestArtifactReadCommand:
         with redirect_stdout(out):
             exit_code = main(
                 [
-                    'artifact', 'read',
+                    'artifact',
+                    'read',
                     '.teaagent/artifacts/tool-results/run-001/call-maxbytes.txt',
-                    '--max-bytes', '500',
-                    '--root', str(tmp_path),
+                    '--max-bytes',
+                    '500',
+                    '--root',
+                    str(tmp_path),
                 ]
             )
         assert exit_code == 0
@@ -136,7 +147,9 @@ class TestArtifactListCommand:
             ('run-001', {'call-a': 'aaa', 'call-b': 'bbb'}),
             ('run-002', {'call-x': 'xxxx'}),
         ]:
-            artifact_dir = tmp_path / '.teaagent' / 'artifacts' / 'tool-results' / run_id
+            artifact_dir = (
+                tmp_path / '.teaagent' / 'artifacts' / 'tool-results' / run_id
+            )
             artifact_dir.mkdir(parents=True, exist_ok=True)
             for call_id, content in calls.items():
                 (artifact_dir / f'{call_id}.txt').write_text(content, encoding='utf-8')

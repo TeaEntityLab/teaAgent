@@ -274,7 +274,12 @@ def memory_quarantine_promote_command(args: argparse.Namespace) -> int:
         try:
             gate = load_gate(approved_gate_id, workspace_root=args.root)
         except FileNotFoundError:
-            print_json({'status': 'error', 'message': f'approved gate not found: {approved_gate_id}'})
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f'approved gate not found: {approved_gate_id}',
+                }
+            )
             return 1
         if gate.decision != 'approved':
             print_json(

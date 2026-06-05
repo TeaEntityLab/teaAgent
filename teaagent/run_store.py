@@ -355,9 +355,10 @@ class RunStore:
                 cost_cents = float(payload.get('cost_cents', 0.0))
             elif event_type == 'run_paused':
                 status = payload.get('status', 'paused')
-        resumable = not (
-            status == 'completed' or status.startswith('failed:')
-        ) and status != 'unknown'
+        resumable = (
+            not (status == 'completed' or status.startswith('failed:'))
+            and status != 'unknown'
+        )
         return RunSummary(
             run_id=run_id,
             task=task,

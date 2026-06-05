@@ -43,21 +43,13 @@ class TestIsProtectedSkillPath:
         assert is_protected_skill_path(tmp_path, target) is True
 
     def test_config_agent_skills_dir_is_protected(self, tmp_path: Path) -> None:
-        target = (
-            tmp_path / '.config' / 'agent' / 'skills' / 'test-skill' / 'SKILL.md'
-        )
+        target = tmp_path / '.config' / 'agent' / 'skills' / 'test-skill' / 'SKILL.md'
         target.parent.mkdir(parents=True, exist_ok=True)
         target.touch()
         assert is_protected_skill_path(tmp_path, target) is True
 
     def test_candidate_path_is_not_protected(self, tmp_path: Path) -> None:
-        target = (
-            tmp_path
-            / '.teaagent'
-            / 'skill-candidates'
-            / 'test-skill'
-            / 'SKILL.md'
-        )
+        target = tmp_path / '.teaagent' / 'skill-candidates' / 'test-skill' / 'SKILL.md'
         target.parent.mkdir(parents=True, exist_ok=True)
         target.touch()
         assert is_protected_skill_path(tmp_path, target) is False
@@ -104,18 +96,14 @@ class TestAssertSkillPathNotProtected:
             )
         assert exc_info.value.reason_code == DenialReasonCode.SKILL_WRITE_BLOCKED
 
-    def test_write_to_config_agent_skills_is_blocked(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_to_config_agent_skills_is_blocked(self, tmp_path: Path) -> None:
         manager = self._make_manager(tmp_path)
         with pytest.raises(ToolPermissionError) as exc_info:
             manager.assert_allowed(
                 tool_name='workspace_write_file',
                 call_id='call-2',
                 destructive=True,
-                arguments={
-                    'path': '.config/agent/skills/test-skill/SKILL.md'
-                },
+                arguments={'path': '.config/agent/skills/test-skill/SKILL.md'},
             )
         assert exc_info.value.reason_code == DenialReasonCode.SKILL_WRITE_BLOCKED
 
@@ -147,14 +135,10 @@ class TestAssertSkillPathNotProtected:
             tool_name='workspace_write_file',
             call_id='call-5',
             destructive=True,
-            arguments={
-                'path': '.teaagent/skill-candidates/test-skill/SKILL.md'
-            },
+            arguments={'path': '.teaagent/skill-candidates/test-skill/SKILL.md'},
         )
 
-    def test_write_to_normal_source_file_is_allowed(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_to_normal_source_file_is_allowed(self, tmp_path: Path) -> None:
         manager = self._make_manager(tmp_path)
         manager.assert_allowed(
             tool_name='workspace_write_file',
@@ -174,10 +158,7 @@ class TestAssertSkillPathNotProtected:
                 destructive=True,
                 arguments={'path': '/etc/passwd'},
             )
-        assert (
-            exc_info.value.reason_code
-            == DenialReasonCode.WORKSPACE_WRITE_MODE
-        )
+        assert exc_info.value.reason_code == DenialReasonCode.WORKSPACE_WRITE_MODE
 
     def test_skill_quarantine_blocks_before_permission_mode_check(
         self, tmp_path: Path
@@ -207,9 +188,7 @@ class TestAssertSkillPathNotProtected:
 
 
 class TestErrorMessage:
-    def test_error_message_contains_candidate_path(
-        self, tmp_path: Path
-    ) -> None:
+    def test_error_message_contains_candidate_path(self, tmp_path: Path) -> None:
         manager = ApprovalManager(
             permission_mode=PermissionMode.WORKSPACE_WRITE,
             workspace_root=str(tmp_path),
@@ -226,9 +205,7 @@ class TestErrorMessage:
         assert '--skill-dev-opt-in' in msg
         assert '.opencode/skill/rss/SKILL.md' in msg
 
-    def test_error_message_contains_actionable_guidance(
-        self, tmp_path: Path
-    ) -> None:
+    def test_error_message_contains_actionable_guidance(self, tmp_path: Path) -> None:
         manager = ApprovalManager(
             permission_mode=PermissionMode.WORKSPACE_WRITE,
             workspace_root=str(tmp_path),
@@ -238,9 +215,7 @@ class TestErrorMessage:
                 tool_name='workspace_write_file',
                 call_id='call-11',
                 destructive=True,
-                arguments={
-                    'path': '.config/agent/skills/my-skill/SKILL.md'
-                },
+                arguments={'path': '.config/agent/skills/my-skill/SKILL.md'},
             )
         msg = str(exc_info.value)
         assert 'candidate install' in msg.lower()
@@ -258,9 +233,7 @@ class TestDevOptIn:
 
     def test_env_var_bypasses_guard(self, tmp_path: Path) -> None:
         manager = self._make_manager(tmp_path)
-        with patch.dict(
-            os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'true'}, clear=False
-        ):
+        with patch.dict(os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'true'}, clear=False):
             manager.assert_allowed(
                 tool_name='workspace_write_file',
                 call_id='call-12',
@@ -271,9 +244,7 @@ class TestDevOptIn:
     def test_env_var_false_does_not_bypass(self, tmp_path: Path) -> None:
         manager = self._make_manager(tmp_path)
         with (
-            patch.dict(
-                os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'false'}, clear=False
-            ),
+            patch.dict(os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'false'}, clear=False),
             pytest.raises(ToolPermissionError),
         ):
             manager.assert_allowed(
@@ -322,9 +293,7 @@ class TestDevOptIn:
         )
 
         manager = self._make_manager(tmp_path)
-        with patch.dict(
-            os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'true'}, clear=False
-        ):
+        with patch.dict(os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'true'}, clear=False):
             manager.assert_allowed(
                 tool_name='workspace_write_file',
                 call_id='call-16',
@@ -335,21 +304,15 @@ class TestDevOptIn:
 
 class TestIsSkillDevOptIn:
     def test_env_true(self, tmp_path: Path) -> None:
-        with patch.dict(
-            os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'true'}, clear=False
-        ):
+        with patch.dict(os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'true'}, clear=False):
             assert _is_skill_dev_opt_in(tmp_path) is True
 
     def test_env_yes(self, tmp_path: Path) -> None:
-        with patch.dict(
-            os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'yes'}, clear=False
-        ):
+        with patch.dict(os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': 'yes'}, clear=False):
             assert _is_skill_dev_opt_in(tmp_path) is True
 
     def test_env_one(self, tmp_path: Path) -> None:
-        with patch.dict(
-            os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': '1'}, clear=False
-        ):
+        with patch.dict(os.environ, {'TEAAGENT_SKILL_DEV_OPT_IN': '1'}, clear=False):
             assert _is_skill_dev_opt_in(tmp_path) is True
 
     def test_env_false(self, tmp_path: Path) -> None:
@@ -383,9 +346,7 @@ class TestPathArgumentKeys:
                 tool_name='workspace_apply_patch',
                 call_id='call-17',
                 destructive=True,
-                arguments={
-                    'target_path': '.opencode/skill/rss/SKILL.md'
-                },
+                arguments={'target_path': '.opencode/skill/rss/SKILL.md'},
             )
 
     def test_file_key_is_checked(self, tmp_path: Path) -> None:
@@ -417,9 +378,7 @@ class TestPathArgumentKeys:
                 },
             )
 
-    def test_multiple_paths_first_protected_blocks(
-        self, tmp_path: Path
-    ) -> None:
+    def test_multiple_paths_first_protected_blocks(self, tmp_path: Path) -> None:
         manager = ApprovalManager(
             permission_mode=PermissionMode.WORKSPACE_WRITE,
             workspace_root=str(tmp_path),

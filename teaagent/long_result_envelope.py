@@ -75,7 +75,7 @@ def store_long_result(
     run_id: str,
     tool_call_id: str,
     content: str,
-    content_type: str = "text/markdown",
+    content_type: str = 'text/markdown',
     *,
     max_preview_bytes: int = DEFAULT_MAX_PREVIEW_BYTES,
 ) -> LongResultEnvelope:
@@ -86,7 +86,7 @@ def store_long_result(
     persisted to ``.teaagent/artifacts/tool-results/<run_id>/<tool_call_id>.txt``
     and only the preview is kept in-memory.
     """
-    content_bytes = content.encode("utf-8")
+    content_bytes = content.encode('utf-8')
     total_bytes = len(content_bytes)
     content_hash = _sha256_hex(content_bytes)
 
@@ -98,10 +98,10 @@ def store_long_result(
             truncated=False,
             total_bytes=total_bytes,
             preview_bytes=total_bytes,
-            artifact_path="",
+            artifact_path='',
             content_hash=content_hash,
-            cursor=f"offset:{total_bytes}",
-            suggested_next_action="full content available in preview",
+            cursor=f'offset:{total_bytes}',
+            suggested_next_action='full content available in preview',
         )
 
     # Large content -- persist artifact, keep preview.
@@ -109,33 +109,31 @@ def store_long_result(
     artifact_dir.mkdir(parents=True, exist_ok=True)
     secure_audit_dir(artifact_dir)
 
-    artifact_file = artifact_dir / f"{_safe_name(tool_call_id)}.txt"
+    artifact_file = artifact_dir / f'{_safe_name(tool_call_id)}.txt'
     atomic_write_text(artifact_file, content)
     secure_audit_file(artifact_file)
 
     preview_data, preview_actual_bytes = _safe_utf8_truncate(
         content_bytes, max_preview_bytes
     )
-    preview = preview_data.decode("utf-8")
+    preview = preview_data.decode('utf-8')
 
     return LongResultEnvelope(
         content_type=content_type,
         preview=preview,
         truncated=True,
         total_bytes=total_bytes,
-        preview_bytes=len(preview.encode("utf-8")),
-        artifact_path=str(
-            artifact_file.relative_to(workspace_root)
-        ),
+        preview_bytes=len(preview.encode('utf-8')),
+        artifact_path=str(artifact_file.relative_to(workspace_root)),
         content_hash=content_hash,
-        cursor=f"offset:{len(preview.encode('utf-8'))}",
+        cursor=f'offset:{len(preview.encode("utf-8"))}',
         suggested_next_action=(
             f"readback_artifact(workspace_root, '{_rel_path(workspace_root, artifact_file)}', cursor='{_cursor_str(len(preview.encode('utf-8')))}')"
         ),
     )
 
 
-_ARTIFACT_STORE_REL = ".teaagent/artifacts/tool-results"
+_ARTIFACT_STORE_REL = '.teaagent/artifacts/tool-results'
 
 
 def _validate_artifact_path(workspace_root: Path, artifact_path: str) -> Path:
@@ -146,13 +144,13 @@ def _validate_artifact_path(workspace_root: Path, artifact_path: str) -> Path:
     """
     if Path(artifact_path).is_absolute():
         raise ValueError(
-            f"absolute path not allowed in readback_artifact: {artifact_path}"
+            f'absolute path not allowed in readback_artifact: {artifact_path}'
         )
     resolved = (workspace_root / artifact_path).resolve()
     store_root = (workspace_root / _ARTIFACT_STORE_REL).resolve()
-    if not str(resolved).startswith(str(store_root) + "/") and resolved != store_root:
+    if not str(resolved).startswith(str(store_root) + '/') and resolved != store_root:
         raise ValueError(
-            f"path outside artifact store ({_ARTIFACT_STORE_REL}/): {artifact_path}"
+            f'path outside artifact store ({_ARTIFACT_STORE_REL}/): {artifact_path}'
         )
     return resolved
 
@@ -180,17 +178,17 @@ def readback_artifact(
         Maximum bytes to return (default 50KB).
     """
     if max_bytes <= 0:
-        raise ValueError(f"max_bytes must be positive, got {max_bytes}")
+        raise ValueError(f'max_bytes must be positive, got {max_bytes}')
     full_path = _validate_artifact_path(workspace_root, artifact_path)
     content_bytes = full_path.read_bytes()
 
     offset = _parse_offset(cursor)
     if offset < 0:
-        raise ValueError(f"cursor offset must be >= 0, got {offset}")
+        raise ValueError(f'cursor offset must be >= 0, got {offset}')
     chunk_data, _ = _safe_utf8_truncate(
         content_bytes[offset : offset + max_bytes], max_bytes
     )
-    return chunk_data.decode("utf-8")
+    return chunk_data.decode('utf-8')
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +197,7 @@ def readback_artifact(
 
 
 def _sha256_hex(data: bytes) -> str:
-    return f"sha256:{hashlib.sha256(data).hexdigest()}"
+    return f'sha256:{hashlib.sha256(data).hexdigest()}'
 
 
 def _safe_utf8_truncate(data: bytes, max_bytes: int) -> tuple[bytes, int]:
@@ -213,20 +211,25 @@ def _safe_utf8_truncate(data: bytes, max_bytes: int) -> tuple[bytes, int]:
     truncated = data[:max_bytes]
     while truncated:
         try:
-            truncated.decode("utf-8")
+            truncated.decode('utf-8')
             return truncated, len(truncated)
         except UnicodeDecodeError:
             truncated = truncated[:-1]
-    return b"", 0
+    return b'', 0
 
 
 def _artifact_dir(workspace_root: Path, run_id: str) -> Path:
-    return workspace_root / ".teaagent" / "artifacts" / "tool-results" / _safe_name(run_id)
+    return (
+        workspace_root / '.teaagent' / 'artifacts' / 'tool-results' / _safe_name(run_id)
+    )
 
 
 def _safe_name(identifier: str) -> str:
     """Strip characters that could cause path traversal / ambiguity."""
-    return "".join(ch for ch in identifier if ch.isalnum() or ch in {"-", "_"}) or "unnamed"
+    return (
+        ''.join(ch for ch in identifier if ch.isalnum() or ch in {'-', '_'})
+        or 'unnamed'
+    )
 
 
 def _rel_path(workspace_root: Path, absolute: Path) -> str:
@@ -234,15 +237,15 @@ def _rel_path(workspace_root: Path, absolute: Path) -> str:
 
 
 def _cursor_str(offset: int) -> str:
-    return f"offset:{offset}"
+    return f'offset:{offset}'
 
 
 def _parse_offset(cursor: str | None) -> int:
     if cursor is None:
         return 0
-    if cursor.startswith("offset:"):
+    if cursor.startswith('offset:'):
         try:
-            return int(cursor[len("offset:"):])
+            return int(cursor[len('offset:') :])
         except ValueError:
             return 0
     return 0

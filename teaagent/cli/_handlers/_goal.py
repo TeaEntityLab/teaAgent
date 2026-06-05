@@ -19,13 +19,15 @@ def goal_list_command(args: argparse.Namespace) -> int:
     goals = store.list()
     result = []
     for g in goals:
-        result.append({
-            'goal_id': g.goal_id,
-            'objective': _truncate(g.objective, 60),
-            'status': g.status,
-            'cost_cents': g.cost_cents,
-            'updated_at': g.updated_at,
-        })
+        result.append(
+            {
+                'goal_id': g.goal_id,
+                'objective': _truncate(g.objective, 60),
+                'status': g.status,
+                'cost_cents': g.cost_cents,
+                'updated_at': g.updated_at,
+            }
+        )
     print_json(result)
     return 0
 

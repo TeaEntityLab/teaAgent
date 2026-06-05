@@ -238,7 +238,11 @@ class SubagentManager:
             else self._parent_config.permission_mode
         )
         parent_mode_str = str(
-            getattr(self._parent_config.permission_mode, 'value', self._parent_config.permission_mode)
+            getattr(
+                self._parent_config.permission_mode,
+                'value',
+                self._parent_config.permission_mode,
+            )
         )
         if (
             sub_def is None or sub_def.permission_mode is None

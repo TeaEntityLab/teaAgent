@@ -33,8 +33,11 @@ def test_run_summary_resumable_for_running_run():
         audit.record('run_started', 'run-r', task='in-progress task')
         store.logger_for_result(
             RunResult(
-                run_id='run-r', final_answer=None,
-                iterations=1, tool_calls=0, status='running',
+                run_id='run-r',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
+                status='running',
             ),
             audit,
         )
@@ -48,13 +51,19 @@ def test_run_summary_resumable_for_paused_run():
         store = RunStore(tmp)
         audit = store.audit_logger()
         audit.record('run_started', 'run-p', task='write')
-        audit.record('run_paused', 'run-p',
-                     status='pending_approval',
-                     approval={'call_id': 'write-1'})
+        audit.record(
+            'run_paused',
+            'run-p',
+            status='pending_approval',
+            approval={'call_id': 'write-1'},
+        )
         store.logger_for_result(
             RunResult(
-                run_id='run-p', final_answer=None,
-                iterations=1, tool_calls=0, status='pending_approval',
+                run_id='run-p',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
+                status='pending_approval',
             ),
             audit,
         )
@@ -71,8 +80,11 @@ def test_run_summary_not_resumable_for_completed_run():
         audit.record('run_completed', 'run-c', answer='ok', metadata={})
         store.logger_for_result(
             RunResult(
-                run_id='run-c', final_answer=FinalAnswer('ok'),
-                iterations=1, tool_calls=0, status='completed',
+                run_id='run-c',
+                final_answer=FinalAnswer('ok'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
             ),
             audit,
         )
@@ -89,8 +101,11 @@ def test_run_summary_not_resumable_for_failed_run():
         audit.record('run_failed', 'run-f', category='model_logic', message='x')
         store.logger_for_result(
             RunResult(
-                run_id='run-f', final_answer=None,
-                iterations=1, tool_calls=0, status='failed:model_logic',
+                run_id='run-f',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
+                status='failed:model_logic',
             ),
             audit,
         )
@@ -101,9 +116,13 @@ def test_run_summary_not_resumable_for_failed_run():
 
 def test_run_summary_to_dict_includes_resumable():
     summary = RunSummary(
-        run_id='test-id', task='test task', status='running',
-        created_at='2026-01-01T00:00:00Z', updated_at='2026-01-01T00:00:00Z',
-        path=Path('/tmp/test.jsonl'), resumable=True,
+        run_id='test-id',
+        task='test task',
+        status='running',
+        created_at='2026-01-01T00:00:00Z',
+        updated_at='2026-01-01T00:00:00Z',
+        path=Path('/tmp/test.jsonl'),
+        resumable=True,
     )
     d = summary.to_dict()
     assert 'resumable' in d
@@ -112,8 +131,11 @@ def test_run_summary_to_dict_includes_resumable():
 
 def test_run_summary_default_resumable_is_false():
     summary = RunSummary(
-        run_id='test-id', task='test task', status='completed',
-        created_at='2026-01-01T00:00:00Z', updated_at='2026-01-01T00:00:00Z',
+        run_id='test-id',
+        task='test task',
+        status='completed',
+        created_at='2026-01-01T00:00:00Z',
+        updated_at='2026-01-01T00:00:00Z',
         path=Path('/tmp/test.jsonl'),
     )
     assert summary.resumable is False
@@ -130,8 +152,11 @@ def test_background_rejects_existing_run_id_in_task_position(capsys):
         audit.record('run_completed', 'existing-run', answer='done', metadata={})
         store.logger_for_result(
             RunResult(
-                run_id='existing-run', final_answer=FinalAnswer('done'),
-                iterations=1, tool_calls=0, status='completed',
+                run_id='existing-run',
+                final_answer=FinalAnswer('done'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
             ),
             audit,
         )
@@ -153,8 +178,11 @@ def test_background_rejects_existing_run_id_in_provider_position(capsys):
         audit.record('run_completed', 'provider-run', answer='done', metadata={})
         store.logger_for_result(
             RunResult(
-                run_id='provider-run', final_answer=FinalAnswer('done'),
-                iterations=1, tool_calls=0, status='completed',
+                run_id='provider-run',
+                final_answer=FinalAnswer('done'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
             ),
             audit,
         )
@@ -215,10 +243,14 @@ def test_background_allows_legitimate_task(capsys):
             mock_bg_store_class.return_value = mock_bg_store
 
             with (
-                patch('teaagent.cli._handlers._agent._prepare_task',
-                      return_value='legitimate task string'),
-                patch('teaagent.ergonomics.background_run.build_agent_run_command',
-                      return_value='fake-command'),
+                patch(
+                    'teaagent.cli._handlers._agent._prepare_task',
+                    return_value='legitimate task string',
+                ),
+                patch(
+                    'teaagent.ergonomics.background_run.build_agent_run_command',
+                    return_value='fake-command',
+                ),
             ):
                 result = agent_run_task(args)
                 captured = capsys.readouterr()
@@ -235,6 +267,7 @@ def test_background_flag_help_text_mentions_detached_subprocess():
     subs = parser.add_subparsers(dest='agent_command', required=True)
     p = subs.add_parser('run')
     from teaagent.cli._agent_parsers import add_agent_run_arguments
+
     add_agent_run_arguments(p)
     help_text = p.format_help()
     assert 'detached subprocess' in help_text
@@ -288,10 +321,14 @@ def test_interactive_review_with_suspended_run_no_changes(capsys):
 
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run(['git', 'init'], cwd=tmp, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'],
-                       cwd=tmp, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'],
-                       cwd=tmp, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmp,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmp, capture_output=True
+        )
         (Path(tmp) / 'test.txt').write_text('initial')
         subprocess.run(['git', 'add', '.'], cwd=tmp, capture_output=True)
         subprocess.run(['git', 'commit', '-m', 'init'], cwd=tmp, capture_output=True)
@@ -299,15 +336,17 @@ def test_interactive_review_with_suspended_run_no_changes(capsys):
         tea_dir = Path(tmp) / '.teaagent'
         tea_dir.mkdir(parents=True, exist_ok=True)
         (tea_dir / 'suspension-suspended-1.json').write_text(
-            json.dumps({
-                'run_id': 'suspended-1',
-                'timestamp': __import__('time').time(),
-                'acp_version': '1.0.0',
-                'mode': 'suspended_from_repl',
-                'config': {},
-                'session_context': {'observations_count': 0, 'compaction_count': 0},
-                'targeted_files': [],
-            })
+            json.dumps(
+                {
+                    'run_id': 'suspended-1',
+                    'timestamp': __import__('time').time(),
+                    'acp_version': '1.0.0',
+                    'mode': 'suspended_from_repl',
+                    'config': {},
+                    'session_context': {'observations_count': 0, 'compaction_count': 0},
+                    'targeted_files': [],
+                }
+            )
         )
 
         result = interactive_review_mode(tmp, 'suspended-1')
@@ -323,10 +362,14 @@ def test_interactive_review_missing_suspension_file(capsys):
 
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run(['git', 'init'], cwd=tmp, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'],
-                       cwd=tmp, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'],
-                       cwd=tmp, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmp,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmp, capture_output=True
+        )
         (Path(tmp) / 'test.txt').write_text('content')
         subprocess.run(['git', 'add', '.'], cwd=tmp, capture_output=True)
         subprocess.run(['git', 'commit', '-m', 'init'], cwd=tmp, capture_output=True)
@@ -345,8 +388,11 @@ def test_resume_requires_run_started_task():
         audit.record('run_completed', 'no-task-run', answer='done', metadata={})
         store.logger_for_result(
             RunResult(
-                run_id='no-task-run', final_answer=FinalAnswer('done'),
-                iterations=1, tool_calls=0, status='completed',
+                run_id='no-task-run',
+                final_answer=FinalAnswer('done'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
             ),
             audit,
         )
@@ -362,10 +408,14 @@ def test_full_lifecycle_suspend_review_refuse_background(capsys):
 
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run(['git', 'init'], cwd=tmp, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'],
-                       cwd=tmp, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'],
-                       cwd=tmp, capture_output=True)
+        subprocess.run(
+            ['git', 'config', 'user.email', 'test@example.com'],
+            cwd=tmp,
+            capture_output=True,
+        )
+        subprocess.run(
+            ['git', 'config', 'user.name', 'Test User'], cwd=tmp, capture_output=True
+        )
         (Path(tmp) / 'test.txt').write_text('initial')
         subprocess.run(['git', 'add', '.'], cwd=tmp, capture_output=True)
         subprocess.run(['git', 'commit', '-m', 'init'], cwd=tmp, capture_output=True)
@@ -382,33 +432,48 @@ def test_full_lifecycle_suspend_review_refuse_background(capsys):
         safe_id = run_id.replace('.', '-')
         tea_dir = Path(tmp) / '.teaagent'
         (tea_dir / f'suspension-{safe_id}.json').write_text(
-            json.dumps({
-                'run_id': run_id,
-                'timestamp': __import__('time').time(),
-                'acp_version': '1.0.0',
-                'mode': 'suspended_from_repl',
-            })
+            json.dumps(
+                {
+                    'run_id': run_id,
+                    'timestamp': __import__('time').time(),
+                    'acp_version': '1.0.0',
+                    'mode': 'suspended_from_repl',
+                }
+            )
         )
 
         args = _make_background_args(tmp, task=run_id)
         result = agent_run_task(args)
         captured = capsys.readouterr()
         assert result == 2
-        assert 'suspension id' in captured.out.lower() or 'existing run id' in captured.out.lower()
+        assert (
+            'suspension id' in captured.out.lower()
+            or 'existing run id' in captured.out.lower()
+        )
 
 
 # ---- Helpers ----
 
 
-def _make_background_args(root, *, task='test task',
-                          provider='gpt', model=None):
+def _make_background_args(root, *, task='test task', provider='gpt', model=None):
     return argparse.Namespace(
-        root=root, task=task, provider=provider, model=model,
+        root=root,
+        task=task,
+        provider=provider,
+        model=model,
         background=True,
-        route_model=False, max_iterations=10, max_tool_calls=10,
-        clarify=False, allow_destructive=False, approve_call_id=[],
-        hitl_approval=False, permission_mode='prompt',
-        subagent=False, max_subagent_depth=1, heartbeat=0.0,
-        code_analysis=False, context_profile='balanced',
+        route_model=False,
+        max_iterations=10,
+        max_tool_calls=10,
+        clarify=False,
+        allow_destructive=False,
+        approve_call_id=[],
+        hitl_approval=False,
+        permission_mode='prompt',
+        subagent=False,
+        max_subagent_depth=1,
+        heartbeat=0.0,
+        code_analysis=False,
+        context_profile='balanced',
         max_estimated_cost_cents=0,
     )

@@ -868,8 +868,8 @@ def validate_docs_consistency(
             errors.extend(validate_roadmap(roadmap_status_doc_path))
         except ImportError:
             errors.append(
-                "Cannot import validate_control_loop_freshness; "
-                "control-loop freshness check skipped."
+                'Cannot import validate_control_loop_freshness; '
+                'control-loop freshness check skipped.'
             )
     else:
         errors.append(f'Roadmap status doc not found: {roadmap_status_doc_path}')
@@ -993,27 +993,27 @@ def validate_doc_cross_references(
     errors: list[str] = []
 
     CURRENT_TRUTH_DOCS = (
-        repo_root / "README.md",
-        repo_root / "docs" / "INDEX.md",
-        repo_root / "docs" / "USAGE.md",
-        repo_root / "docs" / "cli.md",
-        repo_root / "docs" / "acceptance.md",
-        repo_root / "docs" / "roadmap-status.md",
-        repo_root / "docs" / "daily-driver-current-status.md",
-        repo_root / "docs" / "release-checklist.md",
-        repo_root / "docs" / "backlog-priority.md",
-        repo_root / "docs" / "maturity-matrix.md",
-        repo_root / "docs" / "terminology.md",
-        repo_root / "docs" / "architecture.md",
+        repo_root / 'README.md',
+        repo_root / 'docs' / 'INDEX.md',
+        repo_root / 'docs' / 'USAGE.md',
+        repo_root / 'docs' / 'cli.md',
+        repo_root / 'docs' / 'acceptance.md',
+        repo_root / 'docs' / 'roadmap-status.md',
+        repo_root / 'docs' / 'daily-driver-current-status.md',
+        repo_root / 'docs' / 'release-checklist.md',
+        repo_root / 'docs' / 'backlog-priority.md',
+        repo_root / 'docs' / 'maturity-matrix.md',
+        repo_root / 'docs' / 'terminology.md',
+        repo_root / 'docs' / 'architecture.md',
     )
 
-    LINK_PATTERN = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+    LINK_PATTERN = re.compile(r'\[([^\]]*)\]\(([^)]+)\)')
 
     for doc_path in CURRENT_TRUTH_DOCS:
         if not doc_path.is_file():
             continue
 
-        text = doc_path.read_text(encoding="utf-8")
+        text = doc_path.read_text(encoding='utf-8')
         doc_dir = doc_path.parent
         rel = doc_path.relative_to(repo_root)
 
@@ -1021,17 +1021,17 @@ def validate_doc_cross_references(
             target = match.group(2)
 
             # Skip external URLs and mailto
-            if target.startswith(("http://", "https://", "mailto:")):
+            if target.startswith(('http://', 'https://', 'mailto:')):
                 continue
 
             # Resolve anchor-only links relative to current doc
-            if target.startswith("#"):
+            if target.startswith('#'):
                 continue
 
             # Split anchor from path
-            anchor = ""
-            if "#" in target:
-                target, anchor = target.split("#", 1)
+            anchor = ''
+            if '#' in target:
+                target, anchor = target.split('#', 1)
 
             # Skip if only anchor remains (e.g. "#section" already handled)
             if not target:
@@ -1047,16 +1047,15 @@ def validate_doc_cross_references(
                 continue
 
             if not target_path.exists():
-
                 errors.append(
-                    f"Broken cross-reference in {rel}: "
-                    f"[{match.group(1)}]({target}) → "
-                    f"{target_path.relative_to(repo_root)} (not found)"
+                    f'Broken cross-reference in {rel}: '
+                    f'[{match.group(1)}]({target}) → '
+                    f'{target_path.relative_to(repo_root)} (not found)'
                 )
                 errors.append(
-                    f"Broken cross-reference in {rel}: "
-                    f"[{match.group(1)}]({target}) → "
-                    f"{target_path.relative_to(repo_root)} (not found)"
+                    f'Broken cross-reference in {rel}: '
+                    f'[{match.group(1)}]({target}) → '
+                    f'{target_path.relative_to(repo_root)} (not found)'
                 )
 
     return errors

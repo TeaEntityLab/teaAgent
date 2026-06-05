@@ -97,7 +97,7 @@ def _load_env_file(root: str | Path) -> None:
         line = raw_line.strip()
         if not line.startswith('export '):
             continue
-        assignment = line[len('export '):]
+        assignment = line[len('export ') :]
         key, sep, raw_value = assignment.partition('=')
         if not sep:
             continue

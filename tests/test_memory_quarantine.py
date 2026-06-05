@@ -99,11 +99,13 @@ class AutoCurateMemoryQuarantineTests(unittest.TestCase):
             quarantined_entries = catalog.list_quarantined(limit=10)
 
             self.assertEqual(
-                len(main_entries), 0,
+                len(main_entries),
+                0,
                 'Auto-curated memory should NOT go to main catalog',
             )
             self.assertGreater(
-                len(quarantined_entries), 0,
+                len(quarantined_entries),
+                0,
                 'Auto-curated memory should go to quarantine',
             )
 
@@ -147,7 +149,8 @@ class AutoCurateMemoryQuarantineTests(unittest.TestCase):
 
             quarantined_entries = MemoryCatalog(root).list_quarantined(limit=10)
             self.assertEqual(
-                len(quarantined_entries), 1,
+                len(quarantined_entries),
+                1,
                 'Duplicate auto-curated summary should be skipped',
             )
 
@@ -240,10 +243,12 @@ class AuditEventEmissionTests(unittest.TestCase):
             self.assertEqual(len(promote_events), 1)
             self.assertEqual(promote_events[0].run_id, run_id)
             self.assertEqual(
-                promote_events[0].payload.get('memory_id'), entry.memory_id,
+                promote_events[0].payload.get('memory_id'),
+                entry.memory_id,
             )
             self.assertEqual(
-                promote_events[0].payload.get('attestation'), 'operator-approved',
+                promote_events[0].payload.get('attestation'),
+                'operator-approved',
             )
 
             main_entries = catalog.list(limit=10)
