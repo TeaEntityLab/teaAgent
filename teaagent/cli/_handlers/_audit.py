@@ -11,6 +11,7 @@ from teaagent.audit_chain import verify_audit_chain
 from teaagent.audit_export import export_compliance_bundle, write_compliance_bundle
 from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
+from teaagent.ssh_signatures import sign_message_ssh
 
 
 def audit_list_command(args: argparse.Namespace) -> int:
@@ -129,52 +130,29 @@ def audit_verify_command(args: argparse.Namespace) -> int:
             )
             return 1
 
+        # Reject public keys for signing
+        if key_path.suffix == '.pub':
+            print_json(
+                {
+                    'status': 'error',
+                    'message': f'Cannot sign with public key: {key_path}. Provide a private key.',
+                }
+            )
+            return 1
+
         print(f'[Attesting...] Generating provenance signature using {key_path}...')
 
         try:
             # Read the audit log content
             audit_content = audit_log_path.read_text(encoding='utf-8')
 
-            # Generate signature using SSH key (ssh-keygen -Y sign)
-            if key_path.suffix in ['.pub', '']:
-                # SSH key signing
-                proc = subprocess.run(
-                    [
-                        'ssh-keygen',
-                        '-Y',
-                        'sign',
-                        '-f',
-                        str(key_path),
-                        '-n',
-                        'teaagent-audit',
-                        '/dev/stdin',
-                    ],
-                    input=audit_content.encode('utf-8'),
-                    capture_output=True,
+            # Generate signature using SSH key or GPG
+            if key_path.suffix == '' or 'ssh' in key_path.name.lower():
+                # SSH key signing - use the existing helper
+                signature_content = sign_message_ssh(
+                    key_path, audit_content, namespace='teaagent-audit'
                 )
-
-                if proc.returncode != 0:
-                    print_json(
-                        {
-                            'status': 'error',
-                            'message': f'Signature failed: {proc.stderr.decode()}',
-                        }
-                    )
-                    return 1
-
-                # Extract signature from ssh-keygen output
-                signature_output = proc.stdout.decode()
-                signature_lines = [
-                    line
-                    for line in signature_output.split('\n')
-                    if line.startswith('-----BEGIN')
-                ]
-                if signature_lines:
-                    signature_content = '\n'.join(signature_lines)
-                    signature_path.write_text(signature_content, encoding='utf-8')
-                else:
-                    # Fallback: write raw output
-                    signature_path.write_text(signature_output, encoding='utf-8')
+                signature_path.write_text(signature_content, encoding='utf-8')
             else:
                 # GPG key signing
                 proc = subprocess.run(

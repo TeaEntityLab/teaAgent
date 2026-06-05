@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
@@ -1111,6 +1112,57 @@ class CLITests(unittest.TestCase):
             self.assertIn('events', result)
             # Chain validation should pass with real hashes
             self.assertTrue(result['chain_valid'])
+
+    def test_audit_verify_signature_rejects_public_key(self) -> None:
+        """Test that audit verify --signature rejects .pub keys."""
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / '.teaagent' / 'audit.jsonl'
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text('{"event_id": "1", "event_type": "test"}', encoding='utf-8')
+
+            pub_key_path = Path(tmp) / 'id_rsa.pub'
+            pub_key_path.write_text('ssh-rsa AAAAB...', encoding='utf-8')
+
+            verify_output = io.StringIO()
+            with redirect_stdout(verify_output):
+                verify_code = main(['audit', 'verify', '--root', tmp, '--signature', str(pub_key_path)])
+            output = verify_output.getvalue()
+
+            self.assertEqual(verify_code, 1)
+            # Parse JSON from the output (it's the last line)
+            json_line = output.strip().split('\n')[-1]
+            result = json.loads(json_line)
+            self.assertEqual(result['status'], 'error')
+            self.assertIn('public key', result['message'].lower())
+
+    def test_audit_verify_signature_uses_ssh_helper(self) -> None:
+        """Test that audit verify --signature uses the SSH signature helper."""
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / '.teaagent' / 'audit.jsonl'
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text('{"event_id": "1", "event_type": "test"}', encoding='utf-8')
+
+            private_key_path = Path(tmp) / 'id_rsa'
+            private_key_path.write_text('private key content', encoding='utf-8')
+
+            # Mock the SSH signature helper to return a valid signature
+            with patch('teaagent.cli._handlers._audit.sign_message_ssh') as mock_sign:
+                mock_sign.return_value = '-----BEGIN SIGNATURE-----\ntest signature\n-----END SIGNATURE-----'
+
+                verify_output = io.StringIO()
+                with redirect_stdout(verify_output):
+                    verify_code = main(['audit', 'verify', '--root', tmp, '--signature', str(private_key_path)])
+                output = verify_output.getvalue()
+
+                self.assertEqual(verify_code, 0)
+                # Parse JSON from the output (it's the last line)
+                json_line = output.strip().split('\n')[-1]
+                result = json.loads(json_line)
+                self.assertEqual(result['status'], 'valid')
+                # Verify the SSH helper was called with correct namespace
+                mock_sign.assert_called_once()
+                call_args = mock_sign.call_args
+                self.assertEqual(call_args[1]['namespace'], 'teaagent-audit')
 
 
 if __name__ == '__main__':

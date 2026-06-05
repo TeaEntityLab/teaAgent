@@ -368,7 +368,12 @@ class AuditLogger:
 
             try:
                 with file_lock(path):
-                    # Use in-memory _prev_hash instead of disk read for performance
+                    # Read _prev_hash under file_lock to prevent race
+                    # SAFETY: We read _prev_hash without self._lock here because:
+                    # 1. _prev_hash is only written here (atomic string assignment)
+                    # 2. We're inside file_lock which serializes all writes
+                    # 3. The stale read risk is acceptable - it would just cause
+                    #    a hash mismatch that would be caught by verification
                     prev = self._prev_hash
 
                     # Encrypt payload for L3
@@ -409,8 +414,12 @@ class AuditLogger:
                     if not self._file_chmod_done:
                         secure_audit_file(path)
                         self._file_chmod_done = True
-                with self._lock:
+
+                    # Update _prev_hash before releasing file_lock to prevent race
+                    # Atomic string assignment doesn't need self._lock
                     self._prev_hash = current_hash
+
+                with self._lock:
                     self._disk_error = None
                     self._last_disk_error_time = 0.0
             except OSError as exc:

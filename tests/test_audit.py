@@ -324,6 +324,11 @@ class AuditLoggerTests(unittest.TestCase):
             lines = path.read_text(encoding='utf-8').strip().split('\n')
             self.assertEqual(len(lines), 5)
 
+            # Verify chain integrity is maintained under concurrent writes
+            from teaagent.audit_chain import verify_audit_chain
+            result = verify_audit_chain(path)
+            self.assertTrue(result.valid, f'Chain validation failed: {result.error}')
+
 
 class UtcNowTests(unittest.TestCase):
     def test_returns_isoformat_string(self) -> None:

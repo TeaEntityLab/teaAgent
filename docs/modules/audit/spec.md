@@ -33,14 +33,16 @@ Provides tamper-evident, append-only audit logging with SHA-256 hash chaining, H
 
 record(event_type, run_id, **payload)
   ├── apply_audit_level(payload)
-  ├── redact_audit_payload(...)
+  ├── if audit_level != L3: redact_audit_payload(...)
   ├── [lock] append to self.events
   └── [file_lock(path)]
-        ├── last_chain_hash(path) → prev
+        ├── _prev_hash → prev (in-memory, not disk read)
+        ├── if audit_level == L3: encrypt payload
         ├── compute SHA-256 → current_hash
         ├── compute HMAC → chain_hmac
         ├── append JSON line to file
         ├── fsync()
+        ├── _prev_hash = current_hash (update before releasing lock)
         └── secure_audit_file(path)
   └── fan-out to sinks
 ```
@@ -50,7 +52,7 @@ record(event_type, run_id, **payload)
 - `events[i].prev_hash == sha256(canonical(events[i-1]))` for all i > 0
 - `events[0].prev_hash == "genesis"`
 - Audit file permissions never exceed `0o600`
-- `self._lock` and `file_lock` are never held simultaneously
+- `_prev_hash` is updated under `file_lock` to prevent race conditions in concurrent writes
 - Redaction runs before persistence at all non-L3 audit levels (L0-L2); L3 skips redaction
 
 ## Known Caveats
