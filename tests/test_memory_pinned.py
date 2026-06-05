@@ -329,7 +329,7 @@ class TestFileWatcher:
         """Test starting and stopping the file watcher."""
         from teaagent.memory.file_watcher import FileWatcher
 
-        def test_callback(file_path: str, event_type: str) -> None:
+        def _dummy_callback(file_path: str, event_type: str) -> None:
             pass
 
         class DummyObserver:
@@ -356,7 +356,7 @@ class TestFileWatcher:
         with patch('teaagent.memory.file_watcher.Observer', DummyObserver):
             watcher = FileWatcher(
                 root=temp_root,
-                callback=test_callback,
+                callback=_dummy_callback,
             )
 
             # Start watcher
@@ -375,12 +375,12 @@ class TestFileWatcher:
         """Test updating the set of watched files."""
         from teaagent.memory.file_watcher import FileWatcher
 
-        def test_callback(file_path: str, event_type: str) -> None:
+        def _dummy_callback(file_path: str, event_type: str) -> None:
             pass
 
         watcher = FileWatcher(
             root=temp_root,
-            callback=test_callback,
+            callback=_dummy_callback,
         )
 
         # Update watched files

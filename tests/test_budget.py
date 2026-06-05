@@ -60,7 +60,8 @@ class RunBudgetTests(unittest.TestCase):
         """0 cap allows exactly zero cost."""
         budget = RunBudget(max_estimated_cost_cents=0)
         with patch('teaagent.budget.estimate_cost_preflight', return_value=0):
-            budget.check_cost_preflight('gpt', 'gpt-4o-mini', 100, 10)
+            result = budget.check_cost_preflight('gpt', 'gpt-4o-mini', 100, 10)
+        self.assertIsNone(result)
 
     def test_budget_is_frozen(self) -> None:
         budget = RunBudget()
