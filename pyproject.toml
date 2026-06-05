@@ -45,7 +45,7 @@ code-analysis = [
     "tree-sitter-language-pack>=1.0.0",
 ]
 graphqlite = [
-    "graphqlite>=0.4.4",
+    "graphqlite>=0.6.0",
     "pysqlite3>=0.6.0",
 ]
 playwright = [
@@ -91,7 +91,7 @@ github = [
     "PyGithub>=2.0.0",
 ]
 dev = [
-    "graphqlite>=0.4.4",
+    "graphqlite>=0.6.0",
     "pysqlite3>=0.6.0",
     "cryptography>=48.0.0",
     "watchdog>=3.0.0",
