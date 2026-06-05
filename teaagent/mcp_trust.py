@@ -49,6 +49,22 @@ class MCPTrustPolicy:
             },
         }
 
+    def to_public_dict(self) -> dict[str, Any]:
+        return {
+            'version': self.version,
+            'allowed_tools': list(self.allowed_tools),
+            'denied_tools': list(self.denied_tools),
+            'default_ttl_seconds': self.default_ttl_seconds,
+            'servers': {
+                name: {
+                    'allowed_tools': list(server.allowed_tools),
+                    'denied_tools': list(server.denied_tools),
+                    'expires_at': server.expires_at,
+                }
+                for name, server in self.servers.items()
+            },
+        }
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> 'MCPTrustPolicy':
         servers: dict[str, MCPServerTrust] = {}
