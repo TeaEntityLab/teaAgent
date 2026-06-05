@@ -30,11 +30,11 @@ class EndToEndTests(unittest.TestCase):
             audit = store.audit_logger()
 
             result = run_chat_agent(
-                task='read hello',
-                adapter=adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     root, max_iterations=3, max_tool_calls=2
                 ),
+                'read hello',
+                adapter=adapter,
                 audit=audit,
             )
             store.logger_for_result(result, audit)
@@ -57,24 +57,25 @@ class EndToEndTests(unittest.TestCase):
             audit = store.audit_logger()
 
             result = run_chat_agent(
-                task='write file',
-                adapter=adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     root, max_iterations=2, max_tool_calls=1
                 ),
+                'write file',
+                adapter=adapter,
                 audit=audit,
             )
             store.logger_for_result(result, audit)
 
             resumed = run_chat_agent(
-                task='write file',
-                adapter=FakeAdapter(['{"type":"final","content":"resumed"}']),
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     root,
                     allow_destructive=True,
                     max_iterations=2,
                     max_tool_calls=2,
                 ),
+                'write file',
+                adapter=FakeAdapter(['{"type":"final","content":"resumed"}']),
+                audit=audit,
                 initial_observations=store.observations_for_run(result.run_id),
             )
 

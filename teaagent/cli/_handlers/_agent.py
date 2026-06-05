@@ -665,9 +665,9 @@ def _execute_agent_task(
         validation_profile=_resolve_validation_profile(args),
     )
     result = run_chat_agent(
-        task=task,
+        config,
+        task,
         adapter=adapter,
-        config=config,
         audit=audit,
         task_spec=task_spec,
         initial_observations=initial_observations,

@@ -29,12 +29,12 @@ class _Adapter:
 def test_code_analysis_prompt_injection_smoke(tmp_path):
     adapter = _Adapter()
     result = run_chat_agent(
-        task='Inspect src/app.py and report warnings',
-        adapter=adapter,
-        config=ChatAgentConfig.from_root(
+        ChatAgentConfig.from_root(
             tmp_path,
             code_analysis_config=CodeAnalysisConfig.from_root(tmp_path, enabled=True),
         ),
+        'Inspect src/app.py and report warnings',
+        adapter=adapter,
     )
 
     assert result.status == 'completed'

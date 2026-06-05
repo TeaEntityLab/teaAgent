@@ -17,6 +17,8 @@ class TestFileLock:
         p.write_text('hi')
         with file_lock(p):
             pass
+        # Verify that the file still exists after lock
+        assert p.exists()
 
     def test_lock_creates_parent_dir(self, tmp_path):
         p = tmp_path / 'sub' / 'nested.txt'

@@ -57,16 +57,20 @@ class SubagentLineageTests(unittest.TestCase):
                 )
 
             run_mock.assert_called_once()
-            call_kwargs = run_mock.call_args.kwargs
+            call_args = run_mock.call_args.args
+            # First positional arg is config
+            child_config = call_args[0]
             self.assertEqual(
-                call_kwargs['config'].max_iterations,
+                child_config.max_iterations,
                 2,
                 'child budget should inherit per-call overrides',
             )
             self.assertEqual(
-                call_kwargs['config'].max_tool_calls,
+                child_config.max_tool_calls,
                 1,
             )
+            # initial_context_extra is passed as keyword arg
+            call_kwargs = run_mock.call_args.kwargs
             self.assertEqual(
                 call_kwargs['initial_context_extra']['subagent_lineage'][
                     'parent_run_id'

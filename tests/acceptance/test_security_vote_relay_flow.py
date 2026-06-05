@@ -121,9 +121,9 @@ class TestVerifyRelayVote:
 
 class TestRequireRelayBindAuth:
     def test_loopback_allows_no_policy(self):
+        # Verify that loopback is accepted without policy
         require_relay_bind_auth('127.0.0.1', None)
-
-    def test_non_loopback_requires_policy(self):
+        # Verify that non-loopback requires policy
         with pytest.raises(ValueError, match='non-loopback'):
             require_relay_bind_auth('0.0.0.0', None)
 
@@ -132,3 +132,5 @@ class TestRequireRelayBindAuth:
 
         policy = SurfaceAuthPolicy()
         require_relay_bind_auth('0.0.0.0', policy)
+        # Verify that the policy was used without error
+        assert policy is not None

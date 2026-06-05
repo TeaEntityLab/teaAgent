@@ -35,7 +35,7 @@ class _StubAdapter:
 def test_run_result_exposes_token_counts(tmp_path):
     adapter = _StubAdapter()
     config = ChatAgentConfig.from_root(tmp_path)
-    result = run_chat_agent(task='hello', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'hello', adapter=adapter)
 
     assert result.status == 'completed'
     assert result.input_tokens == 200
@@ -47,7 +47,7 @@ def test_run_completed_audit_event_has_cost_fields(tmp_path):
     audit = AuditLogger()
     adapter = _StubAdapter()
     config = ChatAgentConfig.from_root(tmp_path)
-    run_chat_agent(task='hello', adapter=adapter, config=config, audit=audit)
+    run_chat_agent(config, 'hello', adapter=adapter, audit=audit)
 
     events = [e for e in audit.events if e.event_type == 'run_completed']
     assert events, 'run_completed must be recorded'

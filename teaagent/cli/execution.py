@@ -192,9 +192,9 @@ class DefaultCommandExecutor(CommandExecutor):
 
         # Execute the agent
         result = run_chat_agent(
-            task=context.task,
+            context.config,
+            context.task,
             adapter=context.adapter,
-            config=context.config,
             audit=context.audit,
             task_spec=context.task_spec,
             initial_observations=context.initial_observations,

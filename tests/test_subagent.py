@@ -25,9 +25,9 @@ class SubagentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='parent task',
+                ChatAgentConfig.from_root(tmp, enable_subagent=True),
+                'parent task',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp, enable_subagent=True),
             )
 
             self.assertEqual(result.status, 'completed')
@@ -45,11 +45,11 @@ class SubagentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='parent',
-                adapter=adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     tmp, enable_subagent=True, max_subagent_depth=1
                 ),
+                'parent',
+                adapter=adapter,
             )
 
             self.assertEqual(result.status, 'completed')
@@ -63,9 +63,9 @@ class SubagentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='parent',
+                ChatAgentConfig.from_root(tmp),
+                'parent',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp),
             )
 
             self.assertNotEqual(result.status, 'completed')

@@ -73,6 +73,9 @@ class AuditLoggerTests(unittest.TestCase):
         self.assertEqual(event.payload, {'key': 'value'})
         self.assertEqual(len(logger.events), 1)
         self.assertIs(logger.events[0], event)
+        # Verify that the event has a unique ID and timestamp
+        self.assertTrue(len(event.event_id) > 0)
+        self.assertTrue(len(event.created_at) > 0)
 
     def test_record_multiple_events_in_order(self) -> None:
         logger = AuditLogger()
@@ -82,6 +85,8 @@ class AuditLoggerTests(unittest.TestCase):
         self.assertEqual(len(logger.events), 2)
         self.assertEqual(logger.events[0].event_type, 'start')
         self.assertEqual(logger.events[1].event_type, 'end')
+        # Verify that events have different IDs
+        self.assertNotEqual(logger.events[0].event_id, logger.events[1].event_id)
 
     def test_sink_receives_every_recorded_event(self) -> None:
         logger = AuditLogger()
@@ -92,6 +97,9 @@ class AuditLoggerTests(unittest.TestCase):
         e2 = logger.record('b', 'r1')
 
         self.assertEqual(received, [e1, e2])
+        # Verify that the sink received the same objects
+        self.assertIs(received[0], e1)
+        self.assertIs(received[1], e2)
 
     def test_multiple_sinks_receive_events(self) -> None:
         logger = AuditLogger()
@@ -106,6 +114,8 @@ class AuditLoggerTests(unittest.TestCase):
         self.assertEqual(len(sink2), 1)
         self.assertIs(sink1[0], event)
         self.assertIs(sink2[0], event)
+        # Verify that both sinks received the same event
+        self.assertEqual(sink1[0].event_id, sink2[0].event_id)
 
     def test_persists_events_to_jsonl_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -124,6 +134,8 @@ class AuditLoggerTests(unittest.TestCase):
             self.assertEqual(e1['payload'], {'a': 1})
             self.assertEqual(e2['event_type'], 'e2')
             self.assertEqual(e2['payload'], {'b': 2})
+            # Verify that events have different IDs
+            self.assertNotEqual(e1['event_id'], e2['event_id'])
 
     def test_threaded_persistence_writes_complete_lines(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -146,6 +158,9 @@ class AuditLoggerTests(unittest.TestCase):
             self.assertEqual(len(lines), 100)
             for line in lines:
                 self.assertEqual(json.loads(line)['event_type'], 'e')
+            # Verify that all events have unique IDs
+            event_ids = [json.loads(line)['event_id'] for line in lines]
+            self.assertEqual(len(set(event_ids)), 100)
 
     def test_record_redacts_sensitive_payload_keys(self) -> None:
         logger = AuditLogger()
@@ -165,6 +180,10 @@ class AuditLoggerTests(unittest.TestCase):
             event.payload['arguments']['nested']['Authorization'], AUDIT_REDACTED
         )
         self.assertEqual(event.payload['arguments']['path'], 'file.txt')
+        # Verify that the original secret is not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('sk-secret', audit_json)
+        self.assertNotIn('Bearer secret', audit_json)
 
     def test_record_redacts_sensitive_tool_argument_values(self) -> None:
         logger = AuditLogger()
@@ -186,6 +205,12 @@ class AuditLoggerTests(unittest.TestCase):
         self.assertEqual(event.payload['arguments']['old'], AUDIT_REDACTED)
         self.assertEqual(event.payload['arguments']['new'], AUDIT_REDACTED)
         self.assertEqual(event.payload['arguments']['command'], AUDIT_REDACTED)
+        # Verify that the original secrets are not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('secret file body', audit_json)
+        self.assertNotIn('previous secret', audit_json)
+        self.assertNotIn('new secret', audit_json)
+        self.assertNotIn('TOKEN=secret', audit_json)
 
     def test_record_preserves_non_argument_content(self) -> None:
         logger = AuditLogger()
@@ -193,6 +218,9 @@ class AuditLoggerTests(unittest.TestCase):
         event = logger.record('tool_call_completed', 'run-1', content='read result')
 
         self.assertEqual(event.payload['content'], 'read result')
+        # Verify that the content is not redacted
+        audit_json = event.to_json()
+        self.assertIn('read result', audit_json)
 
     def test_record_redacts_sensitive_tool_result_values(self) -> None:
         logger = AuditLogger()
@@ -219,6 +247,12 @@ class AuditLoggerTests(unittest.TestCase):
         self.assertEqual(result['matches'][0]['text'], AUDIT_REDACTED)
         self.assertEqual(result['stdout'], AUDIT_REDACTED)
         self.assertEqual(result['stderr'], AUDIT_REDACTED)
+        # Verify that the original secrets are not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('secret file body', audit_json)
+        self.assertNotIn('secret match', audit_json)
+        self.assertNotIn('secret stdout', audit_json)
+        self.assertNotIn('secret stderr', audit_json)
 
     def test_record_redacts_secret_patterns_inside_non_sensitive_strings(self) -> None:
         logger = AuditLogger()
@@ -237,6 +271,11 @@ class AuditLoggerTests(unittest.TestCase):
             event.payload['url'],
             'https://api.example?token=[redacted]&debug=true',
         )
+        # Verify that the original secrets are not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('abcdefghijklmnop', audit_json)
+        self.assertNotIn('sk-abcdef1234567890', audit_json)
+        self.assertNotIn('abcdef123456', audit_json)
 
     def test_record_redacts_jwt_tokens_in_arbitrary_strings(self) -> None:
         logger = AuditLogger()
@@ -249,6 +288,9 @@ class AuditLoggerTests(unittest.TestCase):
 
         self.assertNotIn('eyJhbGci', event.payload['error'])
         self.assertIn('[redacted-JWT]', event.payload['error'])
+        # Verify that the original JWT is not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('eyJhbGci', audit_json)
 
     def test_record_redacts_aws_access_keys_in_arbitrary_strings(self) -> None:
         logger = AuditLogger()
@@ -261,6 +303,9 @@ class AuditLoggerTests(unittest.TestCase):
 
         self.assertNotIn('AKIAIOS', event.payload['config'])
         self.assertIn(AUDIT_REDACTED, event.payload['config'])
+        # Verify that the original key is not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('AKIAIOS', audit_json)
 
     def test_record_redacts_github_pat_in_arbitrary_strings(self) -> None:
         logger = AuditLogger()
@@ -273,6 +318,9 @@ class AuditLoggerTests(unittest.TestCase):
 
         self.assertNotIn('github_pat_', event.payload['env'])
         self.assertIn(AUDIT_REDACTED, event.payload['env'])
+        # Verify that the original token is not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('github_pat_', audit_json)
 
     def test_record_truncates_large_strings(self) -> None:
         logger = AuditLogger()
@@ -285,6 +333,9 @@ class AuditLoggerTests(unittest.TestCase):
             len(event.payload['stdout']), MAX_AUDIT_STRING_LENGTH + len(AUDIT_TRUNCATED)
         )
         self.assertTrue(event.payload['stdout'].endswith(AUDIT_TRUNCATED))
+        # Verify that the original long string is not in the audit
+        audit_json = event.to_json()
+        self.assertNotIn('x' * (MAX_AUDIT_STRING_LENGTH + 1), audit_json)
 
     def test_path_parent_dirs_are_created(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -295,12 +346,17 @@ class AuditLoggerTests(unittest.TestCase):
             self.assertTrue(path.exists())
             self.assertEqual(file_mode(path.parent), AUDIT_DIR_MODE)
             self.assertEqual(file_mode(path), AUDIT_FILE_MODE)
+            # Verify that the event was written
+            lines = path.read_text(encoding='utf-8').strip().split('\n')
+            self.assertEqual(len(lines), 1)
 
     def test_in_memory_only_when_no_path(self) -> None:
         logger = AuditLogger()
         logger.record('e', 'r')
 
         self.assertEqual(len(logger.events), 1)
+        # Verify that the event has the expected type
+        self.assertEqual(logger.events[0].event_type, 'e')
 
     def test_thread_safety_concurrent_records(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

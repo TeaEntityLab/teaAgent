@@ -27,9 +27,9 @@ def test_resume_preserves_task_across_run_boundary(tmp_path: Path) -> None:
     registry = ToolRegistry()
 
     result1 = run_chat_agent(
-        task='original task',
+        ChatAgentConfig.from_root(tmp_path, permission_mode='read-only'),
+        'original task',
         adapter=adapter,
-        config=ChatAgentConfig.from_root(tmp_path, permission_mode='read-only'),
         registry=registry,
     )
     assert result1.status == 'completed'
@@ -54,9 +54,9 @@ def test_memory_auto_curated_after_completed_resume(tmp_path: Path) -> None:
         ]
     )
     result = run_chat_agent(
-        task='curate this',
+        ChatAgentConfig.from_root(tmp_path, permission_mode='read-only'),
+        'curate this',
         adapter=adapter,
-        config=ChatAgentConfig.from_root(tmp_path, permission_mode='read-only'),
         registry=ToolRegistry(),
     )
     assert result.status == 'completed'

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from teaagent.cli._output import print_json
@@ -61,7 +61,7 @@ def skill_publish_command(args: argparse.Namespace) -> int:
             skill_name=skill_name,
             skill_version=skill_version,
             skill_author=skill_author,
-            created_at=datetime.utcnow().isoformat() + 'Z',
+            created_at=datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             environment_type=args.environment_type,
             python_version=f'{sys.version_info.major}.{sys.version_info.minor}',
         )

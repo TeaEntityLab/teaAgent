@@ -814,7 +814,7 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
         # Mock run_chat_agent to capture the config it receives
         captured_configs = []
 
-        def mock_run_chat_agent(*, task, adapter, config):
+        def mock_run_chat_agent(config, task, *, adapter=None, audit=None, task_spec=None, initial_observations=None, initial_context_extra=None):
             captured_configs.append(config)
             from teaagent.runner import RunResult
 

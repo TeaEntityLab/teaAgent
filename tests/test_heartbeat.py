@@ -48,9 +48,9 @@ class HeartbeatTests(unittest.TestCase):
             audit = store.audit_logger()
 
             result = run_chat_agent(
-                task='long task',
+                ChatAgentConfig.from_root(tmp, heartbeat_seconds=0.02),
+                'long task',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp, heartbeat_seconds=0.02),
                 audit=audit,
             )
 

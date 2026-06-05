@@ -458,9 +458,9 @@ class MemoryCatalog:
             )
 
         # Check for stale entries (older than 30 days)
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
-        cutoff_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
+        cutoff_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         stale_count = 0
         for entry in main_entries:
             if entry.created_at < cutoff_date:

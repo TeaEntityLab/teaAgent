@@ -118,6 +118,8 @@ class TestApprovalManager:
             destructive=False,
             read_only=True,
         )
+        # Verify that read operations are allowed in read-only mode
+        assert mgr.permission_mode == PermissionMode.READ_ONLY
 
     def test_assert_allowed_read_only_blocks_write(self):
         mgr = ApprovalManager(permission_mode=PermissionMode.READ_ONLY)
@@ -127,6 +129,8 @@ class TestApprovalManager:
                 call_id='c1',
                 destructive=True,
             )
+        # Verify that the manager is still in read-only mode
+        assert mgr.permission_mode == PermissionMode.READ_ONLY
 
     def test_assert_allowed_workspace_write_allows_edit(self):
         mgr = ApprovalManager(permission_mode=PermissionMode.WORKSPACE_WRITE)
@@ -136,6 +140,8 @@ class TestApprovalManager:
             destructive=True,
             arguments={'path': 'foo.py'},
         )
+        # Verify that workspace_write mode allows edits
+        assert mgr.permission_mode == PermissionMode.WORKSPACE_WRITE
 
     def test_approve_once_then_assert_allowed(self):
         mgr = ApprovalManager(permission_mode=PermissionMode.PROMPT)
@@ -145,10 +151,15 @@ class TestApprovalManager:
             call_id='c1',
             destructive=True,
         )
+        # Verify that the call was approved
+        assert mgr.get_jit_state().is_call_approved('c1')
 
     def test_shutdown_does_not_raise(self):
         mgr = ApprovalManager()
         mgr.shutdown()
+        # Verify that a new manager can be created after shutdown
+        mgr2 = ApprovalManager()
+        assert mgr2 is not None
 
 
 class TestVerifySSHSignature:

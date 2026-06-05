@@ -197,9 +197,7 @@ class ACPServer:
             and adapter_supports_streaming(adapter)
         )
         result = run_chat_agent(
-            task=prompt,
-            adapter=adapter,
-            config=ChatAgentConfig.from_root(
+            ChatAgentConfig.from_root(
                 root,
                 model=model,
                 permission_mode=permission_mode,
@@ -207,6 +205,8 @@ class ACPServer:
                 on_chunk=on_chunk,
                 stream_text_only=True,
             ),
+            prompt,
+            adapter=adapter,
             audit=audit,
         )
         store.logger_for_result(result, audit)

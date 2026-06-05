@@ -90,8 +90,10 @@ class ManagedAgentRunnerAuditTests(unittest.TestCase):
 
     def test_no_audit_without_logger(self) -> None:
         log = _logger()
-        ManagedAgentRunner(_OkRuntime()).run('task')
+        result = ManagedAgentRunner(_OkRuntime()).run('task')
         log.record.assert_not_called()
+        # Verify that the task still completed without audit
+        assert result.output == 'done:task'
 
     def test_run_id_propagated_to_events(self) -> None:
         log = _logger()
@@ -115,8 +117,12 @@ class ManagedAgentRunnerAuditTests(unittest.TestCase):
 
     def test_exception_still_raised_when_logger_present(self) -> None:
         log = _logger()
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(RuntimeError) as cm:
             ManagedAgentRunner(_FailRuntime()).run('x', audit_logger=log)
+        # Verify that the error message is preserved
+        self.assertIn('exploded', str(cm.exception))
+        # Verify that audit events were still recorded
+        self.assertGreater(len(log.record.call_args_list), 0)
 
 
 class ManagedRuntimeToolContextTests(unittest.TestCase):

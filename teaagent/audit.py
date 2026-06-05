@@ -380,6 +380,8 @@ class AuditLogger:
                     payload_to_write = event.payload
                     if self._audit_level == 'L3':
                         # Encryption is required for L3 - fail closed if it fails
+                        if self._fernet is None:
+                            raise ValueError('L3 encryption not initialized')
                         try:
                             payload_json = json.dumps(event.payload, sort_keys=True)
                             encrypted_bytes = self._fernet.encrypt(payload_json.encode('utf-8'))

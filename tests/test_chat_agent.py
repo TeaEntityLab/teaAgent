@@ -47,11 +47,11 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='read hello',
-                adapter=adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     root, max_iterations=3, max_tool_calls=2
                 ),
+                'read hello',
+                adapter=adapter,
             )
 
             self.assertEqual(result.status, 'completed')
@@ -69,9 +69,9 @@ class ChatAgentTests(unittest.TestCase):
                 ]
             )
             result = run_chat_agent(
-                task='say done',
+                ChatAgentConfig.from_root(tmp),
+                'say done',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp),
             )
             self.assertEqual(result.status, 'completed')
             self.assertEqual(result.final_answer.content, 'done')
@@ -81,9 +81,9 @@ class ChatAgentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             adapter = FakeAdapter(['bad', 'still bad', 'also bad'])
             result = run_chat_agent(
-                task='say done',
+                ChatAgentConfig.from_root(tmp),
+                'say done',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp),
             )
             self.assertEqual(result.status, 'completed')
             self.assertIn('"status":"error"', result.final_answer.content)
@@ -102,9 +102,9 @@ class ChatAgentTests(unittest.TestCase):
             )
             adapter = FakeAdapter([answer, answer, answer])
             result = run_chat_agent(
-                task='can you tell me about cloudflare',
+                ChatAgentConfig.from_root(tmp),
+                'can you tell me about cloudflare',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp),
             )
 
             self.assertEqual(result.status, 'completed')
@@ -119,9 +119,9 @@ class ChatAgentTests(unittest.TestCase):
             answer = 'I need to inspect the workspace before I can answer this.'
             adapter = FakeAdapter([answer, answer, answer])
             result = run_chat_agent(
-                task='read note.txt',
+                ChatAgentConfig.from_root(tmp),
+                'read note.txt',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp),
             )
 
             self.assertEqual(result.status, 'completed')
@@ -141,14 +141,14 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='inspect diagnostics',
-                adapter=adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     tmp,
                     code_analysis_config=CodeAnalysisConfig.from_root(
                         tmp, enabled=True
                     ),
                 ),
+                'inspect diagnostics',
+                adapter=adapter,
             )
 
             self.assertEqual(result.status, 'completed')
@@ -159,14 +159,14 @@ class ChatAgentTests(unittest.TestCase):
             adapter = FakeAdapter(['{"type":"final","content":"done"}'])
 
             result = run_chat_agent(
-                task='inspect src/app.py',
-                adapter=adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     tmp,
                     code_analysis_config=CodeAnalysisConfig.from_root(
                         tmp, enabled=True
                     ),
                 ),
+                'inspect src/app.py',
+                adapter=adapter,
             )
 
             self.assertEqual(result.status, 'completed')
@@ -177,10 +177,10 @@ class ChatAgentTests(unittest.TestCase):
             adapter = FakeAdapter(['{"type":"final","content":"done"}'])
 
             result = run_chat_agent(
-                task='Update docs',
-                task_spec='Clarified task specification:\nTASK: Update docs',
+                ChatAgentConfig.from_root(tmp),
+                'Update docs',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp),
+                task_spec='Clarified task specification:\nTASK: Update docs',
             )
 
             self.assertEqual(result.status, 'completed')
@@ -196,9 +196,9 @@ class ChatAgentTests(unittest.TestCase):
             adapter = FakeAdapter(['{"type":"final","content":"done"}'])
 
             result = run_chat_agent(
-                task='docs cli clarify',
+                ChatAgentConfig.from_root(tmp),
+                'docs cli clarify',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp),
             )
 
             self.assertEqual(result.status, 'completed')
@@ -213,7 +213,9 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='write', adapter=adapter, config=ChatAgentConfig.from_root(tmp)
+                ChatAgentConfig.from_root(tmp),
+                'write',
+                adapter=adapter,
             )
 
             self.assertEqual(result.status, 'pending_approval')
@@ -229,11 +231,11 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='write',
-                adapter=adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     tmp, approval_handler=lambda _request: True
                 ),
+                'write',
+                adapter=adapter,
             )
 
             self.assertEqual(result.status, 'completed')
@@ -249,9 +251,9 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='write',
+                ChatAgentConfig.from_root(tmp, allow_destructive=True),
+                'write',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp, allow_destructive=True),
             )
 
             self.assertEqual(result.status, 'completed')
@@ -267,9 +269,9 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             result = run_chat_agent(
-                task='write',
+                ChatAgentConfig.from_root(tmp, allow_destructive=True),
+                'write',
                 adapter=adapter,
-                config=ChatAgentConfig.from_root(tmp, allow_destructive=True),
             )
 
             self.assertEqual(result.status, 'completed')
@@ -290,22 +292,22 @@ class ChatAgentTests(unittest.TestCase):
             )
 
             write_result = run_chat_agent(
-                task='write',
-                adapter=write_adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     tmp,
                     permission_mode=PermissionMode.WORKSPACE_WRITE,
                     skip_plan_check=True,
                 ),
+                'write',
+                adapter=write_adapter,
             )
             shell_result = run_chat_agent(
-                task='shell',
-                adapter=shell_adapter,
-                config=ChatAgentConfig.from_root(
+                ChatAgentConfig.from_root(
                     tmp,
                     permission_mode=PermissionMode.WORKSPACE_WRITE,
                     skip_plan_check=True,
                 ),
+                'shell',
+                adapter=shell_adapter,
             )
 
             self.assertEqual(write_result.status, 'completed')

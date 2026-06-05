@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import pytest
 
+from teaagent.workspace_tools._config import WorkspaceToolConfig
 from teaagent.workspace_tools._shell import (
     _INSPECT_EXECUTABLES,
     classify_shell_command_policy,
     run_shell_inspect,
 )
-from teaagent.workspace_tools._config import WorkspaceToolConfig
-
 
 # ---------------------------------------------------------------------------
 # Allowlist membership assertions
@@ -80,9 +79,13 @@ def test_run_shell_inspect_raises_for_cat(tmp_path):
     config = WorkspaceToolConfig(root=tmp_path)
     with pytest.raises(ValueError, match='not inspect-safe'):
         run_shell_inspect(config, {'command': 'cat README.md'})
+    # Verify that cat is not in the allowlist
+    assert 'cat' not in _INSPECT_EXECUTABLES
 
 
 def test_run_shell_inspect_raises_for_head(tmp_path):
     config = WorkspaceToolConfig(root=tmp_path)
     with pytest.raises(ValueError, match='not inspect-safe'):
         run_shell_inspect(config, {'command': 'head -n 3 README.md'})
+    # Verify that head is not in the allowlist
+    assert 'head' not in _INSPECT_EXECUTABLES

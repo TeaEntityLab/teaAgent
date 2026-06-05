@@ -122,8 +122,8 @@ class SubagentIsolationTests(unittest.TestCase):
                 worktree_path=worktree,
             )
 
-            def capture_run(**kwargs: object) -> RunResult:
-                cfg = kwargs['config']
+            def capture_run(*args: object, **kwargs: object) -> RunResult:
+                cfg = args[0]  # First positional arg is config
                 captured['child_root'] = cfg.root  # type: ignore[attr-defined]
                 return _stub_result('child-wt')
 
@@ -186,8 +186,8 @@ class SubagentIsolationTests(unittest.TestCase):
                 container_path=snapshot,
             )
 
-            def capture_run(**kwargs: object) -> RunResult:
-                cfg = kwargs['config']
+            def capture_run(*args: object, **kwargs: object) -> RunResult:
+                cfg = args[0]  # First positional arg is config
                 captured['child_root'] = cfg.root  # type: ignore[attr-defined]
                 return _stub_result('child-ds')
 

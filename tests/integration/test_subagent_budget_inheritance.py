@@ -41,7 +41,7 @@ def test_subagent_respects_max_iterations(tmp_path):
         max_tool_calls=1,
     )
     # Run a direct call; subagent internally gets max_iterations=5 as default
-    result = run_chat_agent(task='delegate something', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'delegate something', adapter=adapter)
     assert result is not None
 
 
@@ -74,9 +74,9 @@ def test_subagent_tool_not_registered_at_max_depth(tmp_path):
     registry = ToolRegistry()
     # run_chat_agent will skip register_subagent_tool when depth >= max_subagent_depth
     run_chat_agent(
-        task='deep delegate',
+        config,
+        'deep delegate',
         adapter=adapter,
-        config=config,
         registry=registry,
         depth=1,
     )
@@ -113,7 +113,7 @@ def test_subagent_jit_approval_isolation_sec06(tmp_path):
 
     # Run a parent task that would normally create JIT approvals
     # The subagent spawned inside should not inherit them
-    result = run_chat_agent(task='simple task', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'simple task', adapter=adapter)
     assert result is not None
 
     # The isolation is enforced by:

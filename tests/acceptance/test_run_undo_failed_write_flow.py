@@ -28,14 +28,14 @@ def test_failed_write_does_not_persist_undo_journal(tmp_path: Path) -> None:
     audit.add_sink(journal)
 
     result = run_chat_agent(
-        task='Try to update notes.txt',
-        adapter=adapter,
-        config=ChatAgentConfig.from_root(
+        ChatAgentConfig.from_root(
             tmp_path,
             allow_destructive=True,
             max_iterations=4,
             max_tool_calls=4,
         ),
+        'Try to update notes.txt',
+        adapter=adapter,
         audit=audit,
     )
 

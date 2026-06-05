@@ -76,7 +76,7 @@ def test_run_events_delivered_to_webhook(tmp_path):
         adapter = _StubAdapter()
         config = ChatAgentConfig.from_root(tmp_path)
         result = run_chat_agent(
-            task='hello', adapter=adapter, config=config, audit=audit
+            config, 'hello', adapter=adapter, audit=audit
         )
 
         assert result.status == 'completed'
@@ -117,7 +117,7 @@ def test_webhook_event_filter_limits_delivery(tmp_path):
         audit.add_sink(sink)
         adapter = _StubAdapter()
         config = ChatAgentConfig.from_root(tmp_path)
-        run_chat_agent(task='hello', adapter=adapter, config=config, audit=audit)
+        run_chat_agent(config, 'hello', adapter=adapter, audit=audit)
 
         types = {json.loads(r['body'])['event_type'] for r in _Collector.received}
         assert types == {'run_completed'}, f'only run_completed expected, got {types}'
@@ -132,5 +132,5 @@ def test_webhook_failure_does_not_abort_run(tmp_path):
     audit.add_sink(sink)
     adapter = _StubAdapter()
     config = ChatAgentConfig.from_root(tmp_path)
-    result = run_chat_agent(task='hello', adapter=adapter, config=config, audit=audit)
+    result = run_chat_agent(config, 'hello', adapter=adapter, audit=audit)
     assert result.status == 'completed'

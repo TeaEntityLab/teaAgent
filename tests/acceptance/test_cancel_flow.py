@@ -70,9 +70,9 @@ def test_cancel_token_stops_run_cleanly(tmp_path):
     )
 
     result = run_chat_agent(
-        task='long task',
+        config,
+        'long task',
         adapter=adapter,
-        config=config,
         registry=registry,
     )
 
@@ -111,5 +111,5 @@ def test_cancel_token_without_set_runs_normally(tmp_path):
             )
 
     config = ChatAgentConfig.from_root(tmp_path, cancel_token=cancel)
-    result = run_chat_agent(task='hello', adapter=_QuickAdapter(), config=config)
+    result = run_chat_agent(config, 'hello', adapter=_QuickAdapter())
     assert result.status == 'completed'

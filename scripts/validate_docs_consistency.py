@@ -98,6 +98,102 @@ CATALOG_REQUIRED_FIXTURES = (
     'tests/fixtures/plugin_skill_catalog/sample_plugin/plugin.json',
     'tests/fixtures/plugin_skill_catalog/external_mcp_tools.json',
 )
+
+
+def validate_test_quality(tests_dir: Path, mode: str = 'report') -> list[str]:
+    """Validate test quality by running the audit tool and checking for severe issues.
+
+    Args:
+        tests_dir: Directory containing tests
+        mode: 'report' (print findings without failing), 'strict' (fail on weak tests), 'off' (skip audit)
+
+    Returns:
+        List of error strings (empty in 'report' or 'off' mode unless audit fails)
+    """
+    errors = []
+
+    if mode == 'off':
+        return errors
+
+    # Import audit tool functions
+    sys.path.insert(0, str(_REPO_ROOT / 'scripts'))
+    try:
+        from audit_test_quality import (
+            _repo_relative,
+            collect_pytest_nodes,
+            discover_test_files,
+            scan_test_file,
+        )
+    except ImportError:
+        errors.append('audit_test_quality.py not found or not importable')
+        return errors
+
+    # Collection is required in all modes except 'off' to catch import/collection errors
+    if mode != 'off':
+        try:
+            collect_pytest_nodes(tests_dir)
+        except RuntimeError as e:
+            errors.append(f'Test quality audit failed: {e}')
+            return errors
+
+    test_files = discover_test_files(tests_dir)
+
+    try:
+        all_metrics = []
+        for test_file in test_files:
+            metrics = scan_test_file(test_file)
+            all_metrics.append(metrics)
+
+        # Check for severe issues
+        total_tests = sum(len(m.test_functions) for m in all_metrics)
+        no_assert_tests = sum(
+            sum(1 for count in m.assertion_counts.values() if count == 0)
+            for m in all_metrics
+        )
+
+        findings = []
+
+        # Warn if more than 10% of tests have no assertions
+        if total_tests > 0 and no_assert_tests / total_tests > 0.1:
+            finding = (
+                f'Test quality: {no_assert_tests}/{total_tests} tests ({no_assert_tests/total_tests*100:.1f}%) have no assertions. Threshold is 10%.'
+            )
+            findings.append(finding)
+            if mode == 'strict':
+                errors.append(finding)
+
+        # Check for new placeholder tests (tests with no assertions in security/audit paths)
+        for metrics in all_metrics:
+            if metrics.has_syntax_error:
+                continue
+
+            path_str = _repo_relative(metrics.path)
+            if 'security' in path_str or 'audit' in path_str:
+                no_assert_count = sum(1 for count in metrics.assertion_counts.values() if count == 0)
+                if no_assert_count > 0:
+                    finding = (
+                        f'Test quality: {path_str} has {no_assert_count} tests with no assertions in security/audit path.'
+                    )
+                    findings.append(finding)
+                    if mode == 'strict':
+                        errors.append(finding)
+
+        # Print findings in report mode
+        if mode == 'report' and findings:
+            print('Test quality audit findings (report mode, not failing validation):')
+            for finding in findings:
+                print(f'  {finding}')
+
+    except Exception as e:
+        error_msg = f'Test quality audit failed: {e}'
+        if mode == 'report':
+            print(f'  {error_msg}')
+        else:
+            errors.append(error_msg)
+
+    return errors
+
+
 COVERAGE_OMIT_HEADER_COLUMNS = (
     'Omit Pattern',
     'Owner',
@@ -869,23 +965,10 @@ def validate_docs_consistency(
     return errors
 
 
-def _collect_repo_test_names(repo_root: Path) -> set[str]:
-    """Return all def test_<name> function names found under tests/."""
-    names: set[str] = set()
-    tests_dir = repo_root / 'tests'
-    if not tests_dir.is_dir():
-        return names
-    for path in tests_dir.rglob('test_*.py'):
-        for m in re.finditer(r'def\s+(test_[a-z][a-z0-9_]*)', path.read_text(encoding='utf-8')):
-            names.add(m.group(1))
-    return names
-
-
 def validate_risk_register_evidence(
     risk_register_text: str,
     *,
     repo_root: Path = _REPO_ROOT,
-    check_test_names: bool = True,
 ) -> list[str]:
     """Validate that risk register rows have evidence for FIXED/P0/P1 claims.
 
@@ -901,8 +984,6 @@ def validate_risk_register_evidence(
     """
     errors: list[str] = []
     p0p1_errors: list[str] = []
-
-    known_tests = _collect_repo_test_names(repo_root) if check_test_names else set()
 
     # Extract the Fix Status block if present (provides evidence for fixed items).
     fix_status_block = ''
@@ -969,9 +1050,7 @@ def validate_risk_register_evidence(
         has_strong_evidence = has_test or has_commit
         has_evidence = has_strong_evidence or has_cross_ref
 
-        if has_strong_evidence:
-            verified += 1
-        elif has_cross_ref:
+        if has_strong_evidence or has_cross_ref:
             verified += 1
 
         # Table says OPEN but Fix Status says it's fixed → inconsistency
@@ -1024,7 +1103,6 @@ def validate_ticket_index_evidence(
       is not cited or no ACs are listed.
     """
     errors: list[str] = []
-    known_tests = _collect_repo_test_names(repo_root)
 
     total = 0
     verified = 0
@@ -1054,9 +1132,7 @@ def validate_ticket_index_evidence(
 
         # Full "Fixed" claim: require a file path or test name in the row
         has_file = bool(re.search(r'`[a-z][a-z0-9_/]+\.[a-z]+`', line))
-        has_test = bool(_TEST_NAME_IN_TEXT.search(line)) or any(
-            t in line for t in known_tests
-        )
+        has_test = bool(_TEST_NAME_IN_TEXT.search(line))
         if has_file or has_test:
             verified += 1
         else:
@@ -1124,6 +1200,18 @@ def main() -> int:
         action='store_true',
         help='Skip ticket index evidence audit.',
     )
+    parser.add_argument(
+        '--test-quality-mode',
+        choices=['report', 'strict', 'off'],
+        default='report',
+        help=(
+            'Test quality audit mode. '
+            'report: print findings without failing (default, compatible with rollout). '
+            'strict: fail validation on weak tests (future CI enforcement). '
+            'off: disable audit (local/debug only, not a normal CI path). '
+            'Rationale: Baseline weak tests are known historical debt; report mode keeps docs consistency compatible during rollout.'
+        ),
+    )
     args = parser.parse_args()
 
     errors = validate_docs_consistency(
@@ -1163,6 +1251,13 @@ def main() -> int:
             )
         else:
             errors.append(f'Ticket index not found: {ticket_index_path}')
+
+    # Test quality audit integration
+    test_quality_errors = validate_test_quality(
+        tests_dir=Path(args.acceptance_tests_dir).parent,
+        mode=args.test_quality_mode,
+    )
+    errors.extend(test_quality_errors)
 
     if errors:
         for err in errors:

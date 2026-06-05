@@ -70,11 +70,11 @@ def test_named_subagent_tool_is_registered_and_callable(tmp_path: Path):
         parent_adapter=adapter,
     )
     result = run_chat_agent(
-        task='parent task',
-        adapter=adapter,
-        config=ChatAgentConfig.from_root(
+        ChatAgentConfig.from_root(
             tmp_path, enable_subagent=True, subagent_manager=manager
         ),
+        'parent task',
+        adapter=adapter,
     )
 
     assert result.status == 'completed'

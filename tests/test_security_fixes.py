@@ -81,6 +81,14 @@ class TestRegexValidationFix:
                         'pattern': '[invalid(',  # Invalid regex
                     },
                 )
+            # Verify that valid patterns work
+            result = registry.invoke(
+                'workspace_search_text',
+                {
+                    'pattern': 'valid',
+                },
+            )
+            assert 'error' not in result
 
     def test_regex_timeout_protection(self):
         """Verify that regex operations have timeout protection."""
@@ -145,6 +153,8 @@ class TestTOCTOUFix:
                         'expected_mtime': 0.0,  # Wrong mtime
                     },
                 )
+            # Verify the file was not modified
+            assert test_file.read_text() == 'original'
 
 
 class TestSymlinkValidationFix:
@@ -295,6 +305,8 @@ class TestLineValidationFix:
                         'new': 'updated',
                     },
                 )
+            # Verify the file was not modified
+            assert test_file.read_text() == 'line1\nline2\nline3'
 
     def test_line_number_type_validation(self):
         """Verify that line number type is validated."""
@@ -316,6 +328,8 @@ class TestLineValidationFix:
                         'new': 'updated',
                     },
                 )
+            # Verify the file was not modified
+            assert test_file.read_text() == 'line1\nline2\nline3'
 
 
 class TestPathTraversalFix:
@@ -329,6 +343,11 @@ class TestPathTraversalFix:
             # Try to read file outside workspace using path traversal
             with pytest.raises(ToolExecutionError, match='path escapes workspace root'):
                 registry.invoke('workspace_read_file', {'path': '../../../etc/passwd'})
+            # Verify that valid paths within workspace work
+            test_file = Path(tmpdir) / 'test.txt'
+            test_file.write_text('content')
+            result = registry.invoke('workspace_read_file', {'path': 'test.txt'})
+            assert result.get('content') == 'content'
 
 
 class TestEmptyFileValidationFix:
@@ -355,6 +374,8 @@ class TestEmptyFileValidationFix:
                         'new': 'content',
                     },
                 )
+            # Verify the file remains empty
+            assert test_file.read_text() == ''
 
 
 class TestContextBusValidationFix:
@@ -370,6 +391,15 @@ class TestContextBusValidationFix:
                     max_delta_age_seconds=3600,
                 )
             )
+        # Verify that valid workflow_id works
+        bus = ContextBus(
+            ContextBusConfig(
+                db_path=Path('/tmp/test.db'),
+                workflow_id='valid-workflow',
+                max_delta_age_seconds=3600,
+            )
+        )
+        assert bus is not None
 
     def test_max_delta_age_validation(self):
         """Verify that max_delta_age_seconds is validated."""
@@ -381,6 +411,15 @@ class TestContextBusValidationFix:
                     max_delta_age_seconds=-1,  # Invalid negative value
                 )
             )
+        # Verify that valid max_delta_age works
+        bus = ContextBus(
+            ContextBusConfig(
+                db_path=Path('/tmp/test.db'),
+                workflow_id='test-workflow',
+                max_delta_age_seconds=3600,
+            )
+        )
+        assert bus is not None
 
 
 if __name__ == '__main__':

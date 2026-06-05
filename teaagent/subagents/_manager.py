@@ -257,9 +257,9 @@ class SubagentManager:
         started_at = datetime.now(timezone.utc).isoformat()
         try:
             sub_result = run_chat_agent(
-                task=task_spec,
+                sub_config,
+                task_spec,
                 adapter=self._parent_adapter,
-                config=sub_config,
                 audit=sub_audit,
                 registry=registry,
                 depth=child_depth,

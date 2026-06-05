@@ -107,7 +107,7 @@ def test_skill_reaches_model_system_prompt(tmp_path):
     )
     adapter = _StubAdapter()
     config = ChatAgentConfig.from_root(tmp_path)
-    result = run_chat_agent(task='write code', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'write code', adapter=adapter)
     assert result.status == 'completed'
     assert result.final_answer is not None
     assert result.final_answer.content == 'skill received'
@@ -190,9 +190,9 @@ def test_skill_load_audit_records_search_dirs_and_review_failures(tmp_path):
 
     audit = AuditLogger()
     result = run_chat_agent(
-        task='check skills',
+        ChatAgentConfig.from_root(tmp_path),
+        'check skills',
         adapter=_AuditStubAdapter(),
-        config=ChatAgentConfig.from_root(tmp_path),
         audit=audit,
     )
     assert result.status == 'completed'
@@ -231,9 +231,9 @@ def test_skill_load_audit_records_truncation_warning(tmp_path):
 
     audit = AuditLogger()
     result = run_chat_agent(
-        task='check truncation',
+        ChatAgentConfig.from_root(tmp_path),
+        'check truncation',
         adapter=_TruncationAuditStubAdapter(),
-        config=ChatAgentConfig.from_root(tmp_path),
         audit=audit,
     )
     assert result.status == 'completed'
@@ -271,9 +271,9 @@ def test_run_chat_agent_uses_configured_skill_search_dirs(tmp_path):
         tmp_path, skill_search_dirs=['custom/skills', '.opencode/skill']
     )
     result = run_chat_agent(
-        task='configured skill dirs',
+        config,
+        'configured skill dirs',
         adapter=_ConfiguredPathStubAdapter(),
-        config=config,
         audit=audit,
     )
     assert result.status == 'completed'
@@ -300,9 +300,9 @@ def test_run_chat_agent_custom_profile_requires_skill_search_dirs(tmp_path):
 
     try:
         run_chat_agent(
-            task='custom profile missing dirs',
+            ChatAgentConfig.from_root(tmp_path, skill_source_profile='custom'),
+            'custom profile missing dirs',
             adapter=_NoopAdapter(),
-            config=ChatAgentConfig.from_root(tmp_path, skill_source_profile='custom'),
             audit=AuditLogger(),
         )
         raise AssertionError('expected ValueError for missing skill_search_dirs')

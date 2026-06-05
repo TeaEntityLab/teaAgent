@@ -46,7 +46,7 @@ def test_streaming_on_chunk_fires(tmp_path):
         stream=True,
         on_chunk=chunks.append,
     )
-    result = run_chat_agent(task='hello', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'hello', adapter=adapter)
     assert result.status == 'completed'
     assert len(chunks) > 0, 'on_chunk callbacks must have fired'
     assert ''.join(chunks) == 'streaming response'
@@ -56,7 +56,7 @@ def test_streaming_audit_events_recorded(tmp_path):
     audit = AuditLogger()
     adapter = _StreamingStubAdapter()
     config = ChatAgentConfig.from_root(tmp_path, stream=True)
-    run_chat_agent(task='hello', adapter=adapter, config=config, audit=audit)
+    run_chat_agent(config, 'hello', adapter=adapter, audit=audit)
 
     assert any(e.event_type == 'run_completed' for e in audit.events)
 
@@ -64,7 +64,7 @@ def test_streaming_audit_events_recorded(tmp_path):
 def test_streaming_cost_accumulated(tmp_path):
     adapter = _StreamingStubAdapter()
     config = ChatAgentConfig.from_root(tmp_path, stream=True)
-    result = run_chat_agent(task='hello', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'hello', adapter=adapter)
     # Tokens from streaming adapter should be accumulated
     assert result.input_tokens >= 0
     assert result.output_tokens >= 0
@@ -73,6 +73,6 @@ def test_streaming_cost_accumulated(tmp_path):
 def test_non_streaming_works_without_on_chunk(tmp_path):
     adapter = _StreamingStubAdapter()
     config = ChatAgentConfig.from_root(tmp_path, stream=False)
-    result = run_chat_agent(task='hello', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'hello', adapter=adapter)
     assert result.status == 'completed'
     assert adapter.chunks_fired == [], 'on_chunk must not fire when stream=False'

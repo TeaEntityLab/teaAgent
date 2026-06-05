@@ -69,7 +69,7 @@ def test_fresh_agent_run_does_not_register_browser_tools_twice(tmp_path, monkeyp
 
     adapter = _StubAdapter()
     config = chat_agent.ChatAgentConfig.from_root(tmp_path)
-    result = chat_agent.run_chat_agent(task='say hello', adapter=adapter, config=config)
+    result = chat_agent.run_chat_agent(config, 'say hello', adapter=adapter)
 
     assert result.status == 'completed'
 
@@ -79,7 +79,7 @@ def test_cost_fields_populated_after_run(tmp_path):
 
     adapter = _StubAdapter()
     config = ChatAgentConfig.from_root(tmp_path)
-    result = run_chat_agent(task='say hello', adapter=adapter, config=config)
+    result = run_chat_agent(config, 'say hello', adapter=adapter)
 
     assert isinstance(result, RunResult)
     assert result.status == 'completed'
@@ -94,7 +94,7 @@ def test_cost_reported_in_audit_run_completed(tmp_path):
     audit = AuditLogger()
     adapter = _StubAdapter()
     config = ChatAgentConfig.from_root(tmp_path)
-    run_chat_agent(task='say hello', adapter=adapter, config=config, audit=audit)
+    run_chat_agent(config, 'say hello', adapter=adapter, audit=audit)
 
     completed = [e for e in audit.events if e.event_type == 'run_completed']
     assert completed, 'run_completed event must be recorded'
@@ -107,7 +107,6 @@ def test_cost_reported_in_audit_run_completed(tmp_path):
 def test_zero_cost_cap_blocks_positive_cost_run(tmp_path):
     """0 cap means zero spend allowed - any positive cost exceeds it."""
     from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
-    from teaagent.errors import BudgetExceededError
 
     adapter = _StubAdapter()
     config = ChatAgentConfig.from_root(tmp_path, max_estimated_cost_cents=0)

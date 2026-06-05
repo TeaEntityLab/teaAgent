@@ -77,6 +77,12 @@ class TestBuildServerSSLContext:
                 cert_file=tmp_path / 'nonexistent.crt',
                 key_file=key,
             )
+        # Verify that valid cert/key pair works
+        ctx = build_server_ssl_context(
+            cert_file=tmp_path / 'server.crt',
+            key_file=key,
+        )
+        assert isinstance(ctx, ssl.SSLContext)
 
     def test_missing_key_file_raises(self, tmp_path):
         cert = tmp_path / 'server.crt'
@@ -86,6 +92,12 @@ class TestBuildServerSSLContext:
                 cert_file=cert,
                 key_file=tmp_path / 'nonexistent.key',
             )
+        # Verify that valid cert/key pair works
+        ctx = build_server_ssl_context(
+            cert_file=cert,
+            key_file=tmp_path / 'server.key',
+        )
+        assert isinstance(ctx, ssl.SSLContext)
 
 
 class TestWrapServerSocket:

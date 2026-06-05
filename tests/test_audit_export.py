@@ -17,6 +17,9 @@ def test_export_empty_events():
     assert bundle['version'] == 1
     assert bundle['run_id'] is None
     assert bundle['signed_digest'] is not None
+    # Verify that the bundle has the expected structure
+    assert 'events' in bundle
+    assert isinstance(bundle['events'], list)
 
 
 def test_export_non_empty_events():
@@ -45,6 +48,8 @@ def test_export_non_empty_events():
     assert bundle['run_id'] == 'r1'
     assert bundle['summary']['tool_calls_started'] == 0
     assert len(bundle['events']) == 2
+    # Verify that the bundle can be verified
+    assert verify_bundle_integrity(bundle) is True
 
 
 def test_export_chain_verification_with_log_path():
@@ -69,6 +74,8 @@ def test_export_chain_verification_with_log_path():
         )
         assert bundle['chain_verification'] is not None
         assert isinstance(bundle['chain_verification']['valid'], bool)
+        # Verify that the bundle can be verified
+        assert verify_bundle_integrity(bundle) is True
     finally:
         log_path.unlink(missing_ok=True)
 
@@ -84,6 +91,8 @@ def test_export_chain_verification_no_log_path():
     ]
     bundle = export_compliance_bundle(events, include_chain_verification=True)
     assert bundle['chain_verification'] is None
+    # Verify that the bundle can still be verified
+    assert verify_bundle_integrity(bundle) is True
 
 
 def test_export_chain_verification_disabled():
@@ -97,6 +106,8 @@ def test_export_chain_verification_disabled():
     ]
     bundle = export_compliance_bundle(events, include_chain_verification=False)
     assert bundle['chain_verification'] is None
+    # Verify that the bundle can still be verified
+    assert verify_bundle_integrity(bundle) is True
 
 
 def test_write_compliance_bundle():
@@ -108,6 +119,9 @@ def test_write_compliance_bundle():
         assert out_path.exists()
         loaded = json.loads(out_path.read_text(encoding='utf-8'))
         assert loaded['version'] == 1
+        # Verify that the written bundle has the expected structure
+        assert 'events' in loaded
+        assert isinstance(loaded['events'], list)
 
 
 def test_verify_bundle_integrity_valid():
@@ -187,6 +201,8 @@ def test_export_summary_tool_call_counts():
     assert bundle['summary']['tool_calls_completed'] == 1
     assert bundle['summary']['tool_calls_failed'] == 1
     assert bundle['summary']['tool_calls_blocked'] == 1
+    # Verify that the bundle can be verified
+    assert verify_bundle_integrity(bundle) is True
 
 
 def test_export_summary_time_range():
@@ -209,6 +225,8 @@ def test_export_summary_time_range():
     bundle = export_compliance_bundle(events)
     assert bundle['summary']['time_range']['earliest'] == '2026-01-01T00:00:00Z'
     assert bundle['summary']['time_range']['latest'] == '2026-01-01T00:05:00Z'
+    # Verify that the bundle can be verified
+    assert verify_bundle_integrity(bundle) is True
 
 
 def test_export_summary_time_range_single_event():
@@ -224,6 +242,8 @@ def test_export_summary_time_range_single_event():
     bundle = export_compliance_bundle(events)
     assert bundle['summary']['time_range']['earliest'] == '2026-01-01T00:00:00Z'
     assert bundle['summary']['time_range']['latest'] == '2026-01-01T00:00:00Z'
+    # Verify that the bundle can be verified
+    assert verify_bundle_integrity(bundle) is True
 
 
 def test_write_compliance_bundle_compact():

@@ -37,14 +37,14 @@ def test_run_undo_restores_workspace_after_agent_writes(tmp_path: Path) -> None:
     audit.add_sink(journal)
 
     result = run_chat_agent(
-        task='Update notes and create a companion file',
-        adapter=adapter,
-        config=ChatAgentConfig.from_root(
+        ChatAgentConfig.from_root(
             tmp_path,
             allow_destructive=True,
             max_iterations=6,
             max_tool_calls=6,
         ),
+        'Update notes and create a companion file',
+        adapter=adapter,
         audit=audit,
     )
 
