@@ -926,12 +926,6 @@ def _strict_log_sanitize(value: Any) -> Any:
     if isinstance(value, str) and _looks_like_sensitive_string(value):
         return _REDACTED
     return value
-        return [_ensure_log_safe(item) for item in value]
-    if isinstance(value, str) and (
-        _looks_like_sensitive_string(value) or _looks_like_sensitive_env_name(value)
-    ):
-        return _REDACTED
-    return value
 
 
 def print_json(value: Any) -> None:
