@@ -39,6 +39,14 @@ follow dated evidence documents only when you need the reasoning trail.
 | Markdown governance review | [Markdown Status Review](analysis/markdown-status-review-2026-06-02.md) |
 | Competitor signal survey | [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-04.md) |
 | Product principles | [TeaAgent Product Principles](strategy/teaagent-product-principles-2026-06-04.md) |
+| Dynamic skill and long-result audit | [Dynamic Skill Generation And Long Result Audit](analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md) |
+| RSS dynamic skill failure case study | [RSS Dynamic Skill Failure Case Study](analysis/rss-failure-case-study-2026-06-05.md) |
+| Agent ecosystem core values | [Agent Ecosystem Core Values](strategy/agent-ecosystem-core-values-2026-06-05.md) |
+| Dynamic skill critical questioning | [Dynamic Skill Critical Questioning](reviews/dynamic-skill-critical-questioning-2026-06-05.md) |
+| Seven control loops competitor survey | [Seven Control Loops Competitor Survey](analysis/seven-control-loops-competitor-survey-2026-06-05.md) |
+| Seven control loops product direction | [Seven Control Loops Product Direction](strategy/seven-control-loops-product-direction-2026-06-05.md) |
+| Seven control loops critical questioning | [Seven Control Loops Critical Questioning](reviews/seven-control-loops-critical-questioning-2026-06-05.md) |
+| Community agent pain points | [Community Agent Pain Points Survey](analysis/community-agent-pain-points-survey-2026-06-05.md) |
 
 ## Governance
 
@@ -63,6 +71,12 @@ follow dated evidence documents only when you need the reasoning trail.
 | [Roadmap Work Items](work-log/roadmap-work-items-2026-06-04.md) | Product roadmap work items and acceptance criteria. |
 | [Phase 0 Priority Work Items](work-log/phase-0-priority-work-items-2026-06-04.md) | Trust-repair tasks derived from project-state review. |
 | [Phase 0 Governance Closure Report](work-log/phase-0-governance-closure-report-2026-06-04.md) | Closure evidence for coverage omit, dependency audit, and ADR-state governance. |
+| [Dynamic Skill E2E Test Roadmap](plans/dynamic-skill-e2e-test-roadmap-2026-06-05.md) | Test roadmap for generated skills, RSS fixture checks, and long result handling. |
+| [Dynamic Skill And Long Result Work Items](plans/dynamic-skill-and-long-result-work-items-2026-06-05.md) | Task ledger for lifecycle states, direct-write quarantine, RSS acceptance, long-result envelopes, and behavioral evals. |
+| [Dynamic Skill Lifecycle And Result Flow](architecture/dynamic-skill-lifecycle-and-result-flow-2026-06-05.md) | Architecture target for candidate install, activation, long-result preservation, and output verification. |
+| [Seven Control Loops Work Items](plans/seven-control-loops-work-items-2026-06-05.md) | Cross-cutting task ledger for spec-first, dynamic workflow, goal loops, model routing, review, memory, and human gates. |
+| [Seven Control Loops Integration Map](architecture/seven-control-loops-teaagent-integration-map-2026-06-05.md) | Architecture map for integrating the seven control loops into existing TeaAgent surfaces. |
+| [Community Pain Points Response Plan](plans/community-pain-points-response-plan-2026-06-05.md) | Work plan for routing opacity, memory pollution, review cost, long-task drift, hook confusion, skill/MCP risk, and fake success. |
 
 ## Security And Reliability
 

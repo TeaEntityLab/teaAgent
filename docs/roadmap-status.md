@@ -1,7 +1,7 @@
 # Roadmap Status
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-05 (fixed-item evidence added; unverified claims registry added; all other status docs link here)
+**Last updated:** 2026-06-05 (dynamic skill trust documentation, H3 pre-gate, seven-control-loop strategy package, and community pain-point overlay added)
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/daily-driver-findings-status-ledger-2026-06-01.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -54,8 +54,97 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | GOV-014 | Add doc-vs-HEAD guarded claim registry | docs / verification | In Progress | Medium | DOCOPT-012 | High |
 | GOV-015 | Audit High/Critical module risks for upward links | docs / module owners | Pending | Medium | DOCOPT-013 | High |
 
+## Track H3 - Ecosystem Trust And Dynamic Skills
+
+The June 5 dynamic-skill research narrows the first H3 proof point: TeaAgent
+should not expand ecosystem breadth until generated skills, long results, and
+skill-output verification are testable against the RSS failure case.
+
+| ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |
+|----|-----------|-------|--------|------------|-----------|------|
+| DSK-P0-001 | Skill lifecycle state machine distinguishes loaded, activated, used, and verified. | skills / audit | Proposed | Medium | lifecycle event tests | High |
+| DSK-P0-002 | Direct active-skill writes are blocked, quarantined, or labeled unmanaged. | workspace tools / skill writer | Proposed | Medium | protected path acceptance | High |
+| DSK-P0-003 | Offline RSS fixture acceptance proves source-backed skill output. | tests / skills | Proposed | High | fixture summary test | High |
+| DSK-P0-004 | Long-result envelope preserves preview, full artifact, hash, and cursor. | tools / audit | Proposed | Medium | large result fixture test | High |
+| DSK-P1-001 | Behavioral skill eval compares with-skill and without-skill results. | skill eval | Proposed | Medium | deterministic eval harness | Medium |
+| DSK-P1-002 | Skill invocation audit records activation cause and output artifact links. | audit / run store | Proposed | Medium | run evidence integration | Medium |
+| DSK-P1-003 | Explicit skill activation UX is available through CLI/task config first. | CLI / runner | Proposed | Medium | explicit activation acceptance | Medium |
+
+Current evidence package:
+
+- [Dynamic Skill Generation And Long Result Audit](analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md)
+- [RSS Dynamic Skill Failure Case Study](analysis/rss-failure-case-study-2026-06-05.md)
+- [Agent Ecosystem Core Values](strategy/agent-ecosystem-core-values-2026-06-05.md)
+- [Dynamic Skill Critical Questioning](reviews/dynamic-skill-critical-questioning-2026-06-05.md)
+- [Dynamic Skill And Long Result Work Items](plans/dynamic-skill-and-long-result-work-items-2026-06-05.md)
+- [Dynamic Skill Lifecycle And Result Flow](architecture/dynamic-skill-lifecycle-and-result-flow-2026-06-05.md)
+
+## Cross-Horizon Track - Seven Control Loops
+
+The June 5 competitor pass identifies seven control loops that should become
+TeaAgent's architecture and product governance model across H0-H5:
+spec-first direction, dynamic workflow breadth, loop/goal depth, model routing,
+synthesis review, precise memory, and human review gates. This track is
+cross-horizon because each loop touches multiple existing modules rather than a
+single roadmap horizon.
+
+| ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |
+|----|-----------|-------|--------|------------|-----------|------|
+| SCL-P0-001 | Bind high-risk runs to a spec or plan receipt. | plan gate / runner | Proposed | Medium | failing high-risk no-spec test | High |
+| SCL-P0-002 | Add repo-grounding checks before spec tasks execute. | plan gate / code map | Proposed | Medium | stale-spec fixture test | High |
+| SCL-P0-003 | Link dynamic skill lifecycle and long-result work as the H3 proof path. | skills / docs | Proposed | High | DSK-P0 link audit | High |
+| SCL-P0-004 | Define persisted goal records for loop state, evidence, and stop criteria. | runner / run store | Proposed | Medium | goal record schema test | High |
+| SCL-P0-005 | Add model-route receipts to audit and run evidence. | model routing / audit | Proposed | Medium | deterministic route fixture | Medium |
+| SCL-P0-006 | Define synthesis review artifacts for high-risk answers. | review / evidence | Proposed | Medium | contradictory-source fixture | High |
+| SCL-P0-007 | Define human review gate packets for irreversible actions. | approval / TUI | Proposed | Medium | destructive action packet test | High |
+| SCL-P1-001 | Add typed memory metadata: scope, source, confidence, TTL, supersession, owner. | memory | Proposed | Medium | memory promotion tests | High |
+| SCL-P1-002 | Add memory quarantine and promotion flow. | memory / review | Proposed | Medium | unreviewed memory injection test | High |
+| SCL-P1-003 | Add goal status and evidence inspection commands. | CLI / TUI | Proposed | Medium | status command acceptance | Medium |
+| SCL-P1-004 | Add role-aware model routing tests. | model routing | Proposed | Medium | route matrix tests | Medium |
+| SCL-P1-005 | Require synthesis review for source-backed high-risk research. | review / docs | Proposed | Medium | review requirement validator | Medium |
+| SCL-P1-006 | Add gate packets to skill install and memory promotion. | skills / memory / approval | Proposed | Medium | gate packet acceptance | High |
+| SCL-P2-001 | Build a TUI cockpit for spec, goal, route, review, memory, and approval state. | TUI | Proposed | Low | cockpit prototype | Medium |
+| SCL-P2-002 | Add release evidence bundle for all seven loops. | release / docs | Proposed | Low | release bundle check | Medium |
+
+Current evidence package:
+
+- [Seven Control Loops Competitor Survey](analysis/seven-control-loops-competitor-survey-2026-06-05.md)
+- [Seven Control Loops Product Direction](strategy/seven-control-loops-product-direction-2026-06-05.md)
+- [Seven Control Loops TeaAgent Integration Map](architecture/seven-control-loops-teaagent-integration-map-2026-06-05.md)
+- [Seven Control Loops Critical Questioning](reviews/seven-control-loops-critical-questioning-2026-06-05.md)
+- [Seven Control Loops Work Items](plans/seven-control-loops-work-items-2026-06-05.md)
+
+## Cross-Horizon Track - Community Pain Point Overlay
+
+The June 5 community pass adds a user-pain overlay to the seven control loops.
+The work is deliberately receipt-oriented: make routing, memory, review, cost,
+skill/MCP, approval, goal, and proof-of-use behavior visible before widening
+autonomy.
+
+| ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |
+|----|-----------|-------|--------|------------|-----------|------|
+| CPP-P0-001 | Add route evidence panel to run summary. | model routing / run evidence | Proposed | Medium | model route fixture | High |
+| CPP-P0-002 | Add goal checkpoint receipt. | runner / run store | Proposed | Medium | long-goal checkpoint test | High |
+| CPP-P0-003 | Add memory write quarantine rule for agent-created project memory. | memory / approval | Proposed | Medium | pending-memory test | High |
+| CPP-P0-004 | Add review artifact minimum schema. | review / subagents | Proposed | Medium | missing-evidence review test | High |
+| CPP-P0-005 | Add approval authority receipt. | approval / audit | Proposed | Medium | exact-scope authority test | High |
+| CPP-P0-006 | Add dynamic asset provenance summary. | skills / MCP / audit | Proposed | Medium | dynamic asset evidence test | High |
+| CPP-P0-007 | Add proof-of-use requirement for skill-backed outputs. | skills / runner | Proposed | Medium | skill-backed output test | High |
+| CPP-P0-008 | Add intent-drift pre-write check for high-risk runs. | plan gate / policy | Proposed | Medium | out-of-scope write test | High |
+| CPP-P1-001 | Add review repeat suppression. | review / evidence | Proposed | Medium | repeated finding state test | Medium |
+| CPP-P1-002 | Add phase budget thresholds. | budget / model routing | Proposed | Medium | phase budget test | Medium |
+| CPP-P1-003 | Add context pressure score. | context bus / TUI | Proposed | Medium | context score test | Medium |
+| CPP-P1-004 | Add untrusted-source memory tests. | tests / memory | Proposed | Medium | memory poisoning fixture | High |
+| CPP-P1-005 | Add risk-adaptive spec exemption UX. | plan gate / CLI | Proposed | Medium | low-risk exemption test | Medium |
+
+Current evidence package:
+
+- [Community Agent Pain Points Survey](analysis/community-agent-pain-points-survey-2026-06-05.md)
+- [Community Pain Points Response Plan](plans/community-pain-points-response-plan-2026-06-05.md)
+
 ## Status Definitions
 
+- **Proposed**: Item is documented and not yet accepted as implementation-ready
 - **Complete**: Item is fully implemented and verified
 - **In Progress**: Item is actively being worked on
 - **Pending**: Item is not yet started

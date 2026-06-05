@@ -1,5 +1,5 @@
 # Daily-Driver Current Status
-# As of 2026-06-04
+# As of 2026-06-05
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.
@@ -77,11 +77,55 @@ plan, and a work-item ledger:
 - Master plan: [plans/documentation-optimization-master-plan-2026-06-04.md](plans/documentation-optimization-master-plan-2026-06-04.md)
 - Work items: [work-log/documentation-optimization-work-items-2026-06-04.md](work-log/documentation-optimization-work-items-2026-06-04.md)
 
+## Latest dynamic skill and long-result package
+
+Dynamic skill generation is structurally supported but not yet proven reliable
+end-to-end for daily use. The RSS failure case shows the current gap: a skill
+can appear in a discoverable directory without proving reviewed install,
+activation, long-source preservation, script execution, or verified summary
+output.
+
+- Audit: [analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md](analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md)
+- RSS case study: [analysis/rss-failure-case-study-2026-06-05.md](analysis/rss-failure-case-study-2026-06-05.md)
+- Ecosystem value map: [strategy/agent-ecosystem-core-values-2026-06-05.md](strategy/agent-ecosystem-core-values-2026-06-05.md)
+- Critical questioning: [reviews/dynamic-skill-critical-questioning-2026-06-05.md](reviews/dynamic-skill-critical-questioning-2026-06-05.md)
+- Architecture target: [architecture/dynamic-skill-lifecycle-and-result-flow-2026-06-05.md](architecture/dynamic-skill-lifecycle-and-result-flow-2026-06-05.md)
+- Work items: [plans/dynamic-skill-and-long-result-work-items-2026-06-05.md](plans/dynamic-skill-and-long-result-work-items-2026-06-05.md)
+
+## Latest seven-control-loop strategy package
+
+The June 5 competitor and research pass reframes TeaAgent's next architecture
+step as seven control loops: spec-first direction, dynamic workflow breadth,
+goal-loop depth, model-routing cost and quality control, synthesis review,
+precise memory, and human review gates. These documents are strategy and work
+planning evidence only; they do not prove the runtime already implements the
+full loop.
+
+- Competitor survey: [analysis/seven-control-loops-competitor-survey-2026-06-05.md](analysis/seven-control-loops-competitor-survey-2026-06-05.md)
+- Product direction: [strategy/seven-control-loops-product-direction-2026-06-05.md](strategy/seven-control-loops-product-direction-2026-06-05.md)
+- Architecture map: [architecture/seven-control-loops-teaagent-integration-map-2026-06-05.md](architecture/seven-control-loops-teaagent-integration-map-2026-06-05.md)
+- Critical questioning: [reviews/seven-control-loops-critical-questioning-2026-06-05.md](reviews/seven-control-loops-critical-questioning-2026-06-05.md)
+- Work items: [plans/seven-control-loops-work-items-2026-06-05.md](plans/seven-control-loops-work-items-2026-06-05.md)
+
+## Latest community pain-point package
+
+The June 5 community pass records current user pain around routing opacity,
+memory pollution, review cost, long-task drift, cost surprise, hook/permission
+confusion, skill/MCP supply-chain risk, overeager edits, and fake success. Treat
+these as roadmap pressure signals, not proof that every competitor has the same
+bug or that TeaAgent has already fixed the class.
+
+- Pain-point survey: [analysis/community-agent-pain-points-survey-2026-06-05.md](analysis/community-agent-pain-points-survey-2026-06-05.md)
+- Response plan: [plans/community-pain-points-response-plan-2026-06-05.md](plans/community-pain-points-response-plan-2026-06-05.md)
+
 ## Known issues
 
 | Issue | Practical impact | Tracking |
 |-------|------------------|----------|
 | Full REPL-originated suspend→resume rehydration is still open. | Users should inspect suspended REPL sessions with `teaagent agent interactive-review <run_id>`; real CLI resume remains Phase 2 work. | AG-03 / TICKET-16 Phase 2 |
+| Dynamic generated skills are not yet proven end-to-end. | Treat generated skills as governed candidates until a run proves activation, source preservation, and output verification. Do not rely on RSS/WebSearch skill summaries as fully reliable yet. | DSK-P0-001 through DSK-P0-004 |
+| Seven-control-loop model is not implemented as a runtime contract yet. | Treat it as a planning model until SCL-P0 work adds explicit spec binding, route receipts, review artifacts, gate packets, and goal records. | SCL-P0-001 through SCL-P0-007 |
+| Community pain-point mitigations are mostly planning artifacts today. | Routing, memory, review, cost, long-task, and dynamic asset receipts need implementation and tests before they can be claimed as fixed. | CPP-P0-001 through CPP-P0-008 |
 
 ## Recently fixed
 
@@ -108,6 +152,12 @@ plan, and a work-item ledger:
 - Do not use `teaagent agent run --background <run_id>` to resume; it can treat the id as a new task argument.
 - Do not treat a successful docs-only check as proof that active runtime paths were tested.
 - Do not treat newly landed stop-gaps as release-ready until the active command path is tested.
+- Do not treat a loaded skill as proof that the skill was used or that the final
+  artifact was source-backed.
+- Do not treat the seven-control-loop strategy package as runtime proof. It is
+  a roadmap control model until the SCL work items have tests and audit receipts.
+- Do not treat community pain-point docs as mitigation evidence. They are input
+  to the roadmap until CPP/SCL/DSK rows land with tests.
 
 ## Read next
 

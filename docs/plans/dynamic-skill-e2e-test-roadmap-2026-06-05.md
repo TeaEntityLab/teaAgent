@@ -12,6 +12,14 @@ Make TeaAgent's dynamic skill workflow objectively testable:
   pointers, pagination, and compaction.
 - Final outputs are checked mechanically before the run claims success.
 
+Related June 5 documentation package:
+
+- [Agent Ecosystem Core Values](../strategy/agent-ecosystem-core-values-2026-06-05.md)
+- [RSS Dynamic Skill Failure Case Study](../analysis/rss-failure-case-study-2026-06-05.md)
+- [Dynamic Skill Critical Questioning](../reviews/dynamic-skill-critical-questioning-2026-06-05.md)
+- [Dynamic Skill Lifecycle And Result Flow](../architecture/dynamic-skill-lifecycle-and-result-flow-2026-06-05.md)
+- [Dynamic Skill And Long Result Work Items](dynamic-skill-and-long-result-work-items-2026-06-05.md)
+
 ## Priority Order
 
 ### P0 - Prove the Lifecycle, Not the Claim
@@ -484,4 +492,3 @@ For the RSS case specifically:
 - It records source coverage.
 - It ignores feed-level prompt injection.
 - It is impossible for a placeholder script or empty summary to pass.
-

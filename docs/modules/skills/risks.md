@@ -1,5 +1,14 @@
 # skills — Risk Vectors & Known Issues
 
+The June 5 dynamic skill review makes these risks H3 ecosystem-trust blockers
+until TeaAgent can prove generated skills are reviewed, activated, used, and
+verified. See:
+
+- `docs/analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md`
+- `docs/analysis/rss-failure-case-study-2026-06-05.md`
+- `docs/reviews/dynamic-skill-critical-questioning-2026-06-05.md`
+- `docs/plans/dynamic-skill-and-long-result-work-items-2026-06-05.md`
+
 ### SKL-R-001: Native skill execution runs in the same process
 **File**: `skill_executor.py`
 **Risk**: `NATIVE` sandbox type imports and calls `tool.py` in the same Python process. A buggy skill can crash the agent, corrupt global state, or access any file the agent can access.
@@ -65,3 +74,14 @@ or creates a placeholder helper script and claims completion.
 **Mitigation**: Standardize a long-result envelope with preview, truncation
 metadata, full artifact path, content hash, cursor, and compaction-preserved
 source IDs. Acceptance tests must verify final output against fixture sources.
+
+### SKL-R-010: Skill ecosystem breadth can outpace behavioral proof
+**File**: `skill_loader.py`, `skill_candidates.py`, `skill_eval.py`, TUI/CLI skill surfaces
+**Risk**: Adding more skill, plugin, MCP, hook, or package surfaces before one
+dynamic skill loop is proven can make the ecosystem look mature while the daily
+user still cannot tell whether a generated skill actually improved the task.
+**Failure mode**: Roadmap progress is measured by surface count instead of
+verified user outcomes; generated skills remain demo-useful but daily-use risky.
+**Mitigation**: Treat the RSS fixture flow as the first H3 ecosystem-trust
+spine test. Require lifecycle audit states, direct-write quarantine, long-result
+envelopes, and output validators before claiming dynamic skill reliability.

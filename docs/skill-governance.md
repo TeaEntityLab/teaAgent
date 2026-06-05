@@ -8,6 +8,16 @@ This document defines the governance process for TeaAgent skills, including revi
 
 TeaAgent skills are distributed as Provenanced Skill Bundles (TSB) with cryptographic signatures. This governance process ensures that skills in the ecosystem are safe, reliable, and trustworthy.
 
+Current implementation note, 2026-06-05:
+
+- TeaAgent has a governed candidate path for Agent Skills prompt packages, but
+  end-to-end generated skill reliability is still being hardened.
+- Direct writes into active skill discovery directories must be treated as
+  unmanaged unless they carry reviewed candidate provenance.
+- Dynamic skill roadmap and failure evidence live in
+  `docs/plans/dynamic-skill-and-long-result-work-items-2026-06-05.md` and
+  `docs/analysis/rss-failure-case-study-2026-06-05.md`.
+
 ## Governance Principles
 
 1. **Cryptographic Provenance**: All skills must be signed with verifiable identities
@@ -17,6 +27,33 @@ TeaAgent skills are distributed as Provenanced Skill Bundles (TSB) with cryptogr
 5. **Community Oversight**: Transparent review process with community feedback
 
 ## Skill Lifecycle
+
+### 0. Dynamic Candidate Phase
+
+Agent-generated skills should start as candidate bundles, not as direct writes
+to active skill directories.
+
+**Requirements:**
+- Candidate is stored under `.teaagent/skill-candidates/`.
+- Candidate includes `SKILL.md`, `REFERENCE.md`, `tool_call_contract.json`,
+  `cost_profile.json`, `interaction_policy.json`, and `provenance.json`.
+- Candidate eval proves structure and, for source-backed tasks, behavior against
+  deterministic fixtures.
+- Install provenance records the candidate origin and install scope.
+
+**Direct-write rule:**
+- `.config/agent/skills/`, `.claude/skills/`, `.opencode/skill/`, and
+  `.opencode/skills/` are active discovery directories.
+- Agent writes to those directories are unmanaged unless they go through the
+  candidate install path.
+- Future workspace write guards should block or quarantine direct active-skill
+  writes by default.
+
+**Evidence required before trust:**
+- Loaded is availability only.
+- Activated means the skill was selected for a run.
+- Used means a runtime action referenced the skill for output.
+- Verified means deterministic checks passed on the final artifact.
 
 ### 1. Development Phase
 

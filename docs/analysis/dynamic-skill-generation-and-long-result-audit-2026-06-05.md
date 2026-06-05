@@ -17,6 +17,14 @@ The RSS example is a good failure probe because it combines every risky axis:
 dynamic skill creation, external/long content, summarization quality, artifact
 creation, and user-visible proof.
 
+Companion documents created from this audit:
+
+- [Agent Ecosystem Core Values](../strategy/agent-ecosystem-core-values-2026-06-05.md)
+- [RSS Dynamic Skill Failure Case Study](rss-failure-case-study-2026-06-05.md)
+- [Dynamic Skill Critical Questioning](../reviews/dynamic-skill-critical-questioning-2026-06-05.md)
+- [Dynamic Skill Lifecycle And Result Flow](../architecture/dynamic-skill-lifecycle-and-result-flow-2026-06-05.md)
+- [Dynamic Skill And Long Result Work Items](../plans/dynamic-skill-and-long-result-work-items-2026-06-05.md)
+
 ## Current Verdict
 
 TeaAgent is partially ready, but not yet reliable enough for this workflow.
@@ -399,4 +407,3 @@ The most important product principle:
 
 > A skill is not trusted because it exists. A skill is trusted only after it has
 > provenance, tests, activation evidence, and output evidence.
-

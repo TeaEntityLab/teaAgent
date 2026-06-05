@@ -14,6 +14,13 @@ agent capabilities. TeaAgent currently has two related skill surfaces:
 The daily-driver skill path should prefer the governed Agent Skills candidate
 workflow before a skill becomes active in a project.
 
+Strategic direction and current gaps are recorded in:
+
+- `docs/strategy/agent-ecosystem-core-values-2026-06-05.md`
+- `docs/analysis/rss-failure-case-study-2026-06-05.md`
+- `docs/architecture/dynamic-skill-lifecycle-and-result-flow-2026-06-05.md`
+- `docs/plans/dynamic-skill-and-long-result-work-items-2026-06-05.md`
+
 ## Behavior Contract
 
 ### Skill Routing (`skill_router.py`)
@@ -54,6 +61,19 @@ workflow before a skill becomes active in a project.
 6. **Provenance** — installed candidates record install scope and candidate
    origin so CLI/TUI can distinguish reviewed skills from direct writes.
 
+### Target Dynamic Skill Lifecycle
+1. **Candidate proposal** — repeated successful procedures become quarantined
+   candidate bundles, not direct active-skill writes.
+2. **Artifact and eval gates** — structure, provenance, cost, interaction
+   policy, reference content, and deterministic task behavior are checked before
+   install.
+3. **Reviewed install** — reviewed project installs write to
+   `.config/agent/skills/<name>` with provenance.
+4. **Activation evidence** — a later run must record skill selection,
+   activation, resource reads, and output verification separately from load.
+5. **Long-result preservation** — source-heavy skill outputs use preview plus
+   artifact pointer, hash, and cursor when they exceed model-visible limits.
+
 ### Skill Router (`skill_router.py`)
 1. **Semantic matching** — `SkillRouter.route(query)` returns ranked skills by description similarity.
 2. **Exact match** — skill name matches take priority over semantic matches.
@@ -68,3 +88,5 @@ workflow before a skill becomes active in a project.
   unmanaged/direct-write skill for explainability and review purposes.
 - "Skill loaded" does not imply "skill used"; runtime activation and output
   verification require separate audit evidence.
+- Long RSS/WebSearch/skill outputs must remain source-backed through artifact
+  pointers and verification, not preview-only summarization.
