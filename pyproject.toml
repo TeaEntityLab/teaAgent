@@ -85,7 +85,7 @@ security = [
     "pip-audit>=2",
 ]
 sigstore = [
-    "sigstore>=2.0.0",
+    "sigstore>=4.3.0",
 ]
 github = [
     "PyGithub>=2.0.0",
@@ -97,7 +97,7 @@ dev = [
     "watchdog>=3.0.0",
     "prompt-toolkit>=3.0.0",
     "playwright>=1.40",
-    "sigstore>=2.0.0",
+    "sigstore>=4.3.0",
     "PyGithub>=2.0.0",
     "wasmer>=1.0.0",
     "pre-commit>=3",
