@@ -1081,39 +1081,21 @@ class CLITests(unittest.TestCase):
 
     def test_audit_decrypt_includes_chain_validation(self) -> None:
         """Test that audit decrypt command includes chain validation in output."""
-        from teaagent.audit import CRYPTO_AVAILABLE
+        from teaagent.audit import CRYPTO_AVAILABLE, AuditLogger
 
         if not CRYPTO_AVAILABLE:
             self.skipTest('cryptography not available')
-
-        from cryptography.fernet import Fernet
 
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / 'test-run.jsonl'
             key_path = Path(tmp) / 'key.enc'
 
-            # Generate and save encryption key
-            key = Fernet.generate_key()
-            key_path.write_bytes(key)
+            # Create logger with L3 to generate real encrypted log with correct hashes
+            logger = AuditLogger(path=audit_path, audit_level='L3')
+            logger.record('tool_call', 'test-run', sensitive_data='secret_value', tool_name='test_tool')
 
-            # Create encrypted audit log
-            fernet = Fernet(key)
-            payload = {'sensitive_data': 'secret_value', 'tool_name': 'test_tool'}
-            encrypted_bytes = fernet.encrypt(json.dumps(payload).encode('utf-8'))
-            encrypted_str = encrypted_bytes.decode('utf-8')
-
-            event = {
-                'event_id': 'evt-1',
-                'event_type': 'tool_call',
-                'run_id': 'test-run',
-                'created_at': '2024-01-01T00:00:00Z',
-                'payload': {'encrypted': encrypted_str},
-                'prev_hash': '0',
-                'hash': 'abc123',
-                'chain_hmac': 'hmac123',
-            }
-
-            audit_path.write_text(json.dumps(event), encoding='utf-8')
+            # Save the encryption key
+            key_path.write_bytes(logger._encryption_key)
 
             # Decrypt with key
             decrypt_output = io.StringIO()
@@ -1127,8 +1109,8 @@ class CLITests(unittest.TestCase):
             self.assertIn('chain_errors', result)
             self.assertIn('event_count', result)
             self.assertIn('events', result)
-            # Chain validation should fail due to dummy hashes
-            self.assertFalse(result['chain_valid'])
+            # Chain validation should pass with real hashes
+            self.assertTrue(result['chain_valid'])
 
 
 if __name__ == '__main__':

@@ -556,31 +556,21 @@ class AuditLogger:
         # Read and decrypt the audit log
         try:
             lines = audit_path.read_text(encoding='utf-8').splitlines()
+            raw_events = []
             decrypted_events = []
 
+            # First pass: read raw events and verify chain integrity on encrypted data
             for line in lines:
                 if not line.strip():
                     continue
 
                 event = json.loads(line)
-                payload = event.get('payload', {})
+                raw_events.append(event)
 
-                # Check if payload is encrypted
-                if isinstance(payload, dict) and 'encrypted' in payload:
-                    try:
-                        encrypted_data = payload['encrypted']
-                        decrypted_bytes = fernet.decrypt(encrypted_data.encode('utf-8'))
-                        decrypted_json = decrypted_bytes.decode('utf-8')
-                        event['payload'] = json.loads(decrypted_json)
-                    except Exception as exc:
-                        raise ValueError(f'Failed to decrypt event {event.get("event_id")}: {exc}') from exc
-
-                decrypted_events.append(event)
-
-            # Verify chain integrity
+            # Verify chain integrity on raw (encrypted) events
             chain_errors = []
             prev_hash = _GENESIS_HASH
-            for i, event in enumerate(decrypted_events):
+            for i, event in enumerate(raw_events):
                 event_hash = event.get('hash')
                 event_prev_hash = event.get('prev_hash')
 
@@ -589,7 +579,7 @@ class AuditLogger:
                         f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})'
                     )
 
-                # Verify the hash matches the content
+                # Verify the hash matches the content (encrypted payload)
                 canonical = json.dumps(
                     {
                         'event_id': event.get('event_id'),
@@ -610,6 +600,22 @@ class AuditLogger:
                     )
 
                 prev_hash = event_hash or computed_hash
+
+            # Second pass: decrypt events
+            for event in raw_events:
+                payload = event.get('payload', {})
+
+                # Check if payload is encrypted
+                if isinstance(payload, dict) and 'encrypted' in payload:
+                    try:
+                        encrypted_data = payload['encrypted']
+                        decrypted_bytes = fernet.decrypt(encrypted_data.encode('utf-8'))
+                        decrypted_json = decrypted_bytes.decode('utf-8')
+                        event['payload'] = json.loads(decrypted_json)
+                    except Exception as exc:
+                        raise ValueError(f'Failed to decrypt event {event.get("event_id")}: {exc}') from exc
+
+                decrypted_events.append(event)
 
             return {
                 'events': decrypted_events,

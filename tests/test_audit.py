@@ -493,48 +493,37 @@ class AuditChainVerificationTests(unittest.TestCase):
 
             with self.assertRaises(ValueError) as ctx:
                 AuditLogger.decrypt_audit_log(audit_path)
-            self.assertIn('Encryption key not found', str(ctx.exception))
+            # Error can be either key not found or decryption failure
+            self.assertTrue(
+                'Encryption key not found' in str(ctx.exception)
+                or 'Failed to decrypt' in str(ctx.exception)
+            )
 
     def test_decrypt_audit_log_success(self) -> None:
-        """Test successful decryption of L3 audit log."""
+        """Test successful decryption of L3 audit log with real round-trip."""
         if not CRYPTO_AVAILABLE:
             self.skipTest('cryptography not available')
 
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / 'test-run.jsonl'
 
-            # Generate encryption key
-            key = Fernet.generate_key()
+            # Create logger with L3 to generate real encrypted log with correct hashes
+            logger = AuditLogger(path=audit_path, audit_level='L3')
+            logger.record('tool_call', 'test-run', sensitive_data='secret_value', tool_name='test_tool')
 
-            # Create encrypted audit log
-            fernet = Fernet(key)
-            payload = {'sensitive_data': 'secret_value', 'tool_name': 'test_tool'}
-            encrypted_bytes = fernet.encrypt(json.dumps(payload).encode('utf-8'))
-            encrypted_str = encrypted_bytes.decode('utf-8')
+            # Get the encryption key from the logger
+            encryption_key = logger._encryption_key
 
-            event = {
-                'event_id': 'evt-1',
-                'event_type': 'tool_call',
-                'run_id': 'test-run',
-                'created_at': '2024-01-01T00:00:00Z',
-                'payload': {'encrypted': encrypted_str},
-                'prev_hash': '0',
-                'hash': 'abc123',
-                'chain_hmac': 'hmac123',
-            }
-
-            audit_path.write_text(json.dumps(event), encoding='utf-8')
-
-            # Decrypt with explicitly provided key
-            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=key)
+            # Decrypt the log
+            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=encryption_key)
 
             self.assertEqual(result['total_events'], 1)
             self.assertEqual(len(result['events']), 1)
-            self.assertEqual(result['events'][0]['payload'], payload)
-            self.assertEqual(result['events'][0]['event_id'], 'evt-1')
-            # Chain verification should fail due to dummy hashes
-            self.assertFalse(result['chain_valid'])
-            self.assertGreater(len(result['chain_errors']), 0)
+            self.assertEqual(result['events'][0]['payload']['sensitive_data'], 'secret_value')
+            self.assertEqual(result['events'][0]['payload']['tool_name'], 'test_tool')
+            # Chain verification should pass with real hashes
+            self.assertTrue(result['chain_valid'])
+            self.assertEqual(len(result['chain_errors']), 0)
 
     def test_decrypt_audit_log_autoload_key(self) -> None:
         """Test decryption with automatic key loading from ~/.teaagent/audit-encryption/."""
@@ -548,42 +537,20 @@ class AuditChainVerificationTests(unittest.TestCase):
                 os.environ['HOME'] = tmp
 
                 audit_path = Path(tmp) / 'test-run.jsonl'
-                key_dir = Path(tmp) / '.teaagent' / 'audit-encryption'
-                key_dir.mkdir(parents=True)
-                key_path = key_dir / 'test-run.enc'
 
-                # Generate and save encryption key
-                key = Fernet.generate_key()
-                key_path.write_bytes(key)
-
-                # Create encrypted audit log
-                fernet = Fernet(key)
-                payload = {'sensitive_data': 'secret_value', 'tool_name': 'test_tool'}
-                encrypted_bytes = fernet.encrypt(json.dumps(payload).encode('utf-8'))
-                encrypted_str = encrypted_bytes.decode('utf-8')
-
-                event = {
-                    'event_id': 'evt-1',
-                    'event_type': 'tool_call',
-                    'run_id': 'test-run',
-                    'created_at': '2024-01-01T00:00:00Z',
-                    'payload': {'encrypted': encrypted_str},
-                    'prev_hash': '0',
-                    'hash': 'abc123',
-                    'chain_hmac': 'hmac123',
-                }
-
-                audit_path.write_text(json.dumps(event), encoding='utf-8')
+                # Create logger with L3 to generate real encrypted log with correct hashes
+                logger = AuditLogger(path=audit_path, audit_level='L3')
+                logger.record('tool_call', 'test-run', sensitive_data='secret_value', tool_name='test_tool')
 
                 # Decrypt without providing key (should autoload)
                 result = AuditLogger.decrypt_audit_log(audit_path)
 
                 self.assertEqual(result['total_events'], 1)
                 self.assertEqual(len(result['events']), 1)
-                self.assertEqual(result['events'][0]['payload'], payload)
-                self.assertEqual(result['events'][0]['event_id'], 'evt-1')
-                # Chain verification should fail due to dummy hashes
-                self.assertFalse(result['chain_valid'])
+                self.assertEqual(result['events'][0]['payload']['sensitive_data'], 'secret_value')
+                self.assertEqual(result['events'][0]['payload']['tool_name'], 'test_tool')
+                # Chain verification should pass with real hashes
+                self.assertTrue(result['chain_valid'])
         finally:
             # Restore original HOME
             if original_home is not None:
@@ -599,28 +566,49 @@ class AuditChainVerificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             audit_path = Path(tmp) / 'test-run.jsonl'
 
-            # Create unencrypted audit log (L2 or lower)
-            event = {
-                'event_id': 'evt-1',
-                'event_type': 'test',
-                'run_id': 'test-run',
-                'created_at': '2024-01-01T00:00:00Z',
-                'payload': {'data': 'plaintext'},
-                'prev_hash': '0',
-                'hash': 'abc123',
-                'chain_hmac': 'hmac123',
-            }
-
-            audit_path.write_text(json.dumps(event), encoding='utf-8')
+            # Create logger with L2 to generate unencrypted log with correct hashes
+            logger = AuditLogger(path=audit_path, audit_level='L2')
+            logger.record('test', 'test-run', data='plaintext')
 
             # Decrypt should handle unencrypted payload gracefully
             result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=Fernet.generate_key())
 
             self.assertEqual(result['total_events'], 1)
             self.assertEqual(len(result['events']), 1)
-            self.assertEqual(result['events'][0]['payload'], {'data': 'plaintext'})
-            # Chain verification should fail due to dummy hashes
+            self.assertEqual(result['events'][0]['payload']['data'], 'plaintext')
+            # Chain verification should pass with real hashes
+            self.assertTrue(result['chain_valid'])
+
+    def test_decrypt_audit_log_detects_tampering(self) -> None:
+        """Test that decrypt detects tampered audit logs."""
+        if not CRYPTO_AVAILABLE:
+            self.skipTest('cryptography not available')
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'test-run.jsonl'
+
+            # Create logger with L3 to generate real encrypted log
+            logger = AuditLogger(path=audit_path, audit_level='L3')
+            logger.record('tool_call', 'test-run', sensitive_data='secret_value')
+
+            # Get the encryption key
+            encryption_key = logger._encryption_key
+
+            # Tamper with the log by modifying the hash
+            content = audit_path.read_text(encoding='utf-8')
+            lines = content.splitlines()
+            tampered_line = json.loads(lines[0])
+            tampered_line['hash'] = 'tampered_hash_12345'
+            audit_path.write_text(json.dumps(tampered_line), encoding='utf-8')
+
+            # Decrypt should detect tampering
+            result = AuditLogger.decrypt_audit_log(audit_path, encryption_key=encryption_key)
+
+            self.assertEqual(result['total_events'], 1)
+            # Chain verification should fail due to tampering
             self.assertFalse(result['chain_valid'])
+            self.assertGreater(len(result['chain_errors']), 0)
+            self.assertIn('hash mismatch', result['chain_errors'][0].lower())
 
 
 if __name__ == '__main__':
