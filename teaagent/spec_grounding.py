@@ -27,7 +27,7 @@ _BACKTICK_PATH = re.compile(r'`([^`\s]+\.(?:py|ts|tsx|js|jsx|rs|go|java|rb|md|js
 _BRACKET_PATH = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 _PLAIN_PATH = re.compile(r'(?<!\w)(?:\.\/|(?:\w+\/)+)[\w./-]+\.\w+(?!\w)')
 
-_MARKER_COMMENT = re.compile(r'#\s|//\s|--\s|<!--|-->|\*/|"""', re.MULTILINE)
+_MARKER_COMMENT = re.compile(r'#\s|//\s|--\s|<!--|--!?>|\*/|"""', re.MULTILINE)
 
 
 def _is_likely_path(raw: str) -> bool:
