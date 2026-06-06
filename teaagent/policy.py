@@ -446,6 +446,12 @@ class ApprovalPolicy:
             )
         return asyncio.run(coro)
 
+    def __del__(self) -> None:
+        try:
+            self._signature_executor.shutdown(wait=False, cancel_futures=True)
+        except Exception:
+            pass
+
 
 def parse_permission_mode(value: str) -> PermissionMode:
     try:

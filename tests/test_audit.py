@@ -702,5 +702,21 @@ class AuditChainVerificationTests(unittest.TestCase):
             self.assertIn('hash mismatch', result['chain_errors'][0].lower())
 
 
+class HMACKeySaveTests(unittest.TestCase):
+    def test_chain_key_save_failure_logs_warning(self) -> None:
+        """RISK-01: OSError when saving HMAC chain key must emit a warning, not silently pass."""
+        import unittest.mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_path = Path(tmp) / 'run-id.jsonl'
+            with unittest.mock.patch('pathlib.Path.write_bytes', side_effect=OSError('no space')):
+                with self.assertLogs('teaagent.audit', level='WARNING') as log_ctx:
+                    AuditLogger(path=audit_path)
+        self.assertTrue(
+            any('HMAC chain key could not be persisted' in msg for msg in log_ctx.output),
+            f'Expected warning not found in: {log_ctx.output}',
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

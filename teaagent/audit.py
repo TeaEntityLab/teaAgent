@@ -217,8 +217,13 @@ class AuditLogger:
             key_dir.chmod(0o700)
             key_path.write_bytes(key)
             key_path.chmod(0o600)
-        except OSError:
-            pass
+        except OSError as exc:
+            logger.warning(
+                'HMAC chain key could not be persisted to %s: %s — '
+                'audit chain will be non-reproducible across restarts',
+                key_path,
+                exc,
+            )
         return key
 
     def _load_or_save_encryption_key(self) -> bytes:

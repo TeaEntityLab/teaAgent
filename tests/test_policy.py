@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import tempfile
+import threading
 import unittest
 from dataclasses import FrozenInstanceError
+from unittest.mock import patch
 
-from teaagent.approval_manager import MultiSigQuorumConfig
+from teaagent.approval_manager import JITApprovalManager, MultiSigQuorumConfig
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.errors import ToolPermissionError
 from teaagent.policy import (
@@ -1198,6 +1200,45 @@ class EmptyPathScopeTests(unittest.TestCase):
             )
             self.assertIsNotNone(grant)
             self.assertIn('*', grant.path_globs)
+
+
+class ApprovalPolicyThreadLeakTests(unittest.TestCase):
+    def test_del_shuts_down_signature_executor(self) -> None:
+        """ENG-01: __del__ must shut down the ThreadPoolExecutor to prevent thread leaks."""
+        policy = ApprovalPolicy()
+        executor = policy._signature_executor
+        policy.__del__()
+        with self.assertRaises(RuntimeError):
+            executor.submit(lambda: None)
+
+    def test_del_is_safe_to_call_twice(self) -> None:
+        policy = ApprovalPolicy()
+        policy.__del__()
+        policy.__del__()  # must not raise
+
+
+class JITApprovalTimeoutTests(unittest.TestCase):
+    def test_prompt_auto_denies_on_timeout(self) -> None:
+        """OPS-01: JIT approval prompt must auto-deny after the configured timeout."""
+        blocker = threading.Event()
+
+        def blocking_input(prompt: str) -> str:
+            blocker.wait()
+            return 'o'
+
+        manager = JITApprovalManager(approval_timeout_seconds=0.05)
+        with patch('builtins.input', side_effect=blocking_input):
+            result = manager._prompt('tool_x', 'call-timeout-1')
+
+        blocker.set()
+        self.assertEqual(result, 'd', 'timed-out prompt must return deny')
+
+    def test_prompt_respects_valid_choice_before_timeout(self) -> None:
+        """OPS-01: fast user response must pass through normally."""
+        manager = JITApprovalManager(approval_timeout_seconds=5.0)
+        with patch('builtins.input', return_value='o'):
+            result = manager._prompt('tool_x', 'call-fast-1')
+        self.assertEqual(result, 'o')
 
 
 if __name__ == '__main__':

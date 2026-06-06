@@ -280,12 +280,20 @@ class PermissionModeEnforcer:
         return '__continue__'
 
 
+_JIT_APPROVAL_TIMEOUT_SECONDS: float = 60.0
+
+
 class JITApprovalManager:
     """Manages JIT (Just-In-Time) approval state and TTY prompting (ADR-002)."""
 
-    def __init__(self, enable_jit_prompt: bool = True) -> None:
+    def __init__(
+        self,
+        enable_jit_prompt: bool = True,
+        approval_timeout_seconds: float = _JIT_APPROVAL_TIMEOUT_SECONDS,
+    ) -> None:
         self.jit_state = JITApprovalState()
         self.enable_jit_prompt = enable_jit_prompt
+        self.approval_timeout_seconds = approval_timeout_seconds
 
     def is_approved(self, *, tool_name: str, call_id: str) -> bool:
         return self.jit_state.is_tool_session_approved(
@@ -327,6 +335,8 @@ class JITApprovalManager:
         call_id: str,
         arguments: dict[str, Any] | None = None,
     ) -> str:
+        import threading
+
         print(f'\n[TeaAgent] Permission required for tool: {tool_name}')
         print(f'[TeaAgent] Call ID: {call_id}')
         if arguments:
@@ -338,14 +348,34 @@ class JITApprovalManager:
         print('[TeaAgent]   [e] Explain - show details and deny')
 
         while True:
-            try:
-                choice = input('[TeaAgent] Choice [o/s/d/e]: ').strip().lower()
-                if choice in ('o', 's', 'd', 'e'):
-                    return choice
-                print('[TeaAgent] Invalid choice. Please enter o, s, d, or e.')
-            except (EOFError, KeyboardInterrupt):
+            result_holder: list[str] = []
+
+            def _read_input() -> None:
+                try:
+                    result_holder.append(
+                        input('[TeaAgent] Choice [o/s/d/e]: ').strip().lower()
+                    )
+                except (EOFError, KeyboardInterrupt):
+                    result_holder.append('__interrupt__')
+
+            t = threading.Thread(target=_read_input, daemon=True)
+            t.start()
+            t.join(self.approval_timeout_seconds)
+
+            if not result_holder:
+                print(
+                    f'\n[TeaAgent] No response after {self.approval_timeout_seconds:.0f}s. '
+                    'Denying permission.'
+                )
+                return 'd'
+
+            choice = result_holder[0]
+            if choice == '__interrupt__':
                 print('\n[TeaAgent] Interrupted. Denying permission.')
                 return 'd'
+            if choice in ('o', 's', 'd', 'e'):
+                return choice
+            print('[TeaAgent] Invalid choice. Please enter o, s, d, or e.')
 
 
 class MultiSigQuorumManager:

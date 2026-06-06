@@ -181,16 +181,19 @@ def check_llm_configuration(provider: str) -> tuple[bool, str]:
 
 
 # Base per-provider rates (used when no model-specific rate exists).
+# fake/ollama/vllm use nominal non-zero rates so the budget guard fires in tests
+# and local-model runs. These are NOT real API prices ($0 for local inference)
+# but a sentinel that lets budget accounting remain exercisable.
 PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
-    'fake': 0.0,
+    'fake': 0.001,
     'claude': 0.003,
     'gpt': 0.00015,
     'gemini': 0.000075,
     'openrouter': 0.0005,
-    'ollama': 0.0,
+    'ollama': 0.0001,
     'opencodezen-go': 0.0005,
     'opencodezen': 0.0005,
-    'vllm': 0.0,
+    'vllm': 0.0001,
     'mistral': 0.002,
     'deepseek': 0.00014,
     'grok': 0.003,
@@ -199,15 +202,15 @@ PROVIDER_COST_PER_1K_INPUT: dict[str, float] = {
 }
 
 PROVIDER_COST_PER_1K_OUTPUT: dict[str, float] = {
-    'fake': 0.0,
+    'fake': 0.001,
     'claude': 0.015,
     'gpt': 0.0006,
     'gemini': 0.0003,
     'openrouter': 0.002,
-    'ollama': 0.0,
+    'ollama': 0.0001,
     'opencodezen-go': 0.002,
     'opencodezen': 0.002,
-    'vllm': 0.0,
+    'vllm': 0.0001,
     'mistral': 0.006,
     'deepseek': 0.00028,
     'grok': 0.015,

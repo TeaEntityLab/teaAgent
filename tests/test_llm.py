@@ -630,5 +630,32 @@ class LLMAdapterTests(unittest.TestCase):
                 adapter.complete(LLMRequest(messages=[LLMMessage('user', 'hi')]))
 
 
+class ProviderCostRateTests(unittest.TestCase):
+    """RISK-02: fake/ollama/vllm must have non-zero cost rates so budget guards fire."""
+
+    def _rates(self, provider: str) -> tuple[float, float]:
+        from teaagent.llm._config import (
+            PROVIDER_COST_PER_1K_INPUT,
+            PROVIDER_COST_PER_1K_OUTPUT,
+        )
+
+        return PROVIDER_COST_PER_1K_INPUT[provider], PROVIDER_COST_PER_1K_OUTPUT[provider]
+
+    def test_fake_cost_rates_nonzero(self) -> None:
+        in_rate, out_rate = self._rates('fake')
+        self.assertGreater(in_rate, 0.0, 'fake input cost rate must be > 0')
+        self.assertGreater(out_rate, 0.0, 'fake output cost rate must be > 0')
+
+    def test_ollama_cost_rates_nonzero(self) -> None:
+        in_rate, out_rate = self._rates('ollama')
+        self.assertGreater(in_rate, 0.0, 'ollama input cost rate must be > 0')
+        self.assertGreater(out_rate, 0.0, 'ollama output cost rate must be > 0')
+
+    def test_vllm_cost_rates_nonzero(self) -> None:
+        in_rate, out_rate = self._rates('vllm')
+        self.assertGreater(in_rate, 0.0, 'vllm input cost rate must be > 0')
+        self.assertGreater(out_rate, 0.0, 'vllm output cost rate must be > 0')
+
+
 if __name__ == '__main__':
     unittest.main()

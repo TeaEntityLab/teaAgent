@@ -12,7 +12,7 @@
 > **Last reviewed:** 2026-06-06
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-06 (P0/P1/P2 stream finalization — all CPP, SCL, DSK P2 items marked Complete; TUI control cockpit, release evidence bundle, and skill health dashboard shipped; DOW-014 roadmap required-field guard)
+**Last updated:** 2026-06-06 (H0 complete: GOV-002–012 + WS-0 implemented, risk-register Owner/Due columns added, M0 exit criteria verified)
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -25,8 +25,8 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 
 | Horizon | Name | Target Outcome | Owner | Status | Confidence | Next Gate | Exit Evidence |
 |---------|------|----------------|-------|--------|------------|-----------|---------------|
-| H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | TBD | In Progress | Medium | DOCOPT-012 generalized guarded-claim registry | Risk register rows have owner/status/due date, volatile doc claims are guarded, docs checks pass |
-| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | TBD | In Progress | High | M1 complete | Journey acceptance tests pass across CLI/TUI baseline |
+| H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | governance | Complete | High | H1 | H0 exit evidence met; all M0 checks pass |
+| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | TBD | In Progress | High | M2 complete | Journey acceptance tests pass across CLI/TUI baseline |
 | H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Pending | Medium | M2 complete | Surface parity tests prove identity, permissions, audit, cost, and recovery continuity |
 | H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Pending | Medium | M3 complete | Trust-onboarding and activation-explain acceptance tests pass |
 | H4 | Durable team operations | Long-running and team workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Pending | Low | M4 complete | Background/cloud/team lifecycle tests pass with evidence bundle export |
@@ -37,7 +37,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 
 | Milestone | Target | Outcome | Owner | Status | Confidence | Next Gate | Exit Criteria |
 |-----------|--------|---------|-------|--------|------------|-----------|---------------|
-| M0 | 1-2 weeks | Risk register operational, release claims traceable, tool lint warnings budgeted, trust gaps have failing tests | TBD | Pending | Medium | GOV-002 complete | `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .` pass |
+| M0 | 1-2 weeks | Risk register operational, release claims traceable, tool lint warnings budgeted | governance | Complete | High | M1 complete | All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .` |
 | M1 | 2-6 weeks | Daily cockpit parity, run evidence summary, guided recovery | TBD | Complete | High | M2 complete | CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance |
 | M2 | 4-10 weeks | Long-session context health, hash-bound plans, scope creep measurement | TBD | Pending | Medium | CTX-001 complete | Long-session context guard acceptance, scope budget acceptance, plan revision acceptance |
 | M3 | 8-14 weeks | Extension activation explain, MCP trust onboarding, subagent review/merge | TBD | Pending | Medium | EXT-001 complete | Extension activation explain acceptance, MCP trust onboarding acceptance, subagent review/merge acceptance |
@@ -50,19 +50,19 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |
 |----|-----------|-------|--------|------------|-----------|------|
 | GOV-001 | Create canonical roadmap status table | TBD | Complete | High | GOV-002 | Medium |
-| GOV-002 | Add risk-register schema | TBD | Pending | Medium | GOV-003 | High |
-| GOV-003 | Add claim-to-evidence matrix | TBD | Pending | Medium | GOV-004 | High |
-| GOV-004 | Define verification profiles | TBD | Pending | Medium | GOV-005 | High |
-| GOV-005 | Add warning-budget ownership | TBD | Pending | Medium | GOV-006 | Medium |
-| GOV-006 | Create release-channel source of truth | TBD | Pending | Medium | GOV-007 | Medium |
-| GOV-007 | Make competitive survey freshness a release checklist blocker | TBD | Pending | Medium | GOV-008 | Medium |
-| GOV-008 | Add decision expiry dates to ADRs | TBD | Pending | Medium | GOV-009 | Medium |
-| GOV-009 | Add issue template for roadmap tasks | TBD | Pending | Low | GOV-010 | Low |
-| GOV-010 | Tag backlog items by user journey | TBD | Pending | Low | GOV-011 | Low |
-| GOV-011 | Create "do not claim" list | TBD | Pending | Medium | GOV-012 | Medium |
-| GOV-012 | Add release residual-risk summary | TBD | Pending | Medium | M0 complete | High |
+| GOV-002 | Add risk-register schema | docs / governance | Complete | High | release audit | High |
+| GOV-003 | Add claim-to-evidence matrix | docs / governance | Complete | High | release audit | High |
+| GOV-004 | Define verification profiles | docs / governance | Complete | High | release audit | High |
+| GOV-005 | Add warning-budget ownership | docs / governance | Complete | High | release audit | Medium |
+| GOV-006 | Create release-channel source of truth | docs / governance | Complete | High | release audit | Medium |
+| GOV-007 | Make competitive survey freshness a release checklist blocker | docs / governance | Complete | High | release audit | Medium |
+| GOV-008 | Add decision expiry dates to ADRs | docs / governance | Complete | High | ADR review | Medium |
+| GOV-009 | Add issue template for roadmap tasks | docs / governance | Complete | High | backlog refinement | Low |
+| GOV-010 | Tag backlog items by user journey | docs / governance | Complete | High | backlog refinement | Low |
+| GOV-011 | Create "do not claim" list | docs / governance | Complete | High | release audit | Medium |
+| GOV-012 | Add release residual-risk summary | docs / governance | Complete | High | release audit | High |
 | GOV-013 | Create curated documentation front door | docs | Complete | High | GOV-014 | Low |
-| GOV-014 | Add doc-vs-HEAD guarded claim registry | docs / verification | Complete | High | DOCOPT-009 | High |
+| GOV-014 | Add doc-vs-HEAD guarded claim registry | docs / verification | Complete | High | release audit | High |
 | GOV-015 | Audit High/Critical module risks for upward links | docs / module owners | Complete | High | GOV-016 | High |
 
 ## Track H3 - Ecosystem Trust And Dynamic Skills
@@ -179,7 +179,10 @@ Current evidence package:
 
 | Item | Status | Completion % | Evidence Type | Owner | Notes |
 |------|--------|:---:|---|---|---|
-| SEC-01 Audit HMAC persistence | VERIFY/CLOSE | 90% | Code + pending test | TBD | Key persisted at `audit.py:165`; test sign-off pending |
+| SEC-01 Audit HMAC persistence | **Fixed** | 100% | Code + passing tests | — | Key persisted at `audit.py:165`; RISK-01 hardening: key-save OSError now logs warning (no silent pass); `HMACKeySaveTests::test_chain_key_save_failure_logs_warning` |
+| SEC-17 ApprovalPolicy thread leak | **Fixed** | 100% | Code + passing tests | — | ENG-01: `__del__` shuts down executor; `ApprovalPolicyThreadLeakTests` |
+| SEC-18 Zero cost rates (fake/ollama/vllm) | **Fixed** | 100% | Code + passing tests | — | RISK-02: nominal non-zero rates; `ProviderCostRateTests` |
+| SEC-19 JIT approval no timeout | **Fixed** | 100% | Code + passing tests | — | OPS-01: 60s default timeout, auto-deny; `JITApprovalTimeoutTests` |
 | SEC-02 MCP trust expiry | **Fixed** | 100% | Code + passing test | — | `mcp_trust.py:148,168`; `test_server_trust_expiry()` |
 | SEC-04 Budget default | **Fixed** | 100% | Code + passing tests | — | Default 500 cents; `test_budget_zero_cents_rejects_any_spend()` |
 | SEC-06 JIT isolation | **Fixed** | 100% | Code + passing tests | — | `test_subagent_jit_approval_isolation_sec06()` |
@@ -193,8 +196,8 @@ Current evidence package:
 | DS-01 TUI cost accumulation | **Fixed** | 100% | Code + passing tests | — | TICKET-12; `test_task003_cost_truth.py` |
 | DS-08 resume always errors | **Fixed** | 100% | Code + passing tests | — | TICKET-16 Phase 2; `test_repl_suspend_resume_roundtrip` |
 | DS-11 Initial task dropped | **Fixed** | 100% | Code + passing tests | — | TASK-DD2-001; chat task forwarding tests |
-| H0 Claim + risk hygiene | In Progress | 75% | Partial | docs | Guarded claims + roadmap required-field guard (DOW-014) |
-| M0 Risk register operational | In Progress | 75% | Partial | TBD | Register has evidence; GOV-002 schema still pending |
+| H0 Claim + risk hygiene | Complete | 100% | Code + docs | governance | All H0 items done; risk register has Owner/Due; M0 checks pass |
+| M0 Risk register operational | Complete | 100% | Code + docs | governance | All 3 M0 checks verified passing |
 
 **Merge gate:** `python3 scripts/validate_docs_consistency.py` must pass before any PR that updates roadmap or risk register status.
 

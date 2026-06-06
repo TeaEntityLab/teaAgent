@@ -21,6 +21,72 @@ teaagent is a governance-first AI agent harness with strong policy enforcement, 
 
 ---
 
+## Risk Register Schema
+
+**Effective:** 2026-06-06  
+**Governed by:** this schema (GOV-002) — any structural change to risk register rows must update this section.
+
+This section defines the canonical column schema for every risk register row (SEC-\*, DS-\*, SC-\*) in Part 2. Non-conforming rows fail automated validation via `scripts/validate_docs_consistency.py` (`_parse_risk_register_rows`, `_RISK_ROW_ID`).
+
+### Column Definitions
+
+| Column | Field Name | Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | **ID** | `string` | Pattern `[A-Z]{2,4}-\d{2}` (e.g. `SEC-01`, `DS-12`, `SC-03`) | Unique risk identifier. Prefix indicates source: `SEC`=Security Finding, `DS`=Defeat Scenario, `SC`=Supply Chain. |
+| 2 | **Category** | `string` | Free-text, 1–3 words | Risk taxonomy bucket (e.g. Audit Integrity, Access Control, Permission, Budget, Isolation, Dependencies). |
+| 3 | **Description** | `string` | Free-text, actionable | One-sentence summary of the risk, the gap, and why it matters. |
+| 4 | **Likelihood (L)** | `enum` | `H` (High/certain), `M` (Medium/conditional), `L` (Low/rare) | Probability of exploitation or occurrence in normal use. Defined in Appendix A. |
+| 5 | **Impact (I)** | `enum` | `H` (High), `M` (Medium), `L` (Low) | Severity if exploited. Defined in Appendix A. |
+| 6 | **Score** | `integer` | `1`–`9` (see mapping below) | Risk Score = Likelihood × Impact quantisation. Computed, not asserted. |
+| 7 | **Status** | `enum` | Canonical state from `docs/governance/document-state-model.md`: `Proposed`, `Active` (`OPEN` maps to `Active`), `Partially fixed`, `Verify/close`, `Fixed`, `Superseded`, `Archived`. Legacy labels (`OPEN`, `FIXED`, `WATCH`) are accepted with canonical mapping in doc-state-model.md. | Current mitigation state with evidence or fix date where applicable. |
+| 8 | **Priority** | `enum` | `P0` (no-go for production), `P1` (fix this sprint), `P2` (fix within cycle), `P3` (backlog), `QW` (quick win), `—` (already fixed) | Remediation urgency. Follows Part 5 §5.2 priority tiers. |
+
+### Risk Score Calculation
+
+Risk Score is the quantised product of Likelihood × Impact:
+
+| Likelihood | Impact | Score | Severity Label |
+|---|---|---|---|
+| H | H | 9 | Critical |
+| H | M | 6 | High |
+| M | H | 6 | High |
+| M | M | 4 | Medium |
+| H | L | 4 | Medium |
+| L | H | 3 | Medium |
+| M | L | 2 | Low |
+| L | M | 2 | Low |
+| L | L | 1 | Informational |
+
+Scores are used for the heat matrix (Part 1) and for priority triage.
+
+### Status Value Reference
+
+All Status cells must use a canonical state defined in `docs/governance/document-state-model.md`. Common values:
+
+| Status | Meaning | Example Row |
+|---|---|---|
+| `Active` / `OPEN` | Verified defect or gap affecting current product. | SEC-05, SEC-14 |
+| `Verify/close` | Implementation exists; closure evidence pending. | SEC-01 |
+| `Fixed` | Active-path verification and docs agree issue is resolved. Must include fix date and test evidence. | SEC-02 (Fixed 2026-06-05) |
+| `**FIXED** YYYY-MM-DD — …` | Same as Fixed; bolded to surface recent mitigation. Evidence inline. | SEC-04, SEC-07, SEC-10 |
+| `**DOCUMENTED** YYYY-MM-DD — …` | Risk accepted but documented with warnings. | SEC-08 |
+| `Superseded` | Replaced by a newer finding or decision. | — |
+
+### Validation Rules
+
+1. **ID uniqueness**: Each `SEC-\*`, `DS-\*`, `SC-\*` ID must appear exactly once across all register tables.
+2. **ID pattern**: Must match `^[A-Z]{2,4}-\d{2,}$` (two-to-four uppercase letters, hyphen, two or more digits).
+3. **Score consistency**: The Score column must match the quantised product of the Likelihood and Impact columns per the table above.
+4. **Status vocabulary**: Status text must map to a canonical state in `document-state-model.md`. Legacy labels (`OPEN`, `FIXED`, `WATCH`) are acceptable if the canonical mapping is supplied.
+5. **Fixed rows require evidence**: Any row marked `Fixed` / `FIXED` must include either a test name (e.g. `test_*`) or a commit reference inline in the Status cell.
+6. **Priority consistency**: Priority must match the tier defined in Part 5 §5.2 for open risks. Fixed risks use `—`.
+
+### Schema Compliance in CI
+
+The `_parse_risk_register_rows()` function in `scripts/validate_docs_consistency.py` parses every risk register row against this schema. CI runs `validate_docs_consistency.py --check-all` as part of the `use-case-matrix` job. Rows that fail ID pattern matching are silently skipped by the parser; missing or malformed rows should be caught by manual review during the risk register update process.
+
+---
+
 ## Part 1 — Risk Heat Matrix
 
 ```
@@ -52,48 +118,51 @@ teaagent is a governance-first AI agent harness with strong policy enforcement, 
 
 ## Part 2 — Risk Register
 
-Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L) · Risk Score (Likelihood×Impact: HH=9, HM=6, MM=4, etc.) · Mitigation Status · Priority**
+Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L) · Risk Score (Likelihood×Impact: HH=9, HM=6, MM=4, etc.) · Owner · Due · Mitigation Status · Priority**
 
 ### 2.1 Security Findings (SEC-*)
 
-| ID | Category | Description | L | I | Score | Status | Priority |
-|---|---|---|---|---|---|---|---|
-| SEC-01 | Audit Integrity | HMAC key is ephemeral — audit chain unverifiable across restarts; SHA-256 recomputable by attacker with write access | H | H | 9 | **VERIFY/CLOSE 2026-06-05** — key persisted to `~/.teaagent/run-keys/<run_id>.key` (chmod 600) since audit.py:165; tests: `test_audit_hmac_persisted_across_instances`, `test_audit_hmac_fails_with_wrong_key`, `test_audit_key_file_permissions_readable` | — |
-| SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | **Fixed** (2026-06-05) — `is_server_trust_expired()` enforced in hot path at `mcp_trust.py:148,168`; `test_server_trust_expiry()` in `tests/test_mcp_trust.py` | — |
-| SEC-03 | Permission | Historical: `allow_all_destructive=True` short-circuited the approval gate outside explicit full-access mode. Current branch blocks it in `prompt` mode and requires explicit broad-mode promotion for bypass callers. | L | H | 3 | **FIXED / WATCH** | P1 |
-| SEC-04 | Budget | ~~`ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap"~~ Default changed to `500`; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents` | H | H | 9 | **FIXED 2026-06-05** | — |
-| SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | **OPEN** | P2 |
-| SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | **FIXED 2026-06-05** | — |
-| SEC-07 | Isolation | Docker subagent runs as root, no `--network none`, no `--cap-drop ALL`, no seccomp — allows exfiltration and container escape | H | H | 9 | **FIXED 2026-06-05** — all flags present in `_isolation.py:223-242`: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges`; test: `test_subagent_docker_container_hardened`; documented in `docs/ops/security-hardening.md` | — |
-| SEC-08 | Isolation | `directory-snapshot` mode provides only filesystem isolation, not process isolation — agent reads `/etc/`, `/proc/`, `~/.ssh/`, spawns host processes | H | M | 6 | **DOCUMENTED 2026-06-05** — `logger.warning()` emitted at every `directory-snapshot` selection (`_isolation.py:181`); isolation modes table and dev-vs-production guidance added to `docs/ops/security-hardening.md` | P1 |
-| SEC-09 | Multi-sig | Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files | M | M | 4 | **OPEN** | P2 |
-| SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | **FIXED 2026-06-05** — `_INSPECT_EXECUTABLES` contains only `{pwd, ls, rg, grep, wc}`; `cat/head/tail` absent; tests: `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | — |
-| SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | **OPEN** | P2 |
-| SEC-12 | Audit | `os.fsync()` failure caught and silenced; audit degrades to in-memory only with no operator notification; disk-full attack eliminates all log persistence | L | M | 2 | **OPEN** | P2 |
-| SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | **OPEN** — remediation plan in §9; target tests include `tests/test_chat_agent.py`, audit HMAC persistence/wrong-key tests, and MCP trust-expiry enforcement tests | P1 |
-| SEC-14 | Permission | `preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification | L | L | 1 | **OPEN** | P3 |
-| SEC-15 | Multi-sig | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment | L | M | 2 | **OPEN** | P2 |
-| SEC-16 | Code Quality | Dead code at `budget_monitor.py:104-119` after early return — maintenance hazard that could accidentally activate on refactor | H | L | 3 | **OPEN** | QW |
+| ID | Category | Description | L | I | Score | Owner | Due | Status | Priority |
+|---|---|---|---|---|---|---|---|---|---|
+| SEC-01 | Audit Integrity | HMAC key is ephemeral — audit chain unverifiable across restarts; SHA-256 recomputable by attacker with write access | H | H | 9 | security | | **FIXED 2026-06-06** — key persisted to `~/.teaagent/run-keys/<run_id>.key` (chmod 600) since audit.py:165; **RISK-01 hardening 2026-06-06**: OSError on key save now emits `logger.warning` instead of silent pass — audit chain non-reproducibility is surfaced at runtime; tests: `test_audit_hmac_persisted_across_instances`, `test_audit_hmac_fails_with_wrong_key`, `test_audit_key_file_permissions_readable`, `HMACKeySaveTests::test_chain_key_save_failure_logs_warning` | — |
+| SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | security | | **Fixed** (2026-06-05) — `is_server_trust_expired()` enforced in hot path at `mcp_trust.py:148,168`; `test_server_trust_expiry()` in `tests/test_mcp_trust.py` | — |
+| SEC-03 | Permission | Historical: `allow_all_destructive=True` short-circuited the approval gate outside explicit full-access mode. Current branch blocks it in `prompt` mode and requires explicit broad-mode promotion for bypass callers. | L | H | 3 | security | | **FIXED / WATCH** | P1 |
+| SEC-04 | Budget | ~~`ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap"~~ Default changed to `500`; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents` | H | H | 9 | security | | **FIXED 2026-06-05** | — |
+| SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | security | | **FIXED 2026-06-05** | — |
+| SEC-07 | Isolation | Docker subagent runs as root, no `--network none`, no `--cap-drop ALL`, no seccomp — allows exfiltration and container escape | H | H | 9 | security | | **FIXED 2026-06-05** — all flags present in `_isolation.py:223-242`: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges`; test: `test_subagent_docker_container_hardened`; documented in `docs/ops/security-hardening.md` | — |
+| SEC-08 | Isolation | `directory-snapshot` mode provides only filesystem isolation, not process isolation — agent reads `/etc/`, `/proc/`, `~/.ssh/`, spawns host processes | H | M | 6 | security | | **DOCUMENTED 2026-06-05** — `logger.warning()` emitted at every `directory-snapshot` selection (`_isolation.py:181`); isolation modes table and dev-vs-production guidance added to `docs/ops/security-hardening.md` | P1 |
+| SEC-09 | Multi-sig | Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files | M | M | 4 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | security | | **FIXED 2026-06-05** — `_INSPECT_EXECUTABLES` contains only `{pwd, ls, rg, grep, wc}`; `cat/head/tail` absent; tests: `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | — |
+| SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-12 | Audit | `os.fsync()` failure caught and silenced; audit degrades to in-memory only with no operator notification; disk-full attack eliminates all log persistence | L | M | 2 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | security | 2026-06-20 | **OPEN** — remediation plan in §9; target tests include `tests/test_chat_agent.py`, audit HMAC persistence/wrong-key tests, and MCP trust-expiry enforcement tests | P1 |
+| SEC-14 | Permission | `preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification | L | L | 1 | security | | **OPEN** | P3 |
+| SEC-15 | Multi-sig | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment | L | M | 2 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-16 | Code Quality | Dead code at `budget_monitor.py:104-119` after early return — maintenance hazard that could accidentally activate on refactor | H | L | 3 | security | | **OPEN** | QW |
+| SEC-17 | Engineering | `ApprovalPolicy` creates a `ThreadPoolExecutor` in `__post_init__` with no shutdown — every policy instance leaks threads (`policy.py:70`) | M | M | 4 | engineering | | **FIXED 2026-06-06 (ENG-01)** — `__del__` added to call `shutdown(wait=False, cancel_futures=True)`; tests: `ApprovalPolicyThreadLeakTests::test_del_shuts_down_signature_executor`, `test_del_is_safe_to_call_twice` | — |
+| SEC-18 | Budget | `fake`, `ollama`, and `vllm` providers had `0.0` cost rates — budget guard never triggered for local/test providers, masking runaway inference | M | M | 4 | budget | | **FIXED 2026-06-06 (RISK-02)** — `fake=0.001`, `ollama=0.0001`, `vllm=0.0001` (nominal compute-cost sentinels); budget guard now exercisable with all providers; tests: `ProviderCostRateTests::test_fake_cost_rates_nonzero`, `test_ollama_cost_rates_nonzero`, `test_vllm_cost_rates_nonzero` | — |
+| SEC-19 | Permission | JIT approval `input()` prompt has no timeout — agent blocks indefinitely waiting for human response on unattended TTY | M | M | 4 | permission | | **FIXED 2026-06-06 (OPS-01)** — 60-second default timeout via daemon thread; auto-denies with log message; configurable via `approval_timeout_seconds`; tests: `JITApprovalTimeoutTests::test_prompt_auto_denies_on_timeout`, `test_prompt_respects_valid_choice_before_timeout` | — |
 
 ### 2.2 Defeat Scenario Findings (DS-*)
 
-| ID | Category | Description | L | I | Score | Status | Priority |
-|---|---|---|---|---|---|---|---|
-| DS-12 | Permission | Empty-path approval creates implicit global workspace grant; user believes they granted path-scoped access; audit log records it as "path-scoped" masking the expansion | M | H | 6 | **FIXED 2026-06-05** | — |
-| DS-13 | Budget | ~~`0` cost cap had three incompatible semantics~~ `None`=unlimited, `0`=zero-spend, positive=cap. Default 500 cents. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_default_500_cents` | M | M | 4 | **FIXED 2026-06-05** | — |
-| DS-01 | Budget | Historical: TUI `_session_cost_cents` never incremented — `/cost` and budget bar always showed `$0.00`; per-run cap still fired but cumulative cap never triggered | H | M | 6 | **FIXED 2026-06-05** — runtime-path TUI tests in `tests/test_tui.py`; see TICKET-12 | — |
-| DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | **Fixed** (2026-06-05) — TUI undo routes journal-first via `ChatSessionController.undo_last_run()` at `tui/__init__.py:860`; checkpoint fallback retained; `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py` | — |
-| DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | **Fixed** (2026-06-05) — known run/suspension IDs rejected before dispatch; `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167` | — |
-| DS-04 | Audit | Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events | M | L | 2 | **OPEN** | P3 |
-| DS-06 | Testing | Historical: TUI cost test injected `_session_cost_cents` directly and tested formatter only, masking CG-11 from CI | H | M | 6 | **FIXED 2026-06-05** — active-path TUI cost/session tests in `tests/test_tui.py`; see TICKET-14 | — |
+| ID | Category | Description | L | I | Score | Owner | Due | Status | Priority |
+|---|---|---|---|---|---|---|---|---|---|
+| DS-12 | Permission | Empty-path approval creates implicit global workspace grant; user believes they granted path-scoped access; audit log records it as "path-scoped" masking the expansion | M | H | 6 | infrastructure | | **FIXED 2026-06-05** | — |
+| DS-13 | Budget | ~~`0` cost cap had three incompatible semantics~~ `None`=unlimited, `0`=zero-spend, positive=cap. Default 500 cents. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_default_500_cents` | M | M | 4 | infrastructure | | **FIXED 2026-06-05** | — |
+| DS-01 | Budget | Historical: TUI `_session_cost_cents` never incremented — `/cost` and budget bar always showed `$0.00`; per-run cap still fired but cumulative cap never triggered | H | M | 6 | infrastructure | | **FIXED 2026-06-05** — runtime-path TUI tests in `tests/test_tui.py`; see TICKET-12 | — |
+| DS-05 | Undo | TUI `/undo` calls `git stash pop` (broadcast restore); REPL `/undo` calls `UndoJournal.restore()` (surgical) — same command word, different blast radius; TUI can destroy manual edits irreversibly | M | H | 6 | infrastructure | | **Fixed** (2026-06-05) — TUI undo routes journal-first via `ChatSessionController.undo_last_run()` at `tui/__init__.py:860`; checkpoint fallback retained; `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py` | — |
+| DS-09 | UX/Security | `agent run --background <uuid>` silently runs the UUID as a literal task string, spawning a real LLM call that spends money on nonsense | H | M | 6 | infrastructure | | **Fixed** (2026-06-05) — known run/suspension IDs rejected before dispatch; `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167` | — |
+| DS-04 | Audit | Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events | M | L | 2 | infrastructure | | **OPEN** | P3 |
+| DS-06 | Testing | Historical: TUI cost test injected `_session_cost_cents` directly and tested formatter only, masking CG-11 from CI | H | M | 6 | infrastructure | | **FIXED 2026-06-05** — active-path TUI cost/session tests in `tests/test_tui.py`; see TICKET-14 | — |
 
 ### 2.3 Supply Chain Findings (SC-*)
 
-| ID | Category | Description | L | I | Score | Status | Priority |
-|---|---|---|---|---|---|---|---|
-| SC-01 | Dependencies | Two alpha packages in production lock (`opentelemetry-exporter-gcp-logging==1.12.0a0`, `opentelemetry-resourcedetector-gcp==1.12.0a0`) can break between lock refreshes | M | L | 2 | **OPEN** | P2 |
-| SC-02 | Dependencies | `anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit` | H | M | 6 | **OPEN** — TASK-DD2-015 dependency declaration/import-check follow-up; fix target: `pyproject.toml` | P1 |
-| SC-03 | Dependencies | `aiohttp` and `mcp` SDK in lock as orphans — not declared, not imported in core; add 22 transitive packages to attack surface unnecessarily | H | L | 3 | **OPEN** | P2 |
+| ID | Category | Description | L | I | Score | Owner | Due | Status | Priority |
+|---|---|---|---|---|---|---|---|---|---|
+| SC-01 | Dependencies | Two alpha packages in production lock (`opentelemetry-exporter-gcp-logging==1.12.0a0`, `opentelemetry-resourcedetector-gcp==1.12.0a0`) can break between lock refreshes | M | L | 2 | architecture | 2026-07-15 | **OPEN** | P2 |
+| SC-02 | Dependencies | `anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit` | H | M | 6 | architecture | 2026-06-20 | **OPEN** — TASK-DD2-015 dependency declaration/import-check follow-up; fix target: `pyproject.toml` | P1 |
+| SC-03 | Dependencies | `aiohttp` and `mcp` SDK in lock as orphans — not declared, not imported in core; add 22 transitive packages to attack surface unnecessarily | H | L | 3 | architecture | 2026-07-15 | **OPEN** | P2 |
 
 ---
 

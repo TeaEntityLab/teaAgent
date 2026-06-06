@@ -21,6 +21,8 @@ contract drift. Code references are anchored to HEAD as of the ledger date.
 
 ### DS-01 · CG-11 — TUI `/cost` and budget bar always show $0.00
 
+> **STATUS: Fixed 2026-06-05/06** — `_session_cost_cents` accumulation fixed via TICKET-12 (controller routing). Cascade concern at §DS-01 line "inherit the zero silently" additionally addressed 2026-06-06 (RISK-02): `fake`, `ollama`, and `vllm` providers now carry non-zero nominal cost rates (`_config.py`) so budget guard activates for all providers. Tests: `ProviderCostRateTests::test_fake_cost_rates_nonzero`, `test_ollama_cost_rates_nonzero`, `test_vllm_cost_rates_nonzero`.
+
 **Ticket:** TICKET-12 (stop-gap: 1 line). **Severity:** P1.
 
 **User-facing failure.**
