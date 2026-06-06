@@ -7,6 +7,14 @@ from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 from teaagent import __version__
+
+# Exit codes used across CLI commands.
+# 0: Success — command completed as expected.
+# 1: User or permission error — invalid args, missing key, permission denied.
+# 2: Blocking issue found — dirty workspace, missing config, needs clarification.
+EXIT_SUCCESS = 0
+EXIT_ERROR = 1
+EXIT_BLOCKING = 2
 from teaagent.cli._handlers import (
     agent_attach_command,
     agent_card_command,

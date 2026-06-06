@@ -1262,8 +1262,6 @@ class TuiBackgroundHandoffScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('runs')
-            joined = '\n'.join(output)
-            # May produce empty list '[]' — that's valid
             self.assertTrue(len(output) > 0)
 
     def test_l4_show_unknown_id_handles_error(self) -> None:
@@ -1331,8 +1329,6 @@ class TuiSetupAndSkillScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('skills')
-            joined = '\n'.join(output)
-            # May print empty JSON '{}' or actual skills — both acceptable
             self.assertTrue(len(output) > 0)
 
 

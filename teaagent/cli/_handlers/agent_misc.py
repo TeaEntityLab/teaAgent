@@ -6,6 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from teaagent.cli import EXIT_BLOCKING, EXIT_SUCCESS
 from teaagent.cli._output import print_json
 from teaagent.run_store import RunStore
 
@@ -105,7 +106,7 @@ def agent_preflight_command(args: argparse.Namespace) -> int:
         print(format_preflight_summary(payload, root=args.root))
     else:
         print_json(payload)
-    return 0 if result.to_dict()['ready'] else 2
+    return EXIT_SUCCESS if result.to_dict()['ready'] else EXIT_BLOCKING
 
 
 def agent_daily_command(args: argparse.Namespace) -> int:
@@ -114,7 +115,7 @@ def agent_daily_command(args: argparse.Namespace) -> int:
 
         report = assess_stale_workspace(args.root)
         print_json(report.to_dict())
-        return 0 if not report.dirty_git and not report.diverged_from_main else 2
+        return EXIT_SUCCESS if not report.dirty_git and not report.diverged_from_main else EXIT_BLOCKING
 
     from teaagent.daily import build_daily_brief
 

@@ -109,10 +109,20 @@ def validate_context_from(
     if upstream_id == spec.automation_id:
         errors.append('context_from cannot reference the same automation_id')
         return errors
+    # Check AutomationStore first
     automation_store = store or AutomationStore(root)
+    found = False
     try:
         automation_store.show(upstream_id)
+        found = True
     except FileNotFoundError:
+        pass
+    # Fall back to handoff file if not in AutomationStore
+    if not found:
+        handoff = load_automation_handoff(root, upstream_id)
+        if handoff is not None:
+            found = True
+    if not found:
         errors.append(f"context_from automation '{upstream_id}' not found")
     return errors
 

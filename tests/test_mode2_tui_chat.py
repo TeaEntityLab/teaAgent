@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
 
@@ -230,7 +230,7 @@ class ChatSessionControllerTests(unittest.TestCase):
                 ['{"type":"final","content":"audited"}']
             )
             config = ChatAgentConfig(root=root, max_iterations=3, max_tool_calls=2)
-            result = controller.execute_task(
+            controller.execute_task(
                 "audited task",
                 config,
                 adapter=adapter,

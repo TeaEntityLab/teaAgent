@@ -233,7 +233,18 @@ class ConsensusState:
         return self.get_total_votes() >= required
 
     def is_approved(self) -> bool:
-        """Check if proposal is approved based on votes."""
+        """Check if proposal is approved based on votes.
+
+        Threshold behavior (strict >, not >=):
+        - SIMPLE_MAJORITY: approve > total_votes / 2 (50%)
+        - SUPERMAJORITY:   approve > total_votes * 2 / 3 (66.6...%)
+        - UNANIMOUS:       approve == total_votes (100%)
+        - CUSTOM:          approve > total_votes * custom_threshold
+
+        Note: SUPERMAJORITY requires strictly more than 2/3.
+        For 3 peers, 2 approve + 1 reject = 66.6% which equals 2/3,
+        so the proposal is rejected (2 > 2.0 is False).
+        """
         if not self.has_quorum():
             return False
 

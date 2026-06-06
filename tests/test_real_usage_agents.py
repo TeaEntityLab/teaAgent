@@ -30,7 +30,7 @@ from conftest import FakeAdapter
 
 from teaagent import ChatAgentConfig
 from teaagent.chat_agent import run_chat_agent
-from teaagent.cli import main
+from teaagent.cli import EXIT_BLOCKING, main
 from teaagent.policy import PermissionMode
 from teaagent.subagents import SubagentManager, register_subagent_tools
 from teaagent.tools import ToolAnnotations, ToolRegistry
@@ -128,7 +128,7 @@ class CliAgentRunScenarios(unittest.TestCase):
                         '--human',
                     ]
                 )
-            self.assertNotEqual(exit_code, 0)
+            self.assertEqual(exit_code, EXIT_BLOCKING)
             output = out.getvalue().lower()
             self.assertTrue(
                 'needs_clarification' in output
@@ -175,8 +175,7 @@ class CliAgentRunScenarios(unittest.TestCase):
                     '--human',
                 ]
             )
-        # Dry-run with missing config returns non-zero (blocking issues found)
-        self.assertNotEqual(exit_code, 0)
+        self.assertEqual(exit_code, EXIT_BLOCKING)
         output = out.getvalue().lower()
         self.assertTrue(
             'dry-run' in output or 'readiness' in output or 'blocking' in output
@@ -649,6 +648,19 @@ class WorkflowAndAutomationScenarios(unittest.TestCase):
             sanitized = sanitize_untrusted_automation_text(chained, max_chars=100)
             self.assertLessEqual(len(sanitized), 103)
 
+            # validate_context_from should find the handoff file (P2 fix)
+            from teaagent.automation_chain import validate_context_from
+            downstream_spec = AutomationSpec(
+                automation_id='triage',
+                name='triage',
+                task=downstream_task,
+                schedule='every 30m',
+                context_from='collector',
+            )
+            errors = validate_context_from(downstream_spec, root=str(root))
+            self.assertEqual(errors, [],
+                'validate_context_from should recognize handoff files')
+
     def test_d4_automation_handoff_context_from_missing(self) -> None:
         """validate_context_from returns errors for missing upstream."""
         from teaagent.automation_chain import validate_context_from
@@ -1017,7 +1029,6 @@ class ApprovalAndAuditScenarios(unittest.TestCase):
             )
             self.assertLessEqual(result.iterations, 1)
 
-
 # ============================================================================
 # Class H: MCP and ACP server protocol scenarios
 # ============================================================================
@@ -1110,7 +1121,12 @@ class McpAcpServerScenarios(unittest.TestCase):
             agent_runner=mock_runner,
         )
 
-        server._initialized = True
+        # Initialize and list tools should work without crash (P0 fix)
+        init_resp = server.initialize({'protocolVersion': '1.0.0'})
+        self.assertIn('serverVersion', init_resp)
+        tools = server.list_tools()
+        self.assertIsInstance(tools, list)
+
         prompt_resp = server.session_prompt(
             {
                 'sessionId': 'acp-session-1',

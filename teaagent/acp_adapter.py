@@ -118,7 +118,7 @@ class ACPServer:
         """List all available tools."""
         if not self._initialized:
             raise ACPError('Server not initialized')
-        return self._tool_registry.mcp_metadata().get('tools', [])
+        return self._tool_registry.mcp_metadata()
 
     def set_notification_sink(
         self, sink: Any, *, session_id: Optional[str] = None
