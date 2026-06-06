@@ -85,12 +85,13 @@ def summarize_run(
     if budget_cap_cents is not None:
         remaining_cents = float(budget_cap_cents) - float(cost_cents_value)
 
-    # ── cost state derivation (P0-B) ──────────────────────────────────
-    cost_state: str = 'unavailable'
-    if budget_cap_cents is None:
-        cost_state = 'unlimited'
-    elif cost_cents_value > 0:
-        cost_state = 'estimated'
+    # ── cost state derivation (P0-B / WS3-004) ─────────────────────────
+    from teaagent.cost_state import derive_cost_state
+
+    cost_state = derive_cost_state(
+        cost_cents=cost_cents_value,
+        budget_cap_cents=budget_cap_cents,
+    )
 
     summary: dict[str, Any] = {
         'tool_calls_total': tool_calls_total,

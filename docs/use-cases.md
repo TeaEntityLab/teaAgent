@@ -7,8 +7,8 @@ from market-standard product gaps that still need acceptance tests.
 
 Generated matrix: [use-case-matrix.md](use-case-matrix.md)
 
-Landscape survey (reviewed 2026-05-24)
-Last refreshed: 2026-05-31
+Landscape survey (reviewed 2026-06-06)
+Last refreshed: 2026-06-06
 [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md)
 
 ## Status Key
@@ -42,7 +42,7 @@ governance, audit, and portable protocol surfaces.
 ## Competitive Differentiators (Implemented / Maintenance)
 
 These items are intentionally **not** full parity gaps. They are shipped
-differentiators from the 2026-05-24 landscape survey that now need release
+differentiators from the 2026-06-06 landscape survey that now need release
 hygiene, drift checks, and periodic review rather than feature buildout.
 
 | Differentiator | Priority | Backlog reference |
@@ -164,7 +164,7 @@ stories, but docs/packaging/ops still lag mainstream daily agents.
 
 ## Partial / Planned Gaps (docs & packaging)
 
-These items are tracked as open gaps from the 2026-05-24 landscape survey.
+These items are tracked as open gaps from the 2026-06-06 landscape survey.
 They are **not** claimed as done — each has a concrete next action.
 
 | Gap | Source agent(s) | Current state | Next action | Priority |

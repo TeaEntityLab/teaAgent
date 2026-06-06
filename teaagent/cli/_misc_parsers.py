@@ -35,6 +35,7 @@ def register(
         migration_handler=handlers.get('doctor_migration'),
         git_sandbox_handler=handlers.get('doctor_git_sandbox'),
         selftest_handler=handlers.get('doctor_selftest'),
+        config_lint_handler=handlers.get('doctor_config_lint'),
     )
     _selftest_top_level(subparsers, handlers.get('doctor_selftest'))
     _completion(subparsers, handlers['completion'])
@@ -47,6 +48,7 @@ def register(
         verify_handler=handlers.get('audit_verify'),
         export_handler=handlers.get('audit_export'),
         decrypt_handler=handlers.get('audit_decrypt'),
+        tail_handler=handlers.get('audit_tail'),
     )
     _env(
         subparsers,
@@ -267,6 +269,7 @@ def _doctor(
     migration_handler: Optional[Callable] = None,
     git_sandbox_handler: Optional[Callable] = None,
     selftest_handler: Optional[Callable] = None,
+    config_lint_handler: Optional[Callable] = None,
 ) -> None:
     doctor = subparsers.add_parser('doctor', help='Run environment checks.')
     subs = doctor.add_subparsers(dest='doctor_command', required=True)
@@ -398,6 +401,29 @@ def _doctor(
     )
     env_order.set_defaults(func=env_order_handler or model_handler)
 
+    if config_lint_handler is not None:
+        config_lint = subs.add_parser(
+            'config-lint',
+            help='Warn about unsafe permission, isolation, and cost settings.',
+        )
+        config_lint.add_argument('--root', default='.', help='Workspace root.')
+        config_lint.add_argument(
+            '--permission-mode',
+            default='prompt',
+            help='Permission mode to evaluate (default: prompt).',
+        )
+        config_lint.add_argument(
+            '--allow-destructive',
+            action='store_true',
+            help='Include allow-destructive posture in lint evaluation.',
+        )
+        config_lint.add_argument(
+            '--subagent-isolation',
+            default=None,
+            help='Subagent isolation mode override for lint (e.g. shared, worktree).',
+        )
+        config_lint.set_defaults(func=config_lint_handler)
+
     all_checks = subs.add_parser('all', help='Run all environment checks.')
     all_checks.add_argument(
         '--database',
@@ -516,6 +542,7 @@ def _audit(
     verify_handler: Optional[Callable] = None,
     export_handler: Optional[Callable] = None,
     decrypt_handler: Optional[Callable] = None,
+    tail_handler: Optional[Callable] = None,
 ) -> None:
     audit = subparsers.add_parser('audit', help='Inspect and prune run audit logs.')
     subs = audit.add_subparsers(dest='audit_command', required=True)
@@ -534,6 +561,20 @@ def _audit(
         help='Include model reasoning alongside tool call events.',
     )
     show_cmd.set_defaults(func=show_handler)
+
+    tail_cmd = subs.add_parser(
+        'tail', help='Show recent run audit events with classification.'
+    )
+    tail_cmd.add_argument('run_id', help='Run id to tail.')
+    tail_cmd.add_argument('--root', default='.', help='Workspace root.')
+    tail_cmd.add_argument('--limit', type=int, default=20, help='Number of events.')
+    tail_cmd.add_argument(
+        '--human',
+        action='store_true',
+        help='Human-readable output with event classification.',
+    )
+    if tail_handler is not None:
+        tail_cmd.set_defaults(func=tail_handler)
 
     prune_cmd = subs.add_parser('prune', help='Delete old audit JSONL runs.')
     prune_cmd.add_argument('--root', default='.', help='Workspace root.')

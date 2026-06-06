@@ -1,5 +1,9 @@
 # Daily-Driver Critique and Counterarguments - 2026-06-04
 
+> **Last strategy refresh:** 2026-06-06 — see
+> [Competitor Signal Survey (2026-06-06)](../analysis/competitor-signal-survey-2026-06-06.md)
+> for updated market-pressure notes. Critique structure unchanged.
+
 ## Purpose
 
 This document is the skeptical companion to the roadmap. It asks what could be wrong with the current direction, which assumptions are weak, and which alternatives deserve explicit rejection instead of quiet neglect.

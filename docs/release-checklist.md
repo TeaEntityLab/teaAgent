@@ -1,8 +1,14 @@
 # Release Checklist
 
-**Last reviewed:** 2026-06-05
+**Last reviewed:** 2026-06-06
+
+> **Review trigger:** Release gates, survey cadence, or validation workflow changes.
 
 Use before tagging a minor release or merging a federation/protocol ADR.
+
+Periodic documentation audit cadence:
+[Documentation Audit Cadence](governance/documentation-audit-cadence-2026-06-06.md)
+(via `./scripts/verify_docs.sh`).
 
 ## Competitive landscape hygiene
 
@@ -96,8 +102,16 @@ remain clearly marked as archival.
 ### Completion evidence
 
 After each monthly review, update the `Last reviewed` date at the top of this
-file and note the review in `docs/release-evidence.json` (or in a comment if
-no other release evidence changed).
+file and regenerate the release documentation evidence bundle:
+
+```bash
+python3 scripts/build_release_docs_evidence_bundle.py
+```
+
+See [docs/generated/release-docs-evidence.md](generated/release-docs-evidence.md)
+for the dated bundle (commands, commit, docs freshness, roadmap excerpt, and
+open residual risks). JSON mirror:
+[docs/generated/release-docs-evidence.json](generated/release-docs-evidence.json).
 
 ## Quarterly Refresh Process (P2-C)
 
@@ -130,8 +144,8 @@ documentation corpus does not silently stale between release cycles.
    ```bash
    python3 scripts/detect_stale_plans.py --check-review-dates
    ```
-2. **Competitor signal survey** — Re-run `scripts/refresh_agent_readme_survey.md`
-   against current DeepWiki/upstream signals and update `Last reviewed` date.
+2. **Competitor signal survey** — Follow [Quarterly Competitor Refresh Process](processes/quarterly-competitor-refresh.md)
+   and run `python3 scripts/refresh_competitive_docs.py`; update `Last reviewed` date.
 3. **Maturity matrix** — Re-assess every row in `docs/maturity-matrix.md`:
    - Experimental → Beta transitions that happened
    - Beta → Stable transitions that qualified

@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import Any
 
 from teaagent.llm import LLMAdapter
 from teaagent.subagent_run_context import get_parent_run_id
-from teaagent.subagents._isolation import normalize_subagent_isolation
+from teaagent.subagents._isolation import (
+    DEFAULT_SUBAGENT_BATCH_TIMEOUT_SECONDS,
+    GLOBAL_MAX_SUBAGENT_BATCH_WORKERS,
+    resolve_subagent_isolation,
+)
 from teaagent.subagents._manager import SubagentManager
 from teaagent.subagents._team_orchestrator import TeamOrchestrator
+from teaagent.subagents._types import DEFAULT_SUBAGENT_ISOLATION
 from teaagent.tools import ToolAnnotations, ToolRegistry
 
 
@@ -29,11 +35,13 @@ def register_subagent_tools(
         task = args.get('task')
         if not isinstance(task, str) or not task.strip():
             return _subagent_error("subagent requires non-empty 'task'")
-        isolation = normalize_subagent_isolation(args.get('isolation'))
+        isolation = resolve_subagent_isolation(
+            args.get('isolation'), root=manager._root
+        )
         if isolation is None:
             return _subagent_error(
                 f'unsupported subagent isolation: {args.get("isolation")!r}; '
-                'use shared, worktree, or container'
+                'use shared, worktree, directory-snapshot, docker, or auto'
             )
         return manager.run_subagent(
             task=task,
@@ -47,7 +55,7 @@ def register_subagent_tools(
     _register(
         registry,
         name='subagent',
-        description='Delegate one focused sub-task to a fresh agent run sharing tools and policy.',
+        description='Delegate one focused sub-task to a fresh agent run sharing tools and policy. Default isolation is worktree on git repos; pass isolation=shared explicitly for a shared workspace.',
         handler=execute,
     )
 
@@ -55,7 +63,10 @@ def register_subagent_tools(
         tool_name = f'subagent_{sub_def.name}'
 
         def execute_named(
-            args: dict[str, Any], *, def_name: str = sub_def.name
+            args: dict[str, Any],
+            *,
+            def_name: str = sub_def.name,
+            def_isolation: str = sub_def.isolation,
         ) -> dict[str, Any]:
             if depth >= config.max_subagent_depth:
                 return _subagent_error(
@@ -64,11 +75,15 @@ def register_subagent_tools(
             task = args.get('task')
             if not isinstance(task, str) or not task.strip():
                 return _subagent_error("subagent requires non-empty 'task'")
-            isolation = normalize_subagent_isolation(args.get('isolation'))
+            isolation = resolve_subagent_isolation(
+                args.get('isolation'),
+                root=manager._root,
+                def_isolation=def_isolation,
+            )
             if isolation is None:
                 return _subagent_error(
                     f'unsupported subagent isolation: {args.get("isolation")!r}; '
-                    'use shared, worktree, or container'
+                    'use shared, worktree, directory-snapshot, docker, or auto'
                 )
             return manager.run_subagent(
                 task=task,
@@ -160,7 +175,10 @@ def _register(
                 'max_tool_calls': {'type': 'integer'},
                 'isolation': {
                     'type': 'string',
-                    'description': 'Workspace isolation: shared (default), worktree, or container snapshot.',
+                    'description': (
+                        'Workspace isolation mode. Omit for worktree on git repos; '
+                        'pass isolation=shared explicitly for a shared workspace.'
+                    ),
                 },
             },
             'required': ['task'],
@@ -255,7 +273,15 @@ def _register_batch(
                 'message': "'tasks' must be a non-empty list of subagent task objects",
             }
 
-        max_workers = min(_as_int(args.get('max_workers')) or 4, len(tasks))
+        max_workers = min(
+            _as_int(args.get('max_workers')) or 4,
+            len(tasks),
+            GLOBAL_MAX_SUBAGENT_BATCH_WORKERS,
+        )
+        timeout_seconds = (
+            _as_int(args.get('timeout_seconds'))
+            or DEFAULT_SUBAGENT_BATCH_TIMEOUT_SECONDS
+        )
         parent_run_id = get_parent_run_id()
 
         def _run_one(task_obj: dict, batch_index: int) -> dict[str, Any]:
@@ -263,11 +289,18 @@ def _register_batch(
             if not isinstance(task, str) or not task.strip():
                 return _subagent_error("subagent requires non-empty 'task'")
             def_name = task_obj.get('def_name')
-            isolation = normalize_subagent_isolation(task_obj.get('isolation'))
+            sub_def = manager.get_def(def_name) if isinstance(def_name, str) else None
+            isolation = resolve_subagent_isolation(
+                task_obj.get('isolation'),
+                root=manager._root,
+                def_isolation=sub_def.isolation
+                if sub_def
+                else DEFAULT_SUBAGENT_ISOLATION,
+            )
             if isolation is None:
                 return _subagent_error(
                     f'unsupported subagent isolation: {task_obj.get("isolation")!r}; '
-                    'use shared, worktree, or container'
+                    'use shared, worktree, directory-snapshot, docker, or auto'
                 )
             return manager.run_subagent(
                 task=task,
@@ -281,34 +314,77 @@ def _register_batch(
             )
 
         results: list[tuple[int, dict[str, Any]]] = []
+        deadline = time.monotonic() + max(timeout_seconds, 1)
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             futures = {
                 pool.submit(_run_one, task, index): index
                 for index, task in enumerate(tasks)
             }
-            for future in as_completed(futures):
+            pending = set(futures.keys())
+            while pending:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                done, pending = wait(
+                    pending,
+                    timeout=remaining,
+                    return_when=FIRST_COMPLETED,
+                )
+                for future in done:
+                    idx = futures[future]
+                    try:
+                        results.append((idx, future.result()))
+                    except Exception as exc:
+                        results.append((idx, _subagent_error(str(exc))))
+
+            for future in pending:
+                future.cancel()
                 idx = futures[future]
-                try:
-                    results.append((idx, future.result()))
-                except Exception as exc:
-                    results.append((idx, _subagent_error(str(exc))))
+                results.append(
+                    (
+                        idx,
+                        _subagent_error(
+                            f'batch timeout after {timeout_seconds}s before task started'
+                        ),
+                    )
+                )
 
         results.sort(key=lambda x: x[0])
         ordered = [r for _, r in results]
 
         ok_count = sum(1 for r in ordered if r.get('status') == 'completed')
+        timed_out = sum(
+            1
+            for r in ordered
+            if r.get('status') == 'error'
+            and 'batch timeout' in str(r.get('message', ''))
+        )
         lineage = [
             entry
             for entry in (r.get('lineage') for r in ordered)
             if isinstance(entry, dict)
         ]
-        return {
-            'status': 'completed' if ok_count == len(ordered) else 'partial',
+        if timed_out:
+            status = 'partial'
+            message = f'{timed_out} task(s) timed out after {timeout_seconds}s'
+        elif ok_count == len(ordered):
+            status = 'completed'
+            message = ''
+        else:
+            status = 'partial'
+            message = ''
+        payload = {
+            'status': status,
             'results': ordered,
             'lineage': lineage,
             'total': len(ordered),
             'completed': ok_count,
+            'timed_out': timed_out,
+            'timeout_seconds': timeout_seconds,
         }
+        if message:
+            payload['message'] = message
+        return payload
 
     registry.register(
         name='subagent_batch',
@@ -326,7 +402,13 @@ def _register_batch(
                             'def_name': {'type': 'string'},
                             'max_iterations': {'type': 'integer'},
                             'max_tool_calls': {'type': 'integer'},
-                            'isolation': {'type': 'string'},
+                            'isolation': {
+                                'type': 'string',
+                                'description': (
+                                    'Per-task isolation. Omit for worktree on git repos; '
+                                    'pass isolation=shared explicitly for shared workspace.'
+                                ),
+                            },
                         },
                         'required': ['task'],
                     },
@@ -334,6 +416,10 @@ def _register_batch(
                 'max_workers': {
                     'type': 'integer',
                     'description': 'Maximum concurrent subagents (default: 4).',
+                },
+                'timeout_seconds': {
+                    'type': 'integer',
+                    'description': f'Batch deadline in seconds (default: {DEFAULT_SUBAGENT_BATCH_TIMEOUT_SECONDS}).',
                 },
             },
             'required': ['tasks'],
@@ -383,6 +469,8 @@ def _register_batch(
                 },
                 'total': {'type': 'integer'},
                 'completed': {'type': 'integer'},
+                'timed_out': {'type': 'integer'},
+                'timeout_seconds': {'type': 'integer'},
                 'message': {'type': 'string'},
                 'lineage': {
                     'type': 'array',

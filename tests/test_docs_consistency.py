@@ -64,6 +64,7 @@ def test_validate_docs_consistency_passes_when_inputs_match(tmp_path: Path) -> N
         check_mode_matrix=False,
         check_surface_recipes=False,
         check_catalog=False,
+        check_repo_governance=False,
     )
     assert errors == []
 
@@ -94,6 +95,7 @@ def test_validate_docs_consistency_detects_mismatch(tmp_path: Path) -> None:
         check_survey=False,
         check_mode_matrix=False,
         check_surface_recipes=False,
+        check_repo_governance=False,
     )
     assert len(errors) == 3  # status, tier sync, uncovered matrix row
 
@@ -158,6 +160,39 @@ def test_validate_roadmap_status_detects_missing_h0_truth_links() -> None:
         'Roadmap status missing documentation-current-truth work reference.' in errors
     )
     assert 'Roadmap status missing doc-vs-HEAD guard reference.' in errors
+
+
+def test_validate_roadmap_required_fields_detects_missing_owner() -> None:
+    roadmap = (
+        '# Roadmap Status\n\n'
+        '| ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |\n'
+        '|---|---|---|---|---|---|---|\n'
+        '| GOV-001 | Example |  | Pending | Medium | GOV-002 | Medium |\n'
+    )
+    errors = _VALIDATE_MODULE.validate_roadmap_required_fields(roadmap)
+    assert any('missing required field' in err and 'Owner' in err for err in errors)
+
+
+def test_validate_roadmap_required_fields_detects_invalid_status() -> None:
+    roadmap = (
+        '# Roadmap Status\n\n'
+        '| ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |\n'
+        '|---|---|---|---|---|---|---|\n'
+        '| GOV-001 | Example | docs | Shipped | Medium | GOV-002 | Medium |\n'
+    )
+    errors = _VALIDATE_MODULE.validate_roadmap_required_fields(roadmap)
+    assert any('unrecognized Status' in err for err in errors)
+
+
+def test_validate_roadmap_required_fields_passes_for_valid_track_row() -> None:
+    roadmap = (
+        '# Roadmap Status\n\n'
+        '| ID | Work Item | Owner | Status | Confidence | Next Gate | Risk |\n'
+        '|---|---|---|---|---|---|---|\n'
+        '| GOV-001 | Example | docs | Pending | Medium | GOV-002 | Medium |\n'
+    )
+    errors = _VALIDATE_MODULE.validate_roadmap_required_fields(roadmap)
+    assert errors == []
 
 
 def test_validate_coverage_omit_ledger_passes_for_repo_docs() -> None:
@@ -308,7 +343,9 @@ def test_validate_date_coherence_detects_use_cases_survey_drift() -> None:
     use_cases = (root / 'docs' / 'use-cases.md').read_text(encoding='utf-8')
     architecture = (root / 'docs' / 'architecture.md').read_text(encoding='utf-8')
     stale = use_cases.replace(
-        '2026-05-24 landscape survey', '2026-05-22 landscape survey', 1
+        'Landscape survey (reviewed 2026-06-06)',
+        'Landscape survey (reviewed 2026-06-01)',
+        1,
     )
     errors = _VALIDATE_MODULE.validate_date_coherence(
         survey_text=survey,

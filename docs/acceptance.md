@@ -1,6 +1,13 @@
 # Acceptance Coverage
 
-**Last reviewed:** 2026-06-05
+> **Claim class:** Current truth for acceptance/integration test inventory and count.
+>
+> **Owns:** How to run acceptance tests and the current passed-count guard target.
+>
+> **Does not own:** Full-suite CI results (see dated evidence) or roadmap priorities.
+>
+> **Review trigger:** Acceptance test inventory or count changes.
+> **Last reviewed:** 2026-06-06
 
 TeaAgent acceptance tests live under `tests/acceptance/` and verify
 user-facing workflows rather than isolated primitives. Integration tests live
@@ -23,7 +30,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `442 passed`** (P0+P1+P2 streams finalized)
+**Current acceptance test count: `446 passed`** (P0+P1+P2 streams finalized)
 
 ## Acceptance Flows
 
@@ -143,7 +150,7 @@ directory.
 
 ## Current Status
 
-Acceptance collection currently reports `442` acceptance tests, matching the
+Acceptance collection currently reports `446` acceptance tests, matching the
 headline above. The last recorded supported-interpreter full-suite verification
 in the June 5 daily-driver finalization package reported `4265 passed, 0 failed, 6 skipped`
 on Python 3.14.4 (4265 = 4090 baseline + 175 new tests across P0–P2 workstreams). Treat that full-suite

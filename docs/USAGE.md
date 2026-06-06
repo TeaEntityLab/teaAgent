@@ -7,6 +7,9 @@ last_audit: 2026-06-01
 ---
 # TeaAgent Quick Start Guide
 
+> **Last reviewed:** 2026-06-06
+> **Review trigger:** CLI/TUI command behavior, permission modes, or surface recipes change.
+
 A beginner-friendly walkthrough from installation to your first agent run and chat session.
 
 **Docs map:** This file is the guided walkthrough. [README.md](../README.md) is the short golden path. [cli.md](cli.md) is the command reference.

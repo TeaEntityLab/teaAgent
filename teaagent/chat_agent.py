@@ -24,13 +24,14 @@ from teaagent.context import ContextCompactor
 from teaagent.errors import ToolValidationError
 from teaagent.heartbeat import Heartbeat
 from teaagent.hooks import HookRegistry
+from teaagent.integration.run_contract import build_run_budget
 from teaagent.llm import (
     LLMAdapter,
     LLMMessage,
     LLMRequest,
 )
 from teaagent.memory import MemoryCatalog, memory_entries_to_prompt
-from teaagent.policy import ApprovalPolicy, MultiSigQuorumConfig, PermissionMode
+from teaagent.policy import PermissionMode
 from teaagent.prompt import (
     DECISION_JSON_SCHEMA,
     assemble_agent_prompt,
@@ -564,7 +565,7 @@ def _create_runner_and_engine(
     Returns:
         Tuple of (runner, engine)
     """
-    runner_budget = RunBudget(
+    runner_budget = build_run_budget(
         max_iterations=config.max_iterations,
         max_tool_calls=config.max_tool_calls,
         max_estimated_cost_cents=config.max_estimated_cost_cents,
@@ -584,32 +585,30 @@ def _create_runner_and_engine(
         skill_index=skill_index_entries or None,
     )
     # Load approval store if enabled
-    approval_store = None
-    if config.use_approval_store:
-        from teaagent.ergonomics.approval_store import ApprovalPresetStore
+    from teaagent.integration.run_contract import RunSetupRequest, build_approval_policy
 
-        approval_store = ApprovalPresetStore(config.root)
+    approval_policy = build_approval_policy(
+        RunSetupRequest(
+            root=config.root,
+            permission_mode=config.permission_mode,
+            allow_destructive=config.allow_destructive,
+            max_iterations=config.max_iterations,
+            max_tool_calls=config.max_tool_calls,
+            max_estimated_cost_cents=config.max_estimated_cost_cents,
+            approved_call_ids=config.approved_call_ids,
+            use_approval_store=config.use_approval_store,
+            run_id=run_id,
+            resumed_from=context_extra.get('resumed_from'),
+            load_plugins=False,
+        ),
+        approval_origin_run_id=context_extra.get('resumed_from') or run_id,
+    )
 
     runner = AgentRunner(
         registry=tool_registry,
         audit=audit_logger,
         budget=runner_budget,
-        approval_policy=ApprovalPolicy(
-            preapproved_call_ids=config.approved_call_ids,
-            allow_all_destructive=config.allow_destructive,
-            # The explicit --allow-destructive flag is the user's acknowledgment
-            # of full-access semantics (P0-TR-001); the bypass is only honored
-            # in danger-full-access mode.
-            full_access_acknowledged=config.allow_destructive,
-            permission_mode=(
-                PermissionMode.DANGER_FULL_ACCESS
-                if config.allow_destructive
-                else config.permission_mode
-            ),
-            approval_store=approval_store,
-            approval_origin_run_id=context_extra.get('resumed_from') or run_id,
-            multi_sig_config=MultiSigQuorumConfig.from_workspace_config(config.root),
-        ),
+        approval_policy=approval_policy,
         approval_handler=config.approval_handler,
         budget_prompt_handler=config.budget_prompt_handler,
         compactor=ContextCompactor(memory_keys=('task_spec', 'memories')),

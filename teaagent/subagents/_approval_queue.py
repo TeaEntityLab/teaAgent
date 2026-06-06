@@ -143,21 +143,23 @@ class CentralizedApprovalQueue:
         self._sync_results: dict[str, bool] = {}
         self._lock = asyncio.Lock()
         self._sync_lock = threading.Lock()
-        self._store = None
+        self._backend: Optional[Any] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         if self._workspace_root is not None:
-            from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+            from teaagent.coordination.approval_backend import (  # noqa: I001
+                resolve_approval_backend,
+            )
 
-            self._store = ApprovalQueueStore(self._workspace_root)
+            self._backend = resolve_approval_backend(self._workspace_root)
             self.reload_from_store()
 
     def reload_from_store(self) -> None:
-        """Merge on-disk queue state (for cross-process approve/deny)."""
-        if self._store is None:
+        """Merge durable queue state (for cross-process approve/deny)."""
+        if self._backend is None:
             return
         from teaagent.subagents._approval_queue_store import request_from_dict
 
-        snapshot = self._store.load(self._parent_run_id)
+        snapshot = self._backend.load_snapshot(self._parent_run_id)
         with self._sync_lock:
             # Validate snapshot structure
             if not isinstance(snapshot.requests, dict):
@@ -253,8 +255,8 @@ class CentralizedApprovalQueue:
                             self._resolve_future_threadsafe(future, False)
 
     def _persist(self) -> None:
-        if self._store is not None:
-            self._store.save(self._parent_run_id, self._requests, self._batches)
+        if self._backend is not None:
+            self._backend.save(self._parent_run_id, self._requests, self._batches)
 
     def _resolve_future_threadsafe(
         self, future: asyncio.Future[bool], value: bool
@@ -317,7 +319,7 @@ class CentralizedApprovalQueue:
         poll_interval = 0.25
         while time.monotonic() < deadline:
             remaining = deadline - time.monotonic()
-            if self._store is not None:
+            if self._backend is not None:
                 self.reload_from_store()
             if event.wait(timeout=min(poll_interval, max(remaining, 0))):
                 break
@@ -692,9 +694,13 @@ def list_active_parent_run_ids(
         if root_key is None or ws == root_key:
             keys.add(parent_id)
     if workspace_root is not None:
-        from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+        from teaagent.coordination.approval_backend import (  # noqa: I001
+            approval_backend_for_workspace,
+        )
 
-        keys.update(ApprovalQueueStore(workspace_root).list_parent_run_ids())
+        keys.update(
+            approval_backend_for_workspace(workspace_root).list_parent_run_ids()
+        )
     return sorted(keys)
 
 
@@ -728,9 +734,11 @@ def try_get_approval_queue(
     if key in _approval_queues:
         return _approval_queues[key]
     if workspace_root is not None:
-        from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+        from teaagent.coordination.approval_backend import (  # noqa: I001
+            approval_backend_for_workspace,
+        )
 
-        if ApprovalQueueStore(workspace_root).exists(parent_run_id):
+        if approval_backend_for_workspace(workspace_root).exists(parent_run_id):
             return get_approval_queue(parent_run_id, workspace_root=workspace_root)
     return None
 
@@ -757,13 +765,15 @@ def approve_request_cross_process(
     *,
     approved_by: str = 'human',
 ) -> bool:
-    """Approve via disk when the parent process holds the in-memory waiter."""
-    from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+    """Approve via durable backend when the parent process holds the in-memory waiter."""
+    from teaagent.coordination.approval_backend import (  # noqa: I001
+        approval_backend_for_workspace,
+    )
 
-    store = ApprovalQueueStore(workspace_root)
+    backend = approval_backend_for_workspace(workspace_root)
     ok = False
     for _ in range(10):
-        ok = store.update_request_status(
+        ok = backend.update_request_status(
             parent_run_id,
             request_id,
             ApprovalRequestStatus.APPROVED,
@@ -786,10 +796,12 @@ def deny_request_cross_process(
     *,
     reason: str = 'Denied by human',
 ) -> bool:
-    from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+    from teaagent.coordination.approval_backend import (  # noqa: I001
+        approval_backend_for_workspace,
+    )
 
-    store = ApprovalQueueStore(workspace_root)
-    ok = store.update_request_status(
+    backend = approval_backend_for_workspace(workspace_root)
+    ok = backend.update_request_status(
         parent_run_id,
         request_id,
         ApprovalRequestStatus.DENIED,

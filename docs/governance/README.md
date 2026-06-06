@@ -1,5 +1,8 @@
 # Governance Index
 
+> **Last reviewed:** 2026-06-06
+> **Review trigger:** Governance index or process entry points change.
+
 This directory contains the authoritative standards and process documentation for TeaAgent. All documents are grounded in the actual project configuration (`pyproject.toml`, `ruff.toml`, `.github/workflows/`, `SECURITY.md`).
 
 ---
@@ -21,10 +24,12 @@ This directory contains the authoritative standards and process documentation fo
 | [doc-maintenance-policy-2026-06-02.md](doc-maintenance-policy-2026-06-02.md) | Short entry point for keeping the daily-driver doc corpus useful |
 | [evidence-to-principle-policy.md](evidence-to-principle-policy.md) | How to turn repository evidence into durable principles and roadmap rationale |
 | [documentation-operating-model-2026-06-04.md](documentation-operating-model-2026-06-04.md) | Claim classes, evidence hierarchy, freshness windows, guarded claims, and documentation definition of done |
-| [coverage-omit-ledger.md](coverage-omit-ledger.md) | Owner, reason, risk, return milestone, and smoke-test candidate for each coverage omit pattern |
+| [integration-contracts.md](integration-contracts.md) | WS5 run/event/approval/storage/plugin boundaries |
+| [trust-and-audit-whitepaper.md](trust-and-audit-whitepaper.md) | Guarantees, non-goals, failure behavior, verification commands |
+| [cost-state-taxonomy.md](cost-state-taxonomy.md) | Run receipt and budget display labels |
 
-For the threat model and permission mode table, see [SECURITY.md](../../SECURITY.md).  
-For architecture decisions, see [docs/adr/](../adr/).  
+For the threat model and permission mode table, see [SECURITY.md](../../SECURITY.md).
+For architecture decisions, see [docs/adr/](../adr/).
 For the existing skill governance process, see [docs/skill-governance.md](../skill-governance.md).
 For the curated documentation front door, see [docs/INDEX.md](../INDEX.md).
 For dependency audit lanes, see

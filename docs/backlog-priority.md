@@ -1,5 +1,8 @@
 # Backlog Priority
 
+> **Last reviewed:** 2026-06-06
+> **Review trigger:** Backlog priorities or shipped/beta status claims change.
+
 Prioritized by impact order: security and production risk → core platform capabilities → developer experience and ecosystem.
 
 Last updated: 2026-06-01 (P0 acceptance tests complete, strategic P2 research initiated, monitoring automation scripts created, first monitoring cycle executed)

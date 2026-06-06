@@ -1,6 +1,9 @@
 # TeaAgent Documentation Index
 # 2026-06-06
 
+> **Last reviewed:** 2026-06-06
+> **Review trigger:** New front-door docs, supersession links, or validation command changes.
+
 This is the curated front door for TeaAgent documentation. It is intentionally
 not an exhaustive file list. Use it to find the current source of truth, then
 follow dated evidence documents only when you need the reasoning trail.
@@ -14,6 +17,27 @@ follow dated evidence documents only when you need the reasoning trail.
 | What is the documentation operating model? | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Governance rulebook for claim types, TTL, owners, supersession, and CI guard targets. |
 | What should be done next? | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Execution plan for reducing drift and improving discoverability. |
 | What are the concrete work items? | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Task ledger with priority, status, dependencies, and acceptance criteria. |
+| Exhaustive docs inventory (generated) | [Docs Inventory](generated/docs-inventory.md) | Deterministic catalog; not current truth — use this index table first. |
+| Documentation aging dashboard (generated) | [Docs Aging Dashboard](generated/docs-aging-dashboard.md) | Current-truth review freshness grouped by owner surface. |
+| Command snippet inventory (generated) | [Command Snippet Inventory](generated/command-snippet-inventory.md) | Guide command coverage vs smoke/manual registry. |
+
+## Status vocabulary
+
+Active indexes and work-item ledgers use the canonical states in
+[Document State Model](governance/document-state-model.md). When updating a
+ledger row, map legacy labels instead of introducing new synonyms:
+
+| Legacy label | Canonical state |
+| --- | --- |
+| OPEN | Active |
+| DONE / Complete / Closed | Fixed |
+| Pending | Proposed |
+| In Progress | Active |
+| PARTIAL | Partially fixed |
+| Stale | Superseded |
+
+Roadmap tables may keep horizon-specific wording (`In Progress`, `Pending`) but
+governance ledgers should prefer the canonical set above.
 
 ## Current Truth
 
@@ -36,8 +60,9 @@ follow dated evidence documents only when you need the reasoning trail.
 | June 4 total review | [Total Review Index](analysis/total-review-2026-06-04-INDEX.md) |
 | June 4 documentation critique | [Documentation Critical Questioning](reviews/documentation-critical-questioning-2026-06-04.md) |
 | June 1 daily-driver review package | [Daily-Driver Review Package Index](analysis/daily-driver-review-INDEX-2026-06-01.md) |
+| Active daily-driver finding closure | [Active Findings Status Ledger](analysis/active-findings-status-ledger-2026-06-06.md) |
 | Markdown governance review | [Markdown Status Review](analysis/markdown-status-review-2026-06-02.md) |
-| Competitor signal survey | [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-04.md) |
+| Competitor signal survey | [Competitor Signal Survey](analysis/competitor-signal-survey-2026-06-06.md) (June 4 snapshot: [2026-06-04](analysis/competitor-signal-survey-2026-06-04.md)) |
 | Product principles | [TeaAgent Product Principles](strategy/teaagent-product-principles-2026-06-04.md) |
 | Dynamic skill and long-result audit | [Dynamic Skill Generation And Long Result Audit](analysis/dynamic-skill-generation-and-long-result-audit-2026-06-05.md) |
 | RSS dynamic skill failure case study | [RSS Dynamic Skill Failure Case Study](analysis/rss-failure-case-study-2026-06-05.md) |
@@ -71,7 +96,9 @@ follow dated evidence documents only when you need the reasoning trail.
 | Post-fix re-audit | [Postfix Reaudit Process](processes/postfix-reaudit-process.md) |
 | Daily-driver verification | [Daily-Driver Verification](processes/daily-driver-verification.md) |
 | Daily-driver manual QA smoke | [Daily-Driver Manual QA Smoke](processes/daily-driver-manual-qa-smoke.md) |
-| Quarterly competitor refresh | [Release Checklist](release-checklist.md) |
+| Quarterly competitor refresh | [Quarterly Competitor Refresh Process](processes/quarterly-competitor-refresh.md) · [Release Checklist](release-checklist.md) |
+| Trust and audit whitepaper | [Trust and Audit Whitepaper](governance/trust-and-audit-whitepaper.md) |
+| When not to use TeaAgent | [When Not to Use TeaAgent](guides/when-not-to-use-teaagent.md) |
 
 ## Governance
 
@@ -83,6 +110,8 @@ follow dated evidence documents only when you need the reasoning trail.
 | [Documentation Taxonomy And Ownership](governance/doc-taxonomy-and-ownership.md) | Where each document type belongs and who owns it. |
 | [Documentation Maintenance Policy](governance/doc-maintenance-policy-2026-06-02.md) | Short policy for adding, updating, and validating docs. |
 | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Practical rules for claim classes, freshness windows, source-of-truth conflicts, and CI guard scope. |
+| [Documentation Audit Cadence](governance/documentation-audit-cadence-2026-06-06.md) | When to run docs gates and which evidence artifacts to keep. |
+| [Command Snippet Registry](governance/command-snippet-registry.md) | Smoke vs manual coverage for high-value guide commands. |
 | [Coverage Omit Ledger](governance/coverage-omit-ledger.md) | Governance ledger for files and directories omitted from test coverage reporting. |
 | [Architecture Decision Records](adr/README.md) | Index of ADRs and their current accepted/closed states. |
 
@@ -140,6 +169,7 @@ for current status.
 | Surface | Documentation |
 | --- | --- |
 | CLI | [CLI](cli.md) and [USAGE](USAGE.md) |
+| Conversation UX | [Chat Surface Semantics](guides/chat-surface-semantics.md) and [Background/Resume Vocabulary](guides/background-resume-vocabulary.md) |
 | TUI | [TUI Daily-Driver Guide](tui-daily-driver-guide.md) and [TUI Chat Reference](tui-chat-reference.md) |
 | Agent mode | [Agent Mode Operator Guide](agent-mode-operator-guide.md) |
 | APIs | [API Index](api/README.md) |

@@ -90,7 +90,7 @@ Use one active source of truth per question:
 | Question | Source of truth |
 |----------|-----------------|
 | What should a daily user trust today? | `docs/daily-driver-current-status.md` |
-| Which daily-driver findings are open or closed? | `docs/analysis/daily-driver-findings-status-ledger-2026-06-01.md` or its successor |
+| Which daily-driver findings are open or closed? | `docs/analysis/active-findings-status-ledger-2026-06-06.md` | Dated review packages and the June 1 ledger (superseded). |
 | Which fix should be implemented next? | `docs/plans/ticket-plans/index.md` |
 | Which roadmap horizon owns the work? | `docs/roadmap-status.md` |
 | Which subsystem owns a local risk? | `docs/modules/<module>/risks.md` |

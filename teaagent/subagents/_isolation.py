@@ -15,6 +15,43 @@ from teaagent.workspace_tools._config import _load_gitignore_matcher
 
 logger = logging.getLogger(__name__)
 
+GLOBAL_MAX_SUBAGENT_BATCH_WORKERS = 8
+DEFAULT_SUBAGENT_BATCH_TIMEOUT_SECONDS = 300
+
+
+def is_git_repository(root: Path) -> bool:
+    return (root.resolve() / '.git').exists()
+
+
+def resolve_subagent_isolation(
+    explicit: Any,
+    *,
+    root: Path,
+    def_isolation: str = DEFAULT_SUBAGENT_ISOLATION,
+) -> str | None:
+    """Resolve runtime isolation for tool calls.
+
+    Shared workspace requires an explicit ``isolation='shared'`` argument.
+    When omitted, prefer ``worktree`` on git repositories; otherwise fall back
+    to shared with a warning (non-git workspaces cannot use worktree).
+    """
+    if isinstance(explicit, str) and explicit.strip():
+        return normalize_subagent_isolation(explicit)
+    if explicit is not None and not isinstance(explicit, str):
+        return normalize_subagent_isolation(explicit)
+    if def_isolation != DEFAULT_SUBAGENT_ISOLATION:
+        normalized_def = normalize_subagent_isolation(def_isolation)
+        if normalized_def:
+            return normalized_def
+    if is_git_repository(root):
+        return 'worktree'
+    logger.warning(
+        'Subagent isolation omitted on a non-git workspace; defaulting to shared. '
+        'Pass isolation=shared explicitly or run git init to enable worktree default.'
+    )
+    return DEFAULT_SUBAGENT_ISOLATION
+
+
 SUPPORTED_SUBAGENT_ISOLATIONS = frozenset(
     {'shared', 'worktree', 'directory-snapshot', 'docker', 'auto'}
 )
@@ -195,6 +232,10 @@ def prepare_subagent_isolation(
         isolation = new_name
 
     if isolation == DEFAULT_SUBAGENT_ISOLATION:
+        logger.info(
+            'Subagent using shared workspace isolation; child writes apply directly '
+            'to the parent workspace.'
+        )
         return (
             IsolationContext(parent_root=root, child_root=root, isolation=isolation),
             '',

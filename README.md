@@ -1,6 +1,25 @@
 # TeaAgent
 
+> **Last reviewed:** 2026-06-06
+> **Review trigger:** README feature claims, golden path, or provider count changes.
+
 Governance-first agent harness for autonomous coding tasks. Thin orchestration layer with tool governance, state boundaries, audit logging, and destructive-tool approval.
+
+**TeaAgent is not** a generic IDE agent clone or hosted cloud delegate. It is a local-first harness you operate — with explicit permission modes, hash-chained audit logs, and verification commands a security reviewer can run. See [When Not to Use TeaAgent](docs/guides/when-not-to-use-teaagent.md) for honest non-fit cases.
+
+## Governance-first harness
+
+| Pillar | What you get |
+| --- | --- |
+| **Permission matrix** | `read-only` → `workspace-write` → `prompt` → `allow` — not binary on/off |
+| **Audit trail** | Append-only JSONL per run, hash-chained, exportable for compliance review |
+| **Bounded runs** | Hard caps on iterations, tool calls, and estimated cost |
+| **Human gates** | Destructive tools require approval; subagent queues are durable and inspectable |
+| **Verify, don't trust** | `teaagent audit verify`, `doctor config-lint`, run receipts with audit health |
+
+Trust model: [Trust and Audit Whitepaper](docs/governance/trust-and-audit-whitepaper.md). Enterprise NIST mapping: [Security Whitepaper](docs/security-whitepaper.md).
+
+**Start by persona:** [Solo CLI](docs/guides/getting-started-solo-cli.md) · [Team operator](docs/guides/getting-started-team-operator.md) · [Tool/plugin author](docs/guides/getting-started-tool-plugin-author.md) · [Security reviewer](docs/guides/getting-started-security-reviewer.md)
 
 ## What makes it different
 
@@ -12,7 +31,7 @@ Governance-first agent harness for autonomous coding tasks. Thin orchestration l
 | Cost cap | ✅ hard budget via `--max-estimated-cost-cents` | ❌ surprise bills |
 | Model/provider choice | ✅ multiple adapters | ❌ vendor locked |
 
-Enterprise evaluation artifact: `docs/security-whitepaper.md`.
+Enterprise evaluation artifact: [Trust and Audit Whitepaper](docs/governance/trust-and-audit-whitepaper.md) (NIST detail: [Security Whitepaper](docs/security-whitepaper.md)).
 
 ## Golden path (first hour)
 

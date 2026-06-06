@@ -1,5 +1,9 @@
 # Daily-Driver Roadmap Rationale - 2026-06-04
 
+> **Last strategy refresh:** 2026-06-06 — competitor signals updated in
+> [Competitor Signal Survey (2026-06-06)](../analysis/competitor-signal-survey-2026-06-06.md).
+> Priority ordering below remains valid: trust repair before surface expansion.
+
 ## Purpose
 
 This document explains why the roadmap should favor trust repair and daily-driver usability before broader expansion.

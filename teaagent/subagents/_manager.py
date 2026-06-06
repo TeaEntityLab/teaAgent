@@ -95,6 +95,18 @@ class SubagentManager:
     ) -> dict[str, Any]:
         from teaagent.chat_agent import run_chat_agent
 
+        if depth >= self._parent_config.max_subagent_depth:
+            return _error(
+                f'global subagent depth limit {self._parent_config.max_subagent_depth} reached',
+                lineage=_lineage_or_none(
+                    parent_run_id,
+                    def_name or 'generic',
+                    depth + 1,
+                    batch_index,
+                    isolation,
+                ),
+            )
+
         sub_def: Optional[SubagentDef] = None
         if def_name:
             sub_def = self.get_def(def_name)
@@ -126,6 +138,14 @@ class SubagentManager:
         )
         resolved_max_tool_calls = max_tool_calls or (
             sub_def.max_tool_calls if sub_def else 5
+        )
+        resolved_max_iterations = min(
+            int(resolved_max_iterations),
+            int(self._parent_config.max_iterations),
+        )
+        resolved_max_tool_calls = min(
+            int(resolved_max_tool_calls),
+            int(self._parent_config.max_tool_calls),
         )
 
         normalized_isolation = normalize_subagent_isolation(isolation)
@@ -260,6 +280,7 @@ class SubagentManager:
             root=iso_ctx.child_root,
             max_iterations=int(resolved_max_iterations),
             max_tool_calls=int(resolved_max_tool_calls),
+            max_estimated_cost_cents=self._parent_config.max_estimated_cost_cents,
             model=(
                 sub_def.model
                 if sub_def and sub_def.model

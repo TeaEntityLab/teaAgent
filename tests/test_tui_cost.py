@@ -371,7 +371,7 @@ class TUICostTerminologyAlignmentTests(unittest.TestCase):
         )
         self.assertEqual(summary['cost_state'], 'unlimited')
 
-    def test_run_summary_unavailable_cost_state(self) -> None:
+    def test_run_summary_unknown_cost_state(self) -> None:
         from teaagent.ergonomics.run_summary import summarize_run
 
         summary = summarize_run(
@@ -383,7 +383,7 @@ class TUICostTerminologyAlignmentTests(unittest.TestCase):
             output_tokens=0,
             budget_cap_cents=500,
         )
-        self.assertEqual(summary['cost_state'], 'unavailable')
+        self.assertEqual(summary['cost_state'], 'unknown')
 
 
 class TUIEvidenceBundleCostTests(unittest.TestCase):

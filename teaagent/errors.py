@@ -161,3 +161,22 @@ class RunCancelledError(AgentHarnessError):
             hint=hint
             or 'Use `teaagent agent resume <run_id>` to continue from the last checkpoint.',
         )
+
+
+class AuditDurabilityError(AgentHarnessError):
+    """Audit log could not be persisted durably (WS3-001 compliance mode)."""
+
+    category = ErrorCategory.SYSTEM
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        cause: Optional[OSError] = None,
+        hint: Optional[str] = None,
+    ) -> None:
+        super().__init__(
+            message,
+            hint=hint or 'Free disk space or unset TEAAGENT_COMPLIANCE_MODE.',
+        )
+        self.cause = cause

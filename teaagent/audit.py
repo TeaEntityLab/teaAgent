@@ -118,7 +118,10 @@ class AuditLogger:
         redaction_config: Optional[Any] = None,
         audit_level: AuditLevel = 'L2',  # Default to redacted payload level
         encryption_key: Optional[bytes] = None,
+        compliance_mode: Optional[bool] = None,
     ) -> None:
+        from teaagent.security_env import compliance_mode as env_compliance_mode
+
         self.path = path
         self.events: list[AuditEvent] = []
         self._sinks: list[Callable[[AuditEvent], None]] = []
@@ -132,6 +135,9 @@ class AuditLogger:
         self._disk_error: Optional[OSError] = None
         self._last_disk_error_time: float = 0.0
         self._disk_error_cooldown_seconds: float = 30.0
+        self._compliance_mode = (
+            env_compliance_mode() if compliance_mode is None else compliance_mode
+        )
         self._chain_key = self._load_or_save_chain_key()
         self._audit_level = audit_level
         self._file_chmod_done = False  # Track if chmod has been done
@@ -446,6 +452,13 @@ class AuditLogger:
                         payload={'error': str(exc), 'errno': exc.errno},
                     )
                     self.events.append(err_event)
+                if self._compliance_mode:
+                    from teaagent.errors import AuditDurabilityError
+
+                    raise AuditDurabilityError(
+                        f'Audit disk write failed: {exc}',
+                        cause=exc,
+                    ) from exc
         failed_sinks = []
         for sink in sinks:
             try:

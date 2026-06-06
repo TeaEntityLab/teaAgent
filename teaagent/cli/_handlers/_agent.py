@@ -2621,11 +2621,28 @@ def agent_daily_command(args: argparse.Namespace) -> int:
 def agent_status_command(args: argparse.Namespace) -> int:
     store = RunStore(args.root, readonly=True)
     try:
+        if getattr(args, 'progress', False):
+            from teaagent.run_progress import (
+                build_run_progress_summary,
+                format_run_progress_summary,
+            )
+
+            summary = build_run_progress_summary(store, args.run_id)
+            if getattr(args, 'human', False) or sys.stdout.isatty():
+                print(format_run_progress_summary(summary))
+            else:
+                print_json(summary.to_dict())
+            return 0
         if getattr(args, 'evidence', False):
+            if getattr(args, 'human', False):
+                from teaagent.run_receipt import build_run_receipt
+
+                print(build_run_receipt(store, args.run_id, args.root))
+                return 0
             from teaagent.evidence_summary import build_evidence_summary
 
-            summary = build_evidence_summary(store, args.run_id, args.root)
-            print_json(summary.to_dict())
+            evidence_summary = build_evidence_summary(store, args.run_id, args.root)
+            print_json(evidence_summary.to_dict())
             return 0
         print_json(store.heartbeat_for_run(args.run_id))
     except FileNotFoundError as exc:

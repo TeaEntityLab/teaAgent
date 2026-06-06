@@ -1,5 +1,9 @@
 # Competitor Signal Survey - 2026-06-04
 
+> Supersession note, 2026-06-06: For the latest quarterly refresh, use
+> [Competitor Signal Survey (2026-06-06)](competitor-signal-survey-2026-06-06.md)
+> and [Competitor Self-Comparison Matrix (2026-06-06)](competitor-self-comparison-matrix-2026-06-06.md).
+
 ## Purpose
 
 This survey collects current competitor signals from official documentation, release notes, and community feedback. The goal is not to rank "best agent" in the abstract. The goal is to extract what TeaAgent should learn, what it should avoid, and which product shapes are now common enough to count as baseline expectations.

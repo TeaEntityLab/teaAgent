@@ -3,7 +3,7 @@
 Fixture-backed reference for TeaAgent extension surfaces. Examples live under
 `tests/fixtures/plugin_skill_catalog/`.
 
-Last reviewed: **2026-05-24**
+Last reviewed: **2026-06-06**
 
 ## Skill discovery paths
 

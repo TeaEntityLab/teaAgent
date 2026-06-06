@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
@@ -656,6 +657,7 @@ class AgentRunner:
             annotations=annotations,
             reasoning=decision.reasoning if decision.reasoning else None,
         )
+        tool_started_at = time.monotonic()
         try:
             parent_token = bind_parent_run_id(run_id)
             tool_ctx_token = bind_tool_call_context(
@@ -676,6 +678,7 @@ class AgentRunner:
                 'call_id': decision.call_id,
                 'tool_name': decision.tool_name,
                 'error': str(exc),
+                'duration_ms': round((time.monotonic() - tool_started_at) * 1000.0, 2),
             }
             context['observations'].append(err_observation)
             self.audit.record('tool_call_failed', run_id, **err_observation)
@@ -710,10 +713,12 @@ class AgentRunner:
 
         tool_calls += 1
         self.auto_mode_manager.record_tool_call()
+        duration_ms = round((time.monotonic() - tool_started_at) * 1000.0, 2)
         observation: dict[str, Any] = {
             'call_id': decision.call_id,
             'tool_name': decision.tool_name,
             'result': observation_result,
+            'duration_ms': duration_ms,
         }
         if _long_meta is not None:
             observation.update(_long_meta)

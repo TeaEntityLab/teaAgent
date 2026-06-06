@@ -1,7 +1,7 @@
 # TeaAgent Security Whitepaper (Draft)
-_Last updated: 2026-05-31_
+_Last updated: 2026-06-06_
 
-This document describes TeaAgent’s security posture for enterprise evaluation.
+> **Canonical trust/audit reference (2026-06-06):** [Trust and Audit Whitepaper](governance/trust-and-audit-whitepaper.md) — guarantees, non-goals, failure behavior, and verification commands. This document retains enterprise NIST mapping detail.
 It is intentionally concrete: every control should map to a code path, an
 acceptance test, or an explicit limitation.
 

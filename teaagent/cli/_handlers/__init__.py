@@ -48,6 +48,7 @@ from ._audit import (
     audit_prune_command,
     audit_serve_command,
     audit_show_command,
+    audit_tail_command,
     audit_verify_command,
 )
 from ._chat import chat_command
@@ -79,6 +80,7 @@ from ._cost import cost_report_command
 from ._doctor import (
     doctor_aigateway,
     doctor_all,
+    doctor_config_lint_command,
     doctor_env_order,
     doctor_git_sandbox,
     doctor_graphqlite,
@@ -284,6 +286,7 @@ __all__ = [
     'audit_serve_command',
     'doctor_migration_command',
     'doctor_git_sandbox',
+    'doctor_config_lint_command',
     'doctor_selftest_command',
     'doctor_aigateway',
     'doctor_providers',
@@ -322,6 +325,7 @@ __all__ = [
     'audit_export_command',
     'audit_prune_command',
     'audit_show_command',
+    'audit_tail_command',
     'audit_verify_command',
     'env_lock_command',
     'env_provision_command',

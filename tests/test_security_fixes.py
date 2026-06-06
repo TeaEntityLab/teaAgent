@@ -161,7 +161,7 @@ class TestSymlinkValidationFix:
     """Tests for symlink validation vulnerability fix."""
 
     def test_symlink_blocked_in_read(self):
-        """Verify that symlinks are resolved to their target within workspace."""
+        """Verify that workspace reads reject symlinks."""
         with tempfile.TemporaryDirectory() as tmpdir:
             registry = build_workspace_tool_registry(tmpdir)
 
@@ -171,14 +171,11 @@ class TestSymlinkValidationFix:
             symlink = Path(tmpdir) / 'link.txt'
             symlink.symlink_to(target_file)
 
-            # Read through symlink — resolves to target within workspace
-            result = registry.invoke('workspace_read_file', {'path': 'link.txt'})
-
-            # Should resolve to target file
-            assert result.get('content') == 'content'
+            with pytest.raises(ToolExecutionError, match='symlinks are not allowed'):
+                registry.invoke('workspace_read_file', {'path': 'link.txt'})
 
     def test_symlink_blocked_in_write(self):
-        """Verify that writes through symlinks resolve to the target file."""
+        """Verify that workspace writes reject symlinks."""
         with tempfile.TemporaryDirectory() as tmpdir:
             registry = build_workspace_tool_registry(tmpdir)
 
@@ -188,18 +185,15 @@ class TestSymlinkValidationFix:
             symlink = Path(tmpdir) / 'link.txt'
             symlink.symlink_to(target_file)
 
-            # Write through symlink — resolves to target within workspace
-            result = registry.invoke(
-                'workspace_write_file',
-                {
-                    'path': 'link.txt',
-                    'content': 'updated',
-                },
-            )
-
-            # Should resolve to target file
-            assert result.get('path') == 'target.txt'
-            assert target_file.read_text() == 'updated'
+            with pytest.raises(ToolExecutionError, match='symlinks are not allowed'):
+                registry.invoke(
+                    'workspace_write_file',
+                    {
+                        'path': 'link.txt',
+                        'content': 'updated',
+                    },
+                )
+            assert target_file.read_text() == 'original'
 
 
 class TestSecureRandomFix:

@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from teaagent.integration.plugin_governance import validate_plugin_tools
 from teaagent.tools import ToolRegistry
 
 PLUGIN_GROUP = 'teaagent.tools'
@@ -145,8 +146,26 @@ def load_plugins(
                 failed.append(name)
                 continue
 
+            baseline = set(registry.list_tools())
             fn = ep.load()
             fn(registry)
+            added = [
+                tool_name
+                for tool_name in registry.list_tools()
+                if tool_name not in baseline
+            ]
+            if added:
+                report = validate_plugin_tools(registry, tool_names=added)
+                if report.blocked:
+                    for tool_name in added:
+                        registry.unregister(tool_name)
+                    logger.warning(
+                        'Plugin %s blocked by tool governance: %s',
+                        name,
+                        report.to_dict(),
+                    )
+                    failed.append(name)
+                    continue
             loaded.append(name)
         except Exception as exc:
             logger.warning('Plugin %s failed to load: %s', name, exc)

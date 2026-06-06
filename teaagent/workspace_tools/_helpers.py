@@ -72,9 +72,12 @@ def assert_shell_command_size_allowed(
 
 
 def resolve_workspace_path(config: WorkspaceToolConfig, path: str) -> Path:
-    resolved = (config.root / path).resolve()
+    candidate = config.root / path
+    if candidate.is_symlink():
+        raise ValueError('symlinks are not allowed')
+    resolved = candidate.resolve()
     try:
-        resolved.relative_to(config.root)
+        resolved.relative_to(config.root.resolve())
     except ValueError as exc:
         raise ValueError('path escapes workspace root') from exc
     return resolved

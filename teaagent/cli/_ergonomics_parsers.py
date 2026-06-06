@@ -271,11 +271,27 @@ def _approval(
     )
     pending.add_argument('--root', default='.')
     pending.add_argument('--limit', type=int, default=20)
+    pending.add_argument(
+        '--human',
+        action='store_true',
+        help='Show numbered pending actions with tool, reason, path, and risk.',
+    )
     pending.set_defaults(func=handlers['approval_pending'], command='approval')
     approve = subs.add_parser(
         'approve', help='Approve a pending call and optionally resume the run.'
     )
-    approve.add_argument('call_id')
+    approve.add_argument(
+        'call_id',
+        nargs='?',
+        default=None,
+        help='Exact pending call id (legacy). Prefer --selector N.',
+    )
+    approve.add_argument(
+        '--selector',
+        type=int,
+        default=None,
+        help='Approve the numbered pending action from `approval pending --human`.',
+    )
     approve.add_argument('--root', default='.')
     approve.add_argument(
         '--resume', action='store_true', help='Resume the run after approval.'
@@ -321,6 +337,11 @@ def _approval(
         'next', help='Show next pending approval and suggest actions.'
     )
     next_cmd.add_argument('--root', default='.')
+    next_cmd.add_argument(
+        '--human',
+        action='store_true',
+        help='Show numbered pending actions with tool, reason, path, and risk.',
+    )
     next_cmd.set_defaults(func=handlers['approval_next'], command='approval')
 
     subagents = subs.add_parser(
@@ -338,6 +359,11 @@ def _approval(
         '--parent-run-id',
         default=None,
         help='Filter to one parent run (omit to list all active queues).',
+    )
+    sub_list.add_argument(
+        '--human',
+        action='store_true',
+        help='Human-readable queue summary with age and expiry.',
     )
     sub_list.set_defaults(func=handlers['approval_subagents_list'], command='approval')
 

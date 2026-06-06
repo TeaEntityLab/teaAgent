@@ -81,18 +81,25 @@ def compute_chain_hmac(event_hash: str, secret_key: bytes) -> str:
 def verify_audit_chain(
     log_path: Path,
     secret_key: Optional[bytes] = None,
+    *,
+    strict: Optional[bool] = None,
+    allow_legacy_reset: Optional[bool] = None,
 ) -> ChainVerificationResult:
     """Verify the SHA-256 hash chain of a JSONL audit log file.
 
-    When *secret_key* is provided, also verifies the HMAC-SHA256 signature
-    (``chain_hmac``) of every event that carries one.  Events written
-    without HMAC (e.g. by an older version) are still accepted for
-    backward compatibility.
-
-    Returns :class:`ChainVerificationResult` with ``valid=True`` when
-    every chained event is intact.  On failure the ``error`` field
-    contains a human-readable description of the first violation found.
+    When *strict* is True (or ``TEAAGENT_AUDIT_CHAIN_STRICT`` is set), legacy
+    lines without ``prev_hash`` / ``hash`` are rejected unless
+    *allow_legacy_reset* is True (default: ``TEAAGENT_AUDIT_CHAIN_LEGACY_COMPAT``).
     """
+    from teaagent.security_env import (
+        audit_chain_legacy_compat,
+        audit_chain_strict,
+    )
+
+    if strict is None:
+        strict = audit_chain_strict()
+    if allow_legacy_reset is None:
+        allow_legacy_reset = audit_chain_legacy_compat()
     if secret_key is None:
         run_id = log_path.stem
         safe_id = (
@@ -128,6 +135,15 @@ def verify_audit_chain(
             )
 
         if 'prev_hash' not in obj or 'hash' not in obj:
+            if strict and not allow_legacy_reset:
+                return ChainVerificationResult(
+                    valid=False,
+                    event_count=i,
+                    error=(
+                        f'Line {i + 1}: legacy event without chain fields '
+                        'rejected in strict audit-chain mode'
+                    ),
+                )
             # Legacy event without chain fields — skip and reset chain origin.
             prev_hash = GENESIS_HASH
             continue

@@ -55,6 +55,30 @@ def audit_show_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def audit_tail_command(args: argparse.Namespace) -> int:
+    store = RunStore(args.root, readonly=True)
+    try:
+        events = store.show_run(args.run_id)
+    except FileNotFoundError as exc:
+        print_json({'status': 'error', 'message': str(exc)})
+        return 1
+
+    from teaagent.audit_tail import format_audit_tail_human, tail_audit_events
+
+    limit = int(getattr(args, 'limit', 20) or 20)
+    if getattr(args, 'human', False):
+        print(format_audit_tail_human(events, limit=limit))
+        return 0
+    print_json(
+        {
+            'run_id': args.run_id,
+            'limit': limit,
+            'events': tail_audit_events(events, limit=limit),
+        }
+    )
+    return 0
+
+
 def audit_prune_command(args: argparse.Namespace) -> int:
     if args.days is None and args.keep is None and not args.all:
         print_json(

@@ -13,6 +13,11 @@ Practical documentation for using and extending TeaAgent.
 
 | Guide | Audience | Summary |
 |-------|----------|---------|
+| [Solo CLI Getting Started](getting-started-solo-cli.md) | User | First-hour terminal workflow with permission modes and receipts |
+| [Team Operator Getting Started](getting-started-team-operator.md) | Operator | Workspace bootstrap, CI patterns, observability commands |
+| [Tool/Plugin Author Getting Started](getting-started-tool-plugin-author.md) | Developer | Registry governance, plugins, integration contracts |
+| [Security Reviewer Getting Started](getting-started-security-reviewer.md) | Security | Evidence checklist, verification commands, test references |
+| [When Not to Use TeaAgent](when-not-to-use-teaagent.md) | All | Honest non-fit scenarios (IDE-first, cloud delegate, zero-config) |
 | [Use Cases](use-cases.md) | User | Walkthroughs for 8 common deployment scenarios |
 | [Integration Guide](integration-guide.md) | Developer | Add providers, tools, approval policies, and custom UIs |
 | [Tool Development](tool-development.md) | Developer | Build safe, auditable tools with full lifecycle coverage |

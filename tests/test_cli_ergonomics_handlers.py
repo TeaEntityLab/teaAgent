@@ -612,9 +612,11 @@ def test_approval_pending_and_approve_workflow(tmp_path: Path) -> None:
     with redirect_stdout(out):
         assert main(['approval', 'pending', '--root', str(tmp_path)]) == 0
     pending_payload = json.loads(out.getvalue())
-    assert len(pending_payload) == 1
-    assert pending_payload[0]['run_id'] == 'run-pending'
-    assert pending_payload[0]['pending_approval']['call_id'] == 'call-123'
+    assert pending_payload['queue_depth'] == 1
+    assert len(pending_payload['pending']) == 1
+    assert pending_payload['pending'][0]['run_id'] == 'run-pending'
+    assert pending_payload['pending'][0]['selector'] == 1
+    assert pending_payload['pending'][0]['call_id'] == 'call-123'
 
     # Approve without resume
     out = io.StringIO()
@@ -757,7 +759,8 @@ def test_approval_approve_persists_state(tmp_path: Path) -> None:
     with redirect_stdout(out):
         assert main(['approval', 'pending', '--root', str(tmp_path)]) == 0
     pending_payload = json.loads(out.getvalue())
-    assert len(pending_payload) == 0
+    assert pending_payload['queue_depth'] == 0
+    assert pending_payload['pending'] == []
 
 
 def test_approval_explain_shows_expired_and_mode_mismatch(tmp_path: Path) -> None:
@@ -831,7 +834,7 @@ def test_readonly_commands_dont_mutate_fresh_workspace(tmp_path: Path) -> None:
     with redirect_stdout(out):
         assert main(['approval', 'pending', '--root', str(tmp_path)]) == 0
     pending = json.loads(out.getvalue())
-    assert pending == []
+    assert pending == {'queue_depth': 0, 'pending': []}
     assert not teaagent_dir.exists()
 
     # Test approval list (should return empty policy without creating .teaagent)

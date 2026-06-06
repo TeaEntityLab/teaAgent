@@ -1,6 +1,8 @@
 # TeaAgent CLI
 
-**Last reviewed:** 2026-06-05
+**Last reviewed:** 2026-06-06
+
+> **Review trigger:** CLI flags, subcommands, or handler behavior changes.
 
 Choose your surface: [USAGE.md — Choose Your Surface](USAGE.md#choose-your-surface) (CLI, TUI, VS Code, MCP, ACP, A2A, ANP, managed runtime).
 

@@ -1,6 +1,8 @@
 # TeaAgent Terminology Guide
 
-**Last reviewed:** 2026-06-05
+**Last reviewed:** 2026-06-06
+
+> **Review trigger:** Canonical terminology or state vocabulary changes.
 
 This document standardizes terminology across all TeaAgent documentation.
 

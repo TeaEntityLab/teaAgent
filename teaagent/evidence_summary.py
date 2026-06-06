@@ -298,13 +298,20 @@ def build_evidence_summary(
 
     summary = summarize_run_events(events)
 
-    # ── cost state derivation ─────────────────────────────────────────
-    cost_state: str = 'unavailable'
-    cost_cents = summary.get('total_cost_cents', 0)
-    if budget_cap_cents is None:
-        cost_state = 'unlimited'
-    elif cost_cents > 0:
-        cost_state = 'estimated'
+    from teaagent.cost_state import derive_cost_state
+
+    provider_reported = any(
+        isinstance(event.get('payload'), dict)
+        and event['payload'].get('actual_cost_cents') is not None
+        for event in events
+        if event.get('event_type')
+        in {'run_completed', 'iteration_completed', 'llm_usage'}
+    )
+    cost_state = derive_cost_state(
+        cost_cents=float(summary.get('total_cost_cents', 0)),
+        budget_cap_cents=budget_cap_cents,
+        provider_reported=provider_reported,
+    )
 
     # ── rollback availability ─────────────────────────────────────────
     root_path = Path(root).resolve()

@@ -18,10 +18,23 @@ from typing import Any
 
 from teaagent.audit_chain import verify_audit_chain
 
-try:
-    from teaagent.sigstore_signer import SigstoreSigner, TSBProvenanceVerifier
+SigstoreSigner: Any = None
+TSBProvenanceVerifier: Any = None
 
-    SIGSTORE_AVAILABLE = True
+try:
+    from teaagent.sigstore_signer import (
+        SIGSTORE_AVAILABLE as _SIGSTORE_AVAILABLE,
+    )
+    from teaagent.sigstore_signer import (
+        SigstoreSigner as _SigstoreSigner,
+    )
+    from teaagent.sigstore_signer import (
+        TSBProvenanceVerifier as _TSBProvenanceVerifier,
+    )
+
+    SigstoreSigner = _SigstoreSigner
+    TSBProvenanceVerifier = _TSBProvenanceVerifier
+    SIGSTORE_AVAILABLE = _SIGSTORE_AVAILABLE
 except ImportError:
     SIGSTORE_AVAILABLE = False
 

@@ -160,6 +160,11 @@ class ToolRegistry:
         if rate_limit is not None:
             self._rate_states[name] = _RateLimiterState(rate_limit)
 
+    def unregister(self, name: str) -> None:
+        """Remove a tool from the registry (used when plugin governance fails)."""
+        self._tools.pop(name, None)
+        self._rate_states.pop(name, None)
+
     def get(self, name: str) -> ToolDefinition:
         try:
             return self._tools[name]

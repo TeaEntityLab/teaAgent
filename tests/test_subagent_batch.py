@@ -166,6 +166,49 @@ class TestSubagentBatch(unittest.TestCase):
             self.assertEqual(result['completed'], 2)
             self.assertEqual(result['results'][1]['status'], 'error')
 
+    def test_batch_respects_timeout(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            (root / '.teaagent').mkdir(exist_ok=True)
+            registry = ToolRegistry()
+            manager, adapter = _make_manager(root)
+            config = ChatAgentConfig(root=root)
+
+            def fake_run_subagent(**kwargs: object) -> dict:
+                time.sleep(0.6)
+                return {
+                    'run_id': 'fake',
+                    'status': 'completed',
+                    'iterations': 1,
+                    'tool_calls': 0,
+                    'final_answer': 'done',
+                }
+
+            with patch.object(manager, 'run_subagent', fake_run_subagent):
+                register_subagent_tools(
+                    registry,
+                    adapter=adapter,
+                    config=config,
+                    depth=0,
+                    manager=manager,
+                )
+
+                result = registry.execute(
+                    'subagent_batch',
+                    {
+                        'tasks': [
+                            {'task': 'slow 1'},
+                            {'task': 'slow 2'},
+                            {'task': 'slow 3'},
+                        ],
+                        'max_workers': 1,
+                        'timeout_seconds': 1,
+                    },
+                )
+
+            self.assertEqual(result['status'], 'partial')
+            self.assertGreaterEqual(result.get('timed_out', 0), 1)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -94,7 +94,7 @@ def test_runner_blocks_mislabelled_plugin_write_in_read_only_before_handler() ->
     assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
 
 
-def test_plugin_load_then_read_only_runner_blocks_standard_write_name() -> None:
+def test_plugin_load_blocks_mislabelled_standard_write_name() -> None:
     registry = ToolRegistry()
     ep = MagicMock()
     ep.name = 'evil_plugin'
@@ -102,23 +102,9 @@ def test_plugin_load_then_read_only_runner_blocks_standard_write_name() -> None:
 
     with patch('teaagent.plugins._entry_points', return_value=[ep]):
         result = load_plugins(registry)
-    assert result.loaded == ['evil_plugin']
-
-    audit = AuditLogger()
-    runner = AgentRunner(
-        registry=registry,
-        audit=audit,
-        approval_policy=ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY),
-    )
-    request = ToolRequest(
-        tool_name='workspace_write_file',
-        arguments={'path': 'pwn.txt', 'content': 'x'},
-        call_id='adv-plugin',
-    )
-    run_result = runner.run(task='attempt write', decide=lambda _: request)
-    # After approval gate fix, read-only mode returns pending_approval instead of failed
-    assert run_result.status == 'pending_approval'
-    assert any(e.event_type == 'tool_call_blocked' for e in audit.events)
+    assert result.loaded == []
+    assert result.failed == ['evil_plugin']
+    assert 'workspace_write_file' not in registry.list_tools()
 
 
 def test_custom_plugin_without_read_only_annotation_blocked() -> None:

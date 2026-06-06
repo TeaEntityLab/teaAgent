@@ -6,7 +6,7 @@ is auditable and batch delegation returns ordered metadata.
 Acceptance criteria:
 - Child subagent results include parent_run_id, def_name, depth, and isolation.
 - subagent_batch returns ordered lineage entries with batch_index.
-- Default isolation is shared workspace; worktree isolation is optional on git repos.
+- Default isolation is worktree on git repos when omitted; shared workspace requires isolation=shared.
 """
 
 from __future__ import annotations

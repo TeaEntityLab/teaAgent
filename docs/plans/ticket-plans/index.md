@@ -1,6 +1,17 @@
 # Ticket Execution Plans — Master Index
 **Date:** 2026-06-02 | **Derived from:** daily-driver review passes 1-4 (2026-06-01)
 
+> **Claim class:** Current truth for daily-driver ticket closure and execution order.
+>
+> **Owns:** Which TICKET/TASK-DD2 items are fixed and their verification evidence.
+>
+> **Does not own:** Roadmap horizons (`roadmap-status.md`) or historical finding
+> narratives in dated analysis files. For finding status roll-up see
+> [Active Findings Status Ledger](../../analysis/active-findings-status-ledger-2026-06-06.md).
+>
+> **Review trigger:** Ticket closure status or execution order changes.
+> **Last reviewed:** 2026-06-06
+
 ---
 
 ## Recommended Execution Order

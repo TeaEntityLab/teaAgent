@@ -557,36 +557,60 @@ def approval_audit_command(args: argparse.Namespace) -> int:
 
 
 def approval_pending_command(args: argparse.Namespace) -> int:
+    from teaagent.approval_selectors import (
+        collect_pending_approval_views,
+        format_pending_approvals,
+        pending_approvals_payload,
+    )
+
     store = RunStore(args.root, readonly=True)
-    pending_runs = []
-    for summary in store.list_runs(limit=args.limit):
-        pending = store.pending_approval_for_run(summary.run_id)
-        if pending:
-            pending_runs.append(
-                {
-                    'run_id': summary.run_id,
-                    'task': summary.task,
-                    'status': summary.status,
-                    'created_at': summary.created_at,
-                    'pending_approval': pending,
-                }
-            )
-    print_json(pending_runs)
+    views = collect_pending_approval_views(store, limit=args.limit)
+    if getattr(args, 'human', False):
+        print(format_pending_approvals(views))
+        return 0
+    print_json(pending_approvals_payload(views))
     return 0
 
 
 def approval_approve_command(args: argparse.Namespace) -> int:
     def _approve() -> int:
+        from teaagent.approval_selectors import (
+            collect_pending_approval_views,
+            resolve_selector,
+        )
         from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
         store = RunStore(args.root)
         approval_store = ApprovalPresetStore(args.root)
+        call_id = args.call_id
+        if getattr(args, 'selector', None) is not None:
+            views = collect_pending_approval_views(store, limit=100)
+            selected = resolve_selector(views, args.selector)
+            if selected is None:
+                print_json(
+                    {
+                        'status': 'error',
+                        'message': f"selector '{args.selector}' not found in pending approvals",
+                    }
+                )
+                return 1
+            call_id = selected.call_id
+
+        if not call_id:
+            print_json(
+                {
+                    'status': 'error',
+                    'message': 'Provide call_id or --selector N',
+                }
+            )
+            return 1
+
         # Find the run with this pending call_id
         target_run_id = None
         pending_approval = None
         for summary in store.list_runs(limit=100):
             pending = store.pending_approval_for_run(summary.run_id)
-            if pending and pending.get('call_id') == args.call_id:
+            if pending and pending.get('call_id') == call_id:
                 target_run_id = summary.run_id
                 pending_approval = pending
                 break
@@ -595,7 +619,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
             print_json(
                 {
                     'status': 'error',
-                    'message': f"call_id '{args.call_id}' not found in pending approvals",
+                    'message': f"call_id '{call_id}' not found in pending approvals",
                 }
             )
             return 1
@@ -604,7 +628,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
         # Persist the approval as a scoped record for exact tool call matching
         approval_store.add_scoped_approval(
             run_id=target_run_id,
-            call_id=args.call_id,
+            call_id=call_id,
             tool_name=pending.get('tool_name', 'unknown'),
             arguments=pending.get('arguments', {}),
         )
@@ -634,7 +658,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
                 provider=None,
                 model=None,
                 fresh_restart=False,
-                approve_call_id=[args.call_id],
+                approve_call_id=[call_id],
                 clarify=False,
                 route_model=False,
                 max_iterations=10,
@@ -670,7 +694,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
             audit.record(
                 'tool_call_approved',
                 target_run_id,
-                call_id=args.call_id,
+                call_id=call_id,
                 tool_name=pending_approval.get('tool_name')
                 if pending_approval
                 else 'unknown',
@@ -679,7 +703,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
             print_json(
                 {
                     'status': 'approved',
-                    'call_id': args.call_id,
+                    'call_id': call_id,
                     'run_id': target_run_id,
                     'note': 'Use --resume to continue the run',
                 }
@@ -1138,25 +1162,19 @@ def approval_doctor_command(args: argparse.Namespace) -> int:
 
 def approval_next_command(args: argparse.Namespace) -> int:
     def _next() -> int:
+        from teaagent.approval_selectors import (
+            collect_pending_approval_views,
+            format_pending_approvals,
+        )
         from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
         store = RunStore(args.root, readonly=True)
+        views = collect_pending_approval_views(store, limit=20)
 
-        # Find pending approvals
-        pending_runs: list[dict[str, Any]] = []
-        for summary in store.list_runs(limit=20):
-            pending = store.pending_approval_for_run(summary.run_id)
-            if pending:
-                pending_runs.append(
-                    {
-                        'run_id': summary.run_id,
-                        'task': summary.task,
-                        'status': summary.status,
-                        'pending_approval': pending,
-                    }
-                )
-
-        if not pending_runs:
+        if not views:
+            if getattr(args, 'human', False):
+                print('No pending approvals found.')
+                return 0
             print_json(
                 {
                     'status': 'no_pending',
@@ -1169,11 +1187,14 @@ def approval_next_command(args: argparse.Namespace) -> int:
             )
             return 0
 
-        # Get the first pending approval
-        first_pending = pending_runs[0]
-        pending_detail: dict[str, Any] = first_pending['pending_approval']
-        call_id = str(pending_detail['call_id'])
-        tool_name = str(pending_detail['tool_name'])
+        first_view = views[0]
+        if getattr(args, 'human', False):
+            print(format_pending_approvals(views))
+            return 0
+
+        pending = store.pending_approval_for_run(first_view.run_id) or {}
+        pending_detail = dict(pending)
+        tool_name = first_view.tool_name
         arguments = pending_detail.get('arguments', {})
         if not isinstance(arguments, dict):
             arguments = {}
@@ -1203,10 +1224,13 @@ def approval_next_command(args: argparse.Namespace) -> int:
                 'No matching grant found - consider adding a preset or explicit approval'
             )
             suggestions.append('Try: teaagent approval preset dev-safe')
-        suggestions.append(f'Approve: teaagent approval approve {call_id}')
         suggestions.append(
-            f'Approve and resume: teaagent approval approve {call_id} --resume'
+            f'Approve: teaagent approval approve --selector {first_view.selector}'
         )
+        suggestions.append(
+            f'Approve and resume: teaagent approval approve --selector {first_view.selector} --resume'
+        )
+        suggestions.append('Human list: teaagent approval pending --human')
         suggestions.append(
             f'Explain: teaagent approval explain {tool_name} --arg path={arguments.get("path", "")}'
         )
@@ -1214,9 +1238,13 @@ def approval_next_command(args: argparse.Namespace) -> int:
         print_json(
             {
                 'status': 'pending_found',
-                'run_id': first_pending['run_id'],
-                'task': first_pending['task'],
+                'selector': first_view.selector,
+                'run_id': first_view.run_id,
+                'task': first_view.task,
                 'pending_approval': pending_detail,
+                'path_summary': first_view.path_summary,
+                'risk_class': first_view.risk_class,
+                'expires_at': first_view.expires_at,
                 'explanation': {
                     'tool_name': tool_name,
                     'decision': check_result['decision'],
@@ -1225,7 +1253,7 @@ def approval_next_command(args: argparse.Namespace) -> int:
                     'evaluated_grants_count': len(check_result['evaluated_grants']),
                 },
                 'suggestions': suggestions,
-                'total_pending': len(pending_runs),
+                'total_pending': len(views),
             }
         )
         return 0

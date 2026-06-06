@@ -25,23 +25,23 @@ Canonical states follow [Document State Model](../governance/document-state-mode
 | DOW-011 | P0 | Fixed | Update roadmap H0 to include documentation-current-truth work. | DOW-008 | `roadmap-status.md` references documentation optimization and doc-vs-HEAD guard work. |
 | DOW-012 | P0 | Fixed | Add a guarded-claim registry for volatile prose facts. | DOW-007 | A stale full-suite prose claim can fail CI. |
 | DOW-013 | P1 | Fixed | Audit High/Critical module risks for upward links. | DOW-004 | Every P0/P1 module risk links to central risk, roadmap, ticket, or defer decision. |
-| DOW-014 | P1 | Proposed | Add required-field guard for roadmap rows. | DOW-011 | Rows missing owner/status/confidence/next gate/exit evidence fail docs tests. |
+| DOW-014 | P1 | Fixed | Add required-field guard for roadmap rows. | DOW-011 | Rows missing owner/status/confidence/next gate/exit evidence fail docs tests. |
 | DOW-015 | P1 | Fixed | Resolve stale proposed-ADR status claims. | None | ADR 0010, 0012, 0014, 0015, 0017, and 0018 are closed in the ADR index; ADR 0025 reflects implemented REPL/TUI controller state. |
 | DOW-016 | P1 | Fixed | Document coverage omit re-entry plan. | None | Each omit pattern has reason, owner surface, target sprint, smoke-test candidate, and validator coverage. |
 | DOW-017 | P1 | Fixed | Document optional-extra dependency audit lane. | None | Base and optional-extra audit scopes are separated, scheduled, and reflected in the security workflow. |
-| DOW-018 | P1 | Proposed | Create successor findings ledger for June 4 status. | DOW-005 | Stale June 1 ledger rows are mapped to current state or superseded. |
-| DOW-019 | P1 | Proposed | Add "current truth" banners to stable front doors. | DOW-007 | Current truth docs clearly say what they own and what they do not own. |
-| DOW-020 | P1 | Proposed | Shorten daily-user guides that contain too much history. | DOW-019 | Guides answer command choice and recovery first; history moves to analysis. |
-| DOW-021 | P2 | Proposed | Generate exhaustive docs inventory. | DOW-001 | Generated inventory is deterministic and secondary to curated index. |
-| DOW-022 | P2 | Proposed | Add internal link health check. | DOW-021 | Current-truth broken links are blocking; historical links start as warnings. |
-| DOW-023 | P2 | Proposed | Add documentation aging dashboard. | DOW-019 | Current-truth docs show last-reviewed and stale triggers. |
-| DOW-024 | P2 | Proposed | Add release documentation evidence bundle. | DOW-012, DOW-014 | Release checklist links dated evidence bundle with commands, commit, and residual risks. |
-| DOW-025 | P2 | Proposed | Add competitor survey freshness policy. | None | Positioning claims name source date or explicitly state "not refreshed." |
-| DOW-026 | P2 | Proposed | Add command-snippet smoke inventory. | DOW-020 | High-value guide commands are either smoke tested or marked manual. |
-| DOW-027 | P2 | Proposed | Normalize old status labels in active indexes. | DOW-007 | Active indexes map old labels to canonical states without rewriting dated evidence. |
-| DOW-028 | P2 | Proposed | Add docs ownership field to stable current-truth docs. | DOW-019 | Owner surface appears in current-truth docs or their index row. |
-| DOW-029 | P2 | Proposed | Review non-English or mixed-language durable docs. | None | Durable governance/current docs are English unless explicitly localization-focused. |
-| DOW-030 | P2 | Proposed | Create a periodic documentation audit cadence. | DOW-023 | Cadence triggers after release, roadmap change, or trust-sensitive code changes. |
+| DOW-018 | P1 | Fixed | Create successor findings ledger for June 4 status. | DOW-005 | Stale June 1 ledger rows are mapped to current state or superseded. |
+| DOW-019 | P1 | Fixed | Add "current truth" banners to stable front doors. | DOW-007 | Current truth docs clearly say what they own and what they do not own. |
+| DOW-020 | P1 | Fixed | Shorten daily-user guides that contain too much history. | DOW-019 | Guides answer command choice and recovery first; history moves to analysis. |
+| DOW-021 | P2 | Fixed | Generate exhaustive docs inventory. | DOW-001 | Generated inventory is deterministic and secondary to curated index. |
+| DOW-022 | P2 | Fixed | Add internal link health check. | DOW-021 | Current-truth broken links are blocking; historical links start as warnings. |
+| DOW-023 | P2 | Fixed | Add documentation aging dashboard. | DOW-019 | Current-truth docs show last-reviewed and stale triggers. |
+| DOW-024 | P2 | Fixed | Add release documentation evidence bundle. | DOW-012, DOW-014 | `scripts/build_release_docs_evidence_bundle.py` → `docs/generated/release-docs-evidence.md`; linked from release checklist. |
+| DOW-025 | P2 | Fixed | Add competitor survey freshness policy. | None | Positioning claims name source date or explicitly state "not refreshed." |
+| DOW-026 | P2 | Fixed | Add command-snippet smoke inventory. | DOW-020 | `generate_command_snippet_inventory.py` + registry; CI `--check` via verify_docs.sh. |
+| DOW-027 | P2 | Fixed | Normalize old status labels in active indexes. | DOW-007 | INDEX status vocabulary + work-log canonical state validator. |
+| DOW-028 | P2 | Fixed | Add docs ownership field to stable current-truth docs. | DOW-019 | Aging dashboard + validator enforce Owns/Owner banners on scanned docs. |
+| DOW-029 | P2 | Fixed | Review non-English or mixed-language durable docs. | None | Governance/current-truth language scan in validate_docs_consistency.py. |
+| DOW-030 | P2 | Fixed | Create a periodic documentation audit cadence. | DOW-023 | documentation-audit-cadence doc linked from release checklist + verify_docs.sh. |
 
 ## Immediate Sequence
 
@@ -96,5 +96,65 @@ cx symbols --kind heading --name '*Roadmap*' --limit 120
   this ledger.
 - DOW-012 remains the highest-value next documentation-validator task because it
   generalizes guarded claims beyond coverage and dependency audit scope.
-- DOW-013 is the highest-value risk-governance follow-up because module risk
-  detail currently exceeds central ownership.
+- 2026-06-06 — **DOW-014 Fixed.** `validate_roadmap_required_fields` in
+  `scripts/validate_docs_consistency.py` parses roadmap tables and fails when
+  owner/status/confidence/next gate/exit-or-risk columns are empty or status is
+  unrecognized. Covered by `tests/test_docs_consistency.py` roadmap guard tests.
+- 2026-06-06 — **DOW-018 Fixed.** Added
+  `docs/analysis/active-findings-status-ledger-2026-06-06.md` as the current
+  findings roll-up; June 1 ledger carries a supersession note.
+- 2026-06-06 — **DOW-019 Fixed.** Current-truth banners added to
+  `daily-driver-current-status.md`, `roadmap-status.md`, `acceptance.md`, and
+  `plans/ticket-plans/index.md`.
+- 2026-06-06 — **DOW-020 Fixed.** Removed stale TUI cost-migration wording from
+  `tui-daily-driver-guide.md`; guide now points to current-truth docs for status.
+- 2026-06-06 — **DOW-021 Fixed.** Added `scripts/generate_docs_inventory.py` and
+  `docs/generated/docs-inventory.md` with CI freshness check via
+  `validate_docs_consistency.py`.
+- 2026-06-06 — **DOW-022 Fixed.** Expanded `validate_doc_cross_references` to
+  cover additional current-truth docs and emit non-blocking warnings for
+  historical evidence directories.
+- 2026-06-06 — **DOW-025 Fixed.** Quarterly competitor refresh landed as
+  [competitor-signal-survey-2026-06-06.md](../analysis/competitor-signal-survey-2026-06-06.md)
+  with synchronized survey dates across matrix, catalog, architecture, and
+  use-cases docs.
+- 2026-06-06 — **DOW-023 Fixed.** Added `scripts/report_docs_aging.py`,
+  `docs/generated/docs-aging-dashboard.md`, review triggers on current-truth
+  docs, and CI freshness check via `validate_docs_consistency.py`.
+- 2026-06-06 — **WS1-001 MVP.** Added `teaagent/run_receipt.py` and
+  `teaagent agent status <run_id> --evidence --human` for human-readable run
+  receipts (goal, model, cost, audit path, tools, files, approvals, rollback).
+- 2026-06-06 — **WS1-002 MVP.** Added `teaagent/approval_selectors.py` with
+  numbered pending approvals (`approval pending --human`) and selector-based
+  approve (`approval approve --selector N`).
+- 2026-06-06 — **DOW-024 Fixed.** Added `scripts/build_release_docs_evidence_bundle.py`
+  and linked `docs/generated/release-docs-evidence.md` from the release checklist.
+- 2026-06-06 — **DOW-026–030 Fixed.** Command snippet inventory/registry, INDEX status
+  vocabulary, language scan, audit cadence doc, and expanded verify_docs gate.
+- 2026-06-06 — **WS1-003 MVP.** Added `teaagent/run_progress.py` and
+  `teaagent agent status <run_id> --progress [--human]`.
+- 2026-06-06 — **WS1-004/005 docs.** Added chat surface semantics and
+  background/resume vocabulary guides.
+- 2026-06-06 — **WS1-006.** Added `tests/acceptance/test_conversation_ux_flow.py`.
+- 2026-06-06 — **WS2-007.** Added remote multi-agent non-goals doc for Phase 0/1.
+- 2026-06-06 — **WS2-001–004.** Subagent safety: worktree default on git repos with
+  explicit shared isolation, batch deadline/partial results, child budget caps, and
+  global depth guard in `teaagent/subagents/`.
+- 2026-06-06 — **WS2-005.** Added `ApprovalCoordinationBackend` with file-backed
+  default and remote extension point; wired `CentralizedApprovalQueue` + CLI prune.
+- 2026-06-06 — **WS2-006.** Added subagent/swarm orchestration unification design
+  (`docs/plans/subagent-swarm-orchestration-unification-2026-06-06.md`).
+- 2026-06-06 — **WS3-001–006.** Compliance audit mode, strict audit-chain verification,
+  schema/path containment tests, cost-state taxonomy, prompt-injection boundaries doc,
+  and approval-token exactness tests.
+- 2026-06-06 — **WS4-001–005.** Run latency metrics and audit health on receipts;
+  approval queue depth/age (CLI + subagents); `audit tail` with classification/redaction;
+  `doctor config-lint` for unsafe runtime combinations; tests in
+  `tests/test_ws4_observability.py`.
+- 2026-06-06 — **WS5-001–005.** Integration contracts in `teaagent/integration/`
+  (run setup, event stream, approval strategy, storage adapters, plugin governance);
+  wired into `chat_agent` and `load_plugins`; doc at
+  `docs/governance/integration-contracts.md`.
+- 2026-06-06 — **WS6-001–005.** Governance-first README section; trust/audit
+  whitepaper; quarterly competitor refresh process; four persona getting-started
+  guides + when-not-to-use page; INDEX and guides index updated.

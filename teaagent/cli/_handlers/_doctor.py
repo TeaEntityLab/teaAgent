@@ -928,6 +928,27 @@ def _strict_log_sanitize(value: Any) -> Any:
     return value
 
 
+def doctor_config_lint_command(args: argparse.Namespace) -> int:
+    from teaagent.config_lint import lint_runtime_config
+
+    permission_mode = getattr(args, 'permission_mode', 'prompt') or 'prompt'
+    findings = lint_runtime_config(
+        root=getattr(args, 'root', '.') or '.',
+        permission_mode=permission_mode,
+        allow_destructive=bool(getattr(args, 'allow_destructive', False)),
+        subagent_isolation=getattr(args, 'subagent_isolation', None),
+    )
+    errors = [f for f in findings if f.severity == 'error']
+    print_json(
+        {
+            'status': 'error' if errors else 'ok',
+            'finding_count': len(findings),
+            'findings': [finding.to_dict() for finding in findings],
+        }
+    )
+    return 1 if errors else 0
+
+
 def print_json(value: Any) -> None:
     if isinstance(value, dict) and value.get('mode') in {'wizard', 'setup'}:
         value = redact_wizard_payload(value)

@@ -1,5 +1,8 @@
 # TeaAgent Architecture
 
+> **Last reviewed:** 2026-06-06
+> **Review trigger:** Architecture claims, provider count, or module boundaries change.
+
 ## System Overview
 
 TeaAgent is a thin governance-first agent harness. It does not implement its own
@@ -450,7 +453,7 @@ Methods:
 TeaAgent is a governance-first agent harness. This section documents how it
 compares to the four mainstream coding-agent frameworks surveyed in
 [scripts/refresh_agent_readme_survey.md](../scripts/refresh_agent_readme_survey.md),
-last refreshed 2026-05-24.
+last refreshed 2026-06-06.
 
 ### Feature Coverage Matrix
 

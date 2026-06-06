@@ -152,11 +152,12 @@ This work log turns the current strategy into concrete execution chunks.
   docs (`tool-development.md`, `integration-guide.md`, `approval-policy-design.md`)
   against live code. Updated each checklist with pass/warn annotations and
   per-file evidence references. All 14 TASK-DD2 items verified committed.
-- 2026-06-04 — **TASK-007 still open** (competitor survey — docs/research, not
-  code). All code tasks for P0/P1 workstreams in the complete work plan are
-  otherwise closed. See `docs/plans/documentation-optimization-master-plan-2026-06-04.md`
-  P1/P2 proposals (DOCOPT-007 through DOCOPT-016) if design/planning capacity
-  available.
+- 2026-06-06 — **TASK-007 DONE.** Competitor survey refreshed to 2026-06-06:
+  `scripts/refresh_agent_readme_survey.md`, new
+  `docs/analysis/competitor-signal-survey-2026-06-06.md`, strategy rationale and
+  critique refresh notes, and synchronized landscape survey dates across
+  use-case matrix, catalog, architecture, and use-cases docs via
+  `refresh_competitive_docs.py`.
 - 2026-06-04 — **COMPREHENSIVE VERIFICATION INVESTIGATION DONE**. Cross-referenced
   every claimed-done task against actual code, tests, and git history. Summary:
   - **TASK-001/002/003/005**: 4 regression guard test files verified — exist,

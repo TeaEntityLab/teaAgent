@@ -4,7 +4,12 @@ DeepWiki- and upstream-backed review for TeaAgent competitive positioning. TeaAg
 stays a governance-first harness; this artifact tracks parity, gaps, and backlog
 actions — not a second agent framework.
 
-Last reviewed: **2026-05-24**
+Last reviewed: **2026-06-06**
+
+Related evidence:
+
+- [Competitor Signal Survey (2026-06-06)](../docs/analysis/competitor-signal-survey-2026-06-06.md)
+- [Competitor Self-Comparison Matrix (2026-06-06)](../docs/analysis/competitor-self-comparison-matrix-2026-06-06.md)
 
 ## Sources reviewed
 
@@ -18,9 +23,26 @@ Last reviewed: **2026-05-24**
 | Aider | https://deepwiki.com/Aider-AI/aider | https://github.com/Aider-AI/aider | Repo-map context, edit strategies, git workflow | Workspace tools, LSP/code-analysis, GraphQLite, preflight `context_pack` with LSP + hybrid/knowledge/GraphQLite read-only hits | Whole-repo map heuristics still thinner than Aider's dedicated repo-map UX | P2 maintenance | `docs/use-cases.md` |
 | LangGraph | https://deepwiki.com/langchain-ai/langgraph | https://github.com/langchain-ai/langgraph | Graph state, checkpoints, durable execution | `CheckpointStore`, runner limits, audit chain | No graph-native orchestration (intentional harness boundary) | Document as non-goal | `docs/use-cases.md` |
 | CrewAI | https://deepwiki.com/crewAIInc/crewAI | https://github.com/crewAIInc/crewAI | Role-based crews, task delegation | A2A delegation, ANP governed federation | No multi-role crew DSL (intentional harness boundary) | Document as non-goal | `docs/use-cases.md` |
+| GitHub Copilot cloud agent | https://docs.github.com/en/copilot/concepts/agents/cloud-agent/about-cloud-agent | https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/start-copilot-sessions | PR-native async background work, GitHub Actions environments, multi-entry intake | Audit, policy, MCP, automation hooks | No GitHub-native cloud agent surface | P2 adapter research | `docs/analysis/competitor-self-comparison-matrix-2026-06-06.md` |
+| Cursor | https://docs.cursor.com/background-agent | https://docs.cursor.com/agent | IDE agent modes, background remote agents, explicit CLI permissions | CLI/TUI governance, audit chain, local-first | No productized remote background agent | P2 UX benchmark only | `docs/analysis/competitor-self-comparison-matrix-2026-06-06.md` |
+| Cline | https://docs.cline.bot/cline-overview | https://docs.cline.bot/core-workflows/plan-and-act | Plan/Act separation, per-action approval, IDE + terminal | Plan-before-write gates, approval manager, run evidence | Plan/Act UX less legible in TeaAgent surfaces | P1 conversation trust (WS1) | `docs/analysis/competitor-self-comparison-matrix-2026-06-06.md` |
 
 Additional README baselines (prior survey): Claude Code GitHub, Codex CLI GitHub,
 Cursor docs, Gemini CLI, Continue — still valid for env/skill conventions.
+
+## June 2026 refresh notes
+
+Official docs checked on **2026-06-06** confirm three strategic pressures:
+
+1. Remote async agents are baseline for major vendors (Codex, Copilot, Cursor,
+   Kiro, Devin, Jules).
+2. IDE-native and PR-native entry beats terminal-only onboarding for daily use.
+3. Audit/compliance surfaces (Codex Compliance API, Devin enterprise logs) are
+   becoming purchase criteria — TeaAgent should lead with provable audit once
+   durability gates pass.
+
+Full row-level comparison:
+`docs/analysis/competitor-self-comparison-matrix-2026-06-06.md`.
 
 ## Implemented parity (harness core)
 

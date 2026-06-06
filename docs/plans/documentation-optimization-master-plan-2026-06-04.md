@@ -176,7 +176,7 @@ Acceptance criteria:
 
 ### DOCOPT-009: Roadmap Required-Field Guard
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
@@ -241,7 +241,7 @@ Acceptance criteria:
 
 ### DOCOPT-013: Generated Exhaustive Documentation Inventory
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
@@ -255,7 +255,7 @@ Acceptance criteria:
 
 ### DOCOPT-014: Link Health Check
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
@@ -269,7 +269,7 @@ Acceptance criteria:
 
 ### DOCOPT-015: Documentation Aging Dashboard
 
-Status: Proposed.
+Status: Done.
 
 Goal:
 
@@ -283,7 +283,7 @@ Acceptance criteria:
 
 ### DOCOPT-016: Release Documentation Evidence Bundle
 
-Status: Proposed.
+Status: Done (2026-06-06).
 
 Goal:
 

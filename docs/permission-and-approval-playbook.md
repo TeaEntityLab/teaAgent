@@ -1,6 +1,9 @@
 # Permission And Approval Playbook
 # As of 2026-06-02
 
+> **Last reviewed:** 2026-06-06
+> **Review trigger:** Approval, permission, or MCP trust behavior changes.
+
 This playbook is for users operating TeaAgent in repositories where tool authority
 matters.
 

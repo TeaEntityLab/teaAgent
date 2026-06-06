@@ -815,6 +815,16 @@ def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
         action='store_true',
         help='Show run evidence summary (changed files, commands, tests, approvals, costs, rollback).',
     )
+    p.add_argument(
+        '--human',
+        action='store_true',
+        help='With --evidence, print a human-readable run receipt instead of JSON.',
+    )
+    p.add_argument(
+        '--progress',
+        action='store_true',
+        help='Show phase, last tool, elapsed time, and budget remaining.',
+    )
     p.set_defaults(func=handler)
 
 

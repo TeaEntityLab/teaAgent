@@ -1,0 +1,180 @@
+{
+  "ok": true,
+  "created_at": "2026-06-06T04:14:55+00:00",
+  "repo_root": "/Users/teee/dev/teaagent",
+  "git": {
+    "branch": "main",
+    "commit": "b0b3054f49231598c378d031dc0feef03e87bd32",
+    "dirty": true
+  },
+  "commands": [],
+  "docs_freshness": {
+    "scanned": 17,
+    "needs_attention": 0,
+    "by_owner": {},
+    "stale_threshold_days": 90
+  },
+  "roadmap_excerpt": {
+    "horizons": [
+      {
+        "id": "H0",
+        "name": "Claim and risk hygiene",
+        "status": "In Progress",
+        "confidence": "Medium",
+        "next_gate": "DOCOPT-012 generalized guarded-claim registry"
+      },
+      {
+        "id": "H1",
+        "name": "Daily operator loop",
+        "status": "In Progress",
+        "confidence": "High",
+        "next_gate": "M1 complete"
+      },
+      {
+        "id": "H2",
+        "name": "Multi-surface continuity",
+        "status": "Pending",
+        "confidence": "Medium",
+        "next_gate": "M2 complete"
+      },
+      {
+        "id": "H3",
+        "name": "Ecosystem trust",
+        "status": "Pending",
+        "confidence": "Medium",
+        "next_gate": "M3 complete"
+      },
+      {
+        "id": "H4",
+        "name": "Durable team operations",
+        "status": "Pending",
+        "confidence": "Low",
+        "next_gate": "M4 complete"
+      },
+      {
+        "id": "H5",
+        "name": "Quality and eval loop",
+        "status": "Pending",
+        "confidence": "Low",
+        "next_gate": "M5 complete"
+      }
+    ],
+    "milestones": [
+      {
+        "id": "M0",
+        "target": "1-2 weeks",
+        "status": "Medium",
+        "next_gate": "`validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .` pass"
+      },
+      {
+        "id": "M1",
+        "target": "2-6 weeks",
+        "status": "High",
+        "next_gate": "CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance"
+      },
+      {
+        "id": "M2",
+        "target": "4-10 weeks",
+        "status": "Medium",
+        "next_gate": "Long-session context guard acceptance, scope budget acceptance, plan revision acceptance"
+      },
+      {
+        "id": "M3",
+        "target": "8-14 weeks",
+        "status": "Medium",
+        "next_gate": "Extension activation explain acceptance, MCP trust onboarding acceptance, subagent review/merge acceptance"
+      }
+    ]
+  },
+  "open_risks": [
+    {
+      "id": "SEC-05",
+      "category": "Budget",
+      "description": "Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response",
+      "status": "**OPEN**",
+      "priority": "P2"
+    },
+    {
+      "id": "SEC-09",
+      "category": "Multi-sig",
+      "description": "Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files",
+      "status": "**OPEN**",
+      "priority": "P2"
+    },
+    {
+      "id": "SEC-11",
+      "category": "Undo",
+      "description": "`UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows \"undo available\" but shell side-effects are unrecoverable",
+      "status": "**OPEN**",
+      "priority": "P2"
+    },
+    {
+      "id": "SEC-12",
+      "category": "Audit",
+      "description": "`os.fsync()` failure caught and silenced; audit degrades to in-memory only with no operator notification; disk-full attack eliminates all log persistence",
+      "status": "**OPEN**",
+      "priority": "P2"
+    },
+    {
+      "id": "SEC-13",
+      "category": "Testing",
+      "description": "Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way)",
+      "status": "**OPEN** — remediation plan in §9; target tests include `tests/test_chat_agent.py`, audit HMAC persistence/wrong-key tests, and MCP trust-expiry enforcement tests",
+      "priority": "P1"
+    },
+    {
+      "id": "SEC-14",
+      "category": "Permission",
+      "description": "`preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification",
+      "status": "**OPEN**",
+      "priority": "P3"
+    },
+    {
+      "id": "SEC-15",
+      "category": "Multi-sig",
+      "description": "`TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment",
+      "status": "**OPEN**",
+      "priority": "P2"
+    },
+    {
+      "id": "SEC-16",
+      "category": "Code Quality",
+      "description": "Dead code at `budget_monitor.py:104-119` after early return — maintenance hazard that could accidentally activate on refactor",
+      "status": "**OPEN**",
+      "priority": "QW"
+    },
+    {
+      "id": "DS-04",
+      "category": "Audit",
+      "description": "Stale `audit_trail` dict in suspension JSON predates CG-10 fix; forensic tooling may prefer the stale copy over the real RunStore events",
+      "status": "**OPEN**",
+      "priority": "P3"
+    },
+    {
+      "id": "SC-01",
+      "category": "Dependencies",
+      "description": "Two alpha packages in production lock (`opentelemetry-exporter-gcp-logging==1.12.0a0`, `opentelemetry-resourcedetector-gcp==1.12.0a0`) can break between lock refreshes",
+      "status": "**OPEN**",
+      "priority": "P2"
+    },
+    {
+      "id": "SC-02",
+      "category": "Dependencies",
+      "description": "`anthropic` SDK and `pyyaml` imported at runtime but undeclared in `pyproject.toml` — silent `ImportError` on installs without `google-cloud-aiplatform` or `pre-commit`",
+      "status": "**OPEN** — TASK-DD2-015 dependency declaration/import-check follow-up; fix target: `pyproject.toml`",
+      "priority": "P1"
+    },
+    {
+      "id": "SC-03",
+      "category": "Dependencies",
+      "description": "`aiohttp` and `mcp` SDK in lock as orphans — not declared, not imported in core; add 22 transitive packages to attack surface unnecessarily",
+      "status": "**OPEN**",
+      "priority": "P2"
+    }
+  ],
+  "regenerate_commands": [
+    "python3 scripts/build_release_docs_evidence_bundle.py",
+    "python3 scripts/validate_docs_consistency.py",
+    "python3 scripts/report_docs_aging.py"
+  ]
+}

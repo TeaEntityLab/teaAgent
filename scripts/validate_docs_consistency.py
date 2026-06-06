@@ -51,6 +51,22 @@ ROADMAP_H0_ROW = re.compile(
 )
 ROADMAP_DOCUMENTATION_TRUTH = re.compile(r'documentation-current-truth', re.IGNORECASE)
 ROADMAP_DOC_VS_HEAD = re.compile(r'doc-vs-head', re.IGNORECASE)
+ROADMAP_TABLE_SEPARATOR = re.compile(r'^\|[-:\s|]+\|$')
+ROADMAP_EXIT_COLUMNS = ('Exit Evidence', 'Exit Criteria', 'Risk')
+ROADMAP_REQUIRED_ROW_FIELDS = ('Owner', 'Status', 'Confidence', 'Next Gate')
+ROADMAP_VALID_STATUS_VALUES = (
+    'proposed',
+    'complete',
+    'in progress',
+    'pending',
+    'blocked',
+    'on hold',
+    'fixed',
+    'active',
+    'verify/close',
+    'partially fixed',
+)
+ROADMAP_EMPTY_FIELD_VALUES = frozenset({'', '-', '—', 'n/a', 'na'})
 MODE_MATRIX_START = '<!-- MODE_SAFETY_MATRIX:START -->'
 MODE_MATRIX_END = '<!-- MODE_SAFETY_MATRIX:END -->'
 MODE_MATRIX_REQUIRED_TOPICS = (
@@ -523,6 +539,107 @@ def validate_matrix_open_gap_count(
     return errors
 
 
+def _split_markdown_table_row(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip('|').split('|')]
+
+
+def _is_markdown_table_separator(line: str) -> bool:
+    return bool(ROADMAP_TABLE_SEPARATOR.match(line.strip()))
+
+
+def _roadmap_status_is_valid(status_value: str) -> bool:
+    normalized = re.sub(r'[*_`]', '', status_value).strip().lower()
+    if not normalized:
+        return False
+    return any(
+        normalized == valid or valid in normalized
+        for valid in ROADMAP_VALID_STATUS_VALUES
+    )
+
+
+def validate_roadmap_required_fields(roadmap_text: str) -> list[str]:
+    """Ensure roadmap tables keep owner/status/confidence/next gate/exit fields."""
+    errors: list[str] = []
+    lines = roadmap_text.splitlines()
+    line_no = 0
+    while line_no < len(lines):
+        line = lines[line_no]
+        if not line.strip().startswith('|'):
+            line_no += 1
+            continue
+
+        headers = _split_markdown_table_row(line)
+        if not all(field in headers for field in ROADMAP_REQUIRED_ROW_FIELDS):
+            line_no += 1
+            continue
+
+        # Critical Path uses a different schema (no Confidence column guard here).
+        if 'Completion %' in headers:
+            line_no += 1
+            continue
+
+        exit_column = next(
+            (column for column in ROADMAP_EXIT_COLUMNS if column in headers),
+            None,
+        )
+        if exit_column is None:
+            errors.append(
+                f'Roadmap table at line {line_no + 1} missing one of '
+                f'{ROADMAP_EXIT_COLUMNS}.'
+            )
+            line_no += 1
+            continue
+
+        field_indexes = {
+            field: headers.index(field) for field in ROADMAP_REQUIRED_ROW_FIELDS
+        }
+        exit_index = headers.index(exit_column)
+        line_no += 1
+        if line_no < len(lines) and _is_markdown_table_separator(lines[line_no]):
+            line_no += 1
+
+        while line_no < len(lines) and lines[line_no].strip().startswith('|'):
+            row_line = lines[line_no]
+            if _is_markdown_table_separator(row_line):
+                line_no += 1
+                continue
+
+            row_cells = _split_markdown_table_row(row_line)
+            if len(row_cells) < len(headers):
+                errors.append(
+                    f'Roadmap row at line {line_no + 1} has too few columns '
+                    f'({len(row_cells)} < {len(headers)}).'
+                )
+                line_no += 1
+                continue
+
+            for field, index in field_indexes.items():
+                value = row_cells[index].strip().lower()
+                if value in ROADMAP_EMPTY_FIELD_VALUES:
+                    errors.append(
+                        f'Roadmap row at line {line_no + 1} missing required '
+                        f'field {field!r}.'
+                    )
+
+            exit_value = row_cells[exit_index].strip().lower()
+            if exit_value in ROADMAP_EMPTY_FIELD_VALUES:
+                errors.append(
+                    f'Roadmap row at line {line_no + 1} missing required '
+                    f'field {exit_column!r}.'
+                )
+
+            status_value = row_cells[field_indexes['Status']]
+            if not _roadmap_status_is_valid(status_value):
+                errors.append(
+                    f'Roadmap row at line {line_no + 1} has unrecognized Status '
+                    f'value {status_value!r}.'
+                )
+
+            line_no += 1
+
+    return errors
+
+
 def validate_roadmap_status(roadmap_text: str) -> list[str]:
     errors: list[str] = []
     if not ROADMAP_H0_ROW.search(roadmap_text):
@@ -533,6 +650,7 @@ def validate_roadmap_status(roadmap_text: str) -> list[str]:
         )
     if not ROADMAP_DOC_VS_HEAD.search(roadmap_text):
         errors.append('Roadmap status missing doc-vs-HEAD guard reference.')
+    errors.extend(validate_roadmap_required_fields(roadmap_text))
     return errors
 
 
@@ -617,6 +735,170 @@ def _load_build_use_case_matrix_module() -> ModuleType:
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_generate_docs_inventory_module() -> ModuleType:
+    script = Path(__file__).with_name('generate_docs_inventory.py')
+    spec = spec_from_file_location('generate_docs_inventory', script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f'Unable to load {script}')
+    module = module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_report_docs_aging_module() -> ModuleType:
+    script = Path(__file__).with_name('report_docs_aging.py')
+    spec = spec_from_file_location('report_docs_aging', script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f'Unable to load {script}')
+    module = module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_generate_command_snippet_inventory_module() -> ModuleType:
+    script = Path(__file__).with_name('generate_command_snippet_inventory.py')
+    spec = spec_from_file_location('generate_command_snippet_inventory', script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f'Unable to load {script}')
+    module = module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+WORK_LOG_CANONICAL_STATES = frozenset(
+    {
+        'proposed',
+        'active',
+        'partially fixed',
+        'verify/close',
+        'fixed',
+        'superseded',
+        'archived',
+    }
+)
+WORK_LOG_LEGACY_STATE_LABELS = frozenset(
+    {
+        'done',
+        'complete',
+        'closed',
+        'open',
+        'partial',
+        'pending',
+        'in progress',
+    }
+)
+_CJK_CHAR = re.compile(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]')
+
+
+def validate_work_log_canonical_states(
+    work_log_text: str,
+    *,
+    path_label: str,
+) -> list[str]:
+    """Ensure active work-item ledgers use canonical State labels."""
+    errors: list[str] = []
+    lines = work_log_text.splitlines()
+    state_index: int | None = None
+    for line_no, line in enumerate(lines, start=1):
+        if not line.strip().startswith('|'):
+            continue
+        headers = _split_markdown_table_row(line)
+        if 'State' in headers:
+            state_index = headers.index('State')
+            continue
+        if state_index is None or _is_markdown_table_separator(line):
+            continue
+        cells = _split_markdown_table_row(line)
+        if len(cells) <= state_index:
+            continue
+        state = cells[state_index].strip()
+        if not state or state.lower() == 'state':
+            continue
+        normalized = state.lower()
+        if normalized in WORK_LOG_CANONICAL_STATES:
+            continue
+        if normalized in WORK_LOG_LEGACY_STATE_LABELS:
+            errors.append(
+                f'{path_label} line {line_no}: legacy State label {state!r} — '
+                'map to canonical vocabulary in document-state-model.md.'
+            )
+            continue
+        errors.append(
+            f'{path_label} line {line_no}: unrecognized State label {state!r}.'
+        )
+    return errors
+
+
+def validate_index_status_vocabulary(index_text: str) -> list[str]:
+    errors: list[str] = []
+    if 'document-state-model.md' not in index_text:
+        errors.append(
+            'docs/INDEX.md must link document-state-model.md for status vocabulary.'
+        )
+    if (
+        'Status vocabulary' not in index_text
+        and 'status vocabulary' not in index_text.lower()
+    ):
+        errors.append(
+            'docs/INDEX.md must include a Status vocabulary section mapping legacy labels.'
+        )
+    return errors
+
+
+def validate_durable_docs_language(
+    paths: list[Path],
+    *,
+    repo_root: Path = _REPO_ROOT,
+) -> list[str]:
+    errors: list[str] = []
+    for path in paths:
+        if not path.is_file():
+            continue
+        for line_no, line in enumerate(
+            path.read_text(encoding='utf-8').splitlines(),
+            start=1,
+        ):
+            if _CJK_CHAR.search(line):
+                rel = path.relative_to(repo_root).as_posix()
+                errors.append(
+                    f'{rel} line {line_no}: durable governance doc contains '
+                    'non-English characters; translate or mark as localization-only.'
+                )
+                break
+    return errors
+
+
+def validate_documentation_audit_cadence(
+    *,
+    cadence_path: Path,
+    release_checklist_path: Path,
+    verify_docs_path: Path,
+) -> list[str]:
+    errors: list[str] = []
+    if not cadence_path.is_file():
+        errors.append(f'Missing documentation audit cadence doc: {cadence_path}')
+    if release_checklist_path.is_file():
+        text = release_checklist_path.read_text(encoding='utf-8')
+        if 'documentation-audit-cadence' not in text:
+            errors.append(
+                'docs/release-checklist.md must link documentation-audit-cadence doc.'
+            )
+    else:
+        errors.append(f'Missing release checklist: {release_checklist_path}')
+    if verify_docs_path.is_file():
+        text = verify_docs_path.read_text(encoding='utf-8')
+        if 'generate_command_snippet_inventory.py' not in text:
+            errors.append(
+                'scripts/verify_docs.sh must run generate_command_snippet_inventory.py --check.'
+            )
+    else:
+        errors.append(f'Missing verify_docs.sh: {verify_docs_path}')
+    return errors
 
 
 def _load_control_loop_freshness_module() -> ModuleType:
@@ -771,6 +1053,7 @@ def validate_docs_consistency(
     check_catalog: bool = True,
     check_mode_matrix: bool = True,
     check_surface_recipes: bool = True,
+    check_repo_governance: bool = True,
 ) -> list[str]:
     errors: list[str] = []
 
@@ -945,6 +1228,80 @@ def validate_docs_consistency(
 
     errors.extend(validate_doc_cross_references(repo_root=_REPO_ROOT))
 
+    if check_repo_governance:
+        try:
+            inventory_module = _load_generate_docs_inventory_module()
+            errors.extend(inventory_module.check_docs_inventory())
+        except RuntimeError:
+            errors.append(
+                'Cannot load generate_docs_inventory; docs inventory check skipped.'
+            )
+
+        try:
+            aging_module = _load_report_docs_aging_module()
+            errors.extend(aging_module.check_docs_aging_dashboard())
+        except RuntimeError:
+            errors.append(
+                'Cannot load report_docs_aging; docs aging dashboard check skipped.'
+            )
+
+        try:
+            snippet_module = _load_generate_command_snippet_inventory_module()
+            errors.extend(snippet_module.check_command_snippet_inventory())
+        except RuntimeError:
+            errors.append(
+                'Cannot load generate_command_snippet_inventory; '
+                'command snippet inventory check skipped.'
+            )
+
+        work_log_path = (
+            _REPO_ROOT
+            / 'docs'
+            / 'work-log'
+            / ('documentation-optimization-work-items-2026-06-04.md')
+        )
+        if work_log_path.is_file():
+            errors.extend(
+                validate_work_log_canonical_states(
+                    work_log_path.read_text(encoding='utf-8'),
+                    path_label=str(work_log_path.relative_to(_REPO_ROOT)),
+                )
+            )
+
+        index_path = _REPO_ROOT / 'docs' / 'INDEX.md'
+        if index_path.is_file():
+            errors.extend(
+                validate_index_status_vocabulary(index_path.read_text(encoding='utf-8'))
+            )
+
+        errors.extend(
+            validate_durable_docs_language(
+                [
+                    _REPO_ROOT / 'docs' / 'INDEX.md',
+                    _REPO_ROOT
+                    / 'docs'
+                    / 'governance'
+                    / 'documentation-operating-model-2026-06-04.md',
+                    _REPO_ROOT
+                    / 'docs'
+                    / 'governance'
+                    / 'documentation-audit-cadence-2026-06-06.md',
+                    _REPO_ROOT / 'docs' / 'governance' / 'command-snippet-registry.md',
+                ]
+            )
+        )
+
+        errors.extend(
+            validate_documentation_audit_cadence(
+                cadence_path=_REPO_ROOT
+                / 'docs'
+                / 'governance'
+                / 'documentation-audit-cadence-2026-06-06.md',
+                release_checklist_path=_REPO_ROOT / 'docs' / 'release-checklist.md',
+                verify_docs_path=_REPO_ROOT / 'scripts' / 'verify_docs.sh',
+            )
+        )
+
     try:
         status_count = _extract_acceptance_status_count(acceptance_text)
     except ValueError as exc:
@@ -987,85 +1344,134 @@ def validate_docs_consistency(
     return errors
 
 
-def validate_doc_cross_references(
-    repo_root: Path = _REPO_ROOT,
-) -> list[str]:
-    """Check internal markdown links in current-truth docs for broken references.
+def _collect_markdown_link_targets(
+    *,
+    doc_path: Path,
+    repo_root: Path,
+) -> list[tuple[str, str, Path]]:
+    """Return (label, raw_target, resolved_path) for each internal markdown link."""
+    text = doc_path.read_text(encoding='utf-8')
+    doc_dir = doc_path.parent
+    targets: list[tuple[str, str, Path]] = []
 
-    Scans key current-truth documents for relative links to `.md` files and
-    verifies each target exists in the repository. Dated evidence docs
-    (analysis/, reviews/, work-log/) are checked but reported as warnings.
+    for match in re.finditer(r'\[([^\]]*)\]\(([^)]+)\)', text):
+        label = match.group(1)
+        target = match.group(2)
 
-    Returns errors for broken links in current-truth docs; returns empty for
-    broken links in dated evidence (non-blocking).
-    """
-    errors: list[str] = []
-
-    CURRENT_TRUTH_DOCS = (
-        repo_root / 'README.md',
-        repo_root / 'docs' / 'INDEX.md',
-        repo_root / 'docs' / 'USAGE.md',
-        repo_root / 'docs' / 'cli.md',
-        repo_root / 'docs' / 'acceptance.md',
-        repo_root / 'docs' / 'roadmap-status.md',
-        repo_root / 'docs' / 'daily-driver-current-status.md',
-        repo_root / 'docs' / 'release-checklist.md',
-        repo_root / 'docs' / 'backlog-priority.md',
-        repo_root / 'docs' / 'maturity-matrix.md',
-        repo_root / 'docs' / 'terminology.md',
-        repo_root / 'docs' / 'architecture.md',
-    )
-
-    LINK_PATTERN = re.compile(r'\[([^\]]*)\]\(([^)]+)\)')
-
-    for doc_path in CURRENT_TRUTH_DOCS:
-        if not doc_path.is_file():
+        if target.startswith(('http://', 'https://', 'mailto:')):
+            continue
+        if target.startswith('#'):
             continue
 
-        text = doc_path.read_text(encoding='utf-8')
-        doc_dir = doc_path.parent
-        rel = doc_path.relative_to(repo_root)
+        path_part = target.split('#', 1)[0]
+        if not path_part:
+            continue
 
-        for match in LINK_PATTERN.finditer(text):
-            target = match.group(2)
+        if not path_part.endswith('.md'):
+            continue
 
-            # Skip external URLs and mailto
-            if target.startswith(('http://', 'https://', 'mailto:')):
+        resolved = (doc_dir / path_part).resolve()
+        try:
+            resolved.relative_to(repo_root)
+        except ValueError:
+            continue
+
+        targets.append((label, target, resolved))
+
+    return targets
+
+
+def _scan_doc_links(
+    *,
+    doc_path: Path,
+    repo_root: Path,
+) -> list[str]:
+    rel = doc_path.relative_to(repo_root)
+    broken: list[str] = []
+    for label, target, resolved in _collect_markdown_link_targets(
+        doc_path=doc_path,
+        repo_root=repo_root,
+    ):
+        if resolved.is_file():
+            continue
+        broken.append(
+            f'Broken cross-reference in {rel}: '
+            f'[{label}]({target}) → '
+            f'{resolved.relative_to(repo_root)} (not found)'
+        )
+    return broken
+
+
+CURRENT_TRUTH_DOC_PATHS = (
+    'README.md',
+    'docs/INDEX.md',
+    'docs/USAGE.md',
+    'docs/cli.md',
+    'docs/acceptance.md',
+    'docs/roadmap-status.md',
+    'docs/daily-driver-current-status.md',
+    'docs/release-checklist.md',
+    'docs/backlog-priority.md',
+    'docs/maturity-matrix.md',
+    'docs/terminology.md',
+    'docs/architecture.md',
+    'docs/tui-daily-driver-guide.md',
+    'docs/permission-and-approval-playbook.md',
+    'docs/governance/README.md',
+    'docs/plans/ticket-plans/index.md',
+    'docs/analysis/active-findings-status-ledger-2026-06-06.md',
+)
+
+HISTORICAL_DOC_DIRS = (
+    'docs/analysis',
+    'docs/reviews',
+    'docs/work-log',
+    'docs/plans',
+)
+
+
+def validate_doc_cross_references(
+    repo_root: Path = _REPO_ROOT,
+    *,
+    emit_historical_warnings: bool = True,
+) -> list[str]:
+    """Check internal markdown links.
+
+    Current-truth docs: broken `.md` links fail validation.
+    Historical evidence dirs: broken links are warnings only (printed).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    current_truth_paths = {repo_root / rel for rel in CURRENT_TRUTH_DOC_PATHS}
+
+    for doc_path in sorted(current_truth_paths):
+        if not doc_path.is_file():
+            continue
+        errors.extend(_scan_doc_links(doc_path=doc_path, repo_root=repo_root))
+
+    for rel_dir in HISTORICAL_DOC_DIRS:
+        directory = repo_root / rel_dir
+        if not directory.is_dir():
+            continue
+        for doc_path in sorted(directory.rglob('*.md')):
+            if doc_path in current_truth_paths:
                 continue
+            warnings.extend(_scan_doc_links(doc_path=doc_path, repo_root=repo_root))
 
-            # Resolve anchor-only links relative to current doc
-            if target.startswith('#'):
-                continue
-
-            # Split anchor from path
-            anchor = ''
-            if '#' in target:
-                target, anchor = target.split('#', 1)
-
-            # Skip if only anchor remains (e.g. "#section" already handled)
-            if not target:
-                continue
-
-            # Resolve relative path
-            target_path = (doc_dir / target).resolve()
-
-            # Skip absolute paths outside repo
-            try:
-                target_path.relative_to(repo_root)
-            except ValueError:
-                continue
-
-            if not target_path.exists():
-                errors.append(
-                    f'Broken cross-reference in {rel}: '
-                    f'[{match.group(1)}]({target}) → '
-                    f'{target_path.relative_to(repo_root)} (not found)'
-                )
-                errors.append(
-                    f'Broken cross-reference in {rel}: '
-                    f'[{match.group(1)}]({target}) → '
-                    f'{target_path.relative_to(repo_root)} (not found)'
-                )
+    if emit_historical_warnings and warnings:
+        print(
+            f'Historical doc link warnings ({len(warnings)}; non-blocking):',
+            file=sys.stderr,
+        )
+        preview = warnings[:25]
+        for warning in preview:
+            print(f'  WARNING: {warning}', file=sys.stderr)
+        if len(warnings) > len(preview):
+            print(
+                f'  WARNING: ... and {len(warnings) - len(preview)} more',
+                file=sys.stderr,
+            )
 
     return errors
 

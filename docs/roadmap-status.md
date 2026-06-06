@@ -1,10 +1,21 @@
 # Roadmap Status
 
+> **Claim class:** Current truth for roadmap horizon, milestone, and track status.
+>
+> **Owns:** Which workstreams are complete, in progress, or pending, and their
+> next gates.
+>
+> **Does not own:** Daily-user command recommendations (`daily-driver-current-status.md`)
+> or historical review reasoning in dated analysis files.
+>
+> **Review trigger:** Roadmap horizon, milestone, or track status changes.
+> **Last reviewed:** 2026-06-06
+
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-05 (P0/P1/P2 stream finalization — all CPP, SCL, DSK P2 items marked Complete; TUI control cockpit, release evidence bundle, and skill health dashboard shipped)
+**Last updated:** 2026-06-06 (P0/P1/P2 stream finalization — all CPP, SCL, DSK P2 items marked Complete; TUI control cockpit, release evidence bundle, and skill health dashboard shipped; DOW-014 roadmap required-field guard)
 **Owner:** TBD
 
-> **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/daily-driver-findings-status-ledger-2026-06-01.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
+> **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
 
 ## Purpose
 
@@ -51,8 +62,8 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | GOV-011 | Create "do not claim" list | TBD | Pending | Medium | GOV-012 | Medium |
 | GOV-012 | Add release residual-risk summary | TBD | Pending | Medium | M0 complete | High |
 | GOV-013 | Create curated documentation front door | docs | Complete | High | GOV-014 | Low |
-| GOV-014 | Add doc-vs-HEAD guarded claim registry | docs / verification | In Progress | Medium | DOCOPT-012 | High |
-| GOV-015 | Audit High/Critical module risks for upward links | docs / module owners | Pending | Medium | DOCOPT-013 | High |
+| GOV-014 | Add doc-vs-HEAD guarded claim registry | docs / verification | Complete | High | DOCOPT-009 | High |
+| GOV-015 | Audit High/Critical module risks for upward links | docs / module owners | Complete | High | GOV-016 | High |
 
 ## Track H3 - Ecosystem Trust And Dynamic Skills
 
@@ -179,11 +190,11 @@ Current evidence package:
 | DS-09 Background UUID rejection | **Fixed** | 100% | Code + passing test | — | `test_agent_run_background_rejects_known_run_or_suspension_id()` |
 | DS-12 Empty-path approval | **Fixed** | 100% | Code + passing tests | — | `test_empty_path_globs_rejected_ds12()` |
 | DS-13 Budget zero semantics | **Fixed** | 100% | Code + passing tests | — | `None`=unlimited, `0`=no-spend |
-| DS-01 TUI cost accumulation | Active | 0% | None | TICKET-12 | `_session_cost_cents` not incremented |
-| DS-08 resume always errors | Active | 0% | None | TICKET-16 | `run_started` event schema mismatch |
-| DS-11 Initial task dropped | Active | 0% | None | TASK-DD2-001 | `chat_command` never reads `args.task` |
-| H0 Claim + risk hygiene | In Progress | 60% | Partial | TBD | Risk register updated; validation script exists; claim registry TBD |
-| M0 Risk register operational | In Progress | 70% | Partial | TBD | Register has evidence; `validate_docs_consistency.py` exists; GOV-002 pending |
+| DS-01 TUI cost accumulation | **Fixed** | 100% | Code + passing tests | — | TICKET-12; `test_task003_cost_truth.py` |
+| DS-08 resume always errors | **Fixed** | 100% | Code + passing tests | — | TICKET-16 Phase 2; `test_repl_suspend_resume_roundtrip` |
+| DS-11 Initial task dropped | **Fixed** | 100% | Code + passing tests | — | TASK-DD2-001; chat task forwarding tests |
+| H0 Claim + risk hygiene | In Progress | 75% | Partial | docs | Guarded claims + roadmap required-field guard (DOW-014) |
+| M0 Risk register operational | In Progress | 75% | Partial | TBD | Register has evidence; GOV-002 schema still pending |
 
 **Merge gate:** `python3 scripts/validate_docs_consistency.py` must pass before any PR that updates roadmap or risk register status.
 

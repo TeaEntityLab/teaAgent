@@ -1,6 +1,12 @@
 # Daily-Driver Findings Status Ledger (All Passes)
 # 2026-06-01
 
+> Supersession note, 2026-06-06: This file is historical evidence from the
+> June 1 review pass. For current finding closure status, use
+> [Active Findings Status Ledger (2026-06-06)](active-findings-status-ledger-2026-06-06.md).
+> Ticket execution state lives in
+> [Ticket Execution Plans](../plans/ticket-plans/index.md).
+
 **Why.** Four review passes produced findings CG-01…CG-17 and AG-01…AG-04 across many
 docs. This is the single page that answers "where does everything stand right now" —
 status, owning ticket, guard test, and one-line evidence — re-anchored against current

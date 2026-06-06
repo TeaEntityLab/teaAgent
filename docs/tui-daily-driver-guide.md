@@ -1,5 +1,15 @@
 # TUI Daily-Driver Guide
-# As of 2026-06-02
+# As of 2026-06-06
+
+> **Claim class:** User guide — operational steps for the TUI daily loop.
+>
+> **Owns:** Commands, safe defaults, and recovery pointers for TUI operators.
+>
+> **Does not own:** Roadmap horizons (`roadmap-status.md`), ticket execution
+> steps (`plans/ticket-plans/index.md`), or historical review prose in dated analysis files.
+>
+> **Review trigger:** TUI operator loop or recovery pointers change.
+> **Last reviewed:** 2026-06-06
 
 Use this guide when `teaagent tui` is your daily operator cockpit.
 
@@ -33,7 +43,7 @@ Recommended habits:
 The TUI should be treated as an operator surface:
 
 - Status panels are prompts to inspect, not proof that a run is complete.
-- Cost displays are useful only after the TUI cost migration lands.
+- Cost displays reflect session spend via `ChatSessionController` after TICKET-12.
 - Run ids are the durable handle for audit and recovery.
 - Approval rows should be read as security boundaries, not convenience buttons.
 

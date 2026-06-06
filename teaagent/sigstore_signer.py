@@ -15,16 +15,24 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
+Signer: Any = None
+Verifier: Any = None
+Identity: Any = None
+SIGSTORE_IMPORT_ERROR: str | None = None
+
 try:
     from sigstore.sign import Signer as _Signer
     from sigstore.verify import Verifier as _Verifier
-    from sigstore.verify.policy import Identity
+    from sigstore.verify.policy import Identity as _Identity
 
     Signer = cast(Any, _Signer)
     Verifier = cast(Any, _Verifier)
+    Identity = cast(Any, _Identity)
     SIGSTORE_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # pragma: no cover - depends on optional dependency state
     SIGSTORE_AVAILABLE = False
+    SIGSTORE_IMPORT_ERROR = f'{type(exc).__name__}: {exc}'
+    logger.debug('sigstore-python is unavailable: %s', SIGSTORE_IMPORT_ERROR)
 
 
 def detect_ci_oidc_token() -> str | None:
@@ -73,8 +81,10 @@ class SigstoreSigner:
                 will auto-detect from CI/CD environment variables.
         """
         if not SIGSTORE_AVAILABLE:
+            detail = f': {SIGSTORE_IMPORT_ERROR}' if SIGSTORE_IMPORT_ERROR else ''
             raise ValueError(
-                'sigstore-python is not installed. Install with: pip install sigstore'
+                'sigstore-python is not available or failed to initialize. '
+                f'Install or repair with: pip install sigstore{detail}'
             )
         # Auto-detect OIDC token from CI/CD environment if not provided
         if identity_token is None:
@@ -236,7 +246,8 @@ class TSBProvenanceVerifier:
                 return False, 'Sigstore signing requires certificate'
 
             if not SIGSTORE_AVAILABLE:
-                return False, 'sigstore-python not installed for verification'
+                detail = f': {SIGSTORE_IMPORT_ERROR}' if SIGSTORE_IMPORT_ERROR else ''
+                return False, f'sigstore-python not available for verification{detail}'
 
             try:
                 if self._sigstore_signer is None:
