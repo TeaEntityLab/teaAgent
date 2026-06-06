@@ -15,7 +15,7 @@ from teaagent import __version__
 EXIT_SUCCESS = 0
 EXIT_ERROR = 1
 EXIT_BLOCKING = 2
-from teaagent.cli._handlers import (
+from teaagent.cli._handlers import (  # noqa: E402
     agent_attach_command,
     agent_card_command,
     agent_daily_command,
@@ -221,18 +221,18 @@ from teaagent.cli._handlers import (
     workspace_tools_metadata,
     yesterday_command,
 )
-from teaagent.graphqlite_store import (
+from teaagent.graphqlite_store import (  # noqa: E402
     check_graphqlite_runtime,
 )
-from teaagent.llm import (
+from teaagent.llm import (  # noqa: E402
     check_llm_configuration,
     create_llm_adapter,
 )
-from teaagent.llm_conformance import (
+from teaagent.llm_conformance import (  # noqa: E402
     run_model_conformance,  # noqa: F401  # kept for test patches
 )
-from teaagent.mcp_http import serve_mcp_http
-from teaagent.policy import PermissionMode
+from teaagent.mcp_http import serve_mcp_http  # noqa: E402
+from teaagent.policy import PermissionMode  # noqa: E402
 
 _TOP_LEVEL_AGENT_COMMANDS = frozenset(
     {'run', 'ask', 'daily', 'resume', 'preflight', 'plan'}
