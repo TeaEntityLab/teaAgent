@@ -23,7 +23,7 @@ def test_execute_skill_low_risk_code_mode(tmp_path: Path) -> None:
     assert result.output == {'echo': 1}
 
 
-def test_execute_skill_wasm_compat_python(tmp_path: Path) -> None:
+def test_execute_skill_high_risk_missing_isolation_fails_closed(tmp_path: Path) -> None:
     skill_dir = tmp_path / 'wasm_skill'
     skill_dir.mkdir()
     (skill_dir / 'tool.py').write_text(
@@ -33,14 +33,14 @@ def test_execute_skill_wasm_compat_python(tmp_path: Path) -> None:
     (skill_dir / 'SKILL.md').write_text('# wasm skill\n', encoding='utf-8')
 
     result = execute_skill(skill_dir, {'n': 3}, risk_level=RiskLevel.HIGH)
-    assert result.success is True
-    assert result.execution_backend in {
-        'wasm_compat_python',
-        'wasm',
-        'docker_fallback_subprocess',
-        'subprocess',
-        'docker',
-    }
+    if result.success:
+        assert result.execution_backend in {'wasm', 'docker'}
+    else:
+        assert result.execution_backend in {
+            'docker_unavailable',
+            'wasm_artifact_missing',
+            'isolation_required',
+        }
 
 
 def test_skill_writer_publish_then_execute(tmp_path: Path) -> None:

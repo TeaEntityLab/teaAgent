@@ -1,6 +1,6 @@
 """IT: Graceful disk-full degradation in AuditLogger.
 
-When a write raises OSError (e.g. ENOSPC) the logger:
+When a write raises OSError (e.g. ENOSPC) in explicit best-effort mode the logger:
 - Does NOT raise or crash the run.
 - Continues recording events in memory.
 - Records a synthetic _disk_write_error event.
@@ -14,7 +14,10 @@ import errno
 import os
 from unittest.mock import patch
 
+import pytest
+
 from teaagent.audit import AuditLogger
+from teaagent.errors import AuditDurabilityError
 
 
 def _enospc_fsync(fd: int) -> None:
@@ -23,7 +26,7 @@ def _enospc_fsync(fd: int) -> None:
 
 def test_disk_full_does_not_raise(tmp_path):
     log = tmp_path / 'run.jsonl'
-    audit = AuditLogger(path=log)
+    audit = AuditLogger(path=log, compliance_mode=False)
 
     with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')  # must not raise
@@ -33,7 +36,7 @@ def test_disk_full_does_not_raise(tmp_path):
 
 def test_in_memory_events_captured_after_disk_full(tmp_path):
     log = tmp_path / 'run.jsonl'
-    audit = AuditLogger(path=log)
+    audit = AuditLogger(path=log, compliance_mode=False)
 
     with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')
@@ -46,7 +49,7 @@ def test_in_memory_events_captured_after_disk_full(tmp_path):
 
 def test_disk_error_event_recorded(tmp_path):
     log = tmp_path / 'run.jsonl'
-    audit = AuditLogger(path=log)
+    audit = AuditLogger(path=log, compliance_mode=False)
 
     with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')
@@ -62,7 +65,7 @@ def test_disk_error_event_recorded(tmp_path):
 
 def test_disk_error_property_set(tmp_path):
     log = tmp_path / 'run.jsonl'
-    audit = AuditLogger(path=log)
+    audit = AuditLogger(path=log, compliance_mode=False)
 
     with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync):
         audit.record('run_started', 'r1', task='hello')
@@ -80,7 +83,7 @@ def test_disk_error_property_none_on_success(tmp_path):
 
 def test_further_writes_skipped_after_disk_full(tmp_path):
     log = tmp_path / 'run.jsonl'
-    audit = AuditLogger(path=log)
+    audit = AuditLogger(path=log, compliance_mode=False)
     call_count = {'n': 0}
 
     def counting_fail(fd: int) -> None:
@@ -99,7 +102,7 @@ def test_further_writes_skipped_after_disk_full(tmp_path):
 def test_non_enospc_oserror_also_handled(tmp_path):
     """Any OSError during write should degrade gracefully."""
     log = tmp_path / 'run.jsonl'
-    audit = AuditLogger(path=log)
+    audit = AuditLogger(path=log, compliance_mode=False)
 
     def permission_denied(fd: int) -> None:
         raise OSError(errno.EACCES, 'Permission denied')
@@ -109,3 +112,13 @@ def test_non_enospc_oserror_also_handled(tmp_path):
 
     assert audit.disk_error is not None
     assert len(audit.events) >= 1
+
+
+def test_disk_full_raises_by_default(tmp_path):
+    log = tmp_path / 'run.jsonl'
+    audit = AuditLogger(path=log)
+
+    with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync), pytest.raises(
+        AuditDurabilityError
+    ):
+        audit.record('run_started', 'r1', task='hello')

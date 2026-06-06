@@ -57,6 +57,7 @@ class ToolDefinition:
     annotations: ToolAnnotations
     handler: ToolHandler
     rate_limit: Optional[ToolRateLimit] = None
+    mcp_server_name: Optional[str] = None
     capability_manifest: Optional[dict[str, Any]] = (
         None  # Declared capabilities for security tier mapping
     )
@@ -119,6 +120,7 @@ class ToolRegistry:
     def __init__(self, *, hook_registry: Optional[HookRegistry] = None) -> None:
         self._tools: dict[str, ToolDefinition] = {}
         self._rate_states: dict[str, _RateLimiterState] = {}
+        self._mcp_trust_hook_roots: set[str] = set()
         self.hook_registry = hook_registry
 
     def register(
@@ -131,6 +133,7 @@ class ToolRegistry:
         annotations: ToolAnnotations,
         handler: ToolHandler,
         rate_limit: Optional[ToolRateLimit] = None,
+        mcp_server_name: Optional[str] = None,
         allow_override: bool = False,
     ) -> None:
         if not name or ' ' in name:
@@ -156,6 +159,7 @@ class ToolRegistry:
             annotations=annotations,
             handler=handler,
             rate_limit=rate_limit,
+            mcp_server_name=mcp_server_name,
         )
         if rate_limit is not None:
             self._rate_states[name] = _RateLimiterState(rate_limit)
@@ -191,14 +195,13 @@ class ToolRegistry:
     def execute(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         tool = self.get(name)
         validate_object_schema(tool.input_schema, arguments, label=f'tool.{name}.input')
-        state = self._rate_states.get(name)
-        if state is not None:
-            state.check_and_record(name)
         if self.hook_registry is not None:
             ctx = get_tool_call_context()
-            original_args = arguments
+            original_args = dict(arguments)
             try:
-                modified_args = self.hook_registry.run_pre_hooks(name, arguments)
+                modified_args = self.hook_registry.run_pre_hooks(
+                    name, dict(arguments)
+                )
             except HookError as exc:
                 if ctx is not None:
                     ctx.audit.record(
@@ -207,10 +210,24 @@ class ToolRegistry:
                         call_id=ctx.call_id,
                         tool_name=name,
                         error=str(exc),
-                    )
+                )
                 raise
             if modified_args is not None:
                 arguments = modified_args
+            if arguments != original_args and tool.annotations.destructive:
+                if ctx is not None:
+                    ctx.audit.record(
+                        'tool_hook_pre_mutation_blocked',
+                        ctx.run_id,
+                        call_id=ctx.call_id,
+                        tool_name=name,
+                    )
+                raise ToolExecutionError(
+                    f"pre-tool hooks may not mutate destructive tool '{name}' arguments"
+                )
+            validate_object_schema(
+                tool.input_schema, arguments, label=f'tool.{name}.input'
+            )
             if ctx is not None and arguments != original_args:
                 before_keys = set(original_args)
                 after_keys = set(arguments)
@@ -227,6 +244,9 @@ class ToolRegistry:
                         if original_args.get(k) != arguments.get(k)
                     ),
                 )
+        state = self._rate_states.get(name)
+        if state is not None:
+            state.check_and_record(name)
         try:
             result = tool.handler(arguments)
         except ToolExecutionError:

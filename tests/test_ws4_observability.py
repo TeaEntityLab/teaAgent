@@ -169,7 +169,7 @@ def test_config_lint_flags_unsafe_combinations(
 ) -> None:
     monkeypatch.delenv('TEAAGENT_MAX_ESTIMATED_COST_CENTS', raising=False)
     monkeypatch.delenv('TEAAGENT_BUDGET_CAP_CENTS', raising=False)
-    monkeypatch.delenv('TEAAGENT_COMPLIANCE_MODE', raising=False)
+    monkeypatch.setenv('TEAAGENT_COMPLIANCE_MODE', '0')
     findings = lint_runtime_config(
         root=tmp_path,
         permission_mode=PermissionMode.ALLOW,

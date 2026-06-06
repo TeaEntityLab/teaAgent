@@ -98,14 +98,10 @@ def lint_runtime_config(
             )
         )
 
+    compliance_raw = os.environ.get('TEAAGENT_COMPLIANCE_MODE')
     if (
-        os.environ.get('TEAAGENT_COMPLIANCE_MODE', '').strip().lower()
-        not in {
-            '1',
-            'true',
-            'yes',
-            'on',
-        }
+        compliance_raw is not None
+        and compliance_raw.strip().lower() in {'0', 'false', 'no', 'off'}
         and mode == PermissionMode.ALLOW
     ):
         findings.append(

@@ -87,6 +87,7 @@ def register_mcp_tools(
     endpoint: str,
     auth_token: Optional[str] = None,
     name_prefix: str = '',
+    server_name: Optional[str] = None,
     rate_limit: Optional[ToolRateLimit] = None,
     client: Optional[MCPHTTPClient] = None,
 ) -> list[str]:
@@ -98,6 +99,8 @@ def register_mcp_tools(
         The ``ToolRegistry`` to register tools into.
     endpoint:
         Base URL of the MCP HTTP server (e.g. ``http://localhost:7330``).
+    server_name:
+        Stable trust-policy identity for this MCP server. Defaults to endpoint.
     auth_token:
         Optional Bearer token for MCP server authentication.
     name_prefix:
@@ -114,6 +117,7 @@ def register_mcp_tools(
         Names of the tools that were registered.
     """
     own_client = client is None
+    source_server = server_name or endpoint
     if own_client:
         client = MCPHTTPClient(endpoint, auth_token=auth_token)
         client.initialize()
@@ -146,6 +150,7 @@ def register_mcp_tools(
             annotations=annotations,
             handler=handler,
             rate_limit=rate_limit,
+            mcp_server_name=source_server,
         )
         registered.append(name)
 

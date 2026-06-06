@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
+from teaagent.audit import AuditLogger
+from teaagent.chat_agent import _apply_plan_contract
 from teaagent.plan import load_plan_contract
+from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.runner import AgentRunner
+from teaagent.tools import ToolRegistry
 
 
 def _write_minimal_plan(path: Path, task: str) -> None:
@@ -37,3 +42,42 @@ def test_load_plan_contract_accepts_plans_dir_artifact(tmp_path: Path) -> None:
     contract = load_plan_contract(artifact, root=tmp_path)
     assert contract.rel_path == '.teaagent/plans/20260526-test.md'
     assert contract.task == 'Plans dir task'
+
+
+def test_apply_plan_contract_binds_validator_write_scope(tmp_path: Path) -> None:
+    runner = AgentRunner(
+        registry=ToolRegistry(),
+        audit=AuditLogger(path=None),
+        approval_policy=ApprovalPolicy(permission_mode=PermissionMode.PROMPT),
+    )
+    plan_path = tmp_path / '.teaagent' / 'plans' / 'scope.md'
+    plan_path.parent.mkdir(parents=True)
+    plan_path.write_text('# TeaAgent Plan\n', encoding='utf-8')
+
+    _apply_plan_contract(
+        runner,
+        {
+            'plan_contract': {
+                'path': str(plan_path),
+                'rel_path': '.teaagent/plans/scope.md',
+                'content_hash': 'abc123',
+                'task': 'scoped write',
+                'file_targets': ['allowed.txt'],
+            }
+        },
+    )
+
+    contract = runner.plan_validator.get_plan_contract()
+    assert contract is not None
+    assert contract.file_targets == frozenset({'allowed.txt'})
+    drift = runner.plan_validator.validate_write_allowed(
+        tool_name='workspace_write_file',
+        context={
+            'plan_contract': {
+                'content_hash': 'abc123',
+            }
+        },
+        tool_arguments={'path': 'outside.txt', 'content': 'nope'},
+    )
+    assert drift is not None
+    assert 'outside the approved plan scope' in drift

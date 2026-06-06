@@ -9,7 +9,7 @@ from uuid import uuid4
 from teaagent.abstract_store import AbstractStore
 from teaagent.audit import AuditLogger, secure_audit_dir, secure_audit_file, utc_now
 from teaagent.runner import RunResult
-from teaagent.storage import atomic_write_text
+from teaagent.storage import append_jsonl_line, atomic_write_text
 
 
 @dataclass(frozen=True)
@@ -98,13 +98,7 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         summary = self.summarize(run_path)
         if summary is None:
             return
-        # Append to index file
-        index_line = json.dumps(summary.to_dict()) + '\n'
-        if self._index_path.exists():
-            existing_content = self._index_path.read_text(encoding='utf-8')
-            atomic_write_text(self._index_path, existing_content + index_line)
-        else:
-            atomic_write_text(self._index_path, index_line)
+        append_jsonl_line(self._index_path, json.dumps(summary.to_dict()))
         secure_audit_file(self._index_path)
 
     def _read_index(self) -> list[RunSummary]:

@@ -19,9 +19,11 @@ from teaagent import (
     parse_model_decision,
     run_chat_agent,
 )
+from teaagent.chat_agent import _setup_tool_registry
 from teaagent.cli import main
 from teaagent.errors import ToolPermissionError
 from teaagent.runner import ToolRequest
+from teaagent.tools import ToolRegistry
 
 
 class ChatAgentTests(unittest.TestCase):
@@ -57,6 +59,19 @@ class ChatAgentTests(unittest.TestCase):
             self.assertEqual(result.final_answer.content, 'read hello.txt')
             self.assertIn('workspace_read_file', adapter.requests[0].system)
             self.assertIsNotNone(adapter.requests[0].response_format)
+
+    def test_setup_tool_registry_applies_mcp_trust_to_external_registry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registry = ToolRegistry()
+            config = ChatAgentConfig.from_root(tmp)
+            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
+
+            _setup_tool_registry(config, adapter, registry, 'task', None, 0, None)
+            self.assertIsNotNone(registry.hook_registry)
+            first_count = len(registry.hook_registry.config.pre_hooks)
+
+            _setup_tool_registry(config, adapter, registry, 'task', None, 0, None)
+            self.assertEqual(len(registry.hook_registry.config.pre_hooks), first_count)
 
     def test_chat_agent_retries_on_invalid_decision_then_recovers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

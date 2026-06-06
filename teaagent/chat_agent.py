@@ -484,10 +484,9 @@ def _setup_tool_registry(
         register_git_tools(tool_registry, GitToolConfig(root=config.root))
     if _registry_fresh and 'browser_navigate' not in tool_registry.list_tools():
         register_browser_tools(tool_registry)
-    if _registry_fresh:
-        from teaagent.mcp_trust import apply_mcp_trust_hooks
+    from teaagent.mcp_trust import apply_mcp_trust_hooks
 
-        apply_mcp_trust_hooks(tool_registry, config.root)
+    apply_mcp_trust_hooks(tool_registry, config.root)
     return tool_registry, context_extra
 
 
@@ -670,18 +669,16 @@ def _apply_plan_contract(
     if plan_contract and isinstance(plan_contract, dict):
         from teaagent.plan import PlanContract
 
-        # Reconstruct PlanContract from dict for runner use
-        object.__setattr__(
-            runner,
-            '_plan_contract',
-            PlanContract(
-                path=Path(plan_contract.get('path', '')),
-                rel_path=plan_contract.get('rel_path', ''),
-                content_hash=plan_contract.get('content_hash', ''),
-                task=plan_contract.get('task', ''),
-                file_targets=frozenset(plan_contract.get('file_targets', [])),
-            ),
+        # Reconstruct PlanContract for the validator that enforces write scope.
+        contract = PlanContract(
+            path=Path(plan_contract.get('path', '')),
+            rel_path=plan_contract.get('rel_path', ''),
+            content_hash=plan_contract.get('content_hash', ''),
+            task=plan_contract.get('task', ''),
+            file_targets=frozenset(plan_contract.get('file_targets', [])),
         )
+        runner.plan_validator.set_plan_contract(contract)
+        object.__setattr__(runner, '_plan_contract', contract)
     return run_started_extra
 
 

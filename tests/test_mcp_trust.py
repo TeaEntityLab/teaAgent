@@ -22,7 +22,21 @@ from teaagent.mcp_trust import (
     save_mcp_trust_policy,
     update_server_tools,
 )
-from teaagent.tools import ToolRegistry
+from teaagent.tools import ToolAnnotations, ToolRegistry
+
+
+def _register_mcp_tool(
+    registry: ToolRegistry, tool_name: str, server_name: str
+) -> None:
+    registry.register(
+        name=tool_name,
+        description='remote MCP test tool',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(read_only=True),
+        handler=lambda args: {},
+        mcp_server_name=server_name,
+    )
 
 
 def test_mcp_trust_policy_serialization():
@@ -221,6 +235,7 @@ class TestHookBlocksUntrustedServer:
 
             registry = ToolRegistry()
             registry.hook_registry = None
+            _register_mcp_tool(registry, 'dangerous_tool', 'bad')
             apply_mcp_trust_hooks(registry, tmp_path)
             assert registry.hook_registry is not None
 
@@ -245,6 +260,7 @@ class TestHookBlocksUntrustedServer:
 
             registry = ToolRegistry()
             registry.hook_registry = None
+            _register_mcp_tool(registry, 'stale_tool', 'stale')
             apply_mcp_trust_hooks(registry, tmp_path)
             assert registry.hook_registry is not None
 
@@ -269,6 +285,7 @@ class TestHookBlocksUntrustedServer:
 
             registry = ToolRegistry()
             registry.hook_registry = None
+            _register_mcp_tool(registry, 'good_tool', 'good')
             apply_mcp_trust_hooks(registry, tmp_path)
 
             result = registry.hook_registry.run_pre_hooks('good_tool', {})
@@ -292,6 +309,7 @@ class TestHookBlocksUntrustedServer:
 
             registry = ToolRegistry()
             registry.hook_registry = None
+            _register_mcp_tool(registry, 'any_tool', 'expired_no_lists')
             apply_mcp_trust_hooks(registry, tmp_path)
 
             with pytest.raises(HookError, match='has expired'):

@@ -225,7 +225,7 @@ class ExecuteCodeModeAuditTests(unittest.TestCase):
         self.assertEqual(result.variables.get('x'), 1)
         events = [call[0][0] for call in logger.record.call_args_list]
         self.assertIn('docker_preflight_failed', events)
-        self.assertIn('sandbox_fallback_to_wasm', events)
+        self.assertIn('sandbox_fallback_to_child_process', events)
 
 
 if __name__ == '__main__':

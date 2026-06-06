@@ -26,7 +26,7 @@ from typing import Any, Iterator, Optional
 _active_run_id: Optional[str] = None
 _original_factory: Any = None
 _json_format_active: bool = False
-_saved_formatters: dict[int, logging.Formatter] = {}
+_saved_formatters: dict[int, logging.Formatter | None] = {}
 
 
 def _inject_run_id_factory(

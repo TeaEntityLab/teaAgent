@@ -87,6 +87,7 @@ def build_approval_policy(
         or request.resumed_from
         or request.run_id,
         multi_sig_config=MultiSigQuorumConfig.from_workspace_config(request.root),
+        workspace_root=str(Path(request.root).resolve()),
     )
 
 

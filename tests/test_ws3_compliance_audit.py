@@ -14,6 +14,8 @@ from teaagent.security_env import compliance_mode
 
 def test_compliance_mode_env_helper(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv('TEAAGENT_COMPLIANCE_MODE', raising=False)
+    assert compliance_mode() is True
+    monkeypatch.setenv('TEAAGENT_COMPLIANCE_MODE', '0')
     assert compliance_mode() is False
     monkeypatch.setenv('TEAAGENT_COMPLIANCE_MODE', '1')
     assert compliance_mode() is True

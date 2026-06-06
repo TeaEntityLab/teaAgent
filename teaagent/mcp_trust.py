@@ -171,6 +171,9 @@ def merged_tool_filters(
 def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustPolicy:
     """Register pre-tool hooks from persisted MCP trust policy."""
     policy = load_mcp_trust_policy(root)
+    root_key = str(Path(root).resolve())
+    if root_key in registry._mcp_trust_hook_roots:
+        return policy
     if registry.hook_registry is None:
         registry.hook_registry = HookRegistry()
 
@@ -178,17 +181,23 @@ def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustP
         tool_name: str, arguments: dict[str, Any]
     ) -> dict[str, Any] | None:
         current_policy = load_mcp_trust_policy(root)
+        server_name: str | None = None
+        try:
+            server_name = registry.get(tool_name).mcp_server_name
+        except KeyError:
+            server_name = None
 
-        # P2-A-001: Enforce trust expiry at call time for every server,
-        # regardless of whether the tool appears in allow/deny lists.
-        for server_name, server in current_policy.servers.items():
-            if not server.trusted:
-                raise HookError(f"MCP server '{server_name}' is not trusted")
-            if is_server_trust_expired(server):
-                raise HookError(
-                    f"Trust for MCP server '{server_name}' has expired "
-                    f'(expired at {server.expires_at})'
-                )
+        if server_name is None:
+            matching_servers = [
+                name
+                for name, server in current_policy.servers.items()
+                if tool_name in server.allowed_tools or tool_name in server.denied_tools
+            ]
+            if len(matching_servers) == 1:
+                server_name = matching_servers[0]
+
+        if server_name is not None:
+            check_mcp_server_trust_at_call_time(root, tool_name, server_name)
 
         allowed, denied = merged_tool_filters(current_policy)
         if denied and tool_name in denied:
@@ -201,6 +210,7 @@ def apply_mcp_trust_hooks(registry: ToolRegistry, root: str | Path) -> MCPTrustP
         return None
 
     registry.hook_registry.register_pre_hook(dynamic_mcp_trust_hook)
+    registry._mcp_trust_hook_roots.add(root_key)
     return policy
 
 

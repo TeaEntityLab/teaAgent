@@ -21,8 +21,8 @@ def plugins_strict_audit() -> bool:
 
 
 def compliance_mode() -> bool:
-    """Fail closed on audit durability errors when set (WS3-001)."""
-    return _env_truthy('TEAAGENT_COMPLIANCE_MODE')
+    """Fail closed on audit durability errors unless explicitly disabled."""
+    return _env_truthy('TEAAGENT_COMPLIANCE_MODE', default=True)
 
 
 def audit_chain_strict() -> bool:

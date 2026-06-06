@@ -105,9 +105,10 @@ def _resolve_backend_with_fallback(
             reason=reason,
         )
         audit_logger.record(
-            'sandbox_fallback_to_wasm',
+            'sandbox_fallback_to_child_process',
             run_id,
             reason=reason,
+            backend='child_process',
         )
     # Current fallback implementation uses local restricted backend.
     return ChildProcessCodeModeBackend()

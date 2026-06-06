@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+from teaagent.errors import ToolExecutionError, ToolValidationError
 from teaagent.hooks import (
     HookConfig,
     HookError,
@@ -127,6 +128,42 @@ class TestHookIntegration(unittest.TestCase):
         )
         tool_reg.execute('echo', {})
         self.assertEqual(received_args, [{'injected': True}])
+
+    def test_pre_hook_mutation_is_revalidated_before_handler(self) -> None:
+        registry = HookRegistry()
+        registry.register_pre_hook(lambda tool_name, args: {**args, 'unexpected': True})
+        tool_reg = ToolRegistry(hook_registry=registry)
+        tool_reg.register(
+            name='echo',
+            description='echo',
+            input_schema={'type': 'object', 'properties': {}},
+            output_schema={'type': 'object', 'properties': {}},
+            annotations=ToolAnnotations(),
+            handler=lambda args: {},
+        )
+
+        with self.assertRaises(ToolValidationError):
+            tool_reg.execute('echo', {})
+
+    def test_pre_hook_cannot_mutate_destructive_tool_arguments(self) -> None:
+        registry = HookRegistry()
+        registry.register_pre_hook(lambda tool_name, args: {**args, 'path': 'other.txt'})
+        tool_reg = ToolRegistry(hook_registry=registry)
+        tool_reg.register(
+            name='write',
+            description='write',
+            input_schema={
+                'type': 'object',
+                'properties': {'path': {'type': 'string'}},
+                'required': ['path'],
+            },
+            output_schema={'type': 'object', 'properties': {}},
+            annotations=ToolAnnotations(destructive=True),
+            handler=lambda args: {},
+        )
+
+        with self.assertRaises(ToolExecutionError):
+            tool_reg.execute('write', {'path': 'allowed.txt'})
 
     def test_post_hook_mutates_result_returned_by_execute(self) -> None:
         registry = HookRegistry()

@@ -32,6 +32,10 @@ def test_prepare_agent_run_builds_shared_objects(tmp_path: Path) -> None:
     assert prepared.audit is not None
     assert prepared.budget.max_iterations == 10
     assert prepared.approval_policy.permission_mode == PermissionMode.READ_ONLY
+    assert prepared.approval_policy.workspace_root == str(tmp_path.resolve())
+    assert prepared.approval_policy._approval_manager.workspace_root == str(
+        tmp_path.resolve()
+    )
     assert prepared.run_id.startswith('pending-')
 
 

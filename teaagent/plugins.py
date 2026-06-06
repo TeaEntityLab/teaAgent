@@ -17,6 +17,8 @@ Usage::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from teaagent.plugin_system import (
     PLUGIN_GROUP,
     PluginLoadResult,  # noqa: F401 — re-export for backward compat
@@ -25,8 +27,13 @@ from teaagent.plugin_system import (
     load_entry_point_tools,
 )
 
+if TYPE_CHECKING:
+    from teaagent.tools import ToolRegistry
 
-def load_plugins(registry, *, group=PLUGIN_GROUP):
+
+def load_plugins(
+    registry: ToolRegistry, *, group: str = PLUGIN_GROUP
+) -> PluginLoadResult:
     """Backward-compatible wrapper for :func:`~teaagent.plugin_system.load_entry_point_tools`.
 
     Passes this module's ``_entry_points`` so tests can monkeypatch

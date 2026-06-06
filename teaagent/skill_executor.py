@@ -216,6 +216,8 @@ def _execute_docker(
     tool_code: str,
     payload: dict[str, Any],
     plan: SkillIsolationPlan,
+    *,
+    fail_closed_on_unavailable: bool,
 ) -> SkillExecutionResult:
     sandbox = DockerSandbox(
         cpu_cores=plan.cpu_quota or 1.0,
@@ -226,7 +228,14 @@ def _execute_docker(
     try:
         started = sandbox.start()
     except ValueError:
-        logger.exception('Docker sandbox start failed; falling back to code mode')
+        logger.exception('Docker sandbox start failed')
+        if fail_closed_on_unavailable:
+            return SkillExecutionResult(
+                success=False,
+                sandbox_type=SandboxType.DOCKER,
+                error='Docker sandbox start failed; refusing local fallback for non-low-risk skill',
+                execution_backend='docker_unavailable',
+            )
         return _execute_python_subprocess(
             skill_path,
             tool_code,
@@ -235,7 +244,17 @@ def _execute_docker(
             backend='docker_fallback_subprocess',
         )
     if started.status != 'started':
-        logger.info('Docker unavailable for skill execution; falling back to code mode')
+        logger.info('Docker unavailable for skill execution')
+        if fail_closed_on_unavailable:
+            return SkillExecutionResult(
+                success=False,
+                sandbox_type=SandboxType.DOCKER,
+                error=(
+                    started.message
+                    or 'Docker unavailable; refusing local fallback for non-low-risk skill'
+                ),
+                execution_backend='docker_unavailable',
+            )
         return _execute_python_subprocess(
             skill_path,
             tool_code,
@@ -309,6 +328,11 @@ def execute_skill(
     plan = plan_skill_isolation(path, risk_level, router=skill_router)
     decision = skill_router.route_skill(path, risk_level, preferred_sandbox)
     safe_payload = dict(payload or {})
+    non_low_risk = risk_level in {
+        RiskLevel.MEDIUM,
+        RiskLevel.HIGH,
+        RiskLevel.CRITICAL,
+    }
 
     try:
         tool_code = _find_tool_file(path).read_text(encoding='utf-8')
@@ -317,6 +341,15 @@ def execute_skill(
             success=False,
             sandbox_type=decision.sandbox_type,
             error=str(exc),
+            reason=decision.reason,
+            )
+
+    if non_low_risk and decision.sandbox_type == SandboxType.DIRECTORY_SNAPSHOT:
+        return SkillExecutionResult(
+            success=False,
+            sandbox_type=decision.sandbox_type,
+            error='Non-low-risk skills require Docker or WASM isolation; refusing local execution',
+            execution_backend='isolation_required',
             reason=decision.reason,
         )
 
@@ -329,6 +362,14 @@ def execute_skill(
                 safe_payload,
                 memory_limit_mb=skill_router.wasm_memory_limit_mb,
             )
+        if non_low_risk:
+            return SkillExecutionResult(
+                success=False,
+                sandbox_type=SandboxType.WASM,
+                error='WASM artifact missing; refusing Python compatibility fallback for non-low-risk skill',
+                execution_backend='wasm_artifact_missing',
+                reason=decision.reason,
+            )
         return _execute_python_subprocess(
             path,
             tool_code,
@@ -338,7 +379,13 @@ def execute_skill(
         )
 
     if decision.sandbox_type == SandboxType.DOCKER:
-        return _execute_docker(path, tool_code, safe_payload, plan)
+        return _execute_docker(
+            path,
+            tool_code,
+            safe_payload,
+            plan,
+            fail_closed_on_unavailable=non_low_risk,
+        )
 
     return _execute_python_subprocess(
         path,

@@ -133,6 +133,17 @@ def test_register_mcp_tools_annotations_inferred():
         server.shutdown()
 
 
+def test_register_mcp_tools_records_source_server():
+    server, endpoint = _start_fake_mcp_server()
+    try:
+        registry = ToolRegistry()
+        register_mcp_tools(registry, endpoint=endpoint, server_name='fake-server')
+        assert registry.get('remote_echo').mcp_server_name == 'fake-server'
+        assert registry.get('remote_write').mcp_server_name == 'fake-server'
+    finally:
+        server.shutdown()
+
+
 def test_register_mcp_tools_name_prefix_filter():
     server, endpoint = _start_fake_mcp_server()
     try:

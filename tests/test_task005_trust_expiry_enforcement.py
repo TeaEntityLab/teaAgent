@@ -29,7 +29,7 @@ from teaagent.mcp_trust import (
     merged_tool_filters,
     save_mcp_trust_policy,
 )
-from teaagent.tools import ToolRegistry
+from teaagent.tools import ToolAnnotations, ToolRegistry
 
 _EXPIRED = time.time() - 3600
 _ACTIVE = time.time() + 3600
@@ -70,6 +70,15 @@ class CallTimeHookEnforcementTests(unittest.TestCase):
         policy.servers['srv'] = server
         save_mcp_trust_policy(self._tmp, policy)
         registry = ToolRegistry()
+        registry.register(
+            name='srv_tool',
+            description='remote MCP test tool',
+            input_schema={'type': 'object', 'properties': {}},
+            output_schema={'type': 'object', 'properties': {}},
+            annotations=ToolAnnotations(read_only=True),
+            handler=lambda args: {},
+            mcp_server_name='srv',
+        )
         apply_mcp_trust_hooks(registry, self._tmp)
         return registry
 
