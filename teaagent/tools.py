@@ -199,9 +199,7 @@ class ToolRegistry:
             ctx = get_tool_call_context()
             original_args = dict(arguments)
             try:
-                modified_args = self.hook_registry.run_pre_hooks(
-                    name, dict(arguments)
-                )
+                modified_args = self.hook_registry.run_pre_hooks(name, dict(arguments))
             except HookError as exc:
                 if ctx is not None:
                     ctx.audit.record(
@@ -210,7 +208,7 @@ class ToolRegistry:
                         call_id=ctx.call_id,
                         tool_name=name,
                         error=str(exc),
-                )
+                    )
                 raise
             if modified_args is not None:
                 arguments = modified_args

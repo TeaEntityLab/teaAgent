@@ -118,7 +118,8 @@ def test_disk_full_raises_by_default(tmp_path):
     log = tmp_path / 'run.jsonl'
     audit = AuditLogger(path=log)
 
-    with patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync), pytest.raises(
-        AuditDurabilityError
+    with (
+        patch('teaagent.audit.os.fsync', side_effect=_enospc_fsync),
+        pytest.raises(AuditDurabilityError),
     ):
         audit.record('run_started', 'r1', task='hello')

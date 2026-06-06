@@ -342,7 +342,7 @@ def execute_skill(
             sandbox_type=decision.sandbox_type,
             error=str(exc),
             reason=decision.reason,
-            )
+        )
 
     if non_low_risk and decision.sandbox_type == SandboxType.DIRECTORY_SNAPSHOT:
         return SkillExecutionResult(

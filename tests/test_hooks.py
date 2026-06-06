@@ -147,7 +147,9 @@ class TestHookIntegration(unittest.TestCase):
 
     def test_pre_hook_cannot_mutate_destructive_tool_arguments(self) -> None:
         registry = HookRegistry()
-        registry.register_pre_hook(lambda tool_name, args: {**args, 'path': 'other.txt'})
+        registry.register_pre_hook(
+            lambda tool_name, args: {**args, 'path': 'other.txt'}
+        )
         tool_reg = ToolRegistry(hook_registry=registry)
         tool_reg.register(
             name='write',
