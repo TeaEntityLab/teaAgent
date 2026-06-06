@@ -26,6 +26,7 @@ from teaagent.errors import DenialReasonCode, ToolPermissionError
 from teaagent.read_only_gate import read_only_runtime_block_reason
 
 if TYPE_CHECKING:
+    from teaagent.approval_backend import ApprovalBackend as _ApprovalBackend
     from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
 logger = logging.getLogger(__name__)
@@ -347,18 +348,17 @@ class JITApprovalManager:
         print('[TeaAgent]   [d] Deny - block this call')
         print('[TeaAgent]   [e] Explain - show details and deny')
 
+        def _read_input(result_holder: list[str]) -> None:
+            try:
+                result_holder.append(
+                    input('[TeaAgent] Choice [o/s/d/e]: ').strip().lower()
+                )
+            except (EOFError, KeyboardInterrupt):
+                result_holder.append('__interrupt__')
+
         while True:
             result_holder: list[str] = []
-
-            def _read_input() -> None:
-                try:
-                    result_holder.append(
-                        input('[TeaAgent] Choice [o/s/d/e]: ').strip().lower()
-                    )
-                except (EOFError, KeyboardInterrupt):
-                    result_holder.append('__interrupt__')
-
-            t = threading.Thread(target=_read_input, daemon=True)
+            t = threading.Thread(target=_read_input, args=(result_holder,), daemon=True)
             t.start()
             t.join(self.approval_timeout_seconds)
 
@@ -722,6 +722,8 @@ class ApprovalManager:
         allow_all_destructive: bool = False,
         full_access_acknowledged: bool = False,
         preapproved_call_ids: frozenset[str] = frozenset(),
+        extra_path_keys: set[str] | None = None,
+        approval_backend: _ApprovalBackend | None = None,
     ) -> None:
         self.permission_mode = permission_mode
         self.approval_store = approval_store
@@ -733,12 +735,20 @@ class ApprovalManager:
         self.allow_all_destructive = allow_all_destructive
         self.full_access_acknowledged = full_access_acknowledged
         self.preapproved_call_ids = preapproved_call_ids
+        self._extra_path_keys: set[str] = extra_path_keys or set()
 
         self._permission_enforcer = PermissionModeEnforcer(
             permission_mode=permission_mode,
             allow_all_destructive=allow_all_destructive,
             full_access_acknowledged=full_access_acknowledged,
         )
+
+        if approval_backend is not None:
+            self._approval_backend: _ApprovalBackend = approval_backend
+        else:
+            from teaagent.approval_backend import backend_from_mode
+
+            self._approval_backend = backend_from_mode(permission_mode)
         self._jit_manager = JITApprovalManager(enable_jit_prompt=enable_jit_prompt)
         self._multisig_manager = MultiSigQuorumManager(
             config=self.multi_sig_config, agent_id=agent_id
@@ -768,15 +778,32 @@ class ApprovalManager:
         Raises:
             ToolPermissionError: If the tool call is not allowed.
         """
-        mode_result = self._permission_enforcer.check(
+        from teaagent.approval_backend import ApprovalRequest as _BeApprovalRequest
+
+        backend_request = _BeApprovalRequest(
+            call_id=call_id,
             tool_name=tool_name,
-            destructive=destructive,
+            arguments=arguments or {},
+            reason=(
+                'destructive tool requires approval'
+                if destructive
+                else 'non-destructive tool call'
+            ),
+            annotations={
+                'destructive': destructive,
+                'read_only': read_only or False,
+            },
+            permission_mode=self.permission_mode,
             plan_contract=plan_contract,
-            arguments=arguments,
             read_only=read_only,
             description=description,
             handler=handler,
+            allow_all_destructive=self.allow_all_destructive,
+            full_access_acknowledged=self.full_access_acknowledged,
         )
+
+        decision = self._approval_backend.approve(backend_request)
+
         # P0-D-001: Validate tool path arguments are within workspace root.
         # Run before the early-return for ALLOW/DANGER_FULL_ACCESS so that
         # root containment is enforced regardless of permission mode.
@@ -786,23 +813,25 @@ class ApprovalManager:
             # the dev opt-in is active.
             self._assert_skill_path_not_protected(tool_name, call_id, arguments)
 
-        if mode_result is None:
+        if decision.approved:
             return
-        if mode_result != '__continue__':
-            # Map the block reason to a DenialReasonCode based on permission mode.
-            if self.permission_mode == PermissionMode.READ_ONLY:
+        if decision.reason_code != 'jit_required':
+            # Map the backend reason code to a DenialReasonCode.
+            dc = decision.reason_code
+            if dc == DenialReasonCode.READ_ONLY_MODE.value:
                 reason_code = DenialReasonCode.READ_ONLY_MODE
-            elif self.permission_mode == PermissionMode.WORKSPACE_WRITE:
-                if 'plan' in mode_result.lower():
-                    reason_code = DenialReasonCode.PLAN_CONTRACT_DENIED
-                else:
-                    reason_code = DenialReasonCode.WORKSPACE_WRITE_MODE
-            elif destructive and self.allow_all_destructive:
-                # Bypass requested outside danger-full-access mode.
+            elif dc == DenialReasonCode.WORKSPACE_WRITE_MODE.value:
+                reason_code = DenialReasonCode.WORKSPACE_WRITE_MODE
+            elif dc == DenialReasonCode.PLAN_CONTRACT_DENIED.value:
+                reason_code = DenialReasonCode.PLAN_CONTRACT_DENIED
+            elif dc == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED.value:
                 reason_code = DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
             else:
                 reason_code = DenialReasonCode.MISSING_STATE
-            raise ToolPermissionError(mode_result, reason_code=reason_code)
+            raise ToolPermissionError(
+                decision.reason or 'denied by approval backend',
+                reason_code=reason_code,
+            )
 
         if self._jit_manager.is_approved(tool_name=tool_name, call_id=call_id):
             return
@@ -860,7 +889,30 @@ class ApprovalManager:
         )
 
     # Path argument keys checked for workspace containment.
-    _PATH_ARGUMENT_KEYS = ('path', 'file_path', 'target_path', 'file')
+    _PATH_ARGUMENT_KEYS: tuple[str, ...] = ('path', 'file_path', 'target_path', 'file')
+
+    def _get_extended_path_keys(self) -> set[str]:
+        """Return the full set of path argument keys (defaults + extensions)."""
+        return set(self._PATH_ARGUMENT_KEYS) | self._extra_path_keys
+
+    @staticmethod
+    def _looks_like_path(value: Any) -> bool:
+        """Return True if *value* heuristically looks like a filesystem path.
+
+        A value is considered path-like when it is a ``Path`` object or a
+        standalone string containing ``/`` or ``\\``.  Strings that contain
+        spaces (e.g. shell commands like ``/usr/bin/python -m pytest``) are
+        intentionally excluded — they are compound expressions, not single
+        path arguments, and checking their entire body as one path would
+        produce false positives.
+        """
+        if isinstance(value, Path):
+            return True
+        if isinstance(value, str) and value.strip():
+            s = value.strip()
+            if '/' in s or '\\' in s:
+                return ' ' not in s
+        return False
 
     def _assert_paths_in_workspace(
         self,
@@ -870,13 +922,37 @@ class ApprovalManager:
     ) -> None:
         """Check that tool path arguments stay within workspace_root.
 
+        Two-phase check:
+        1. Named path keys (default + extra_path_keys) are checked directly.
+        2. ALL string/Path values are checked heuristically — any value
+           containing ``/`` or ``\\`` (or that is a Path object) is validated
+           for workspace containment.
+
         Raises ToolPermissionError if any path argument resolves outside
         the workspace root. This ensures explicit workspace root takes
         precedence over saved/imported state.
         """
         root_path = Path(self.workspace_root).resolve()
-        for key in self._PATH_ARGUMENT_KEYS:
-            raw = arguments.get(key)
+        key_set = self._get_extended_path_keys()
+
+        for key, raw in arguments.items():
+            if self._looks_like_path(raw):
+                path_str = raw if isinstance(raw, str) else str(raw)
+                try:
+                    target = (root_path / path_str).resolve()
+                    target.relative_to(root_path)
+                except (ValueError, OSError):
+                    raise ToolPermissionError(
+                        f"Tool '{tool_name}' target path '{path_str}' is outside "
+                        f"workspace root '{self.workspace_root}'. "
+                        'Explicit workspace root must take precedence '
+                        'over any saved state.',
+                        reason_code=DenialReasonCode.WORKSPACE_WRITE_MODE,
+                    ) from None
+                continue
+
+            if key not in key_set:
+                continue
             if not isinstance(raw, str) or not raw.strip():
                 continue
             try:
@@ -905,7 +981,8 @@ class ApprovalManager:
             return
 
         root_path = Path(self.workspace_root).resolve()
-        for key in self._PATH_ARGUMENT_KEYS:
+        key_set = self._get_extended_path_keys()
+        for key in key_set:
             raw = arguments.get(key)
             if not isinstance(raw, str) or not raw.strip():
                 continue

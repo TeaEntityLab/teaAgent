@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional, Sequence, Union
 
+from teaagent.abstract_store import AbstractStore
 from teaagent.ergonomics._approval_grants import (
     APPROVAL_TTL_HOURS,
     POLICY_ORDER,
@@ -60,7 +61,7 @@ def _normalize_grant_patterns(
     return cleaned
 
 
-class ApprovalPresetStore:
+class ApprovalPresetStore(AbstractStore[dict[str, Any]]):
     def __init__(self, root: _RootType, *, readonly: bool = False) -> None:
         if isinstance(root, ApprovalPersistence):
             self._persist = root
@@ -695,6 +696,71 @@ class ApprovalPresetStore:
                     self._save(data)
             return True
         return False
+
+    def save(self, key: str, value: dict[str, Any]) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot save in readonly mode')
+        self._migrate_missing_grant_ids()
+        with file_lock(self.path):
+            data = self._load()
+            grants = [
+                g
+                for g in data['grants']
+                if isinstance(g, dict) and g.get('grant_id') != key
+            ]
+            value_copy = dict(value)
+            value_copy['grant_id'] = key
+            grants.append(value_copy)
+            data['grants'] = grants
+            data['audit'].append(
+                {
+                    'action': 'save',
+                    'grant_id': key,
+                    'tool_name': value.get('tool_name', ''),
+                    'created_at': datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            self._save(data)
+
+    def load(self, key: str) -> dict[str, Any] | None:
+        for grant in self.list_grants():
+            if grant.grant_id == key:
+                return grant.to_dict()
+        data = self._load()
+        for item in data.get('grants', []):
+            if isinstance(item, dict) and item.get('grant_id') == key:
+                return dict(item)
+        return None
+
+    def delete(self, key: str) -> bool:
+        return self.revoke(key)
+
+    def list_keys(self) -> list[str]:
+        return [g.grant_id for g in self.list_grants() if g.grant_id]
+
+    def exists(self, key: str) -> bool:
+        self._migrate_missing_grant_ids()
+        data = self._load()
+        return any(
+            isinstance(g, dict) and g.get('grant_id') == key
+            for g in data.get('grants', [])
+        )
+
+    def clear(self) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot clear in readonly mode')
+        with file_lock(self.path):
+            data = self._load()
+            existing_count = len([g for g in data['grants'] if isinstance(g, dict)])
+            data['grants'] = []
+            data['audit'].append(
+                {
+                    'action': 'clear',
+                    'cleared_count': existing_count,
+                    'created_at': datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            self._save(data)
 
 
 __all__ = ['ApprovalPresetStore']

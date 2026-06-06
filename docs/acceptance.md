@@ -30,7 +30,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `446 passed`** (P0+P1+P2 streams finalized)
+**Current acceptance test count: `574 passed`** (P0+P1+P2 streams finalized)
 
 ## Acceptance Flows
 
@@ -88,6 +88,7 @@ directory.
 | `test_subagent_container_isolation_flow.py` | Subagent container isolation | `isolation=container` uses a gitignore-respecting workspace snapshot, records `container_path` in lineage, and cleans up after completion |
 | `test_context_pack_read_only_flow.py` | Read-only context pack | Preflight returns read-only `context_pack` with hybrid/knowledge/GraphQLite hits when indexed; read-only runs still block workspace writes |
 | `test_context_compaction_slo_flow.py` | Context compaction latency SLO | Traffic-light zoning (green 0-75%, yellow 75-92%, red 92%+), should_compact thresholds, CompactionResult preserves recent observations, compaction latency < 100ms SLO |
+| `test_context_health_score_flow.py` | Context-health score | ContextHealthScore model, signal helpers (token pressure, memory confidence), compute_context_health() integration with traffic-light overall and recommendations |
 | `test_skill_install_flow.py` | Skill discovery and injection | Skill discovery, prompt injection, multi-skill loading, project override precedence, model-decision prompt wiring |
 | `test_ultrawork_flow.py` | Long-running worker | Worker start, list, show, log tail, and stop lifecycle |
 | `test_vscode_extension_mcp_boot_flow.py` | VSCode MCP boot flow | Extension manifest command contribution, source command wiring for MCP HTTP server, permission mode enum parity |

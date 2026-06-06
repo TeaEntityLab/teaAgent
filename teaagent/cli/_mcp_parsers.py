@@ -130,3 +130,15 @@ def register(
         '--tools', nargs='+', required=True, help='Tool names to deny.'
     )
     trust_deny.set_defaults(func=handlers['trust_deny'])
+
+    trust_revoke = trust_subs.add_parser(
+        'revoke', help='Revoke trust for an MCP server.'
+    )
+    trust_revoke.add_argument('--root', default='.', help='Workspace root.')
+    trust_revoke.add_argument('--server', required=True, help='Server name to revoke.')
+    trust_revoke.set_defaults(func=handlers['trust_revoke'])
+
+    trust_audit = trust_subs.add_parser('audit', help='Show MCP trust audit trail.')
+    trust_audit.add_argument('--root', default='.', help='Workspace root.')
+    trust_audit.add_argument('--server', default=None, help='Filter by server name.')
+    trust_audit.set_defaults(func=handlers['trust_audit'])

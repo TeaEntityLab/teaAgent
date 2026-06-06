@@ -268,6 +268,17 @@ class ModelDecisionEngine:
         # instead of masking as success with invalid_model_decision_json
         task = str(context.get('task', ''))
         if not _looks_like_simple_answer_task(task):
+            # The model may have gathered information via tools and produced a
+            # plain-text final answer that parse_model_decision couldn't extract
+            # as JSON (common when the provider does not support response_format
+            # and the model falls back to natural language for final answers).
+            # Try to surface it as a final answer before failing hard.
+            content = (last_response_content or '').strip()
+            if content and len(content) >= 20 and not content.startswith('{'):
+                return FinalAnswer(
+                    content=content,
+                    metadata={'decision_fallback': 'post_retry_plain_text'},
+                )
             raise RuntimeError(
                 f'Model decision JSON parsing failed after {self.max_parse_retries} attempts. '
                 f'This indicates the model is not producing valid tool decisions for a workspace task. '

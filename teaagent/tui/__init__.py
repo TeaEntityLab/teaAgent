@@ -16,6 +16,7 @@ from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.cockpit import CockpitState, ControlCockpitState, build_control_cockpit
 from teaagent.context import ContextCompactor as _ContextCompactor
+from teaagent.context_health import ContextHealthScore, compute_context_health
 from teaagent.context_pressure import (
     ContextPressureScore,
     compute_context_pressure,
@@ -311,9 +312,13 @@ class TeaAgentTUI:
                 f'(scoped: {", ".join(self._approved_path_globs)})'
             )
         try:
+            ctx_health: ContextHealthScore | None = compute_context_health(
+                workspace_root=str(self.root),
+            )
             self._cockpit_state = CockpitState(
                 workspace_root=str(self.root),
                 approval_scope=' '.join(approval_scope_parts),
+                context_health=ctx_health.to_dict() if ctx_health else None,
             )
         except Exception:
             self._cockpit_state = None
@@ -483,6 +488,26 @@ class TeaAgentTUI:
             state = cost.get('state', 'unavailable')
             limit_str = f'${limit / 100:.2f}' if limit else 'unlimited'
             print(f'  Cost: ${spent / 100:.2f} / {limit_str} ({state})')
+
+        # Context Health (CTX-001)
+        if self._cockpit_state and self._cockpit_state.context_health:
+            ch = self._cockpit_state.context_health
+            if ch.get('overall', 'unknown') != 'green':
+                print('\n[Context Health]')
+                print(f'  Overall: {ch["overall"].upper()}')
+                if ch.get('token_pressure', 'unknown') != 'green':
+                    print(f'  Token Pressure: {ch["token_pressure"].upper()}')
+                if ch.get('stale_files', 0) > 0:
+                    print(f'  Stale Files: {ch["stale_files"]}')
+                if ch.get('old_observations', 0) > 50:
+                    print(f'  Old Observations: {ch["old_observations"]}')
+                if ch.get('memory_confidence', 'unknown') != 'green':
+                    print(f'  Memory Confidence: {ch["memory_confidence"].upper()}')
+                if ch.get('hidden_large_attachments', 0) > 0:
+                    print(f'  Large Attachments: {ch["hidden_large_attachments"]}')
+                rec = ch.get('recommendation', '')
+                if rec:
+                    print(f'  → {rec}')
 
         # Context Pressure (CPP-P1-003)
         if self._context_pressure:

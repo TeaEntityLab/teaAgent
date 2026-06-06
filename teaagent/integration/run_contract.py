@@ -102,9 +102,9 @@ def prepare_agent_run(request: RunSetupRequest) -> PreparedAgentRun:
 
     plugin_load_failed: list[str] = []
     if request.load_plugins and request.registry is None:
-        from teaagent.plugins import load_plugins
+        from teaagent.plugin_system import load_entry_point_tools
 
-        plugin_result = load_plugins(registry)
+        plugin_result = load_entry_point_tools(registry)
         plugin_load_failed = list(plugin_result.failed)
 
     audit = run_store.audit_logger(None if run_id.startswith('pending-') else run_id)

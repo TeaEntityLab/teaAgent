@@ -707,13 +707,19 @@ class HMACKeySaveTests(unittest.TestCase):
         """RISK-01: OSError when saving HMAC chain key must emit a warning, not silently pass."""
         import unittest.mock
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            unittest.mock.patch(
+                'pathlib.Path.write_bytes', side_effect=OSError('no space')
+            ),
+        ):
             audit_path = Path(tmp) / 'run-id.jsonl'
-            with unittest.mock.patch('pathlib.Path.write_bytes', side_effect=OSError('no space')):
-                with self.assertLogs('teaagent.audit', level='WARNING') as log_ctx:
-                    AuditLogger(path=audit_path)
+            with self.assertLogs('teaagent.audit', level='WARNING') as log_ctx:
+                AuditLogger(path=audit_path)
         self.assertTrue(
-            any('HMAC chain key could not be persisted' in msg for msg in log_ctx.output),
+            any(
+                'HMAC chain key could not be persisted' in msg for msg in log_ctx.output
+            ),
             f'Expected warning not found in: {log_ctx.output}',
         )
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
+from teaagent.abstract_store import AbstractStore
 from teaagent.audit import AuditLogger, secure_audit_dir, secure_audit_file, utc_now
 from teaagent.runner import RunResult
 from teaagent.storage import atomic_write_text
@@ -37,7 +38,7 @@ class RunSummary:
         }
 
 
-class RunStore:
+class RunStore(AbstractStore[list[dict[str, Any]]]):
     def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
         self.readonly = readonly
@@ -422,6 +423,42 @@ class RunStore:
         index_content = '\n'.join(json.dumps(s.to_dict()) for s in summaries) + '\n'
         atomic_write_text(self._index_path, index_content)
         secure_audit_file(self._index_path)
+
+    def save(self, key: str, value: list[dict[str, Any]]) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot save in readonly mode')
+        path = self.run_path(key)
+        content = '\n'.join(json.dumps(event) for event in value) + '\n'
+        atomic_write_text(path, content)
+
+    def load(self, key: str) -> list[dict[str, Any]] | None:
+        try:
+            return self.show_run(key)
+        except FileNotFoundError:
+            return None
+
+    def delete(self, key: str) -> bool:
+        if self.readonly:
+            raise RuntimeError('Cannot delete in readonly mode')
+        path = self.run_path(key)
+        if path.exists():
+            path.unlink()
+            return True
+        return False
+
+    def list_keys(self) -> list[str]:
+        return [s.run_id for s in self.list_runs()]
+
+    def exists(self, key: str) -> bool:
+        return self.run_path(key).exists()
+
+    def clear(self) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot clear in readonly mode')
+        for path in self.store_dir.glob('*.jsonl'):
+            path.unlink(missing_ok=True)
+        if self._index_path.exists():
+            self._index_path.unlink(missing_ok=True)
 
 
 def safe_run_id(run_id: str) -> str:

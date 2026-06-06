@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import contextlib
 import fcntl
 import hashlib
 import json
@@ -57,6 +58,7 @@ class ApprovalPolicy:
     multi_sig_config: MultiSigQuorumConfig = field(default_factory=MultiSigQuorumConfig)
     agent_id: str = ''  # Agent ID for multi-sig quorum identification
     workspace_root: str = '.'  # Workspace root for sync operations
+    extra_path_keys: set[str] | None = None
     _signature_executor: concurrent.futures.ThreadPoolExecutor = field(
         init=False, repr=False
     )
@@ -86,6 +88,7 @@ class ApprovalPolicy:
                 allow_all_destructive=self.allow_all_destructive,
                 full_access_acknowledged=self.full_access_acknowledged,
                 preapproved_call_ids=self.preapproved_call_ids,
+                extra_path_keys=self.extra_path_keys,
             ),
         )
 
@@ -447,10 +450,8 @@ class ApprovalPolicy:
         return asyncio.run(coro)
 
     def __del__(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._signature_executor.shutdown(wait=False, cancel_futures=True)
-        except Exception:
-            pass
 
 
 def parse_permission_mode(value: str) -> PermissionMode:

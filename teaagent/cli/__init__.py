@@ -128,9 +128,11 @@ from teaagent.cli._handlers import (
     interactive_review_command,
     mcp_serve_command,
     mcp_trust_allow_command,
+    mcp_trust_audit_command,
     mcp_trust_deny_command,
     mcp_trust_inspect_command,
     mcp_trust_list_command,
+    mcp_trust_revoke_command,
     memory_add_command,
     memory_decisions_add_command,
     memory_decisions_list_command,
@@ -601,6 +603,8 @@ def build_parser() -> argparse.ArgumentParser:
             'trust_inspect': mcp_trust_inspect_command,
             'trust_allow': mcp_trust_allow_command,
             'trust_deny': mcp_trust_deny_command,
+            'trust_revoke': mcp_trust_revoke_command,
+            'trust_audit': mcp_trust_audit_command,
         },
     )
     register_cloud(

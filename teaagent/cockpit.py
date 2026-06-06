@@ -95,6 +95,7 @@ class CockpitState:
     harness_health: HarnessHealth = field(default_factory=HarnessHealth)
     budget: BudgetState = field(default_factory=BudgetState)
     recoverable: RecoverableState = field(default_factory=RecoverableState)
+    context_health: Optional[dict[str, Any]] = None
 
     # P0-D-003: Active workspace root and approval scope for surface visibility.
     workspace_root: str = ''
@@ -136,6 +137,7 @@ class CockpitState:
                 'last_run_id': self.recoverable.last_run_id,
                 'last_run_recoverable': self.recoverable.last_run_recoverable,
             },
+            'context_health': self.context_health,
             'workspace_root': self.workspace_root,
             'approval_scope': self.approval_scope,
             'last_updated': self.last_updated,
@@ -184,6 +186,7 @@ class CockpitState:
                     'last_run_recoverable', False
                 ),
             ),
+            context_health=data.get('context_health'),
             workspace_root=data.get('workspace_root', ''),
             approval_scope=data.get('approval_scope', ''),
             last_updated=data.get('last_updated'),
@@ -440,6 +443,24 @@ def build_control_cockpit(
         'limit_cents': cost_limit_cents,
         'state': cost_state,
     }
+
+    # ── context health (CTX-001) ──
+    try:
+        from teaagent.context_health import compute_context_health
+
+        ch = compute_context_health(workspace_root=str(root_path))
+        cockpit.skill.setdefault('context_health', ch.to_dict())
+    except Exception:
+        pass
+
+    # ── extension activation explain (EXT-001) ──
+    try:
+        from teaagent.extension_explain import explain_extension_activation
+
+        ext = explain_extension_activation(workspace_root=str(root_path))
+        cockpit.skill.setdefault('extension_activation', ext.to_dict())
+    except Exception:
+        pass
 
     return cockpit
 

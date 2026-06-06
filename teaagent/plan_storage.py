@@ -560,6 +560,7 @@ class PlanContent:
     affected_files: list[str]
     risks: list[str]
     acceptance_criteria: list[str]
+    scope_budget: Optional[dict[str, Any]] = None
 
 
 @dataclass

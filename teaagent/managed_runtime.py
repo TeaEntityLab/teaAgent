@@ -54,11 +54,16 @@ def managed_runtime_context(
     workspace_root: Optional[str] = None,
     extra: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    context = dict(extra or {})
-    context['tools'] = registry.mcp_metadata()
+    from teaagent.run_context import RunContext
+
+    ctx: RunContext = {}
+    if extra:
+        for k, v in extra.items():
+            ctx[k] = v  # type: ignore[literal-required]
+    ctx['tools'] = registry.mcp_metadata()
     if workspace_root is not None:
-        context['workspace_root'] = workspace_root
-    return context
+        ctx['workspace_root'] = workspace_root
+    return ctx
 
 
 class ManagedAgentRunner:

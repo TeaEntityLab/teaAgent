@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +51,10 @@ class ToolPermissionManager:
     def __init__(
         self,
         approval_callback: Optional[Callable[[PermissionRequest], bool]] = None,
+        scope_budget_enforcer: Optional[Any] = None,
     ) -> None:
         self._approval_callback = approval_callback
+        self._scope_enforcer = scope_budget_enforcer
         self._tool_permissions: dict[str, ToolPermission] = {}
         self._agent_tool_whitelist: dict[str, set[str]] = {}
         self._agent_approved_tools: dict[str, set[str]] = {}
@@ -197,6 +199,34 @@ class ToolPermissionManager:
 
         self._agent_tool_whitelist[agent_name] = allowed_tools
         logger.info(f'Granted {len(allowed_tools)} tools to agent {agent_name}')
+
+    def set_scope_budget_enforcer(self, enforcer: Any) -> None:
+        """Attach a scope budget enforcer (PLAN-002).
+
+        The enforcer must expose a ``check_tool(tool_name, args)`` method
+        returning ``list[ScopeCheckResult]``.
+        """
+        self._scope_enforcer = enforcer
+
+    def check_scope_budget(
+        self, tool_name: str, tool_args: Optional[dict[str, Any]] = None
+    ) -> Optional[str]:
+        """Check tool against the attached scope budget enforcer.
+
+        Returns a denial reason string if the tool is out of scope, or
+        ``None`` if allowed (or no enforcer attached).
+        """
+        if not self._scope_enforcer:
+            return None
+        try:
+            results = self._scope_enforcer.check_tool(tool_name, tool_args or {})
+            for r in results:
+                if not r.allowed:
+                    return r.reason
+        except Exception as exc:
+            logger.warning('Scope budget check failed: %s', exc)
+            return None  # fail open if enforcer raises
+        return None
 
     def check_tool_access(
         self, agent_name: str, tool_name: str

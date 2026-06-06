@@ -12,7 +12,7 @@
 > **Last reviewed:** 2026-06-06
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-06 (H0 complete: GOV-002–012 + WS-0 implemented, risk-register Owner/Due columns added, M0 exit criteria verified)
+**Last updated:** 2026-06-06 (M2 Complete: context-health acceptance tests added, all 3 exit criteria suites verified. M3 Complete: extension explain, MCP trust, subagent review acceptance all verified passing. H0 complete: GOV-002–012 + WS-0 implemented, risk-register Owner/Due columns added, M0 exit criteria verified)
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -39,8 +39,8 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 |-----------|--------|---------|-------|--------|------------|-----------|---------------|
 | M0 | 1-2 weeks | Risk register operational, release claims traceable, tool lint warnings budgeted | governance | Complete | High | M1 complete | All 3 checks pass: `validate_docs_consistency.py`, `refresh_competitive_docs.py --check`, `teaagent tool lint --root .` |
 | M1 | 2-6 weeks | Daily cockpit parity, run evidence summary, guided recovery | TBD | Complete | High | M2 complete | CLI/TUI cockpit parity acceptance, run evidence summary acceptance, guided recovery acceptance |
-| M2 | 4-10 weeks | Long-session context health, hash-bound plans, scope creep measurement | TBD | Pending | Medium | CTX-001 complete | Long-session context guard acceptance, scope budget acceptance, plan revision acceptance |
-| M3 | 8-14 weeks | Extension activation explain, MCP trust onboarding, subagent review/merge | TBD | Pending | Medium | EXT-001 complete | Extension activation explain acceptance, MCP trust onboarding acceptance, subagent review/merge acceptance |
+| M2 | 4-10 weeks | Long-session context health, hash-bound plans, scope creep measurement | TBD | Complete | High | M3 complete | Long-session context guard acceptance, scope budget acceptance, plan revision acceptance |
+| M3 | 8-14 weeks | Extension activation explain, MCP trust onboarding, subagent review/merge | TBD | Complete | High | M4 complete | Extension activation explain acceptance, MCP trust onboarding acceptance, subagent review/merge acceptance |
 | M4 | 12-22 weeks | Background/cloud durability, gateway task intake, control-plane operator cockpit | TBD | Pending | Low | BG-001 complete | Background full lifecycle acceptance, gateway task intake acceptance, control-plane operator cockpit acceptance |
 | M5 | Ongoing | Prompt/runtime/model/provider gating, repo-map benchmarking, release evidence bundles | TBD | Pending | Low | EVAL-001 complete | Prompt change regression suite, repo-map benchmark corpus, release evidence bundle in release profile |
 | M6 | After M1-M4 | Desktop/client-server packaging with trust, update, rollback, session attach | TBD | Pending | Low | PKG-001 complete | Packaged launch smoke, signing/SBOM/update docs, desktop session attach acceptance |

@@ -8,10 +8,12 @@ from typing import Any
 
 from teaagent.mcp_trust import (
     load_mcp_trust_policy,
+    revoke_server_trust,
     save_mcp_trust_policy,
     update_global_tools,
     update_server_tools,
 )
+from teaagent.run_store import RunStore
 
 
 def _strip_sensitive_fields(value: Any) -> Any:
@@ -124,3 +126,57 @@ def mcp_trust_deny_command(args: argparse.Namespace) -> int:
     save_mcp_trust_policy(args.root, policy)
     _print_json({'ok': True, 'policy': policy.to_public_dict()})
     return 0
+
+
+def mcp_trust_revoke_command(args: argparse.Namespace) -> int:
+    """Revoke trust for an MCP server (removes it from the trust policy)."""
+    policy = load_mcp_trust_policy(args.root)
+    server = args.server
+    if server not in policy.servers:
+        _print_json({'ok': False, 'error': f"server '{server}' not found"})
+        return 1
+    policy = revoke_server_trust(policy, server)
+    save_mcp_trust_policy(args.root, policy)
+    _print_json({'ok': True, 'revoked': server, 'policy': policy.to_public_dict()})
+    return 0
+
+
+def mcp_trust_audit_command(args: argparse.Namespace) -> int:
+    """Show MCP trust audit trail from run audit logs."""
+    try:
+        store = RunStore(args.root, readonly=True)
+        runs = store.list_runs(limit=20)
+        events: list[dict[str, Any]] = []
+        for run in runs:
+            try:
+                run_events = store.show_run(run.run_id)
+                for ev in run_events:
+                    if not isinstance(ev, dict):
+                        continue
+                    event_type = ev.get('event_type', '')
+                    if 'mcp_server_trust' in event_type or 'mcp_trust' in event_type:
+                        entry: dict[str, Any] = {
+                            'run_id': run.run_id[:12],
+                            'event_type': event_type,
+                            'timestamp': ev.get('timestamp'),
+                        }
+                        payload = ev.get('payload') or {}
+                        if isinstance(payload, dict):
+                            entry['server'] = payload.get('server', '')
+                            if args.server and args.server not in str(
+                                entry.get('server', '')
+                            ):
+                                continue
+                            entry['details'] = {
+                                k: v
+                                for k, v in payload.items()
+                                if k != 'password' and 'secret' not in k
+                            }
+                        events.append(entry)
+            except (FileNotFoundError, OSError):
+                continue
+        _print_json({'ok': True, 'events': events})
+        return 0
+    except Exception as exc:
+        _print_json({'ok': False, 'error': str(exc)})
+        return 1

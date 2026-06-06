@@ -135,10 +135,38 @@ def check_subagent_review(
     review_id: str,
     *,
     parent_run_id: Optional[str] = None,
+    with_cost: bool = True,
 ) -> dict[str, Any]:
-    return _run_review_patch(
+    """Check if a subagent review patch can be applied cleanly.
+
+    Args:
+        root: Workspace root.
+        review_id: Review identifier.
+        parent_run_id: Optional parent run ID filter.
+        with_cost: If True (default), attach per-child cost ledger.
+
+    Returns:
+        Dict with ``ok``, ``status``, ``review``, ``stdout``, ``stderr``,
+        and optionally ``cost_ledger``.
+    """
+    result = _run_review_patch(
         root, review_id, parent_run_id=parent_run_id, apply_patch=False
     )
+    if with_cost and result.get('review'):
+        child_run_id = result['review'].get('child_run_id', '')
+        child_name = result['review'].get('review_id', child_run_id)[:12]
+        if child_run_id:
+            try:
+                from teaagent.subagents._cost import build_child_cost_ledger
+
+                ledger = build_child_cost_ledger(
+                    Path(root).resolve(),
+                    [(child_run_id, child_name)],
+                )
+                result['cost_ledger'] = ledger.to_dict()
+            except Exception:
+                pass
+    return result
 
 
 def apply_subagent_review(

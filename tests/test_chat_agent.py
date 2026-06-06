@@ -121,10 +121,12 @@ class ChatAgentTests(unittest.TestCase):
                 'modify the workspace file',
                 adapter=adapter,
             )
-            # Should raise RuntimeError for workspace tasks and be caught as failed:system
-            self.assertEqual(result.status, 'failed:system')
-            self.assertIn('Model decision JSON parsing failed', result.error_message)
-            self.assertIn('Recovery hint:', result.error_message)
+            # When the model produces meaningful plain text after exhausting parse
+            # retries, it is now accepted as a final answer via post-retry fallback
+            # rather than failing with system error.
+            self.assertEqual(result.status, 'completed')
+            self.assertIsNotNone(result.final_answer)
+            self.assertEqual(result.final_answer.content, answer)
 
     def test_chat_agent_can_use_code_analysis_tools_when_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -138,6 +138,9 @@ class RunEvidenceBundle:
     undo_mechanism: Optional[str] = None  # 'journal' | 'checkpoint' | None
     undo_outcome: Optional[str] = None  # 'reverted' | 'partial' | 'failed' | None
 
+    # ── context health (CTX-001) ──
+    context_health: Optional[dict[str, Any]] = None
+
     # ── cost tracking (P0-B) ──
     cost_cents: float = 0.0
     cost_state: str = 'unavailable'
@@ -221,6 +224,7 @@ class RunEvidenceBundle:
             'undo_available': self.undo_available,
             'undo_mechanism': self.undo_mechanism,
             'undo_outcome': self.undo_outcome,
+            'context_health': self.context_health,
             'cost_cents': self.cost_cents,
             'cost_state': self.cost_state,
             'budget_cap_cents': self.budget_cap_cents,
@@ -665,6 +669,15 @@ def build_run_evidence_bundle(
     provenance = extract_provenance(events)
     skill_activations = extract_skill_activations(events)
 
+    # ── context health (CTX-001) ──
+    try:
+        from teaagent.context_health import compute_context_health
+
+        ch = compute_context_health(workspace_root=str(root))
+        ctx_health_dict: dict[str, Any] | None = ch.to_dict() if ch else None
+    except Exception:
+        ctx_health_dict = None
+
     return RunEvidenceBundle(
         run_id=run_id,
         commands_run=commands,
@@ -680,6 +693,7 @@ def build_run_evidence_bundle(
         undo_available=undo_available,
         undo_mechanism=undo_mechanism,
         undo_outcome=undo_outcome,
+        context_health=ctx_health_dict,
     )
 
 

@@ -24,9 +24,11 @@ from teaagent.errors import (
 from teaagent.file_policy import FilePolicy
 from teaagent.long_result_envelope import DEFAULT_MAX_PREVIEW_BYTES, store_long_result
 from teaagent.phase_tracker import PhaseTracker
-from teaagent.plugins import load_plugins
+from teaagent.plugin_system import discover_and_load_all
 from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from teaagent.proof_of_use import build_proof_of_use, emit_proof_of_use_audit
+from teaagent.run_context import RunContext
+from teaagent.run_logging import setup_run_logging, teardown_run_logging
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.tool_call_context import (
     ToolCallContext,
@@ -155,9 +157,11 @@ class AgentRunner:
             auto_mode_config=auto_mode_config,
         )
 
-        # Load entry-point plugins if workspace root is provided
+        # Load plugins (entry-points + file-based manifests) if workspace root is provided
         if workspace_root is not None:
-            plugin_result = load_plugins(registry)
+            plugin_result = discover_and_load_all(
+                registry, workspace_root=workspace_root
+            )
             if not plugin_result.ok:
                 logger = logging.getLogger(__name__)
                 logger.warning(
@@ -353,6 +357,8 @@ class AgentRunner:
         input_tokens: int,
         output_tokens: int,
     ) -> None:
+        # Teardown per-run logging context regardless of summary display settings.
+        teardown_run_logging()
         if not self.show_summary:
             return
         if self.workspace_root is None:
@@ -377,7 +383,7 @@ class AgentRunner:
         initial_observations: Optional[list[dict[str, Any]]],
         initial_context_extra: Optional[dict[str, Any]],
         run_started_extra: Optional[dict[str, Any]],
-    ) -> tuple[str, dict[str, Any], int, float, int, int]:
+    ) -> tuple[str, RunContext, int, float, int, int]:
         """Initialize run state and context.
 
         Returns:
@@ -387,11 +393,11 @@ class AgentRunner:
         observations: list[dict[str, Any]] = (
             list(initial_observations) if initial_observations else []
         )
-        context: dict[str, Any] = {'task': task, 'observations': observations}
+        context: RunContext = {'task': task, 'observations': observations}
         if initial_context_extra:
-            context.update(
-                {k: v for k, v in initial_context_extra.items() if k != 'task'}
-            )
+            for k, v in initial_context_extra.items():
+                if k != 'task':
+                    context[k] = v  # type: ignore[literal-required]
         if self.decision_log is not None:
             summary = self.decision_log.inject_summary()
             if summary:
@@ -801,6 +807,7 @@ class AgentRunner:
                 run_started_extra,
             )
         )
+        setup_run_logging(current_run_id)
         iterations = 0
 
         while iterations < self.budget.max_iterations:
@@ -898,6 +905,7 @@ class AgentRunner:
                     approval_metadata['call_id'] = exc.approval_request.call_id
                     approval_metadata['tool_name'] = exc.approval_request.tool_name
                     approval_metadata['arguments'] = exc.approval_request.arguments
+                teardown_run_logging()
                 return RunResult(
                     run_id=current_run_id,
                     final_answer=None,

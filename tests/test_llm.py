@@ -639,7 +639,9 @@ class ProviderCostRateTests(unittest.TestCase):
             PROVIDER_COST_PER_1K_OUTPUT,
         )
 
-        return PROVIDER_COST_PER_1K_INPUT[provider], PROVIDER_COST_PER_1K_OUTPUT[provider]
+        return PROVIDER_COST_PER_1K_INPUT[provider], PROVIDER_COST_PER_1K_OUTPUT[
+            provider
+        ]
 
     def test_fake_cost_rates_nonzero(self) -> None:
         in_rate, out_rate = self._rates('fake')

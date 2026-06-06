@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Iterator, List, Literal, cast
 from uuid import uuid4
 
+from teaagent.abstract_store import AbstractStore
 from teaagent.audit import utc_now
 from teaagent.storage import append_jsonl_line
 
@@ -131,7 +132,7 @@ class MemoryEntry:
         return result
 
 
-class MemoryCatalog:
+class MemoryCatalog(AbstractStore['MemoryEntry']):
     def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
         self.root = Path(root).resolve()
         self.path = self.root / '.teaagent' / 'memory.jsonl'
@@ -666,6 +667,59 @@ class MemoryCatalog:
             )
 
         return report
+
+    def save(self, key: str, value: MemoryEntry) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot save in readonly mode')
+        with self._cross_process_lock():
+            entries = self._read_entries()
+            found = False
+            for i, entry in enumerate(entries):
+                if entry.memory_id == key:
+                    entries[i] = value
+                    found = True
+                    break
+            if found:
+                self._atomic_write_entries(entries)
+            else:
+                append_jsonl_line(
+                    self.path, json.dumps(value.to_dict(), sort_keys=True)
+                )
+
+    def load(self, key: str) -> MemoryEntry | None:
+        try:
+            return self.show(key)
+        except FileNotFoundError:
+            return None
+
+    def delete(self, key: str) -> bool:
+        if self.readonly:
+            raise RuntimeError('Cannot delete in readonly mode')
+        with self._cross_process_lock():
+            entries = self._read_entries()
+            original = len(entries)
+            entries = [e for e in entries if e.memory_id != key]
+            if len(entries) == original:
+                return False
+            self._atomic_write_entries(entries)
+            return True
+
+    def list_keys(self) -> list[str]:
+        return [e.memory_id for e in self._read_entries()]
+
+    def exists(self, key: str) -> bool:
+        try:
+            self.show(key)
+            return True
+        except FileNotFoundError:
+            return False
+
+    def clear(self) -> None:
+        if self.readonly:
+            raise RuntimeError('Cannot clear in readonly mode')
+        with self._cross_process_lock():
+            if self.path.exists():
+                self.path.write_text('', encoding='utf-8')
 
 
 def memory_entry_from_payload(payload: Any) -> MemoryEntry | None:

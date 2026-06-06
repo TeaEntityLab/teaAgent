@@ -145,9 +145,11 @@ from ._marketplace import (
 from ._mcp import mcp_serve_command
 from ._mcp_trust import (
     mcp_trust_allow_command,
+    mcp_trust_audit_command,
     mcp_trust_deny_command,
     mcp_trust_inspect_command,
     mcp_trust_list_command,
+    mcp_trust_revoke_command,
 )
 from ._memory import (
     memory_add_command,
@@ -348,9 +350,11 @@ __all__ = [
     'graphqlite_smoke',
     'mcp_serve_command',
     'mcp_trust_allow_command',
+    'mcp_trust_audit_command',
     'mcp_trust_deny_command',
     'mcp_trust_inspect_command',
     'mcp_trust_list_command',
+    'mcp_trust_revoke_command',
     'memory_add_command',
     'memory_decisions_add_command',
     'memory_decisions_list_command',

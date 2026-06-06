@@ -29,7 +29,7 @@ class SigstoreSignerTests(unittest.TestCase):
         with patch('teaagent.sigstore_signer.SIGSTORE_AVAILABLE', False):
             with self.assertRaises(ValueError) as ctx:
                 SigstoreSigner()
-            self.assertIn('sigstore-python is not installed', str(ctx.exception))
+            self.assertIn('sigstore-python is not available', str(ctx.exception))
 
     def test_sign_with_identity_token(self) -> None:
         """Test signing with identity token."""
