@@ -544,7 +544,7 @@ class TuiSessionMemoryScenarios(unittest.TestCase):
         )
         tui.handle_command('session new')
         tui.handle_command('session show')
-        self.assertTrue(len(output) > 0)
+        self.assertFalse(any('error' in o.lower() for o in output))
 
 
 # ============================================================================
@@ -589,7 +589,7 @@ class TuiPreflightPlanDailyScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('plan add a new feature')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('error' in o.lower() for o in output))
 
     def test_t6c_daily_command(self) -> None:
         """daily shows readiness without model call."""
@@ -641,7 +641,7 @@ class TuiPreflightPlanDailyScenarios(unittest.TestCase):
             output_fn=output.append,
         )
         tui.handle_command('route analyze this Python code')
-        self.assertTrue(len(output) > 0)
+        self.assertFalse(any('error' in o.lower() for o in output))
 
 
 # ============================================================================
@@ -772,7 +772,7 @@ class TuiAdvancedOperationsScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('runs')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('error' in o.lower() for o in output))
 
     def test_t8d_root_command(self) -> None:
         """root command changes the workspace root."""
@@ -797,7 +797,7 @@ class TuiAdvancedOperationsScenarios(unittest.TestCase):
             output_fn=output.append,
         )
         tui.handle_command('skill-diagnostics')
-        self.assertTrue(len(output) > 0)
+        self.assertFalse(any('error' in o.lower() for o in output))
 
     def test_t8f_skill_health_command(self) -> None:
         """skill-health shows skill ecosystem health."""
@@ -807,7 +807,7 @@ class TuiAdvancedOperationsScenarios(unittest.TestCase):
             output_fn=output.append,
         )
         tui.handle_command('skill-health')
-        self.assertTrue(len(output) > 0)
+        self.assertFalse(any('error' in o.lower() for o in output))
 
 
 # ============================================================================
@@ -1096,7 +1096,7 @@ class TuiDoctorScenarios(unittest.TestCase):
             )
             # May succeed or fail depending on graphqlite availability
             tui.handle_command('doctor')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('crashed' in o.lower() for o in output))
 
     def test_j2_doctor_model_argument_accepted(self) -> None:
         """doctor model command does not crash."""
@@ -1110,7 +1110,7 @@ class TuiDoctorScenarios(unittest.TestCase):
                 database=':memory:',
             )
             tui.handle_command('doctor model')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('crashed' in o.lower() for o in output))
 
     def test_j3_doctor_providers_argument_accepted(self) -> None:
         """doctor providers command does not crash."""
@@ -1124,7 +1124,7 @@ class TuiDoctorScenarios(unittest.TestCase):
                 database=':memory:',
             )
             tui.handle_command('doctor providers')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('crashed' in o.lower() for o in output))
 
 
 # ============================================================================
@@ -1262,7 +1262,7 @@ class TuiBackgroundHandoffScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('runs')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('error' in o.lower() for o in output))
 
     def test_l4_show_unknown_id_handles_error(self) -> None:
         """show command with unknown run ID does not crash."""
@@ -1303,7 +1303,7 @@ class TuiSetupAndSkillScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('setup')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('crashed' in o.lower() for o in output))
 
     def test_m2_setup_write_env_command(self) -> None:
         """setup write-env produces output without crashing."""
@@ -1316,7 +1316,7 @@ class TuiSetupAndSkillScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('setup write-env')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('crashed' in o.lower() for o in output))
 
     def test_m3_skills_command_produces_output(self) -> None:
         """skills command prints skill activation information."""
@@ -1329,7 +1329,7 @@ class TuiSetupAndSkillScenarios(unittest.TestCase):
                 output_fn=output.append,
             )
             tui.handle_command('skills')
-            self.assertTrue(len(output) > 0)
+            self.assertFalse(any('crashed' in o.lower() for o in output))
 
 
 if __name__ == '__main__':

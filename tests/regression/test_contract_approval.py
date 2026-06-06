@@ -20,12 +20,8 @@ def test_read_only_mode_blocks_all_destructive() -> None:
         'workspace_edit_at_hash',
         'workspace_run_shell_mutate',
     ):
-        raised = False
-        try:
+        with pytest.raises(ToolPermissionError):
             policy.assert_allowed(tool_name=tool, call_id='x', destructive=True)
-        except Exception:
-            raised = True
-        assert raised, f'{tool} must be blocked in read-only mode'
 
 
 def test_workspace_write_allows_file_writes_blocks_shell() -> None:
@@ -37,24 +33,16 @@ def test_workspace_write_allows_file_writes_blocks_shell() -> None:
     ):
         policy.assert_allowed(tool_name=tool, call_id='x', destructive=True)
     for tool in ('workspace_run_shell_mutate', 'bash'):
-        raised = False
-        try:
+        with pytest.raises(ToolPermissionError, match='requires'):
             policy.assert_allowed(tool_name=tool, call_id='x', destructive=True)
-        except Exception:
-            raised = True
-        assert raised, f'{tool} must be blocked in workspace-write mode'
 
 
 def test_unapproved_destructive_call_raises_in_prompt_mode() -> None:
     policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
-    raised = False
-    try:
+    with pytest.raises(ToolPermissionError, match='requires'):
         policy.assert_allowed(
             tool_name='workspace_write_file', call_id='unknown', destructive=True
         )
-    except Exception:
-        raised = True
-    assert raised
 
 
 def test_preapproved_call_id_without_store_blocked_in_prompt_mode() -> None:
