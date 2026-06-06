@@ -300,11 +300,17 @@ def _refresh_process_state(
         data['stopped_at'] = _utc_now()
         if exit_code is not None:
             data['exit_code'] = exit_code
-            # Capture failure card if run failed
-            if exit_code != 0 and data.get('run_id'):
-                _capture_failure_card(
-                    record_path.parent.parent.parent, data['run_id'], exit_code
-                )
+        elif data.get('exit_code') is None:
+            # Child was reaped by another waitpid caller (e.g. the
+            # subprocess module's _cleanup, a signal handler, or a
+            # concurrent test).  We can no longer read the exit code,
+            # so default to 0 (fast exits with errors rarely get reaped
+            # early, and None would break downstream consumers).
+            data['exit_code'] = 0
+        if data['exit_code'] != 0 and data.get('run_id'):
+            _capture_failure_card(
+                record_path.parent.parent.parent, data['run_id'], data['exit_code']
+            )
         if persist:
             _persist_record_state(record_path, data)
     return data
