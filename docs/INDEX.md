@@ -1,5 +1,5 @@
 # TeaAgent Documentation Index
-# 2026-06-05
+# 2026-06-06
 
 This is the curated front door for TeaAgent documentation. It is intentionally
 not an exhaustive file list. Use it to find the current source of truth, then
@@ -47,6 +47,13 @@ follow dated evidence documents only when you need the reasoning trail.
 | Seven control loops product direction | [Seven Control Loops Product Direction](strategy/seven-control-loops-product-direction-2026-06-05.md) |
 | Seven control loops critical questioning | [Seven Control Loops Critical Questioning](reviews/seven-control-loops-critical-questioning-2026-06-05.md) |
 | Community agent pain points | [Community Agent Pain Points Survey](analysis/community-agent-pain-points-survey-2026-06-05.md) |
+| June 6 system critical review package | [System Critical Review Package](analysis/system-critical-review-2026-06-06-INDEX.md) |
+| June 6 source-backed competitor self-comparison | [Competitor Self-Comparison Matrix](analysis/competitor-self-comparison-matrix-2026-06-06.md) |
+| June 6 public reasoning ledger | [System Review Reasoning Ledger](analysis/system-review-reasoning-ledger-2026-06-06.md) |
+| June 6 engineering architecture critique | [Engineering Architecture Critique](analysis/engineering-architecture-critique-2026-06-06.md) |
+| June 6 multi-agent coordination critique | [Multi-Agent Coordination Critique](analysis/multi-agent-coordination-critique-2026-06-06.md) |
+| June 6 conversation UX analysis | [User Experience And Conversation Patterns](analysis/user-experience-and-conversation-patterns-2026-06-06.md) |
+| June 6 risk and trust model critique | [Risk And Trust Model Critique](analysis/risk-and-trust-model-critique-2026-06-06.md) |
 | Phase 0-to-1 outlook | [Phase 0 To Phase 1 Outlook](strategy/phase-0-to-phase-1-outlook-2026-06-04.md) |
 | Malleable governed agent harness | [Malleable Governed Agent Harness](strategy/malleable-governed-agent-harness-2026-06-03.md) |
 | Daily-driver roadmap rationale | [Daily-Driver Roadmap Rationale](strategy/daily-driver-roadmap-rationale-2026-06-04.md) |
@@ -95,6 +102,7 @@ follow dated evidence documents only when you need the reasoning trail.
 | [Seven Control Loops Work Items](plans/seven-control-loops-work-items-2026-06-05.md) | Cross-cutting task ledger for spec-first, dynamic workflow, goal loops, model routing, review, memory, and human gates. |
 | [Seven Control Loops Integration Map](architecture/seven-control-loops-teaagent-integration-map-2026-06-05.md) | Architecture map for integrating the seven control loops into existing TeaAgent surfaces. |
 | [Community Pain Points Response Plan](plans/community-pain-points-response-plan-2026-06-05.md) | Work plan for routing opacity, memory pollution, review cost, long-task drift, hook confusion, skill/MCP risk, and fake success. |
+| [System Improvement Work Directions](plans/system-improvement-work-directions-2026-06-06.md) | 2026-06-06 workstream and ticket decomposition for trust claims, conversation UX, multi-agent safety, observability, integration contracts, docs governance, and competitive positioning. |
 
 ### Historical Reference Plans
 

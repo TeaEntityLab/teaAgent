@@ -619,6 +619,16 @@ def _load_build_use_case_matrix_module() -> ModuleType:
     return module
 
 
+def _load_control_loop_freshness_module() -> ModuleType:
+    script = Path(__file__).with_name('validate_control_loop_freshness.py')
+    spec = spec_from_file_location('validate_control_loop_freshness', script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f'Unable to load {script}')
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def validate_surface_recipes(usage_text: str) -> list[str]:
     errors: list[str] = []
     try:
@@ -863,12 +873,11 @@ def validate_docs_consistency(
     if roadmap_status_doc_path.is_file():
         errors.extend(validate_roadmap_status(roadmap_status_text))
         try:
-            from validate_control_loop_freshness import validate_roadmap
-
-            errors.extend(validate_roadmap(roadmap_status_doc_path))
-        except ImportError:
+            control_loop_module = _load_control_loop_freshness_module()
+            errors.extend(control_loop_module.validate_roadmap(roadmap_status_doc_path))
+        except RuntimeError:
             errors.append(
-                'Cannot import validate_control_loop_freshness; '
+                'Cannot load validate_control_loop_freshness; '
                 'control-loop freshness check skipped.'
             )
     else:
