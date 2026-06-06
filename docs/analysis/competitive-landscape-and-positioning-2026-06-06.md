@@ -1,6 +1,16 @@
 # Competitive Landscape and Positioning — TeaAgent
 # 2026-06-06
 
+> **Claim class:** Dated strategic synthesis.
+>
+> **Supersession note, 2026-06-06:** For current reusable competitor claims, use
+> [Competitor Self-Comparison Matrix](competitor-self-comparison-matrix-2026-06-06.md)
+> and [Competitive Claim Audit](competitive-claim-audit-2026-06-06.md). This file
+> remains useful for strategic reasoning, anti-personas, and opportunity framing,
+> but any exact star counts, pricing labels, plan details, model names, hosted
+> availability, or adoption rankings below are historical unless refreshed from
+> official/upstream sources on the same day.
+
 > **2026-06-06 source note:** This file is a strategic synthesis. For the
 > source-backed competitor-by-competitor comparison and refreshed official-doc
 > source map, use

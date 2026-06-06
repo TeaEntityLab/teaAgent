@@ -26,8 +26,11 @@
 | [Deployment and Operations Readiness](deployment-and-operations-readiness-2026-06-06.md) | Installation, config, persistence, monitoring, and upgrade review | What would break in real operations? |
 | [Competitive Landscape and Positioning](competitive-landscape-and-positioning-2026-06-06.md) | Strategic synthesis | Where can TeaAgent win, and where is it behind? |
 | [Competitor Self-Comparison Matrix](competitor-self-comparison-matrix-2026-06-06.md) | Source-backed market comparison | How does TeaAgent compare against each selected competitor? |
+| [Competitive Claim Audit](competitive-claim-audit-2026-06-06.md) | Claim hygiene and reuse rules | Which competitor and self-positioning claims are safe, unsafe, or conditional? |
+| [System Interrogation Map](system-interrogation-map-2026-06-06.md) | Public critical-question map | What was challenged across engineering, remote multi-agent, UX, trust, ops, integration, docs, and market fit? |
 | [System Review Reasoning Ledger](system-review-reasoning-ledger-2026-06-06.md) | Public critical-question log | What questions were asked, what evidence answered them, and what remains uncertain? |
 | [System Improvement Work Directions](../plans/system-improvement-work-directions-2026-06-06.md) | Workstream and ticket decomposition | What should be done next, in what order, and with what acceptance criteria? |
+| [System Review Workstream Traceability](../plans/system-review-workstream-traceability-2026-06-06.md) | Evidence-to-workstream trace | Which finding, competitor pressure, and gate justifies each workstream? |
 
 ---
 
@@ -60,6 +63,7 @@ which claims are production-grade versus alpha/beta evidence.
 | The core harness is no longer "thin" in practice. | Inference | 366 source files, large integration surfaces, and monolithic CLI/TUI/chat entry points suggest feature accumulation around the harness. |
 | Remote multi-agent use is not production-ready. | Inference | Default subagent isolation is `shared`; subagent batch lacks an explicit timeout; approval queues are in-process; child budget caps are not inherited. |
 | TeaAgent has a real governance moat, but not yet a market moat. | Inference | Competitors now ship subagents, hooks, remote agents, sandboxes, PR workflows, and IDE surfaces; TeaAgent's strongest unique layer is governance/audit/cost discipline, not interface breadth. |
+| Competitive claims need same-day refresh before publication. | Evidence | The 2026-06-06 source-backed matrix and claim audit separate stable product-shape evidence from volatile plan, model, star, pricing, and availability claims. |
 | Exact community adoption ranking is unknown from this package. | Unknown | Star counts, install counts, and usage claims change quickly and were not treated as stable evidence unless source-verified on 2026-06-06. |
 | Whether users prefer strict governance over faster autonomy is unknown. | Unknown | Existing docs infer a governance-first persona; no external user study for TeaAgent adoption exists in this repo. |
 
@@ -117,6 +121,15 @@ hooks, MCP, permissions, web/mobile entry points, and PR workflows. TeaAgent's
 most defensible position is not "another coding agent"; it is "a local-first,
 provider-agnostic governance harness for teams that need auditable agent work."
 
+### Critical Questioning And Traceability
+
+The [System Interrogation Map](system-interrogation-map-2026-06-06.md) records
+the public questioning structure behind this package. The
+[System Review Workstream Traceability](../plans/system-review-workstream-traceability-2026-06-06.md)
+turns those questions into workstream gates, proof requirements, and validation
+commands. Use these two documents when converting critique into tickets; they
+prevent the review from becoming detached prose.
+
 ---
 
 ## Recommended Read Order
@@ -126,7 +139,9 @@ provider-agnostic governance harness for teams that need auditable agent work."
 3. Read [User Experience and Conversation Patterns Analysis](user-experience-and-conversation-patterns-2026-06-06.md) to understand why technical strength is not yet daily-driver comfort.
 4. Read [Multi-Agent Coordination Critique](multi-agent-coordination-critique-2026-06-06.md) before any remote-agent or team-agent roadmap work.
 5. Read [Risk and Trust Model Critique](risk-and-trust-model-critique-2026-06-06.md) before making security or enterprise claims.
-6. Use [System Improvement Work Directions](../plans/system-improvement-work-directions-2026-06-06.md) as the execution queue.
+6. Read [System Interrogation Map](system-interrogation-map-2026-06-06.md) when you need the concrete critical-question breakdown.
+7. Use [System Improvement Work Directions](../plans/system-improvement-work-directions-2026-06-06.md) as the execution queue.
+8. Use [System Review Workstream Traceability](../plans/system-review-workstream-traceability-2026-06-06.md) to map findings to proof and validation gates.
 
 ---
 

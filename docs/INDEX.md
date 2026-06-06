@@ -74,7 +74,9 @@ governance ledgers should prefer the canonical set above.
 | Community agent pain points | [Community Agent Pain Points Survey](analysis/community-agent-pain-points-survey-2026-06-05.md) |
 | June 6 system critical review package | [System Critical Review Package](analysis/system-critical-review-2026-06-06-INDEX.md) |
 | June 6 source-backed competitor self-comparison | [Competitor Self-Comparison Matrix](analysis/competitor-self-comparison-matrix-2026-06-06.md) |
+| June 6 competitive claim hygiene | [Competitive Claim Audit](analysis/competitive-claim-audit-2026-06-06.md) |
 | June 6 public reasoning ledger | [System Review Reasoning Ledger](analysis/system-review-reasoning-ledger-2026-06-06.md) |
+| June 6 critical-question map | [System Interrogation Map](analysis/system-interrogation-map-2026-06-06.md) |
 | June 6 engineering architecture critique | [Engineering Architecture Critique](analysis/engineering-architecture-critique-2026-06-06.md) |
 | June 6 multi-agent coordination critique | [Multi-Agent Coordination Critique](analysis/multi-agent-coordination-critique-2026-06-06.md) |
 | June 6 conversation UX analysis | [User Experience And Conversation Patterns](analysis/user-experience-and-conversation-patterns-2026-06-06.md) |
@@ -132,6 +134,7 @@ governance ledgers should prefer the canonical set above.
 | [Seven Control Loops Integration Map](architecture/seven-control-loops-teaagent-integration-map-2026-06-05.md) | Architecture map for integrating the seven control loops into existing TeaAgent surfaces. |
 | [Community Pain Points Response Plan](plans/community-pain-points-response-plan-2026-06-05.md) | Work plan for routing opacity, memory pollution, review cost, long-task drift, hook confusion, skill/MCP risk, and fake success. |
 | [System Improvement Work Directions](plans/system-improvement-work-directions-2026-06-06.md) | 2026-06-06 workstream and ticket decomposition for trust claims, conversation UX, multi-agent safety, observability, integration contracts, docs governance, and competitive positioning. |
+| [System Review Workstream Traceability](plans/system-review-workstream-traceability-2026-06-06.md) | Evidence-to-workstream trace for the June 6 critique package, including proof gates and validation commands. |
 
 ### Historical Reference Plans
 

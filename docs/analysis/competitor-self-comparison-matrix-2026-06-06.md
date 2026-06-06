@@ -9,6 +9,12 @@
 > the competitors most relevant to TeaAgent's current product thesis: terminal
 > agents, IDE agents, remote/cloud coding agents, and governed orchestration
 > systems.
+>
+> **Reuse rule:** Pair this matrix with the
+> [Competitive Claim Audit](competitive-claim-audit-2026-06-06.md) before using
+> any claim in README, release, sales, fundraising, or public positioning
+> material. The claim audit defines which statements are safe, unsafe, or
+> conditional.
 
 ---
 
@@ -48,6 +54,18 @@ Local TeaAgent evidence:
 
 ---
 
+## Source Freshness And Claim Rules
+
+| Fact type | Reuse rule |
+| --- | --- |
+| Product-shape facts from official docs | Reusable when this 2026-06-06 date and source URL are preserved. |
+| Star counts, install counts, pricing, plan limits, model defaults, hosted availability | Do not reuse from this file unless refreshed the same day. |
+| TeaAgent code behavior | Recheck against current code and tests before claiming current truth. |
+| "Only" or "best" claims | Avoid unless bounded to the selected source set and backed by the claim audit. |
+| Remote, enterprise, compliance, sandbox, or production readiness | Treat as conditional until the linked workstream gates are passed. |
+
+---
+
 ## Competitor Matrix
 
 | Competitor | Confirmed Public Shape | Advantage Over TeaAgent | TeaAgent Advantage | Work Direction |
@@ -65,6 +83,19 @@ Local TeaAgent evidence:
 | Google Jules | Experimental autonomous coding agent integrated with GitHub; works autonomously on bugs, docs, and features; hosted/cloud VM positioning. | Lower-friction hosted async task flow. | TeaAgent is more configurable and inspectable. | Use Jules as a reminder that "experimental" can still be simple to try; reduce TeaAgent's first-run ceremony. |
 | Windsurf / Cascade | IDE-centric Cascade with in-house SWE models, workflows stored as markdown, web/docs search, terminal integration, usage analytics, and usage-based plans. | Strong IDE workflow packaging and model/product integration. | TeaAgent is not bound to one IDE or model family. | Convert TeaAgent workflows and skills into compact, discoverable, repo-native artifacts with visible runtime receipts. |
 | Roo Code | Open-source VS Code agent with modes, custom modes, tool groups, MCP, and powerful customization; official docs now indicate shutdown of Roo Code products on May 15, 2026. | Historical strength in custom modes and mode-specific tool access; less current market threat after shutdown notice. | TeaAgent remains active in this workspace and can learn from Roo's mode system without inheriting its product risk. | Classify Roo as a design reference, not a primary strategic threat, unless a successor fork regains traction. |
+
+---
+
+## Comparison Axis Summary
+
+| Axis | Competitors that set the benchmark | TeaAgent's current self-comparison | Workstream |
+| --- | --- | --- | --- |
+| Local governance and audit | Codex compliance API, Devin enterprise logs, OpenCode/Cursor permissions, OpenHands sandbox terms | TeaAgent has strong local audit, approval, cost, tool schema, and run evidence primitives, but must make them visible and mode-specific. | WS1, WS3 |
+| Remote async work | Codex, Copilot cloud agent, Cursor background agents, Kiro autonomous mode, Devin, Jules | TeaAgent should not claim parity; local subagent/swarm work is useful but not remote-safe. | WS2, WS4 |
+| IDE and PR workflow | Cursor, Copilot, Cline, Devin Desktop/Cascade, Kiro | TeaAgent is CLI/TUI-first and needs adapters or receipts rather than immediate hosted parity. | WS5, WS6 |
+| Plan/spec before write | Cline Plan/Act, Kiro specs, Codex/Copilot planning, Claude subagents/teams | TeaAgent has enforcement primitives but weaker user-facing plan receipts. | WS1 |
+| Extension taxonomy | Claude Code, Devin/Cascade, OpenCode, MCP-enabled tools | TeaAgent has tools, MCP, skills, plugins, and subagents, but needs clearer trust boundaries and package semantics. | WS5 |
+| Git reversibility | Aider, Copilot PR branches, Cursor background branches, Jules VM branches | TeaAgent has undo/run evidence but should make files touched, diff, and rollback scope obvious. | WS1, WS3 |
 
 ---
 

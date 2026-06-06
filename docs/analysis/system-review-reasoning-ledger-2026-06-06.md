@@ -25,6 +25,14 @@
 5. Separated stable evidence from inference, volatile claims, and unknowns.
 6. Converted the critique into workstreams instead of treating it as a single
    abstract improvement request.
+7. Added a dedicated interrogation map to preserve the public critical-question
+   structure across engineering, remote multi-agent, UX, trust, operations,
+   integration, documentation governance, and competitive positioning.
+8. Added a competitive claim audit so market comparisons can be reused without
+   copying stale star counts, pricing, model defaults, hosted availability, or
+   broad "only tool" claims.
+9. Added a workstream traceability layer so each major critique maps to an
+   acceptance gate, validation command, or explicit non-goal.
 
 ---
 
@@ -238,6 +246,31 @@ links.
 | What is the minimum trust receipt that makes TeaAgent visibly different? | Converts hidden governance into user value. | Proposed in work directions; not implemented here. |
 | Which competitor facts must be refreshed on every positioning update? | Prevents stale star/pricing/model claims. | Source-backed matrix now records the rule. |
 | Which audit failures must become fatal in compliance mode? | Separates best-effort local logging from real governance claims. | Needs engineering design and tests. |
+
+---
+
+## Public Reasoning Artifacts Added
+
+| Artifact | What it records | Why it exists |
+| --- | --- | --- |
+| [System Interrogation Map](system-interrogation-map-2026-06-06.md) | Concrete skeptical questions, evidence handles, inferences, counterarguments, rejected shortcuts, and unknowns. | Makes the review process auditable without exposing private chain-of-thought. |
+| [Competitive Claim Audit](competitive-claim-audit-2026-06-06.md) | Stable vs volatile competitor facts, allowed and disallowed claim wording, and competitor-to-self pressure map. | Prevents public positioning from reusing stale or overbroad competitor claims. |
+| [System Review Workstream Traceability](../plans/system-review-workstream-traceability-2026-06-06.md) | Evidence source, critical finding, market pressure, workstream, proof of movement, gates, and decision backlog. | Converts critique into verifiable work rather than more prose. |
+
+---
+
+## Reasoning Trace By Angle
+
+| Angle | Question asked | Evidence class | Inference made | Work direction |
+| --- | --- | --- | --- | --- |
+| Engineering | Is the harness thin enough to stay maintainable? | Code-grounded architecture critique. | The spine is coherent, but the surrounding surface needs maturity labels and contracts. | WS0, WS5 |
+| Remote multi-agent | Can current subagents support remote teams? | Code-grounded subagent, swarm, queue, isolation, and budget review. | Local bounded delegation is real; remote readiness is not. | WS2 |
+| User conversation | Does a daily user understand run state, approvals, cost, and recovery? | TUI/CLI/chat surface analysis and active findings ledger. | Governance is too often exposed as internal control-plane state. | WS1 |
+| Trust and security | Are claims proportional to implementation? | Approval, audit, plugin, path, and sandbox evidence. | Local governance is credible; enterprise and sandbox-complete claims require gates. | WS0, WS3 |
+| Observability | Can operators diagnose long-running work? | Audit/run-store/operations critique. | Audit is strong forensic evidence but not yet enough live operational visibility. | WS4 |
+| Integration | Can new surfaces be added without duplicating policy? | Tool/provider/plugin/CLI/TUI contract review. | Tool/provider interfaces are stronger than run/approval/storage/event contracts. | WS5 |
+| Documentation | Does the corpus clarify or obscure truth? | Documentation index, operating model, generated inventory, dated evidence. | Dated docs are useful only when current-truth front doors and claim classes are clear. | WS0, WS6 |
+| Competitive | Where should TeaAgent compete? | Official/upstream source refresh and local evidence. | The defensible lane is governance-as-a-layer, not fastest IDE or hosted teammate. | WS6 after WS1/WS3 proof |
 
 ---
 

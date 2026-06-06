@@ -7,6 +7,11 @@
 > **Scope:** Engineering architecture, remote/local multi-agent behavior,
 > conversation UX, trust/security posture, observability, integration contracts,
 > documentation governance, and competitive positioning.
+>
+> **Traceability companion:** Use
+> [System Review Workstream Traceability](system-review-workstream-traceability-2026-06-06.md)
+> to map each workstream to the evidence source, competitor pressure, proof of
+> movement, and validation gate.
 
 ---
 
@@ -21,6 +26,20 @@
 | P2 | Integration boundaries | Reduces framework sprawl and stabilizes extension points. |
 | P2 | Documentation governance | Keeps dated reasoning useful without becoming stale truth. |
 | P3 | Competitive positioning | Turns strengths into market language after the product proof exists. |
+
+---
+
+## Critical Question Routing
+
+| Critical question | Primary evidence | Workstream |
+| --- | --- | --- |
+| What exactly is stable core versus alpha/beta/experimental surface? | Engineering architecture critique and documentation operating model | WS-0 |
+| Can a normal developer understand a run without reading JSONL or call IDs? | User experience and conversation patterns analysis | WS-1 |
+| Can local subagents run safely under time, budget, depth, and isolation limits? | Multi-agent coordination critique | WS-2 |
+| What trust claims are hard guarantees, and what is best-effort? | Risk and trust model critique | WS-3 |
+| Can operators diagnose cost, latency, queue depth, audit health, and retention? | Performance and observability critique | WS-4 |
+| Can integrations reuse policy instead of duplicating it? | Integration and extensibility critique | WS-5 |
+| Which competitor claims are safe to reuse? | Competitor self-comparison matrix and competitive claim audit | WS-6 |
 
 ---
 
