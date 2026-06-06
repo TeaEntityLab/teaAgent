@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
 # Module-level state
 _active_run_id: Optional[str] = None
@@ -111,7 +111,7 @@ def _safe_serialize(value: Any) -> Any:
         return repr(value)
 
 
-def _all_handlers():
+def _all_handlers() -> Iterator[logging.Handler]:
     for handler in logging.root.handlers:
         yield handler
     for logger in logging.root.manager.loggerDict.values():

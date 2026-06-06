@@ -6,7 +6,10 @@ import json
 import logging
 import secrets
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Optional, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from teaagent.run_context import RunContext
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +56,7 @@ def managed_runtime_context(
     *,
     workspace_root: Optional[str] = None,
     extra: Optional[dict[str, Any]] = None,
-) -> dict[str, Any]:
-    from teaagent.run_context import RunContext
-
+) -> RunContext:
     ctx: RunContext = {}
     if extra:
         for k, v in extra.items():

@@ -102,13 +102,13 @@ def _gather_skills(workspace_root: Optional[Path]) -> list[ExtensionActivation]:
                 )
             )
 
-        for item in explain.skipped:
+        for skipped_item in explain.skipped:
             result.append(
                 ExtensionActivation(
-                    name=item.skill_name,
+                    name=skipped_item.skill_name,
                     type='skill',
-                    source=str(item.skill_path),
-                    reason=f'Skipped: {item.reason}',
+                    source=str(skipped_item.skill_path),
+                    reason=f'Skipped: {skipped_item.reason}',
                     trust_level='unknown',
                     disable_command='',
                 )

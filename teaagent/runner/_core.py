@@ -824,7 +824,7 @@ class AgentRunner:
                     tool_calls=tool_calls,
                 )
                 self._assert_cost_budget(cost_cents)
-                decision = decide(context)
+                decision = decide(context)  # type: ignore[arg-type]
                 cost_cents = context.get('_cost_cents', cost_cents)
                 input_tokens = context.get('_input_tokens', input_tokens)
                 output_tokens = context.get('_output_tokens', output_tokens)
@@ -837,7 +837,7 @@ class AgentRunner:
                     run_id=current_run_id, cost_cents=cost_cents
                 )
                 self._check_compaction_warning(
-                    context=context,
+                    context=context,  # type: ignore[arg-type]
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                 )
@@ -886,9 +886,9 @@ class AgentRunner:
                             raw_decision_preview=preview,
                         )
 
-                tool_calls, context = self._execute_tool_decision(
+                tool_calls, context = self._execute_tool_decision(  # type: ignore[assignment]
                     decision,
-                    context,
+                    context,  # type: ignore[arg-type]
                     current_run_id,
                     tool_calls,
                     cost_cents,

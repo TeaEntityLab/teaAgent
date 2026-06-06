@@ -704,7 +704,7 @@ class MemoryCatalog(AbstractStore['MemoryEntry']):
             self._atomic_write_entries(entries)
             return True
 
-    def list_keys(self) -> list[str]:
+    def list_keys(self) -> builtins.list[str]:
         return [e.memory_id for e in self._read_entries()]
 
     def exists(self, key: str) -> bool:

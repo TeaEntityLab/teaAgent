@@ -160,7 +160,7 @@ class CloudTaskManager:
         try:
             runner = self._runner_factory(runtime, adapter=adapter)
             ctx = managed_runtime_context(ToolRegistry())
-            result = runner.run(prompt, context=ctx)
+            result = runner.run(prompt, context=ctx)  # type: ignore[arg-type]
             return self._store.update(
                 task.task_id,
                 status='completed',

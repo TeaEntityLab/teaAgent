@@ -219,6 +219,67 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
                 self._corrupt_count += 1
         return events
 
+    def describe_run(self, run_id: str) -> RunResult:
+        """Get the RunResult for a completed/failed run from the audit log.
+
+        Args:
+            run_id: The run ID to describe.
+
+        Returns:
+            A ``RunResult`` with fields populated from the audit events.
+            ``iterations`` and ``tool_calls`` default to 0 (not stored in
+            audit events).
+        """
+        events = self.show_run(run_id)
+        cost_cents = 0.0
+        input_tokens = 0
+        output_tokens = 0
+        status = 'unknown'
+        final_answer = None
+        error_message: Optional[str] = None
+
+        for event in events:
+            event_type = event.get('event_type')
+            payload = event.get('payload', {})
+            if not isinstance(payload, dict):
+                payload = {}
+            if event_type == 'run_completed':
+                cost_cents = float(payload.get('cost_cents', 0.0))
+                input_tokens = int(payload.get('input_tokens', 0))
+                output_tokens = int(payload.get('output_tokens', 0))
+                status = 'completed'
+                answer = payload.get('answer')
+                if isinstance(answer, dict):
+                    from teaagent.runner._types import FinalAnswer as FA
+
+                    final_answer = FA(
+                        content=answer.get('content', ''),
+                        metadata=answer.get('metadata', {}),
+                    )
+            elif event_type == 'run_failed':
+                cost_cents = float(payload.get('cost_cents', 0.0))
+                input_tokens = int(payload.get('input_tokens', 0))
+                output_tokens = int(payload.get('output_tokens', 0))
+                category = payload.get('category', 'unknown')
+                status = f'failed:{category}'
+                error_message = str(payload.get('message', ''))
+            elif event_type == 'run_paused':
+                paused_status = payload.get('status')
+                if isinstance(paused_status, str):
+                    status = paused_status
+
+        return RunResult(
+            run_id=run_id,
+            final_answer=final_answer,
+            iterations=0,
+            tool_calls=0,
+            status=status,
+            cost_cents=cost_cents,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            error_message=error_message,
+        )
+
     def task_for_run(self, run_id: str) -> str:
         for event in self.show_run(run_id):
             if event.get('event_type') == 'run_started':
