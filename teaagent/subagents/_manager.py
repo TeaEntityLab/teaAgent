@@ -33,6 +33,144 @@ UNSAFE_PARENT_MODES = frozenset({'allow', 'danger-full-access'})
 MAX_CHILD_PERMISSION = 'workspace-write'
 
 
+def _resolve_budget_limits(
+    max_iterations: int | None,
+    max_tool_calls: int | None,
+    sub_def: SubagentDef | None,
+    parent_config: Any,
+) -> tuple[int, int]:
+    resolved_max_iterations = max_iterations or (
+        sub_def.max_iterations if sub_def else 5
+    )
+    resolved_max_tool_calls = max_tool_calls or (
+        sub_def.max_tool_calls if sub_def else 5
+    )
+    resolved_max_iterations = min(
+        int(resolved_max_iterations),
+        int(parent_config.max_iterations),
+    )
+    resolved_max_tool_calls = min(
+        int(resolved_max_tool_calls),
+        int(parent_config.max_tool_calls),
+    )
+    return resolved_max_iterations, resolved_max_tool_calls
+
+
+def _resolve_subagent_isolation(
+    isolation: str,
+    parent_run_id: str,
+    def_name: str | None,
+    depth: int,
+    batch_index: int | None,
+    skill_path: str | Path | None,
+    skill_risk_level: Any,
+) -> tuple[str, float | None, str | None, dict[str, Any] | None]:
+    normalized_isolation = normalize_subagent_isolation(isolation)
+    if normalized_isolation is None:
+        return (
+            '',
+            None,
+            None,
+            _error(
+                f'unsupported subagent isolation: {isolation!r}; '
+                f'use one of: shared, worktree, directory-snapshot, docker, auto',
+                lineage=_lineage_or_none(
+                    parent_run_id,
+                    def_name or 'generic',
+                    depth + 1,
+                    batch_index,
+                    DEFAULT_SUBAGENT_ISOLATION,
+                ),
+            ),
+        )
+    isolation = normalized_isolation
+    cpu_quota: float | None = None
+    memory_limit: str | None = None
+    if isolation == 'auto':
+        if skill_path is None:
+            return (
+                '',
+                None,
+                None,
+                _error(
+                    'isolation=auto requires skill_path for sandbox routing',
+                    lineage=_lineage_or_none(
+                        parent_run_id,
+                        def_name or 'generic',
+                        depth + 1,
+                        batch_index,
+                        'auto',
+                    ),
+                ),
+            )
+        from teaagent.consensus import RiskLevel
+        from teaagent.skill_router import plan_skill_isolation
+
+        risk = skill_risk_level
+        if risk is None:
+            risk = RiskLevel.MEDIUM
+        elif isinstance(risk, str):
+            risk = RiskLevel(risk)
+        plan = plan_skill_isolation(Path(skill_path), risk)
+        isolation = plan.isolation
+        cpu_quota = plan.cpu_quota
+        memory_limit = plan.memory_limit
+    return isolation, cpu_quota, memory_limit, None
+
+
+def _resolve_permission_mode(
+    sub_def: SubagentDef | None,
+    parent_config: Any,
+    def_used: str,
+) -> Any:
+    inherited_mode = (
+        sub_def.permission_mode
+        if sub_def and sub_def.permission_mode is not None
+        else parent_config.permission_mode
+    )
+    parent_mode_str = str(
+        getattr(
+            parent_config.permission_mode,
+            'value',
+            parent_config.permission_mode,
+        )
+    )
+    if (
+        sub_def is None or sub_def.permission_mode is None
+    ) and parent_mode_str in UNSAFE_PARENT_MODES:
+        logger.warning(
+            'Subagent %s inheriting from parent in %s mode — capping permission to %s',
+            def_used,
+            parent_mode_str,
+            MAX_CHILD_PERMISSION,
+        )
+        inherited_mode = MAX_CHILD_PERMISSION
+    return inherited_mode
+
+
+def _build_subagent_config(
+    sub_def: SubagentDef | None,
+    parent_config: Any,
+    parent_adapter: LLMAdapter,
+    iso_ctx: Any,
+    resolved_max_iterations: int,
+    resolved_max_tool_calls: int,
+    def_used: str,
+    approval_handler: Any,
+    inherited_mode: Any,
+) -> Any:
+    return replace(
+        parent_config,
+        root=iso_ctx.child_root,
+        max_iterations=int(resolved_max_iterations),
+        max_tool_calls=int(resolved_max_tool_calls),
+        max_estimated_cost_cents=parent_config.max_estimated_cost_cents,
+        model=(sub_def.model if sub_def and sub_def.model else parent_config.model),
+        permission_mode=inherited_mode,
+        approval_handler=approval_handler,
+    )
+
+
 def _lineage_or_none(
     parent_run_id: str,
     def_name: str,
@@ -93,8 +231,6 @@ class SubagentManager:
         skill_path: Optional[str | Path] = None,
         skill_risk_level: Optional[Any] = None,
     ) -> dict[str, Any]:
-        from teaagent.chat_agent import run_chat_agent
-
         if depth >= self._parent_config.max_subagent_depth:
             return _error(
                 f'global subagent depth limit {self._parent_config.max_subagent_depth} reached',
@@ -107,88 +243,28 @@ class SubagentManager:
                 ),
             )
 
-        sub_def: Optional[SubagentDef] = None
-        if def_name:
-            sub_def = self.get_def(def_name)
-            if sub_def is None:
-                return _error(
-                    f'unknown subagent: {def_name}',
-                    lineage=_lineage_or_none(
-                        parent_run_id,
-                        def_name,
-                        depth,
-                        batch_index,
-                        isolation,
-                    ),
-                )
-            if depth >= sub_def.max_depth:
-                return _error(
-                    f"subagent '{sub_def.name}' max_depth {sub_def.max_depth} reached",
-                    lineage=_lineage_or_none(
-                        parent_run_id,
-                        sub_def.name,
-                        depth + 1,
-                        batch_index,
-                        isolation,
-                    ),
-                )
+        sub_def = self._lookup_subagent(
+            def_name, parent_run_id, depth, batch_index, isolation
+        )
+        if isinstance(sub_def, dict):
+            return sub_def
 
-        resolved_max_iterations = max_iterations or (
-            sub_def.max_iterations if sub_def else 5
-        )
-        resolved_max_tool_calls = max_tool_calls or (
-            sub_def.max_tool_calls if sub_def else 5
-        )
-        resolved_max_iterations = min(
-            int(resolved_max_iterations),
-            int(self._parent_config.max_iterations),
-        )
-        resolved_max_tool_calls = min(
-            int(resolved_max_tool_calls),
-            int(self._parent_config.max_tool_calls),
+        resolved_max_iterations, resolved_max_tool_calls = _resolve_budget_limits(
+            max_iterations, max_tool_calls, sub_def, self._parent_config
         )
 
-        normalized_isolation = normalize_subagent_isolation(isolation)
-        if normalized_isolation is None:
-            return _error(
-                f'unsupported subagent isolation: {isolation!r}; '
-                f'use one of: shared, worktree, directory-snapshot, docker, auto',
-                lineage=_lineage_or_none(
-                    parent_run_id,
-                    def_name or 'generic',
-                    depth + 1,
-                    batch_index,
-                    DEFAULT_SUBAGENT_ISOLATION,
-                ),
-            )
-        isolation = normalized_isolation
-
-        cpu_quota: Optional[float] = None
-        memory_limit: Optional[str] = None
-        if isolation == 'auto':
-            if skill_path is None:
-                return _error(
-                    'isolation=auto requires skill_path for sandbox routing',
-                    lineage=_lineage_or_none(
-                        parent_run_id,
-                        def_name or 'generic',
-                        depth + 1,
-                        batch_index,
-                        'auto',
-                    ),
-                )
-            from teaagent.consensus import RiskLevel
-            from teaagent.skill_router import plan_skill_isolation
-
-            risk = skill_risk_level
-            if risk is None:
-                risk = RiskLevel.MEDIUM
-            elif isinstance(risk, str):
-                risk = RiskLevel(risk)
-            plan = plan_skill_isolation(Path(skill_path), risk)
-            isolation = plan.isolation
-            cpu_quota = plan.cpu_quota
-            memory_limit = plan.memory_limit
+        isolation, cpu_quota, memory_limit, iso_err = _resolve_subagent_isolation(
+            isolation,
+            parent_run_id,
+            def_name,
+            depth,
+            batch_index,
+            skill_path,
+            skill_risk_level,
+        )
+        if iso_err is not None:
+            err_msg = str(iso_err) if not isinstance(iso_err, str) else iso_err
+            return _error(err_msg)
 
         def_used = sub_def.name if sub_def else 'generic'
         iso_ctx, iso_error = prepare_subagent_isolation(
@@ -202,13 +278,9 @@ class SubagentManager:
         )
         if iso_ctx is None:
             return _error(
-                iso_error,
+                iso_error or 'isolation preparation failed',
                 lineage=_lineage_or_none(
-                    parent_run_id,
-                    def_used,
-                    depth + 1,
-                    batch_index,
-                    isolation,
+                    parent_run_id, def_used, depth + 1, batch_index, isolation
                 ),
             )
 
@@ -217,78 +289,116 @@ class SubagentManager:
             task_spec = f'[{sub_def.name} role]\n{sub_def.system_prompt.strip()}\n\n---\n\nTask: {task}'
 
         child_depth = depth + 1
-        worktree_rel: Optional[str] = None
-        container_rel: Optional[str] = None
-        if iso_ctx.worktree_path is not None:
-            worktree_rel = _path_relative_to_root(iso_ctx.worktree_path, self._root)
-        if iso_ctx.container_path is not None:
-            container_rel = _path_relative_to_root(iso_ctx.container_path, self._root)
 
+        worktree_rel = _rel_if_set(iso_ctx.worktree_path, self._root)
+        container_rel = _rel_if_set(iso_ctx.container_path, self._root)
+
+        approval_handler = self._build_approval_handler(
+            sub_def, parent_run_id, def_used, batch_index, isolation, worktree_rel
+        )
+        inherited_mode = _resolve_permission_mode(
+            sub_def, self._parent_config, def_used
+        )
+        sub_config = _build_subagent_config(
+            sub_def,
+            self._parent_config,
+            self._parent_adapter,
+            iso_ctx,
+            resolved_max_iterations,
+            resolved_max_tool_calls,
+            def_used,
+            approval_handler,
+            inherited_mode,
+        )
+
+        return self._execute_subagent_run(
+            sub_config,
+            task_spec,
+            parent_run_id,
+            def_used,
+            child_depth,
+            batch_index,
+            isolation,
+            worktree_rel,
+            container_rel,
+            sub_def,
+            iso_ctx,
+        )
+
+    def _lookup_subagent(
+        self,
+        def_name: str | None,
+        parent_run_id: str,
+        depth: int,
+        batch_index: int | None,
+        isolation: str,
+    ) -> SubagentDef | None | dict[str, Any]:
+        if not def_name:
+            return None
+        sub_def = self.get_def(def_name)
+        if sub_def is None:
+            return _error(
+                f'unknown subagent: {def_name}',
+                lineage=_lineage_or_none(
+                    parent_run_id, def_name, depth, batch_index, isolation
+                ),
+            )
+        if depth >= sub_def.max_depth:
+            return _error(
+                f"subagent '{sub_def.name}' max_depth {sub_def.max_depth} reached",
+                lineage=_lineage_or_none(
+                    parent_run_id, sub_def.name, depth + 1, batch_index, isolation
+                ),
+            )
+        return sub_def
+
+    def _build_approval_handler(
+        self,
+        sub_def: SubagentDef | None,
+        parent_run_id: str,
+        def_used: str,
+        batch_index: int | None,
+        isolation: str,
+        worktree_rel: str | None,
+    ) -> Any:
         use_centralized = should_use_centralized_approval(
             parent_run_id=parent_run_id,
             batch_index=batch_index,
             parallel_mode=get_parallel_approval_mode(),
         )
-        approval_handler = self._parent_config.approval_handler
-        if use_centralized:
-            permission_mode = (
-                sub_def.permission_mode
-                if sub_def and sub_def.permission_mode is not None
-                else self._parent_config.permission_mode
-            )
-            approval_handler = make_centralized_subagent_approval_handler(
-                parent_run_id=parent_run_id,
-                subagent_id=f'{parent_run_id}:{def_used}:{batch_index or 0}',
-                subagent_name=def_used,
-                permission_mode=str(getattr(permission_mode, 'value', permission_mode)),
-                isolation=isolation,
-                batch_index=batch_index,
-                worktree_path=worktree_rel,
-                workspace_root=self._root,
-            )
-
-        # P2-A-003: Cap permission mode inheritance.
-        # Child agents must never silently inherit unsafe authority from the
-        # parent.  If the parent runs in allow/danger-full-access mode and the
-        # subagent definition does not explicitly set its own permission mode,
-        # the child is capped at workspace-write.
-        inherited_mode = (
+        if not use_centralized:
+            return self._parent_config.approval_handler
+        permission_mode = (
             sub_def.permission_mode
             if sub_def and sub_def.permission_mode is not None
             else self._parent_config.permission_mode
         )
-        parent_mode_str = str(
-            getattr(
-                self._parent_config.permission_mode,
-                'value',
-                self._parent_config.permission_mode,
-            )
+        return make_centralized_subagent_approval_handler(
+            parent_run_id=parent_run_id,
+            subagent_id=f'{parent_run_id}:{def_used}:{batch_index or 0}',
+            subagent_name=def_used,
+            permission_mode=str(getattr(permission_mode, 'value', permission_mode)),
+            isolation=isolation,
+            batch_index=batch_index,
+            worktree_path=worktree_rel,
+            workspace_root=self._root,
         )
-        if (
-            sub_def is None or sub_def.permission_mode is None
-        ) and parent_mode_str in UNSAFE_PARENT_MODES:
-            logger.warning(
-                'Subagent %s inheriting from parent in %s mode — capping permission to %s',
-                def_used,
-                parent_mode_str,
-                MAX_CHILD_PERMISSION,
-            )
-            inherited_mode = MAX_CHILD_PERMISSION
 
-        sub_config = replace(
-            self._parent_config,
-            root=iso_ctx.child_root,
-            max_iterations=int(resolved_max_iterations),
-            max_tool_calls=int(resolved_max_tool_calls),
-            max_estimated_cost_cents=self._parent_config.max_estimated_cost_cents,
-            model=(
-                sub_def.model
-                if sub_def and sub_def.model
-                else self._parent_config.model
-            ),
-            permission_mode=inherited_mode,
-            approval_handler=approval_handler,
-        )
+    def _execute_subagent_run(
+        self,
+        sub_config: Any,
+        task_spec: str,
+        parent_run_id: str,
+        def_used: str,
+        child_depth: int,
+        batch_index: int | None,
+        isolation: str,
+        worktree_rel: str | None,
+        container_rel: str | None,
+        sub_def: SubagentDef | None,
+        iso_ctx: Any,
+    ) -> dict[str, Any]:
+        from teaagent.chat_agent import run_chat_agent
 
         lineage = SubagentLineage(
             parent_run_id=parent_run_id,
@@ -396,6 +506,12 @@ def _normalize_name(name: str) -> str:
 
 def _path_relative_to_root(path: Path, root: Path) -> str:
     return path.resolve().relative_to(root.resolve()).as_posix()
+
+
+def _rel_if_set(path: Path | None, root: Path) -> str | None:
+    if path is not None:
+        return _path_relative_to_root(path, root)
+    return None
 
 
 def _success(session: SubagentSession) -> dict[str, Any]:

@@ -183,57 +183,44 @@ class ApprovalPolicy:
             fcntl.flock(fd.fileno(), fcntl.LOCK_UN)
             fd.close()
 
+    def _check_command_args(self, arguments: dict[str, Any], pattern: str) -> bool:
+        if 'command' not in arguments and 'cmd' not in arguments:
+            return False
+        command_arg = arguments.get('command') or arguments.get('cmd', '')
+        if isinstance(command_arg, str):
+            normalized_cmd = self._normalize_shell_arg(command_arg)
+            return pattern in normalized_cmd
+        if isinstance(command_arg, list):
+            joined_cmd = ' '.join(str(item) for item in command_arg)
+            normalized_cmd = self._normalize_shell_arg(joined_cmd)
+            return pattern in normalized_cmd
+        normalized_cmd = self._normalize_shell_arg(str(command_arg))
+        return pattern in normalized_cmd
+
     def _is_high_risk_operation(
         self, tool_name: str, arguments: dict[str, Any] | None
     ) -> bool:
-        """Check if operation matches high-risk patterns triggering multi-sig quorum.
-
-        Uses shell command parsing to normalize arguments and prevent bypass attempts
-        via token splitting, escape sequences, or encoding tricks.
-        """
         if not arguments:
             return False
 
-        # Check against configured high-risk patterns
         for pattern in self.multi_sig_config.high_risk_patterns:
             if pattern in tool_name:
                 return True
-            # Check if pattern appears in arguments (e.g., file paths)
             args_str = json.dumps(arguments, sort_keys=True)
             if pattern in args_str:
                 return True
 
-        # Default high-risk patterns with shell normalization
         default_high_risk = ['/prod', '/production', 'database', 'delete', 'rm -rf']
 
         for pattern in default_high_risk:
             if pattern in tool_name.lower():
                 return True
             if arguments:
-                # Try to normalize shell commands to catch bypass attempts
                 args_str = json.dumps(arguments, sort_keys=True).lower()
-
-                # Check raw string first
                 if pattern in args_str:
                     return True
-
-                # Multi-pass normalization for command-like arguments
-                if 'command' in arguments or 'cmd' in arguments:
-                    command_arg = arguments.get('command') or arguments.get('cmd', '')
-                    if isinstance(command_arg, str):
-                        normalized_cmd = self._normalize_shell_arg(command_arg)
-                        if pattern in normalized_cmd:
-                            return True
-                    elif isinstance(command_arg, list):
-                        joined_cmd = ' '.join(str(item) for item in command_arg)
-                        normalized_cmd = self._normalize_shell_arg(joined_cmd)
-                        if pattern in normalized_cmd:
-                            return True
-                    else:
-                        # Fallback: convert any other type to string and check
-                        normalized_cmd = self._normalize_shell_arg(str(command_arg))
-                        if pattern in normalized_cmd:
-                            return True
+                if self._check_command_args(arguments, pattern):
+                    return True
 
         return False
 

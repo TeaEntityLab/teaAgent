@@ -99,6 +99,151 @@ def _tool_arguments(payload: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _process_event_lifecycle(
+    event_type: str,
+    payload: dict[str, Any],
+    ts: str,
+    *,
+    started_at: str,
+    finished_at: str | None,
+    status: str,
+    total_cost_cents: int,
+) -> tuple[str, str | None, str, int]:
+    """Update lifecycle state from a single audit event."""
+    if event_type == 'run_started':
+        return ts, finished_at, 'running', total_cost_cents
+    if event_type == 'run_completed':
+        cost = payload.get('cost_cents', 0)
+        if isinstance(cost, (int, float)):
+            total_cost_cents += int(cost)
+        return started_at, ts, 'success', total_cost_cents
+    if event_type == 'run_failed':
+        cost = payload.get('cost_cents', 0)
+        if isinstance(cost, (int, float)):
+            total_cost_cents += int(cost)
+        return started_at, ts, 'failure', total_cost_cents
+    if event_type == 'run_paused':
+        return started_at, ts, 'pending_approval', total_cost_cents
+    if event_type == 'run_cancelled':
+        return started_at, ts, 'cancelled', total_cost_cents
+    return started_at, finished_at, status, total_cost_cents
+
+
+def _process_event_file_shell(
+    event_type: str,
+    payload: dict[str, Any],
+    ts: str,
+    *,
+    changed_files: list[str],
+    commands_run: list[dict[str, Any]],
+    tests_executed: int,
+) -> None:
+    """Update file-change and shell-mutation accumulators from a tool event."""
+    if event_type not in ('tool_call_started', 'tool_call_completed'):
+        return
+    tool_name = str(payload.get('tool_name', ''))
+
+    if tool_name == 'workspace_write_file':
+        args = _tool_arguments(payload)
+        path = args.get('path', args.get('file_path', ''))
+        if path and isinstance(path, str) and path not in changed_files:
+            changed_files.append(path)
+
+    if tool_name == 'workspace_run_shell_mutate':
+        args = _tool_arguments(payload)
+        command = args.get('command', args.get('cmd', ''))
+        if command and isinstance(command, str):
+            commands_run.append(
+                {'tool_name': tool_name, 'command': command, 'timestamp': ts}
+            )
+
+
+def _process_event_approvals(
+    event_type: str,
+    payload: dict[str, Any],
+    ts: str,
+    approvals: list[dict[str, Any]],
+) -> None:
+    """Update approvals list from a single event (deduplicate by call_id)."""
+    if event_type == 'tool_call_pending_approval':
+        call_id = str(payload.get('call_id', ''))
+        existing = next((a for a in approvals if a['call_id'] == call_id), None)
+        if existing is None:
+            approvals.append(
+                {
+                    'call_id': call_id,
+                    'tool_name': str(payload.get('tool_name', '')),
+                    'decision': 'pending',
+                    'timestamp': ts,
+                    'scope': str(payload.get('scope', '')),
+                }
+            )
+    elif event_type == 'approval_granted':
+        _update_approval_decision(approvals, payload, ts, 'granted')
+    elif event_type == 'approval_denied':
+        _update_approval_decision(approvals, payload, ts, 'denied')
+
+
+def _update_approval_decision(
+    approvals: list[dict[str, Any]],
+    payload: dict[str, Any],
+    ts: str,
+    decision: str,
+) -> None:
+    """Find or create an approval entry and set its decision."""
+    call_id = str(payload.get('call_id', ''))
+    existing = next((a for a in approvals if a['call_id'] == call_id), None)
+    if existing is not None:
+        existing['decision'] = decision
+        existing['timestamp'] = ts
+    else:
+        approvals.append(
+            {
+                'call_id': call_id,
+                'tool_name': str(payload.get('tool_name', '')),
+                'decision': decision,
+                'timestamp': ts,
+                'scope': str(payload.get('scope', '')),
+            }
+        )
+
+
+def _process_event_cost(
+    event_type: str,
+    payload: dict[str, Any],
+    total_cost_cents: int,
+) -> int:
+    """Accumulate estimated cost from a tool_call event."""
+    if event_type != 'tool_call':
+        return total_cost_cents
+    cost = payload.get('estimated_cost_cents', 0)
+    if isinstance(cost, (int, float)):
+        return total_cost_cents + int(cost)
+    return total_cost_cents
+
+
+def _process_event_evidence(
+    event_type: str,
+    payload: dict[str, Any],
+    evidence_categories: dict[str, int],
+) -> None:
+    """Update evidence category counters from a single event."""
+    if event_type == 'test_run':
+        test_status = str(payload.get('status', ''))
+        if test_status == 'passed':
+            evidence_categories['verified'] += 1
+        elif test_status == 'failed':
+            evidence_categories['known_failure'] += 1
+        elif test_status == 'skipped':
+            evidence_categories['not_tested'] += 1
+    elif event_type in ('run_failed', 'tool_error', 'command_failed'):
+        evidence_categories['known_failure'] += 1
+    elif event_type in ('tool_call_started', 'tool_call_completed'):
+        tool_name = str(payload.get('tool_name', ''))
+        if tool_name == 'workspace_write_file':
+            evidence_categories['claimed'] += 1
+
+
 def summarize_run_events(events: list[dict[str, Any]]) -> dict[str, Any]:
     """Extract summary fields from a run's audit event list.
 
@@ -133,131 +278,36 @@ def summarize_run_events(events: list[dict[str, Any]]) -> dict[str, Any]:
         payload = _safe_payload(event)
         ts = _extract_timestamp(event)
 
-        # ── lifecycle status ──────────────────────────────────────────
-        if event_type == 'run_started':
-            started_at = ts
-            status = 'running'
-        elif event_type == 'run_completed':
-            finished_at = ts
-            status = 'success'
-            cost = payload.get('cost_cents', 0)
-            if isinstance(cost, (int, float)):
-                total_cost_cents += int(cost)
-        elif event_type == 'run_failed':
-            finished_at = ts
-            status = 'failure'
-            cost = payload.get('cost_cents', 0)
-            if isinstance(cost, (int, float)):
-                total_cost_cents += int(cost)
-        elif event_type == 'run_paused':
-            finished_at = ts
-            status = 'pending_approval'
-        elif event_type == 'run_cancelled':
-            finished_at = ts
-            status = 'cancelled'
+        started_at, finished_at, status, total_cost_cents = _process_event_lifecycle(
+            event_type,
+            payload,
+            ts,
+            started_at=started_at,
+            finished_at=finished_at,
+            status=status,
+            total_cost_cents=total_cost_cents,
+        )
 
-        # ── changed files (workspace_write_file) ─────────────────────
-        if event_type in ('tool_call_started', 'tool_call_completed'):
-            tool_name = str(payload.get('tool_name', ''))
-            if tool_name == 'workspace_write_file':
-                args = _tool_arguments(payload)
-                path = args.get('path', args.get('file_path', ''))
-                if path and isinstance(path, str) and path not in changed_files:
-                    changed_files.append(path)
+        _process_event_file_shell(
+            event_type,
+            payload,
+            ts,
+            changed_files=changed_files,
+            commands_run=commands_run,
+            tests_executed=tests_executed,
+        )
 
-        # ── shell mutations ───────────────────────────────────────────
-        if event_type in ('tool_call_started', 'tool_call_completed'):
-            tool_name = str(payload.get('tool_name', ''))
-            if tool_name == 'workspace_run_shell_mutate':
-                args = _tool_arguments(payload)
-                command = args.get('command', args.get('cmd', ''))
-                if command and isinstance(command, str):
-                    commands_run.append(
-                        {
-                            'tool_name': tool_name,
-                            'command': command,
-                            'timestamp': ts,
-                        }
-                    )
+        if event_type in (
+            'tool_call_started',
+            'tool_call_completed',
+        ) and _tool_matches_test(str(payload.get('tool_name', ''))):
+            tests_executed += 1
 
-        # ── test tool calls ───────────────────────────────────────────
-        if event_type in ('tool_call_started', 'tool_call_completed'):
-            tool_name = str(payload.get('tool_name', ''))
-            if _tool_matches_test(tool_name):
-                tests_executed += 1
+        _process_event_approvals(event_type, payload, ts, approvals)
 
-        # ── approvals (deduplicate by call_id, final decision wins) ─────
-        if event_type == 'tool_call_pending_approval':
-            call_id = str(payload.get('call_id', ''))
-            existing = next((a for a in approvals if a['call_id'] == call_id), None)
-            if existing is None:
-                approvals.append(
-                    {
-                        'call_id': call_id,
-                        'tool_name': str(payload.get('tool_name', '')),
-                        'decision': 'pending',
-                        'timestamp': ts,
-                        'scope': str(payload.get('scope', '')),
-                    }
-                )
-        elif event_type == 'approval_granted':
-            call_id = str(payload.get('call_id', ''))
-            existing = next((a for a in approvals if a['call_id'] == call_id), None)
-            if existing is not None:
-                existing['decision'] = 'granted'
-                existing['timestamp'] = ts
-            else:
-                approvals.append(
-                    {
-                        'call_id': call_id,
-                        'tool_name': str(payload.get('tool_name', '')),
-                        'decision': 'granted',
-                        'timestamp': ts,
-                        'scope': str(payload.get('scope', '')),
-                    }
-                )
-        elif event_type == 'approval_denied':
-            call_id = str(payload.get('call_id', ''))
-            existing = next((a for a in approvals if a['call_id'] == call_id), None)
-            if existing is not None:
-                existing['decision'] = 'denied'
-                existing['timestamp'] = ts
-            else:
-                approvals.append(
-                    {
-                        'call_id': call_id,
-                        'tool_name': str(payload.get('tool_name', '')),
-                        'decision': 'denied',
-                        'timestamp': ts,
-                        'scope': str(payload.get('scope', '')),
-                    }
-                )
+        total_cost_cents = _process_event_cost(event_type, payload, total_cost_cents)
 
-        # ── cost accumulation ─────────────────────────────────────────
-        if event_type == 'tool_call':
-            cost = payload.get('estimated_cost_cents', 0)
-            if isinstance(cost, (int, float)):
-                total_cost_cents += int(cost)
-
-        # ── evidence categories ──────────────────────────────────────
-        if event_type == 'test_run':
-            test_status = str(payload.get('status', ''))
-            if test_status == 'passed':
-                evidence_categories['verified'] += 1
-            elif test_status == 'failed':
-                evidence_categories['known_failure'] += 1
-            elif test_status == 'skipped':
-                evidence_categories['not_tested'] += 1
-        elif (
-            event_type == 'run_failed'
-            or event_type == 'tool_error'
-            or event_type == 'command_failed'
-        ):
-            evidence_categories['known_failure'] += 1
-        elif event_type in ('tool_call_started', 'tool_call_completed'):
-            tool_name = str(payload.get('tool_name', ''))
-            if tool_name == 'workspace_write_file':
-                evidence_categories['claimed'] += 1
+        _process_event_evidence(event_type, payload, evidence_categories)
 
     if status == 'running':
         finished_at = None

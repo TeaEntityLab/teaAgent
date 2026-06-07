@@ -81,6 +81,57 @@ def compute_chain_hmac(event_hash: str, secret_key: bytes) -> str:
     return hmac.HMAC(secret_key, event_hash.encode('utf-8'), hashlib.sha256).hexdigest()
 
 
+def _verify_single_event(
+    obj: dict,
+    prev_hash: str,
+    line_index: int,
+    secret_key: bytes | None,
+    strict: bool,
+    allow_legacy_reset: bool,
+) -> tuple[str | None, str]:
+    if 'prev_hash' not in obj or 'hash' not in obj:
+        if strict and not allow_legacy_reset:
+            return None, (
+                f'Line {line_index}: legacy event without chain fields '
+                'rejected in strict audit-chain mode'
+            )
+        logger.warning(
+            'Line %d: legacy event without chain fields — '
+            'hash chain anchor reset to genesis; '
+            'chain integrity cannot be verified across this boundary',
+            line_index,
+        )
+        return GENESIS_HASH, ''
+
+    stored_prev = obj['prev_hash']
+    if stored_prev != prev_hash:
+        return None, (
+            f'Line {line_index}: prev_hash mismatch '
+            f'(expected {prev_hash!r}, got {stored_prev!r})'
+        )
+
+    try:
+        expected = compute_event_hash(obj)
+    except KeyError as exc:
+        return None, f'Line {line_index}: missing required field {exc}'
+
+    if obj['hash'] != expected:
+        return None, (
+            f'Line {line_index}: hash mismatch for event '
+            f'{obj.get("event_id", "?")} — content may have been tampered'
+        )
+
+    if secret_key is not None and 'chain_hmac' in obj:
+        expected_hmac = compute_chain_hmac(obj['hash'], secret_key)
+        if obj['chain_hmac'] != expected_hmac:
+            return None, (
+                f'Line {line_index}: HMAC mismatch for event '
+                f'{obj.get("event_id", "?")} — signature does not match key'
+            )
+
+    return obj['hash'], ''
+
+
 def verify_audit_chain(
     log_path: Path,
     secret_key: Optional[bytes] = None,
@@ -88,12 +139,6 @@ def verify_audit_chain(
     strict: Optional[bool] = None,
     allow_legacy_reset: Optional[bool] = None,
 ) -> ChainVerificationResult:
-    """Verify the SHA-256 hash chain of a JSONL audit log file.
-
-    When *strict* is True (or ``TEAAGENT_AUDIT_CHAIN_STRICT`` is set), legacy
-    lines without ``prev_hash`` / ``hash`` are rejected unless
-    *allow_legacy_reset* is True (default: ``TEAAGENT_AUDIT_CHAIN_LEGACY_COMPAT``).
-    """
     from teaagent.security_env import (
         audit_chain_legacy_compat,
         audit_chain_strict,
@@ -104,23 +149,7 @@ def verify_audit_chain(
     if allow_legacy_reset is None:
         allow_legacy_reset = audit_chain_legacy_compat()
     if secret_key is None:
-        run_id = log_path.stem
-        safe_id = (
-            ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
-        )
-        key_path = Path.home() / '.teaagent' / 'run-keys' / f'{safe_id}.key'
-        if key_path.is_file():
-            try:
-                key = key_path.read_bytes()
-                if len(key) == 32:
-                    secret_key = key
-            except OSError as exc:
-                logger.warning(
-                    'HMAC chain key could not be read from %s: %s — '
-                    'proceeding without chain integrity verification',
-                    key_path,
-                    exc,
-                )
+        secret_key = _load_run_key(log_path)
 
     if not log_path.is_file():
         return ChainVerificationResult(valid=True, event_count=0)
@@ -142,72 +171,34 @@ def verify_audit_chain(
                 error=f'Line {i + 1}: invalid JSON: {exc}',
             )
 
-        if 'prev_hash' not in obj or 'hash' not in obj:
-            if strict and not allow_legacy_reset:
-                return ChainVerificationResult(
-                    valid=False,
-                    event_count=i,
-                    error=(
-                        f'Line {i + 1}: legacy event without chain fields '
-                        'rejected in strict audit-chain mode'
-                    ),
-                )
-            # Legacy event without chain fields — skip and reset chain origin.
-            logger.warning(
-                'Line %d: legacy event without chain fields — '
-                'hash chain anchor reset to genesis; '
-                'chain integrity cannot be verified across this boundary',
-                i + 1,
-            )
-            prev_hash = GENESIS_HASH
-            continue
-
-        stored_prev = obj['prev_hash']
-        if stored_prev != prev_hash:
-            return ChainVerificationResult(
-                valid=False,
-                event_count=i,
-                error=(
-                    f'Line {i + 1}: prev_hash mismatch '
-                    f'(expected {prev_hash!r}, got {stored_prev!r})'
-                ),
-            )
-
-        try:
-            expected = compute_event_hash(obj)
-        except KeyError as exc:
-            return ChainVerificationResult(
-                valid=False,
-                event_count=i,
-                error=f'Line {i + 1}: missing required field {exc}',
-            )
-
-        if obj['hash'] != expected:
-            return ChainVerificationResult(
-                valid=False,
-                event_count=i,
-                error=(
-                    f'Line {i + 1}: hash mismatch for event '
-                    f'{obj.get("event_id", "?")} — content may have been tampered'
-                ),
-            )
-
-        # Verify HMAC when the event carries one and a key was provided.
-        if secret_key is not None and 'chain_hmac' in obj:
-            expected_hmac = compute_chain_hmac(obj['hash'], secret_key)
-            if obj['chain_hmac'] != expected_hmac:
-                return ChainVerificationResult(
-                    valid=False,
-                    event_count=i,
-                    error=(
-                        f'Line {i + 1}: HMAC mismatch for event '
-                        f'{obj.get("event_id", "?")} — signature does not match key'
-                    ),
-                )
-
-        prev_hash = obj['hash']
+        new_prev, error = _verify_single_event(
+            obj, prev_hash, i + 1, secret_key, strict, allow_legacy_reset
+        )
+        if error:
+            return ChainVerificationResult(valid=False, event_count=i, error=error)
+        prev_hash = new_prev if new_prev is not None else prev_hash
 
     return ChainVerificationResult(valid=True, event_count=len(lines))
+
+
+def _load_run_key(log_path: Path) -> bytes | None:
+    run_id = log_path.stem
+    safe_id = ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+    key_path = Path.home() / '.teaagent' / 'run-keys' / f'{safe_id}.key'
+    if not key_path.is_file():
+        return None
+    try:
+        key = key_path.read_bytes()
+        if len(key) == 32:
+            return key
+    except OSError as exc:
+        logger.warning(
+            'HMAC chain key could not be read from %s: %s — '
+            'proceeding without chain integrity verification',
+            key_path,
+            exc,
+        )
+    return None
 
 
 def last_chain_hash(log_path: Path) -> str:

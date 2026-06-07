@@ -58,6 +58,44 @@ DANGEROUS_CALLS = {
 logger = logging.getLogger(__name__)
 
 
+class DangerousPatternVisitor(ast.NodeVisitor):
+    def __init__(self, findings: list[SkillReviewFinding], file_path: Path):
+        self.findings = findings
+        self.file_path = file_path
+        self.imports_found: set[str] = set()
+        self.calls_found: set[str] = set()
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            module_name = alias.name.split('.')[0]
+            if module_name in DANGEROUS_IMPORTS:
+                self.imports_found.add(module_name)
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        if node.module:
+            module_name = node.module.split('.')[0]
+            if module_name in DANGEROUS_IMPORTS:
+                self.imports_found.add(module_name)
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        _check_dangerous_call(node, self.calls_found)
+        self.generic_visit(node)
+
+
+def _check_dangerous_call(node: ast.Call, calls_found: set[str]) -> None:
+    if isinstance(node.func, ast.Name):
+        func_name = node.func.id
+        if func_name in DANGEROUS_CALLS:
+            calls_found.add(func_name)
+    elif isinstance(node.func, ast.Attribute):
+        if isinstance(node.func.value, ast.Name):
+            full_name = f'{node.func.value.id}.{node.func.attr}'
+            if full_name in DANGEROUS_CALLS or node.func.attr in DANGEROUS_CALLS:
+                calls_found.add(full_name)
+
+
 @dataclass(frozen=True)
 class SkillReviewFinding:
     severity: str
@@ -74,10 +112,34 @@ class SkillReviewResult:
         return not any(finding.severity == 'error' for finding in self.findings)
 
 
+def _report_import_findings(
+    imports_found: set[str],
+    file_path: Path,
+) -> SkillReviewFinding | None:
+    if not imports_found:
+        return None
+    return SkillReviewFinding(
+        'warning',
+        f'Python file imports potentially dangerous modules: {", ".join(sorted(imports_found))}. '
+        'Review for network access, file operations, or code execution risks.',
+    )
+
+
+def _report_call_findings(
+    calls_found: set[str],
+) -> SkillReviewFinding | None:
+    if not calls_found:
+        return None
+    return SkillReviewFinding(
+        'warning',
+        f'Python file calls potentially dangerous functions: {", ".join(sorted(calls_found))}. '
+        'Review for dynamic code execution or system operation risks.',
+    )
+
+
 def _analyze_python_file_for_dangerous_patterns(
     file_path: Path,
 ) -> list[SkillReviewFinding]:
-    """Analyze Python files for dangerous imports and function calls using AST."""
     findings: list[SkillReviewFinding] = []
 
     try:
@@ -87,81 +149,22 @@ def _analyze_python_file_for_dangerous_patterns(
         logger.warning(f'Failed to parse {file_path}: {exc}')
         return findings
 
-    class DangerousPatternVisitor(ast.NodeVisitor):
-        def __init__(self, findings: list[SkillReviewFinding], file_path: Path):
-            self.findings = findings
-            self.file_path = file_path
-            self.imports_found: set[str] = set()
-            self.calls_found: set[str] = set()
-
-        def visit_Import(self, node: ast.Import) -> None:
-            for alias in node.names:
-                module_name = alias.name.split('.')[0]
-                if module_name in DANGEROUS_IMPORTS:
-                    self.imports_found.add(module_name)
-            self.generic_visit(node)
-
-        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-            if node.module:
-                module_name = node.module.split('.')[0]
-                if module_name in DANGEROUS_IMPORTS:
-                    self.imports_found.add(module_name)
-            self.generic_visit(node)
-
-        def visit_Call(self, node: ast.Call) -> None:
-            if isinstance(node.func, ast.Name):
-                func_name = node.func.id
-                if func_name in DANGEROUS_CALLS:
-                    self.calls_found.add(func_name)
-            elif isinstance(node.func, ast.Attribute):
-                # Handle calls like subprocess.run
-                if isinstance(node.func.value, ast.Name):
-                    full_name = f'{node.func.value.id}.{node.func.attr}'
-                    if (
-                        full_name in DANGEROUS_CALLS
-                        or node.func.attr in DANGEROUS_CALLS
-                    ):
-                        self.calls_found.add(full_name)
-            self.generic_visit(node)
-
     visitor = DangerousPatternVisitor(findings, file_path)
     visitor.visit(tree)
 
-    # Report findings
-    if visitor.imports_found:
-        findings.append(
-            SkillReviewFinding(
-                'warning',
-                f'Python file imports potentially dangerous modules: {", ".join(sorted(visitor.imports_found))}. '
-                'Review for network access, file operations, or code execution risks.',
-            )
-        )
+    import_finding = _report_import_findings(visitor.imports_found, file_path)
+    if import_finding is not None:
+        findings.append(import_finding)
 
-    if visitor.calls_found:
-        findings.append(
-            SkillReviewFinding(
-                'warning',
-                f'Python file calls potentially dangerous functions: {", ".join(sorted(visitor.calls_found))}. '
-                'Review for dynamic code execution or system operation risks.',
-            )
-        )
+    call_finding = _report_call_findings(visitor.calls_found)
+    if call_finding is not None:
+        findings.append(call_finding)
 
     return findings
 
 
-def review_skill(
-    skill_path: Path, *, max_skill_md_lines: int = 80
-) -> SkillReviewResult:
-    skill_file = skill_path / 'SKILL.md' if skill_path.is_dir() else skill_path
+def _check_skill_frontmatter(text: str, lines: list[str]) -> list[SkillReviewFinding]:
     findings: list[SkillReviewFinding] = []
-    if not skill_file.exists():
-        return SkillReviewResult(
-            skill_path=skill_file,
-            findings=[SkillReviewFinding('error', 'SKILL.md is missing')],
-        )
-
-    text = skill_file.read_text(encoding='utf-8')
-    lines = text.splitlines()
     if not lines or lines[0] != '---':
         findings.append(
             SkillReviewFinding('error', 'SKILL.md must start with YAML frontmatter')
@@ -174,6 +177,13 @@ def review_skill(
         findings.append(
             SkillReviewFinding('error', 'SKILL.md frontmatter must include description')
         )
+    return findings
+
+
+def _check_skill_content_patterns(
+    text: str, lines: list[str], max_skill_md_lines: int
+) -> list[SkillReviewFinding]:
+    findings: list[SkillReviewFinding] = []
     if len(lines) > max_skill_md_lines:
         findings.append(
             SkillReviewFinding(
@@ -206,17 +216,39 @@ def review_skill(
                 )
             )
             break
+    return findings
 
-    # AST-based analysis of Python files in skill directory
+
+def review_skill(
+    skill_path: Path, *, max_skill_md_lines: int = 80
+) -> SkillReviewResult:
+    skill_file = skill_path / 'SKILL.md' if skill_path.is_dir() else skill_path
+    findings: list[SkillReviewFinding] = []
+    if not skill_file.exists():
+        return SkillReviewResult(
+            skill_path=skill_file,
+            findings=[SkillReviewFinding('error', 'SKILL.md is missing')],
+        )
+
+    text = skill_file.read_text(encoding='utf-8')
+    lines = text.splitlines()
+    findings.extend(_check_skill_frontmatter(text, lines))
+    findings.extend(_check_skill_content_patterns(text, lines, max_skill_md_lines))
+
     if skill_path.is_dir():
-        for py_file in skill_path.rglob('*.py'):
-            # Skip the SKILL.md file itself if it got picked up
-            if py_file.name == 'SKILL.md':
-                continue
-            try:
-                py_findings = _analyze_python_file_for_dangerous_patterns(py_file)
-                findings.extend(py_findings)
-            except Exception as exc:
-                logger.warning(f'Error analyzing {py_file}: {exc}')
+        _analyze_skill_python_files(skill_path, findings)
 
     return SkillReviewResult(skill_path=skill_file, findings=findings)
+
+
+def _analyze_skill_python_files(
+    skill_path: Path, findings: list[SkillReviewFinding]
+) -> None:
+    for py_file in skill_path.rglob('*.py'):
+        if py_file.name == 'SKILL.md':
+            continue
+        try:
+            py_findings = _analyze_python_file_for_dangerous_patterns(py_file)
+            findings.extend(py_findings)
+        except Exception as exc:
+            logger.warning(f'Error analyzing {py_file}: {exc}')

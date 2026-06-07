@@ -87,8 +87,87 @@ class RunLatencyMetrics:
         }
 
 
+def _sample_llm_latency(
+    event_type: str,
+    created: datetime | None,
+    iteration_started: datetime | None,
+    metrics: RunLatencyMetrics,
+) -> datetime | None:
+    if (
+        event_type.startswith('tool_call_')
+        and event_type != 'tool_call_started'
+        and iteration_started is not None
+        and created is not None
+    ):
+        sample = _ms_between(iteration_started, created)
+        if sample is not None:
+            metrics.llm_latencies_ms.append(sample)
+        return None
+    return iteration_started
+
+
+def _record_tool_start(
+    event_type: str,
+    payload: dict[str, Any],
+    created: datetime | None,
+    tool_started: dict[str, datetime],
+) -> None:
+    if event_type != 'tool_call_started':
+        return
+    call_id = payload.get('call_id')
+    if isinstance(call_id, str) and created is not None:
+        tool_started[call_id] = created
+
+
+def _record_tool_latency(
+    event_type: str,
+    payload: dict[str, Any],
+    created: datetime | None,
+    tool_started: dict[str, datetime],
+    metrics: RunLatencyMetrics,
+) -> None:
+    if event_type not in {'tool_call_completed', 'tool_call_failed'}:
+        return
+    call_id = payload.get('call_id')
+    duration = payload.get('duration_ms')
+    if isinstance(duration, (int, float)):
+        metrics.tool_latencies_ms.append(float(duration))
+    elif isinstance(call_id, str) and call_id in tool_started:
+        sample = _ms_between(tool_started.pop(call_id), created)
+        if sample is not None:
+            metrics.tool_latencies_ms.append(sample)
+
+
+def _record_approval_pending(
+    event_type: str,
+    payload: dict[str, Any],
+    created: datetime | None,
+    approval_pending: dict[str, datetime],
+) -> None:
+    if event_type != 'tool_call_pending_approval':
+        return
+    call_id = payload.get('call_id')
+    if isinstance(call_id, str) and created is not None:
+        approval_pending[call_id] = created
+
+
+def _record_approval_latency(
+    event_type: str,
+    payload: dict[str, Any],
+    created: datetime | None,
+    approval_pending: dict[str, datetime],
+    metrics: RunLatencyMetrics,
+) -> None:
+    if event_type not in {'tool_call_approved', 'tool_call_denied'}:
+        return
+    call_id = payload.get('call_id')
+    if isinstance(call_id, str) and call_id in approval_pending:
+        sample = _ms_between(approval_pending.pop(call_id), created)
+        if sample is not None:
+            metrics.approval_latencies_ms.append(sample)
+
+
 def summarize_run_latencies(events: list[dict[str, Any]]) -> RunLatencyMetrics:
-    """Compute latency samples from paired audit events."""
     metrics = RunLatencyMetrics()
     tool_started: dict[str, datetime] = {}
     approval_pending: dict[str, datetime] = {}
@@ -111,46 +190,16 @@ def summarize_run_latencies(events: list[dict[str, Any]]) -> RunLatencyMetrics:
             iteration_started = created
             continue
 
-        if (
-            event_type.startswith('tool_call_')
-            and event_type != 'tool_call_started'
-            and iteration_started is not None
-            and created is not None
-        ):
-            sample = _ms_between(iteration_started, created)
-            if sample is not None:
-                metrics.llm_latencies_ms.append(sample)
-            iteration_started = None
+        iteration_started = _sample_llm_latency(
+            event_type, created, iteration_started, metrics
+        )
 
-        if event_type == 'tool_call_started':
-            call_id = payload.get('call_id')
-            if isinstance(call_id, str) and created is not None:
-                tool_started[call_id] = created
-            continue
-
-        if event_type in {'tool_call_completed', 'tool_call_failed'}:
-            call_id = payload.get('call_id')
-            duration = payload.get('duration_ms')
-            if isinstance(duration, (int, float)):
-                metrics.tool_latencies_ms.append(float(duration))
-            elif isinstance(call_id, str) and call_id in tool_started:
-                sample = _ms_between(tool_started.pop(call_id), created)
-                if sample is not None:
-                    metrics.tool_latencies_ms.append(sample)
-            continue
-
-        if event_type == 'tool_call_pending_approval':
-            call_id = payload.get('call_id')
-            if isinstance(call_id, str) and created is not None:
-                approval_pending[call_id] = created
-            continue
-
-        if event_type in {'tool_call_approved', 'tool_call_denied'}:
-            call_id = payload.get('call_id')
-            if isinstance(call_id, str) and call_id in approval_pending:
-                sample = _ms_between(approval_pending.pop(call_id), created)
-                if sample is not None:
-                    metrics.approval_latencies_ms.append(sample)
+        _record_tool_start(event_type, payload, created, tool_started)
+        _record_tool_latency(event_type, payload, created, tool_started, metrics)
+        _record_approval_pending(event_type, payload, created, approval_pending)
+        _record_approval_latency(
+            event_type, payload, created, approval_pending, metrics
+        )
 
     return metrics
 

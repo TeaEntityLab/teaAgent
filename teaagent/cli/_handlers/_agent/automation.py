@@ -588,10 +588,97 @@ def automation_serve_command(args: argparse.Namespace) -> int:
         signal.signal(signal.SIGTERM, old_term)
 
 
-def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
+def _resolve_automation_status(
+    bg: dict[str, Any],
+    spec: AutomationSpec,
+    root: str,
+    run_store: RunStore,
+    candidate_store: Any,
+    runtime_capped: bool,
+) -> dict[str, Any]:
+    from teaagent.automation_limits import cost_cap_exceeded
+
+    run_id = bg.get('run_id') if isinstance(bg.get('run_id'), str) else None
+    alive = bool(bg.get('alive'))
+    next_state: dict[str, Any] = {}
+    if run_id:
+        next_state['last_run_id'] = run_id
+        try:
+            heartbeat = run_store.heartbeat_for_run(run_id)
+            status = str(heartbeat.get('status', 'running'))
+        except FileNotFoundError:
+            status = 'running'
+        if runtime_capped and not alive:
+            next_state['last_status'] = 'runtime_cap_exceeded'
+        elif (
+            not alive
+            and status == 'completed'
+            and cost_cap_exceeded(root, spec, run_id=run_id)
+        ):
+            next_state['last_status'] = 'cost_cap_exceeded'
+        else:
+            next_state['last_status'] = status
+        _maybe_auto_propose_skill(spec, run_id, next_state, candidate_store)
+    if not alive:
+        next_state['running_background_id'] = None
+    return next_state
+
+
+def _maybe_auto_propose_skill(
+    spec: AutomationSpec,
+    run_id: str,
+    next_state: dict[str, Any],
+    candidate_store: Any,
+) -> None:
+    if (
+        spec.auto_propose_skill
+        and next_state.get('last_status') == 'completed'
+        and spec.last_run_id != run_id
+    ):
+        with contextlib.suppress(FileNotFoundError, ValueError):
+            candidate_store.create_from_run(
+                run_id=run_id,
+                name=f'{spec.name}-auto',
+                description=f'Auto-proposed from automation {spec.name}',
+            )
+
+
+def _deliver_handoff(
+    root: str,
+    spec: AutomationSpec,
+    bg: dict[str, Any],
+    alive: bool,
+    next_state: dict[str, Any],
+    refreshed: AutomationSpec,
+) -> None:
     from teaagent.automation_chain import persist_automation_handoff
     from teaagent.automation_delivery import deliver_automation_tick
-    from teaagent.automation_limits import cost_cap_exceeded, enforce_runtime_cap
+
+    log_path = bg.get('log_path')
+    log_tail = ''
+    if isinstance(log_path, str):
+        path = Path(log_path)
+        if path.is_file():
+            lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+            log_tail = '\n'.join(lines[-20:])
+    persist_automation_handoff(
+        root,
+        refreshed,
+        log_tail=log_tail,
+        summary=str(refreshed.last_status or ''),
+    )
+    if not alive:
+        deliver_automation_tick(
+            root,
+            refreshed,
+            status=str(refreshed.last_status or 'completed'),
+            log_tail=log_tail,
+            run_id=next_state.get('last_run_id'),
+        )
+
+
+def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
+    from teaagent.automation_limits import enforce_runtime_cap
     from teaagent.ergonomics.background_run import BackgroundRunStore
 
     bg_store = BackgroundRunStore(root)
@@ -617,63 +704,14 @@ def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
         )
         if runtime_capped:
             bg = bg_store.get(spec.running_background_id)
-        run_id = bg.get('run_id') if isinstance(bg.get('run_id'), str) else None
         alive = bool(bg.get('alive'))
-        next_state: dict[str, Any] = {}
-        if run_id:
-            next_state['last_run_id'] = run_id
-            try:
-                heartbeat = run_store.heartbeat_for_run(run_id)
-                status = str(heartbeat.get('status', 'running'))
-            except FileNotFoundError:
-                status = 'running'
-            if runtime_capped and not alive:
-                next_state['last_status'] = 'runtime_cap_exceeded'
-            elif (
-                not alive
-                and status == 'completed'
-                and cost_cap_exceeded(root, spec, run_id=run_id)
-            ):
-                next_state['last_status'] = 'cost_cap_exceeded'
-            else:
-                next_state['last_status'] = status
-            if (
-                spec.auto_propose_skill
-                and next_state['last_status'] == 'completed'
-                and spec.last_run_id != run_id
-            ):
-                with contextlib.suppress(FileNotFoundError, ValueError):
-                    candidate_store.create_from_run(
-                        run_id=run_id,
-                        name=f'{spec.name}-auto',
-                        description=f'Auto-proposed from automation {spec.name}',
-                    )
-        if not alive:
-            next_state['running_background_id'] = None
+        next_state = _resolve_automation_status(
+            bg, spec, root, run_store, candidate_store, runtime_capped
+        )
         refreshed = spec
         if next_state:
             refreshed = store.update(AutomationSpec(**{**spec.to_dict(), **next_state}))
-        log_tail = ''
-        log_path = bg.get('log_path')
-        if isinstance(log_path, str):
-            path = Path(log_path)
-            if path.is_file():
-                lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
-                log_tail = '\n'.join(lines[-20:])
-        persist_automation_handoff(
-            root,
-            refreshed,
-            log_tail=log_tail,
-            summary=str(refreshed.last_status or ''),
-        )
-        if not alive:
-            deliver_automation_tick(
-                root,
-                refreshed,
-                status=str(refreshed.last_status or 'completed'),
-                log_tail=log_tail,
-                run_id=run_id,
-            )
+        _deliver_handoff(root, spec, bg, alive, next_state, refreshed)
 
 
 def _automation_health(store: AutomationStore) -> dict[str, int]:

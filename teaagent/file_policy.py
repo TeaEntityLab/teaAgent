@@ -184,14 +184,58 @@ def _parse_scalar(value: str) -> Any:
         return value
 
 
-def _load_simple_policy_yaml(text: str) -> dict[str, Any]:
-    """Parse the small policy.yaml subset supported without PyYAML.
+def _parse_policy_line_level0(line: str, data: dict[str, Any]) -> None:
+    key, sep, value = line.partition(':')
+    if not sep:
+        raise ValueError('policy YAML line must contain ":"')
+    key = key.strip()
+    if key == 'rules' and not value.strip():
+        data[key] = []
+    else:
+        data[key] = _parse_scalar(value)
 
-    The project keeps runtime dependencies to the standard library. This parser
-    intentionally supports only the policy schema documented above: top-level
-    scalars plus a ``rules`` list of mappings with optional one-level
-    ``argument_pattern`` mappings.
-    """
+
+def _parse_policy_line_level2(
+    line: str, data: dict[str, Any]
+) -> tuple[dict[str, Any] | None, str | None]:
+    rule_data = line[2:].strip()
+    current_rule: dict[str, Any] = {}
+    data.setdefault('rules', []).append(current_rule)
+    if rule_data:
+        key, sep, value = rule_data.partition(':')
+        if not sep:
+            raise ValueError('policy rule line must contain ":"')
+        current_rule[key.strip()] = _parse_scalar(value)
+    return current_rule, None
+
+
+def _parse_policy_line_level4(line: str, current_rule: dict[str, Any]) -> str | None:
+    key, sep, value = line.partition(':')
+    if not sep:
+        raise ValueError('policy YAML line must contain ":"')
+    key = key.strip()
+    value = value.strip()
+    if value:
+        current_rule[key] = _parse_scalar(value)
+        return None
+    current_rule[key] = {}
+    return key
+
+
+def _parse_policy_line_level6(
+    line: str, current_rule: dict[str, Any], nested_key: str
+) -> None:
+    key, sep, value = line.partition(':')
+    if not sep:
+        raise ValueError('policy YAML line must contain ":"')
+    key = key.strip()
+    nested = current_rule.setdefault(nested_key, {})
+    if not isinstance(nested, dict):
+        raise ValueError(f'policy YAML key {nested_key!r} must be a mapping')
+    nested[key] = _parse_scalar(value)
+
+
+def _load_simple_policy_yaml(text: str) -> dict[str, Any]:
     data: dict[str, Any] = {}
     current_rule: Optional[dict[str, Any]] = None
     nested_key: Optional[str] = None
@@ -205,50 +249,22 @@ def _load_simple_policy_yaml(text: str) -> dict[str, Any]:
         if indent == 0:
             current_rule = None
             nested_key = None
-            key, sep, value = line.partition(':')
-            if not sep:
-                raise ValueError('policy YAML line must contain ":"')
-            key = key.strip()
-            if key == 'rules' and not value.strip():
-                data[key] = []
-            else:
-                data[key] = _parse_scalar(value)
+            _parse_policy_line_level0(line, data)
             continue
 
         if indent == 2 and line.startswith('- '):
-            rule_data = line[2:].strip()
-            current_rule = {}
-            nested_key = None
-            data.setdefault('rules', []).append(current_rule)
-            if rule_data:
-                key, sep, value = rule_data.partition(':')
-                if not sep:
-                    raise ValueError('policy rule line must contain ":"')
-                current_rule[key.strip()] = _parse_scalar(value)
+            current_rule, nested_key = _parse_policy_line_level2(line, data)
             continue
 
         if current_rule is None:
             raise ValueError('policy YAML nested value must appear under rules')
 
-        key, sep, value = line.partition(':')
-        if not sep:
-            raise ValueError('policy YAML line must contain ":"')
-        key = key.strip()
-        value = value.strip()
         if indent == 4:
-            if value:
-                current_rule[key] = _parse_scalar(value)
-                nested_key = None
-            else:
-                current_rule[key] = {}
-                nested_key = key
+            nested_key = _parse_policy_line_level4(line, current_rule)
             continue
 
         if indent == 6 and nested_key is not None:
-            nested = current_rule.setdefault(nested_key, {})
-            if not isinstance(nested, dict):
-                raise ValueError(f'policy YAML key {nested_key!r} must be a mapping')
-            nested[key] = _parse_scalar(value)
+            _parse_policy_line_level6(line, current_rule, nested_key)
             continue
 
         raise ValueError(f'unsupported policy YAML indentation: {indent}')

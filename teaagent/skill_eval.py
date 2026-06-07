@@ -238,27 +238,25 @@ def _output_matches_format(output: str, fmt: str) -> bool:
     return False
 
 
-def run_offline_eval(
+def _check_required_artifacts(
     candidate_dir: Path,
-    *,
-    max_skill_bytes: int = DEFAULT_MAX_SKILL_BYTES,
-    fixture_dir: Path | None = None,
-) -> EvalReport:
-    from teaagent.skill_eval_fixtures import (
-        get_default_eval_cases,
-        get_default_eval_fixtures,
-    )
-
-    checks: list[str] = []
-    failures: list[str] = []
-
+    checks: list[str],
+    failures: list[str],
+) -> None:
     checks.append('required_artifacts')
     artifact_errors = validate_candidate_artifacts(candidate_dir)
     if artifact_errors:
         failures.extend(artifact_errors)
 
-    skill_path = candidate_dir / 'SKILL.md'
+
+def _check_skill_size(
+    candidate_dir: Path,
+    max_skill_bytes: int,
+    checks: list[str],
+    failures: list[str],
+) -> None:
     checks.append('skill_size')
+    skill_path = candidate_dir / 'SKILL.md'
     if skill_path.is_file():
         size = skill_path.stat().st_size
         if size > max_skill_bytes:
@@ -268,13 +266,26 @@ def run_offline_eval(
     else:
         failures.append('missing SKILL.md')
 
+
+def _check_skill_review_file(
+    candidate_dir: Path,
+    checks: list[str],
+    failures: list[str],
+) -> None:
     checks.append('skill_review')
+    skill_path = candidate_dir / 'SKILL.md'
     if skill_path.is_file():
         review = review_skill(skill_path)
         for finding in review.findings:
             if finding.severity == 'error':
                 failures.append(finding.message)
 
+
+def _check_provenance_file(
+    candidate_dir: Path,
+    checks: list[str],
+    failures: list[str],
+) -> None:
     checks.append('provenance')
     provenance_path = candidate_dir / 'provenance.json'
     if provenance_path.is_file():
@@ -290,6 +301,12 @@ def run_offline_eval(
     else:
         failures.append('missing provenance.json')
 
+
+def _check_reference_file(
+    candidate_dir: Path,
+    checks: list[str],
+    failures: list[str],
+) -> None:
     checks.append('reference_nonempty')
     reference_path = candidate_dir / 'REFERENCE.md'
     if reference_path.is_file():
@@ -298,53 +315,55 @@ def run_offline_eval(
     else:
         failures.append('missing REFERENCE.md')
 
-    dataset_checks, dataset_failures = run_eval_dataset_checks(candidate_dir)
-    checks.extend(dataset_checks)
-    failures.extend(dataset_failures)
 
-    skill_md = skill_path.read_text(encoding='utf-8') if skill_path.is_file() else ''
-    adapter = FakeToolAdapter(skill_md)
+def _validate_eval_case(
+    case: Any,
+    output: str,
+) -> list[str]:
+    case_failures: list[str] = []
+    for title in case.expected_titles:
+        if title not in output:
+            case_failures.append(f'missing expected title: {title!r}')
+    if case.expected_row_count is not None:
+        actual_rows = len([ln for ln in output.split('\n') if ln.strip()])
+        if actual_rows != case.expected_row_count:
+            case_failures.append(
+                f'row count mismatch: expected {case.expected_row_count}, got {actual_rows}'
+            )
+    if case.expected_json:
+        try:
+            json.loads(output)
+        except json.JSONDecodeError:
+            case_failures.append('expected valid JSON but output is not parseable')
+    for pattern in case.reject_patterns:
+        if pattern.lower() in output.lower():
+            case_failures.append(f'output contains rejected pattern: {pattern!r}')
+    return case_failures
 
-    eval_cases = get_default_eval_cases()
-    fixtures = get_default_eval_fixtures()
-    fixture_map: dict[str, EvalFixture] = {f.name: f for f in fixtures}
 
+def _find_case_fixture(
+    case: Any,
+    fixture_map: dict[str, EvalFixture],
+) -> EvalFixture | None:
+    fixture = fixture_map.get(case.name)
+    if fixture is None:
+        for fname, ef in fixture_map.items():
+            if case.name.startswith(fname) or fname.startswith(case.name):
+                return ef
+    return fixture
+
+
+def _run_eval_cases(
+    eval_cases: list[Any],
+    fixture_map: dict[str, EvalFixture],
+    adapter: FakeToolAdapter,
+) -> list[EvalRunResult]:
     eval_results: list[EvalRunResult] = []
-
     for case in eval_cases:
-        case_failures: list[str] = []
-
-        fixture = fixture_map.get(case.name)
-        if fixture is None:
-            for fname, ef in fixture_map.items():
-                if case.name.startswith(fname) or fname.startswith(case.name):
-                    fixture = ef
-                    break
-
+        fixture = _find_case_fixture(case, fixture_map)
         fixture_content = fixture.content if fixture else ''
         output = adapter.run(case.input_text, fixture_content)
-
-        for title in case.expected_titles:
-            if title not in output:
-                case_failures.append(f'missing expected title: {title!r}')
-
-        if case.expected_row_count is not None:
-            actual_rows = len([ln for ln in output.split('\n') if ln.strip()])
-            if actual_rows != case.expected_row_count:
-                case_failures.append(
-                    f'row count mismatch: expected {case.expected_row_count}, got {actual_rows}'
-                )
-
-        if case.expected_json:
-            try:
-                json.loads(output)
-            except json.JSONDecodeError:
-                case_failures.append('expected valid JSON but output is not parseable')
-
-        for pattern in case.reject_patterns:
-            if pattern.lower() in output.lower():
-                case_failures.append(f'output contains rejected pattern: {pattern!r}')
-
+        case_failures = _validate_eval_case(case, output)
         passed = not case_failures
         eval_results.append(
             EvalRunResult(
@@ -354,13 +373,14 @@ def run_offline_eval(
                 output=output,
             )
         )
+    return eval_results
 
-    checks.append('fixture_validation')
 
-    skill_md_hash = (
-        hashlib.sha256(skill_md.encode('utf-8')).hexdigest() if skill_md else ''
-    )
-
+def _check_fixture_formats(
+    eval_results: list[EvalRunResult],
+    skill_md: str,
+    failures: list[str],
+) -> None:
     expected_formats = _detect_expected_formats(skill_md)
     if expected_formats:
         passing_outputs = [r.output for r in eval_results if r.passed]
@@ -370,6 +390,48 @@ def run_offline_eval(
                     f'output does not reflect SKILL.md format requirements: '
                     f"'{fmt_name}' format expected but not found in any passing case output"
                 )
+
+
+def run_offline_eval(
+    candidate_dir: Path,
+    *,
+    max_skill_bytes: int = DEFAULT_MAX_SKILL_BYTES,
+    fixture_dir: Path | None = None,
+) -> EvalReport:
+    from teaagent.skill_eval_fixtures import (
+        get_default_eval_cases,
+        get_default_eval_fixtures,
+    )
+
+    checks: list[str] = []
+    failures: list[str] = []
+
+    _check_required_artifacts(candidate_dir, checks, failures)
+    _check_skill_size(candidate_dir, max_skill_bytes, checks, failures)
+    _check_skill_review_file(candidate_dir, checks, failures)
+    _check_provenance_file(candidate_dir, checks, failures)
+    _check_reference_file(candidate_dir, checks, failures)
+
+    dataset_checks, dataset_failures = run_eval_dataset_checks(candidate_dir)
+    checks.extend(dataset_checks)
+    failures.extend(dataset_failures)
+
+    skill_path = candidate_dir / 'SKILL.md'
+    skill_md = skill_path.read_text(encoding='utf-8') if skill_path.is_file() else ''
+    adapter = FakeToolAdapter(skill_md)
+
+    eval_cases = get_default_eval_cases()
+    fixtures = get_default_eval_fixtures()
+    fixture_map: dict[str, EvalFixture] = {f.name: f for f in fixtures}
+
+    eval_results = _run_eval_cases(eval_cases, fixture_map, adapter)
+
+    checks.append('fixture_validation')
+    _check_fixture_formats(eval_results, skill_md, failures)
+
+    skill_md_hash = (
+        hashlib.sha256(skill_md.encode('utf-8')).hexdigest() if skill_md else ''
+    )
 
     content_digest = ''
     if not failures:

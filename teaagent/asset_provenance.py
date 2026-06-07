@@ -111,6 +111,91 @@ def _revocation_status_for_skill(
     return 'unknown'
 
 
+def _collect_skill_records(
+    skill_activation: Any,
+    lifecycle_tracker: Any,
+) -> list[ProvenanceRecord]:
+    from teaagent.skill_loader import SkillActivationExplain
+
+    records: list[ProvenanceRecord] = []
+    if not isinstance(skill_activation, SkillActivationExplain):
+        return records
+
+    shadow_map: dict[str, list[str]] = {}
+    for shadow in skill_activation.shadowed:
+        shadow_map.setdefault(shadow.name, []).append(str(shadow.shadowed_path))
+
+    for loaded in skill_activation.loaded:
+        lifecycle_state = loaded.lifecycle_state
+        if lifecycle_tracker is not None:
+            try:
+                current = lifecycle_tracker.current_state(loaded.name)
+                if current != 'unknown':
+                    lifecycle_state = current
+            except Exception:
+                pass
+
+        records.append(
+            ProvenanceRecord(
+                asset_type='skill',
+                name=loaded.name,
+                source_path=str(loaded.path),
+                governance_status=loaded.governance_status,
+                activation_status=lifecycle_state,
+                revocation_status=_revocation_status_for_skill(
+                    loaded.name, lifecycle_state
+                ),
+                shadowed_paths=shadow_map.get(loaded.name, []),
+            )
+        )
+    return records
+
+
+def _collect_mcp_records(
+    mcp_servers: list[dict[str, Any]],
+) -> list[ProvenanceRecord]:
+    records: list[ProvenanceRecord] = []
+    for server in mcp_servers:
+        name = server.get('name', '')
+        endpoint = server.get('endpoint', '')
+        source_path = server.get('source_path', endpoint)
+        status = server.get('status', 'unknown')
+        activation_status = _mcp_activation_status(status)
+        revocation_status = _mcp_revocation_status(status)
+        records.append(
+            ProvenanceRecord(
+                asset_type='mcp_server',
+                name=name,
+                source_path=source_path,
+                governance_status='remote'
+                if endpoint.startswith(('http://', 'https://'))
+                else 'local',
+                activation_status=activation_status,
+                revocation_status=revocation_status,
+                shadowed_paths=[],
+            )
+        )
+    return records
+
+
+def _mcp_activation_status(status: str) -> str:
+    if status == 'connected':
+        return 'connected'
+    if status == 'disconnected':
+        return 'disconnected'
+    if status == 'failed':
+        return 'failed'
+    return status
+
+
+def _mcp_revocation_status(status: str) -> RevocationStatus:
+    if status in ('connected', 'initializing'):
+        return 'active'
+    if status in ('failed', 'revoked', 'disconnected'):
+        return 'revoked'
+    return 'unknown'
+
+
 def collect_provenance(
     root: str | Path,
     *,
@@ -118,105 +203,12 @@ def collect_provenance(
     mcp_servers: Optional[list[dict[str, Any]]] = None,
     lifecycle_tracker: Any | None = None,
 ) -> AssetProvenanceBundle:
-    """Collect provenance snapshot for currently loaded skills and MCP servers.
-
-    Parameters
-    ----------
-    root:
-        Workspace root path.
-    skill_activation:
-        Optional :class:`~teaagent.skill_loader.SkillActivationExplain`
-        from a prior call to
-        :func:`~teaagent.skill_loader.explain_skill_activation`.
-        When ``None``, no skill records are included.
-    mcp_servers:
-        Optional list of MCP server descriptors. Each dict may contain
-        ``name``, ``endpoint``, ``status``, and ``source_path`` keys.
-    lifecycle_tracker:
-        Optional :class:`~teaagent.skill_lifecycle.SkillLifecycleTracker`
-        used to resolve current lifecycle states. When ``None``,
-        lifecycle_state defaults to ``unknown``.
-
-    Returns
-    -------
-    AssetProvenanceBundle
-        Snapshot of all discovered provenance records.
-    """
     records: list[ProvenanceRecord] = []
 
-    # --- Skills ------------------------------------------------------------
     if skill_activation is not None:
-        from teaagent.skill_loader import SkillActivationExplain
+        records.extend(_collect_skill_records(skill_activation, lifecycle_tracker))
 
-        if isinstance(skill_activation, SkillActivationExplain):
-            shadow_map: dict[str, list[str]] = {}
-            for shadow in skill_activation.shadowed:
-                shadow_map.setdefault(shadow.name, []).append(str(shadow.shadowed_path))
-
-            for loaded in skill_activation.loaded:
-                lifecycle_state = loaded.lifecycle_state
-                if lifecycle_tracker is not None:
-                    try:
-                        current = lifecycle_tracker.current_state(loaded.name)
-                        if current != 'unknown':
-                            lifecycle_state = current
-                    except Exception:
-                        pass
-
-                records.append(
-                    ProvenanceRecord(
-                        asset_type='skill',
-                        name=loaded.name,
-                        source_path=str(loaded.path),
-                        governance_status=loaded.governance_status,
-                        activation_status=lifecycle_state,
-                        revocation_status=_revocation_status_for_skill(
-                            loaded.name, lifecycle_state
-                        ),
-                        shadowed_paths=shadow_map.get(loaded.name, []),
-                    )
-                )
-
-    # --- MCP servers -------------------------------------------------------
     if mcp_servers is not None:
-        for server in mcp_servers:
-            name = server.get('name', '')
-            endpoint = server.get('endpoint', '')
-            source_path = server.get('source_path', endpoint)
-            status = server.get('status', 'unknown')
-
-            # Map connection status to activation_status
-            activation_status: str = 'unknown'
-            if status == 'connected':
-                activation_status = 'connected'
-            elif status == 'disconnected':
-                activation_status = 'disconnected'
-            elif status == 'failed':
-                activation_status = 'failed'
-            else:
-                activation_status = status
-
-            # Revocation status for MCP servers
-            revocation_status: RevocationStatus
-            if status in ('connected', 'initializing'):
-                revocation_status = 'active'
-            elif status in ('failed', 'revoked', 'disconnected'):
-                revocation_status = 'revoked'
-            else:
-                revocation_status = 'unknown'
-
-            records.append(
-                ProvenanceRecord(
-                    asset_type='mcp_server',
-                    name=name,
-                    source_path=source_path,
-                    governance_status='remote'
-                    if endpoint.startswith(('http://', 'https://'))
-                    else 'local',
-                    activation_status=activation_status,
-                    revocation_status=revocation_status,
-                    shadowed_paths=[],
-                )
-            )
+        records.extend(_collect_mcp_records(mcp_servers))
 
     return AssetProvenanceBundle(records=records)

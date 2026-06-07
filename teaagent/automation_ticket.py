@@ -237,6 +237,101 @@ def compose_self_contained_automation_task(
     return '\n'.join(lines)
 
 
+def _validate_skills_selection(
+    spec: AutomationSpec,
+    root: str,
+    errors: list[str],
+) -> tuple[list[str], int, int]:
+    index = discover_skill_index(root)
+    index_names = {entry.name for entry in index}
+    selected = list(spec.selected_skills)
+    unknown = [name for name in selected if name not in index_names]
+    if unknown:
+        errors.append(
+            'unknown selected_skills: '
+            + ', '.join(unknown)
+            + f'; available: {", ".join(sorted(index_names)) or "(none)"}'
+        )
+    selected_set = frozenset(selected)
+    skill_report = load_skills_with_report(root, selected_names=selected_set)
+    estimated_tokens = estimate_skill_prompt_tokens(skill_report.skills)
+    if selected_set and not skill_report.skills:
+        errors.append('selected_skills did not load any skill content')
+    return selected, len(index), estimated_tokens
+
+
+def _validate_toolsets(spec: AutomationSpec, errors: list[str]) -> list[str]:
+    allowed_toolsets = list(resolve_allowed_toolsets(spec))
+    unknown_toolsets = [
+        name for name in spec.allowed_toolsets if name not in KNOWN_TOOLSETS
+    ]
+    if unknown_toolsets:
+        errors.append(
+            'unknown allowed_toolsets: '
+            + ', '.join(unknown_toolsets)
+            + f'; known: {", ".join(sorted(KNOWN_TOOLSETS))}'
+        )
+    return allowed_toolsets
+
+
+def _validate_budget_limits(spec: AutomationSpec, errors: list[str]) -> None:
+    if spec.max_cost_cents < 0:
+        errors.append('max_cost_cents must be >= 0')
+    if spec.max_runtime_seconds < 0:
+        errors.append('max_runtime_seconds must be >= 0')
+
+
+def _validate_delivery_mode(
+    spec: AutomationSpec,
+    root: str,
+    errors: list[str],
+    warnings: list[str],
+) -> str:
+    delivery = spec.delivery.strip() or 'background_log'
+    if delivery not in ALLOWED_DELIVERY_MODES:
+        errors.append(
+            f'delivery must be one of {", ".join(sorted(ALLOWED_DELIVERY_MODES))}'
+        )
+    if delivery == 'webhook' and not resolve_automation_webhook_url(root):
+        errors.append(
+            'delivery=webhook requires automation_webhook_url in '
+            '.teaagent/config.toml or TEAAGENT_AUTOMATION_WEBHOOK_URL'
+        )
+    if (
+        delivery == 'webhook'
+        and resolve_automation_webhook_url(root)
+        and not resolve_automation_webhook_secret(root)
+    ):
+        warnings.append(
+            'delivery=webhook has no automation_webhook_secret; '
+            'set TEAAGENT_AUTOMATION_WEBHOOK_SECRET for HMAC verification'
+        )
+    return delivery
+
+
+def _resolve_context_handoff(
+    spec: AutomationSpec,
+    root: str,
+    warnings: list[str],
+) -> str:
+    upstream_handoff_preview = ''
+    if not spec.context_from.strip():
+        return upstream_handoff_preview
+    from teaagent.automation_chain import load_automation_handoff
+
+    handoff = load_automation_handoff(root, spec.context_from.strip())
+    if handoff is None:
+        warnings.append(
+            f'context_from {spec.context_from.strip()} has no handoff file yet; '
+            'run the upstream automation once before the downstream tick'
+        )
+    else:
+        from teaagent.automation_chain import handoff_preview
+
+        upstream_handoff_preview = handoff_preview(handoff)
+    return upstream_handoff_preview
+
+
 def validate_automation_spec(
     spec: AutomationSpec,
     *,
@@ -273,77 +368,24 @@ def validate_automation_spec(
             'collector_command_digest does not match the current collector script'
         )
 
-    index = discover_skill_index(root)
-    index_names = {entry.name for entry in index}
-    selected = list(spec.selected_skills)
-    unknown = [name for name in selected if name not in index_names]
-    if unknown:
-        errors.append(
-            'unknown selected_skills: '
-            + ', '.join(unknown)
-            + f'; available: {", ".join(sorted(index_names)) or "(none)"}'
-        )
+    selected, index_count, estimated_tokens = _validate_skills_selection(
+        spec, root, errors
+    )
 
-    selected_set = frozenset(selected)
-    skill_report = load_skills_with_report(root, selected_names=selected_set)
-    estimated_tokens = estimate_skill_prompt_tokens(skill_report.skills)
+    allowed_toolsets = _validate_toolsets(spec, errors)
 
-    if selected_set and not skill_report.skills:
-        errors.append('selected_skills did not load any skill content')
+    _validate_budget_limits(spec, errors)
 
-    allowed_toolsets = list(resolve_allowed_toolsets(spec))
-    unknown_toolsets = [
-        name for name in spec.allowed_toolsets if name not in KNOWN_TOOLSETS
-    ]
-    if unknown_toolsets:
-        errors.append(
-            'unknown allowed_toolsets: '
-            + ', '.join(unknown_toolsets)
-            + f'; known: {", ".join(sorted(KNOWN_TOOLSETS))}'
-        )
-    if spec.max_cost_cents < 0:
-        errors.append('max_cost_cents must be >= 0')
-    if spec.max_runtime_seconds < 0:
-        errors.append('max_runtime_seconds must be >= 0')
-    delivery = spec.delivery.strip() or 'background_log'
-    if delivery not in ALLOWED_DELIVERY_MODES:
-        errors.append(
-            f'delivery must be one of {", ".join(sorted(ALLOWED_DELIVERY_MODES))}'
-        )
-    if delivery == 'webhook' and not resolve_automation_webhook_url(root):
-        errors.append(
-            'delivery=webhook requires automation_webhook_url in '
-            '.teaagent/config.toml or TEAAGENT_AUTOMATION_WEBHOOK_URL'
-        )
-    if (
-        delivery == 'webhook'
-        and resolve_automation_webhook_url(root)
-        and not resolve_automation_webhook_secret(root)
-    ):
-        warnings.append(
-            'delivery=webhook has no automation_webhook_secret; '
-            'set TEAAGENT_AUTOMATION_WEBHOOK_SECRET for HMAC verification'
-        )
+    delivery = _validate_delivery_mode(spec, root, errors, warnings)
+
     if spec.requires_subagent:
         warnings.append(
             'requires_subagent enables the subagent tool on automation agent ticks '
             '(max depth 1)'
         )
     errors.extend(validate_context_from(spec, root=root, store=AutomationStore(root)))
-    upstream_handoff_preview = ''
-    if spec.context_from.strip():
-        from teaagent.automation_chain import load_automation_handoff
+    upstream_handoff_preview = _resolve_context_handoff(spec, root, warnings)
 
-        handoff = load_automation_handoff(root, spec.context_from.strip())
-        if handoff is None:
-            warnings.append(
-                f'context_from {spec.context_from.strip()} has no handoff file yet; '
-                'run the upstream automation once before the downstream tick'
-            )
-        else:
-            from teaagent.automation_chain import handoff_preview
-
-            upstream_handoff_preview = handoff_preview(handoff)
     if not spec.max_cost_cents:
         warnings.append(
             'max_cost_cents is unset; add --max-cost-cents to cap spend per tick'
@@ -363,7 +405,7 @@ def validate_automation_spec(
         errors=errors,
         warnings=warnings,
         selected_skills=selected,
-        skill_index_count=len(index),
+        skill_index_count=index_count,
         estimated_skill_tokens=estimated_tokens,
         permission_mode=spec.permission_mode,
         context_profile=spec.context_profile,

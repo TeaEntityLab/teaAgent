@@ -440,139 +440,154 @@ class TSBVerifier:
         identity: str | None = None,
         issuer: str | None = None,
     ) -> tuple[bool, str]:
-        """Verify TSB integrity and attestation.
-
-        Args:
-            verify_signature: Whether to verify cryptographic signature.
-            skip_audit_verification: Skip audit chain verification (for testing).
-            allow_unsigned: Allow unsigned bundles (unsafe for production).
-            identity: Optional OIDC identity to enforce (e.g., email).
-            issuer: Optional OIDC issuer to enforce (e.g., "https://accounts.google.com").
-
-        Returns:
-            Tuple of (is_valid, error_message).
-        """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
+            ok, err = self._extract_tsb_safe(tmp_path)
+            if not ok:
+                return False, err
 
-            # Extract tarball with path traversal protection
-            try:
-                with tarfile.open(self._tsb_path, 'r:gz') as tar:
-                    # Use data_filter to prevent path traversal attacks (CVE-2007-4559, CVE-2025-4517)
-                    # Python 3.12+ supports filter='data', fallback to members-only extraction for older versions
-                    if hasattr(tarfile, 'data_filter'):
-                        tar.extractall(tmp_path, filter='data')
-                    else:
-                        # Fallback: extract members individually with path validation
-                        for member in tar.getmembers():
-                            # Prevent absolute path and parent directory traversal
-                            if member.name.startswith('/') or '..' in member.name.split(
-                                '/'
-                            ):
-                                return (
-                                    False,
-                                    f'Path traversal attempt detected: {member.name}',
-                                )
-                            tar.extract(member, tmp_path)
-            except (tarfile.TarError, OSError, ValueError) as exc:
-                logger.warning('Failed to extract TSB: %s', exc)
-                return False, f'Failed to extract TSB: {exc}'
+            manifest_data, err = self._read_manifest(tmp_path)
+            if manifest_data is None:
+                return False, err
 
-            # Read manifest
-            manifest_path = tmp_path / 'manifest.json'
-            if not manifest_path.exists():
-                return False, 'Manifest not found in TSB'
+            ok, err = self._verify_tsb_bundle_hash(tmp_path, manifest_data)
+            if not ok:
+                return False, err
 
-            try:
-                manifest_data = json.loads(manifest_path.read_text(encoding='utf-8'))
-            except json.JSONDecodeError as exc:
-                return False, f'Invalid manifest JSON: {exc}'
+            ok, err = self._verify_tsb_audit(
+                tmp_path, manifest_data, skip_audit_verification
+            )
+            if not ok:
+                return False, err
 
-            # Verify bundle hash (hash of skill files and audit only, excluding manifest)
-            # Use sorted iteration for deterministic hash across platforms
-            # Include relative paths in hash to prevent structural tampering (TSB v1.1)
-            bundle_hash_obj = hashlib.sha256()
-            skill_path = tmp_path / 'skill'
-            if skill_path.exists():
-                skill_files = sorted(skill_path.rglob('*'), key=lambda p: str(p))
-                for file_path in skill_files:
-                    if file_path.is_file():
-                        # Include relative path in hash to prevent file renaming attacks
-                        rel_path = str(file_path.relative_to(skill_path))
-                        bundle_hash_obj.update(rel_path.encode('utf-8'))
-                        bundle_hash_obj.update(file_path.read_bytes())
-            audit_path = tmp_path / 'audit.jsonl'
-            if audit_path.exists():
-                bundle_hash_obj.update(audit_path.read_bytes())
-            bundle_hash = bundle_hash_obj.hexdigest()
-
-            attestation = manifest_data.get('attestation', {})
-            if attestation.get('bundle_hash') != bundle_hash:
-                return (
-                    False,
-                    f'Bundle hash mismatch: expected {attestation.get("bundle_hash")}, got {bundle_hash}',
-                )
-
-            # Verify audit chain
-            audit_path = tmp_path / 'audit.jsonl'
-            if audit_path.exists() and not skip_audit_verification:
-                verification = verify_audit_chain(audit_path)
-                if not verification.valid:
-                    return (
-                        False,
-                        f'Audit chain verification failed: {verification.error}',
-                    )
-
-                # Verify audit hash
-                audit_hash = hashlib.sha256(audit_path.read_bytes()).hexdigest()
-                if attestation.get('audit_chain_hash') != audit_hash:
-                    return (
-                        False,
-                        f'Audit hash mismatch: expected {attestation.get("audit_chain_hash")}, got {audit_hash}',
-                    )
-
-            # Verify signature if requested
             if verify_signature:
-                # Require signature when verification is enabled, unless allow_unsigned is set
-                if not attestation.get('author_signature'):
-                    if allow_unsigned:
-                        # Allow unsigned bundles in development mode
-                        return (
-                            True,
-                            'TSB verification successful (unsigned bundle allowed in development mode)',
-                        )
-                    else:
-                        return (
-                            False,
-                            'Signature verification requested but bundle is unsigned. Use allow_unsigned=True for development (unsafe for production).',
-                        )
-
-                # Use TSBProvenanceVerifier for verification if available
-                if SIGSTORE_AVAILABLE:
-                    try:
-                        verifier = TSBProvenanceVerifier(
-                            require_signature=True,
-                            identity=identity,  # Optional: enforce specific email
-                            issuer=issuer,  # Optional: enforce specific OIDC issuer
-                            offline=self._offline,  # Offline mode for air-gapped environments
-                        )
-                        is_valid, message = verifier.verify_provenance(
-                            self._tsb_path, manifest_data
-                        )
-                        if not is_valid:
-                            return False, f'Provenance verification failed: {message}'
-                    except (ImportError, ValueError, TypeError, OSError) as exc:
-                        logger.warning('Provenance verifier error: %s', exc)
-                        return False, f'Provenance verifier error: {exc}'
-                else:
-                    # Fallback: sigstore not available, cannot verify signatures securely
-                    # Fail closed for security - don't accept unverified signatures
-                    return (
-                        False,
-                        'Signature verification requires sigstore-python. Install with: pip install sigstore',
-                    )
+                ok, err = self._verify_tsb_signature(
+                    manifest_data, allow_unsigned, identity, issuer
+                )
+                if not ok:
+                    return False, err
 
             return True, 'TSB verification successful'
+
+    def _extract_tsb_safe(self, tmp_path: Path) -> tuple[bool, str]:
+        try:
+            with tarfile.open(self._tsb_path, 'r:gz') as tar:
+                if hasattr(tarfile, 'data_filter'):
+                    tar.extractall(tmp_path, filter='data')
+                else:
+                    for member in tar.getmembers():
+                        if member.name.startswith('/') or '..' in member.name.split(
+                            '/'
+                        ):
+                            return (
+                                False,
+                                f'Path traversal attempt detected: {member.name}',
+                            )
+                        tar.extract(member, tmp_path)
+        except (tarfile.TarError, OSError, ValueError) as exc:
+            logger.warning('Failed to extract TSB: %s', exc)
+            return False, f'Failed to extract TSB: {exc}'
+        return True, ''
+
+    def _read_manifest(self, tmp_path: Path) -> tuple[dict[str, Any] | None, str]:
+        manifest_path = tmp_path / 'manifest.json'
+        if not manifest_path.exists():
+            return None, 'Manifest not found in TSB'
+        try:
+            manifest_data = json.loads(manifest_path.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as exc:
+            return None, f'Invalid manifest JSON: {exc}'
+        return manifest_data, ''
+
+    def _verify_tsb_bundle_hash(
+        self, tmp_path: Path, manifest_data: dict[str, Any]
+    ) -> tuple[bool, str]:
+        bundle_hash_obj = hashlib.sha256()
+        skill_path = tmp_path / 'skill'
+        if skill_path.exists():
+            skill_files = sorted(skill_path.rglob('*'), key=lambda p: str(p))
+            for file_path in skill_files:
+                if file_path.is_file():
+                    rel_path = str(file_path.relative_to(skill_path))
+                    bundle_hash_obj.update(rel_path.encode('utf-8'))
+                    bundle_hash_obj.update(file_path.read_bytes())
+        audit_path = tmp_path / 'audit.jsonl'
+        if audit_path.exists():
+            bundle_hash_obj.update(audit_path.read_bytes())
+        bundle_hash = bundle_hash_obj.hexdigest()
+
+        attestation = manifest_data.get('attestation', {})
+        if attestation.get('bundle_hash') != bundle_hash:
+            return (
+                False,
+                f'Bundle hash mismatch: expected {attestation.get("bundle_hash")}, got {bundle_hash}',
+            )
+        return True, ''
+
+    def _verify_tsb_audit(
+        self,
+        tmp_path: Path,
+        manifest_data: dict[str, Any],
+        skip_audit_verification: bool,
+    ) -> tuple[bool, str]:
+        audit_path = tmp_path / 'audit.jsonl'
+        if not audit_path.exists() or skip_audit_verification:
+            return True, ''
+
+        verification = verify_audit_chain(audit_path)
+        if not verification.valid:
+            return False, f'Audit chain verification failed: {verification.error}'
+
+        attestation = manifest_data.get('attestation', {})
+        audit_hash = hashlib.sha256(audit_path.read_bytes()).hexdigest()
+        if attestation.get('audit_chain_hash') != audit_hash:
+            return (
+                False,
+                f'Audit hash mismatch: expected {attestation.get("audit_chain_hash")}, got {audit_hash}',
+            )
+        return True, ''
+
+    def _verify_tsb_signature(
+        self,
+        manifest_data: dict[str, Any],
+        allow_unsigned: bool,
+        identity: str | None,
+        issuer: str | None,
+    ) -> tuple[bool, str]:
+        attestation = manifest_data.get('attestation', {})
+        if not attestation.get('author_signature'):
+            if allow_unsigned:
+                return (
+                    True,
+                    'TSB verification successful (unsigned bundle allowed in development mode)',
+                )
+            return (
+                False,
+                'Signature verification requested but bundle is unsigned. Use allow_unsigned=True for development (unsafe for production).',
+            )
+
+        if SIGSTORE_AVAILABLE:
+            try:
+                verifier = TSBProvenanceVerifier(
+                    require_signature=True,
+                    identity=identity,
+                    issuer=issuer,
+                    offline=self._offline,
+                )
+                is_valid, message = verifier.verify_provenance(
+                    self._tsb_path, manifest_data
+                )
+                if not is_valid:
+                    return False, f'Provenance verification failed: {message}'
+            except (ImportError, ValueError, TypeError, OSError) as exc:
+                logger.warning('Provenance verifier error: %s', exc)
+                return False, f'Provenance verifier error: {exc}'
+        else:
+            return (
+                False,
+                'Signature verification requires sigstore-python. Install with: pip install sigstore',
+            )
+        return True, ''
 
     def extract_skill(self, output_path: Path) -> None:
         """Extract skill files from TSB.

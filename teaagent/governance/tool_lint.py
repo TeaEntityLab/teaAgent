@@ -70,8 +70,80 @@ def _check_write_keywords_in_text(text: str) -> list[str]:
     return check_write_keywords_in_text(text)
 
 
+_SUBPROCESS_METHODS = frozenset({'run', 'call', 'Popen', 'check_output', 'check_call'})
+_OS_METHODS = frozenset(
+    {
+        'system',
+        'popen',
+        'remove',
+        'unlink',
+        'rename',
+        'replace',
+        'mkdir',
+        'makedirs',
+        'rmdir',
+    }
+)
+_SHUTIL_METHODS = frozenset({'rmtree', 'move', 'copy', 'copy2', 'copyfile'})
+_WRITE_METHODS = frozenset(
+    {
+        'write',
+        'save',
+        'create',
+        'delete',
+        'remove',
+        'update',
+        'edit',
+        'append',
+        'overwrite',
+    }
+)
+_DANGEROUS_FUNCS = frozenset(
+    {'open', 'mkdir', 'remove', 'rmdir', 'unlink', 'eval', 'exec', 'compile'}
+)
+_DYNAMIC_EVAL = frozenset({'eval', 'exec', 'compile'})
+
+
+def _check_ast_attribute_call(mod_id: str, attr: str, node: ast.Call) -> list[str]:
+    write_operations: list[str] = []
+    if mod_id == 'subprocess' and attr in _SUBPROCESS_METHODS:
+        write_operations.append(f'subprocess.{attr}()')
+        if node.args and isinstance(node.args[0], (ast.Constant, ast.JoinedStr)):
+            write_operations.append(f'subprocess.{attr}(string_cmd)')
+    elif mod_id == 'os' and attr in _OS_METHODS:
+        write_operations.append(f'os.{attr}()')
+        if (
+            attr == 'system'
+            and node.args
+            and isinstance(node.args[0], (ast.Constant, ast.JoinedStr))
+        ):
+            write_operations.append('os.system(string_cmd)')
+    elif mod_id == 'shutil' and attr in _SHUTIL_METHODS:
+        write_operations.append(f'shutil.{attr}()')
+    elif attr in _WRITE_METHODS:
+        write_operations.append(f'{attr}()')
+    return write_operations
+
+
+def _check_ast_call_node(node: ast.Call) -> list[str]:
+    write_operations: list[str] = []
+    if isinstance(node.func, ast.Attribute):
+        if isinstance(node.func.value, ast.Name):
+            write_operations.extend(
+                _check_ast_attribute_call(node.func.value.id, node.func.attr, node)
+            )
+    elif isinstance(node.func, ast.Name) and node.func.id in _DANGEROUS_FUNCS:
+        write_operations.append(f'{node.func.id}()')
+        if (
+            node.func.id in _DYNAMIC_EVAL
+            and node.args
+            and not isinstance(node.args[0], ast.Constant)
+        ):
+            write_operations.append(f'{node.func.id}(dynamic)')
+    return write_operations
+
+
 def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
-    """AST-check handler source for write-like operations when marked read_only."""
     if not is_read_only:
         return []
 
@@ -79,105 +151,11 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
     try:
         tree = ast.parse(handler_code)
         for node in ast.walk(tree):
-            # Check for function calls that might write
             if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Attribute):
-                    # Check for subprocess module calls
-                    if (
-                        isinstance(node.func.value, ast.Name)
-                        and node.func.value.id == 'subprocess'
-                        and node.func.attr
-                        in {
-                            'run',
-                            'call',
-                            'Popen',
-                            'check_output',
-                            'check_call',
-                        }
-                    ):
-                        write_operations.append(f'subprocess.{node.func.attr}()')
-                        # Check for subprocess with string commands (bypass surface)
-                        if node.args and isinstance(
-                            node.args[0], (ast.Constant, ast.JoinedStr)
-                        ):
-                            write_operations.append(
-                                f'subprocess.{node.func.attr}(string_cmd)'
-                            )
-                    # Check for os module calls
-                    elif (
-                        isinstance(node.func.value, ast.Name)
-                        and node.func.value.id == 'os'
-                        and node.func.attr
-                        in {
-                            'system',
-                            'popen',
-                            'remove',
-                            'unlink',
-                            'rename',
-                            'replace',
-                            'mkdir',
-                            'makedirs',
-                            'rmdir',
-                        }
-                    ):
-                        write_operations.append(f'os.{node.func.attr}()')
-                        # Check for os.system with string commands (bypass surface)
-                        if (
-                            node.func.attr == 'system'
-                            and node.args
-                            and isinstance(node.args[0], (ast.Constant, ast.JoinedStr))
-                        ):
-                            write_operations.append('os.system(string_cmd)')
-                    # Check for shutil module calls
-                    elif (
-                        isinstance(node.func.value, ast.Name)
-                        and node.func.value.id == 'shutil'
-                        and node.func.attr
-                        in {
-                            'rmtree',
-                            'move',
-                            'copy',
-                            'copy2',
-                            'copyfile',
-                        }
-                    ):
-                        write_operations.append(f'shutil.{node.func.attr}()')
-                    # Generic attribute check for write-like method calls
-                    elif node.func.attr in {
-                        'write',
-                        'save',
-                        'create',
-                        'delete',
-                        'remove',
-                        'update',
-                        'edit',
-                        'append',
-                        'overwrite',
-                    }:
-                        write_operations.append(f'{node.func.attr}()')
-                elif isinstance(node.func, ast.Name) and node.func.id in {
-                    'open',
-                    'mkdir',
-                    'remove',
-                    'rmdir',
-                    'unlink',
-                    'eval',
-                    'exec',
-                    'compile',
-                }:
-                    write_operations.append(f'{node.func.id}()')
-                    # Check for eval/exec/compile with dynamic content (bypass surface)
-                    if (
-                        node.func.id in {'eval', 'exec', 'compile'}
-                        and node.args
-                        and not isinstance(node.args[0], ast.Constant)
-                    ):
-                        write_operations.append(f'{node.func.id}(dynamic)')
-            # Check for assignments that might modify state
+                write_operations.extend(_check_ast_call_node(node))
             elif isinstance(node, ast.AugAssign):
                 write_operations.append('augmented_assignment')
     except (SyntaxError, ValueError):
-        # If we can't parse the AST, skip this check gracefully
         pass
     return write_operations
 

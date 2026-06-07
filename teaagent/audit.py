@@ -576,51 +576,93 @@ class AuditLogger:
             }
 
     @staticmethod
+    def _load_encryption_key(
+        audit_path: Path, encryption_key: Optional[bytes] = None
+    ) -> bytes:
+        if encryption_key is not None:
+            return encryption_key
+        run_id = audit_path.stem
+        safe_id = (
+            ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
+        )
+        key_dir = Path.home() / '.teaagent' / 'audit-encryption'
+        key_path = key_dir / f'{safe_id}.enc'
+        if not key_path.is_file():
+            raise ValueError(f'Encryption key not found at {key_path}')
+        try:
+            key = key_path.read_bytes()
+        except OSError as exc:
+            raise ValueError(
+                f'Failed to load encryption key from {key_path}: {exc}'
+            ) from exc
+        if len(key) != 44:
+            raise ValueError(f'Invalid encryption key length at {key_path}')
+        return key
+
+    @staticmethod
+    @staticmethod
+    def _verify_raw_chain(raw_events: list[dict[str, Any]]) -> list[str]:
+        chain_errors = []
+        prev_hash = _GENESIS_HASH
+        for i, event in enumerate(raw_events):
+            event_hash = event.get('hash')
+            event_prev_hash = event.get('prev_hash')
+            if event_prev_hash != prev_hash:
+                chain_errors.append(
+                    f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})'
+                )
+            canonical = json.dumps(
+                {
+                    'event_id': event.get('event_id'),
+                    'event_type': event.get('event_type'),
+                    'run_id': event.get('run_id'),
+                    'created_at': event.get('created_at'),
+                    'payload': event.get('payload'),
+                    'prev_hash': event_prev_hash,
+                },
+                sort_keys=True,
+                separators=(',', ':'),
+            )
+            computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+            if event_hash != computed_hash:
+                chain_errors.append(
+                    f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})'
+                )
+            prev_hash = event_hash or computed_hash
+        return chain_errors
+
+    @staticmethod
+    @staticmethod
+    def _decrypt_events(
+        raw_events: list[dict[str, Any]], fernet: Any
+    ) -> list[dict[str, Any]]:
+        decrypted_events = []
+        for event in raw_events:
+            payload = event.get('payload', {})
+            if isinstance(payload, dict) and 'encrypted' in payload:
+                try:
+                    encrypted_data = payload['encrypted']
+                    decrypted_bytes = fernet.decrypt(encrypted_data.encode('utf-8'))
+                    decrypted_json = decrypted_bytes.decode('utf-8')
+                    event['payload'] = json.loads(decrypted_json)
+                except Exception as exc:
+                    raise ValueError(
+                        f'Failed to decrypt event {event.get("event_id")}: {exc}'
+                    ) from exc
+            decrypted_events.append(event)
+        return decrypted_events
+
+    @staticmethod
     def decrypt_audit_log(
         audit_path: Path, encryption_key: Optional[bytes] = None
     ) -> dict[str, Any]:
-        """Decrypt an L3 audit log file and verify chain integrity.
-
-        Args:
-            audit_path: Path to the audit log file
-            encryption_key: Optional encryption key (bytes). If not provided, will load from
-                           ~/.teaagent/audit-encryption/<run_id>.enc
-
-        Returns:
-            Dict with 'events' (list of decrypted audit event dictionaries),
-            'chain_valid' (bool), 'chain_errors' (list[str]), and 'total_events' (int)
-
-        Raises:
-            ValueError: If decryption fails or key cannot be loaded
-        """
         if not CRYPTO_AVAILABLE:
             raise ValueError(
                 'Decryption requires cryptography library. Install with: pip install cryptography'
             )
 
-        # Load encryption key if not provided
-        if encryption_key is None:
-            run_id = audit_path.stem
-            safe_id = (
-                ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'})
-                or 'run'
-            )
-            key_dir = Path.home() / '.teaagent' / 'audit-encryption'
-            key_path = key_dir / f'{safe_id}.enc'
+        encryption_key = AuditLogger._load_encryption_key(audit_path, encryption_key)
 
-            if not key_path.is_file():
-                raise ValueError(f'Encryption key not found at {key_path}')
-
-            try:
-                encryption_key = key_path.read_bytes()
-                if len(encryption_key) != 44:  # Fernet key length
-                    raise ValueError(f'Invalid encryption key length at {key_path}')
-            except OSError as exc:
-                raise ValueError(
-                    f'Failed to load encryption key from {key_path}: {exc}'
-                ) from exc
-
-        # Initialize Fernet with the key
         try:
             fernet = Fernet(encryption_key)
         except Exception as exc:
@@ -628,71 +670,12 @@ class AuditLogger:
                 f'Failed to initialize Fernet with provided key: {exc}'
             ) from exc
 
-        # Read and decrypt the audit log
         try:
             lines = audit_path.read_text(encoding='utf-8').splitlines()
-            raw_events = []
-            decrypted_events = []
+            raw_events = [json.loads(line) for line in lines if line.strip()]
 
-            # First pass: read raw events and verify chain integrity on encrypted data
-            for line in lines:
-                if not line.strip():
-                    continue
-
-                event = json.loads(line)
-                raw_events.append(event)
-
-            # Verify chain integrity on raw (encrypted) events
-            chain_errors = []
-            prev_hash = _GENESIS_HASH
-            for i, event in enumerate(raw_events):
-                event_hash = event.get('hash')
-                event_prev_hash = event.get('prev_hash')
-
-                if event_prev_hash != prev_hash:
-                    chain_errors.append(
-                        f'Event {i}: prev_hash mismatch (expected {prev_hash}, got {event_prev_hash})'
-                    )
-
-                # Verify the hash matches the content (encrypted payload)
-                canonical = json.dumps(
-                    {
-                        'event_id': event.get('event_id'),
-                        'event_type': event.get('event_type'),
-                        'run_id': event.get('run_id'),
-                        'created_at': event.get('created_at'),
-                        'payload': event.get('payload'),
-                        'prev_hash': event_prev_hash,
-                    },
-                    sort_keys=True,
-                    separators=(',', ':'),
-                )
-                computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
-
-                if event_hash != computed_hash:
-                    chain_errors.append(
-                        f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})'
-                    )
-
-                prev_hash = event_hash or computed_hash
-
-            # Second pass: decrypt events
-            for event in raw_events:
-                payload = event.get('payload', {})
-
-                # Check if payload is encrypted
-                if isinstance(payload, dict) and 'encrypted' in payload:
-                    try:
-                        encrypted_data = payload['encrypted']
-                        decrypted_bytes = fernet.decrypt(encrypted_data.encode('utf-8'))
-                        decrypted_json = decrypted_bytes.decode('utf-8')
-                        event['payload'] = json.loads(decrypted_json)
-                    except Exception as exc:
-                        raise ValueError(
-                            f'Failed to decrypt event {event.get("event_id")}: {exc}'
-                        ) from exc
-
-                decrypted_events.append(event)
+            chain_errors = AuditLogger._verify_raw_chain(raw_events)
+            decrypted_events = AuditLogger._decrypt_events(raw_events, fernet)
 
             return {
                 'events': decrypted_events,
@@ -700,7 +683,6 @@ class AuditLogger:
                 'chain_errors': chain_errors,
                 'total_events': len(decrypted_events),
             }
-
         except OSError as exc:
             raise ValueError(
                 f'Failed to read audit log from {audit_path}: {exc}'
