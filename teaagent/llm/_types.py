@@ -174,7 +174,16 @@ class HTTPTransport(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class _AdapterConfigLike(Protocol):
+    """Structural protocol for adapter config objects that provide resolved_* helpers."""
+
+    def resolved_api_key(self) -> str: ...
+    def resolved_model(self) -> str: ...
+    def resolved_base_url(self) -> str: ...
+
+
 class LLMAdapter(Protocol):
     provider: str
+    config: _AdapterConfigLike
 
     def complete(self, request: LLMRequest) -> LLMResponse: ...

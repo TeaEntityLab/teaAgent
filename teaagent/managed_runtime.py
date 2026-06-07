@@ -6,7 +6,15 @@ import json
 import logging
 import secrets
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Protocol, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Optional,
+    Protocol,
+    cast,
+    runtime_checkable,
+)
 
 if TYPE_CHECKING:
     from teaagent.run_context import RunContext
@@ -60,7 +68,7 @@ def managed_runtime_context(
     ctx: RunContext = {}
     if extra:
         for k, v in extra.items():
-            ctx[k] = v  # type: ignore[literal-required]
+            cast(dict[str, Any], ctx)[k] = v
     ctx['tools'] = registry.mcp_metadata()
     if workspace_root is not None:
         ctx['workspace_root'] = workspace_root

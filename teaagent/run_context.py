@@ -16,7 +16,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 
 class RunContext(TypedDict, total=False):
@@ -120,5 +120,5 @@ def make_initial_context(
         # Discard keys that are already set explicitly.
         for k, v in extras.items():
             if k not in ctx:
-                ctx[k] = v  # type: ignore[literal-required]
+                cast(dict[str, Any], ctx)[k] = v
     return ctx

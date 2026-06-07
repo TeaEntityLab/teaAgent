@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional, Protocol
 from urllib.parse import parse_qs, urlparse
 
 from teaagent.oauth21 import (
@@ -11,27 +11,52 @@ from teaagent.oauth21 import (
 )
 
 
+class _HandlerProtocol(Protocol):
+    """Protocol for HTTP request handlers used by OAuth endpoints."""
+
+    path: str
+    headers: Any
+    rfile: Any
+
+    def _send_status(self, status: int, message: Optional[str] = None) -> None: ...
+
+    def _send_json(
+        self,
+        status: int,
+        body: dict[str, object],
+        extra_headers: Optional[dict[str, str]] = None,
+    ) -> None: ...
+
+    def send_response(self, code: int) -> None: ...
+
+    def send_header(self, keyword: str, value: str) -> None: ...
+
+    def end_headers(self) -> None: ...
+
+    def _content_length(self) -> tuple[Optional[int], Optional[str]]: ...
+
+
 def _handle_oauth_metadata(
-    handler: object, oauth_server: Optional[OAuth21AuthorizationServer]
+    handler: _HandlerProtocol, oauth_server: Optional[OAuth21AuthorizationServer]
 ) -> None:
     if oauth_server is None:
-        handler._send_status(404, 'not found')  # type: ignore[attr-defined]
+        handler._send_status(404, 'not found')
         return
     metadata = oauth_server.metadata()
-    dpop_header = handler.headers.get(_DPOP_HEADER)  # type: ignore[attr-defined]
+    dpop_header = handler.headers.get(_DPOP_HEADER)
     extra: dict[str, str] = {}
     if dpop_header:
         extra[_DPOP_NONCE_HEADER] = oauth_server.generate_dpop_nonce()
-    handler._send_json(200, metadata, extra_headers=extra or None)  # type: ignore[attr-defined]
+    handler._send_json(200, metadata, extra_headers=extra or None)
 
 
 def _handle_oauth_authorize(
-    handler: object, oauth_server: Optional[OAuth21AuthorizationServer]
+    handler: _HandlerProtocol, oauth_server: Optional[OAuth21AuthorizationServer]
 ) -> None:
     if oauth_server is None:
-        handler._send_status(404, 'not found')  # type: ignore[attr-defined]
+        handler._send_status(404, 'not found')
         return
-    parsed = urlparse(handler.path)  # type: ignore[attr-defined]
+    parsed = urlparse(handler.path)
     params = parse_qs(parsed.query)
 
     from teaagent.mcp_http import _first_param
@@ -44,7 +69,7 @@ def _handle_oauth_authorize(
     state = _first_param(params, 'state')
 
     if not client_id or not redirect_uri or not code_challenge:
-        handler._send_json(  # type: ignore[attr-defined]
+        handler._send_json(
             400,
             {
                 'error': 'invalid_request',
@@ -64,38 +89,38 @@ def _handle_oauth_authorize(
             scope=scope,
             state=state,
         )
-        handler.send_response(302)  # type: ignore[attr-defined]
-        handler.send_header('Location', redirect_url)  # type: ignore[attr-defined]
-        handler.send_header('Content-Length', '0')  # type: ignore[attr-defined]
-        handler.end_headers()  # type: ignore[attr-defined]
+        handler.send_response(302)
+        handler.send_header('Location', redirect_url)
+        handler.send_header('Content-Length', '0')
+        handler.end_headers()
     except OAuth21Error as exc:
-        handler._send_json(  # type: ignore[attr-defined]
+        handler._send_json(
             400,
             {'error': 'invalid_request', 'error_description': str(exc)},
         )
 
 
 def _handle_oauth_token(
-    handler: object, oauth_server: Optional[OAuth21AuthorizationServer]
+    handler: _HandlerProtocol, oauth_server: Optional[OAuth21AuthorizationServer]
 ) -> None:
     if oauth_server is None:
-        handler._send_status(404, 'not found')  # type: ignore[attr-defined]
+        handler._send_status(404, 'not found')
         return
 
-    length, length_error = handler._content_length()  # type: ignore[attr-defined]
+    length, length_error = handler._content_length()
     if length_error is not None:
         status = 413 if length_error == 'body too large' else 400
-        handler._send_json(  # type: ignore[attr-defined]
+        handler._send_json(
             status,
             {'error': 'invalid_request', 'error_description': length_error},
         )
         return
     assert length is not None
-    raw = handler.rfile.read(length)  # type: ignore[attr-defined]
+    raw = handler.rfile.read(length)
     try:
         body = raw.decode('utf-8')
     except UnicodeDecodeError:
-        handler._send_json(  # type: ignore[attr-defined]
+        handler._send_json(
             400,
             {
                 'error': 'invalid_request',
@@ -113,7 +138,7 @@ def _handle_oauth_token(
     refresh_token = _first_param(params, 'refresh_token')
     client_id = _first_param(params, 'client_id')
     client_secret = _first_param(params, 'client_secret')
-    dpop_proof = handler.headers.get(_DPOP_HEADER)  # type: ignore[attr-defined]
+    dpop_proof = handler.headers.get(_DPOP_HEADER)
 
     extra_headers: dict[str, str] = {}
     dpop_nonce = oauth_server.generate_dpop_nonce()
@@ -121,7 +146,7 @@ def _handle_oauth_token(
 
     if grant_type == 'authorization_code':
         if not code:
-            handler._send_json(  # type: ignore[attr-defined]
+            handler._send_json(
                 400,
                 {
                     'error': 'invalid_request',
@@ -130,7 +155,7 @@ def _handle_oauth_token(
             )
             return
         if not code_verifier:
-            handler._send_json(  # type: ignore[attr-defined]
+            handler._send_json(
                 400,
                 {
                     'error': 'invalid_request',
@@ -140,7 +165,7 @@ def _handle_oauth_token(
             return
     elif grant_type == 'refresh_token':
         if not refresh_token:
-            handler._send_json(  # type: ignore[attr-defined]
+            handler._send_json(
                 400,
                 {
                     'error': 'invalid_request',
@@ -149,7 +174,7 @@ def _handle_oauth_token(
             )
             return
     else:
-        handler._send_json(  # type: ignore[attr-defined]
+        handler._send_json(
             400,
             {
                 'error': 'unsupported_grant_type',
@@ -188,7 +213,7 @@ def _handle_oauth_token(
         elif 'client' in str(exc).lower():
             status_code = 401
             error_code = 'invalid_client'
-        handler._send_json(  # type: ignore[attr-defined]
+        handler._send_json(
             status_code,
             {'error': error_code, 'error_description': str(exc)},
             extra_headers=extra_headers,
@@ -203,7 +228,7 @@ def _handle_oauth_token(
     }
     if response.refresh_token is not None:
         token_body['refresh_token'] = response.refresh_token
-    handler._send_json(  # type: ignore[attr-defined]
+    handler._send_json(
         200,
         token_body,
         extra_headers=extra_headers,

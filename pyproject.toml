@@ -201,7 +201,8 @@ targets = ["."]
 [tool.coverage.run]
 source = ["teaagent"]
 omit = [
-    "teaagent/tui/*",
+    "teaagent/tui/__init__.py",
+    "teaagent/tui/_commands.py",
 ]
 
 [tool.ruff]

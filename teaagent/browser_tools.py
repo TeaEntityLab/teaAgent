@@ -8,7 +8,7 @@ instead of raising.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 try:
     import playwright  # noqa: F401
@@ -204,6 +204,13 @@ _DISABLED_MESSAGE = (
 
 def _disabled_handler(message: str) -> dict[str, Any]:
     return {'status': 'error', 'message': message}
+
+
+def _make_disabled_handler(message: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
+    def handler(_args: dict[str, Any]) -> dict[str, Any]:
+        return _disabled_handler(message)
+
+    return handler
 
 
 def register_browser_tools(
@@ -463,8 +470,5 @@ def _register_disabled(registry: ToolRegistry) -> None:
                 required=['status'],
             ),
             annotations=ToolAnnotations(read_only=True),
-            handler=lambda _args, msg=_DISABLED_MESSAGE: {  # type: ignore[misc]
-                'status': 'error',
-                'message': msg,
-            },
+            handler=_make_disabled_handler(_DISABLED_MESSAGE),
         )

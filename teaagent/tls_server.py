@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ssl
+from http.server import HTTPServer
 from pathlib import Path
 
 
@@ -21,6 +22,6 @@ def build_server_ssl_context(
     return ctx
 
 
-def wrap_server_socket(httpd: object, ssl_context: ssl.SSLContext) -> None:
+def wrap_server_socket(httpd: HTTPServer, ssl_context: ssl.SSLContext) -> None:
     """Wrap an existing ``HTTPServer`` listening socket with *ssl_context*."""
-    httpd.socket = ssl_context.wrap_socket(httpd.socket, server_side=True)  # type: ignore[attr-defined]
+    httpd.socket = ssl_context.wrap_socket(httpd.socket, server_side=True)

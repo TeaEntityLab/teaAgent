@@ -4,7 +4,7 @@ import logging
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from uuid import uuid4
 
 from teaagent.audit import AuditLogger
@@ -289,7 +289,7 @@ class AgentRunner:
                 )
 
     def _check_compaction_warning(
-        self, *, context: dict[str, Any], input_tokens: int, output_tokens: int
+        self, *, context: RunContext, input_tokens: int, output_tokens: int
     ) -> None:
         """Emit a proactive context-compaction warning when estimated usage exceeds threshold.
 
@@ -397,7 +397,7 @@ class AgentRunner:
         if initial_context_extra:
             for k, v in initial_context_extra.items():
                 if k != 'task':
-                    context[k] = v  # type: ignore[literal-required]
+                    cast(dict[str, Any], context)[k] = v
         if self.decision_log is not None:
             summary = self.decision_log.inject_summary()
             if summary:
@@ -556,11 +556,11 @@ class AgentRunner:
     def _execute_tool_decision(
         self,
         decision: ToolRequest,
-        context: dict[str, Any],
+        context: RunContext,
         run_id: str,
         tool_calls: int,
         cost_cents: float,
-    ) -> tuple[int, dict[str, Any]]:
+    ) -> tuple[int, RunContext]:
         """Execute a tool decision with approval flow and return updated state.
 
         Returns:
@@ -579,7 +579,7 @@ class AgentRunner:
             )
         drift_error = self.plan_validator.validate_write_allowed(
             tool_name=decision.tool_name,
-            context=context,
+            context=context,  # type: ignore[arg-type]
             tool_arguments=decision.arguments,
         )
         if drift_error:
@@ -626,7 +626,7 @@ class AgentRunner:
                     audit=self.audit,
                     run_id=run_id,
                     checkpoint_store=self.checkpoint_store,
-                    context=context,
+                    context=context,  # type: ignore[arg-type]
                     cost_cents=cost_cents,
                     reason_code=reason_code_str,
                 )
@@ -737,7 +737,7 @@ class AgentRunner:
             and len(context['observations']) > self.compact_after_observations
         ):
             pre_compact_count = len(context['observations'])
-            compacted = self.compactor.compact(context)
+            compacted = self.compactor.compact(context)  # type: ignore[arg-type]
             context['observations'] = compacted.context['observations']
             context['compacted_summary'] = compacted.summary
             context['memory_keys'] = compacted.pinned
@@ -824,7 +824,7 @@ class AgentRunner:
                     tool_calls=tool_calls,
                 )
                 self._assert_cost_budget(cost_cents)
-                decision = decide(context)  # type: ignore[arg-type]
+                decision = decide(cast(dict[str, Any], context))
                 cost_cents = context.get('_cost_cents', cost_cents)
                 input_tokens = context.get('_input_tokens', input_tokens)
                 output_tokens = context.get('_output_tokens', output_tokens)
@@ -837,7 +837,7 @@ class AgentRunner:
                     run_id=current_run_id, cost_cents=cost_cents
                 )
                 self._check_compaction_warning(
-                    context=context,  # type: ignore[arg-type]
+                    context=context,
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                 )
@@ -886,9 +886,9 @@ class AgentRunner:
                             raw_decision_preview=preview,
                         )
 
-                tool_calls, context = self._execute_tool_decision(  # type: ignore[assignment]
+                tool_calls, context = self._execute_tool_decision(
                     decision,
-                    context,  # type: ignore[arg-type]
+                    context,
                     current_run_id,
                     tool_calls,
                     cost_cents,

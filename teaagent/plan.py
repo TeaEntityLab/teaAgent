@@ -53,6 +53,15 @@ class PlanContract:
 
         return False
 
+    def validate(self) -> list[str]:
+        """Return a list of validation errors (empty list means valid)."""
+        errors: list[str] = []
+        if not self.task.strip():
+            errors.append('plan task is empty')
+        if not self.path.is_file():
+            errors.append(f'plan file not found: {self.path}')
+        return errors
+
 
 def plan_content_hash(content: str) -> str:
     return hashlib.sha256(content.encode('utf-8')).hexdigest()

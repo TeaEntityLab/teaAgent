@@ -146,7 +146,7 @@ def create_llm_adapter(
     normalized = provider.lower()
     # Special case for fake adapter used in tests
     if normalized == 'fake':
-        return FakeLLMAdapter(provider='fake', model=model or 'fake-model')
+        return FakeLLMAdapter(provider='fake', model=model or 'fake-model')  # type: ignore[return-value]
     if normalized not in PROVIDER_CONFIGS:
         raise LLMConfigurationError(
             f"unknown provider '{provider}'. Available: {', '.join(available_providers())}"
@@ -163,18 +163,18 @@ def create_llm_adapter(
             base_url_env=config.base_url_env,
         )
     if normalized == 'claude':
-        return ClaudeAdapter(config, transport=transport)
+        return ClaudeAdapter(config, transport=transport)  # type: ignore[return-value]
     if normalized == 'gemini':
-        return GeminiAdapter(config, transport=transport)
+        return GeminiAdapter(config, transport=transport)  # type: ignore[return-value]
     if normalized == 'workers-ai':
-        return WorkersAIAdapter(config, transport=transport)
-    return OpenAICompatibleAdapter(config, transport=transport)
+        return WorkersAIAdapter(config, transport=transport)  # type: ignore[return-value]
+    return OpenAICompatibleAdapter(config, transport=transport)  # type: ignore[return-value]
 
 
 def check_llm_configuration(provider: str) -> tuple[bool, str]:
     adapter = create_llm_adapter(provider)
     try:
-        adapter.config.resolved_api_key()  # type: ignore[attr-defined]
+        adapter.config.resolved_api_key()
     except LLMConfigurationError as exc:
         return False, str(exc)
     return True, f'{provider} configuration is available'

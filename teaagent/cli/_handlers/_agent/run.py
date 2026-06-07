@@ -7,7 +7,7 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.cli._output import print_json
@@ -228,10 +228,15 @@ def _run_post_validation(
     store: RunStore,
     profile: str,
 ) -> int:
+    from typing import cast
+
     from teaagent.audit import AuditLogger
     from teaagent.validation.profiles import run_profile_validation
 
-    report = run_profile_validation(args.root, profile)  # type: ignore[arg-type]
+    report = run_profile_validation(
+        str(args.root),
+        cast(Literal['fast', 'standard', 'strict'], profile),
+    )
     path = store.run_path(result.run_id)
     if path.is_file():
         audit = AuditLogger(path=path)

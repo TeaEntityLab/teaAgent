@@ -11,8 +11,9 @@ try:
     TOMLLIB_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover - py3.10
     try:
-        import tomli as tomllib  # type: ignore[no-redef, unused-ignore]
+        import tomli as _tomli
 
+        tomllib = _tomli
         TOMLLIB_AVAILABLE = True
     except ModuleNotFoundError:
         tomllib = None

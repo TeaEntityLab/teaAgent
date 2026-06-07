@@ -225,8 +225,8 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
     if action == 'permissions':
         from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-        store = ApprovalPresetStore(tui.root)  # type: ignore[assignment]
-        presets = store.list_presets()  # type: ignore[attr-defined]
+        approval_store = ApprovalPresetStore(str(tui.root))
+        presets = approval_store.list_presets()  # type: ignore[attr-defined]
         tui._print_json([p.to_dict() for p in presets])
         return True
 
@@ -326,16 +326,16 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 tui._print_json(
                     {'selected': selected, 'index': index, 'status': 'selected'}
                 )
-                tui._parallel_options = None  # type: ignore[assignment]  # Clear after selection
+                tui._parallel_options = None  # Clear after selection
             else:
                 tui.output_fn(
                     f'error: index {index} out of range (0-{len(tui._parallel_options) - 1})'
                 )
         except ValueError:
             # Try to match as value
-            if selection in tui._parallel_options:
+            if tui._parallel_options and selection in tui._parallel_options:
                 tui._print_json({'selected': selection, 'status': 'selected'})
-                tui._parallel_options = None  # type: ignore[assignment]
+                tui._parallel_options = None
             else:
                 tui.output_fn(
                     f'error: option "{selection}" not found in parallel options'
@@ -344,7 +344,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
 
     if action == 'cancel':
         if hasattr(tui, '_parallel_options') and tui._parallel_options:
-            tui._parallel_options = None  # type: ignore[assignment]
+            tui._parallel_options = None
             tui._print_json(
                 {'status': 'cancelled', 'action': 'cleared_parallel_options'}
             )

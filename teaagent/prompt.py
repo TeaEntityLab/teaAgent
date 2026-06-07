@@ -130,8 +130,8 @@ async def run_aci_injector(
             return_when=asyncio.ALL_COMPLETED,
         )
 
-        for task in pending:  # type: ignore
-            task.cancel()  # type: ignore
+        for task in pending:  # type: ignore[assignment]
+            task.cancel()  # type: ignore[attr-defined]
 
         context_parts = []
         if rag_task in done:

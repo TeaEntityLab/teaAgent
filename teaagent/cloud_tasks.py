@@ -11,7 +11,7 @@ import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from uuid import uuid4
 
 from teaagent.managed_runtime import (
@@ -160,7 +160,7 @@ class CloudTaskManager:
         try:
             runner = self._runner_factory(runtime, adapter=adapter)
             ctx = managed_runtime_context(ToolRegistry())
-            result = runner.run(prompt, context=ctx)  # type: ignore[arg-type]
+            result = runner.run(prompt, context=cast(dict[str, Any], ctx))
             return self._store.update(
                 task.task_id,
                 status='completed',

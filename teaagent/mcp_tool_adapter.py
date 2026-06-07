@@ -121,13 +121,14 @@ def register_mcp_tools(
     if own_client:
         client = MCPHTTPClient(endpoint, auth_token=auth_token)
         client.initialize()
+    assert client is not None  # narrowed above — own_client ∨ caller-provided
 
     try:
-        mcp_tools: list[dict[str, Any]] = client.list_tools()  # type: ignore[union-attr]
+        mcp_tools: list[dict[str, Any]] = client.list_tools()
     finally:
         if own_client:
             with contextlib.suppress(Exception):
-                client.close()  # type: ignore[union-attr]
+                client.close()
 
     registered: list[str] = []
     for mcp_tool in mcp_tools:

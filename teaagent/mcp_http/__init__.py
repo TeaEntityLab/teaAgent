@@ -179,9 +179,12 @@ def _make_handler(
 
         def _request_url(self) -> str:
             """Reconstruct the full request URL for DPoP htu validation."""
+            addr = self.server.server_address
+            server_host = str(addr[0]) if isinstance(addr, tuple) else str(addr)
+            server_port = int(addr[1]) if isinstance(addr, tuple) else 443
             host = self.headers.get(
                 'Host',
-                f'{self.server.server_address[0]}:{self.server.server_address[1]}',  # type: ignore[index]
+                f'{server_host}:{server_port}',
             )
             scheme = 'https' if getattr(self.connection, 'context', None) else 'http'
             return f'{scheme}://{host}{self.path}'
@@ -292,19 +295,28 @@ def _make_handler(
 
         # -- OAuth 2.1 endpoints --
         def _handle_oauth_metadata(self) -> None:
-            from teaagent.mcp_http._oauth import _handle_oauth_metadata as _impl
+            from typing import cast
 
-            return _impl(self, oauth_server)
+            from teaagent.mcp_http._oauth import _handle_oauth_metadata as _impl
+            from teaagent.mcp_http._oauth import _HandlerProtocol
+
+            return _impl(cast(_HandlerProtocol, self), oauth_server)
 
         def _handle_oauth_authorize(self) -> None:
-            from teaagent.mcp_http._oauth import _handle_oauth_authorize as _impl
+            from typing import cast
 
-            return _impl(self, oauth_server)
+            from teaagent.mcp_http._oauth import _handle_oauth_authorize as _impl
+            from teaagent.mcp_http._oauth import _HandlerProtocol
+
+            return _impl(cast(_HandlerProtocol, self), oauth_server)
 
         def _handle_oauth_token(self) -> None:
-            from teaagent.mcp_http._oauth import _handle_oauth_token as _impl
+            from typing import cast
 
-            return _impl(self, oauth_server)
+            from teaagent.mcp_http._oauth import _handle_oauth_token as _impl
+            from teaagent.mcp_http._oauth import _HandlerProtocol
+
+            return _impl(cast(_HandlerProtocol, self), oauth_server)
 
         def _is_oauth_path(self) -> bool:
             path = self.path.split('?')[0]

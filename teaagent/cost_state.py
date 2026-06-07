@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, cast
 
 CostState = Literal[
     'estimated',
@@ -54,5 +54,5 @@ def normalize_cost_state(value: str | None) -> CostState:
     if normalized == 'actual':
         return 'provider_reported'
     if normalized in CANONICAL_COST_STATES:
-        return normalized  # type: ignore[return-value]
+        return cast(CostState, normalized)
     return 'unavailable'

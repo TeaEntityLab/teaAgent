@@ -15,47 +15,58 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Callable, Optional, Set
 
-try:
-    from watchdog.events import (
-        DirDeletedEvent,
-        DirModifiedEvent,
-        FileDeletedEvent,
-        FileModifiedEvent,
-        FileSystemEventHandler,
-    )
-    from watchdog.observers import Observer
 
-    WATCHDOG_AVAILABLE = True
-except ImportError:
-    WATCHDOG_AVAILABLE = False
-    # Create dummy types for type checking when watchdog is not available
-    FileSystemEventHandler = object
-    DirDeletedEvent = object
-    DirModifiedEvent = object
-    FileDeletedEvent = object
-    FileModifiedEvent = object
+def _import_watchdog() -> tuple[bool, object, object, object, object, object, object]:
+    """Return (available, Observer, ... event types)."""
+    try:
+        from watchdog.events import (
+            DirDeletedEvent,
+            DirModifiedEvent,
+            FileDeletedEvent,
+            FileModifiedEvent,
+            FileSystemEventHandler,
+        )
+        from watchdog.observers import Observer
 
-    class Observer:  # type: ignore[no-redef]
-        """Dummy Observer class when watchdog is not available."""
+        return (
+            True,
+            Observer,
+            DirDeletedEvent,
+            DirModifiedEvent,
+            FileDeletedEvent,
+            FileModifiedEvent,
+            FileSystemEventHandler,
+        )
+    except ImportError:
 
-        def schedule(self, *args: object, **kwargs: object) -> None:
-            # Stub: no-op when watchdog is not available
-            pass
+        class _DummyObserver:
+            def schedule(self, *args: object, **kwargs: object) -> None:
+                pass
 
-        def start(self) -> None:
-            # Stub: no-op when watchdog is not available
-            pass
+            def start(self) -> None:
+                pass
 
-        def stop(self) -> None:
-            # Stub: no-op when watchdog is not available
-            pass
+            def stop(self) -> None:
+                pass
 
-        def join(self, timeout: Optional[float] = None) -> None:
-            # Stub: no-op when watchdog is not available
-            pass
+            def join(self, timeout: Optional[float] = None) -> None:
+                pass
+
+        return (False, _DummyObserver, object, object, object, object, object)
 
 
-class FileChangeHandler(FileSystemEventHandler):
+(
+    WATCHDOG_AVAILABLE,
+    Observer,
+    DirDeletedEvent,
+    DirModifiedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileSystemEventHandler,
+) = _import_watchdog()
+
+
+class FileChangeHandler(FileSystemEventHandler):  # type: ignore[valid-type,misc]
     """Handler for file system change events."""
 
     def __init__(
@@ -64,13 +75,6 @@ class FileChangeHandler(FileSystemEventHandler):
         watched_files: Set[str],
         debounce_ms: int = 500,
     ) -> None:
-        """Initialize file change handler.
-
-        Args:
-            callback: Function to call when a file changes (file_path, event_type)
-            watched_files: Set of file paths to watch (relative to workspace root)
-            debounce_ms: Debounce time in milliseconds
-        """
         super().__init__()
         self.callback = callback
         self.watched_files = watched_files
@@ -78,21 +82,15 @@ class FileChangeHandler(FileSystemEventHandler):
         self.last_event_time: dict[str, float] = {}
         self.lock = threading.Lock()
 
-    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:
-        """Handle file modified event.
-
-        Args:
-            event: The file modified event
-        """
-        if event.is_directory:
+    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:  # type: ignore[valid-type]
+        if event.is_directory:  # type: ignore[union-attr]
             return
 
-        # Get relative path
         try:
             src_path_str = (
-                event.src_path
-                if isinstance(event.src_path, str)
-                else event.src_path.decode('utf-8')
+                event.src_path  # type: ignore[union-attr]
+                if isinstance(event.src_path, str)  # type: ignore[union-attr]
+                else event.src_path.decode('utf-8')  # type: ignore[union-attr]
             )
             src_path = Path(src_path_str)
             # This will be resolved in the watcher setup
@@ -116,21 +114,15 @@ class FileChangeHandler(FileSystemEventHandler):
         with suppress(Exception):
             self.callback(file_path, 'modified')
 
-    def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent) -> None:
-        """Handle file deleted event.
-
-        Args:
-            event: The file deleted event
-        """
-        if event.is_directory:
+    def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent) -> None:  # type: ignore[valid-type]
+        if event.is_directory:  # type: ignore[union-attr]
             return
 
-        # Get relative path
         try:
             src_path_str = (
-                event.src_path
-                if isinstance(event.src_path, str)
-                else event.src_path.decode('utf-8')
+                event.src_path  # type: ignore[union-attr]
+                if isinstance(event.src_path, str)  # type: ignore[union-attr]
+                else event.src_path.decode('utf-8')  # type: ignore[union-attr]
             )
             src_path = Path(src_path_str)
             file_path = str(src_path)
@@ -170,7 +162,7 @@ class FileWatcher:
         self.root = Path(root).resolve()
         self.callback = callback
         self.debounce_ms = debounce_ms
-        self.observer = Observer()
+        self.observer = Observer()  # type: ignore[operator]
         self.watched_files: Set[str] = set()
         self.handler: Optional[FileChangeHandler] = None
         self.running = False

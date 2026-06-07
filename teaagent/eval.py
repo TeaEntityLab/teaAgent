@@ -48,6 +48,7 @@ class EvalReport:
 
 JudgeFn = Callable[[str, str], JudgeScore]
 
+
 _SCORE_RE = re.compile(r'"score"\s*:\s*([0-9]*\.?[0-9]+)')
 _REASON_RE = re.compile(r'"reasoning"\s*:\s*"([^"]*)"')
 
@@ -57,20 +58,28 @@ _DEFAULT_JUDGE_SYSTEM = (
 )
 
 
-def make_llm_judge_fn(
-    adapter: Any,
-    *,
-    passing_threshold: float = 0.7,
-    system_prompt: str = _DEFAULT_JUDGE_SYSTEM,
-) -> JudgeFn:
-    from teaagent.llm import LLMMessage, LLMRequest
+class _JudgeCallable:
+    """Callable judge that exposes ``_passing_threshold`` for downstream use."""
 
-    def judge(task: str, output: str) -> JudgeScore:
+    def __init__(
+        self,
+        adapter: Any,
+        *,
+        passing_threshold: float,
+        system_prompt: str,
+    ) -> None:
+        self._adapter = adapter
+        self._passing_threshold = passing_threshold
+        self._system_prompt = system_prompt
+
+    def __call__(self, task: str, output: str) -> JudgeScore:
+        from teaagent.llm import LLMMessage, LLMRequest  # noqa: PLC0415
+
         user_content = f'Task: {task}\n\nAgent output:\n{output}'
         try:
-            response = adapter.complete(
+            response = self._adapter.complete(
                 LLMRequest(
-                    system=system_prompt,
+                    system=self._system_prompt,
                     messages=[LLMMessage(role='user', content=user_content)],
                 )
             )
@@ -89,8 +98,18 @@ def make_llm_judge_fn(
         except Exception as exc:
             return JudgeScore(score=0.0, reasoning=f'judge error: {exc}')
 
-    judge._passing_threshold = passing_threshold  # type: ignore[attr-defined]
-    return judge
+
+def make_llm_judge_fn(
+    adapter: Any,
+    *,
+    passing_threshold: float = 0.7,
+    system_prompt: str = _DEFAULT_JUDGE_SYSTEM,
+) -> _JudgeCallable:
+    return _JudgeCallable(
+        adapter=adapter,
+        passing_threshold=passing_threshold,
+        system_prompt=system_prompt,
+    )
 
 
 def run_eval(cases: list[EvalCase], run_case: Callable[[EvalCase], str]) -> EvalReport:

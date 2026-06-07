@@ -91,13 +91,16 @@ class UltraworkStore:
             from teaagent.notify import fire_notification
 
             class _Rec:
-                pass
+                worker_id: str
+                pid: Any
+                started_at: str
+                command: list[str]
 
             rec = _Rec()
-            rec.worker_id = worker_id  # type: ignore[attr-defined]
-            rec.pid = data.get('pid')  # type: ignore[attr-defined]
-            rec.started_at = data.get('started_at', '')  # type: ignore[attr-defined]
-            rec.command = data.get('command', [])  # type: ignore[attr-defined]
+            rec.worker_id = worker_id
+            rec.pid = data.get('pid')
+            rec.started_at = data.get('started_at', '')
+            rec.command = data.get('command', [])
             fire_notification(self._notify_config, rec, event='stopped')
         return data
 

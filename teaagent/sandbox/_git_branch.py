@@ -7,7 +7,10 @@ import subprocess
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from teaagent.ergonomics.background_run import BackgroundRunStore
 
 _sandbox_lock = threading.Lock()
 
@@ -522,7 +525,7 @@ class GitTransactionSink:
 
 def find_orphaned_sandbox_branches(
     root: str | Path,
-    background_store: Optional[object] = None,
+    background_store: Optional[BackgroundRunStore] = None,
 ) -> list[dict[str, Any]]:
     """Find orphaned sandbox branches that have no corresponding active run.
 
@@ -564,7 +567,7 @@ def find_orphaned_sandbox_branches(
     active_run_ids: set[str] = set()
     if background_store is not None:
         try:
-            for record_file in background_store.dir.glob('*.json'):  # type: ignore[attr-defined]
+            for record_file in background_store.dir.glob('*.json'):
                 try:
                     data = json.loads(record_file.read_text(encoding='utf-8'))
                     if data.get('status') not in {'stopped', 'failed', 'completed'}:

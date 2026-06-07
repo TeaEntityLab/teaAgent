@@ -10,10 +10,9 @@ from typing import Any
 from ._types import CodeModeResult, CodeModeSandbox
 from ._validation import SAFE_BUILTINS, UnsafeCodeError, validate_plain_data
 
-try:
-    import resource
-except ImportError:  # pragma: no cover - resource is Unix-only.
-    resource = None  # type: ignore[assignment]
+resource: Any = None
+with suppress(ImportError):
+    import resource  # noqa: F811
 
 
 @dataclass(frozen=True)

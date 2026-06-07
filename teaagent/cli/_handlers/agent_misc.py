@@ -27,7 +27,7 @@ def agent_plan_command(args: argparse.Namespace) -> int:
         return 1
 
     if getattr(args, 'validate', False):
-        errors = contract.validate()  # type: ignore[attr-defined]
+        errors = contract.validate()
         if errors:
             print_json({'status': 'invalid', 'errors': errors})
             return 1

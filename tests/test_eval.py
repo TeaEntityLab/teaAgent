@@ -153,7 +153,7 @@ class MakeLLMJudgeFnTests(unittest.TestCase):
     def test_passing_threshold_stored_on_fn(self) -> None:
         adapter = self._fake_adapter('{"score": 0.9, "reasoning": "x"}')
         judge_fn = make_llm_judge_fn(adapter, passing_threshold=0.8)
-        self.assertAlmostEqual(judge_fn._passing_threshold, 0.8)  # type: ignore[attr-defined]
+        self.assertAlmostEqual(judge_fn._passing_threshold, 0.8)
 
 
 if __name__ == '__main__':

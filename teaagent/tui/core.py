@@ -108,7 +108,7 @@ class TeaAgentTUI:
         self._session_store: Optional[SessionStore] = None
         self._session: Optional['PromptSession'] = None
         self._parallel_stack: Optional[ParallelExperimentStack] = None
-        self._parallel_options: list[str] = []
+        self._parallel_options: Optional[list[str]] = []
         self._conflict_mode: bool = False
         self._conflicted_files: list[str] = []
         self._current_conflict_index: int = 0

@@ -219,11 +219,6 @@ class BackendAdapterRegistry:
         for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
             if hasattr(backend, 'initialize'):
                 backend.initialize()
-
-    def shutdown_all(self) -> None:
-        for backend in list(self._knowledge_backends.values()):
-            if hasattr(backend, 'shutdown'):
-                backend.shutdown()
         for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
             if hasattr(backend, 'shutdown'):
                 backend.shutdown()
