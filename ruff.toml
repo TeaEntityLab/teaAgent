@@ -6,6 +6,7 @@ select = [
     "I",   # isort
     "B",   # flake8-bugbear
     "SIM", # flake8-simplify
+    "T201", # print found — prevent new print() in non-CLI code
 ]
 ignore = [
     "E501",   # line too long
@@ -20,6 +21,32 @@ exclude = [
     "build",
     "dist",
 ]
+
+[lint.per-file-ignores]
+# Allowed print() users — CLI tools, servers, examples, scripts, benchmarks
+"benchmarks/**" = ["T201"]
+"docs/guides/examples/**" = ["T201"]
+"examples/**" = ["T201"]
+"scripts/**" = ["T201"]
+"tests/**" = ["T201"]
+# Source modules that use print() for CLI output, server startup, or stderr warnings
+"teaagent/acp_adapter.py" = ["T201"]
+"teaagent/approval_manager.py" = ["T201"]
+"teaagent/audit.py" = ["T201"]
+"teaagent/cli/**" = ["T201"]
+"teaagent/collectors/repo_watch.py" = ["T201"]
+"teaagent/control_plane_api.py" = ["T201"]
+"teaagent/env_manager.py" = ["T201"]
+"teaagent/ergonomics/background_run.py" = ["T201"]
+"teaagent/graphqlite_store.py" = ["T201"]
+"teaagent/policy.py" = ["T201"]
+"teaagent/runner/_streaming.py" = ["T201"]
+"teaagent/signature_relay.py" = ["T201"]
+"teaagent/streaming/handlers.py" = ["T201"]
+"teaagent/tui/**" = ["T201"]
+"teaagent/ultrawork.py" = ["T201"]
+"teaagent/validation/validators.py" = ["T201"]
+"teaagent/vote_relay.py" = ["T201"]
 
 [format]
 quote-style = "single"

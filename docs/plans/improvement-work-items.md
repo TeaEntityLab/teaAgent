@@ -1052,14 +1052,14 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 ## Summary Statistics
 
 > **Last updated:** 2026-06-07
-> **Completed this session:** ARC-003, CQ-001, CQ-002, CQ-006, SEC-001, TST-001, TST-002, TST-003, TST-004, TST-005, TST-011, INFRA-002, DEV-002, DEV-005, DEP-001, TST-008 (partial), UX-001 (partial)
+> **Completed this session:** ARC-003, CQ-001, CQ-002, CQ-003, CQ-005, CQ-006, SEC-001, TST-001, TST-002, TST-003, TST-004, TST-005, TST-011, INFRA-002, INFRA-003, DEV-002, DEV-005, DEP-001, TST-008 (partial), UX-001 (partial)
 
 | Category | Items | Done | Remaining | P1 | P2 | P3 |
 |----------|-------|:----:|:---------:|:--:|:--:|:--:|
 | Architecture (ARC) | 10 | **3** | 7 | 3 | 3 | 1 |
 | Testing (TST) | 12 | **7** | 5 | 1 | 3 | 1 |
 | Developer Experience (DEV) | 8 | **4** | 4 | 0 | 2 | 2 |
-| Code Quality (CQ) | 6 | **3** | 3 | 1 | 1 | 1 |
+| Code Quality (CQ) | 6 | **5** | 1 | 0 | 1 | 0 |
 | Security (SEC) | 5 | **1** | 4 | 2 | 2 | 0 |
 | Documentation (DOC) | 6 | **0** | 6 | 2 | 3 | 1 |
 | Performance (PERF) | 5 | **0** | 5 | 1 | 3 | 1 |
@@ -1067,8 +1067,8 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 | Observability (OBS) | 4 | **0** | 4 | 0 | 3 | 1 |
 | Governance (GOV) | 4 | **0** | 4 | 0 | 3 | 1 |
 | User Experience (UX) | 4 | **1** | 3 | 0 | 2 | 1 |
-| Infrastructure (INFRA) | 5 | **2** | 3 | 1 | 1 | 1 |
-| **Total** | **73** | **22** | **51** | **12** | **27** | **12** |
+| Infrastructure (INFRA) | 5 | **3** | 2 | 0 | 1 | 1 |
+| **Total** | **73** | **27** | **46** | **9** | **25** | **12** |
 
 ---
 
@@ -1093,6 +1093,8 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 ### Code Quality
 - **CQ-001** — `type: ignore` reduced from 69 to 28 (59% reduction, commit `2fb3b8d`)
 - **CQ-002** — Cyclomatic complexity reduced from 112 to 97 C901 violations (commit `a67965d`)
+- **CQ-003** — `docs/error-reference.md` created documenting error hierarchy, categories, denial codes, exit codes (commit pending)
+- **CQ-005** — T201 (print found) added to ruff.toml with comprehensive per-file-ignores (commit pending)
 - **CQ-006** — Import ordering auto-fix, ruff `I` rule already enabled
 
 ### Security
@@ -1104,6 +1106,7 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 
 ### Infrastructure
 - **INFRA-002** — Nightly CI enhanced: full test suite + coverage + lint/typecheck (commit `bacaf29`)
+- **INFRA-003** — Coverage gate at 75% already in CI (`--cov-fail-under=75` in ci.yml)
 
 ### Dependencies
 - **DEP-001** — `cryptography` dependency consolidated (single reference)
