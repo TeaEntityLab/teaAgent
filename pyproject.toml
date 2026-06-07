@@ -202,7 +202,6 @@ targets = ["."]
 source = ["teaagent"]
 omit = [
     "teaagent/tui/*",
-    "teaagent/validation/*",
     "teaagent/workflow_engine.py",
     "teaagent/vote_relay.py",
     "teaagent/tls_server.py",
