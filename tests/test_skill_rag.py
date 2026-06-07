@@ -274,7 +274,7 @@ class TestHiddenStateProber:
         # This test verifies the abstract nature by attempting to create a subclass
         # without implementing the abstract method
         with pytest.raises(TypeError):
-            HiddenStateProber()
+            HiddenStateProber()  # type: ignore[abstract]
 
     def test_hidden_state_prober_concrete_implementation(self):
         """Test that a concrete implementation of HiddenStateProber works."""

@@ -288,6 +288,7 @@ class TestHookBlocksUntrustedServer:
             _register_mcp_tool(registry, 'good_tool', 'good')
             apply_mcp_trust_hooks(registry, tmp_path)
 
+            assert registry.hook_registry is not None
             result = registry.hook_registry.run_pre_hooks('good_tool', {})
             assert result == {} or result is None
         finally:
@@ -313,6 +314,7 @@ class TestHookBlocksUntrustedServer:
             apply_mcp_trust_hooks(registry, tmp_path)
 
             with pytest.raises(HookError, match='has expired'):
+                assert registry.hook_registry is not None
                 registry.hook_registry.run_pre_hooks('any_tool', {})
         finally:
             del os.environ['TEAAGENT_MCP_TRUST_KEY']

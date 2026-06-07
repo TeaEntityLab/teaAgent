@@ -827,7 +827,7 @@ def test_run_chat_repl_effort_command_updates_budget(monkeypatch, capsys):
             captured_configs.append(config)
             from teaagent.runner import RunResult
 
-            return RunResult(
+            return RunResult(  # type: ignore[call-arg]
                 success=True, final_answer='test', iterations=0, tool_calls=0
             )
 
