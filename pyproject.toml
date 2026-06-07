@@ -202,8 +202,6 @@ targets = ["."]
 source = ["teaagent"]
 omit = [
     "teaagent/tui/*",
-    "teaagent/cli/_handlers/_cost.py",
-    "teaagent/cli/_handlers/_control_plane.py",
 ]
 
 [tool.ruff]
