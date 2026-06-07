@@ -78,7 +78,7 @@ def compute_chain_hmac(event_hash: str, secret_key: bytes) -> str:
     This binds each audit event to the per-run secret so that an attacker
     who can write the audit file cannot forge the chain without the key.
     """
-    return hmac.new(secret_key, event_hash.encode('utf-8'), hashlib.sha256).hexdigest()
+    return hmac.HMAC(secret_key, event_hash.encode('utf-8'), hashlib.sha256).hexdigest()
 
 
 def verify_audit_chain(

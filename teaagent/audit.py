@@ -134,6 +134,7 @@ class AuditLogger:
         )
         self._disk_error: Optional[OSError] = None
         self._last_disk_error_time: float = 0.0
+        self._consecutive_disk_failures: int = 0
         self._disk_error_cooldown_seconds: float = 30.0
         self._compliance_mode = (
             env_compliance_mode() if compliance_mode is None else compliance_mode
@@ -452,10 +453,12 @@ class AuditLogger:
                 with self._lock:
                     self._disk_error = None
                     self._last_disk_error_time = 0.0
+                    self._consecutive_disk_failures = 0
             except OSError as exc:
                 with self._lock:
                     self._disk_error = exc
                     self._last_disk_error_time = time.monotonic()
+                    self._consecutive_disk_failures += 1
                     err_event = AuditEvent(
                         event_type='_disk_write_error',
                         run_id=event.run_id,
@@ -469,6 +472,20 @@ class AuditLogger:
                         f'Audit disk write failed: {exc}',
                         cause=exc,
                     ) from exc
+                if self._consecutive_disk_failures >= 3:
+                    import sys
+
+                    print(
+                        f'AUDIT CRITICAL: {self._consecutive_disk_failures} consecutive '
+                        f'disk write failures — audit integrity degraded. '
+                        f'Halting run.',
+                        file=sys.stderr,
+                    )
+                    from teaagent.errors import AuditDurabilityError
+
+                    raise AuditDurabilityError(
+                        f'{self._consecutive_disk_failures} consecutive disk write failures',
+                    ) from None
                 logger.warning(
                     'Audit disk write failed: %s (errno=%s) — '
                     'run continues in memory-only mode. '
