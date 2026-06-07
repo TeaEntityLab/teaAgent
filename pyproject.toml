@@ -202,17 +202,9 @@ targets = ["."]
 source = ["teaagent"]
 omit = [
     "teaagent/tui/*",
-    "teaagent/workflow_engine.py",
-    "teaagent/vote_relay.py",
-    "teaagent/tls_server.py",
-    "teaagent/webhook_sink.py",
-    "teaagent/wasm_runtime.py",
-    "teaagent/wasm_skill.py",
-    "teaagent/tsb_format.py",
     "teaagent/workspace_tools/builder.py",
     "teaagent/workspace_tools/_git.py",
     "teaagent/workspace_tools/_config.py",
-    "teaagent/browser_tools.py",
     "teaagent/cli/_handlers/_cost.py",
     "teaagent/cli/_handlers/_control_plane.py",
 ]
