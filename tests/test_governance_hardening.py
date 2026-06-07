@@ -174,7 +174,7 @@ class HMACApprovalQueueTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmpdir.cleanup()
 
-    def _make_store(self, hmac_secret: str | None = None) -> 'ApprovalQueueStore':  # noqa: F821
+    def _make_store(self, hmac_secret: str | None = None) -> 'ApprovalQueueStore':  # type: ignore[name-defined]  # noqa: F821
         from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
         return ApprovalQueueStore(self.store_path, hmac_secret=hmac_secret)

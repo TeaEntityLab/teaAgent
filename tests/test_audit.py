@@ -60,7 +60,7 @@ class AuditEventTests(unittest.TestCase):
     def test_event_is_frozen(self) -> None:
         event = AuditEvent(event_type='e', run_id='r', payload={})
         with self.assertRaises(FrozenInstanceError):
-            event.run_id = 'other'  # type: ignore[misc]
+            event.run_id = 'other'
 
 
 class AuditLoggerTests(unittest.TestCase):

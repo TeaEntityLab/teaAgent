@@ -91,6 +91,6 @@ def test_audit_sink_and_text_sink_emit_notifications() -> None:
 
     assert audit_event_to_session_update(event) is not None
 
-    lines: list[str] = []
+    lines = []
     default_acp_emitter(lines.append)(build_session_update_notification('s', {}))
     assert json.loads(lines[0])['method'] == 'session/update'

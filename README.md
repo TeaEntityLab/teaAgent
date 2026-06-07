@@ -565,7 +565,7 @@ ruff check .
 ruff format --check .
 
 # Type check
-mypy teaagent/
+mypy teaagent/ tests/ --explicit-package-bases
 ```
 
 See [docs/cli.md](docs/cli.md) for full CLI reference, scope docs for P0/P1/P2 feature delineation, and ADRs for architecture decisions.

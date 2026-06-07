@@ -57,13 +57,13 @@ def test_hints_appear_in_str_representation():
     exc = BudgetExceededError('over budget')
     rendered = str(exc)
     assert '→' in rendered
-    assert exc.hint in rendered  # type: ignore[operator]
+    assert exc.hint in rendered
 
 
 def test_custom_hint_replaces_default():
     exc = ToolPermissionError('denied', hint='Ask your admin to change the policy.')
     assert 'Ask your admin' in str(exc)
-    assert 'Ask your admin' in exc.hint  # type: ignore[operator]
+    assert 'Ask your admin' in exc.hint
 
 
 def test_all_concrete_errors_have_hints():

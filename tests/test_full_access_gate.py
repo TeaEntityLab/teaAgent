@@ -133,7 +133,7 @@ class TestPolicyGate:
     def test_full_access_acknowledged_is_immutable(self) -> None:
         policy = ApprovalPolicy()
         with pytest.raises(FrozenInstanceError):
-            policy.full_access_acknowledged = True  # type: ignore[misc]
+            policy.full_access_acknowledged = True
 
     def test_allow_all_without_ack_raises_with_reason_code(self) -> None:
         policy = ApprovalPolicy(allow_all_destructive=True)

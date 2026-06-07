@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Callable
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -62,7 +63,7 @@ def _run_local(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[
 
 def test_documented_smoke_commands_run_locally_without_network() -> None:
     root = _repo_root()
-    cases: list[tuple[list[str], callable[[str], None]]] = [
+    cases: list[tuple[list[str], Callable[[str], None]]] = [
         (
             ['teaagent', 'model', 'providers'],
             lambda out: json.loads(out),

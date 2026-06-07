@@ -92,7 +92,7 @@ def test_swarm_pre_approval_executes_consensus_gated_task() -> None:
             )
         )
 
-        def fake_execute(self):  # type: ignore[no-untyped-def]
+        def fake_execute(self):
             return SubagentResult(task_id=self._task.task_id, success=True, output='ok')
 
         with patch.object(type(manager._subagents[0]), 'execute', fake_execute):
@@ -177,7 +177,7 @@ def test_swarm_async_consensus_executes_after_votes_arrive() -> None:
         proposal_ids: list[str] = []
         ready = threading.Event()
 
-        def fake_execute(self):  # type: ignore[no-untyped-def]
+        def fake_execute(self):
             return SubagentResult(task_id=self._task.task_id, success=True, output='ok')
 
         original_check = manager._check_consensus_for_tasks

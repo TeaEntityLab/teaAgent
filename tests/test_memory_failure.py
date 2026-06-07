@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Generator, Iterator
 from pathlib import Path
 
 import pytest
@@ -62,7 +63,7 @@ class TestFailureCardStorage:
     """Test FailureCardStorage operations."""
 
     @pytest.fixture
-    def temp_root(self) -> Path:
+    def temp_root(self) -> Generator[Path, None, None]:
         """Create a temporary directory for testing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)
@@ -206,7 +207,7 @@ class TestFailureCardMatching:
     """Test failure card matching logic."""
 
     @pytest.fixture
-    def temp_root(self) -> Path:
+    def temp_root(self) -> Iterator[Path]:
         """Create a temporary directory for testing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)

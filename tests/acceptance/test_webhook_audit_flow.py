@@ -57,7 +57,7 @@ def _start() -> tuple[HTTPServer, str]:
 class _StubAdapter:
     provider = 'stub'
 
-    def complete(self, request):  # type: ignore[override]
+    def complete(self, request):
         from teaagent.llm import LLMResponse
 
         return LLMResponse(

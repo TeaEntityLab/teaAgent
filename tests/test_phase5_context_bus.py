@@ -353,7 +353,7 @@ class TestArchiveToRag:
             assert bus.get_delta_count() == 1
 
             class FailingRagStore:
-                def add_document(self, doc):  # type: ignore[no-untyped-def]
+                def add_document(self, doc):
                     raise RuntimeError('RAG store unavailable')
 
             bus.archive_to_rag(FailingRagStore())

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -111,7 +112,7 @@ class TestValidationRunner:
     """Test ValidationRunner."""
 
     @pytest.fixture
-    def temp_root(self) -> Path:
+    def temp_root(self) -> Iterator[Path]:
         """Create a temporary directory for testing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)

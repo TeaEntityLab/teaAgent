@@ -98,7 +98,7 @@ class ValidateToolDecisionTests(unittest.TestCase):
         self.assertIn('must be dict', reason)
 
     def test_input_not_dict(self) -> None:
-        valid, reason = validate_tool_decision([1, 2, 3])  # type: ignore[arg-type]
+        valid, reason = validate_tool_decision([1, 2, 3])
         self.assertFalse(valid)
         self.assertIn('not a dict', reason)
 
@@ -199,7 +199,7 @@ class AgentRunnerInvalidDecisionIntegrationTest(unittest.TestCase):
             task='echo something',
             decide=lambda _ctx: ToolRequest(
                 tool_name='echo',
-                arguments=None,  # type: ignore[arg-type]
+                arguments=None,
                 call_id='bad-3',
             ),
             run_id='run-null-args',
@@ -231,7 +231,7 @@ class AgentRunnerInvalidDecisionIntegrationTest(unittest.TestCase):
             task='echo something',
             decide=lambda _ctx: ToolRequest(
                 tool_name='',
-                arguments=None,  # type: ignore[arg-type]
+                arguments=None,
                 call_id='audit-bad',
             ),
             run_id='run-audit-test',
@@ -251,7 +251,7 @@ class AgentRunnerInvalidDecisionIntegrationTest(unittest.TestCase):
             task='echo something',
             decide=lambda _ctx: ToolRequest(
                 tool_name='',
-                arguments=None,  # type: ignore[arg-type]
+                arguments=None,
                 call_id='audit-bad-2',
             ),
             run_id='run-audit-fail',

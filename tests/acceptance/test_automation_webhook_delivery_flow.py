@@ -33,7 +33,8 @@ def test_automation_webhook_delivery_flow(tmp_path: Path) -> None:
     _HookHandler.payloads.clear()
     server = HTTPServer(('127.0.0.1', 0), _HookHandler)
     Thread(target=server.serve_forever, daemon=True).start()
-    host, port = server.server_address
+    host = server.server_address[0]
+    port = server.server_address[1]
     hook_url = f'http://{host}:{port}/automation'
 
     config = tmp_path / '.teaagent' / 'config.toml'

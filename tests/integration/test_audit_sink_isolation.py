@@ -14,7 +14,7 @@ from teaagent.audit import AuditEvent, AuditLogger
 
 def test_crashing_sink_does_not_propagate():
     audit = AuditLogger()
-    audit.add_sink(lambda _: (_ for _ in ()).throw(RuntimeError('boom')))  # type: ignore[misc]
+    audit.add_sink(lambda _: (_ for _ in ()).throw(RuntimeError('boom')))
 
     # Must not raise
     event = audit.record('test_event', 'run-001', detail='hello')

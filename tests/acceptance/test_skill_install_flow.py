@@ -89,7 +89,7 @@ def test_project_skill_overrides_user_skill(tmp_path):
 class _StubAdapter:
     provider = 'stub'
 
-    def complete(self, request):  # type: ignore[override]
+    def complete(self, request):
         from teaagent.llm import LLMResponse
 
         # Verify skill content reached the system prompt
@@ -183,7 +183,7 @@ def test_skill_load_audit_records_search_dirs_and_review_failures(tmp_path):
     class _AuditStubAdapter:
         provider = 'stub'
 
-        def complete(self, request):  # type: ignore[override]
+        def complete(self, request):
             from teaagent.llm import LLMResponse
 
             assert 'Works.' in (request.system or '')
@@ -226,7 +226,7 @@ def test_skill_load_audit_records_truncation_warning(tmp_path):
     class _TruncationAuditStubAdapter:
         provider = 'stub'
 
-        def complete(self, request):  # type: ignore[override]
+        def complete(self, request):
             from teaagent.llm import LLMResponse
 
             return LLMResponse(
@@ -262,7 +262,7 @@ def test_run_chat_agent_uses_configured_skill_search_dirs(tmp_path):
     class _ConfiguredPathStubAdapter:
         provider = 'stub'
 
-        def complete(self, request):  # type: ignore[override]
+        def complete(self, request):
             from teaagent.llm import LLMResponse
 
             assert 'custom skill loaded' in (request.system or '')
@@ -295,7 +295,7 @@ def test_run_chat_agent_custom_profile_requires_skill_search_dirs(tmp_path):
     class _NoopAdapter:
         provider = 'stub'
 
-        def complete(self, request):  # type: ignore[override]
+        def complete(self, request):
             from teaagent.llm import LLMResponse
 
             return LLMResponse(

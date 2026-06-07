@@ -150,7 +150,7 @@ class ApprovalPolicyTests(unittest.TestCase):
     def test_policy_is_frozen(self) -> None:
         policy = ApprovalPolicy()
         with self.assertRaises(FrozenInstanceError):
-            policy.allow_all_destructive = True  # type: ignore[misc]
+            policy.allow_all_destructive = True
 
     def test_scoped_approval_blocks_same_call_id_different_tool(self) -> None:
         """Regression test: same call_id with different tool/args must be blocked."""

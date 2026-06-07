@@ -23,7 +23,7 @@ class AgentCardTests(unittest.TestCase):
             tools=('read', 'write'),
         )
         defaults.update(kwargs)
-        return AgentCard(**defaults)  # type: ignore[arg-type]
+        return AgentCard(**defaults)
 
     def test_to_dict_round_trips(self) -> None:
         card = self._card()
@@ -75,7 +75,7 @@ class InMemoryAgentRegistryTests(unittest.TestCase):
         registry.register(self._card('a'))
         updated = self._card('a', caps=['new_cap'])
         registry.register(updated)
-        self.assertIn('new_cap', registry.get('a').capabilities)  # type: ignore[union-attr]
+        self.assertIn('new_cap', registry.get('a').capabilities)
 
     def test_deregister_removes(self) -> None:
         registry = InMemoryAgentRegistry()

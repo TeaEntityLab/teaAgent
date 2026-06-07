@@ -66,7 +66,7 @@ class RunBudgetTests(unittest.TestCase):
     def test_budget_is_frozen(self) -> None:
         budget = RunBudget()
         with self.assertRaises(FrozenInstanceError):
-            budget.max_iterations = 99  # type: ignore[misc]
+            budget.max_iterations = 99
 
     def test_custom_valid_budget(self) -> None:
         budget = RunBudget(

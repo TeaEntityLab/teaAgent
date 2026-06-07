@@ -20,7 +20,7 @@ from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 class _StubAdapter:
     provider = 'stub'
 
-    def complete(self, request):  # type: ignore[override]
+    def complete(self, request):
         from teaagent.llm import LLMResponse
 
         return LLMResponse(

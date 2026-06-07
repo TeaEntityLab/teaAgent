@@ -177,11 +177,11 @@ def test_approval_policy_rejects_empty_path(tmp_path):
     # Empty string path in path_globs must be rejected for all non-session scopes
     for scope in ('always', 'once'):
         with pytest.raises(ValueError, match='non-empty pattern'):
-            store.grant('workspace_write_file', path_globs=[''], scope=scope)  # type: ignore[arg-type]
+            store.grant('workspace_write_file', path_globs=[''], scope=scope)
 
     # Whitespace-only entries must also be rejected (they strip to nothing)
     with pytest.raises(ValueError, match='non-empty pattern'):
-        store.grant('workspace_write_file', path_globs=[' ', '\t', ''], scope='always')  # type: ignore[arg-type]
+        store.grant('workspace_write_file', path_globs=[' ', '\t', ''], scope='always')
 
     # None path_globs must be rejected for non-session scopes
     with pytest.raises(ValueError, match='must be provided explicitly'):

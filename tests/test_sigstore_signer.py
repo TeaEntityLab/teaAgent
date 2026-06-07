@@ -18,8 +18,8 @@ try:
     from teaagent.sigstore_signer import SigstoreSigner
 except ImportError:
     SIGSTORE_AVAILABLE = False
-    Verifier = None  # type: ignore
-    SigstoreSigner = None  # type: ignore
+    Verifier = None
+    SigstoreSigner = None
 
 
 @unittest.skipIf(not SIGSTORE_AVAILABLE, 'sigstore-python not installed')

@@ -52,7 +52,7 @@ class RunEvalWithJudgeTests(unittest.TestCase):
         report = run_eval_with_judge(
             cases,
             run_case=lambda c: 'good output',
-            judge_fn=self._fixed_judge(0.9),  # type: ignore[arg-type]
+            judge_fn=self._fixed_judge(0.9),
             passing_threshold=0.7,
         )
         self.assertTrue(report.passed)
@@ -65,7 +65,7 @@ class RunEvalWithJudgeTests(unittest.TestCase):
         report = run_eval_with_judge(
             cases,
             run_case=lambda c: 'poor output',
-            judge_fn=self._fixed_judge(0.3),  # type: ignore[arg-type]
+            judge_fn=self._fixed_judge(0.3),
             passing_threshold=0.7,
         )
         self.assertFalse(report.passed)
@@ -82,7 +82,7 @@ class RunEvalWithJudgeTests(unittest.TestCase):
         report = run_eval_with_judge(
             cases,
             run_case=lambda c: 'this is bad output',
-            judge_fn=self._fixed_judge(1.0),  # type: ignore[arg-type]
+            judge_fn=self._fixed_judge(1.0),
         )
         self.assertFalse(report.passed)
         self.assertIn('required phrase', report.results[0].failures)
@@ -123,20 +123,20 @@ class MakeLLMJudgeFnTests(unittest.TestCase):
 
     def test_parses_json_score(self) -> None:
         adapter = self._fake_adapter('{"score": 0.85, "reasoning": "good job"}')
-        judge_fn = make_llm_judge_fn(adapter)  # type: ignore[arg-type]
+        judge_fn = make_llm_judge_fn(adapter)
         score = judge_fn('task', 'output')
         self.assertAlmostEqual(score.score, 0.85)
         self.assertEqual(score.reasoning, 'good job')
 
     def test_parses_score_from_non_json_response(self) -> None:
         adapter = self._fake_adapter('The score is "score": 0.6 and "reasoning": "ok"')
-        judge_fn = make_llm_judge_fn(adapter)  # type: ignore[arg-type]
+        judge_fn = make_llm_judge_fn(adapter)
         score = judge_fn('task', 'output')
         self.assertAlmostEqual(score.score, 0.6)
 
     def test_clamps_score_to_0_1(self) -> None:
         adapter = self._fake_adapter('{"score": 1.5, "reasoning": "overflow"}')
-        judge_fn = make_llm_judge_fn(adapter)  # type: ignore[arg-type]
+        judge_fn = make_llm_judge_fn(adapter)
         score = judge_fn('task', 'output')
         self.assertAlmostEqual(score.score, 1.0)
 
@@ -145,14 +145,14 @@ class MakeLLMJudgeFnTests(unittest.TestCase):
             def complete(self, req: object) -> object:
                 raise RuntimeError('model down')
 
-        judge_fn = make_llm_judge_fn(FailAdapter())  # type: ignore[arg-type]
+        judge_fn = make_llm_judge_fn(FailAdapter())
         score = judge_fn('task', 'output')
         self.assertAlmostEqual(score.score, 0.0)
         self.assertIn('judge error', score.reasoning)
 
     def test_passing_threshold_stored_on_fn(self) -> None:
         adapter = self._fake_adapter('{"score": 0.9, "reasoning": "x"}')
-        judge_fn = make_llm_judge_fn(adapter, passing_threshold=0.8)  # type: ignore[arg-type]
+        judge_fn = make_llm_judge_fn(adapter, passing_threshold=0.8)
         self.assertAlmostEqual(judge_fn._passing_threshold, 0.8)  # type: ignore[attr-defined]
 
 

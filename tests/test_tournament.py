@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -159,7 +160,7 @@ class TestTournamentBranchManager:
     """Test tournament branch manager."""
 
     @pytest.fixture
-    def temp_root(self) -> Path:
+    def temp_root(self) -> Iterator[Path]:
         """Create a temporary directory for testing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

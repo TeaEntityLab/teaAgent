@@ -16,11 +16,13 @@ class FakeGraphQLiteGraph:
         self.edges: list[tuple] = []
         self.queries: list[str] = []
 
-    def upsert_node(self, node_id: str, properties: dict, label: str = None) -> None:
+    def upsert_node(
+        self, node_id: str, properties: dict, label: str | None = None
+    ) -> None:
         self.nodes.append((node_id, properties, label))
 
     def upsert_edge(
-        self, source: str, target: str, properties: dict, rel_type: str = None
+        self, source: str, target: str, properties: dict, rel_type: str | None = None
     ) -> None:
         self.edges.append((source, target, properties, rel_type))
 

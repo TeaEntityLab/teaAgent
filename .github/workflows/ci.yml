@@ -153,7 +153,11 @@ jobs:
         run: ruff format --check .
 
       - name: Type check with mypy
-        run: mypy teaagent/
+        run: mypy teaagent/ tests/ --explicit-package-bases
+
+      - name: SAST with bandit
+        # Exit 0 so PRs aren't blocked; review results manually for now
+        run: bandit -r teaagent/ -c pyproject.toml --severity-level medium || echo "::warning::Bandit found Medium+ findings — review manually"
 
       - name: Audit test quality
         run: python3 scripts/audit_test_quality.py --fail-on severe

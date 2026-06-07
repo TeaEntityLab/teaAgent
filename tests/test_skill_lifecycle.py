@@ -342,7 +342,7 @@ def test_explain_governance_status_in_output(tmp_path: Path) -> None:
     )
     d = report.to_dict()
 
-    loaded_by_name = {item['name']: item for item in d['loaded']}
+    loaded_by_name = {item['name']: item for item in d['loaded']}  # type: ignore[attr-defined]
     assert loaded_by_name['alpha']['governance_status'] == 'direct_write'
     assert loaded_by_name['beta']['governance_status'] == 'compatibility_path'
 

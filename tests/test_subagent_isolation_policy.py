@@ -98,7 +98,7 @@ class SubagentIsolationPolicyTests(unittest.TestCase):
             )
             captured: dict[str, int] = {}
 
-            def fake_run_chat_agent(cfg, *args, **kwargs):  # type: ignore[no-untyped-def]
+            def fake_run_chat_agent(cfg, *args, **kwargs):
                 captured['max_iterations'] = cfg.max_iterations
                 captured['max_tool_calls'] = cfg.max_tool_calls
                 from teaagent.runner import FinalAnswer, RunResult

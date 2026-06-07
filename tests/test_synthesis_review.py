@@ -904,11 +904,11 @@ class TestImmutability:
             evidence_path='x',
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
-            f.finding_id = 'new'  # type: ignore[misc]
+            f.finding_id = 'new'
 
     def test_residual_risk_is_frozen(self) -> None:
         import dataclasses
 
         r = ResidualRisk(description='d', severity='low', mitigation='m')
         with pytest.raises(dataclasses.FrozenInstanceError):
-            r.description = 'new'  # type: ignore[misc]
+            r.description = 'new'

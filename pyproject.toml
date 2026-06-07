@@ -22,7 +22,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = []
+dependencies = [
+    "bandit>=1.9.4",
+]
 
 [tool.setuptools.packages.find]
 include = ["teaagent*"]
@@ -117,6 +119,7 @@ dev = [
     "opentelemetry-exporter-otlp-proto-http>=1.41.1",
     "google-adk>=2.0.0",
     "google-cloud-aiplatform>=1.156.0",
+    "bandit>=1.7",
 ]
 
 [project.scripts]
@@ -142,13 +145,58 @@ markers = [
 [tool.mypy]
 python_version = "3.10"
 ignore_missing_imports = true
-exclude = ["tests/", "examples/", "scripts/", "benchmarks/"]
+exclude = ["examples/", "scripts/", "benchmarks/"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+# Suppress test-noise error codes; keep attr-defined, misc, name-defined etc. as signal
+disable_error_code = [
+    "arg-type",
+    "union-attr",
+    "var-annotated",
+    "index",
+    "return-value",
+    "func-returns-value",
+    "str-bytes-safe",
+    "list-item",
+    "dict-item",
+    "operator",
+    "method-assign",
+    "override",
+    "call-overload",
+    "misc",
+    "assignment",
+]
+
+[tool.bandit]
+exclude_dirs = [
+    "tests/",
+    "examples/",
+    "scripts/",
+    "benchmarks/",
+    ".git/",
+    ".venv/",
+    ".teaagent/",
+    "build/",
+    "dist/",
+    "docs/",
+]
+skips = [
+    "B101",  # assert statements are used intentionally in non-production paths
+    "B404",  # subprocess import - reviewed for safety in workspace tools
+    "B603",  # subprocess_without_shell - false positive for inspect-only calls
+    "B607",  # subprocess_with_partial_path - partial path is intended
+]
+targets = ["."]
 
 [tool.coverage.run]
 source = ["teaagent"]

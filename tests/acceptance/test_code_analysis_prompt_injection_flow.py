@@ -15,7 +15,7 @@ class _Adapter:
     def __init__(self) -> None:
         self.requests = []
 
-    def complete(self, request):  # type: ignore[override]
+    def complete(self, request):
         from teaagent.llm import LLMResponse
 
         self.requests.append(request)

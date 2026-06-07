@@ -40,7 +40,8 @@ def _start_server() -> tuple[HTTPServer, str]:
     server = HTTPServer(('127.0.0.1', 0), _CaptureHandler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    host, port = server.server_address
+    host = server.server_address[0]
+    port = server.server_address[1]
     return server, f'http://{host}:{port}/hook'
 
 

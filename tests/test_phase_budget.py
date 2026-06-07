@@ -38,7 +38,7 @@ class PhaseBudgetTests(unittest.TestCase):
     def test_is_frozen(self) -> None:
         pb = PhaseBudget(phase=Phase.PLAN, max_iterations=5, max_tool_calls=3)
         with self.assertRaises(FrozenInstanceError):
-            pb.max_iterations = 10  # type: ignore[misc]
+            pb.max_iterations = 10
 
 
 class RunBudgetPhaseResolutionTests(unittest.TestCase):
@@ -150,7 +150,7 @@ class RunBudgetValidationTests(unittest.TestCase):
     def test_runtime_budget_is_frozen(self) -> None:
         budget = RunBudget()
         with self.assertRaises(FrozenInstanceError):
-            budget.max_iterations = 99  # type: ignore[misc]
+            budget.max_iterations = 99
 
 
 class PhaseTrackerIterationTests(unittest.TestCase):

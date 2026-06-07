@@ -56,7 +56,7 @@ class TelemetryConfigTests(unittest.TestCase):
     def test_frozen(self) -> None:
         cfg = TelemetryConfig()
         with self.assertRaises(FrozenInstanceError):
-            cfg.service_name = 'changed'  # type: ignore[misc]
+            cfg.service_name = 'changed'
 
 
 class TelemetryNotAvailableTests(unittest.TestCase):

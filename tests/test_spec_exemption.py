@@ -51,7 +51,7 @@ class TestSpecExemptionReceipt:
         with pytest.raises(ValueError, match='Invalid exemption reason'):
             SpecExemptionReceipt(
                 exemption_id='x',
-                reason='invalid_reason',  # type: ignore[arg-type]
+                reason='invalid_reason',
                 spec_requirement_waived='plan-before-write',
             )
 
@@ -61,7 +61,7 @@ class TestSpecExemptionReceipt:
                 exemption_id='x',
                 reason='read_only',
                 spec_requirement_waived='plan-before-write',
-                risk_level='high',  # type: ignore[arg-type]
+                risk_level='high',
             )
 
     def test_roundtrip_dict(self):
@@ -86,7 +86,7 @@ class TestSpecExemptionReceipt:
         for reason in sorted(_VALID_REASONS):
             receipt = SpecExemptionReceipt(
                 exemption_id='',
-                reason=reason,  # type: ignore[arg-type]
+                reason=reason,
                 spec_requirement_waived='plan-before-write',
             )
             assert receipt.reason == reason
@@ -97,7 +97,7 @@ class TestSpecExemptionReceipt:
                 exemption_id='',
                 reason='read_only',
                 spec_requirement_waived='plan-before-write',
-                risk_level=level,  # type: ignore[arg-type]
+                risk_level=level,
             )
             assert receipt.risk_level == level
 
@@ -148,14 +148,14 @@ class TestGrantSpecExemption:
         with pytest.raises(ValueError, match='Invalid risk_level'):
             grant_spec_exemption(
                 reason='read_only',
-                risk_level='high',  # type: ignore[arg-type]
+                risk_level='high',
                 spec_requirement='plan-before-write',
             )
 
     def test_grant_invalid_reason(self):
         with pytest.raises(ValueError, match='Invalid reason'):
             grant_spec_exemption(
-                reason='bad_reason',  # type: ignore[arg-type]
+                reason='bad_reason',
                 risk_level='low',
                 spec_requirement='plan-before-write',
             )

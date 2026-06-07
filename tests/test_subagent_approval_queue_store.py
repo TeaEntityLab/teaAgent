@@ -34,7 +34,7 @@ def _make_req(**overrides: object) -> SubagentApprovalRequest:
         'isolation': 'shared',
     }
     fields.update(overrides)
-    return SubagentApprovalRequest(**fields)  # type: ignore[arg-type]
+    return SubagentApprovalRequest(**fields)
 
 
 class TestQueueDiskSnapshot:

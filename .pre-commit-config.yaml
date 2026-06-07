@@ -18,7 +18,7 @@ repos:
         pass_filenames: false
       - id: mypy
         name: mypy
-        entry: env UV_CACHE_DIR=.uv-cache uv run mypy teaagent/
+        entry: env UV_CACHE_DIR=.uv-cache uv run mypy teaagent/ tests/ --explicit-package-bases
         language: system
         pass_filenames: false
       - id: pytest

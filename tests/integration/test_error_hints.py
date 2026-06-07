@@ -51,12 +51,12 @@ def test_str_includes_hint(exc_cls):
 
 def test_custom_hint_overrides_default():
     exc = BudgetExceededError('over budget', hint='Try using a smaller model.')
-    assert 'Try using a smaller model.' in exc.hint  # type: ignore[operator]
+    assert 'Try using a smaller model.' in exc.hint
     assert 'Try using a smaller model.' in str(exc)
 
 
 def test_no_hint_renders_cleanly():
     exc = BudgetExceededError.__new__(BudgetExceededError)
     Exception.__init__(exc, 'bare error')
-    exc.hint = None  # type: ignore[assignment]
+    exc.hint = None
     assert str(exc) == 'bare error'

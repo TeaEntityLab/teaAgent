@@ -20,7 +20,7 @@ class _StreamingStubAdapter:
     provider = 'stub'
     chunks_fired: list[str] = []
 
-    def complete(self, request):  # type: ignore[override]
+    def complete(self, request):
         from teaagent.llm import LLMResponse
 
         self.chunks_fired = []

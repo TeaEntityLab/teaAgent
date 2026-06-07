@@ -16,7 +16,7 @@ class _StubAdapter:
     provider = 'stub'
     call_count = 0
 
-    def complete(self, request):  # type: ignore[override]
+    def complete(self, request):
         from teaagent.llm import LLMResponse
 
         self.call_count += 1

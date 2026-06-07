@@ -30,7 +30,7 @@ class _SlowStubAdapter:
     def __init__(self, cancel_event: threading.Event) -> None:
         self._cancel = cancel_event
 
-    def complete(self, request):  # type: ignore[override]
+    def complete(self, request):
         from teaagent.llm import LLMResponse
 
         self.call_count += 1
@@ -101,7 +101,7 @@ def test_cancel_token_without_set_runs_normally(tmp_path):
     class _QuickAdapter:
         provider = 'stub'
 
-        def complete(self, request):  # type: ignore[override]
+        def complete(self, request):
             from teaagent.llm import LLMResponse
 
             return LLMResponse(
