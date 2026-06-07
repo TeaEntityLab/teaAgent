@@ -14,7 +14,11 @@
   "ruff.format": true,
   "ruff.lint.run": "onSave",
   "mypy.runUsingActiveInterpreter": true,
-  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": true,
   "files.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
@@ -24,5 +28,16 @@
     ".ruff_cache": true,
     ".uv-cache": true,
     "**/.DS_Store": true
+  },
+  "files.watcherExclude": {
+    "**/.git/**": true,
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/.mypy_cache/**": true,
+    "**/.pytest_cache/**": true,
+    "**/.ruff_cache/**": true,
+    "**/.uv-cache/**": true,
+    "**/build/**": true,
+    "**/dist/**": true
   }
 }

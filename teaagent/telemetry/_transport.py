@@ -6,7 +6,7 @@ from typing import Any
 try:
     from opentelemetry import trace as _otel_trace
 except ImportError:  # pragma: no cover
-    _otel_trace = None  # type: ignore[assignment]
+    _otel_trace = None
 
 
 class TracingHTTPTransport:

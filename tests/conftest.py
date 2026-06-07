@@ -79,6 +79,12 @@ def fake_adapter(
     return FakeAdapter(outputs, before_each=before_each)
 
 
+@pytest.fixture
+def mock_llm_adapter() -> FakeAdapter:
+    """A FakeAdapter that returns empty responses for testing agent loops."""
+    return FakeAdapter([])
+
+
 def temp_workspace(*files: tuple[str, str]) -> tempfile.TemporaryDirectory[str]:
     td = tempfile.TemporaryDirectory()
     root = Path(td.name)

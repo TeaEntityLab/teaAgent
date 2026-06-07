@@ -29,11 +29,11 @@ try:
 except ImportError:
     WATCHDOG_AVAILABLE = False
     # Create dummy types for type checking when watchdog is not available
-    FileSystemEventHandler = object  # type: ignore[misc,assignment]
-    DirDeletedEvent = object  # type: ignore[misc,assignment]
-    DirModifiedEvent = object  # type: ignore[misc,assignment]
-    FileDeletedEvent = object  # type: ignore[misc,assignment]
-    FileModifiedEvent = object  # type: ignore[misc,assignment]
+    FileSystemEventHandler = object
+    DirDeletedEvent = object
+    DirModifiedEvent = object
+    FileDeletedEvent = object
+    FileModifiedEvent = object
 
     class Observer:  # type: ignore[no-redef]
         """Dummy Observer class when watchdog is not available."""
