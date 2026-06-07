@@ -1,4 +1,4 @@
-"""Audit log hash-chain verification.
+"""Audit log hash-chain verification with tampering detection.
 
 Each event persisted by ``AuditLogger`` carries two extra fields:
 
@@ -15,9 +15,16 @@ Each event persisted by ``AuditLogger`` carries two extra fields:
     secret.  Provided when the caller supplied ``secret_key``.
 
 ``verify_audit_chain`` reads a JSONL audit log and confirms that every
-chained event's hash is correct and that the ``prev_hash`` chain is
-unbroken.  Any insertion, deletion, or content modification produces a
-verification failure with an explanatory error string.
+chained event's hash is correct, the ``prev_hash`` chain is unbroken,
+and timestamps are monotonically non-decreasing.  All failures are
+collected and reported, not just the first one.
+
+Tampering indicators detected:
+- **Hash mismatch** — event content was modified after recording
+- **prev_hash mismatch** — events were inserted, deleted, or reordered
+- **Timestamp regression** — events are out of chronological order
+- **Missing chain fields** — legacy or tampered events without hashes
+- **HMAC mismatch** — signature does not match the per-run secret key
 
 Legacy log lines that lack ``prev_hash`` / ``hash`` fields are skipped
 and the chain is reset at that point (backward compatibility).
@@ -25,11 +32,13 @@ and the chain is reset at that point (backward compatibility).
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -43,12 +52,42 @@ _CHAIN_FIELDS = frozenset(
 
 
 @dataclass(frozen=True)
+class ChainFailure:
+    """A single integrity failure detected during chain verification."""
+
+    line_number: int
+    """1-based line number in the audit log file."""
+
+    event_number: int
+    """0-based event index (skipping non-event lines)."""
+
+    category: str
+    """Failure category: hash_mismatch, prev_hash_mismatch, timestamp_regression,
+    missing_fields, hmac_mismatch, json_parse_error."""
+
+    message: str
+    """Human-readable description of the failure."""
+
+    severity: str = 'error'
+    """Severity: error (integrity violation), warning (non-critical anomaly)."""
+
+
+@dataclass(frozen=True)
 class ChainVerificationResult:
-    """Outcome of :func:`verify_audit_chain`."""
+    """Outcome of :func:`verify_audit_chain`.
+
+    When ``valid`` is False, ``failures`` contains every detected problem.
+    ``error`` retains the first failure message for backward compatibility.
+    """
 
     valid: bool
     event_count: int
     error: Optional[str] = None
+    failures: list[ChainFailure] = field(default_factory=list)
+    total_hash_mismatches: int = 0
+    total_prev_hash_mismatches: int = 0
+    total_timestamp_regressions: int = 0
+    total_legacy_events: int = 0
 
 
 def compute_event_hash(obj: dict) -> str:
@@ -88,48 +127,115 @@ def _verify_single_event(
     secret_key: bytes | None,
     strict: bool,
     allow_legacy_reset: bool,
-) -> tuple[str | None, str]:
+) -> tuple[str | None, list[ChainFailure]]:
+    """Verify a single event. Returns (next_prev_hash, failures)."""
+    failures: list[ChainFailure] = []
+
     if 'prev_hash' not in obj or 'hash' not in obj:
         if strict and not allow_legacy_reset:
-            return None, (
-                f'Line {line_index}: legacy event without chain fields '
-                'rejected in strict audit-chain mode'
+            failures.append(
+                ChainFailure(
+                    line_number=line_index,
+                    event_number=-1,
+                    category='missing_fields',
+                    message=(
+                        f'Line {line_index}: legacy event without chain fields '
+                        'rejected in strict audit-chain mode'
+                    ),
+                    severity='error',
+                )
             )
+            return None, failures
         logger.warning(
             'Line %d: legacy event without chain fields — '
             'hash chain anchor reset to genesis; '
             'chain integrity cannot be verified across this boundary',
             line_index,
         )
-        return GENESIS_HASH, ''
+        return GENESIS_HASH, failures
 
     stored_prev = obj['prev_hash']
     if stored_prev != prev_hash:
-        return None, (
-            f'Line {line_index}: prev_hash mismatch '
-            f'(expected {prev_hash!r}, got {stored_prev!r})'
+        failures.append(
+            ChainFailure(
+                line_number=line_index,
+                event_number=-1,
+                category='prev_hash_mismatch',
+                message=(
+                    f'Line {line_index}: prev_hash mismatch '
+                    f'(expected {prev_hash!r}, got {stored_prev!r})'
+                ),
+                severity='error',
+            )
         )
 
     try:
         expected = compute_event_hash(obj)
     except KeyError as exc:
-        return None, f'Line {line_index}: missing required field {exc}'
+        failures.append(
+            ChainFailure(
+                line_number=line_index,
+                event_number=-1,
+                category='missing_fields',
+                message=f'Line {line_index}: missing required field {exc}',
+                severity='error',
+            )
+        )
+        return None, failures
 
     if obj['hash'] != expected:
-        return None, (
-            f'Line {line_index}: hash mismatch for event '
-            f'{obj.get("event_id", "?")} — content may have been tampered'
+        failures.append(
+            ChainFailure(
+                line_number=line_index,
+                event_number=-1,
+                category='hash_mismatch',
+                message=(
+                    f'Line {line_index}: hash mismatch for event '
+                    f'{obj.get("event_id", "?")} — content may have been tampered'
+                ),
+                severity='error',
+            )
         )
 
     if secret_key is not None and 'chain_hmac' in obj:
         expected_hmac = compute_chain_hmac(obj['hash'], secret_key)
         if obj['chain_hmac'] != expected_hmac:
-            return None, (
-                f'Line {line_index}: HMAC mismatch for event '
-                f'{obj.get("event_id", "?")} — signature does not match key'
+            failures.append(
+                ChainFailure(
+                    line_number=line_index,
+                    event_number=-1,
+                    category='hmac_mismatch',
+                    message=(
+                        f'Line {line_index}: HMAC mismatch for event '
+                        f'{obj.get("event_id", "?")} — signature does not match key'
+                    ),
+                    severity='error',
+                )
             )
 
-    return obj['hash'], ''
+    return obj['hash'], failures
+
+
+def _parse_timestamp(value: object) -> Optional[datetime]:
+    """Parse a timestamp from an audit event. Returns None if unparseable."""
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value, tz=timezone.utc)
+    if isinstance(value, str):
+        for fmt in (
+            '%Y-%m-%dT%H:%M:%S.%fZ',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S.%f%z',
+            '%Y-%m-%dT%H:%M:%S%z',
+            '%Y-%m-%dT%H:%M:%S',
+        ):
+            try:
+                dt = datetime.strptime(value, fmt)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt
+            except ValueError:
+                continue
+    return None
 
 
 def verify_audit_chain(
@@ -160,25 +266,117 @@ def verify_audit_chain(
 
     lines = text.splitlines()
     prev_hash: str = GENESIS_HASH
+    last_timestamp: Optional[datetime] = None
+    all_failures: list[ChainFailure] = []
+    event_idx = 0
+    total_hash_mismatches = 0
+    total_prev_hash_mismatches = 0
+    total_timestamp_regressions = 0
+    total_legacy_events = 0
 
     for i, line in enumerate(lines):
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as exc:
+            all_failures.append(
+                ChainFailure(
+                    line_number=i + 1,
+                    event_number=event_idx,
+                    category='json_parse_error',
+                    message=f'Line {i + 1}: invalid JSON: {exc}',
+                    severity='error',
+                )
+            )
+            event_idx += 1
             return ChainVerificationResult(
                 valid=False,
-                event_count=i,
-                error=f'Line {i + 1}: invalid JSON: {exc}',
+                event_count=event_idx,
+                error=all_failures[0].message,
+                failures=all_failures,
+                total_hash_mismatches=total_hash_mismatches,
+                total_prev_hash_mismatches=total_prev_hash_mismatches,
+                total_timestamp_regressions=total_timestamp_regressions,
+                total_legacy_events=total_legacy_events,
             )
 
-        new_prev, error = _verify_single_event(
+        event_idx += 1
+
+        new_prev, failures = _verify_single_event(
             obj, prev_hash, i + 1, secret_key, strict, allow_legacy_reset
         )
-        if error:
-            return ChainVerificationResult(valid=False, event_count=i, error=error)
-        prev_hash = new_prev if new_prev is not None else prev_hash
 
-    return ChainVerificationResult(valid=True, event_count=len(lines))
+        # Annotate failures with correct event_number
+        for f in failures:
+            all_failures.append(
+                ChainFailure(
+                    line_number=f.line_number,
+                    event_number=event_idx,
+                    category=f.category,
+                    message=f.message,
+                    severity=f.severity,
+                )
+            )
+
+        # Count failure types
+        for f in failures:
+            if f.category == 'hash_mismatch':
+                total_hash_mismatches += 1
+            elif f.category == 'prev_hash_mismatch':
+                total_prev_hash_mismatches += 1
+
+        # Check timestamp ordering
+        created_at = obj.get('created_at')
+        if created_at is not None:
+            current_ts = _parse_timestamp(created_at)
+            if (
+                current_ts is not None
+                and last_timestamp is not None
+                and current_ts < last_timestamp
+            ):
+                total_timestamp_regressions += 1
+                all_failures.append(
+                    ChainFailure(
+                        line_number=i + 1,
+                        event_number=event_idx,
+                        category='timestamp_regression',
+                        message=(
+                            f'Line {i + 1}: timestamp regression for event '
+                            f'{obj.get("event_id", "?")} — '
+                            f'{created_at} is earlier than previous event '
+                            f'({last_timestamp.isoformat()})'
+                        ),
+                        severity='warning',
+                    )
+                )
+            if current_ts is not None:
+                last_timestamp = current_ts
+
+        # Track legacy events
+        if 'prev_hash' not in obj or 'hash' not in obj:
+            total_legacy_events += 1
+
+        # Continue chain even after failures (use expected hash for chain)
+        # so we can detect cascading vs isolated issues
+        if new_prev is not None:
+            prev_hash = new_prev
+        else:
+            # On hash failure, compute expected hash to keep chain going
+            with contextlib.suppress(KeyError, TypeError):
+                prev_hash = compute_event_hash({**obj, 'prev_hash': prev_hash})
+
+    valid = len(all_failures) == 0
+    first_error = all_failures[0].message if all_failures else None
+
+    return ChainVerificationResult(
+        valid=valid,
+        event_count=event_idx,
+        error=first_error,
+        failures=all_failures,
+        total_hash_mismatches=total_hash_mismatches,
+        total_prev_hash_mismatches=total_prev_hash_mismatches,
+        total_timestamp_regressions=total_timestamp_regressions,
+        total_legacy_events=total_legacy_events,
+    )
 
 
 def _load_run_key(log_path: Path) -> bytes | None:

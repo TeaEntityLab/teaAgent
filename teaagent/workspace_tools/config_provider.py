@@ -1,8 +1,11 @@
 """Configuration providers for tool dependency injection."""
 
-from typing import Callable, Protocol
+from __future__ import annotations
 
-from teaagent.workspace_tools._files import WorkspaceToolConfig
+from typing import TYPE_CHECKING, Callable, Protocol
+
+if TYPE_CHECKING:
+    from teaagent.workspace_tools._files import WorkspaceToolConfig
 
 
 class ToolConfigProvider(Protocol):

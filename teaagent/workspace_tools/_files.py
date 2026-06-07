@@ -716,7 +716,7 @@ def _resolve_knowledge_backend(backend_name: str, payload: dict[str, Any]) -> An
 
 
 def git_status(config: WorkspaceToolConfig) -> dict[str, Any]:
-    result = subprocess.run(
+    result = subprocess.run(  # shellcheck: arguments — hardcoded list, safe
         ['git', 'status', '--short'],
         cwd=str(config.root),
         text=True,

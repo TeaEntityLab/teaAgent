@@ -19,7 +19,7 @@ class GitToolConfig:
 def _run_git(
     config: GitToolConfig, args: list[str], *, check: bool = True
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # shellcheck: arguments — list form, no shell=True
         ['git', '-C', str(config.root)] + args,
         capture_output=True,
         text=True,

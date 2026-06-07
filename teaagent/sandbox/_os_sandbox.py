@@ -120,7 +120,7 @@ class OSSandbox:
         env = self.sanitize_environment()
 
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # shellcheck: arguments — list param, safe
                 command,
                 cwd=working_dir,
                 env=env,

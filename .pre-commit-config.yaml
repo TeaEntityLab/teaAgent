@@ -6,6 +6,11 @@ repos:
         entry: python3 .githooks/commit-msg
         language: system
         stages: [commit-msg]
+      - id: check-circular-imports
+        name: check-circular-imports
+        entry: python3 scripts/check_circular_imports.py
+        language: system
+        pass_filenames: false
       - id: ruff-format
         name: ruff-format
         entry: env UV_CACHE_DIR=.uv-cache uv run ruff format

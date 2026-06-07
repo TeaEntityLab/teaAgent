@@ -286,7 +286,7 @@ class ParallelExperimentStack:
                 # Run tests with timeout
                 start_time = time.time()
                 try:
-                    result = subprocess.run(
+                    result = subprocess.run(  # shellcheck: arguments — list param, safe
                         test_command,
                         cwd=self._root,
                         capture_output=True,

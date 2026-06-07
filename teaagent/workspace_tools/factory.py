@@ -9,9 +9,10 @@ late-binding pitfalls of lambda closures.
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
-from teaagent.workspace_tools._files import WorkspaceToolConfig
+if TYPE_CHECKING:
+    from teaagent.workspace_tools._files import WorkspaceToolConfig
 
 
 class ToolFactory:

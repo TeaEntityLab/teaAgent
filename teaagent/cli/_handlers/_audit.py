@@ -125,22 +125,77 @@ def audit_verify_command(args: argparse.Namespace) -> int:
         )
         return 1
 
-    print('[Verifying...] Scanning audit events against genesis block...')
+    print('[Verifying...] Scanning audit events for tampering indicators...')
     result = verify_audit_chain(audit_log_path)
 
     if not result.valid:
+        # Build detailed tampering report
+        failures_by_category: dict[str, int] = {}
+        for f in result.failures:
+            failures_by_category[f.category] = (
+                failures_by_category.get(f.category, 0) + 1
+            )
+
+        print('\n[✗] AUDIT CHAIN VERIFICATION FAILED — TAMPERING DETECTED')
+        print(
+            f'[✗] {len(result.failures)} integrity violation(s) found in '
+            f'{result.event_count} events.\n'
+        )
+
+        print('Failure summary by category:')
+        for category, count in sorted(failures_by_category.items()):
+            label = {
+                'hash_mismatch': 'Event content modified',
+                'prev_hash_mismatch': 'Events inserted/deleted/reordered',
+                'timestamp_regression': 'Out-of-order timestamps',
+                'missing_fields': 'Missing hash chain fields',
+                'hmac_mismatch': 'HMAC signature mismatch',
+                'json_parse_error': 'Unparseable lines',
+            }.get(category, category)
+            print(f'  {label}: {count}')
+
+        print('\nDetailed failures:')
+        for f in result.failures:
+            marker = '✗' if f.severity == 'error' else '⚠'
+            print(
+                f'  {marker} Event #{f.event_number} (line {f.line_number}): '
+                f'[{f.category}] {f.message.split(": ", 1)[-1]}'
+            )
+
         print_json(
             {
                 'status': 'invalid',
                 'event_count': result.event_count,
+                'failure_count': len(result.failures),
+                'hash_mismatches': result.total_hash_mismatches,
+                'prev_hash_mismatches': result.total_prev_hash_mismatches,
+                'timestamp_regressions': result.total_timestamp_regressions,
+                'legacy_events': result.total_legacy_events,
                 'error': result.error,
+                'failures': [
+                    {
+                        'line': f.line_number,
+                        'event': f.event_number,
+                        'category': f.category,
+                        'severity': f.severity,
+                        'message': f.message,
+                    }
+                    for f in result.failures
+                ],
             }
         )
         return 1
 
     print(
-        '[✓] Cryptographic Hash Chain: VALID (zero gaps, zero modifications, zero insertions).'
+        '\n[✓] Cryptographic Hash Chain: VALID '
+        '(zero gaps, zero modifications, zero insertions).'
     )
+    if result.total_legacy_events > 0:
+        print(
+            f'[!] Note: {result.total_legacy_events} legacy event(s) without '
+            'hash-chain fields — integrity cannot be verified across those boundaries.'
+        )
+    print('[✓] Timestamp ordering: VERIFIED (no regressions).')
     print(f'[✓] Verified {result.event_count} audit events.')
 
     # Handle signature generation if requested

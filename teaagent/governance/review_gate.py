@@ -14,10 +14,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from teaagent.consensus import RiskLevel
-from teaagent.goal_record import GoalRecord
+
+if TYPE_CHECKING:
+    from teaagent.goal_record import GoalRecord
 
 logger = logging.getLogger(__name__)
 

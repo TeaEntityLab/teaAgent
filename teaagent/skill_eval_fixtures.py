@@ -5,10 +5,12 @@ All fixtures are in-memory — no external file dependencies.
 
 from __future__ import annotations
 
-from teaagent.skill_eval import EvalCase, EvalFixture
+from typing import Any
 
 
-def get_default_eval_fixtures() -> list[EvalFixture]:
+def get_default_eval_fixtures() -> list[Any]:
+    from teaagent.skill_eval import EvalFixture
+
     return [
         EvalFixture(
             name='markdown_titles_check',
@@ -37,7 +39,9 @@ def get_default_eval_fixtures() -> list[EvalFixture]:
     ]
 
 
-def get_default_eval_cases() -> list[EvalCase]:
+def get_default_eval_cases() -> list[Any]:
+    from teaagent.skill_eval import EvalCase
+
     return [
         EvalCase(
             name='markdown_titles_check',

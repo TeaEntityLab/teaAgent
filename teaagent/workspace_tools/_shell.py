@@ -65,7 +65,7 @@ def run_shell(config: WorkspaceToolConfig, args: dict[str, Any]) -> dict[str, An
             'GIT_PAGER': 'cat',
         }
     )
-    result = subprocess.run(
+    result = subprocess.run(  # shellcheck: arguments — shlex.split + list form
         argv,
         cwd=str(config.root),
         shell=False,
@@ -119,7 +119,7 @@ def run_shell_argv(
             'GIT_PAGER': 'cat',
         }
     )
-    result = subprocess.run(
+    result = subprocess.run(  # shellcheck: arguments — list param + shell=False
         argv,
         cwd=str(config.root),
         shell=False,
