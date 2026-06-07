@@ -360,7 +360,7 @@ class SubagentChainingScenarios(unittest.TestCase):
 
             call_log: list[str] = []
 
-            def fake_run(config, task, **kw):
+            def fake_run(config, task, **kw) -> MagicMock:
                 call_log.append(task)
                 mock = MagicMock()
                 mock.status = 'completed'
@@ -413,7 +413,7 @@ class SubagentChainingScenarios(unittest.TestCase):
             )
             captured_config = None
 
-            def fake_run(config, task, **kw):
+            def fake_run(config, task, **kw) -> MagicMock:
                 nonlocal captured_config
                 captured_config = config
                 mock = MagicMock()
@@ -462,7 +462,7 @@ class SubagentChainingScenarios(unittest.TestCase):
             )
             manager.bind_registry(registry)
 
-            def fake_run_subagent(**kw):
+            def fake_run_subagent(**kw) -> dict[str, Any]:
                 task = kw.get('task', '')
                 if 'fail' in task:
                     raise RuntimeError('Simulated batch error')
@@ -650,6 +650,7 @@ class WorkflowAndAutomationScenarios(unittest.TestCase):
 
             # validate_context_from should find the handoff file (P2 fix)
             from teaagent.automation_chain import validate_context_from
+
             downstream_spec = AutomationSpec(
                 automation_id='triage',
                 name='triage',
@@ -658,8 +659,9 @@ class WorkflowAndAutomationScenarios(unittest.TestCase):
                 context_from='collector',
             )
             errors = validate_context_from(downstream_spec, root=str(root))
-            self.assertEqual(errors, [],
-                'validate_context_from should recognize handoff files')
+            self.assertEqual(
+                errors, [], 'validate_context_from should recognize handoff files'
+            )
 
     def test_d4_automation_handoff_context_from_missing(self) -> None:
         """validate_context_from returns errors for missing upstream."""
@@ -850,6 +852,7 @@ class PluginAndMemoryScenarios(unittest.TestCase):
         self.assertEqual(retrieved.aliases, ('hi',))
 
         from teaagent.plugin_system import AgentPlugin as AP
+
         agent = AP(
             name='tester',
             description='Test execution agent',
@@ -1029,6 +1032,7 @@ class ApprovalAndAuditScenarios(unittest.TestCase):
             )
             self.assertLessEqual(result.iterations, 1)
 
+
 # ============================================================================
 # Class H: MCP and ACP server protocol scenarios
 # ============================================================================
@@ -1136,6 +1140,7 @@ class McpAcpServerScenarios(unittest.TestCase):
                 'permission_mode': 'read-only',
             }
         )
+        assert prompt_resp is not None
         self.assertIn('runId', prompt_resp)
         self.assertIn('status', prompt_resp)
 
@@ -1201,7 +1206,7 @@ class FailureCardScenarios(unittest.TestCase):
             run_id='run-1',
             error_type='TypeError',
             file_path='src/main.py',
-            error_message="int() argument must be a string",
+            error_message='int() argument must be a string',
             task_description='convert string to int',
             context_files=['src/main.py', 'src/utils.py'],
             confidence='low',
@@ -1556,10 +1561,10 @@ class ProviderFailoverScenarios(unittest.TestCase):
         adapter = create_llm_adapter('fake')
         self.assertIsInstance(adapter, FakeLLMAdapter)
         self.assertEqual(adapter.provider, 'fake')
-        self.assertEqual(adapter.model, 'fake-model')
+        self.assertEqual(getattr(adapter, 'model', 'unknown'), 'fake-model')
 
         adapter_custom = create_llm_adapter('fake', model='custom-fake')
-        self.assertEqual(adapter_custom.model, 'custom-fake')
+        self.assertEqual(getattr(adapter_custom, 'model', 'unknown'), 'custom-fake')
 
     def test_t3_route_model_returns_routing_info(self) -> None:
         """route_model returns ModelRoute with category, provider, model, and reason."""
@@ -1605,7 +1610,10 @@ def _init_temp_git_repo(root: Path) -> None:
     """Initialize a minimal git repository at root for sandbox testing."""
     subprocess.run(['git', 'init'], cwd=root, capture_output=True, check=True)
     subprocess.run(
-        ['git', 'config', 'user.email', 't@t.com'], cwd=root, capture_output=True, check=True
+        ['git', 'config', 'user.email', 't@t.com'],
+        cwd=root,
+        capture_output=True,
+        check=True,
     )
     subprocess.run(
         ['git', 'config', 'user.name', 'T'], cwd=root, capture_output=True, check=True
@@ -1663,26 +1671,34 @@ class GitSandboxScenarios(unittest.TestCase):
             sink = GitTransactionSink(sandbox=sandbox)
 
             # Sink processes tool events without raising
-            sink(AuditEvent(
-                event_type='tool_call_started',
-                run_id='test-run-n4',
-                payload={'tool_name': 'workspace_write_file', 'call_id': 'call-1'},
-            ))
-            sink(AuditEvent(
-                event_type='tool_call_completed',
-                run_id='test-run-n4',
-                payload={'tool_name': 'workspace_write_file', 'call_id': 'call-1'},
-            ))
-            sink(AuditEvent(
-                event_type='tool_call_started',
-                run_id='test-run-n4',
-                payload={'tool_name': 'workspace_write_file', 'call_id': 'call-2'},
-            ))
-            sink(AuditEvent(
-                event_type='tool_call_failed',
-                run_id='test-run-n4',
-                payload={'tool_name': 'workspace_write_file', 'call_id': 'call-2'},
-            ))
+            sink(
+                AuditEvent(
+                    event_type='tool_call_started',
+                    run_id='test-run-n4',
+                    payload={'tool_name': 'workspace_write_file', 'call_id': 'call-1'},
+                )
+            )
+            sink(
+                AuditEvent(
+                    event_type='tool_call_completed',
+                    run_id='test-run-n4',
+                    payload={'tool_name': 'workspace_write_file', 'call_id': 'call-1'},
+                )
+            )
+            sink(
+                AuditEvent(
+                    event_type='tool_call_started',
+                    run_id='test-run-n4',
+                    payload={'tool_name': 'workspace_write_file', 'call_id': 'call-2'},
+                )
+            )
+            sink(
+                AuditEvent(
+                    event_type='tool_call_failed',
+                    run_id='test-run-n4',
+                    payload={'tool_name': 'workspace_write_file', 'call_id': 'call-2'},
+                )
+            )
 
     def test_n5_stash_save_and_pop(self) -> None:
         """stash_save and stash_pop correctly save and restore dirty state."""
@@ -1720,7 +1736,9 @@ class GitSandboxScenarios(unittest.TestCase):
             self.assertFalse(is_worktree_clean(root))
 
             # Stage + commit to restore clean
-            subprocess.run(['git', 'add', 'new_file.py'], cwd=root, capture_output=True, check=True)
+            subprocess.run(
+                ['git', 'add', 'new_file.py'], cwd=root, capture_output=True, check=True
+            )
             subprocess.run(
                 ['git', 'commit', '-m', 'add file', '--no-verify'],
                 cwd=root,
@@ -1803,7 +1821,9 @@ class SubagentIsolationScenarios(unittest.TestCase):
 
         self.assertEqual(normalize_subagent_isolation('shared'), 'shared')
         self.assertEqual(normalize_subagent_isolation('worktree'), 'worktree')
-        self.assertEqual(normalize_subagent_isolation('directory-snapshot'), 'directory-snapshot')
+        self.assertEqual(
+            normalize_subagent_isolation('directory-snapshot'), 'directory-snapshot'
+        )
         self.assertEqual(normalize_subagent_isolation('docker'), 'docker')
         self.assertEqual(normalize_subagent_isolation('auto'), 'auto')
         # Unknown value
@@ -1903,7 +1923,7 @@ class TelemetryScenarios(unittest.TestCase):
 
         # Simulate events
         class FakeEvent:
-            def __init__(self, event_type, payload=None):
+            def __init__(self, event_type: str, payload: dict | None = None) -> None:
                 self.event_type = event_type
                 self.payload = payload or {}
 
@@ -1913,7 +1933,9 @@ class TelemetryScenarios(unittest.TestCase):
         sink.handle_event(FakeEvent('tool_call_started', {'tool_name': 'write_file'}))
         sink.handle_event(FakeEvent('tool_call_started', {'tool_name': 'write_file'}))
         sink.handle_event(FakeEvent('tool_call_completed', {'tool_name': 'write_file'}))
-        sink.handle_event(FakeEvent('run_completed', {'iterations': 5, 'cost_cents': 250.0}))
+        sink.handle_event(
+            FakeEvent('run_completed', {'iterations': 5, 'cost_cents': 250.0})
+        )
         sink.handle_event(FakeEvent('run_failed', {'cost_cents': 42.0}))
 
         snap = sink.snapshot()
@@ -2131,16 +2153,20 @@ class ConsensusScenarios(unittest.TestCase):
 
         # Cast approving votes
         sig_a = peer_vote_signature(
-            alfa, state.proposal.task_description,
-            proposal_id=state.proposal.id, peer_name='alfa',
+            alfa,
+            state.proposal.task_description,
+            proposal_id=state.proposal.id,
+            peer_name='alfa',
             decision=VoteDecision.APPROVE.value,
         )
         self.assertTrue(
             engine.submit_vote(state.proposal.id, 'alfa', VoteDecision.APPROVE, sig_a)
         )
         sig_b = peer_vote_signature(
-            bravo, state.proposal.task_description,
-            proposal_id=state.proposal.id, peer_name='bravo',
+            bravo,
+            state.proposal.task_description,
+            proposal_id=state.proposal.id,
+            peer_name='bravo',
             decision=VoteDecision.APPROVE.value,
         )
         self.assertTrue(
@@ -2148,6 +2174,7 @@ class ConsensusScenarios(unittest.TestCase):
         )
 
         final = engine.get_consensus_status(state.proposal.id)
+        assert final is not None
         self.assertEqual(final.status, ConsensusStatus.APPROVED)
         self.assertTrue(final.is_approved())
 
@@ -2183,18 +2210,24 @@ class ConsensusScenarios(unittest.TestCase):
         )
         # Only 2/3 approve → not enough for supermajority
         sig_a = peer_vote_signature(
-            alfa, state.proposal.task_description,
-            proposal_id=state.proposal.id, peer_name='alfa',
+            alfa,
+            state.proposal.task_description,
+            proposal_id=state.proposal.id,
+            peer_name='alfa',
             decision=VoteDecision.APPROVE.value,
         )
         sig_b = peer_vote_signature(
-            bravo, state.proposal.task_description,
-            proposal_id=state.proposal.id, peer_name='bravo',
+            bravo,
+            state.proposal.task_description,
+            proposal_id=state.proposal.id,
+            peer_name='bravo',
             decision=VoteDecision.APPROVE.value,
         )
         sig_c = peer_vote_signature(
-            charlie, state.proposal.task_description,
-            proposal_id=state.proposal.id, peer_name='charlie',
+            charlie,
+            state.proposal.task_description,
+            proposal_id=state.proposal.id,
+            peer_name='charlie',
             decision=VoteDecision.REJECT.value,
         )
         engine.submit_vote(state.proposal.id, 'alfa', VoteDecision.APPROVE, sig_a)
@@ -2218,8 +2251,10 @@ class ConsensusScenarios(unittest.TestCase):
         def _state(threshold: VotingThreshold, num_peers: int) -> ConsensusState:
             return ConsensusState(
                 proposal=Proposal(
-                    id='p1', task_description='x',
-                    risk_level=RiskLevel.LOW, proposed_by='a',
+                    id='p1',
+                    task_description='x',
+                    risk_level=RiskLevel.LOW,
+                    proposed_by='a',
                 ),
                 voting_threshold=threshold,
                 required_peers={f'p{i}' for i in range(num_peers)},

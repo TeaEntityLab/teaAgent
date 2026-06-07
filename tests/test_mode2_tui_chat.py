@@ -68,16 +68,16 @@ class ChatSessionControllerTests(unittest.TestCase):
                 max_tool_calls=2,
             )
             result = controller.execute_task(
-                "say hello",
+                'say hello',
                 config,
                 adapter=adapter,
                 emit_answer=False,
             )
 
-            self.assertEqual(result.run_result.status, "completed")
+            self.assertEqual(result.run_result.status, 'completed')
             self.assertIsNotNone(result.run_result.final_answer)
             if result.run_result.final_answer:
-                self.assertIn("hello", result.run_result.final_answer.content)
+                self.assertIn('hello', result.run_result.final_answer.content)
             self.assertGreaterEqual(result.cost_cents, 0)
 
     def test_execute_task_accepts_config_overrides(self) -> None:
@@ -86,9 +86,7 @@ class ChatSessionControllerTests(unittest.TestCase):
             root = Path(tmp)
             output: list[str] = []
             controller = ChatSessionController(root=root, output_fn=output.append)
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"done"}']
-            )
+            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
             config = ChatAgentConfig(
                 root=root,
                 max_iterations=5,
@@ -96,12 +94,12 @@ class ChatSessionControllerTests(unittest.TestCase):
                 max_estimated_cost_cents=200,
             )
             result = controller.execute_task(
-                "test",
+                'test',
                 config,
                 adapter=adapter,
                 emit_answer=False,
             )
-            self.assertEqual(result.run_result.status, "completed")
+            self.assertEqual(result.run_result.status, 'completed')
 
     def test_execute_task_emits_answer_when_requested(self) -> None:
         """When emit_answer=True, the final answer is sent to output_fn."""
@@ -109,12 +107,10 @@ class ChatSessionControllerTests(unittest.TestCase):
             root = Path(tmp)
             output: list[str] = []
             controller = ChatSessionController(root=root, output_fn=output.append)
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"expected-output"}']
-            )
+            adapter = FakeAdapter(['{"type":"final","content":"expected-output"}'])
             config = ChatAgentConfig(root=root, max_iterations=3, max_tool_calls=2)
-            controller.execute_task("task", config, adapter=adapter, emit_answer=True)
-            self.assertIn("expected-output", output)
+            controller.execute_task('task', config, adapter=adapter, emit_answer=True)
+            self.assertIn('expected-output', output)
 
     def test_execute_task_handles_failed_run(self) -> None:
         """When the agent fails, the error message is displayed."""
@@ -123,23 +119,21 @@ class ChatSessionControllerTests(unittest.TestCase):
             output: list[str] = []
             controller = ChatSessionController(root=root, output_fn=output.append)
             # An invalid tool call string causes a parse failure loop
-            adapter = FakeAdapter(
-                ['invalid json here'] * 4
-            )
+            adapter = FakeAdapter(['invalid json here'] * 4)
             config = ChatAgentConfig(
                 root=root,
                 max_iterations=3,
                 max_tool_calls=2,
             )
             result = controller.execute_task(
-                "broken task",
+                'broken task',
                 config,
                 adapter=adapter,
                 emit_answer=False,
             )
             self.assertTrue(
-                result.run_result.status.startswith("failed"),
-                f"Expected failed status, got: {result.run_result.status}",
+                result.run_result.status.startswith('failed'),
+                f'Expected failed status, got: {result.run_result.status}',
             )
 
     def test_undo_last_run_without_journal_returns_false(self) -> None:
@@ -157,17 +151,17 @@ class ChatSessionControllerTests(unittest.TestCase):
             root = Path(tmp)
             output: list[str] = []
             controller = ChatSessionController(root=root, output_fn=output.append)
-            adapter1 = FakeAdapter(
-                ['{"type":"final","content":"first"}']
-            )
-            adapter2 = FakeAdapter(
-                ['{"type":"final","content":"second"}']
-            )
+            adapter1 = FakeAdapter(['{"type":"final","content":"first"}'])
+            adapter2 = FakeAdapter(['{"type":"final","content":"second"}'])
             config = ChatAgentConfig(root=root, max_iterations=3, max_tool_calls=2)
 
-            controller.execute_task("task1", config, adapter=adapter1, emit_answer=False)
+            controller.execute_task(
+                'task1', config, adapter=adapter1, emit_answer=False
+            )
             cost1 = controller.get_session_cost()
-            controller.execute_task("task2", config, adapter=adapter2, emit_answer=False)
+            controller.execute_task(
+                'task2', config, adapter=adapter2, emit_answer=False
+            )
             cost2 = controller.get_session_cost()
 
             self.assertGreaterEqual(cost2, cost1)
@@ -182,10 +176,10 @@ class ChatSessionControllerTests(unittest.TestCase):
             controller = ChatSessionController(root=root, output_fn=output.append)
             controller.session_state.session_cost_cents = 123.45
             display = controller.get_session_cost_display()
-            self.assertEqual(display, "$1.23")
+            self.assertEqual(display, '$1.23')
             # Test zero cost
             controller.session_state.session_cost_cents = 0.0
-            self.assertEqual(controller.get_session_cost_display(), "$0.00")
+            self.assertEqual(controller.get_session_cost_display(), '$0.00')
 
     def test_execute_task_handles_run_store_factory(self) -> None:
         """Custom _store_factory is used by the controller."""
@@ -207,11 +201,9 @@ class ChatSessionControllerTests(unittest.TestCase):
                 output_fn=output.append,
                 _store_factory=factory,
             )
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"ok"}']
-            )
+            adapter = FakeAdapter(['{"type":"final","content":"ok"}'])
             config = ChatAgentConfig(root=root, max_iterations=3, max_tool_calls=2)
-            controller.execute_task("task", config, adapter=adapter, emit_answer=False)
+            controller.execute_task('task', config, adapter=adapter, emit_answer=False)
 
             # The factory should have been called during execute_task
             self.assertGreater(len(store_calls), 0)
@@ -226,21 +218,25 @@ class ChatSessionControllerTests(unittest.TestCase):
             store = RunStore(root)
             audit = store.audit_logger()
             controller = ChatSessionController(root=root, output_fn=output.append)
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"audited"}']
-            )
+            adapter = FakeAdapter(['{"type":"final","content":"audited"}'])
             config = ChatAgentConfig(root=root, max_iterations=3, max_tool_calls=2)
             controller.execute_task(
-                "audited task",
+                'audited task',
                 config,
                 adapter=adapter,
                 audit=audit,
                 emit_answer=False,
             )
             events = audit.events
-            run_started = [e for e in events if getattr(e, "event_type", "") == "run_started"]
+            run_started = [
+                e for e in events if getattr(e, 'event_type', '') == 'run_started'
+            ]
             self.assertGreater(len(run_started), 0)
-            run_ended = [e for e in events if getattr(e, "event_type", "") in ("run_completed", "run_failed")]
+            run_ended = [
+                e
+                for e in events
+                if getattr(e, 'event_type', '') in ('run_completed', 'run_failed')
+            ]
             self.assertGreater(len(run_ended), 0)
 
     def test_session_cost_accumulates_via_sessions_state(self) -> None:
@@ -266,7 +262,7 @@ class TuiFullPipelineTests(unittest.TestCase):
         """Run a task through _run_agent_task with a FakeAdapter and verify output."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "note.txt").write_text("hello", encoding="utf-8")
+            (root / 'note.txt').write_text('hello', encoding='utf-8')
             output: list[str] = []
             adapter = FakeAdapter(
                 [
@@ -274,93 +270,87 @@ class TuiFullPipelineTests(unittest.TestCase):
                     '{"type":"final","content":"task completed"}',
                 ]
             )
-            state_path = root / ".teaagent" / "tui_state.json"
+            state_path = root / '.teaagent' / 'tui_state.json'
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
                     root=root,
-                    input_fn=lambda _prompt: "exit",
+                    input_fn=lambda _prompt: 'exit',
                     output_fn=output.append,
                     adapter_factory=lambda _p, _m: adapter,
                 )
-                tui._run_agent_task("read note file")
+                tui._run_agent_task('read note file')
 
             # Check output contains success payload
-            joined = "\n".join(output)
-            self.assertIn("task completed", joined)
+            joined = '\n'.join(output)
+            self.assertIn('task completed', joined)
 
     def test_run_agent_task_with_final_answer_json_output(self) -> None:
         """When chat=False, _run_agent_task emits JSON payload."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output: list[str] = []
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"json-result"}']
-            )
-            state_path = root / ".teaagent" / "tui_state.json"
+            adapter = FakeAdapter(['{"type":"final","content":"json-result"}'])
+            state_path = root / '.teaagent' / 'tui_state.json'
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
                     root=root,
-                    input_fn=lambda _prompt: "exit",
+                    input_fn=lambda _prompt: 'exit',
                     output_fn=output.append,
                     adapter_factory=lambda _p, _m: adapter,
                 )
                 tui.chat = False
-                tui._run_agent_task("test json output")
+                tui._run_agent_task('test json output')
 
             # Last output should be JSON
-            json_lines = [line for line in output if line.strip().startswith("{")]
+            json_lines = [line for line in output if line.strip().startswith('{')]
             self.assertGreater(len(json_lines), 0)
             payload = json.loads(json_lines[-1])
-            self.assertEqual(payload["status"], "completed")
-            self.assertEqual(payload["final_answer"], "json-result")
+            self.assertEqual(payload['status'], 'completed')
+            self.assertEqual(payload['final_answer'], 'json-result')
 
     def test_run_agent_task_tracks_cost(self) -> None:
         """Cost accumulates in session state across _run_agent_task calls."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output: list[str] = []
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"first-task"}']
-            )
-            state_path = root / ".teaagent" / "tui_state.json"
+            adapter = FakeAdapter(['{"type":"final","content":"first-task"}'])
+            state_path = root / '.teaagent' / 'tui_state.json'
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
                     root=root,
-                    input_fn=lambda _prompt: "exit",
+                    input_fn=lambda _prompt: 'exit',
                     output_fn=output.append,
                     adapter_factory=lambda _p, _m: adapter,
                 )
                 # First task
-                tui._run_agent_task("task one")
+                tui._run_agent_task('task one')
                 cost1 = tui._session_cost_cents
 
                 # Second task (reset adapter for new responses)
-                adapter2 = FakeAdapter(
-                    ['{"type":"final","content":"second-task"}']
-                )
-                state_path2 = root / ".teaagent" / "tui_state.json"
+                adapter2 = FakeAdapter(['{"type":"final","content":"second-task"}'])
+                state_path2 = root / '.teaagent' / 'tui_state.json'
                 with patch.object(
-                    TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                    TeaAgentTUI, '_state_path', new_callable=PropertyMock
                 ) as mock_state_path2:
                     mock_state_path2.return_value = state_path2
                     tui2 = TeaAgentTUI(
                         root=root,
-                        input_fn=lambda _prompt: "exit",
+                        input_fn=lambda _prompt: 'exit',
                         output_fn=output.append,
                         adapter_factory=lambda _p, _m: adapter2,
                     )
                     # Seed with cost from first task
                     tui2._session_cost_cents = cost1
-                    tui2._run_agent_task("task two")
+                    tui2._run_agent_task('task two')
 
                 self.assertGreaterEqual(tui2._session_cost_cents, cost1)
 
@@ -371,26 +361,28 @@ class TuiFullPipelineTests(unittest.TestCase):
             output: list[str] = []
             # Bad tool name triggers tool-not-found error → failed run
             adapter = FakeAdapter(
-                ['{"type":"tool","tool_name":"nonexistent_tool_x","arguments":{},"call_id":"bad"}']
+                [
+                    '{"type":"tool","tool_name":"nonexistent_tool_x","arguments":{},"call_id":"bad"}'
+                ]
             )
-            state_path = root / ".teaagent" / "tui_state.json"
+            state_path = root / '.teaagent' / 'tui_state.json'
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
                     root=root,
-                    input_fn=lambda _prompt: "exit",
+                    input_fn=lambda _prompt: 'exit',
                     output_fn=output.append,
                     adapter_factory=lambda _p, _m: adapter,
                 )
                 tui.chat = False
-                tui._run_agent_task("broken task")
+                tui._run_agent_task('broken task')
 
-            joined = "\n".join(output)
+            joined = '\n'.join(output)
             self.assertTrue(
-                "failed" in joined.lower() or "error" in joined.lower(),
-                f"Expected failure indicator in output: {joined}",
+                'failed' in joined.lower() or 'error' in joined.lower(),
+                f'Expected failure indicator in output: {joined}',
             )
 
     def test_run_agent_task_with_clarify(self) -> None:
@@ -398,78 +390,76 @@ class TuiFullPipelineTests(unittest.TestCase):
         output: list[str] = []
 
         def fail_factory(_p, _m):
-            raise AssertionError("adapter should not be called")
+            raise AssertionError('adapter should not be called')
 
         state_path = Path(tempfile.TemporaryDirectory().name)
         with patch.object(
-            TeaAgentTUI, "_state_path", new_callable=PropertyMock
+            TeaAgentTUI, '_state_path', new_callable=PropertyMock
         ) as mock_state_path:
             mock_state_path.return_value = state_path
             tui = TeaAgentTUI(
-                input_fn=lambda _prompt: "exit",
+                input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
                 adapter_factory=fail_factory,
             )
-            tui._run_agent_task("improve stuff", clarify_first=True)
+            tui._run_agent_task('improve stuff', clarify_first=True)
 
         # Should see needs_clarification status in output
-        self.assertIn("needs_clarification", "\n".join(output))
+        self.assertIn('needs_clarification', '\n'.join(output))
 
     def test_run_agent_task_with_clarify_concrete_proceeds(self) -> None:
         """Clarify mode with a concrete task passes through and calls the adapter."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output: list[str] = []
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"concrete done"}']
-            )
-            state_path = root / ".teaagent" / "tui_state.json"
+            adapter = FakeAdapter(['{"type":"final","content":"concrete done"}'])
+            state_path = root / '.teaagent' / 'tui_state.json'
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
                     root=root,
-                    input_fn=lambda _prompt: "exit",
+                    input_fn=lambda _prompt: 'exit',
                     output_fn=output.append,
                     adapter_factory=lambda _p, _m: adapter,
                 )
                 tui.chat = False
                 tui._run_agent_task(
-                    "Update docs/cli.md to document clarify command",
+                    'Update docs/cli.md to document clarify command',
                     clarify_first=True,
                 )
 
-            json_lines = [line for line in output if line.strip().startswith("{")]
+            json_lines = [line for line in output if line.strip().startswith('{')]
             self.assertGreater(len(json_lines), 0)
             payload = json.loads(json_lines[-1])
-            self.assertEqual(payload["status"], "completed")
+            self.assertEqual(payload['status'], 'completed')
 
     def test_approval_handler_approves(self) -> None:
         """_approval_handler returns True when preset allows the tool."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output: list[str] = []
-            replies = iter(["yes"])
-            state_path = root / ".teaagent" / "tui_state.json"
+            replies = iter(['yes'])
+            state_path = root / '.teaagent' / 'tui_state.json'
 
             from teaagent.runner import ApprovalRequest
 
             req = ApprovalRequest(
-                call_id="approve-me",
-                tool_name="workspace_write_file",
-                arguments={"path": "test.txt", "content": "data"},
-                reason="Testing approval",
+                call_id='approve-me',
+                tool_name='workspace_write_file',
+                arguments={'path': 'test.txt', 'content': 'data'},
+                reason='Testing approval',
                 annotations={
-                    "destructive": True,
-                    "read_only": False,
-                    "idempotent": True,
+                    'destructive': True,
+                    'read_only': False,
+                    'idempotent': True,
                 },
-                run_id="run-approve-1",
+                run_id='run-approve-1',
             )
 
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
@@ -486,26 +476,26 @@ class TuiFullPipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output: list[str] = []
-            replies = iter(["no"])
-            state_path = root / ".teaagent" / "tui_state.json"
+            replies = iter(['no'])
+            state_path = root / '.teaagent' / 'tui_state.json'
 
             from teaagent.runner import ApprovalRequest
 
             req = ApprovalRequest(
-                call_id="deny-me",
-                tool_name="workspace_run_shell_mutate",
-                arguments={"command": "rm -rf /"},
-                reason="Dangerous shell command",
+                call_id='deny-me',
+                tool_name='workspace_run_shell_mutate',
+                arguments={'command': 'rm -rf /'},
+                reason='Dangerous shell command',
                 annotations={
-                    "destructive": True,
-                    "read_only": False,
-                    "idempotent": False,
+                    'destructive': True,
+                    'read_only': False,
+                    'idempotent': False,
                 },
-                run_id="run-deny-1",
+                run_id='run-deny-1',
             )
 
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
@@ -528,40 +518,40 @@ class TuiFullPipelineTests(unittest.TestCase):
                     '{"type":"final","content":"done"}',
                 ]
             )
-            (root / "note.txt").write_text("hello", encoding="utf-8")
-            state_path = root / ".teaagent" / "tui_state.json"
+            (root / 'note.txt').write_text('hello', encoding='utf-8')
+            state_path = root / '.teaagent' / 'tui_state.json'
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
                     root=root,
-                    input_fn=lambda _prompt: "exit",
+                    input_fn=lambda _prompt: 'exit',
                     output_fn=output.append,
                     adapter_factory=lambda _p, _m: adapter,
                 )
                 tui.progress = True
-                tui._run_agent_task("read note")
+                tui._run_agent_task('read note')
 
-            joined = "\n".join(output)
-            self.assertIn("iter 1", joined)
-            self.assertIn("tool: workspace_read_file", joined)
-            self.assertIn("tool ok: workspace_read_file", joined)
+            joined = '\n'.join(output)
+            self.assertIn('iter 1', joined)
+            self.assertIn('tool: workspace_read_file', joined)
+            self.assertIn('tool ok: workspace_read_file', joined)
 
     def test_budget_prompt_handler_accepts(self) -> None:
         """_budget_prompt_handler returns True on 'yes' input."""
         output: list[str] = []
         state_path = Path(tempfile.TemporaryDirectory().name)
         with patch.object(
-            TeaAgentTUI, "_state_path", new_callable=PropertyMock
+            TeaAgentTUI, '_state_path', new_callable=PropertyMock
         ) as mock_state_path:
             mock_state_path.return_value = state_path
             tui = TeaAgentTUI(
-                input_fn=lambda _prompt: "yes",
+                input_fn=lambda _prompt: 'yes',
                 output_fn=output.append,
             )
             result = tui._budget_prompt_handler(
-                {"percent": 80.0, "cost_cents": 400.0, "max_cost_cents": 500.0}
+                {'percent': 80.0, 'cost_cents': 400.0, 'max_cost_cents': 500.0}
             )
             self.assertTrue(result)
 
@@ -570,15 +560,15 @@ class TuiFullPipelineTests(unittest.TestCase):
         output: list[str] = []
         state_path = Path(tempfile.TemporaryDirectory().name)
         with patch.object(
-            TeaAgentTUI, "_state_path", new_callable=PropertyMock
+            TeaAgentTUI, '_state_path', new_callable=PropertyMock
         ) as mock_state_path:
             mock_state_path.return_value = state_path
             tui = TeaAgentTUI(
-                input_fn=lambda _prompt: "no",
+                input_fn=lambda _prompt: 'no',
                 output_fn=output.append,
             )
             result = tui._budget_prompt_handler(
-                {"percent": 90.0, "cost_cents": 450.0, "max_cost_cents": 500.0}
+                {'percent': 90.0, 'cost_cents': 450.0, 'max_cost_cents': 500.0}
             )
             self.assertFalse(result)
 
@@ -587,41 +577,39 @@ class TuiFullPipelineTests(unittest.TestCase):
         output: list[str] = []
         state_path = Path(tempfile.TemporaryDirectory().name)
         with patch.object(
-            TeaAgentTUI, "_state_path", new_callable=PropertyMock
+            TeaAgentTUI, '_state_path', new_callable=PropertyMock
         ) as mock_state_path:
             mock_state_path.return_value = state_path
             tui = TeaAgentTUI(
-                input_fn=lambda _prompt: "exit",
+                input_fn=lambda _prompt: 'exit',
                 output_fn=output.append,
             )
-            tui.handle_command("help")
+            tui.handle_command('help')
 
-        joined = "\n".join(output)
-        self.assertIn("ask", joined.lower())
-        self.assertIn("cost", joined.lower())
-        self.assertIn("permission", joined.lower())
-        self.assertIn("help", joined.lower())
+        joined = '\n'.join(output)
+        self.assertIn('ask', joined.lower())
+        self.assertIn('cost', joined.lower())
+        self.assertIn('permission', joined.lower())
+        self.assertIn('help', joined.lower())
 
     def test_run_agent_task_sets_last_run_id(self) -> None:
         """After _run_agent_task, last_run_id is set to the result's run_id."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output: list[str] = []
-            adapter = FakeAdapter(
-                ['{"type":"final","content":"set-run-id"}']
-            )
-            state_path = root / ".teaagent" / "tui_state.json"
+            adapter = FakeAdapter(['{"type":"final","content":"set-run-id"}'])
+            state_path = root / '.teaagent' / 'tui_state.json'
             with patch.object(
-                TeaAgentTUI, "_state_path", new_callable=PropertyMock
+                TeaAgentTUI, '_state_path', new_callable=PropertyMock
             ) as mock_state_path:
                 mock_state_path.return_value = state_path
                 tui = TeaAgentTUI(
                     root=root,
-                    input_fn=lambda _prompt: "exit",
+                    input_fn=lambda _prompt: 'exit',
                     output_fn=output.append,
                     adapter_factory=lambda _p, _m: adapter,
                 )
-                tui._run_agent_task("test run id")
+                tui._run_agent_task('test run id')
 
             self.assertIsNotNone(tui.last_run_id)
             self.assertIsInstance(tui.last_run_id, str)
@@ -638,60 +626,60 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
     def test_plain_text_answer_fallback_returns_final_answer(self) -> None:
         """_plain_text_answer_fallback returns a FinalAnswer for simple Q&A tasks."""
-        context = {"task": "What is the capital of France?"}
-        answer = "The capital of France is Paris, a wonderful city with rich history."
+        context = {'task': 'What is the capital of France?'}
+        answer = 'The capital of France is Paris, a wonderful city with rich history.'
         result = _plain_text_answer_fallback(context, answer)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, FinalAnswer)
-        self.assertIn("Paris", result.content)
+        self.assertIn('Paris', result.content)
 
     def test_plain_text_answer_fallback_returns_none_with_observations(self) -> None:
         """_plain_text_answer_fallback returns None when observations exist (tool use)."""
-        context = {"task": "What is X?", "observations": [{"type": "tool_output"}]}
-        answer = "Some long answer with enough words to pass the length check."
+        context = {'task': 'What is X?', 'observations': [{'type': 'tool_output'}]}
+        answer = 'Some long answer with enough words to pass the length check.'
         result = _plain_text_answer_fallback(context, answer)
         self.assertIsNone(result)
 
     def test_plain_text_answer_fallback_returns_none_for_workspace_task(self) -> None:
         """_plain_text_answer_fallback returns None for workspace-related tasks."""
-        context = {"task": "Read the file src/main.py and fix the bug"}
-        answer = "Here is what I found in the file blah blah blah blah."
+        context = {'task': 'Read the file src/main.py and fix the bug'}
+        answer = 'Here is what I found in the file blah blah blah blah.'
         result = _plain_text_answer_fallback(context, answer)
         self.assertIsNone(result)
 
     def test_looks_like_simple_answer_task_true(self) -> None:
         """_looks_like_simple_answer_task returns True for Q&A-style questions."""
-        self.assertTrue(_looks_like_simple_answer_task("What is Python?"))
-        self.assertTrue(_looks_like_simple_answer_task("How do I create a loop?"))
-        self.assertTrue(_looks_like_simple_answer_task("Explain async/await"))
+        self.assertTrue(_looks_like_simple_answer_task('What is Python?'))
+        self.assertTrue(_looks_like_simple_answer_task('How do I create a loop?'))
+        self.assertTrue(_looks_like_simple_answer_task('Explain async/await'))
         self.assertTrue(
-            _looks_like_simple_answer_task("Tell me about machine learning")
+            _looks_like_simple_answer_task('Tell me about machine learning')
         )
-        self.assertTrue(_looks_like_simple_answer_task("Can you tell me about AI?"))
+        self.assertTrue(_looks_like_simple_answer_task('Can you tell me about AI?'))
 
     def test_looks_like_simple_answer_task_false(self) -> None:
         """_looks_like_simple_answer_task returns False for workspace file tasks."""
-        self.assertFalse(_looks_like_simple_answer_task("Read the file src/main.py"))
-        self.assertFalse(_looks_like_simple_answer_task("Fix the bug in tests/"))
-        self.assertFalse(_looks_like_simple_answer_task("Edit README.md"))
-        self.assertFalse(_looks_like_simple_answer_task("Run the test suite"))
-        self.assertFalse(_looks_like_simple_answer_task("Commit and push changes"))
-        self.assertFalse(_looks_like_simple_answer_task(""))
+        self.assertFalse(_looks_like_simple_answer_task('Read the file src/main.py'))
+        self.assertFalse(_looks_like_simple_answer_task('Fix the bug in tests/'))
+        self.assertFalse(_looks_like_simple_answer_task('Edit README.md'))
+        self.assertFalse(_looks_like_simple_answer_task('Run the test suite'))
+        self.assertFalse(_looks_like_simple_answer_task('Commit and push changes'))
+        self.assertFalse(_looks_like_simple_answer_task(''))
 
     def test_looks_like_plain_text_answer_true(self) -> None:
         """_looks_like_plain_text_answer returns True for natural language answers."""
         self.assertTrue(
             _looks_like_plain_text_answer(
-                "Python is a high-level programming language that is widely used."
+                'Python is a high-level programming language that is widely used.'
             )
         )
 
     def test_looks_like_plain_text_answer_false(self) -> None:
         """_looks_like_plain_text_answer returns False for JSON-like or short answers."""
-        self.assertFalse(_looks_like_plain_text_answer("short"))
+        self.assertFalse(_looks_like_plain_text_answer('short'))
         self.assertFalse(_looks_like_plain_text_answer('{"key": "value"}'))
-        self.assertFalse(_looks_like_plain_text_answer("[1, 2, 3]"))
-        self.assertFalse(_looks_like_plain_text_answer("```json\n{}\n```"))
+        self.assertFalse(_looks_like_plain_text_answer('[1, 2, 3]'))
+        self.assertFalse(_looks_like_plain_text_answer('```json\n{}\n```'))
 
     def test_parse_model_decision_returns_tool_request(self) -> None:
         """Valid JSON with type:tool returns a ToolRequest."""
@@ -700,16 +688,14 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
             '"arguments":{"path":"test.txt"},"call_id":"c1"}'
         )
         self.assertIsInstance(result, ToolRequest)
-        self.assertEqual(result.tool_name, "workspace_read_file")
-        self.assertEqual(result.call_id, "c1")
+        self.assertEqual(result.tool_name, 'workspace_read_file')
+        self.assertEqual(result.call_id, 'c1')
 
     def test_parse_model_decision_returns_final_answer(self) -> None:
         """Valid JSON with type:final returns a FinalAnswer."""
-        result = parse_model_decision(
-            '{"type":"final","content":"All done"}'
-        )
+        result = parse_model_decision('{"type":"final","content":"All done"}')
         self.assertIsInstance(result, FinalAnswer)
-        self.assertEqual(result.content, "All done")
+        self.assertEqual(result.content, 'All done')
 
     def test_decide_with_fake_llm_adapter(self) -> None:
         """decide() with FakeLLMAdapter returns a FinalAnswer for final-action JSON."""
@@ -717,31 +703,31 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
         tool_registry = ToolRegistry()
         tool_registry.register(
-            name="workspace_read_file",
-            handler=lambda args: {"output": "fake content"},
-            description="Read a file",
+            name='workspace_read_file',
+            handler=lambda args: {'output': 'fake content'},
+            description='Read a file',
             input_schema={
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
+                'type': 'object',
+                'properties': {'path': {'type': 'string'}},
             },
-            output_schema={"type": "object"},
+            output_schema={'type': 'object'},
             annotations=ToolAnnotations(read_only=True, destructive=False),
         )
 
         adapter = FakeLLMAdapter(
             responses=[
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
+                    provider='fake',
+                    model='fake-model',
                     content='{"type":"final","content":"decision-made"}',
                 )
             ]
         )
         engine = ModelDecisionEngine(adapter=adapter, registry=tool_registry)
-        context = {"task": "Hello world", "decision_summary": ""}
+        context = {'task': 'Hello world', 'decision_summary': ''}
         decision = engine.decide(context)
         self.assertIsInstance(decision, FinalAnswer)
-        self.assertEqual(decision.content, "decision-made")
+        self.assertEqual(decision.content, 'decision-made')
 
     def test_decide_with_tool_request_from_fake_llm(self) -> None:
         """decide() returns a ToolRequest when JSON specifies type:tool."""
@@ -749,31 +735,31 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
         tool_registry = ToolRegistry()
         tool_registry.register(
-            name="workspace_read_file",
-            handler=lambda args: {"output": "content"},
-            description="Read file",
+            name='workspace_read_file',
+            handler=lambda args: {'output': 'content'},
+            description='Read file',
             input_schema={
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
+                'type': 'object',
+                'properties': {'path': {'type': 'string'}},
             },
-            output_schema={"type": "object"},
+            output_schema={'type': 'object'},
             annotations=ToolAnnotations(read_only=True, destructive=False),
         )
         adapter = FakeLLMAdapter(
             responses=[
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
+                    provider='fake',
+                    model='fake-model',
                     content='{"type":"tool","tool_name":"workspace_read_file",'
                     '"arguments":{"path":"x.txt"},"call_id":"tool-call-1"}',
                 )
             ]
         )
         engine = ModelDecisionEngine(adapter=adapter, registry=tool_registry)
-        context = {"task": "Read file x.txt", "decision_summary": ""}
+        context = {'task': 'Read file x.txt', 'decision_summary': ''}
         decision = engine.decide(context)
         self.assertIsInstance(decision, ToolRequest)
-        self.assertEqual(decision.tool_name, "workspace_read_file")
+        self.assertEqual(decision.tool_name, 'workspace_read_file')
 
     def test_decide_falls_back_to_plain_text_after_retries(self) -> None:
         """After max retries with invalid JSON, decide falls back to plain text for simple tasks."""
@@ -781,41 +767,41 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
         tool_registry = ToolRegistry()
         tool_registry.register(
-            name="workspace_read_file",
-            handler=lambda args: {"output": "fake"},
-            description="Read a file",
+            name='workspace_read_file',
+            handler=lambda args: {'output': 'fake'},
+            description='Read a file',
             input_schema={
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
+                'type': 'object',
+                'properties': {'path': {'type': 'string'}},
             },
-            output_schema={"type": "object"},
+            output_schema={'type': 'object'},
             annotations=ToolAnnotations(read_only=True, destructive=False),
         )
         adapter = FakeLLMAdapter(
             responses=[
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
-                    content="not valid json at all",
+                    provider='fake',
+                    model='fake-model',
+                    content='not valid json at all',
                 ),
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
-                    content="still not json",
+                    provider='fake',
+                    model='fake-model',
+                    content='still not json',
                 ),
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
-                    content="this is a long plain text answer with more than twenty characters",
+                    provider='fake',
+                    model='fake-model',
+                    content='this is a long plain text answer with more than twenty characters',
                 ),
             ]
         )
         engine = ModelDecisionEngine(adapter=adapter, registry=tool_registry)
-        context = {"task": "What is the capital of France?", "decision_summary": ""}
+        context = {'task': 'What is the capital of France?', 'decision_summary': ''}
         decision = engine.decide(context)
         # Should fall back to plain_text_final_answer
         self.assertIsInstance(decision, FinalAnswer)
-        self.assertNotEqual(decision.content, "")
+        self.assertNotEqual(decision.content, '')
 
     def test_decide_raises_for_workspace_task_after_max_retries(self) -> None:
         """For workspace tasks, decide raises RuntimeError after exhausting retries."""
@@ -823,14 +809,14 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
         tool_registry = ToolRegistry()
         tool_registry.register(
-            name="workspace_read_file",
-            handler=lambda args: {"output": "fake"},
-            description="Read a file",
+            name='workspace_read_file',
+            handler=lambda args: {'output': 'fake'},
+            description='Read a file',
             input_schema={
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
+                'type': 'object',
+                'properties': {'path': {'type': 'string'}},
             },
-            output_schema={"type": "object"},
+            output_schema={'type': 'object'},
             annotations=ToolAnnotations(read_only=True, destructive=False),
         )
         # All responses are invalid JSON for a workspace task.
@@ -839,30 +825,30 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
         adapter = FakeLLMAdapter(
             responses=[
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
-                    content="garbage input not json",
+                    provider='fake',
+                    model='fake-model',
+                    content='garbage input not json',
                 ),
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
-                    content="more garbage",
+                    provider='fake',
+                    model='fake-model',
+                    content='more garbage',
                 ),
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
-                    content="x",  # too short for plain text fallback (<20 chars)
+                    provider='fake',
+                    model='fake-model',
+                    content='x',  # too short for plain text fallback (<20 chars)
                 ),
             ]
         )
         engine = ModelDecisionEngine(adapter=adapter, registry=tool_registry)
         context = {
-            "task": "Read the file src/main.py and fix all bugs",
-            "decision_summary": "",
+            'task': 'Read the file src/main.py and fix all bugs',
+            'decision_summary': '',
         }
         with self.assertRaises(RuntimeError) as ctx:
             engine.decide(context)
-        self.assertIn("parsing failed", str(ctx.exception))
+        self.assertIn('parsing failed', str(ctx.exception))
 
     def test_decide_with_stream_on_chunk_called(self) -> None:
         """decide with stream=True triggers on_chunk callback."""
@@ -870,22 +856,22 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
         tool_registry = ToolRegistry()
         tool_registry.register(
-            name="workspace_read_file",
-            handler=lambda args: {"output": "fake"},
-            description="Read a file",
+            name='workspace_read_file',
+            handler=lambda args: {'output': 'fake'},
+            description='Read a file',
             input_schema={
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
+                'type': 'object',
+                'properties': {'path': {'type': 'string'}},
             },
-            output_schema={"type": "object"},
+            output_schema={'type': 'object'},
             annotations=ToolAnnotations(read_only=True, destructive=False),
         )
         chunks: list[str] = []
         adapter = FakeLLMAdapter(
             responses=[
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
+                    provider='fake',
+                    model='fake-model',
                     content='{"type":"final","content":"streamed"}',
                 )
             ]
@@ -897,7 +883,7 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
             on_chunk=chunks.append,
             stream_text_only=True,
         )
-        context = {"task": "Hello", "decision_summary": ""}
+        context = {'task': 'Hello', 'decision_summary': ''}
         decision = engine.decide(context)
         self.assertIsInstance(decision, FinalAnswer)
 
@@ -907,21 +893,21 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
         tool_registry = ToolRegistry()
         tool_registry.register(
-            name="workspace_read_file",
-            handler=lambda args: {"output": "fake"},
-            description="Read a file",
+            name='workspace_read_file',
+            handler=lambda args: {'output': 'fake'},
+            description='Read a file',
             input_schema={
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
+                'type': 'object',
+                'properties': {'path': {'type': 'string'}},
             },
-            output_schema={"type": "object"},
+            output_schema={'type': 'object'},
             annotations=ToolAnnotations(read_only=True, destructive=False),
         )
         adapter = FakeLLMAdapter(
             responses=[
                 LLMResponse(
-                    provider="fake",
-                    model="fake-model",
+                    provider='fake',
+                    model='fake-model',
                     content='{"type":"final","content":"costly"}',
                     input_tokens=100,
                     output_tokens=50,
@@ -929,11 +915,11 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
             ]
         )
         engine = ModelDecisionEngine(adapter=adapter, registry=tool_registry)
-        context: dict[str, Any] = {"task": "Hello", "decision_summary": ""}
+        context: dict[str, Any] = {'task': 'Hello', 'decision_summary': ''}
         engine.decide(context)
-        self.assertIn("_cost_cents", context)
-        self.assertIn("_input_tokens", context)
-        self.assertIn("_output_tokens", context)
+        self.assertIn('_cost_cents', context)
+        self.assertIn('_input_tokens', context)
+        self.assertIn('_output_tokens', context)
 
 
 # ---------------------------------------------------------------------------
@@ -951,8 +937,8 @@ class PermissionModeTransitionTests(unittest.TestCase):
 
         with self.assertRaises(ToolPermissionError):
             policy.assert_allowed(
-                tool_name="workspace_write_file",
-                call_id="c1",
+                tool_name='workspace_write_file',
+                call_id='c1',
                 destructive=True,
             )
 
@@ -961,8 +947,8 @@ class PermissionModeTransitionTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY)
         # Should not raise
         policy.assert_allowed(
-            tool_name="workspace_read_file",
-            call_id="c1",
+            tool_name='workspace_read_file',
+            call_id='c1',
             destructive=False,
             read_only=True,
         )
@@ -972,13 +958,13 @@ class PermissionModeTransitionTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
         # File writes allowed
         policy.assert_allowed(
-            tool_name="workspace_write_file",
-            call_id="c1",
+            tool_name='workspace_write_file',
+            call_id='c1',
             destructive=True,
         )
         policy.assert_allowed(
-            tool_name="workspace_apply_patch",
-            call_id="c2",
+            tool_name='workspace_apply_patch',
+            call_id='c2',
             destructive=True,
         )
 
@@ -989,8 +975,8 @@ class PermissionModeTransitionTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
         with self.assertRaises(ToolPermissionError):
             policy.assert_allowed(
-                tool_name="workspace_run_shell_mutate",
-                call_id="c1",
+                tool_name='workspace_run_shell_mutate',
+                call_id='c1',
                 destructive=True,
             )
 
@@ -1001,8 +987,8 @@ class PermissionModeTransitionTests(unittest.TestCase):
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         with self.assertRaises(ToolPermissionError):
             policy.assert_allowed(
-                tool_name="workspace_write_file",
-                call_id="c1",
+                tool_name='workspace_write_file',
+                call_id='c1',
                 destructive=True,
             )
 
@@ -1010,8 +996,8 @@ class PermissionModeTransitionTests(unittest.TestCase):
         """PROMPT mode allows non-destructive tools."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         policy.assert_allowed(
-            tool_name="workspace_read_file",
-            call_id="c1",
+            tool_name='workspace_read_file',
+            call_id='c1',
             destructive=False,
         )
 
@@ -1019,13 +1005,13 @@ class PermissionModeTransitionTests(unittest.TestCase):
         """ALLOW mode allows all destructive tools."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.ALLOW)
         policy.assert_allowed(
-            tool_name="workspace_write_file",
-            call_id="c1",
+            tool_name='workspace_write_file',
+            call_id='c1',
             destructive=True,
         )
         policy.assert_allowed(
-            tool_name="workspace_run_shell_mutate",
-            call_id="c2",
+            tool_name='workspace_run_shell_mutate',
+            call_id='c2',
             destructive=True,
         )
 
@@ -1036,18 +1022,18 @@ class PermissionModeTransitionTests(unittest.TestCase):
             full_access_acknowledged=True,
         )
         policy.assert_allowed(
-            tool_name="workspace_write_file",
-            call_id="c1",
+            tool_name='workspace_write_file',
+            call_id='c1',
             destructive=True,
         )
         policy.assert_allowed(
-            tool_name="workspace_run_shell_mutate",
-            call_id="c2",
+            tool_name='workspace_run_shell_mutate',
+            call_id='c2',
             destructive=True,
         )
         policy.assert_allowed(
-            tool_name="workspace_read_file",
-            call_id="c3",
+            tool_name='workspace_read_file',
+            call_id='c3',
             destructive=False,
         )
 
@@ -1064,5 +1050,5 @@ class PermissionModeTransitionTests(unittest.TestCase):
         self.assertEqual(len({m.value for m in modes}), 5)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

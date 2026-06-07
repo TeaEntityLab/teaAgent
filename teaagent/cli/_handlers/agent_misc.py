@@ -115,7 +115,11 @@ def agent_daily_command(args: argparse.Namespace) -> int:
 
         report = assess_stale_workspace(args.root)
         print_json(report.to_dict())
-        return EXIT_SUCCESS if not report.dirty_git and not report.diverged_from_main else EXIT_BLOCKING
+        return (
+            EXIT_SUCCESS
+            if not report.dirty_git and not report.diverged_from_main
+            else EXIT_BLOCKING
+        )
 
     from teaagent.daily import build_daily_brief
 

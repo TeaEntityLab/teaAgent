@@ -187,9 +187,7 @@ class RealUsageScenariosTests(unittest.TestCase):
         """Live smoke test using the actual opencodezen-go model if key is present in environment."""
         api_key = self._opencodezen_api_key()
         if not api_key:
-            self.skipTest(
-                'OPENCODEZEN_API_KEY not found; skipping live smoke test'
-            )
+            self.skipTest('OPENCODEZEN_API_KEY not found; skipping live smoke test')
 
         with patch.dict(os.environ, self._env_for_opencodezen()):
             # Run model smoke command via main CLI entrypoint

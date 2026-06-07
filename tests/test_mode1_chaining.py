@@ -76,7 +76,9 @@ def _make_team_json_dir(tmp_path: Path, team_name: str, data: dict) -> Path:
     return tmp_path
 
 
-def _fake_subagent_result(task_id: str, success: bool = True, **kwargs) -> SubagentResult:
+def _fake_subagent_result(
+    task_id: str, success: bool = True, **kwargs
+) -> SubagentResult:
     defaults = {
         'task_id': task_id,
         'success': success,
@@ -170,18 +172,14 @@ specialists:
     # ── list_teams / get_team / run_team ──
 
     def test_team_orchestrator_list_teams(self, tmp_path: Path) -> None:
-        _make_team_yaml_dir(tmp_path, 'alpha', "name: alpha\n")
-        _make_team_yaml_dir(tmp_path, 'beta', "name: beta\n")
-        orchestrator = TeamOrchestrator(
-            root=tmp_path, subagent_manager=MagicMock()
-        )
+        _make_team_yaml_dir(tmp_path, 'alpha', 'name: alpha\n')
+        _make_team_yaml_dir(tmp_path, 'beta', 'name: beta\n')
+        orchestrator = TeamOrchestrator(root=tmp_path, subagent_manager=MagicMock())
         teams = orchestrator.list_teams()
         assert [t.name for t in teams] == ['alpha', 'beta']
 
     def test_run_team_unknown_name(self, tmp_path: Path) -> None:
-        orchestrator = TeamOrchestrator(
-            root=tmp_path, subagent_manager=MagicMock()
-        )
+        orchestrator = TeamOrchestrator(root=tmp_path, subagent_manager=MagicMock())
         result = orchestrator.run_team('do something', 'nonexistent')
         assert result['status'] == 'error'
         assert 'unknown team' in result['message']
@@ -253,7 +251,7 @@ specialists:
             {'status': 'completed', 'final_answer': 'done'},
         ]
         merged = TeamOrchestrator._merge_results(results, 'concatenate')
-        assert "completed" in merged or "done" in merged
+        assert 'completed' in merged or 'done' in merged
 
     # ── YAML fallback parser ──
 
@@ -361,15 +359,23 @@ class TestSwarmManager:
 
     def test_compute_prompt_fitness_score_success_zero(self) -> None:
         metrics = PromptFitnessMetrics(
-            success=0, tokens=100.0, min_tokens=50.0,
-            time_seconds=10.0, min_time_seconds=5.0, errors=0,
+            success=0,
+            tokens=100.0,
+            min_tokens=50.0,
+            time_seconds=10.0,
+            min_time_seconds=5.0,
+            errors=0,
         )
         assert compute_prompt_fitness_score(metrics) == 0.0
 
     def test_compute_prompt_fitness_score_normal(self) -> None:
         metrics = PromptFitnessMetrics(
-            success=1, tokens=100.0, min_tokens=50.0,
-            time_seconds=10.0, min_time_seconds=5.0, errors=1,
+            success=1,
+            tokens=100.0,
+            min_tokens=50.0,
+            time_seconds=10.0,
+            min_time_seconds=5.0,
+            errors=1,
         )
         score = compute_prompt_fitness_score(metrics)
         assert 0.0 < score <= 1.0
@@ -377,16 +383,24 @@ class TestSwarmManager:
     def test_compute_prompt_fitness_score_edge_case(self) -> None:
         """All ratios near 1.0 gives maximum score."""
         metrics = PromptFitnessMetrics(
-            success=1, tokens=10.0, min_tokens=10.0,
-            time_seconds=5.0, min_time_seconds=5.0, errors=0,
+            success=1,
+            tokens=10.0,
+            min_tokens=10.0,
+            time_seconds=5.0,
+            min_time_seconds=5.0,
+            errors=0,
         )
         score = compute_prompt_fitness_score(metrics)
         assert score == pytest.approx(0.4 + 0.3 + 0.2 + 0.1, rel=0.01)
 
     def test_compute_prompt_fitness_score_error_penalty(self) -> None:
         metrics = PromptFitnessMetrics(
-            success=1, tokens=10.0, min_tokens=10.0,
-            time_seconds=5.0, min_time_seconds=5.0, errors=9,
+            success=1,
+            tokens=10.0,
+            min_tokens=10.0,
+            time_seconds=5.0,
+            min_time_seconds=5.0,
+            errors=9,
         )
         score = compute_prompt_fitness_score(metrics)
         assert score < 1.0
@@ -395,8 +409,12 @@ class TestSwarmManager:
         with pytest.raises(ValueError):
             compute_prompt_fitness_score(
                 PromptFitnessMetrics(
-                    success=1, tokens=0, min_tokens=0,
-                    time_seconds=1, min_time_seconds=1, errors=0,
+                    success=1,
+                    tokens=0,
+                    min_tokens=0,
+                    time_seconds=1,
+                    min_time_seconds=1,
+                    errors=0,
                 )
             )
 
@@ -404,8 +422,12 @@ class TestSwarmManager:
         with pytest.raises(ValueError):
             compute_prompt_fitness_score(
                 PromptFitnessMetrics(
-                    success=1, tokens=1, min_tokens=1,
-                    time_seconds=0, min_time_seconds=0, errors=0,
+                    success=1,
+                    tokens=1,
+                    min_tokens=1,
+                    time_seconds=0,
+                    min_time_seconds=0,
+                    errors=0,
                 )
             )
 
@@ -413,21 +435,29 @@ class TestSwarmManager:
         with pytest.raises(ValueError):
             compute_prompt_fitness_score(
                 PromptFitnessMetrics(
-                    success=1, tokens=1, min_tokens=1,
-                    time_seconds=1, min_time_seconds=1, errors=-1,
+                    success=1,
+                    tokens=1,
+                    min_tokens=1,
+                    time_seconds=1,
+                    min_time_seconds=1,
+                    errors=-1,
                 )
             )
 
     def test_fitness_metrics_from_result(self) -> None:
         result = _fake_subagent_result(
-            't1', success=True,
+            't1',
+            success=True,
             test_results={'tokens': 100, 'errors': 2},
             execution_time_ms=5000,  # 5 seconds
         )
         peers = [
-            _fake_subagent_result('t2', success=True,
-                                  test_results={'tokens': 50, 'errors': 0},
-                                  execution_time_ms=2000),
+            _fake_subagent_result(
+                't2',
+                success=True,
+                test_results={'tokens': 50, 'errors': 0},
+                execution_time_ms=2000,
+            ),
         ]
         metrics = fitness_metrics_from_result(result, peer_results=peers)
         assert metrics.success == 1
@@ -443,10 +473,22 @@ class TestSwarmManager:
         assert metrics.success == 1
 
     def test_rank_prompt_tournament(self) -> None:
-        m1 = PromptFitnessMetrics(success=1, tokens=20.0, min_tokens=10.0,
-                                   time_seconds=4.0, min_time_seconds=2.0, errors=0)
-        m2 = PromptFitnessMetrics(success=1, tokens=10.0, min_tokens=10.0,
-                                   time_seconds=2.0, min_time_seconds=2.0, errors=0)
+        m1 = PromptFitnessMetrics(
+            success=1,
+            tokens=20.0,
+            min_tokens=10.0,
+            time_seconds=4.0,
+            min_time_seconds=2.0,
+            errors=0,
+        )
+        m2 = PromptFitnessMetrics(
+            success=1,
+            tokens=10.0,
+            min_tokens=10.0,
+            time_seconds=2.0,
+            min_time_seconds=2.0,
+            errors=0,
+        )
         candidates = [('t1', 'prompt A', m1), ('t2', 'prompt B', m2)]
         ranked = rank_prompt_tournament(candidates)
         assert len(ranked) == 2
@@ -488,8 +530,11 @@ class TestSwarmManager:
             _fake_subagent_result('t3', success=False, error='fail'),
         ]
         report = SwarmReport(
-            total_subagents=3, successful_subagents=2, failed_subagents=1,
-            results=results, code_reviews=[],
+            total_subagents=3,
+            successful_subagents=2,
+            failed_subagents=1,
+            results=results,
+            code_reviews=[],
         )
         manager = SwarmManager(root=tmp_path)
         reviews = manager.run_code_reviews(report)
@@ -512,7 +557,9 @@ class TestSwarmManager:
         thread.join(timeout=3)
         assert not thread.is_alive()
 
-    def test_swarm_heartbeat_monitor_double_start_is_idempotent(self, tmp_path: Path) -> None:
+    def test_swarm_heartbeat_monitor_double_start_is_idempotent(
+        self, tmp_path: Path
+    ) -> None:
         manager = SwarmManager(root=tmp_path)
         manager._start_heartbeat_monitor()
         first_thread = manager._heartbeat_thread
@@ -529,7 +576,9 @@ class TestAutomationChain:
 
     def test_handoff_path(self, tmp_path: Path) -> None:
         path = handoff_path(tmp_path, 'auto-1')
-        expected = tmp_path.resolve() / '.teaagent' / 'automation-handoff' / 'auto-1.json'
+        expected = (
+            tmp_path.resolve() / '.teaagent' / 'automation-handoff' / 'auto-1.json'
+        )
         assert path == expected
 
     def test_persist_and_load_handoff(self, tmp_path: Path) -> None:
@@ -540,7 +589,8 @@ class TestAutomationChain:
             schedule='every 1h',
         )
         stored = persist_automation_handoff(
-            tmp_path, spec,
+            tmp_path,
+            spec,
             collector_summary='commit abc detected',
             summary='processed commit abc',
             log_tail='line1\nline2',
