@@ -79,6 +79,21 @@ jobs:
           uv export --format requirements-txt --extra ${{ matrix.extra }} --no-dev --no-emit-project --frozen -o /tmp/teaagent-${{ matrix.extra }}-requirements.txt
           pip-audit -r /tmp/teaagent-${{ matrix.extra }}-requirements.txt
 
+  bandit:
+    name: bandit SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install bandit
+        run: pip install bandit
+      - name: Run bandit SAST scan
+        run: bandit -r teaagent/ -q -c pyproject.toml
+
   codeql:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
