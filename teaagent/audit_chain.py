@@ -28,9 +28,12 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 GENESIS_HASH = 'genesis'
 
@@ -111,8 +114,13 @@ def verify_audit_chain(
                 key = key_path.read_bytes()
                 if len(key) == 32:
                     secret_key = key
-            except OSError:
-                pass
+            except OSError as exc:
+                logger.warning(
+                    'HMAC chain key could not be read from %s: %s — '
+                    'proceeding without chain integrity verification',
+                    key_path,
+                    exc,
+                )
 
     if not log_path.is_file():
         return ChainVerificationResult(valid=True, event_count=0)
@@ -145,6 +153,12 @@ def verify_audit_chain(
                     ),
                 )
             # Legacy event without chain fields — skip and reset chain origin.
+            logger.warning(
+                'Line %d: legacy event without chain fields — '
+                'hash chain anchor reset to genesis; '
+                'chain integrity cannot be verified across this boundary',
+                i + 1,
+            )
             prev_hash = GENESIS_HASH
             continue
 

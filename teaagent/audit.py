@@ -209,8 +209,13 @@ class AuditLogger:
                 key = key_path.read_bytes()
                 if len(key) == 32:
                     return key
-            except OSError:
-                pass
+            except OSError as exc:
+                logger.warning(
+                    'HMAC chain key could not be read from %s: %s — '
+                    'generating new key; chain will not be reproducible across restarts',
+                    key_path,
+                    exc,
+                )
         key = os.urandom(32)
         try:
             key_dir.mkdir(parents=True, exist_ok=True)
@@ -464,6 +469,13 @@ class AuditLogger:
                         f'Audit disk write failed: {exc}',
                         cause=exc,
                     ) from exc
+                logger.warning(
+                    'Audit disk write failed: %s (errno=%s) — '
+                    'run continues in memory-only mode. '
+                    'Enable compliance mode for fatal audit durability enforcement.',
+                    exc,
+                    exc.errno,
+                )
         failed_sinks = []
         for sink in sinks:
             try:
