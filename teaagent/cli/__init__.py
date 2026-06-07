@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 from typing import Any, Callable, Optional, cast
@@ -288,6 +289,7 @@ def main(
         args._check_llm = _check_llm or check_llm_configuration
         args._run_model_conformance = _run_model_conformance or run_model_conformance
         apply_config_defaults(args)
+        _apply_log_format(args)
         _normalize_optional_provider_args(args)
         _require_provider_for_agent_commands(args)
         return args.func(args)
@@ -338,6 +340,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '--version', action='version', version=f'teaagent {__version__}'
+    )
+    parser.add_argument(
+        '--log-format',
+        choices=['text', 'json'],
+        default='text',
+        help='Log format: text (default) or json (structured NDJSON).',
     )
     parser.add_argument(
         '--config',
@@ -679,6 +687,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def _apply_log_format(args: argparse.Namespace) -> None:
+    """Apply global log format based on --log-format flag."""
+    log_format = getattr(args, 'log_format', 'text')
+    if log_format != 'json':
+        return
+    from teaagent.run_logging import JsonLogFormatter
+
+    formatter = JsonLogFormatter()
+    for handler in logging.root.handlers:
+        handler.setFormatter(formatter)
 
 
 def _normalize_optional_provider_args(args: argparse.Namespace) -> None:

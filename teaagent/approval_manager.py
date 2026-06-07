@@ -828,6 +828,16 @@ class ApprovalManager:
                 reason_code = DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
             else:
                 reason_code = DenialReasonCode.MISSING_STATE
+            logger.info(
+                'tool_permission_denied: %s',
+                tool_name,
+                extra={
+                    'event': 'tool_permission_denied',
+                    'tool_name': tool_name,
+                    'call_id': call_id,
+                    'error_code': reason_code.value,
+                },
+            )
             raise ToolPermissionError(
                 decision.reason or 'denied by approval backend',
                 reason_code=reason_code,

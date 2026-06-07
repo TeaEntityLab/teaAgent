@@ -8,6 +8,7 @@ from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 
+from teaagent.http_rate_limit import TokenRateLimiter
 from teaagent.llm._extract import (
     _extract_claude_content,
     _extract_gemini_content,
@@ -123,6 +124,7 @@ class OpenAICompatibleAdapter:
         timeout: int = 60,
         retry_config: Optional[LLMRetryConfig] = None,
         streaming_lines: Optional[list[bytes]] = None,
+        rate_limiter: Optional[TokenRateLimiter] = None,
     ) -> None:
         self.config = config
         self.provider = config.name
@@ -130,6 +132,7 @@ class OpenAICompatibleAdapter:
         self.timeout = timeout
         self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
         self._streaming_lines = streaming_lines
+        self._rate_limiter = rate_limiter
 
     def _prepare_payload(self, request: LLMRequest, model: str) -> dict[str, Any]:
         messages = []
@@ -197,10 +200,21 @@ class OpenAICompatibleAdapter:
             tool_calls=tool_calls,
         )
 
+    def _check_rate_limit(self, key: str) -> None:
+        """Raise LLMHTTPError if the rate limit for *key* is exceeded."""
+        if self._rate_limiter is not None:
+            allowed, reason = self._rate_limiter.allow(key)
+            if not allowed:
+                raise LLMHTTPError(
+                    f'rate limit exceeded for provider {self.provider}: {reason}',
+                    status_code=429,
+                )
+
     def _supports_response_format(self) -> bool:
         return self.provider not in {'opencodezen-go', 'opencodezen'}
 
     def _post_chat_completions(self, payload: dict[str, Any]) -> dict[str, Any]:
+        self._check_rate_limit(self.provider)
         return _call_with_retry(
             self.provider,
             lambda: self.transport.post_json(
@@ -213,6 +227,7 @@ class OpenAICompatibleAdapter:
         )
 
     def _iter_streaming_lines(self, payload: dict[str, Any]) -> Iterator[bytes]:
+        self._check_rate_limit(self.provider)
         if self._streaming_lines is not None:
             for line in self._streaming_lines:
                 yield line if isinstance(line, bytes) else line.encode('utf-8')
@@ -220,7 +235,6 @@ class OpenAICompatibleAdapter:
         body = json.dumps(payload).encode('utf-8')
         url = f'{self.config.resolved_base_url()}/chat/completions'
         headers = {
-            'content-type': 'application/json',
             'user-agent': 'TeaAgent',
             **self._headers(),
         }
@@ -304,6 +318,7 @@ class WorkersAIAdapter(OpenAICompatibleAdapter):
         retry_config: Optional[LLMRetryConfig] = None,
         streaming_lines: Optional[list[bytes]] = None,
         disable_tools: bool = False,
+        rate_limiter: Optional[TokenRateLimiter] = None,
     ) -> None:
         super().__init__(
             config,
@@ -311,6 +326,7 @@ class WorkersAIAdapter(OpenAICompatibleAdapter):
             timeout=timeout,
             retry_config=retry_config,
             streaming_lines=streaming_lines,
+            rate_limiter=rate_limiter,
         )
         self.disable_tools = disable_tools
 
@@ -434,12 +450,23 @@ class ClaudeAdapter:
         timeout: int = 60,
         retry_config: Optional[LLMRetryConfig] = None,
         streaming_lines: Optional[list[bytes]] = None,
+        rate_limiter: Optional[TokenRateLimiter] = None,
     ) -> None:
         self.config = config
         self.transport = transport or UrllibHTTPTransport()
         self.timeout = timeout
         self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
         self._streaming_lines = streaming_lines
+        self._rate_limiter = rate_limiter
+
+    def _check_rate_limit(self, key: str) -> None:
+        if self._rate_limiter is not None:
+            allowed, reason = self._rate_limiter.allow(key)
+            if not allowed:
+                raise LLMHTTPError(
+                    f'rate limit exceeded for provider {self.provider}: {reason}',
+                    status_code=429,
+                )
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self.config.resolved_model()
@@ -466,6 +493,7 @@ class ClaudeAdapter:
         if request.stream:
             payload['stream'] = True
             return self._complete_streaming(request, model, payload)
+        self._check_rate_limit(self.provider)
         response = _call_with_retry(
             self.provider,
             lambda: self.transport.post_json(
@@ -493,6 +521,7 @@ class ClaudeAdapter:
         )
 
     def _iter_streaming_lines(self, payload: dict[str, Any]) -> Iterator[bytes]:
+        self._check_rate_limit(self.provider)
         if self._streaming_lines is not None:
             for line in self._streaming_lines:
                 yield line if isinstance(line, bytes) else line.encode('utf-8')
@@ -567,12 +596,23 @@ class GeminiAdapter:
         timeout: int = 60,
         retry_config: Optional[LLMRetryConfig] = None,
         streaming_lines: Optional[list[bytes]] = None,
+        rate_limiter: Optional[TokenRateLimiter] = None,
     ) -> None:
         self.config = config
         self.transport = transport or UrllibHTTPTransport()
         self.timeout = timeout
         self.retry_config = retry_config or DEFAULT_RETRY_CONFIG
         self._streaming_lines = streaming_lines
+        self._rate_limiter = rate_limiter
+
+    def _check_rate_limit(self, key: str) -> None:
+        if self._rate_limiter is not None:
+            allowed, reason = self._rate_limiter.allow(key)
+            if not allowed:
+                raise LLMHTTPError(
+                    f'rate limit exceeded for provider {self.provider}: {reason}',
+                    status_code=429,
+                )
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         model = request.model or self.config.resolved_model()
@@ -604,6 +644,7 @@ class GeminiAdapter:
             ]
         if request.stream:
             return self._complete_streaming(request, model, payload)
+        self._check_rate_limit(self.provider)
         response = _call_with_retry(
             self.provider,
             lambda: self.transport.post_json(
@@ -632,6 +673,7 @@ class GeminiAdapter:
     def _iter_streaming_lines(
         self, model: str, payload: dict[str, Any]
     ) -> Iterator[bytes]:
+        self._check_rate_limit(self.provider)
         if self._streaming_lines is not None:
             for line in self._streaming_lines:
                 yield line if isinstance(line, bytes) else line.encode('utf-8')

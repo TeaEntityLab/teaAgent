@@ -79,8 +79,12 @@ _JSON_FORMAT_TOP_KEYS = frozenset(
         'timestamp',
         'level',
         'logger',
+        'module',
         'message',
         'run_id',
+        'event',
+        'duration_ms',
+        'error_code',
     }
 )
 
@@ -91,8 +95,12 @@ class JsonLogFormatter(logging.Formatter):
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'level': record.levelname,
             'logger': record.name,
+            'module': record.name.split('.')[-1] if record.name else '',
             'message': record.getMessage(),
             'run_id': record.__dict__.get('run_id'),
+            'event': record.__dict__.get('event'),
+            'duration_ms': record.__dict__.get('duration_ms'),
+            'error_code': record.__dict__.get('error_code'),
         }
         for key, value in record.__dict__.items():
             if key in _LOG_RECORD_BUILTINS or key in _JSON_FORMAT_TOP_KEYS:

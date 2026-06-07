@@ -37,10 +37,12 @@ from teaagent.tool_call_context import (
 )
 from teaagent.tools import ToolRegistry
 
-from ._approval_manager import RunnerApprovalCoordinator
-from ._auto_mode_manager import AutoModeManager
-from ._plan_validator import PlanValidator
-from ._types import (
+logger = logging.getLogger(__name__)
+
+from ._approval_manager import RunnerApprovalCoordinator  # noqa: E402
+from ._auto_mode_manager import AutoModeManager  # noqa: E402
+from ._plan_validator import PlanValidator  # noqa: E402
+from ._types import (  # noqa: E402
     ApprovalHandler,
     BudgetPromptHandler,
     DecisionFn,
@@ -720,6 +722,15 @@ class AgentRunner:
         tool_calls += 1
         self.auto_mode_manager.record_tool_call()
         duration_ms = round((time.monotonic() - tool_started_at) * 1000.0, 2)
+        logger.info(
+            '%s completed',
+            decision.tool_name,
+            extra={
+                'event': 'tool_executed',
+                'duration_ms': duration_ms,
+                'tool_name': decision.tool_name,
+            },
+        )
         observation: dict[str, Any] = {
             'call_id': decision.call_id,
             'tool_name': decision.tool_name,
@@ -895,7 +906,6 @@ class AgentRunner:
                 )
                 self.phase_tracker.record_tool_call()
             except ToolPermissionError as exc:
-                # ToolPermissionError should be treated as pending_approval, not system error
                 # This happens when approval_handler is None and we want to pause
                 # Extract approval metadata from the exception context if available
                 approval_metadata = {}

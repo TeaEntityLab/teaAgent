@@ -254,6 +254,7 @@ class ToolRegistry:
         state = self._rate_states.get(name)
         if state is not None:
             state.check_and_record(name)
+        t0 = time.monotonic()
         try:
             result = tool.handler(arguments)
         except ToolExecutionError:
@@ -262,6 +263,16 @@ class ToolRegistry:
             Exception
         ) as exc:  # pragma: no cover - preserves original detail in message
             raise ToolExecutionError(f"tool '{name}' failed: {exc}") from exc
+        duration_ms = round((time.monotonic() - t0) * 1000.0, 2)
+        logger.info(
+            '%s executed',
+            name,
+            extra={
+                'event': 'tool_executed',
+                'tool_name': name,
+                'duration_ms': duration_ms,
+            },
+        )
         if self.hook_registry is not None:
             ctx = get_tool_call_context()
             original_result = result

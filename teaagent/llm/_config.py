@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Optional
 
+from teaagent.http_rate_limit import TokenRateLimiter
 from teaagent.llm._adapters import (
     ClaudeAdapter,
     GeminiAdapter,
@@ -142,6 +145,7 @@ def create_llm_adapter(
     *,
     transport: Optional[HTTPTransport] = None,
     model: Optional[str] = None,
+    rate_limiter: Optional[TokenRateLimiter] = None,
 ) -> LLMAdapter:
     normalized = provider.lower()
     # Special case for fake adapter used in tests
@@ -163,12 +167,18 @@ def create_llm_adapter(
             base_url_env=config.base_url_env,
         )
     if normalized == 'claude':
-        return ClaudeAdapter(config, transport=transport)  # type: ignore[return-value]
+        return ClaudeAdapter(config, transport=transport, rate_limiter=rate_limiter)  # type: ignore[return-value]
     if normalized == 'gemini':
-        return GeminiAdapter(config, transport=transport)  # type: ignore[return-value]
+        return GeminiAdapter(config, transport=transport, rate_limiter=rate_limiter)  # type: ignore[return-value]
     if normalized == 'workers-ai':
-        return WorkersAIAdapter(config, transport=transport)  # type: ignore[return-value]
-    return OpenAICompatibleAdapter(config, transport=transport)  # type: ignore[return-value]
+        return WorkersAIAdapter(config, transport=transport, rate_limiter=rate_limiter)  # type: ignore[return-value]
+    if normalized == 'aigateway':
+        return OpenAICompatibleAdapter(
+            config, transport=transport, rate_limiter=rate_limiter
+        )  # type: ignore[return-value]
+    return OpenAICompatibleAdapter(
+        config, transport=transport, rate_limiter=rate_limiter
+    )  # type: ignore[return-value]
 
 
 def check_llm_configuration(provider: str) -> tuple[bool, str]:
@@ -283,3 +293,52 @@ def estimate_cost_preflight(
     cost_1k_in, cost_1k_out = _lookup_cost_rates(provider, model)
     cost = (approx_input_tokens * cost_1k_in + max_output_tokens * cost_1k_out) / 1000.0
     return round(cost * 100, 4)
+
+
+def load_llm_rate_limiter(
+    workspace_root: str = '.',
+    *,
+    default_max_calls: int = 100,
+    default_window: float = 60.0,
+) -> Optional[TokenRateLimiter]:
+    """Load LLM rate limit configuration from workspace config.
+
+    Reads ``rate_limits`` section from ``<root>/.teaagent/config.json``.
+    Returns ``None`` when no rate limits are configured.
+
+    Config format::
+
+        {
+          "rate_limits": {
+            "enabled": true,
+            "default": {"max_calls": 100, "window_seconds": 60},
+            "providers": {
+              "gpt": {"max_calls": 50, "window_seconds": 60},
+              "claude": {"max_calls": 10, "window_seconds": 60}
+            }
+          }
+        }
+    """
+    try:
+        config_path = Path(workspace_root) / '.teaagent' / 'config.json'
+        if not config_path.is_file():
+            return None
+        data = json.loads(config_path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    rate_cfg = data.get('rate_limits')
+    if not isinstance(rate_cfg, dict):
+        return None
+    if not rate_cfg.get('enabled', False):
+        return None
+
+    default_cfg = rate_cfg.get('default')
+    if isinstance(default_cfg, dict):
+        max_calls = int(default_cfg.get('max_calls', default_max_calls))
+        window = float(default_cfg.get('window_seconds', default_window))
+    else:
+        max_calls = default_max_calls
+        window = default_window
+
+    return TokenRateLimiter(max_calls=max_calls, window_seconds=window)

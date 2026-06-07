@@ -42,6 +42,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+try:
+    import blake3 as _blake3
+
+    _BLAKE3_AVAILABLE = True
+except ImportError:
+    _blake3 = None
+    _BLAKE3_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 GENESIS_HASH = 'genesis'
@@ -49,6 +57,37 @@ GENESIS_HASH = 'genesis'
 _CHAIN_FIELDS = frozenset(
     {'event_id', 'event_type', 'run_id', 'created_at', 'payload', 'prev_hash'}
 )
+
+# Hash algorithm selection (SHA-256 by default; Blake3 when available and opted in).
+_hash_algorithm: str = 'sha256'
+
+
+def set_hash_algorithm(algo: str) -> None:
+    """Set the hash algorithm used for audit chain integrity.
+
+    Args:
+        algo: ``'sha256'`` (default) or ``'blake3'`` (must be installed).
+    """
+    global _hash_algorithm
+    if algo not in ('sha256', 'blake3'):
+        raise ValueError(f'unsupported hash algorithm: {algo!r}')
+    if algo == 'blake3' and not _BLAKE3_AVAILABLE:
+        raise ImportError('Blake3 is not installed. Install with: pip install blake3')
+    _hash_algorithm = algo
+
+
+def _hash_bytes(data: bytes) -> bytes:
+    """Compute the configured hash of *data*."""
+    if _hash_algorithm == 'blake3' and _BLAKE3_AVAILABLE:
+        return _blake3.blake3(data).digest()
+    return hashlib.sha256(data).digest()
+
+
+def _hash_hex(data: bytes) -> str:
+    """Compute the configured hash of *data*, returning a hex string."""
+    if _hash_algorithm == 'blake3' and _BLAKE3_AVAILABLE:
+        return _blake3.blake3(data).hexdigest()
+    return hashlib.sha256(data).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -91,7 +130,8 @@ class ChainVerificationResult:
 
 
 def compute_event_hash(obj: dict) -> str:
-    """Return the SHA-256 hex digest for *obj* using canonical field ordering.
+    """Return the hex digest for *obj* using canonical field ordering and the
+    configured hash algorithm (SHA-256 by default, Blake3 optional).
 
     Only the six chain fields are included so that non-chain metadata
     added by external tools does not invalidate the hash.
@@ -108,7 +148,7 @@ def compute_event_hash(obj: dict) -> str:
         sort_keys=True,
         separators=(',', ':'),
     )
-    return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+    return _hash_hex(canonical.encode('utf-8'))
 
 
 def compute_chain_hmac(event_hash: str, secret_key: bytes) -> str:

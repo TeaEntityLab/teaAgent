@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
@@ -394,7 +393,7 @@ class AuditLogger:
             sinks = list(self._sinks)
 
         if path is not None and self.disk_error is None:
-            from teaagent.audit_chain import compute_chain_hmac
+            from teaagent.audit_chain import _hash_hex, compute_chain_hmac
 
             try:
                 with file_lock(path):
@@ -441,7 +440,7 @@ class AuditLogger:
                         sort_keys=True,
                         separators=(',', ':'),
                     )
-                    current_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+                    current_hash = _hash_hex(canonical.encode('utf-8'))
                     chain_hmac = compute_chain_hmac(current_hash, self._chain_key)
                     path.parent.mkdir(parents=True, exist_ok=True)
                     with path.open('a', encoding='utf-8') as handle:
@@ -502,6 +501,10 @@ class AuditLogger:
                     'Enable compliance mode for fatal audit durability enforcement.',
                     exc,
                     exc.errno,
+                    extra={
+                        'event': 'audit_disk_write_failed',
+                        'error_code': 'AUDIT_DISK_WRITE',
+                    },
                 )
         failed_sinks = []
         for sink in sinks:
@@ -509,7 +512,12 @@ class AuditLogger:
                 sink(event)
             except Exception as exc:
                 logger.error(
-                    f'Audit sink {sink.__class__.__name__} failed: {exc}', exc_info=True
+                    f'Audit sink {sink.__class__.__name__} failed: {exc}',
+                    exc_info=True,
+                    extra={
+                        'event': 'audit_sink_failed',
+                        'error_code': 'AUDIT_SINK_ERROR',
+                    },
                 )
                 failed_sinks.append((sink, exc))
 
@@ -531,6 +539,8 @@ class AuditLogger:
             }
 
         try:
+            from teaagent.audit_chain import _hash_hex
+
             lines = self.path.read_text(encoding='utf-8').splitlines()
             events = []
             for line in lines:
@@ -564,7 +574,7 @@ class AuditLogger:
                     sort_keys=True,
                     separators=(',', ':'),
                 )
-                computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+                computed_hash = _hash_hex(canonical.encode('utf-8'))
 
                 if event_hash != computed_hash:
                     errors.append(
@@ -619,6 +629,8 @@ class AuditLogger:
     @staticmethod
     @staticmethod
     def _verify_raw_chain(raw_events: list[dict[str, Any]]) -> list[str]:
+        from teaagent.audit_chain import _hash_hex
+
         chain_errors = []
         prev_hash = _GENESIS_HASH
         for i, event in enumerate(raw_events):
@@ -640,7 +652,7 @@ class AuditLogger:
                 sort_keys=True,
                 separators=(',', ':'),
             )
-            computed_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+            computed_hash = _hash_hex(canonical.encode('utf-8'))
             if event_hash != computed_hash:
                 chain_errors.append(
                     f'Event {i}: hash mismatch (expected {computed_hash}, got {event_hash})'
