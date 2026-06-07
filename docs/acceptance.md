@@ -82,7 +82,7 @@ directory.
 | `test_plan_review_revision_flow.py` | Plan review and revision | Plan storage with versioning, plan diff generation, run-to-plan binding, hash verification to prevent execution of modified plans |
 | `test_run_evidence_summary_flow.py` | Run evidence summary | Evidence bundle includes changed files, commands, tests, approvals, denied actions, costs, known failures, and rollback path for successful, failed, cancelled, and pending-approval runs with sensitive value redaction |
 | `test_surface_launch_recipes_flow.py` | Multi-surface launch recipes | USAGE surface table covers CLI/TUI/VS Code/MCP/ACP/A2A/ANP/managed runtime; documented local smoke commands run without network |
-| `test_subagent_lineage_flow.py` | Subagent lineage and isolation | Child runs record parent lineage metadata; batch returns ordered lineage; default shared-workspace isolation documented |
+| `test_subagent_lineage_flow.py` | Subagent lineage and isolation | Child runs record parent lineage metadata; batch returns ordered lineage; default isolation is worktree on git repos (requires explicit shared) |
 | `test_subagent_parallel_worktree_merge_flow.py` | Parallel subagent worktree merge | Two worktree-isolated children expose lineage for parent review before merge |
 | `test_subagent_worktree_isolation_flow.py` | Subagent worktree isolation | `isolation=worktree` uses a detached git worktree, records `worktree_path` in lineage, and cleans up after completion |
 | `test_subagent_container_isolation_flow.py` | Subagent container isolation | `isolation=container` uses a gitignore-respecting workspace snapshot, records `container_path` in lineage, and cleans up after completion |

@@ -103,3 +103,34 @@ def test_agent_status_progress_json(tmp_path: Path) -> None:
     payload = json.loads(out.getvalue())
     assert payload['phase'] == 'pending_approval'
     assert payload['run_id'] == 'run-ux'
+
+
+def test_receipt_includes_cost_state(tmp_path: Path) -> None:
+    _seed_pending_run(tmp_path)
+    store = RunStore(tmp_path)
+    receipt = build_run_receipt(store, 'run-ux', str(tmp_path))
+    assert 'Cost:' in receipt
+    assert '$' in receipt or 'cents' in receipt
+
+
+def test_receipt_includes_status_and_progress(tmp_path: Path) -> None:
+    _seed_pending_run(tmp_path)
+    out = StringIO()
+    with redirect_stdout(out):
+        assert (
+            main(
+                [
+                    'agent',
+                    'status',
+                    'run-ux',
+                    '--progress',
+                    '--human',
+                    '--root',
+                    str(tmp_path),
+                ]
+            )
+            == 0
+        )
+    text = out.getvalue()
+    assert 'Phase:' in text
+    assert 'Budget:' in text

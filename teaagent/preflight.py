@@ -206,6 +206,28 @@ def preflight(
             f'Run store corruption detected: {run_health["corrupt_runs"]} corrupt runs'
         )
         health['healthy'] = False
+
+    try:
+        from teaagent.audit_chain import read_audit_events
+        from teaagent.audit_health import assess_audit_health
+
+        audit_dir = root_path / '.teaagent' / 'runs'
+        if audit_dir.is_dir():
+            run_ids = sorted(audit_dir.iterdir(), reverse=True)
+            if run_ids:
+                log_file = run_ids[0] / 'audit.jsonl'
+                if log_file.is_file():
+                    events = read_audit_events(log_file)
+                    audit_health = assess_audit_health(events, log_path=log_file)
+                    if audit_health.disk_write_errors:
+                        health['failures'].append(
+                            f'Audit: {audit_health.disk_write_errors} disk write '
+                            f'error(s) in last run'
+                        )
+                        health['healthy'] = False
+    except Exception:
+        pass  # non-fatal — audit health check should not block preflight
+
     token_budget = build_token_budget_report(
         task=task,
         provider=provider,

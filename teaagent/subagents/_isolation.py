@@ -34,6 +34,9 @@ def resolve_subagent_isolation(
     Shared workspace requires an explicit ``isolation='shared'`` argument.
     When omitted, prefer ``worktree`` on git repositories; otherwise fall back
     to shared with a warning (non-git workspaces cannot use worktree).
+
+    The ``TEAAGENT_SUBAGENT_ISOLATION`` env var overrides the default when no
+    explicit isolation or per-def isolation is set (WS2-001).
     """
     if isinstance(explicit, str) and explicit.strip():
         return normalize_subagent_isolation(explicit)
@@ -43,6 +46,11 @@ def resolve_subagent_isolation(
         normalized_def = normalize_subagent_isolation(def_isolation)
         if normalized_def:
             return normalized_def
+    env_isolation = os.environ.get('TEAAGENT_SUBAGENT_ISOLATION')
+    if env_isolation:
+        normalized_env = normalize_subagent_isolation(env_isolation)
+        if normalized_env:
+            return normalized_env
     if is_git_repository(root):
         return 'worktree'
     logger.warning(

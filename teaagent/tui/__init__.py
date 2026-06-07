@@ -296,9 +296,7 @@ class TeaAgentTUI:
                 permission_mode=self.permission_mode.value,
                 cost_cents=self._get_session_cost_cents(),
                 cost_limit_cents=self._max_cost_budget_cents,
-                cost_state='estimated'
-                if self._max_cost_budget_cents is None
-                else 'actual',
+                cost_state=self._determine_cost_state(),
             )
         except Exception:
             self._control_cockpit = None
