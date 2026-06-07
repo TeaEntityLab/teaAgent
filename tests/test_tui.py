@@ -1341,8 +1341,8 @@ class TUITests(unittest.TestCase):
             patch.object(tui, '_load_tui_state'),
             patch.object(tui, '_save_tui_state'),
             patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.RunStore') as mock_store,
-            patch('teaagent.tui.create_llm_adapter'),
+            patch('teaagent.tui.core.RunStore') as mock_store,
+            patch('teaagent.tui.state.create_llm_adapter'),
         ):
             mock_run.return_value = unittest.mock.MagicMock(
                 run_id='test-run',
@@ -1374,8 +1374,8 @@ class TUITests(unittest.TestCase):
             patch.object(tui, '_load_tui_state'),
             patch.object(tui, '_save_tui_state'),
             patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.RunStore') as mock_store,
-            patch('teaagent.tui.create_llm_adapter'),
+            patch('teaagent.tui.core.RunStore') as mock_store,
+            patch('teaagent.tui.state.create_llm_adapter'),
         ):
             mock_run.return_value = unittest.mock.MagicMock(
                 run_id='test-run',
@@ -1423,8 +1423,8 @@ class TUITests(unittest.TestCase):
         tui = TeaAgentTUI(input_fn=lambda _: '', output_fn=output.append)
         with (
             patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.RunStore') as mock_store,
-            patch('teaagent.tui.create_llm_adapter'),
+            patch('teaagent.tui.core.RunStore') as mock_store,
+            patch('teaagent.tui.state.create_llm_adapter'),
         ):
             mock_run.return_value = unittest.mock.MagicMock(
                 run_id='test-run',
@@ -1648,8 +1648,8 @@ class TUITests(unittest.TestCase):
             patch.object(tui, '_load_tui_state'),
             patch.object(tui, '_save_tui_state'),
             patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.RunStore') as mock_store,
-            patch('teaagent.tui.create_llm_adapter'),
+            patch('teaagent.tui.core.RunStore') as mock_store,
+            patch('teaagent.tui.state.create_llm_adapter'),
         ):
             mock_run.return_value = unittest.mock.MagicMock(
                 run_id='test-run',

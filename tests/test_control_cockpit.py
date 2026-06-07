@@ -364,7 +364,7 @@ class ControlCockpitRenderingTests(unittest.TestCase):
         )
         # Simulate a failure in build_control_cockpit
         with patch(
-            'teaagent.tui.build_control_cockpit',
+            'teaagent.tui.core.build_control_cockpit',
             side_effect=RuntimeError('simulated failure'),
         ):
             tui._refresh_control_cockpit()

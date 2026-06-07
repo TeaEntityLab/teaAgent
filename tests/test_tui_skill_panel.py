@@ -132,11 +132,11 @@ class TuiSkillPanelTests(unittest.TestCase):
 
         with (
             patch(
-                'teaagent.tui.explain_skill_activation',
+                'teaagent.tui.core.explain_skill_activation',
                 return_value=fake_explain,
             ),
             patch(
-                'teaagent.tui.discover_skill_index',
+                'teaagent.tui.core.discover_skill_index',
                 return_value=skill_entries,
             ),
         ):

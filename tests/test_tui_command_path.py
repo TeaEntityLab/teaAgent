@@ -63,8 +63,8 @@ class AskRunCommandPathTests(unittest.TestCase):
                 patch.object(tui, '_start_file_watcher'),
                 patch.object(tui, '_load_tui_state'),
                 patch.object(tui, '_save_tui_state'),
-                patch('teaagent.tui.create_llm_adapter'),
-                patch('teaagent.tui.RunStore') as mock_store_class,
+                patch('teaagent.tui.state.create_llm_adapter'),
+                patch('teaagent.tui.core.RunStore') as mock_store_class,
             ):
                 mock_store = MagicMock()
                 mock_store.show_run.return_value = []
@@ -86,8 +86,8 @@ class AskRunCommandPathTests(unittest.TestCase):
                 patch.object(tui, '_start_file_watcher'),
                 patch.object(tui, '_load_tui_state'),
                 patch.object(tui, '_save_tui_state'),
-                patch('teaagent.tui.create_llm_adapter'),
-                patch('teaagent.tui.RunStore') as mock_store_class,
+                patch('teaagent.tui.state.create_llm_adapter'),
+                patch('teaagent.tui.core.RunStore') as mock_store_class,
             ):
                 mock_store = MagicMock()
                 mock_store.show_run.return_value = []
@@ -109,8 +109,8 @@ class AskRunCommandPathTests(unittest.TestCase):
                 patch.object(tui, '_start_file_watcher'),
                 patch.object(tui, '_load_tui_state'),
                 patch.object(tui, '_save_tui_state'),
-                patch('teaagent.tui.create_llm_adapter'),
-                patch('teaagent.tui.RunStore') as mock_store_class,
+                patch('teaagent.tui.state.create_llm_adapter'),
+                patch('teaagent.tui.core.RunStore') as mock_store_class,
             ):
                 mock_store = MagicMock()
                 mock_store.show_run.return_value = []
@@ -363,8 +363,8 @@ class ResumeCommandPathTests(unittest.TestCase):
                 patch.object(tui, '_start_file_watcher'),
                 patch.object(tui, '_load_tui_state'),
                 patch.object(tui, '_save_tui_state'),
-                patch('teaagent.tui.create_llm_adapter'),
-                patch('teaagent.tui.RunStore') as mock_store_class,
+                patch('teaagent.tui.state.create_llm_adapter'),
+                patch('teaagent.tui.core.RunStore') as mock_store_class,
             ):
                 mock_store = MagicMock()
                 mock_store.show_run.return_value = []
@@ -444,8 +444,8 @@ class SessionCostStateTests(unittest.TestCase):
             patch.object(tui, '_load_tui_state'),
             patch.object(tui, '_save_tui_state'),
             patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-            patch('teaagent.tui.RunStore') as mock_store_class,
-            patch('teaagent.tui.create_llm_adapter'),
+            patch('teaagent.tui.core.RunStore') as mock_store_class,
+            patch('teaagent.tui.state.create_llm_adapter'),
         ):
             mock_run.return_value = MagicMock(
                 run_id='cost-test-run',

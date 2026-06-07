@@ -260,8 +260,8 @@ class HeadlessTUITests(unittest.TestCase):
 
             with (
                 patch('teaagent.chat_session_controller.run_chat_agent') as mock_run,
-                patch('teaagent.tui.RunStore') as mock_store,
-                patch('teaagent.tui.create_llm_adapter'),
+                patch('teaagent.tui.core.RunStore') as mock_store,
+                patch('teaagent.tui.state.create_llm_adapter'),
             ):
                 # Mock run_chat_agent to return a result with cost
                 mock_run.return_value = MagicMock(
