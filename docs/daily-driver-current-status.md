@@ -11,7 +11,7 @@
 > `docs/analysis/`.
 >
 > **Review trigger:** TUI, chat, agent mode, approval, cost, undo, or resume behavior changes.
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-07 (H1 daily operator loop complete)
 
 This page is the short daily-use entry point for TeaAgent's TUI, TUI chat, and
 agent mode. It is intentionally more practical than the audit corpus.

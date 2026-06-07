@@ -98,12 +98,10 @@ class TestACPToolResult(unittest.TestCase):
 
 class _FakeRegistry:
     def mcp_metadata(self):
-        return {
-            'tools': [
-                {'name': 'read_file', 'description': 'Read a file'},
-                {'name': 'write_file', 'description': 'Write a file'},
-            ]
-        }
+        return [
+            {'name': 'read_file', 'description': 'Read a file'},
+            {'name': 'write_file', 'description': 'Write a file'},
+        ]
 
     def get(self, name):
         tools = {

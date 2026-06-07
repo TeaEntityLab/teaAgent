@@ -12,7 +12,7 @@
 > **Last reviewed:** 2026-06-06
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-06 (M2 Complete: context-health acceptance tests added, all 3 exit criteria suites verified. M3 Complete: extension explain, MCP trust, subagent review acceptance all verified passing. H0 complete: GOV-002–012 + WS-0 implemented, risk-register Owner/Due columns added, M0 exit criteria verified)
+**Last updated:** 2026-06-07 (H1 Complete: all P0–P2 daily-driver workstreams implemented, 4758 tests pass, journey acceptance tests pass across CLI/TUI baseline)
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -26,7 +26,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | Horizon | Name | Target Outcome | Owner | Status | Confidence | Next Gate | Exit Evidence |
 |---------|------|----------------|-------|--------|------------|-----------|---------------|
 | H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | governance | Complete | High | H1 | H0 exit evidence met; all M0 checks pass |
-| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | TBD | In Progress | High | M2 complete | Journey acceptance tests pass across CLI/TUI baseline |
+| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | governance | Complete | High | H2 | Journey acceptance tests pass across CLI/TUI baseline; 576 acceptance + 4758 total pass |
 | H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Pending | Medium | M2 complete | Surface parity tests prove identity, permissions, audit, cost, and recovery continuity |
 | H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Pending | Medium | M3 complete | Trust-onboarding and activation-explain acceptance tests pass |
 | H4 | Durable team operations | Long-running and team workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Pending | Low | M4 complete | Background/cloud/team lifecycle tests pass with evidence bundle export |

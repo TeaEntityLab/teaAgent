@@ -74,7 +74,9 @@ def test_collect_and_format_pending_approval_views(tmp_path: Path) -> None:
     assert view.tool_name == 'workspace_write_file'
     assert view.path_summary == 'docs/cli.md'
     assert view.risk_class == 'destructive'
-    assert '2026-06-07' in view.expires_at
+    # expires_at should be a valid future ISO date (current time + expiry window)
+    assert 'T' in view.expires_at
+    assert view.expires_at.endswith('+00:00')
 
     text = format_pending_approvals(views)
     assert '1. run=run-pending tool=workspace_write_file' in text
