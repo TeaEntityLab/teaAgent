@@ -28,6 +28,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build twine
 
+      - name: Generate changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          bash scripts/release-changelog.sh "$VERSION"
+
+      - name: Build release evidence bundle
+        run: python scripts/build_release_evidence_bundle.py --output-dir dist/evidence
+
       - name: Build distributions
         run: python -m build
 

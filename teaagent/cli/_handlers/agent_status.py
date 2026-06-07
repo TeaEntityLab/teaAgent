@@ -6,11 +6,11 @@ import argparse
 from pathlib import Path
 
 from teaagent.cli._output import print_json
-from teaagent.run_store import RunStore
+from teaagent.cli.execution import AgentExecutionFactory
 
 
 def agent_status_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         print_json(store.heartbeat_for_run(args.run_id))
     except FileNotFoundError as exc:
@@ -20,7 +20,7 @@ def agent_status_command(args: argparse.Namespace) -> int:
 
 
 def agent_runs_list(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     payload = [summary.to_dict() for summary in store.list_runs(limit=args.limit)]
     from teaagent.scratchpad import Scratchpad
 
@@ -36,7 +36,7 @@ def agent_runs_list(args: argparse.Namespace) -> int:
 def agent_runs_trace(args: argparse.Namespace) -> int:
     from teaagent.run_trace import build_run_trace, format_trace_text
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -53,7 +53,7 @@ def agent_runs_trace(args: argparse.Namespace) -> int:
 def agent_runs_export(args: argparse.Namespace) -> int:
     from teaagent.run_trace import dumps_export, export_run
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -66,7 +66,7 @@ def agent_runs_export(args: argparse.Namespace) -> int:
 def agent_runs_replay(args: argparse.Namespace) -> int:
     from teaagent.run_trace import dumps_export, replay_dry_run
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -77,7 +77,7 @@ def agent_runs_replay(args: argparse.Namespace) -> int:
 
 
 def agent_run_show(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         print_json(store.show_run(args.run_id))
     except FileNotFoundError as exc:

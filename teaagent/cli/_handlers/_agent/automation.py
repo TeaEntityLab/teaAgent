@@ -14,6 +14,7 @@ from teaagent.automations import (
     compute_next_run_at,
 )
 from teaagent.cli._output import print_json
+from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.run_store import RunStore
 from teaagent.skill_candidates import SkillCandidateStore
 
@@ -25,7 +26,6 @@ def _start_automation_background_run(
     task: Optional[str] = None,
 ) -> dict[str, Any]:
     from teaagent.ergonomics.background_run import (
-        BackgroundRunStore,
         build_agent_run_command,
     )
 
@@ -50,8 +50,10 @@ def _start_automation_background_run(
         max_estimated_cost_cents=spec.max_cost_cents,
     )
     command = build_agent_run_command(run_args, task or spec.task)
-    record = BackgroundRunStore(root).start(
-        command, label=f'automation:{spec.automation_id}:{spec.name}'
+    record = (
+        AgentExecutionFactory(root)
+        .create_background_run_store()
+        .start(command, label=f'automation:{spec.automation_id}:{spec.name}')
     )
     return record.to_dict()
 
@@ -59,10 +61,10 @@ def _start_automation_background_run(
 def _automation_is_running(root: str, background_id: Optional[str]) -> bool:
     if not background_id:
         return False
-    from teaagent.ergonomics.background_run import BackgroundRunStore
-
     try:
-        row = BackgroundRunStore(root).get(background_id)
+        row = (
+            AgentExecutionFactory(root).create_background_run_store().get(background_id)
+        )
     except FileNotFoundError:
         return False
     return bool(row.get('alive'))
@@ -679,10 +681,9 @@ def _deliver_handoff(
 
 def _reconcile_automation_runs(root: str, store: AutomationStore) -> None:
     from teaagent.automation_limits import enforce_runtime_cap
-    from teaagent.ergonomics.background_run import BackgroundRunStore
 
-    bg_store = BackgroundRunStore(root)
-    run_store = RunStore(root)
+    bg_store = AgentExecutionFactory(root).create_background_run_store()
+    run_store = AgentExecutionFactory(root).create_run_store()
     candidate_store = SkillCandidateStore(root)
     for spec in store.list():
         if not spec.running_background_id:

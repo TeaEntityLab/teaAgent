@@ -15,6 +15,7 @@ from typing import Any, Optional
 from teaagent.audit import AuditLogger
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.code_analysis import CodeAnalysisConfig
+from teaagent.ergonomics.background_run import BackgroundRunStore
 from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore
 from teaagent.run_undo import UndoJournal
@@ -62,9 +63,9 @@ class AgentExecutionFactory:
     def __init__(self, root: Path | str):
         self.root = Path(root).resolve()
 
-    def create_run_store(self) -> RunStore:
+    def create_run_store(self, readonly: bool = False) -> RunStore:
         """Create a RunStore instance."""
-        return RunStore(self.root)
+        return RunStore(self.root, readonly=readonly)
 
     def create_audit_logger(
         self, store: RunStore, run_id: Optional[str] = None
@@ -78,15 +79,24 @@ class AgentExecutionFactory:
         """Create a GitBranchSandbox instance."""
         return GitBranchSandbox(self.root, run_id=run_id)
 
-    def create_undo_journal(self) -> UndoJournal:
+    def create_undo_journal(self, path: Optional[Path] = None) -> UndoJournal:
         """Create an UndoJournal instance."""
-        return UndoJournal(self.root)
+        return UndoJournal(self.root, path=path)
 
     def create_git_transaction_sink(
         self, git_sandbox: GitBranchSandbox
     ) -> GitTransactionSink:
         """Create a GitTransactionSink instance."""
         return GitTransactionSink(git_sandbox)
+
+    def create_background_run_store(self, readonly: bool = False) -> BackgroundRunStore:
+        """Create a BackgroundRunStore instance."""
+        return BackgroundRunStore(self.root, readonly=readonly)
+
+    @staticmethod
+    def create_audit_logger_from_path(path: Path) -> AuditLogger:
+        """Create an AuditLogger instance from a file path."""
+        return AuditLogger(path=path)
 
     def create_chat_agent_config(
         self,
@@ -101,6 +111,7 @@ class AgentExecutionFactory:
         max_subagent_depth: int = 1,
         heartbeat_seconds: float = 0.0,
         approval_handler: Optional[ApprovalHandler] = None,
+        budget_prompt_handler: Any = None,
         checkpoint_store: Any = None,
         stream: bool = False,
         on_chunk: Optional[Any] = None,
@@ -126,6 +137,7 @@ class AgentExecutionFactory:
             max_subagent_depth=max_subagent_depth,
             heartbeat_seconds=heartbeat_seconds,
             approval_handler=approval_handler,
+            budget_prompt_handler=budget_prompt_handler,
             checkpoint_store=checkpoint_store,
             stream=stream,
             on_chunk=on_chunk,

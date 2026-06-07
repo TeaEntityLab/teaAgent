@@ -71,7 +71,7 @@ class BudgetExceededError(AgentHarnessError):
         )
 
 
-class ToolValidationError(AgentHarnessError):
+class ToolValidationError(AgentHarnessError, ValueError):
     category = ErrorCategory.MODEL_LOGIC
 
     def __init__(self, message: str, *, hint: Optional[str] = None) -> None:
@@ -163,7 +163,7 @@ class RunCancelledError(AgentHarnessError):
         )
 
 
-class AuditDurabilityError(AgentHarnessError):
+class AuditDurabilityError(AgentHarnessError, ValueError):
     """Audit log could not be persisted durably (WS3-001 compliance mode)."""
 
     category = ErrorCategory.SYSTEM

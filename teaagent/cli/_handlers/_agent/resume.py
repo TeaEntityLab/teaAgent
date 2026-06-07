@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.cli._output import print_json
-from teaagent.run_store import RunStore
+from teaagent.cli.execution import AgentExecutionFactory
 
 from .run import _execute_agent_task, _resolve_auto_compact
 
 
 def agent_resume_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = AgentExecutionFactory(args.root).create_run_store()
     try:
         original_task = store.task_for_run(args.run_id)
     except (FileNotFoundError, ValueError) as exc:

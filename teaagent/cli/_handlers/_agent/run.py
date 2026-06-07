@@ -9,8 +9,9 @@ import sys
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.chat_agent import run_chat_agent
 from teaagent.cli._output import print_json
+from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
@@ -52,19 +53,21 @@ def _display_recovery_guidance(
         RecoveryAdviceFormatter,
         RecoverySelector,
     )
-    from teaagent.run_undo import UndoJournal
 
     # Load audit log if available
     audit_path = store.run_path(result.run_id)
-    from teaagent.audit import AuditLogger
-
-    audit = AuditLogger(path=audit_path) if audit_path.is_file() else None
+    audit = (
+        AgentExecutionFactory.create_audit_logger_from_path(audit_path)
+        if audit_path.is_file()
+        else None
+    )
 
     # Load undo journal if available
     undo_journal = None
     undo_path = store.undo_path(result.run_id)
     if undo_path.is_file():
-        undo_journal = UndoJournal(root=args.root, path=undo_path)
+        factory = AgentExecutionFactory(args.root)
+        undo_journal = factory.create_undo_journal(path=undo_path)
 
     # Analyze failure
     analyzer = FailureAnalyzer(audit_logger=audit)
@@ -230,7 +233,6 @@ def _run_post_validation(
 ) -> int:
     from typing import cast
 
-    from teaagent.audit import AuditLogger
     from teaagent.validation.profiles import run_profile_validation
 
     report = run_profile_validation(
@@ -239,7 +241,7 @@ def _run_post_validation(
     )
     path = store.run_path(result.run_id)
     if path.is_file():
-        audit = AuditLogger(path=path)
+        audit = AgentExecutionFactory.create_audit_logger_from_path(path)
         audit.record('validation_started', result.run_id, profile=profile)
         audit.record(
             'validation_finished',
@@ -333,11 +335,11 @@ def show_interactive_diff(root: str | Path, sandbox_branch: str) -> bool:
 
 def _start_background_run(args: argparse.Namespace) -> int:
     from teaagent.ergonomics.background_run import (
-        BackgroundRunStore,
         build_agent_run_command,
     )
 
-    run_store = RunStore(args.root, readonly=True)
+    factory = AgentExecutionFactory(args.root)
+    run_store = factory.create_run_store(readonly=True)
     root_path = Path(args.root).resolve()
 
     # Check both positional arguments for run/suspension ID patterns.
@@ -385,7 +387,7 @@ def _start_background_run(args: argparse.Namespace) -> int:
 
     task = _prepare_task(args, args.task)
     command = build_agent_run_command(args, task)
-    record = BackgroundRunStore(args.root).start(command)
+    record = factory.create_background_run_store().start(command)
     payload = record.to_dict()
     payload['status'] = 'background_started'
     payload['attach'] = (
@@ -493,8 +495,9 @@ def _execute_agent_task(
     gate_exit = _require_plan_gate(args, plan_contract)
     if gate_exit is not None:
         return gate_exit
-    store = RunStore(args.root)
-    audit = store.audit_logger()
+    factory = AgentExecutionFactory(args.root)
+    store = factory.create_run_store()
+    audit = factory.create_audit_logger(store)
 
     if routing is not None:
         _policy_source = _derive_policy_source(routing.reason)
@@ -577,11 +580,8 @@ def _execute_agent_task(
             else:
                 scratchpad.clear()
 
-    from teaagent.run_undo import UndoJournal
-    from teaagent.sandbox import GitBranchSandbox
-
     # Initialize git sandbox if available (will be updated with actual run_id later)
-    git_sandbox = GitBranchSandbox(args.root, run_id='pending')
+    git_sandbox = factory.create_git_sandbox()
     git_sandbox_available = git_sandbox.is_available()
     auto_stash = getattr(args, 'git_sandbox_auto_stash', False)
 
@@ -643,15 +643,13 @@ def _execute_agent_task(
                 )
                 git_sandbox_available = False
 
-    undo_journal = UndoJournal(args.root)
+    undo_journal = factory.create_undo_journal()
     audit.add_sink(undo_journal)
 
     # Add git transaction sink if sandbox is active
     git_transaction_sink = None
     if git_sandbox_available:
-        from teaagent.sandbox import GitTransactionSink
-
-        git_transaction_sink = GitTransactionSink(git_sandbox)
+        git_transaction_sink = factory.create_git_transaction_sink(git_sandbox)
         audit.add_sink(git_transaction_sink)
 
     _telemetry_sink = None
@@ -714,8 +712,7 @@ def _execute_agent_task(
     stream_handlers = build_run_stream_handlers(args, audit)
     use_stream = stream_handlers.stream and adapter_supports_streaming(adapter)
     max_estimated_cost_cents = getattr(args, 'max_estimated_cost_cents', 500)
-    config = ChatAgentConfig.from_root(
-        args.root,
+    config = factory.create_chat_agent_config(
         max_iterations=args.max_iterations,
         max_tool_calls=args.max_tool_calls,
         max_estimated_cost_cents=max_estimated_cost_cents,

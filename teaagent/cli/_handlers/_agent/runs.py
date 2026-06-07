@@ -7,15 +7,15 @@ import sys
 from pathlib import Path
 
 from teaagent.cli._output import print_json
+from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.policy import PermissionMode, parse_permission_mode
-from teaagent.run_store import RunStore
 
 from .resume import agent_resume_command
 from .run import _emit_readiness_payload
 
 
 def agent_attach_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    store = AgentExecutionFactory(args.root).create_run_store()
     try:
         heartbeat = store.heartbeat_for_run(args.run_id)
     except FileNotFoundError as exc:
@@ -164,7 +164,7 @@ def agent_daily_command(args: argparse.Namespace) -> int:
 
 
 def agent_status_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         if getattr(args, 'progress', False):
             from teaagent.run_progress import (
@@ -197,7 +197,7 @@ def agent_status_command(args: argparse.Namespace) -> int:
 
 
 def agent_runs_list(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     payload = [summary.to_dict() for summary in store.list_runs(limit=args.limit)]
     from teaagent.scratchpad import Scratchpad
 
@@ -213,7 +213,7 @@ def agent_runs_list(args: argparse.Namespace) -> int:
 def agent_runs_trace(args: argparse.Namespace) -> int:
     from teaagent.run_trace import build_run_trace, format_trace_text
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -230,7 +230,7 @@ def agent_runs_trace(args: argparse.Namespace) -> int:
 def agent_runs_export(args: argparse.Namespace) -> int:
     from teaagent.run_trace import dumps_export, export_run
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -243,7 +243,7 @@ def agent_runs_export(args: argparse.Namespace) -> int:
 def agent_runs_replay(args: argparse.Namespace) -> int:
     from teaagent.run_trace import dumps_export, replay_dry_run
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -258,7 +258,7 @@ def agent_run_show(args: argparse.Namespace) -> int:
     if getattr(args, 'diff', False):
         return _show_run_diff(args)
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         print_json(store.show_run(args.run_id))
     except FileNotFoundError as exc:
@@ -340,9 +340,7 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:
     run_id = getattr(args, 'run_id', None)
     if not run_id:
         # Get last run from RunStore
-        from teaagent.run_store import RunStore
-
-        store = RunStore(root, readonly=True)
+        store = AgentExecutionFactory(root).create_run_store(readonly=True)
         runs = store.list_runs(limit=1)
         if not runs:
             print_json({'status': 'error', 'message': 'No runs found to commit'})
@@ -381,9 +379,7 @@ def agent_runs_commit_command(args: argparse.Namespace) -> int:
         commit_message = custom_message
     else:
         # Auto-generate commit message with run metadata
-        from teaagent.run_store import RunStore
-
-        store = RunStore(root, readonly=True)
+        store = AgentExecutionFactory(root).create_run_store(readonly=True)
         try:
             events = store.show_run(run_id)
             # Extract task from first event

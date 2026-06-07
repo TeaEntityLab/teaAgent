@@ -9,7 +9,7 @@ from pathlib import Path
 
 from teaagent.audit_chain import read_audit_events
 from teaagent.cli._output import print_json
-from teaagent.run_store import RunStore
+from teaagent.cli.execution import AgentExecutionFactory
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ def replay_list(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     limit = args.limit
 
-    run_store = RunStore(root, readonly=True)
+    run_store = AgentExecutionFactory(root).create_run_store(readonly=True)
 
     try:
         summaries = run_store.list_runs(limit=limit)
@@ -62,7 +62,7 @@ def replay_steps(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     run_id = args.run_id
 
-    run_store = RunStore(root, readonly=True)
+    run_store = AgentExecutionFactory(root).create_run_store(readonly=True)
     run_path = run_store.run_path(run_id)
 
     if not run_path.exists():
@@ -122,7 +122,7 @@ def replay_fork(args: argparse.Namespace) -> int:
     step_number = args.step
     branch_name = args.branch_name
 
-    run_store = RunStore(root, readonly=True)
+    run_store = AgentExecutionFactory(root).create_run_store(readonly=True)
     run_path = run_store.run_path(run_id)
 
     if not run_path.exists():

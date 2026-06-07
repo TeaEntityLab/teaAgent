@@ -14,12 +14,13 @@ from typing import Any
 
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
+from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.context import ContextCompactor
 from teaagent.llm import available_providers, create_llm_adapter
 from teaagent.memory.file_watcher import FileWatcher
 from teaagent.memory.pinned_file import PinnedFileStorage
-from teaagent.run_store import RunStore
-from teaagent.run_undo import UndoJournal
+from teaagent.run_store import RunStore  # noqa: F401 — re-export for test patches
+from teaagent.run_undo import UndoJournal  # noqa: F401 — re-export for test patches
 
 from .chat_commands import (
     get_failure_warnings,
@@ -119,7 +120,8 @@ def suspend_to_background(
 
     # Emit audit event for suspension
     try:
-        store = RunStore(root)
+        factory = AgentExecutionFactory(root)
+        store = factory.create_run_store()
         audit = store.audit_logger()
         audit.record(
             event_type='session_suspended',
@@ -134,7 +136,7 @@ def suspend_to_background(
 
     # Write a run_started event so agent_resume_command can find this run
     try:
-        resume_store = RunStore(root)
+        resume_store = factory.create_run_store()
         resume_audit = resume_store.audit_logger(run_id=run_id)
         observations = session_context.get('observations', [])
         last_task = '(resumed from REPL suspension)'
@@ -599,9 +601,10 @@ def run_chat_repl(
         )
 
         # Set up audit and undo journal
-        store = RunStore(config.root)
-        audit = store.audit_logger()
-        undo_journal = UndoJournal(config.root)
+        factory = AgentExecutionFactory(config.root)
+        store = factory.create_run_store()
+        audit = factory.create_audit_logger(store)
+        undo_journal = factory.create_undo_journal()
         audit.add_sink(undo_journal)
 
         # Use controller for consistent behavior (CG-05)
@@ -859,9 +862,10 @@ def run_chat_repl(
             )
 
             # Set up audit and undo journal for this task
-            store = RunStore(config.root)
-            audit = store.audit_logger()
-            undo_journal = UndoJournal(config.root)
+            factory = AgentExecutionFactory(config.root)
+            store = factory.create_run_store()
+            audit = factory.create_audit_logger(store)
+            undo_journal = factory.create_undo_journal()
             audit.add_sink(undo_journal)
 
             # Use controller for consistent behavior (CG-05)

@@ -10,7 +10,6 @@ from teaagent.cli._output import print_json
 from teaagent.ergonomics.human_output import format_preflight_summary
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
-from teaagent.run_store import RunStore
 
 
 def agent_preflight_command(args: argparse.Namespace) -> int:
@@ -64,10 +63,10 @@ def agent_plan_command(args: argparse.Namespace) -> int:
 
 
 def agent_undo_command(args: argparse.Namespace) -> int:
-    from teaagent.run_undo import UndoJournal
-    from teaagent.sandbox import GitBranchSandbox
+    from teaagent.cli.execution import AgentExecutionFactory
 
-    store = RunStore(args.root)
+    factory = AgentExecutionFactory(args.root)
+    store = factory.create_run_store()
     run_id = getattr(args, 'run_id', None)
     if run_id is None or getattr(args, 'last', False):
         run_id = store.latest_run_with_undo()
@@ -83,7 +82,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:
     preview = getattr(args, 'preview', False)
 
     # Try git sandbox rollback first
-    git_sandbox = GitBranchSandbox(args.root, run_id=run_id)
+    git_sandbox = factory.create_git_sandbox(run_id=run_id)
     if git_sandbox.is_available():
         if preview:
             root_path = Path(args.root).resolve()
@@ -145,7 +144,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:
             }
         )
         return 1
-    journal = UndoJournal(args.root, path=undo_path)
+    journal = factory.create_undo_journal(path=undo_path)
 
     if preview:
         root_path = Path(args.root).resolve()

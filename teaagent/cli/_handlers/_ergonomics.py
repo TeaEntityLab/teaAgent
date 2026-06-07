@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from teaagent.cli._handlers._misc import print_json
+from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.daily import build_daily_brief
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.ergonomics.daily_journal import write_daily_journal
@@ -16,7 +17,6 @@ from teaagent.ergonomics.status_short import build_status_short
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
 from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.recipes.registry import list_recipes, run_recipe
-from teaagent.run_store import RunStore
 
 
 def _truncate_string(s: str, max_len: int = 40, suffix: str = '...') -> str:
@@ -103,9 +103,11 @@ def status_short_command(args: argparse.Namespace) -> int:
 
 
 def background_list_command(args: argparse.Namespace) -> int:
-    from teaagent.ergonomics.background_run import BackgroundRunStore
-
-    runs = BackgroundRunStore(args.root, readonly=True).list()
+    runs = (
+        AgentExecutionFactory(args.root)
+        .create_background_run_store(readonly=True)
+        .list()
+    )
     if sys.stdout.isatty():
         from teaagent.ergonomics.human_output import format_ascii_table
 
@@ -123,10 +125,12 @@ def background_list_command(args: argparse.Namespace) -> int:
 
 
 def background_show_command(args: argparse.Namespace) -> int:
-    from teaagent.ergonomics.background_run import BackgroundRunStore
-
     try:
-        print_json(BackgroundRunStore(args.root, readonly=True).get(args.background_id))
+        print_json(
+            AgentExecutionFactory(args.root)
+            .create_background_run_store(readonly=True)
+            .get(args.background_id)
+        )
     except FileNotFoundError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
@@ -134,7 +138,7 @@ def background_show_command(args: argparse.Namespace) -> int:
 
 
 def session_list_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     rows = []
     for summary in store.list_runs(limit=args.limit):
         row = summary.to_dict()
@@ -153,7 +157,7 @@ def session_list_command(args: argparse.Namespace) -> int:
 
 
 def session_show_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -416,7 +420,7 @@ _DENIAL_REASON_DESCRIPTIONS: dict[str, str] = {
 
 def approval_why_denied_command(args: argparse.Namespace) -> int:
     """Explain why tool calls were denied for a given run."""
-    store = RunStore(Path(args.root), readonly=True)
+    store = AgentExecutionFactory(Path(args.root)).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError:
@@ -563,7 +567,7 @@ def approval_pending_command(args: argparse.Namespace) -> int:
         pending_approvals_payload,
     )
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     views = collect_pending_approval_views(store, limit=args.limit)
     if getattr(args, 'human', False):
         print(format_pending_approvals(views))
@@ -580,7 +584,7 @@ def approval_approve_command(args: argparse.Namespace) -> int:
         )
         from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-        store = RunStore(args.root)
+        store = AgentExecutionFactory(args.root).create_run_store()
         approval_store = ApprovalPresetStore(args.root)
         call_id = args.call_id
         if getattr(args, 'selector', None) is not None:
@@ -1168,7 +1172,7 @@ def approval_next_command(args: argparse.Namespace) -> int:
         )
         from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
-        store = RunStore(args.root, readonly=True)
+        store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
         views = collect_pending_approval_views(store, limit=20)
 
         if not views:

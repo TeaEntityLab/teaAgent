@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from teaagent.errors import ToolExecutionError
+from teaagent.errors import ToolExecutionError, ToolValidationError
 from teaagent.hooks import HookError, HookRegistry
 from teaagent.schema import validate_object_schema
 from teaagent.tool_call_context import get_tool_call_context
@@ -137,7 +137,10 @@ class ToolRegistry:
         allow_override: bool = False,
     ) -> None:
         if not name or ' ' in name:
-            raise ValueError('tool name must be non-empty and contain no spaces')
+            raise ToolValidationError(
+                'tool name must be non-empty and contain no spaces',
+                hint='Provide a valid tool name without whitespace.',
+            )
         if name in self._tools:
             if allow_override:
                 logger.warning(
@@ -148,9 +151,15 @@ class ToolRegistry:
                     f"tool '{name}' is already registered. Use allow_override=True to replace it. "
                     f'Existing tool: {self._tools[name].description}'
                 )
-                raise ValueError(f"tool '{name}' is already registered")
+                raise ToolValidationError(
+                    f"tool '{name}' is already registered",
+                    hint='Use allow_override=True to replace the existing registration, or choose a different name.',
+                )
         if not description:
-            raise ValueError('tool description is required')
+            raise ToolValidationError(
+                'tool description is required',
+                hint='Provide a non-empty description string for the tool.',
+            )
         self._tools[name] = ToolDefinition(
             name=name,
             description=description,

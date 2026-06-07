@@ -10,18 +10,18 @@ from teaagent.audit import AuditLogger
 from teaagent.audit_chain import verify_audit_chain
 from teaagent.audit_export import export_compliance_bundle, write_compliance_bundle
 from teaagent.cli._output import print_json
-from teaagent.run_store import RunStore
+from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.ssh_signatures import sign_message_ssh
 
 
 def audit_list_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     print_json([summary.to_dict() for summary in store.list_runs(limit=args.limit)])
     return 0
 
 
 def audit_show_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -56,7 +56,7 @@ def audit_show_command(args: argparse.Namespace) -> int:
 
 
 def audit_tail_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:
@@ -88,7 +88,7 @@ def audit_prune_command(args: argparse.Namespace) -> int:
             }
         )
         return 1
-    store = RunStore(args.root)
+    store = AgentExecutionFactory(args.root).create_run_store()
     cutoff = time.time() - (args.days * 86400) if args.days is not None else None
     run_paths = sorted(
         store.store_dir.glob('*.jsonl'), key=lambda p: p.stat().st_mtime, reverse=True
@@ -110,7 +110,7 @@ def audit_prune_command(args: argparse.Namespace) -> int:
 def audit_serve_command(args: argparse.Namespace) -> int:
     from teaagent.audit_viewer import serve_audit_viewer
 
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     serve_audit_viewer(store, host=args.host, port=args.port)
     return 0
 
@@ -231,7 +231,7 @@ def audit_verify_command(args: argparse.Namespace) -> int:
 
 
 def audit_export_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root, readonly=True)
+    store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
     try:
         events = store.show_run(args.run_id)
     except FileNotFoundError as exc:

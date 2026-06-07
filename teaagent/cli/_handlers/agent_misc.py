@@ -8,7 +8,7 @@ from pathlib import Path
 
 from teaagent.cli import EXIT_BLOCKING, EXIT_SUCCESS
 from teaagent.cli._output import print_json
-from teaagent.run_store import RunStore
+from teaagent.cli.execution import AgentExecutionFactory
 
 from .agent_helpers import _prepare_task
 
@@ -163,7 +163,8 @@ def agent_card_command(args: argparse.Namespace) -> int:
 
 
 def agent_attach_command(args: argparse.Namespace) -> int:
-    store = RunStore(args.root)
+    factory = AgentExecutionFactory(args.root)
+    store = factory.create_run_store()
     try:
         heartbeat = store.heartbeat_for_run(args.run_id)
     except FileNotFoundError as exc:
@@ -245,10 +246,10 @@ def agent_undo_command(args: argparse.Namespace) -> int:
     import base64
     import difflib
 
-    from teaagent.run_undo import UndoJournal
-    from teaagent.sandbox import GitBranchSandbox
+    from teaagent.cli.execution import AgentExecutionFactory
 
-    store = RunStore(args.root)
+    factory = AgentExecutionFactory(args.root)
+    store = factory.create_run_store()
     run_id = getattr(args, 'run_id', None)
     if run_id is None or getattr(args, 'last', False):
         run_id = store.latest_run_with_undo()
@@ -262,7 +263,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:
             return 1
 
     # Try git sandbox rollback first
-    git_sandbox = GitBranchSandbox(args.root, run_id=run_id)
+    git_sandbox = factory.create_git_sandbox(run_id=run_id)
     if git_sandbox.is_available():
         rollback_result = git_sandbox.rollback()
         if rollback_result.success:
@@ -292,7 +293,7 @@ def agent_undo_command(args: argparse.Namespace) -> int:
             }
         )
         return 1
-    journal = UndoJournal(args.root, path=undo_path)
+    journal = factory.create_undo_journal(path=undo_path)
 
     if getattr(args, 'preview', False):
         root_path = Path(args.root).resolve()
@@ -366,17 +367,17 @@ def agent_undo_command(args: argparse.Namespace) -> int:
 
 
 def background_list_command(args: argparse.Namespace) -> int:
-    from teaagent.ergonomics.background_run import BackgroundRunStore
+    from teaagent.cli.execution import AgentExecutionFactory
 
-    store = BackgroundRunStore(args.root)
+    store = AgentExecutionFactory(args.root).create_background_run_store()
     print_json(store.list())
     return 0
 
 
 def background_show_command(args: argparse.Namespace) -> int:
-    from teaagent.ergonomics.background_run import BackgroundRunStore
+    from teaagent.cli.execution import AgentExecutionFactory
 
-    store = BackgroundRunStore(args.root)
+    store = AgentExecutionFactory(args.root).create_background_run_store()
     try:
         print_json(store.get(args.background_id))
     except FileNotFoundError as exc:

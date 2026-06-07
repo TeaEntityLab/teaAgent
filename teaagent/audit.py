@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 from uuid import uuid4
 
+from teaagent.errors import AuditDurabilityError
 from teaagent.storage import file_lock
 
 try:
@@ -148,8 +149,9 @@ class AuditLogger:
         self._fernet: Optional[Any] = None
         if audit_level == 'L3':
             if not CRYPTO_AVAILABLE:
-                raise ValueError(
-                    'L3 audit level requires cryptography library. Install with: pip install cryptography'
+                raise AuditDurabilityError(
+                    'L3 audit level requires cryptography library',
+                    hint='Install the cryptography library with: pip install cryptography',
                 )
             if self._encryption_key is None:
                 # Generate a new encryption key if not provided
@@ -158,7 +160,10 @@ class AuditLogger:
                 assert self._encryption_key is not None
                 self._fernet = Fernet(self._encryption_key)
             except Exception as exc:
-                raise ValueError(f'Failed to initialize L3 encryption: {exc}') from exc
+                raise AuditDurabilityError(
+                    f'Failed to initialize L3 encryption: {exc}',
+                    hint='Check that the encryption key is valid and the cryptography library is installed.',
+                ) from exc
 
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -250,8 +255,9 @@ class AuditLogger:
                 if len(key) == 44:  # Fernet key length
                     return key
             except OSError as exc:
-                raise ValueError(
-                    f'Failed to load encryption key from {key_path}: {exc}'
+                raise AuditDurabilityError(
+                    f'Failed to load encryption key from {key_path}: {exc}',
+                    hint='Verify the encryption key file exists and is readable.',
                 ) from exc
 
         key = Fernet.generate_key()
@@ -261,8 +267,9 @@ class AuditLogger:
             key_path.write_bytes(key)
             key_path.chmod(0o600)
         except OSError as exc:
-            raise ValueError(
-                f'Failed to save encryption key to {key_path}: {exc}'
+            raise AuditDurabilityError(
+                f'Failed to save encryption key to {key_path}: {exc}',
+                hint='Ensure the directory ~/.teaagent/audit-encryption/ is writable.',
             ) from exc
         return key
 
@@ -404,7 +411,10 @@ class AuditLogger:
                     if self._audit_level == 'L3':
                         # Encryption is required for L3 - fail closed if it fails
                         if self._fernet is None:
-                            raise ValueError('L3 encryption not initialized')
+                            raise AuditDurabilityError(
+                                'L3 encryption not initialized',
+                                hint="Reinitialize AuditLogger with audit_level='L3' to set up encryption.",
+                            )
                         try:
                             payload_json = json.dumps(event.payload, sort_keys=True)
                             encrypted_bytes = self._fernet.encrypt(
@@ -414,7 +424,10 @@ class AuditLogger:
                                 'encrypted': encrypted_bytes.decode('utf-8')
                             }
                         except Exception as exc:
-                            raise ValueError(f'L3 encryption failed: {exc}') from exc
+                            raise AuditDurabilityError(
+                                f'L3 encryption failed: {exc}',
+                                hint='Verify the payload can be serialized to JSON and the encryption key is valid.',
+                            ) from exc
 
                     canonical = json.dumps(
                         {
@@ -466,8 +479,6 @@ class AuditLogger:
                     )
                     self.events.append(err_event)
                 if self._compliance_mode:
-                    from teaagent.errors import AuditDurabilityError
-
                     raise AuditDurabilityError(
                         f'Audit disk write failed: {exc}',
                         cause=exc,
@@ -481,7 +492,6 @@ class AuditLogger:
                         f'Halting run.',
                         file=sys.stderr,
                     )
-                    from teaagent.errors import AuditDurabilityError
 
                     raise AuditDurabilityError(
                         f'{self._consecutive_disk_failures} consecutive disk write failures',
@@ -588,15 +598,22 @@ class AuditLogger:
         key_dir = Path.home() / '.teaagent' / 'audit-encryption'
         key_path = key_dir / f'{safe_id}.enc'
         if not key_path.is_file():
-            raise ValueError(f'Encryption key not found at {key_path}')
+            raise AuditDurabilityError(
+                f'Encryption key not found at {key_path}',
+                hint='Ensure the key file exists at the specified path for this run.',
+            )
         try:
             key = key_path.read_bytes()
         except OSError as exc:
-            raise ValueError(
-                f'Failed to load encryption key from {key_path}: {exc}'
+            raise AuditDurabilityError(
+                f'Failed to load encryption key from {key_path}: {exc}',
+                hint='Check file permissions for the encryption key file.',
             ) from exc
         if len(key) != 44:
-            raise ValueError(f'Invalid encryption key length at {key_path}')
+            raise AuditDurabilityError(
+                f'Invalid encryption key length at {key_path}',
+                hint='The encryption key file is corrupted; regenerate it.',
+            )
         return key
 
     @staticmethod
@@ -646,8 +663,9 @@ class AuditLogger:
                     decrypted_json = decrypted_bytes.decode('utf-8')
                     event['payload'] = json.loads(decrypted_json)
                 except Exception as exc:
-                    raise ValueError(
-                        f'Failed to decrypt event {event.get("event_id")}: {exc}'
+                    raise AuditDurabilityError(
+                        f'Failed to decrypt event {event.get("event_id")}: {exc}',
+                        hint='The audit log may be corrupted or the encryption key may have changed.',
                     ) from exc
             decrypted_events.append(event)
         return decrypted_events
@@ -657,8 +675,9 @@ class AuditLogger:
         audit_path: Path, encryption_key: Optional[bytes] = None
     ) -> dict[str, Any]:
         if not CRYPTO_AVAILABLE:
-            raise ValueError(
-                'Decryption requires cryptography library. Install with: pip install cryptography'
+            raise AuditDurabilityError(
+                'Decryption requires the cryptography library',
+                hint='Install the cryptography library with: pip install cryptography',
             )
 
         encryption_key = AuditLogger._load_encryption_key(audit_path, encryption_key)
@@ -666,8 +685,9 @@ class AuditLogger:
         try:
             fernet = Fernet(encryption_key)
         except Exception as exc:
-            raise ValueError(
-                f'Failed to initialize Fernet with provided key: {exc}'
+            raise AuditDurabilityError(
+                f'Failed to initialize Fernet with provided key: {exc}',
+                hint='The provided encryption key is invalid or malformed.',
             ) from exc
 
         try:
@@ -684,11 +704,15 @@ class AuditLogger:
                 'total_events': len(decrypted_events),
             }
         except OSError as exc:
-            raise ValueError(
-                f'Failed to read audit log from {audit_path}: {exc}'
+            raise AuditDurabilityError(
+                f'Failed to read audit log from {audit_path}: {exc}',
+                hint='Check that the audit log file exists and is readable.',
             ) from exc
         except json.JSONDecodeError as exc:
-            raise ValueError(f'Failed to parse audit log JSON: {exc}') from exc
+            raise AuditDurabilityError(
+                f'Failed to parse audit log JSON: {exc}',
+                hint='The audit log file may be corrupted or not in valid JSONL format.',
+            ) from exc
 
 
 def redact_audit_payload(
