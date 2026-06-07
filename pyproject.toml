@@ -51,11 +51,14 @@ graphqlite = [
 playwright = [
     "playwright>=1.40",
 ]
-oauth = [
+crypto = [
     "cryptography>=48.0.0",
 ]
+oauth = [
+    "teaagent[crypto]",
+]
 audit-encryption = [
-    "cryptography>=48.0.0",
+    "teaagent[crypto]",
 ]
 managed-google-adk = [
     "google-adk>=2.0.0",
@@ -93,7 +96,7 @@ github = [
 dev = [
     "graphqlite>=0.6.0",
     "pysqlite3>=0.6.0",
-    "cryptography>=48.0.0",
+    "teaagent[crypto]",
     "watchdog>=3.0.0",
     "prompt-toolkit>=3.0.0",
     "playwright>=1.40",
@@ -143,7 +146,7 @@ exclude = ["tests/", "examples/", "scripts/", "benchmarks/"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
-warn_unused_ignores = false
+warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
 

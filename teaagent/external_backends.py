@@ -215,25 +215,25 @@ class BackendAdapterRegistry:
     def initialize_all(self) -> None:
         for backend in list(self._knowledge_backends.values()):
             if hasattr(backend, 'initialize'):
-                backend.initialize()  # type: ignore[union-attr]
+                backend.initialize()
         for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
             if hasattr(backend, 'initialize'):
-                backend.initialize()  # type: ignore[union-attr]
+                backend.initialize()
 
     def shutdown_all(self) -> None:
         for backend in list(self._knowledge_backends.values()):
             if hasattr(backend, 'shutdown'):
-                backend.shutdown()  # type: ignore[union-attr]
+                backend.shutdown()
         for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
             if hasattr(backend, 'shutdown'):
-                backend.shutdown()  # type: ignore[union-attr]
+                backend.shutdown()
 
     def health_check_all(self) -> dict[str, dict[str, Any]]:
         results: dict[str, dict[str, Any]] = {}
         for name, backend in self._knowledge_backends.items():
             if hasattr(backend, 'check_health'):
                 try:
-                    healthy, msg = backend.check_health()  # type: ignore[union-attr]
+                    healthy, msg = backend.check_health()
                     results[f'knowledge/{name}'] = {'healthy': healthy, 'message': msg}
                 except (ConnectionError, TimeoutError, OSError) as exc:
                     results[f'knowledge/{name}'] = {
@@ -243,7 +243,7 @@ class BackendAdapterRegistry:
         for name, backend in self._code_parse_backends.items():  # type: ignore[assignment]
             if hasattr(backend, 'check_health'):
                 try:
-                    healthy, msg = backend.check_health()  # type: ignore[union-attr]
+                    healthy, msg = backend.check_health()
                     results[f'codeparse/{name}'] = {'healthy': healthy, 'message': msg}
                 except (ConnectionError, TimeoutError, OSError) as exc:
                     results[f'codeparse/{name}'] = {

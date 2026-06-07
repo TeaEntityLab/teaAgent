@@ -8,7 +8,7 @@ from teaagent.policy import PermissionMode
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable],
 ) -> None:
     _yesterday(subparsers, handlers['yesterday'])
@@ -31,7 +31,7 @@ def register(
     _journal(subparsers, handlers['daily_journal'])
 
 
-def _yesterday(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _yesterday(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p = subparsers.add_parser(
         'yesterday', help='List audit runs from the previous calendar day.'
     )
@@ -40,14 +40,14 @@ def _yesterday(subparsers: argparse._SubParsersAction, handler: Callable) -> Non
     p.set_defaults(func=handler, command='yesterday')
 
 
-def _recall(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _recall(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p = subparsers.add_parser('recall', help='List the most recent audit runs.')
     p.add_argument('--root', default='.', help='Workspace root.')
     p.add_argument('--limit', type=int, default=5)
     p.set_defaults(func=handler, command='recall')
 
 
-def _status_short(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _status_short(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p = subparsers.add_parser(
         'status', help='One-line harness status (token pressure, pending approvals).'
     )
@@ -65,7 +65,7 @@ def _status_short(subparsers: argparse._SubParsersAction, handler: Callable) -> 
 
 def _background(
     subparsers: argparse._SubParsersAction, handlers: dict[str, Callable]
-) -> None:  # type: ignore[type-arg]
+) -> None:
     background = subparsers.add_parser(
         'background', help='List detached agent runs started with --background.'
     )
@@ -81,7 +81,7 @@ def _background(
 
 def _session(
     subparsers: argparse._SubParsersAction, handlers: dict[str, Callable]
-) -> None:  # type: ignore[type-arg]
+) -> None:
     session = subparsers.add_parser('session', help='Browse and resume persisted runs.')
     subs = session.add_subparsers(dest='session_command', required=True)
     lst = subs.add_parser('list', help='List runs with heartbeat and pending approval.')
@@ -110,7 +110,7 @@ def _session(
 
 def _recipes(
     subparsers: argparse._SubParsersAction, handlers: dict[str, Callable]
-) -> None:  # type: ignore[type-arg]
+) -> None:
     recipes = subparsers.add_parser(
         'recipes', help='List and run built-in task recipes.'
     )
@@ -129,7 +129,7 @@ def _recipes(
 
 def _approval(
     subparsers: argparse._SubParsersAction, handlers: dict[str, Callable]
-) -> None:  # type: ignore[type-arg]
+) -> None:
     approval = subparsers.add_parser(
         'approval', help='Manage destructive-tool approval presets.'
     )
@@ -439,7 +439,7 @@ def _approval(
     why_denied.set_defaults(func=handlers['approval_why_denied'], command='approval')
 
 
-def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p = subparsers.add_parser(
         'guidance', help='List workspace guidance files (AGENTS.md convention).'
     )
@@ -447,7 +447,7 @@ def _guidance(subparsers: argparse._SubParsersAction, handler: Callable) -> None
     p.set_defaults(func=handler, command='guidance')
 
 
-def _ci(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _ci(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     ci = subparsers.add_parser('ci', help='CI-oriented harness commands.')
     subs = ci.add_subparsers(dest='ci_command', required=True)
     review = subs.add_parser(
@@ -462,7 +462,7 @@ def _ci(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # t
     review.set_defaults(func=handler, command='ci')
 
 
-def _watch(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _watch(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p = subparsers.add_parser('watch', help='Poll compact status on an interval.')
     p.add_argument('--root', default='.')
     p.add_argument('--interval', type=float, default=30.0)
@@ -470,7 +470,7 @@ def _watch(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  
     p.set_defaults(func=handler, command='watch')
 
 
-def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p = subparsers.add_parser(
         'journal', help='Write today daily markdown journal under .teaagent/daily/.'
     )
@@ -492,7 +492,7 @@ def _journal(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
 
 
 def _permission(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     explain_handler: Callable,
 ) -> None:
     permission = subparsers.add_parser(

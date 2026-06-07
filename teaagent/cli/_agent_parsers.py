@@ -7,7 +7,7 @@ from teaagent.policy import PermissionMode
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable[..., Any]],
 ) -> None:
     agent = subparsers.add_parser('agent', help='Run model-driven agent tasks.')
@@ -357,7 +357,7 @@ def add_agent_run_arguments(
 
 
 def register_top_level_agent_aliases(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable[..., Any]],
 ) -> None:
     """Register daily-workflow aliases visible in ``teaagent --help``."""
@@ -394,7 +394,7 @@ def register_top_level_agent_aliases(
 
 
 def _run(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
     *,
     help: str = 'Run one autonomous task with workspace tools.',
@@ -413,7 +413,7 @@ def _run(
 
 
 def _preflight(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
     *,
     top_level: bool = False,
@@ -470,7 +470,7 @@ def _preflight(
 
 
 def _plan(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
     *,
     top_level: bool = False,
@@ -529,7 +529,7 @@ def _plan(
 
 
 def _daily(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
     *,
     top_level: bool = False,
@@ -601,7 +601,7 @@ def _daily(
     p.set_defaults(**defaults)
 
 
-def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p = subs.add_parser(
         'attach', help='Attach to a run (heartbeat snapshot or live event stream).'
     )
@@ -631,7 +631,7 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
 
 
 def _chat(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
     *,
     help: str = 'Interactive chat REPL for continuous agent interaction.',
@@ -647,9 +647,9 @@ def _chat(
 
 
 def _interactive_review(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
-) -> None:  # type: ignore[type-arg]
+) -> None:
     p = subs.add_parser(
         'interactive-review',
         help='Interactive review mode for suspended task results.',
@@ -662,7 +662,7 @@ def _interactive_review(
 
 
 def _resume(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
     *,
     top_level: bool = False,
@@ -777,7 +777,7 @@ def _resume(
     p.set_defaults(**defaults)
 
 
-def _undo(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _undo(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p = subs.add_parser(
         'undo',
         help='Restore workspace files captured before an agent run.',
@@ -804,7 +804,7 @@ def _undo(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type:
     p.set_defaults(func=handler, agent_command='undo')
 
 
-def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p = subs.add_parser('status', help='Show liveness status of a persisted run.')
     p.add_argument('run_id', help='Run id to inspect.')
     p.add_argument(
@@ -830,7 +830,7 @@ def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:  # typ
 
 def _automation(
     subs: argparse._SubParsersAction, handlers: dict[str, Callable]
-) -> None:  # type: ignore[type-arg]
+) -> None:
     automation = subs.add_parser('automation', help='Manage persistent automations.')
     commands = automation.add_subparsers(dest='automation_command', required=True)
 
@@ -1047,7 +1047,7 @@ def _add_automation_v2_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def _runs(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handlers: dict[str, Callable],
     *,
     top_level: bool = False,
@@ -1118,7 +1118,7 @@ def _runs(
     p.set_defaults(**defaults)
 
 
-def _show(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _show(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p = subs.add_parser('show', help='Show one persisted run JSONL record.')
     p.add_argument('run_id', help='Run id to show.')
     p.add_argument(
@@ -1127,7 +1127,7 @@ def _show(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type:
     p.set_defaults(func=handler)
 
 
-def _card(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]
+def _card(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p = subs.add_parser(
         'card',
         help='Print an AgentCard describing this agent and its registered tools.',
@@ -1150,7 +1150,7 @@ def _card(subs: argparse._SubParsersAction, handler: Callable) -> None:  # type:
 
 def _subagent_review(
     subs: argparse._SubParsersAction,
-    handlers: dict[str, Callable],  # type: ignore[type-arg]
+    handlers: dict[str, Callable],
 ) -> None:
     p = subs.add_parser(
         'subagent-review',

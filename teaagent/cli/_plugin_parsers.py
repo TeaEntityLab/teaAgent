@@ -7,7 +7,7 @@ from typing import Callable, Optional
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable],
 ) -> None:
     _plugin(
@@ -19,7 +19,7 @@ def register(
 
 
 def _plugin(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     list_handler: Optional[Callable] = None,
     show_handler: Optional[Callable] = None,
     verify_handler: Optional[Callable] = None,

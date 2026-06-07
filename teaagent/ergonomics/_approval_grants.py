@@ -143,7 +143,7 @@ def _parse_grant(item: dict[str, Any]) -> ApprovalGrant:
     return ApprovalGrant(
         grant_id=str(grant_id) if grant_id else _stable_grant_id(item),
         tool_name=str(item['tool_name']),
-        scope=item.get('scope', 'once'),  # type: ignore[arg-type]
+        scope=item.get('scope', 'once'),
         permission_mode=item.get('permission_mode'),
         created_at=str(item.get('created_at', '')),
         path_globs=tuple(str(g) for g in path_globs if g),

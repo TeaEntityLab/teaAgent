@@ -7,7 +7,7 @@ from teaagent.llm import available_providers
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable],
 ) -> None:
     model = subparsers.add_parser('model', help='Run model adapter operations.')

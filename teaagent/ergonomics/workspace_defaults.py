@@ -15,7 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - py3.10
 
         TOMLLIB_AVAILABLE = True
     except ModuleNotFoundError:
-        tomllib = None  # type: ignore[assignment,misc]
+        tomllib = None
         TOMLLIB_AVAILABLE = False
 
 DEFAULT_KEYS = {

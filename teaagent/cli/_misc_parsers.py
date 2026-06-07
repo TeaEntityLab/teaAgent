@@ -14,7 +14,7 @@ def _deprecation_warning(args: argparse.Namespace) -> int:
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     handlers: dict[str, Callable],
 ) -> None:
     _init(subparsers, handlers.get('init'))
@@ -164,7 +164,7 @@ def _add_workspace_bootstrap_args(p: argparse.ArgumentParser) -> None:
 
 
 def _init(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     handler: Optional[Callable] = None,
 ) -> None:
     p = subparsers.add_parser(
@@ -182,7 +182,7 @@ def _init(
 
 
 def _setup(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     handler: Optional[Callable] = None,
 ) -> None:
     p = subparsers.add_parser(
@@ -197,7 +197,9 @@ def _setup(
     p.set_defaults(func=handler)
 
 
-def _clarify(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]  # argparse private class lacks generic type param
+def _clarify(
+    subparsers: argparse._SubParsersAction, handler: Callable
+) -> None:  # argparse private class lacks generic type param
     p = subparsers.add_parser(
         'clarify', help='Score a task for ambiguity before running an agent.'
     )
@@ -205,7 +207,9 @@ def _clarify(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p.set_defaults(func=handler)
 
 
-def _tui(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]  # argparse private class lacks generic type param
+def _tui(
+    subparsers: argparse._SubParsersAction, handler: Callable
+) -> None:  # argparse private class lacks generic type param
     p = subparsers.add_parser(
         'tui',
         help='Start an interactive terminal UI.',
@@ -257,7 +261,7 @@ def _tui(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # 
 
 
 def _doctor(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     graphqlite_handler: Callable,
     model_handler: Callable,
     aigateway_handler: Optional[Callable] = None,
@@ -496,7 +500,7 @@ def _doctor(
 
 
 def _selftest_top_level(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     handler: Optional[Callable],
 ) -> None:
     p = subparsers.add_parser('selftest', help='Run harness self-tests (alias).')
@@ -507,7 +511,7 @@ def _selftest_top_level(
 
 
 def _configure(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     handler: Optional[Callable] = None,
 ) -> None:
     p = subparsers.add_parser(
@@ -525,7 +529,9 @@ def _configure(
     p.set_defaults(func=handler)
 
 
-def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> None:  # type: ignore[type-arg]  # argparse private class lacks generic type param
+def _completion(
+    subparsers: argparse._SubParsersAction, handler: Callable
+) -> None:  # argparse private class lacks generic type param
     p = subparsers.add_parser('completion', help='Print a shell completion snippet.')
     p.add_argument(
         'shell', choices=['bash', 'zsh', 'fish'], help='Shell to generate for.'
@@ -534,7 +540,7 @@ def _completion(subparsers: argparse._SubParsersAction, handler: Callable) -> No
 
 
 def _audit(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     list_handler: Callable,
     show_handler: Callable,
     prune_handler: Callable,
@@ -661,7 +667,7 @@ def _audit(
 
 
 def _graphqlite(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     query_handler: Callable,
     smoke_handler: Callable,
     migrate_handler: Optional[Callable] = None,
@@ -701,7 +707,7 @@ def _graphqlite(
 
 
 def _code_ontology(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     build_handler: Optional[Callable] = None,
     query_handler: Optional[Callable] = None,
 ) -> None:
@@ -736,7 +742,7 @@ def _code_ontology(
 
 
 def _ultrawork(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     start_handler: Callable,
     list_handler: Callable,
     show_handler: Callable,
@@ -824,7 +830,7 @@ def _ultrawork(
 
 
 def _workspace(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     handler: Callable,
     openapi_handler: Callable,
 ) -> None:
@@ -864,7 +870,7 @@ def _workspace(
 
 
 def _experiment(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     list_handler: Optional[Callable],
     compare_handler: Optional[Callable],
     select_handler: Optional[Callable],
@@ -980,7 +986,7 @@ def _experiment(
 
 
 def _sync(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     export_handler: Optional[Callable],
     import_handler: Optional[Callable],
     status_handler: Optional[Callable],
@@ -1091,7 +1097,7 @@ def _sync(
 
 
 def _replay(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     list_handler: Optional[Callable],
     steps_handler: Optional[Callable],
     fork_handler: Optional[Callable],
@@ -1171,7 +1177,7 @@ def _replay(
 
 
 def _env(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]  # argparse private class lacks generic type param
+    subparsers: argparse._SubParsersAction,  # argparse private class lacks generic type param
     provision_handler: Callable | None,
     verify_handler: Callable | None,
     lock_handler: Callable | None,

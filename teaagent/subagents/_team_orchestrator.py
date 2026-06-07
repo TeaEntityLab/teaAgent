@@ -29,7 +29,7 @@ def _load_team_yaml(path: Path) -> Any:
 
     text = path.read_text(encoding='utf-8')
     try:
-        import yaml  # type: ignore[import-not-found]
+        import yaml
 
         return yaml.safe_load(text)
     except ImportError:

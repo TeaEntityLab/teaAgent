@@ -118,12 +118,11 @@ class JsonlStoreBackend(AbstractStore[T]):
                 continue
             key = data.get(self._key_field)
             if key is not None and isinstance(key, str):
-                result[key] = data  # type: ignore[assignment]
+                result[key] = data
         return result
 
     def _write_all(self, entries: dict[str, T]) -> None:
         lines: list[str] = [
-            json.dumps(value, sort_keys=True)  # type: ignore[arg-type]
-            for value in entries.values()
+            json.dumps(value, sort_keys=True) for value in entries.values()
         ]
         self.path.write_text('\n'.join(lines) + '\n', encoding='utf-8')

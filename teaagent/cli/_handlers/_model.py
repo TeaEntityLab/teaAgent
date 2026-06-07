@@ -24,7 +24,7 @@ def model_smoke(args: argparse.Namespace) -> int:
             }
         )
         return 0
-    adapter = args._adapter_factory(args.provider, model=args.model)  # type: ignore[attr-defined]
+    adapter = args._adapter_factory(args.provider, model=args.model)
     response = adapter.complete(
         LLMRequest(
             messages=[LLMMessage(role='user', content=args.prompt)],
@@ -50,7 +50,7 @@ def model_conformance(args: argparse.Namespace) -> int:
     }
     if args.live_env_var is not None:
         kwargs['live_env_var'] = args.live_env_var
-    report = args._run_model_conformance(args.provider, **kwargs)  # type: ignore[attr-defined]
+    report = args._run_model_conformance(args.provider, **kwargs)
     print_json(report.as_dict())
     return 0 if report.ok else 1
 

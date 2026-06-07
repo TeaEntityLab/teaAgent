@@ -84,7 +84,7 @@ def _load_markdown_frontmatter(path: Path) -> dict[str, Any]:
     data: dict[str, Any] = {}
     if frontmatter_text:
         try:
-            import yaml  # type: ignore[import-untyped]
+            import yaml
 
             parsed = yaml.safe_load(frontmatter_text)
         except ModuleNotFoundError:
@@ -101,7 +101,7 @@ def _load_data_file(path: Path) -> Any:
     if path.suffix.lower() == '.json':
         return json.loads(text)
     try:
-        import yaml  # type: ignore[import-untyped]
+        import yaml
 
         return yaml.safe_load(text)
     except ModuleNotFoundError:

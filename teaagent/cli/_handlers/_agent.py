@@ -436,7 +436,7 @@ def _execute_agent_task(
         else None
     )
     selected_model = routing.model if routing else args.model
-    adapter = args._adapter_factory(args.provider, model=selected_model)  # type: ignore[attr-defined]
+    adapter = args._adapter_factory(args.provider, model=selected_model)
     merged_context_extra: dict[str, Any] = dict(initial_context_extra or {})
     if resumed_from:
         merged_context_extra['resumed_from'] = resumed_from
@@ -624,10 +624,10 @@ def _execute_agent_task(
             )
             _telemetry_sink, tracer = configure_telemetry(cfg)
             audit.add_sink(_telemetry_sink.handle_event)
-            adapter = args._adapter_factory(  # type: ignore[attr-defined]
+            adapter = args._adapter_factory(
                 args.provider,
                 model=selected_model,
-                transport=TracingHTTPTransport(adapter.transport, tracer),  # type: ignore[attr-defined]
+                transport=TracingHTTPTransport(adapter.transport, tracer),
             )
         except Exception as exc:
             print(f'Telemetry setup failed: {exc}', file=sys.stderr)

@@ -14,7 +14,7 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 try:
-    from wasmer import Module, Store, wasi  # type: ignore[import-untyped]
+    from wasmer import Module, Store, wasi
 
     WASMER_AVAILABLE = True
 except ImportError:
@@ -29,12 +29,12 @@ except ImportError:
 
     class _DummyWasi:
         @staticmethod
-        def get_imports(*_: object) -> object:  # type: ignore[misc]
+        def get_imports(*_: object) -> object:
             return {}
 
-    Store = _DummyStore  # type: ignore[misc,assignment]
-    Module = _DummyModule  # type: ignore[misc,assignment]
-    wasi = _DummyWasi  # type: ignore[misc,assignment]
+    Store = _DummyStore
+    Module = _DummyModule
+    wasi = _DummyWasi
 
 
 @dataclass

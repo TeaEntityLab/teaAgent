@@ -176,7 +176,7 @@ def _name_from_expr(node: ast.expr) -> str:
 def _try_tree_sitter_parse(path: Path, language: str) -> Any:
     try:
         from tree_sitter_language_pack import (
-            get_parser,  # type: ignore[import-not-found]
+            get_parser,
         )
     except ImportError as exc:
         raise RuntimeError(

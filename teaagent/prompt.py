@@ -124,7 +124,7 @@ async def run_aci_injector(
         rag_task = asyncio.create_task(fetch_rag_context())
         cache_task = asyncio.create_task(fetch_cache_context())
 
-        done, pending = await asyncio.wait(  # type: ignore
+        done, pending = await asyncio.wait(
             [rag_task, cache_task],
             timeout=timeout_ms / 1000,
             return_when=asyncio.ALL_COMPLETED,

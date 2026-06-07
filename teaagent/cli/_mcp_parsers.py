@@ -7,7 +7,7 @@ from teaagent.mcp_http import DEFAULT_PORT as MCP_HTTP_DEFAULT_PORT
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable],
 ) -> None:
     mcp = subparsers.add_parser('mcp', help='Run a local MCP-compatible server.')

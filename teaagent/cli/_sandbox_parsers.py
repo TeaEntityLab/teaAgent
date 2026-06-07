@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional
 
 
 def _sandbox_route(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     route_handler: Optional[Callable] = None,
 ) -> None:
     """Register sandbox route subcommand."""
@@ -48,7 +48,7 @@ def _sandbox_route(
 
 
 def _sandbox_execute(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     execute_handler: Optional[Callable] = None,
 ) -> None:
     execute_cmd = subparsers.add_parser(
@@ -90,7 +90,7 @@ def _sandbox_execute(
 
 
 def _sandbox_monitor(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     monitor_handler: Optional[Callable] = None,
 ) -> None:
     """Register sandbox monitor subcommand."""
@@ -110,7 +110,7 @@ def _sandbox_monitor(
 
 
 def _sandbox_check(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     check_wasm_handler: Optional[Callable] = None,
     check_compatibility_handler: Optional[Callable] = None,
 ) -> None:
@@ -153,7 +153,7 @@ def register(
 
 
 def _sandbox(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     route_handler: Optional[Callable] = None,
     monitor_handler: Optional[Callable] = None,
     check_wasm_handler: Optional[Callable] = None,

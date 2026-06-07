@@ -5,7 +5,7 @@ from typing import Callable
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable],
 ) -> None:
     release = subparsers.add_parser('release', help='Release evidence commands.')
@@ -14,7 +14,7 @@ def register(
 
 
 def _evidence(
-    subs: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subs: argparse._SubParsersAction,
     handler: Callable,
 ) -> None:
     p = subs.add_parser(

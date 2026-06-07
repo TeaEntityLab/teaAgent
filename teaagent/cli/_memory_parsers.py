@@ -5,7 +5,7 @@ from typing import Callable
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable],
 ) -> None:
     memory = subparsers.add_parser('memory', help='Manage local workspace memory.')

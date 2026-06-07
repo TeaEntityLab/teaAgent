@@ -66,7 +66,7 @@ def mcp_serve_command(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        return args._serve_mcp_http(  # type: ignore[attr-defined]
+        return args._serve_mcp_http(
             registry,
             host=args.host,
             port=args.port,

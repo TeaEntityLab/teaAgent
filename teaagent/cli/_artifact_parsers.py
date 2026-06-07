@@ -7,7 +7,7 @@ from typing import Callable, Optional
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Callable],
 ) -> None:
     _artifact(
@@ -18,7 +18,7 @@ def register(
 
 
 def _artifact(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     read_handler: Optional[Callable] = None,
     list_handler: Optional[Callable] = None,
 ) -> None:

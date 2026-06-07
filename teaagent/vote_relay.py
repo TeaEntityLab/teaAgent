@@ -297,7 +297,7 @@ class VoteRelayHTTPServer(ThreadingHTTPServer):
 
 def _make_relay_handler(relay: VoteRelayServer) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
-        server: VoteRelayHTTPServer  # type: ignore[assignment]
+        server: VoteRelayHTTPServer
 
         def log_message(self, format: str, *args: Any) -> None:
             logger.debug(format, *args)

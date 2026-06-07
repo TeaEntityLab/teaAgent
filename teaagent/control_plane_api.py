@@ -158,7 +158,7 @@ def _make_handler(
     plane: ControlPlaneServer,
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
-        server: ControlPlaneHTTPServer  # type: ignore[assignment]
+        server: ControlPlaneHTTPServer
 
         def log_message(self, format: str, *args: Any) -> None:
             logger.debug(format, *args)

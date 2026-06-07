@@ -31,7 +31,7 @@ def read_only_handler_block_reason(
         return None
     # Unwrap functools.partial to get the underlying function for source inspection
     if isinstance(handler, functools.partial):
-        handler = handler.func  # type: ignore[assignment]
+        handler = handler.func
     try:
         source = inspect.getsource(handler)
     except (OSError, TypeError):

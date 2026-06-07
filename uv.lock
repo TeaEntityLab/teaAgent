@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -3185,6 +3185,9 @@ code-analysis = [
 config = [
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
+crypto = [
+    { name = "cryptography" },
+]
 dev = [
     { name = "cryptography" },
     { name = "google-adk" },
@@ -3261,9 +3264,7 @@ yaml = [
 requires-dist = [
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.40.0" },
     { name = "build", marker = "extra == 'release'", specifier = ">=1" },
-    { name = "cryptography", marker = "extra == 'audit-encryption'", specifier = ">=48.0.0" },
-    { name = "cryptography", marker = "extra == 'dev'", specifier = ">=48.0.0" },
-    { name = "cryptography", marker = "extra == 'oauth'", specifier = ">=48.0.0" },
+    { name = "cryptography", marker = "extra == 'crypto'", specifier = ">=48.0.0" },
     { name = "google-adk", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "google-adk", marker = "extra == 'managed-google-adk'", specifier = ">=2.0.0" },
     { name = "google-cloud-aiplatform", marker = "extra == 'dev'", specifier = ">=1.156.0" },
@@ -3294,6 +3295,9 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.16" },
     { name = "sigstore", marker = "extra == 'dev'", specifier = ">=4.3.0" },
     { name = "sigstore", marker = "extra == 'sigstore'", specifier = ">=4.3.0" },
+    { name = "teaagent", extras = ["crypto"], marker = "extra == 'audit-encryption'" },
+    { name = "teaagent", extras = ["crypto"], marker = "extra == 'dev'" },
+    { name = "teaagent", extras = ["crypto"], marker = "extra == 'oauth'" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'config'", specifier = ">=2.0.1" },
     { name = "tomli", marker = "python_full_version < '3.11' and extra == 'dev'", specifier = ">=2.0.1" },
     { name = "tree-sitter", marker = "extra == 'code-analysis'", specifier = ">=0.25.0" },
@@ -3306,7 +3310,7 @@ requires-dist = [
     { name = "watchdog", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "watchdog", marker = "extra == 'file-watching'", specifier = ">=3.0.0" },
 ]
-provides-extras = ["config", "file-watching", "tui", "code-analysis", "graphqlite", "playwright", "oauth", "audit-encryption", "managed-google-adk", "managed-vertex", "telemetry", "anthropic", "yaml", "wasm", "release", "security", "sigstore", "github", "dev"]
+provides-extras = ["config", "file-watching", "tui", "code-analysis", "graphqlite", "playwright", "crypto", "oauth", "audit-encryption", "managed-google-adk", "managed-vertex", "telemetry", "anthropic", "yaml", "wasm", "release", "security", "sigstore", "github", "dev"]
 
 [[package]]
 name = "tenacity"

@@ -35,7 +35,7 @@ except ImportError:
     FileDeletedEvent = object  # type: ignore[misc,assignment]
     FileModifiedEvent = object  # type: ignore[misc,assignment]
 
-    class Observer:  # type: ignore[misc,no-redef]
+    class Observer:  # type: ignore[no-redef]
         """Dummy Observer class when watchdog is not available."""
 
         def schedule(self, *args: object, **kwargs: object) -> None:
@@ -78,7 +78,7 @@ class FileChangeHandler(FileSystemEventHandler):
         self.last_event_time: dict[str, float] = {}
         self.lock = threading.Lock()
 
-    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:  # type: ignore[override]
+    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:
         """Handle file modified event.
 
         Args:
@@ -116,7 +116,7 @@ class FileChangeHandler(FileSystemEventHandler):
         with suppress(Exception):
             self.callback(file_path, 'modified')
 
-    def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent) -> None:  # type: ignore[override]
+    def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent) -> None:
         """Handle file deleted event.
 
         Args:

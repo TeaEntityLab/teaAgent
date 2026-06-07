@@ -84,7 +84,7 @@ def assert_write_scope(
     if isinstance(plan_contract, dict):
         file_targets = plan_contract.get('file_targets', [])
     elif hasattr(plan_contract, 'file_targets'):
-        file_targets = list(plan_contract.file_targets)  # type: ignore[union-attr]
+        file_targets = list(plan_contract.file_targets)
     else:
         return None
 

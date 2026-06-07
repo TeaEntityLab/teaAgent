@@ -20,7 +20,7 @@ if sys.version_info >= (3, 11):
     TOMLLIB_AVAILABLE = True
 else:
     try:
-        import tomli as tomllib  # type: ignore
+        import tomli as tomllib
 
         TOMLLIB_AVAILABLE = True
     except ImportError:

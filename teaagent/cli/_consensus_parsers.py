@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional
 
 
 def _consensus_peers(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     list_handler: Optional[Callable] = None,
     add_handler: Optional[Callable] = None,
     remove_handler: Optional[Callable] = None,
@@ -54,7 +54,7 @@ def _consensus_peers(
 
 
 def _consensus_config(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     set_handler: Optional[Callable] = None,
 ) -> None:
     """Register consensus config subcommands."""
@@ -106,7 +106,7 @@ def register(
 
 
 def _consensus(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     peers_list_handler: Optional[Callable] = None,
     peers_add_handler: Optional[Callable] = None,
     peers_remove_handler: Optional[Callable] = None,

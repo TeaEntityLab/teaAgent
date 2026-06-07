@@ -7,6 +7,13 @@ from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 from teaagent import __version__
+from teaagent.errors import AgentHarnessError
+
+
+def _ferr(msg: str) -> None:
+    """Write msg to stderr."""
+    print(msg, file=sys.stderr)
+
 
 # Exit codes used across CLI commands.
 # 0: Success — command completed as expected.
@@ -266,23 +273,44 @@ def main(
     _check_llm: Any = None,
     _run_model_conformance: Any = None,
 ) -> int:
-    parser = build_parser()
-    raw_argv = argv if argv is not None else sys.argv[1:]
-    expanded_argv = _expand_argv(raw_argv)
+    try:
+        parser = build_parser()
+        raw_argv = argv if argv is not None else sys.argv[1:]
+        expanded_argv = _expand_argv(raw_argv)
 
-    args = parser.parse_args(expanded_argv)
-    if getattr(args, 'command', None) is None:
-        new_argv = raw_argv + ['chat']
-        args = parser.parse_args(new_argv)
-    args._adapter_factory = _adapter_factory or create_llm_adapter  # type: ignore[attr-defined]
-    args._serve_mcp_http = _serve_mcp_http or serve_mcp_http  # type: ignore[attr-defined]
-    args._check_graphqlite = _check_graphqlite or check_graphqlite_runtime  # type: ignore[attr-defined]
-    args._check_llm = _check_llm or check_llm_configuration  # type: ignore[attr-defined]
-    args._run_model_conformance = _run_model_conformance or run_model_conformance  # type: ignore[attr-defined]
-    apply_config_defaults(args)
-    _normalize_optional_provider_args(args)
-    _require_provider_for_agent_commands(args)
-    return args.func(args)
+        args = parser.parse_args(expanded_argv)
+        if getattr(args, 'command', None) is None:
+            new_argv = raw_argv + ['chat']
+            args = parser.parse_args(new_argv)
+        args._adapter_factory = _adapter_factory or create_llm_adapter
+        args._serve_mcp_http = _serve_mcp_http or serve_mcp_http
+        args._check_graphqlite = _check_graphqlite or check_graphqlite_runtime
+        args._check_llm = _check_llm or check_llm_configuration
+        args._run_model_conformance = _run_model_conformance or run_model_conformance
+        apply_config_defaults(args)
+        _normalize_optional_provider_args(args)
+        _require_provider_for_agent_commands(args)
+        return args.func(args)
+    except AgentHarnessError as e:
+        msg = str(e)
+        if e.hint:
+            _ferr(msg)
+            _ferr(f'  \u2192 {e.hint}')
+        else:
+            _ferr(msg)
+        return EXIT_ERROR
+    except KeyboardInterrupt:
+        return EXIT_SUCCESS
+    except Exception as e:
+        _ferr(f'Unexpected error: {e}')
+        _ferr(
+            '  Please report this: https://github.com/TeaEntityLab/teaagent/issues/new'
+        )
+        if '--verbose' in sys.argv or '-v' in sys.argv:
+            import traceback
+
+            traceback.print_exc()
+        return EXIT_ERROR
 
 
 def build_parser() -> argparse.ArgumentParser:

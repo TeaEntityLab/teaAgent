@@ -94,7 +94,7 @@ def _redact_sensitive_fields(
 
 
 def doctor_graphqlite(args: argparse.Namespace) -> int:
-    ok, message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
+    ok, message = args._check_graphqlite(args.database)
     print(json.dumps({'ok': ok, 'message': message}, sort_keys=True))
     return 0 if ok else 1
 
@@ -102,7 +102,7 @@ def doctor_graphqlite(args: argparse.Namespace) -> int:
 def doctor_model(args: argparse.Namespace) -> int:
     if getattr(args, 'wizard', False):
         return _doctor_model_wizard(args)
-    ok, message = args._check_llm(args.provider)  # type: ignore[attr-defined]
+    ok, message = args._check_llm(args.provider)
     print(
         json.dumps(
             {'ok': ok, 'message': message, 'provider': args.provider}, sort_keys=True
@@ -116,7 +116,7 @@ def doctor_aigateway(args: argparse.Namespace) -> int:
         return _doctor_aigateway_wizard(args)
 
     provider = 'aigateway'
-    ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
+    ok, message = args._check_llm(provider)
     requested_mode = getattr(args, 'mode', 'workers-ai')
     compat_base_url = os.environ.get('AIGATEWAY_BASE_URL', '').strip()
     workers_base_url = os.environ.get('WORKERS_AI_BASE_URL', '').strip()
@@ -249,7 +249,7 @@ def doctor_providers(args: argparse.Namespace) -> int:
 
     results = []
     for provider in available_providers():
-        ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
+        ok, message = args._check_llm(provider)
         env_name = PROVIDER_CONFIGS[provider].api_key_env
         keychain_present = bool(read_keychain_secret(env_name))
         results.append(
@@ -493,7 +493,7 @@ def _doctor_model_wizard(args: argparse.Namespace) -> int:
         env_status = 'written'
         env_path = str(env_file)
 
-    ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
+    ok, message = args._check_llm(provider)
     payload: dict[str, Any] = {
         'ok': ok,
         'mode': 'wizard',
@@ -521,7 +521,7 @@ def _doctor_providers_wizard(args: argparse.Namespace) -> int:
     auto_resolved = []
     env_updates: dict[str, str] = {}
     for provider in selected:
-        ok, _message = args._check_llm(provider)  # type: ignore[attr-defined]
+        ok, _message = args._check_llm(provider)
         env_name = PROVIDER_CONFIGS[provider].api_key_env
         if ok:
             skipped.append({'provider': provider, 'reason': 'already configured'})
@@ -651,7 +651,7 @@ def doctor_all(args: argparse.Namespace) -> int:
     repair_actions: list[str] = []
 
     # GraphQLite check
-    gql_ok, gql_message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
+    gql_ok, gql_message = args._check_graphqlite(args.database)
     checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
 
     # Providers check
@@ -662,7 +662,7 @@ def doctor_all(args: argparse.Namespace) -> int:
     else:
         providers = configured_providers or available_providers()
     for provider in providers:
-        ok, message = args._check_llm(provider)  # type: ignore[attr-defined]
+        ok, message = args._check_llm(provider)
         provider_results.append({'provider': provider, 'ok': ok, 'message': message})
     checks['providers'] = provider_results
 
@@ -727,7 +727,7 @@ def doctor_all(args: argparse.Namespace) -> int:
                 # Attempt to initialize/migrate
                 repair_actions.append('Attempted GraphQLite database migration')
                 # Re-check after migration
-                gql_ok, gql_message = args._check_graphqlite(args.database)  # type: ignore[attr-defined]
+                gql_ok, gql_message = args._check_graphqlite(args.database)
                 checks['graphqlite'] = {'ok': gql_ok, 'message': gql_message}
             except Exception as exc:
                 repair_actions.append(f'Failed to migrate database: {exc}')

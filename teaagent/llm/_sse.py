@@ -33,4 +33,4 @@ def consume_sse_json_chunks(
             on_data(parsed)
     finally:
         if hasattr(lines, 'close'):
-            lines.close()  # type: ignore[union-attr]
+            lines.close()

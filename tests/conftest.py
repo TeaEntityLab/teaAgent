@@ -7,8 +7,51 @@ from typing import Optional
 
 import pytest
 
+from teaagent.audit import AuditLogger
 from teaagent.llm import LLMResponse
+from teaagent.run_store import RunStore
+from teaagent.tools import ToolRegistry
 from test_support import can_bind_loopback, skip_if_socket_bind_is_blocked
+
+
+@pytest.fixture
+def tmp_run_store(tmp_path: Path) -> RunStore:
+    """A RunStore backed by a temporary directory that is cleaned up after the test."""
+    return RunStore(tmp_path)
+
+
+@pytest.fixture
+def mock_audit_logger(tmp_path: Path) -> AuditLogger:
+    """An AuditLogger writing to a temporary directory."""
+    store = RunStore(tmp_path)
+    return store.audit_logger()
+
+
+@pytest.fixture
+def mock_tool_registry() -> ToolRegistry:
+    """A ToolRegistry pre-loaded with a read_file tool."""
+    registry = ToolRegistry()
+
+    def _read_file(path: str) -> dict[str, object]:
+        with open(path) as f:
+            return {'content': f.read()}
+
+    registry.register(
+        name='read_file',
+        description='Read a file from disk',
+        input_schema={
+            'type': 'object',
+            'properties': {'path': {'type': 'string'}},
+            'required': ['path'],
+        },
+        output_schema={
+            'type': 'object',
+            'properties': {'content': {'type': 'string'}},
+        },
+        handler=_read_file,
+        annotations={'read_only': True, 'idempotent': True},
+    )
+    return registry
 
 
 class FakeAdapter:

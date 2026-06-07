@@ -261,7 +261,7 @@ def _load_policy_dict(path: Path) -> dict[str, Any]:
     text = path.read_text(encoding='utf-8')
     if path.suffix in {'.yaml', '.yml'}:
         try:
-            import yaml  # type: ignore[import-untyped]
+            import yaml
 
             data = yaml.safe_load(text)
         except ImportError:

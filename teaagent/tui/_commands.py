@@ -146,7 +146,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         from teaagent.model_routing import estimate_tokens
 
         task = ' '.join(args)
-        estimate = estimate_tokens(task, complexity='medium')  # type: ignore[call-arg]
+        estimate = estimate_tokens(task, complexity='medium')
         tui._print_json({'estimate': estimate, 'task': task})
         return True
 
@@ -163,8 +163,8 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 f'session new: {tui.session_id[:8] if tui.session_id else "none"}'
             )
         elif subcommand == 'list':
-            store = tui._get_session_store()  # type: ignore[attr-defined]
-            sessions = store.list_sessions()  # type: ignore[attr-defined]
+            store = tui._get_session_store()
+            sessions = store.list_sessions()
             tui._print_json(sessions)
         elif subcommand == 'switch':
             if len(args) < 2:
@@ -183,7 +183,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         elif subcommand == 'show':
             session = tui._current_session()
             if session:
-                tui._print_json(session.to_dict())  # type: ignore[attr-defined]
+                tui._print_json(session.to_dict())
         else:
             tui.output_fn(f"error: unknown session subcommand '{subcommand}'")
         return True
@@ -299,7 +299,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: parallel requires at least one option')
             return True
         # Store parallel options for later selection
-        tui._parallel_options = args  # type: ignore[assignment]
+        tui._parallel_options = args
         tui._print_json(
             {
                 'options': args,
@@ -321,19 +321,19 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
         try:
             # Try to parse as index
             index = int(selection)
-            if 0 <= index < len(tui._parallel_options):  # type: ignore[operator]
-                selected = tui._parallel_options[index]  # type: ignore[index]
+            if 0 <= index < len(tui._parallel_options):
+                selected = tui._parallel_options[index]
                 tui._print_json(
                     {'selected': selected, 'index': index, 'status': 'selected'}
                 )
                 tui._parallel_options = None  # type: ignore[assignment]  # Clear after selection
             else:
                 tui.output_fn(
-                    f'error: index {index} out of range (0-{len(tui._parallel_options) - 1})'  # type: ignore[operator]
+                    f'error: index {index} out of range (0-{len(tui._parallel_options) - 1})'
                 )
         except ValueError:
             # Try to match as value
-            if selection in tui._parallel_options:  # type: ignore[operator]
+            if selection in tui._parallel_options:
                 tui._print_json({'selected': selection, 'status': 'selected'})
                 tui._parallel_options = None  # type: ignore[assignment]
             else:

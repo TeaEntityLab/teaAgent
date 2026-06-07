@@ -7,7 +7,7 @@ from typing import Any
 
 
 def register(
-    subparsers: argparse._SubParsersAction,  # type: ignore[type-arg]
+    subparsers: argparse._SubParsersAction,
     handlers: dict[str, Any],
 ) -> None:
     plane_parser = subparsers.add_parser(

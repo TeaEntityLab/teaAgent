@@ -339,7 +339,7 @@ def _make_signature_relay_handler(
     relay: SignatureRelayServer,
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
-        server: SignatureRelayHTTPServer  # type: ignore[assignment]
+        server: SignatureRelayHTTPServer
 
         def log_message(self, format: str, *args: Any) -> None:
             logger.debug(format, *args)
