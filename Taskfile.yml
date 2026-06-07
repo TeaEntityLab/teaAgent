@@ -1,0 +1,81 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install dev dependencies
+    cmds:
+      - pip install -e ".[dev]"
+
+  test:
+    desc: Run full test suite
+    cmds:
+      - python -m pytest
+
+  test:fast:
+    desc: Run critical subset (no slow tests)
+    cmds:
+      - python -m pytest -m "not slow"
+
+  test:acceptance:
+    desc: Run acceptance tests
+    cmds:
+      - python -m pytest tests/acceptance
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - python -m pytest tests/integration
+
+  lint:
+    desc: Run ruff linter
+    cmds:
+      - ruff check teaagent/ tests/
+
+  format:
+    desc: Run ruff formatter
+    cmds:
+      - ruff format teaagent/ tests/
+
+  format:check:
+    desc: Check ruff formatting
+    cmds:
+      - ruff format --check teaagent/ tests/
+
+  typecheck:
+    desc: Run mypy type checker
+    cmds:
+      - mypy teaagent/ tests/
+
+  coverage:
+    desc: Run tests with coverage
+    cmds:
+      - python -m pytest --cov=teaagent --cov-report=term --cov-report=html:htmlcov
+
+  ci:
+    desc: Run all CI checks locally
+    cmds:
+      - task: lint
+      - task: format:check
+      - task: typecheck
+      - task: test
+
+  clean:
+    desc: Remove caches and build artifacts
+    cmds:
+      - rm -rf .mypy_cache .pytest_cache .ruff_cache .coverage htmlcov build dist *.egg-info
+      - find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+
+  docs:
+    desc: Generate API reference docs
+    cmds:
+      - python scripts/build_docs.py
+
+  security:
+    desc: Run security audit
+    cmds:
+      - bandit -r teaagent/ -q -c pyproject.toml

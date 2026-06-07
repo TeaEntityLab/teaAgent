@@ -37,6 +37,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # needed for benchmark regression comparison
 
       - uses: actions/setup-python@v6
         with:
@@ -66,12 +68,61 @@ jobs:
           echo "- smoke: **${{ steps.smoke.outcome }}**" >> $GITHUB_STEP_SUMMARY
           echo "- conformance: **${{ steps.conformance.outcome }}**" >> $GITHUB_STEP_SUMMARY
 
+  full-test-suite:
+    name: Full test suite + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Run full test suite
+        run: python -m pytest --timeout=120 -q 2>&1 | tail -20
+      - name: Coverage report
+        run: |
+          python -m pytest --cov=teaagent --cov-report=term --cov-report=html:htmlcov -q 2>&1 | tail -5
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: htmlcov
+          path: htmlcov/
+
+  lint-and-qa:
+    name: Lint + typecheck + quality audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: ruff lint
+        run: ruff check teaagent/ tests/
+      - name: ruff format
+        run: ruff format --check teaagent/ tests/
+      - name: mypy
+        run: mypy teaagent/ tests/
+      - name: Test quality audit
+        run: python3 scripts/audit_test_quality.py --format markdown --output /tmp/test-quality-report.md
+      - name: Upload quality report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-quality-report
+          path: /tmp/test-quality-report.md
+
   report:
     if: always()
-    needs: smoke
+    needs: [smoke, full-test-suite, lint-and-qa]
     runs-on: ubuntu-latest
     steps:
       - name: Aggregate results
         run: |
-          echo "# Nightly Smoke Results" >> $GITHUB_STEP_SUMMARY
-          echo "See per-provider results above." >> $GITHUB_STEP_SUMMARY
+          echo "# Nightly Results" >> $GITHUB_STEP_SUMMARY
+          echo "See per-provider and per-job results above." >> $GITHUB_STEP_SUMMARY
