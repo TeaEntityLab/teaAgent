@@ -54,9 +54,9 @@ def _derive_resume_state(
 ) -> str:
     event_types = {str(event.get('event_type', '')) for event in events}
     if summary.status == 'pending_approval' or 'run_paused' in event_types:
-        return 'suspended'
+        return 'checkpointed_suspension'
     if 'run_suspended' in event_types or 'suspension_created' in event_types:
-        return 'resumable'
+        return 'resumable_session'
     if summary.rollback_available:
         return 'checkpoint_available'
     return 'none'

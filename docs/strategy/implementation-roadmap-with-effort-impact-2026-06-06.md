@@ -1,6 +1,12 @@
 # Implementation Roadmap With Effort/Impact Analysis — TeaAgent
 # 2026-06-06
 
+> **Supersession note, 2026-06-07:** This file contains volatile facts
+> (star counts, pricing, model availability, adoption claims, or status claims)
+> that may be stale. For current competitive positioning and claim hygiene, see
+> [competitive-claim-audit-2026-06-06.md](../analysis/competitive-claim-audit-2026-06-06.md).
+> For current roadmap status, see [roadmap-status.md](../roadmap-status.md).
+
 > **Claim class:** Plan and workstream decomposition.
 >
 > **Status:** Proposed. All effort estimates are engineering judgment from

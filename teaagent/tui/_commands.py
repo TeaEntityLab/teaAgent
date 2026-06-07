@@ -485,13 +485,28 @@ def _cmd_destructive(tui: 'TeaAgentTUI', args: list[str]) -> bool:
 
 
 def _cmd_progress(tui: 'TeaAgentTUI', args: list[str]) -> bool:
-    """Handle progress command."""
-    if len(args) != 1 or args[0] not in {'on', 'off'}:
-        tui.output_fn("error: progress requires 'on' or 'off'")
+    """Handle progress command: toggle on/off or show run progress."""
+    if len(args) == 1 and args[0] in {'on', 'off'}:
+        tui.progress = args[0] == 'on'
+        tui.output_fn(f'progress: {"on" if tui.progress else "off"}')
+        tui._save_tui_state()
         return True
-    tui.progress = args[0] == 'on'
-    tui.output_fn(f'progress: {"on" if tui.progress else "off"}')
-    tui._save_tui_state()
+    if len(args) == 1:
+        run_id = args[0]
+        store = RunStore(tui.root)
+        from teaagent.run_progress import (
+            build_run_progress_summary,
+            format_run_progress_summary,
+        )
+
+        try:
+            summary = build_run_progress_summary(store, run_id)
+            tui.output_fn(format_run_progress_summary(summary))
+            return True
+        except FileNotFoundError:
+            tui.output_fn(f'error: run {run_id} not found')
+            return True
+    tui.output_fn("error: progress requires 'on', 'off', or a run_id")
     return True
 
 
@@ -565,12 +580,47 @@ def _cmd_permission(tui: 'TeaAgentTUI', args: list[str]) -> bool:
 
 
 def _cmd_approve(tui: 'TeaAgentTUI', args: list[str]) -> bool:
-    """Handle approve command."""
+    """Handle approve command: `approve <call_id>` or `approve --selector N`."""
+    if len(args) >= 2 and args[0] == '--selector':
+        try:
+            selector = int(args[1])
+        except ValueError:
+            tui.output_fn(f'error: selector must be an integer, got {args[1]!r}')
+            return True
+        store = RunStore(tui.root)
+        from teaagent.approval_selectors import (
+            collect_pending_approval_views,
+            resolve_selector,
+        )
+
+        views = collect_pending_approval_views(store)
+        if not views:
+            tui.output_fn('error: no pending approvals')
+            return True
+        view = resolve_selector(views, selector)
+        if view is None:
+            tui.output_fn(f'error: selector {selector} out of range (1..{len(views)})')
+            return True
+        tui.approved_call_ids.add(view.call_id)
+        tui.output_fn(f'approved: {view.call_id} (via selector {selector})')
+        return True
     if len(args) != 1:
         tui.output_fn('error: approve requires one call id')
         return True
     tui.approved_call_ids.add(args[0])
     tui.output_fn(f'approved: {args[0]}')
+    return True
+
+
+def _cmd_receipt(tui: 'TeaAgentTUI', args: list[str]) -> bool:
+    """Handle receipt command: `receipt <run_id>`."""
+    if len(args) != 1:
+        tui.output_fn('error: receipt requires a run id')
+        return True
+    store = RunStore(tui.root)
+    from teaagent.run_receipt import build_run_receipt
+
+    tui.output_fn(build_run_receipt(store, args[0], tui.root))
     return True
 
 
@@ -778,7 +828,11 @@ def _cmd_background(tui: 'TeaAgentTUI', args: list[str]) -> bool:
 
 
 def _cmd_handoff(tui: 'TeaAgentTUI', args: list[str]) -> bool:
-    """Handle handoff command."""
+    """Handle handoff command — alias for suspension checkpoint (NOT background execution)."""
+    tui.output_fn(
+        'handoff: /handoff is a suspension checkpoint alias (not background execution). '
+        'This is the same as the background command — it creates a suspension checkpoint.'
+    )
     tui._handle_background()
     return True
 
@@ -959,6 +1013,7 @@ _COMMAND_DISPATCH: dict[str, typing.Callable[[TeaAgentTUI, list[str]], bool]] = 
     'heartbeat': _cmd_heartbeat,
     'permission': _cmd_permission,
     'approve': _cmd_approve,
+    'receipt': _cmd_receipt,
     'unapprove': _cmd_unapprove,
     'approvals': _cmd_approvals,
     'memory': _cmd_memory,

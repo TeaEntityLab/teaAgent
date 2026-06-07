@@ -1,5 +1,11 @@
 # Pi Agent Ecosystem Review -- 2026-06-03
 
+> **Supersession note, 2026-06-07:** This file contains volatile competitive facts
+> (star counts, version milestones) that may be stale. For current
+> competitive positioning and freshness standards, see
+> [competitive-claim-audit-2026-06-06.md](../analysis/competitive-claim-audit-2026-06-06.md).
+> For current roadmap status, see [roadmap-status.md](../roadmap-status.md).
+
 ## Executive Summary
 
 Pi.dev (the Pi Coding Agent) has grown from a personal project by Mario Zechner into the most starred open-source coding agent on GitHub (59k stars, 7.1k forks, 225 releases, 210 contributors as of v0.78.0). It is a TypeScript terminal harness with four core packages (pi-ai, pi-agent-core, pi-tui, pi-coding-agent), a sprawling npm ecosystem of community extensions, and a design philosophy that stands at nearly every opposite pole from TeaAgent.

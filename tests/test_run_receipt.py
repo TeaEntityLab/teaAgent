@@ -72,3 +72,139 @@ def test_build_run_receipt_for_missing_run():
         store = RunStore(tmpdir)
         text = build_run_receipt(store, 'missing-run', tmpdir)
         assert 'Status: not found' in text
+
+
+def test_derive_resume_state_suspended_from_pending_approval():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _derive_resume_state
+
+    events: list[dict] = [
+        {'event_type': 'run_started'},
+        {'event_type': 'tool_call_pending_approval'},
+        {'event_type': 'run_paused'},
+    ]
+    summary = RunEvidenceSummary(run_id='r1', status='pending_approval')
+    assert _derive_resume_state(events, summary=summary) == 'checkpointed_suspension'
+
+
+def test_derive_resume_state_suspended_from_run_paused_event():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _derive_resume_state
+
+    events: list[dict] = [
+        {'event_type': 'run_started'},
+        {'event_type': 'run_paused'},
+    ]
+    summary = RunEvidenceSummary(run_id='r2', status='running')
+    assert _derive_resume_state(events, summary=summary) == 'checkpointed_suspension'
+
+
+def test_derive_resume_state_resumable_from_run_suspended():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _derive_resume_state
+
+    events: list[dict] = [
+        {'event_type': 'run_started'},
+        {'event_type': 'run_suspended'},
+    ]
+    summary = RunEvidenceSummary(run_id='r3', status='running')
+    assert _derive_resume_state(events, summary=summary) == 'resumable_session'
+
+
+def test_derive_resume_state_resumable_from_suspension_created():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _derive_resume_state
+
+    events: list[dict] = [
+        {'event_type': 'run_started'},
+        {'event_type': 'suspension_created'},
+    ]
+    summary = RunEvidenceSummary(run_id='r4', status='running')
+    assert _derive_resume_state(events, summary=summary) == 'resumable_session'
+
+
+def test_derive_resume_state_checkpoint_available():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _derive_resume_state
+
+    events: list[dict] = [
+        {'event_type': 'run_started'},
+        {'event_type': 'run_completed'},
+    ]
+    summary = RunEvidenceSummary(run_id='r5', status='success', rollback_available=True)
+    assert _derive_resume_state(events, summary=summary) == 'checkpoint_available'
+
+
+def test_derive_resume_state_none():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _derive_resume_state
+
+    events: list[dict] = [
+        {'event_type': 'run_started'},
+        {'event_type': 'run_completed'},
+    ]
+    summary = RunEvidenceSummary(
+        run_id='r6', status='success', rollback_available=False
+    )
+    assert _derive_resume_state(events, summary=summary) == 'none'
+
+
+def test_format_cost_unlimited_budget():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _format_cost
+
+    summary = RunEvidenceSummary(
+        run_id='r', total_cost_cents=50, cost_state='unlimited'
+    )
+    text = _format_cost(summary)
+    assert '50 cents' in text
+    assert 'unlimited' in text
+    assert 'budget cap: unlimited' in text
+
+
+def test_format_cost_not_set_budget():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _format_cost
+
+    summary = RunEvidenceSummary(
+        run_id='r',
+        total_cost_cents=30,
+        cost_state='estimated',
+        budget_cap_cents=None,
+    )
+    text = _format_cost(summary)
+    assert '30 cents' in text
+    assert 'estimated' in text
+    assert 'budget cap: not set' in text
+
+
+def test_format_cost_specific_cents_budget():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _format_cost
+
+    summary = RunEvidenceSummary(
+        run_id='r',
+        total_cost_cents=75,
+        cost_state='provider_reported',
+        budget_cap_cents=500,
+    )
+    text = _format_cost(summary)
+    assert '75 cents' in text
+    assert 'provider_reported' in text
+    assert 'budget cap: 500 cents' in text
+
+
+def test_format_cost_zero_cents_specific_budget():
+    from teaagent.evidence_summary import RunEvidenceSummary
+    from teaagent.run_receipt import _format_cost
+
+    summary = RunEvidenceSummary(
+        run_id='r',
+        total_cost_cents=0,
+        cost_state='unknown',
+        budget_cap_cents=1000,
+    )
+    text = _format_cost(summary)
+    assert '0 cents' in text
+    assert 'unknown' in text
+    assert 'budget cap: 1000 cents' in text

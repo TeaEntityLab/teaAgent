@@ -1,6 +1,6 @@
 # Release Checklist
 
-**Last reviewed:** 2026-06-06
+**Last reviewed:** 2026-06-07
 
 > **Review trigger:** Release gates, survey cadence, or validation workflow changes.
 
@@ -112,6 +112,22 @@ See [docs/generated/release-docs-evidence.md](generated/release-docs-evidence.md
 for the dated bundle (commands, commit, docs freshness, roadmap excerpt, and
 open residual risks). JSON mirror:
 [docs/generated/release-docs-evidence.json](generated/release-docs-evidence.json).
+
+## Guarded Claims
+
+Release notes and public-facing docs must not claim capabilities without
+explicit test or artifact evidence.
+
+| Prohibited claim type | Required evidence | Example |
+|---|---|---|
+| "Enterprise-ready" or "Enterprise grade" | Compliance gate acceptance, audit-level tiers test, documented RBAC test | Not "TeaAgent is enterprise-ready" without linked acceptance test |
+| "Remote-ready" or "Works remotely" | Remote agent isolation tests, gateway task intake acceptance, cloud lifecycle tests | Not "Use TeaAgent remotely" without `test_background_full_lifecycle_flow.py` |
+| "Sandbox-complete" or "Fully sandboxed" | Docker/container isolation tests, path-escape tests, shell allowlist property tests | Not "Fully sandboxed execution" without `test_docker_isolation_*` |
+| "Production-hardened" or "Battle-tested" | Long-session eval, scope-creep benchmark, 7-day stress test results | Not "Battle-tested for production" without linked benchmark report |
+
+Before any release note or public-facing doc update, check each claim against
+the evidence column. If the evidence does not exist at the claimed level, the
+claim must be removed or downgraded (e.g., "Beta" or "Experimental").
 
 ## Quarterly Refresh Process (P2-C)
 

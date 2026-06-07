@@ -736,7 +736,7 @@ class TUITests(unittest.TestCase):
         tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
 
         self.assertTrue(tui.handle_command('progress enabled'))
-        self.assertIn("requires 'on' or 'off'", output[0])
+        self.assertIn('not found', output[0])
 
     def test_tui_subagent_invalid_arg(self) -> None:
         output = []

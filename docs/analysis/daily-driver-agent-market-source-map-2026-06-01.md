@@ -1,5 +1,10 @@
 # Daily-Driver Agent Market Source Map
 
+> **Supersession note, 2026-06-07:** This file contains volatile facts
+> (star counts, pricing, model availability, or adoption claims) that may be
+> stale. For current competitive positioning and claim hygiene, see
+> [competitive-claim-audit-2026-06-06.md](./competitive-claim-audit-2026-06-06.md).
+
 Date: 2026-06-01
 
 Purpose: preserve the source trail behind the daily-driver market survey. This is a

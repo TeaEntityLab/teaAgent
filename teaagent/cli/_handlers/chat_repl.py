@@ -168,7 +168,9 @@ def print_chat_help() -> None:
     print('  /compact                   - Compact session context to save tokens')
     print('  /clear                     - Clear conversation history')
     print('  /diff                      - Show git diff for current session')
-    print('  /background, /handoff       - Suspend session as a checkpoint')
+    print(
+        '  /background, /handoff       - Create a suspension checkpoint (not background execution)'
+    )
     print('  /context                   - Show targeted context files')
     print('  /add <path>                - Add file/directory to context')
     print('  /drop <path>               - Remove file/directory from context')

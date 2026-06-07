@@ -88,7 +88,7 @@ HELP_TEXT = """Commands:
   estimate <task>           Estimate token budget for a task.
   root <path>               Set workspace root for agent tasks.
   destructive <on|off>      Allow or block destructive workspace tools.
-  progress <on|off>         Stream brief audit-event progress lines during ask runs.
+  progress <on|off|run_id>   Toggle audit-event progress lines or show run progress details.
   stream <on|off>           Stream model output token-by-token during ask runs.
   subagent <on|off>         Expose the 'subagent' tool so the model can delegate sub-tasks.
   chat <on|off>             Enable or disable multi-turn chat mode with session history.
@@ -100,8 +100,9 @@ HELP_TEXT = """Commands:
   heartbeat <seconds>       Set heartbeat interval for ask runs. 0 disables.
   status <run_id>           Show heartbeat liveness for a persisted run.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
-  approve <call_id>         Approve one exact destructive tool call id.
+  approve <call_id|--selector N>  Approve one destructive tool call by id or pending selector.
   unapprove <call_id>       Remove one approved call id.
+  receipt <run_id>          Show human-readable run receipt including goal, cost, and audit path.
   approvals                 List approved call ids for this session.
   approvals subagents       Batch view of parallel subagent destructive-tool queue.
   approvals subagents approve|deny|approve-all|deny-all
@@ -144,8 +145,8 @@ HELP_TEXT = """Commands:
   budget                    Show budget and effort status.
   checkpoint                Create manual git checkpoint.
   undo [run_id]              Undo last agent edit (journal-first, checkpoint fallback).
-  background                Suspend session as a checkpoint; use interactive-review/resume on the run id.
-  handoff                   Alias for background command.
+  background                Create a suspension checkpoint (not background execution); use interactive-review/resume on the run id.
+  handoff                   Alias for suspension checkpoint (same as background command).
   skill-diagnostics         Show comprehensive skill diagnostics: loaded, shadowed,
                              candidates, artifacts, output verification (JSON).
   skill-health              Show skill ecosystem health dashboard (JSON).

@@ -25,9 +25,27 @@ Every governance-sensitive document should fit one dominant claim class.
 | Current truth | Describes what users or maintainers should trust now. | `daily-driver-current-status.md`, `roadmap-status.md`, ticket index | Must be updated when behavior or status changes. |
 | Evidence snapshot | Records what was observed at a date, commit, or review pass. | Dated audits, surveys, total-review docs | Must name date and evidence; do not silently rewrite history. |
 | Plan | Describes intended work and acceptance criteria. | Master plans, ticket plans, work logs | Must link to status source and verification. |
+| Proposal | Describes a proposed change not yet accepted or implemented. | ADRs in Proposed status, RFCs, design sketches | Should link to decision or superseding document when resolved. |
+| Aspiration | Describes a future goal or direction without a committed timeline. | Roadmap outlook docs, strategy documents | Must not be cited as committed scope. |
+| Non-goal | Describes something explicitly out of scope or deliberately not addressed. | "When not to use" pages, scope boundaries | Should be reviewed when adjacent scope changes. |
 | Reference | Defines APIs, commands, schemas, or module behavior. | API docs, module docs, terminology | Must stay version-aware; stale references require correction. |
 | Governance rule | Defines process or required standards. | Governance docs, release gates | Changes need review when they affect safety, status, or release claims. |
 | User guide | Helps a user choose and execute commands. | TUI guide, chat reference, troubleshooting | Must be short, current, and practical. |
+
+### Claim class label convention
+
+Every governance-sensitive document should declare its claim class in a header
+blockquote so readers and automated checks can distinguish current truth from
+dated evidence from aspiration:
+
+```markdown
+> **Claim class:** current-truth | evidence-snapshot | plan | proposal | aspiration | non-goal | reference | governance-rule | user-guide
+```
+
+Analysis and strategy docs should use `evidence-snapshot` or `aspiration` unless they
+are the canonical source of truth for a specific claim. Inline exceptions within a
+doc (e.g., a current-truth table inside an evidence-snapshot doc) are fine but
+should be explicitly scoped.
 
 ## Evidence Hierarchy
 
