@@ -24,6 +24,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from conftest import FakeAdapter

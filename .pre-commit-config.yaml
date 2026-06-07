@@ -1,6 +1,11 @@
 repos:
   - repo: local
     hooks:
+      - id: lore-trailers
+        name: lore-trailers
+        entry: python3 .githooks/commit-msg
+        language: system
+        stages: [commit-msg]
       - id: ruff-format
         name: ruff-format
         entry: env UV_CACHE_DIR=.uv-cache uv run ruff format
