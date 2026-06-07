@@ -197,6 +197,11 @@ from ._model import (
     model_route,
     model_smoke,
 )
+from ._observability import (
+    credentials_rotate_command,
+    health_command,
+    metrics_command,
+)
 from ._plugin import (
     plugin_list_command,
     plugin_show_command,
@@ -332,6 +337,9 @@ __all__ = [
     'env_lock_command',
     'env_provision_command',
     'env_verify_command',
+    'health_command',
+    'metrics_command',
+    'credentials_rotate_command',
     'skill_publish_command',
     'skill_verify_tsb_command',
     'chat_command',

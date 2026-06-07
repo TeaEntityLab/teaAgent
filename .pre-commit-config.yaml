@@ -23,7 +23,12 @@ repos:
         pass_filenames: false
       - id: mypy
         name: mypy
-        entry: env UV_CACHE_DIR=.uv-cache uv run mypy teaagent/ tests/ --explicit-package-bases
+        entry: env UV_CACHE_DIR=.uv-cache MYPY_CACHE_DIR=.mypy_cache uv run mypy teaagent/ tests/ --explicit-package-bases
+        language: system
+        pass_filenames: false
+      - id: check-public-docstrings
+        name: check-public-docstrings
+        entry: python3 scripts/check_public_docstrings.py
         language: system
         pass_filenames: false
       - id: pytest

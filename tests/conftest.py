@@ -79,6 +79,16 @@ def fake_adapter(
     return FakeAdapter(outputs, before_each=before_each)
 
 
+@pytest.fixture(autouse=True)
+def _reset_module_caches() -> None:
+    """Reset global caches between tests (TST-012)."""
+    from teaagent.config_loader import clear_config_cache
+
+    clear_config_cache()
+    yield
+    clear_config_cache()
+
+
 @pytest.fixture
 def mock_llm_adapter() -> FakeAdapter:
     """A FakeAdapter that returns empty responses for testing agent loops."""

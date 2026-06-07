@@ -19,6 +19,25 @@ class LLMConfigurationError(LLMAdapterError):
     pass
 
 
+class ProviderKeyError(LLMConfigurationError):
+    """Missing or invalid provider API key."""
+
+    def __init__(
+        self,
+        provider: str,
+        env_var: str,
+        *,
+        hint: str | None = None,
+    ) -> None:
+        message = f'{provider} requires {env_var}'
+        super().__init__(message)
+        self.provider = provider
+        self.env_var = env_var
+        self.hint = hint or (
+            f'Export {env_var} or run `teaagent setup` to configure provider keys.'
+        )
+
+
 class LLMHTTPError(LLMAdapterError):
     """Exception raised for HTTP-related errors from LLM providers."""
 
@@ -124,7 +143,7 @@ class ProviderConfig:
     def resolved_api_key(self) -> str:
         api_key = self.api_key or os.environ.get(self.api_key_env)
         if not api_key:
-            raise LLMConfigurationError(f'{self.name} requires {self.api_key_env}')
+            raise ProviderKeyError(self.name, self.api_key_env)
         return api_key
 
     def resolved_model(self) -> str:

@@ -1,3 +1,5 @@
+"""LLM adapter package — provider configs, adapters, and factory helpers."""
+
 from teaagent.llm._adapters import (  # noqa: F401
     ClaudeAdapter as ClaudeAdapter,
 )
@@ -93,6 +95,9 @@ from teaagent.llm._types import (  # noqa: F401
 )
 from teaagent.llm._types import (  # noqa: F401
     ProviderConfig as ProviderConfig,
+)
+from teaagent.llm._types import (  # noqa: F401
+    ProviderKeyError as ProviderKeyError,
 )
 from teaagent.llm._types import (  # noqa: F401
     SafetyCategory as SafetyCategory,

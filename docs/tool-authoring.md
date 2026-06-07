@@ -54,3 +54,44 @@ Add tests that cover:
 - Invalid input classification.
 - Permission behavior when `destructive=True`.
 - Audit redaction for sensitive arguments and results.
+
+---
+
+## Plugin Tutorial: Custom Plugin in 10 Minutes (DOC-004)
+
+### 1. Scaffold
+
+```bash
+mkdir -p .teaagent/plugins/hello-plugin
+```
+
+### 2. `plugin.json`
+
+```json
+{"name": "hello-plugin", "version": "0.1.0", "commands": ["hello"]}
+```
+
+### 3. Command handler (`.teaagent/plugins/hello-plugin/commands.py`)
+
+```python
+def hello_command(args):
+    print('Hello from plugin')
+    return 0
+```
+
+### 4. Verify
+
+```bash
+teaagent plugin list
+```
+
+### Extension points
+
+| Extension | Purpose |
+|-----------|---------|
+| Commands | CLI subcommands |
+| Agents | Subagent YAML/JSON defs |
+| Hooks | Pre/post run lifecycle |
+| MCP | External tool servers |
+
+See `docs/plugin-skill-catalog.md` for the full catalog.

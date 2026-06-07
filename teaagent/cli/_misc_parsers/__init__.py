@@ -12,7 +12,15 @@ from .advanced import (
     _ultrawork,
     _workspace,
 )
-from .diagnostics import _audit, _doctor, _env, _selftest_top_level
+from .diagnostics import (
+    _audit,
+    _credentials,
+    _doctor,
+    _env,
+    _health,
+    _metrics,
+    _selftest_top_level,
+)
 from .setup import _clarify, _completion, _configure, _init, _setup
 from .tui_parser import _tui
 
@@ -66,6 +74,9 @@ def register(
         handlers.get('env_verify'),
         handlers.get('env_lock'),
     )
+    _health(subparsers, handlers.get('health'))
+    _metrics(subparsers, handlers.get('metrics'))
+    _credentials(subparsers, handlers.get('credentials_rotate'))
     _graphqlite(
         subparsers,
         handlers['graphqlite_query'],

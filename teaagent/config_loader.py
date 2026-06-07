@@ -108,6 +108,21 @@ class ResolvedConfig:
         return lines
 
 
+_CONFIG_CACHE: dict[tuple[str, str], tuple[float, float, ResolvedConfig]] = {}
+
+
+def _config_mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime if path.is_file() else 0.0
+    except OSError:
+        return 0.0
+
+
+def clear_config_cache() -> None:
+    """Clear the resolved-config cache (for tests)."""
+    _CONFIG_CACHE.clear()
+
+
 def _coerce(value: Any, typ: type) -> Any:
     if value is None:
         return None
@@ -174,11 +189,30 @@ class ConfigResolver:
         self._user_home = Path(user_home).resolve() if user_home else Path.home()
 
     def resolve(self) -> ResolvedConfig:
+        user_path = self._user_home / '.teaagent' / 'config.json'
+        workspace_path = self._workspace / '.teaagent' / 'config.json'
+        cache_key = (str(self._workspace), str(self._user_home))
+        user_mtime = _config_mtime(user_path)
+        workspace_mtime = _config_mtime(workspace_path)
+        cached = _CONFIG_CACHE.get(cache_key)
+        if cached and cached[0] == user_mtime and cached[1] == workspace_mtime:
+            return cached[2]
+
+        resolved = self._resolve_uncached(
+            user_cfg=_read_json_config(user_path),
+            workspace_cfg=_read_json_config(workspace_path),
+        )
+        _CONFIG_CACHE[cache_key] = (user_mtime, workspace_mtime, resolved)
+        return resolved
+
+    def _resolve_uncached(
+        self,
+        *,
+        user_cfg: dict[str, Any],
+        workspace_cfg: dict[str, Any],
+    ) -> ResolvedConfig:
         values: dict[str, Any] = {}
         sources: dict[str, ConfigLayer] = {}
-
-        user_cfg = _read_json_config(self._user_home / '.teaagent' / 'config.json')
-        workspace_cfg = _read_json_config(self._workspace / '.teaagent' / 'config.json')
 
         for key, meta in CONFIG_KEYS.items():
             typ = meta['type']

@@ -259,6 +259,19 @@ def completion_command(args: argparse.Namespace) -> int:
 
 
 def setup_command(args: argparse.Namespace) -> int:
+    if getattr(args, 'verify', False):
+        from teaagent.wizard import verify_setup
+
+        result = verify_setup(args.root, check_llm=check_llm_configuration)
+        payload = result.to_dict()
+        if getattr(args, 'human', False):
+            from teaagent.ergonomics.human_output import format_setup_summary
+
+            print(format_setup_summary(payload, root=args.root))
+        else:
+            print_json(payload)
+        return 0 if result.ok else 1
+
     result = run_first_session_setup(
         args,
         check_llm=check_llm_configuration,

@@ -31,7 +31,7 @@ def test_audit_chain_verification_rejects_tampered_events(events):
     idx = random.randint(0, len(chain) - 1)
     chain[idx]['payload'] = 'tampered'
     result = verify_audit_chain(chain)
-    assert not result.verified, 'Tampered chain should not verify'
+    assert not result.valid, 'Tampered chain should not verify'
     assert len(result.error) > 0, 'Should report at least one error'
 
 
@@ -52,7 +52,7 @@ def test_audit_chain_accepts_valid_chains(data):
         return
     chain = _build_chain(events)
     result = verify_audit_chain(chain)
-    assert result.verified or not result.verified  # at minimum doesn't crash
+    assert isinstance(result.valid, bool)  # at minimum doesn't crash
 
 
 @given(st.text(min_size=1, max_size=1000), st.text(min_size=1, max_size=100))

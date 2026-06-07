@@ -49,6 +49,7 @@ class ApprovalQueueStore:
         self.queue_dir = self.workspace_root / '.teaagent' / 'approval_queues'
         self.queue_dir.mkdir(parents=True, exist_ok=True)
         self.hmac_secret = hmac_secret
+        self._snapshot_cache: dict[str, tuple[float, QueueDiskSnapshot]] = {}
 
     def queue_path(self, parent_run_id: str) -> Path:
         safe_id = parent_run_id.replace('/', '_')
@@ -127,6 +128,10 @@ class ApprovalQueueStore:
         path = self.queue_path(parent_run_id)
         if not path.is_file():
             return QueueDiskSnapshot(parent_run_id, {}, {})
+        mtime = path.stat().st_mtime
+        cached = self._snapshot_cache.get(parent_run_id)
+        if cached is not None and cached[0] == mtime:
+            return cached[1]
         with self.lock(parent_run_id, shared=True):
             raw = json.loads(path.read_text(encoding='utf-8'))
         if not isinstance(raw, dict):
@@ -145,7 +150,9 @@ class ApprovalQueueStore:
             requests = {}
         if not isinstance(batches, dict):
             batches = {}
-        return QueueDiskSnapshot(parent_run_id, requests, batches)
+        snapshot = QueueDiskSnapshot(parent_run_id, requests, batches)
+        self._snapshot_cache[parent_run_id] = (mtime, snapshot)
+        return snapshot
 
     def save(
         self,
@@ -168,6 +175,7 @@ class ApprovalQueueStore:
                 encoding='utf-8',
             )
             os.replace(temp, path)
+        self._snapshot_cache.pop(parent_run_id, None)
 
     def update_request_status(
         self,

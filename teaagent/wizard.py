@@ -268,6 +268,49 @@ def build_env_order_checks(root: Path) -> dict[str, Any]:
     }
 
 
+def verify_setup(
+    root: str | Path, *, check_llm: Callable[[str], tuple[bool, str]]
+) -> WizardResult:
+    """Verify an existing workspace setup without modifying files."""
+    root_path = Path(root).resolve()
+    cfg_path = root_path / '.teaagent' / 'config.json'
+    warnings: list[str] = []
+    if not cfg_path.is_file():
+        return WizardResult(
+            ok=False,
+            mode='verify',
+            root=str(root_path),
+            warnings=['missing .teaagent/config.json — run teaagent setup'],
+            next_steps=['teaagent setup --root .'],
+            safe_command='teaagent setup',
+        )
+
+    import json
+
+    cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
+    provider = str(cfg.get('provider') or 'gpt')
+    provider_ok, provider_message = check_llm(provider)
+    env_order = build_env_order_checks(root_path)
+    if not provider_ok:
+        warnings.append(provider_message)
+
+    return WizardResult(
+        ok=provider_ok,
+        mode='verify',
+        root=str(root_path),
+        checks={
+            'provider': {'ok': provider_ok, 'message': provider_message},
+            'env_order': env_order,
+        },
+        configured={'provider': provider, 'config_path': str(cfg_path)},
+        warnings=warnings,
+        next_steps=['teaagent health --root .']
+        if provider_ok
+        else [f'teaagent doctor model {provider}'],
+        safe_command=f'teaagent daily "summarize repo" --dry-run --root {shlex.quote(str(root_path))}',
+    )
+
+
 def run_first_session_setup(
     args: Any,
     *,

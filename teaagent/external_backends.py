@@ -213,15 +213,15 @@ class BackendAdapterRegistry:
         return backend
 
     def initialize_all(self) -> None:
-        for backend in list(self._knowledge_backends.values()):
-            if hasattr(backend, 'initialize'):
-                backend.initialize()
-        for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
-            if hasattr(backend, 'initialize'):
-                backend.initialize()
-        for backend in list(self._code_parse_backends.values()):  # type: ignore[assignment]
-            if hasattr(backend, 'shutdown'):
-                backend.shutdown()
+        for kb_backend in self._knowledge_backends.values():
+            if hasattr(kb_backend, 'initialize'):
+                kb_backend.initialize()
+        for cp_backend in self._code_parse_backends.values():
+            if hasattr(cp_backend, 'initialize'):
+                cp_backend.initialize()
+        for cp_backend in self._code_parse_backends.values():
+            if hasattr(cp_backend, 'shutdown'):
+                cp_backend.shutdown()
 
     def health_check_all(self) -> dict[str, dict[str, Any]]:
         results: dict[str, dict[str, Any]] = {}
@@ -235,10 +235,10 @@ class BackendAdapterRegistry:
                         'healthy': False,
                         'message': str(exc),
                     }
-        for name, backend in self._code_parse_backends.items():  # type: ignore[assignment]
-            if hasattr(backend, 'check_health'):
+        for name, cp_backend in self._code_parse_backends.items():
+            if hasattr(cp_backend, 'check_health'):
                 try:
-                    healthy, msg = backend.check_health()
+                    healthy, msg = cp_backend.check_health()
                     results[f'codeparse/{name}'] = {'healthy': healthy, 'message': msg}
                 except (ConnectionError, TimeoutError, OSError) as exc:
                     results[f'codeparse/{name}'] = {

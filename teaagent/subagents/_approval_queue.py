@@ -143,6 +143,9 @@ class CentralizedApprovalQueue:
         self._sync_results: dict[str, bool] = {}
         self._lock = asyncio.Lock()
         self._sync_lock = threading.Lock()
+        self._persist_dirty = False
+        self._last_reload_at = 0.0
+        self._reload_interval_sec = 0.25
         self._backend: Optional[Any] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         if self._workspace_root is not None:
@@ -153,10 +156,14 @@ class CentralizedApprovalQueue:
             self._backend = resolve_approval_backend(self._workspace_root)
             self.reload_from_store()
 
-    def reload_from_store(self) -> None:
+    def reload_from_store(self, *, force: bool = False) -> None:
         """Merge durable queue state (for cross-process approve/deny)."""
         if self._backend is None:
             return
+        now = time.monotonic()
+        if not force and (now - self._last_reload_at) < self._reload_interval_sec:
+            return
+        self._last_reload_at = now
         from teaagent.subagents._approval_queue_store import request_from_dict
 
         snapshot = self._backend.load_snapshot(self._parent_run_id)
@@ -254,9 +261,16 @@ class CentralizedApprovalQueue:
                         if future is not None and not future.done():
                             self._resolve_future_threadsafe(future, False)
 
-    def _persist(self) -> None:
-        if self._backend is not None:
-            self._backend.save(self._parent_run_id, self._requests, self._batches)
+    def _persist(self, *, force: bool = False) -> None:
+        if self._backend is None:
+            return
+        if not force and not self._persist_dirty:
+            return
+        self._backend.save(self._parent_run_id, self._requests, self._batches)
+        self._persist_dirty = False
+
+    def _mark_persist_dirty(self) -> None:
+        self._persist_dirty = True
 
     def _resolve_future_threadsafe(
         self, future: asyncio.Future[bool], value: bool
@@ -307,7 +321,8 @@ class CentralizedApprovalQueue:
             self._requests[request_id] = request
             self._sync_waiters[request_id] = event
 
-        self._persist()
+        self._mark_persist_dirty()
+        self._persist(force=True)
         logger.info(
             'Submitted sync approval request %s from subagent %s for tool %s',
             request_id,
@@ -344,7 +359,8 @@ class CentralizedApprovalQueue:
                     self._requests[request_id].status = ApprovalRequestStatus.TIMEOUT
                 self._sync_waiters.pop(request_id, None)
                 self._sync_results.pop(request_id, None)
-            self._persist()
+            self._mark_persist_dirty()
+            self._persist(force=True)
             logger.warning('Sync approval request %s timed out', request_id)
             return False
 
@@ -365,7 +381,8 @@ class CentralizedApprovalQueue:
             event = self._sync_waiters.get(request_id)
         if event is not None:
             event.set()
-        self._persist()
+        self._mark_persist_dirty()
+        self._persist(force=True)
         logger.info('Approved sync request %s by %s', request_id, approved_by)
         return True
 
@@ -402,7 +419,8 @@ class CentralizedApprovalQueue:
             event = self._sync_waiters.get(request_id)
         if event is not None:
             event.set()
-        self._persist()
+        self._mark_persist_dirty()
+        self._persist(force=True)
         logger.info('Denied sync request %s: %s', request_id, reason)
         return True
 

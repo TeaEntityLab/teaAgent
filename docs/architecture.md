@@ -507,3 +507,50 @@ These gaps identified in the 2026-05-24 competitive analysis have been closed:
 - **Declarative sub-agent definitions** → YAML/JSON/Markdown frontmatter files
   in `.teaagent/subagents/` with `isolation`, `background`, `disallowed_tools`,
   and `effort` fields.
+
+## Architecture Diagrams (DOC-005)
+
+### High-level flow
+
+```mermaid
+flowchart TB
+  CLI[TUI / CLI] --> Engine[ModelDecisionEngine]
+  Engine --> Runner[AgentRunner]
+  Runner --> Tools[ToolRegistry]
+  Runner --> Approval[ApprovalPolicy]
+  Runner --> Audit[AuditLogger]
+  Tools --> Workspace[Workspace Tools]
+  Approval --> Queue[CentralizedApprovalQueue]
+  Audit --> Chain[Hash Chain Verify]
+```
+
+### Approval flow
+
+```mermaid
+sequenceDiagram
+  participant R as AgentRunner
+  participant P as ApprovalPolicy
+  participant M as ApprovalManager
+  participant H as Human/TUI
+  R->>P: assert_allowed(tool)
+  alt destructive + prompt mode
+    P->>M: create request
+    M->>H: show approval UI
+    H-->>M: approve/deny
+    M-->>R: token or denial
+  else read-only/auto
+    P-->>R: allowed
+  end
+```
+
+### Audit chain
+
+```mermaid
+flowchart LR
+  E1[Event N] --> H1[SHA256 hash]
+  H1 --> E2[Event N+1 + prev_hash]
+  E2 --> H2[SHA256 hash]
+  H2 --> V[teaagent audit verify]
+```
+
+See also `docs/architecture/module-dependencies.md` and `docs/architecture/config-precedence.md`.

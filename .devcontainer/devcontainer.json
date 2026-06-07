@@ -1,0 +1,21 @@
+{
+  "name": "TeaAgent",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "postCreateCommand": "pip install -e '.[dev]' && pre-commit install",
+  "remoteUser": "vscode"
+}

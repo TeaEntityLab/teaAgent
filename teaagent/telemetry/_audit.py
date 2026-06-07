@@ -104,7 +104,10 @@ class OTelAuditSink:
         self._tool_spans.clear()
 
     def force_flush(self, timeout_millis: int = 5000) -> bool:
-        return self._tracer_provider.force_flush(timeout_millis)
+        flush = getattr(self._tracer_provider, 'force_flush', None)
+        if flush is None:
+            return True
+        return bool(flush(timeout_millis))
 
 
 def configure_telemetry(

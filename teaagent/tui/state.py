@@ -36,3 +36,34 @@ def _effort_level_for_budget(limit: int | None) -> str:
     if limit == 5000:
         return 'high'
     return 'custom'
+
+
+_PERMISSION_COLORS = {
+    'read-only': '\033[32m',  # green
+    'prompt': '\033[33m',  # yellow
+    'workspace-write': '\033[36m',  # cyan
+    'full-access': '\033[31m',  # red
+}
+_RESET = '\033[0m'
+
+
+def format_status_bar(
+    *,
+    permission_mode: str,
+    pending_approvals: int = 0,
+    run_status: str = 'idle',
+    memory_mb: float | None = None,
+    use_color: bool = True,
+) -> str:
+    """Compact one-line status for the TUI footer."""
+    mode_color = _PERMISSION_COLORS.get(permission_mode, '') if use_color else ''
+    reset = _RESET if use_color else ''
+    mode_label = (
+        f'{mode_color}{permission_mode}{reset}' if use_color else permission_mode
+    )
+    parts = [f'mode={mode_label}', f'run={run_status}']
+    if pending_approvals:
+        parts.append(f'pending={pending_approvals}')
+    if memory_mb is not None:
+        parts.append(f'mem={memory_mb:.1f}MB')
+    return ' | '.join(parts)

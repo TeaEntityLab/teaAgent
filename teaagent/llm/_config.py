@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 from teaagent.http_rate_limit import TokenRateLimiter
 from teaagent.llm._adapters import (
@@ -150,7 +150,10 @@ def create_llm_adapter(
     normalized = provider.lower()
     # Special case for fake adapter used in tests
     if normalized == 'fake':
-        return FakeLLMAdapter(provider='fake', model=model or 'fake-model')  # type: ignore[return-value]
+        return cast(
+            LLMAdapter,
+            FakeLLMAdapter(provider='fake', model=model or 'fake-model'),
+        )
     if normalized not in PROVIDER_CONFIGS:
         raise LLMConfigurationError(
             f"unknown provider '{provider}'. Available: {', '.join(available_providers())}"
@@ -167,18 +170,31 @@ def create_llm_adapter(
             base_url_env=config.base_url_env,
         )
     if normalized == 'claude':
-        return ClaudeAdapter(config, transport=transport, rate_limiter=rate_limiter)  # type: ignore[return-value]
+        return cast(
+            LLMAdapter,
+            ClaudeAdapter(config, transport=transport, rate_limiter=rate_limiter),
+        )
     if normalized == 'gemini':
-        return GeminiAdapter(config, transport=transport, rate_limiter=rate_limiter)  # type: ignore[return-value]
+        return cast(
+            LLMAdapter,
+            GeminiAdapter(config, transport=transport, rate_limiter=rate_limiter),
+        )
     if normalized == 'workers-ai':
-        return WorkersAIAdapter(config, transport=transport, rate_limiter=rate_limiter)  # type: ignore[return-value]
+        return cast(
+            LLMAdapter,
+            WorkersAIAdapter(config, transport=transport, rate_limiter=rate_limiter),
+        )
     if normalized == 'aigateway':
-        return OpenAICompatibleAdapter(
-            config, transport=transport, rate_limiter=rate_limiter
-        )  # type: ignore[return-value]
-    return OpenAICompatibleAdapter(
-        config, transport=transport, rate_limiter=rate_limiter
-    )  # type: ignore[return-value]
+        return cast(
+            LLMAdapter,
+            OpenAICompatibleAdapter(
+                config, transport=transport, rate_limiter=rate_limiter
+            ),
+        )
+    return cast(
+        LLMAdapter,
+        OpenAICompatibleAdapter(config, transport=transport, rate_limiter=rate_limiter),
+    )
 
 
 def check_llm_configuration(provider: str) -> tuple[bool, str]:

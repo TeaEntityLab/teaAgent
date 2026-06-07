@@ -1,3 +1,5 @@
+"""Agent runner package — decision loop, budget, and approval integration."""
+
 from ._core import AgentRunner, validate_tool_decision
 from ._types import (
     ApprovalHandler,

@@ -1,3 +1,5 @@
+"""Domain-specific harness exceptions and error categories."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -28,6 +30,7 @@ class ErrorCategory(str, Enum):
     MODEL_LOGIC = 'model_logic'
     PERMISSION = 'permission'
     SYSTEM = 'system'
+    CONFIG = 'config'
 
     def __str__(self) -> str:
         return self.value
@@ -55,6 +58,19 @@ class AgentHarnessError(Exception):
         if self.hint:
             return f'{base}\n  → {self.hint}'
         return base
+
+
+class ConfigError(AgentHarnessError):
+    """Invalid or missing workspace/runtime configuration."""
+
+    category = ErrorCategory.CONFIG
+
+    def __init__(self, message: str, *, hint: Optional[str] = None) -> None:
+        super().__init__(
+            message,
+            hint=hint
+            or 'Run `teaagent doctor config-lint` or `teaagent setup --verify` to diagnose.',
+        )
 
 
 class BudgetExceededError(AgentHarnessError):

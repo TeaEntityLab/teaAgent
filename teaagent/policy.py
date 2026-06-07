@@ -1,3 +1,5 @@
+"""Permission modes and approval policy enforcement."""
+
 from __future__ import annotations
 
 import asyncio

@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 from teaagent import __version__
-from teaagent.errors import AgentHarnessError
+from teaagent.errors import AgentHarnessError, ConfigError
+from teaagent.llm._types import LLMConfigurationError, ProviderKeyError
 
 
 def _ferr(msg: str) -> None:
@@ -112,6 +113,7 @@ from teaagent.cli._handlers import (  # noqa: E402
     consensus_wait_command,
     control_plane_serve_command,
     cost_report_command,
+    credentials_rotate_command,
     daily_journal_command,
     doctor_aigateway,
     doctor_all,
@@ -140,6 +142,7 @@ from teaagent.cli._handlers import (  # noqa: E402
     graphqlite_query,
     graphqlite_smoke,
     guidance_command,
+    health_command,
     init_command,
     interactive_review_command,
     mcp_serve_command,
@@ -164,6 +167,7 @@ from teaagent.cli._handlers import (  # noqa: E402
     memory_quarantine_promote_command,
     memory_search_command,
     memory_show_command,
+    metrics_command,
     model_capabilities,
     model_conformance,
     model_providers,
@@ -293,13 +297,54 @@ def main(
         _normalize_optional_provider_args(args)
         _require_provider_for_agent_commands(args)
         return args.func(args)
+    except ProviderKeyError as e:
+        from teaagent.cli._formatting import format_error_block
+
+        _ferr(
+            format_error_block(
+                'Provider key missing',
+                str(e),
+                hint=getattr(e, 'hint', None),
+                category='CONFIG',
+            )
+        )
+        return EXIT_ERROR
+    except LLMConfigurationError as e:
+        from teaagent.cli._formatting import format_error_block
+
+        _ferr(
+            format_error_block(
+                'LLM configuration error',
+                str(e),
+                category='CONFIG',
+            )
+        )
+        return EXIT_ERROR
+    except ConfigError as e:
+        from teaagent.cli._formatting import format_error_block
+
+        _ferr(
+            format_error_block(
+                'Configuration error',
+                str(e),
+                hint=e.hint,
+                category='CONFIG',
+            )
+        )
+        return EXIT_ERROR
     except AgentHarnessError as e:
-        msg = str(e)
-        if e.hint:
-            _ferr(msg)
-            _ferr(f'  \u2192 {e.hint}')
-        else:
-            _ferr(msg)
+        from teaagent.cli._formatting import format_error_block
+
+        category = getattr(getattr(e, 'category', None), 'value', None)
+        primary = str(e).split('\n  →')[0]
+        _ferr(
+            format_error_block(
+                'Harness error',
+                primary,
+                hint=e.hint,
+                category=category,
+            )
+        )
         return EXIT_ERROR
     except KeyboardInterrupt:
         return EXIT_SUCCESS
@@ -414,6 +459,9 @@ def build_parser() -> argparse.ArgumentParser:
             'env_provision': env_provision_command,
             'env_verify': env_verify_command,
             'env_lock': env_lock_command,
+            'health': health_command,
+            'metrics': metrics_command,
+            'credentials_rotate': credentials_rotate_command,
         },
     )
     register_memory(

@@ -118,14 +118,21 @@ def audit_serve_command(args: argparse.Namespace) -> int:
 def audit_verify_command(args: argparse.Namespace) -> int:
     """Verify cryptographic audit chain integrity and optionally sign attestation."""
     audit_log_path = Path(args.root) / '.teaagent' / 'audit.jsonl'
+    ci_mode = bool(getattr(args, 'ci', False))
 
     if not audit_log_path.exists():
-        print_json(
-            {'status': 'error', 'message': f'Audit log not found at {audit_log_path}'}
-        )
+        payload = {
+            'status': 'error',
+            'message': f'Audit log not found at {audit_log_path}',
+        }
+        if ci_mode:
+            print_json(payload)
+        else:
+            print_json(payload)
         return 1
 
-    print('[Verifying...] Scanning audit events for tampering indicators...')
+    if not ci_mode:
+        print('[Verifying...] Scanning audit events for tampering indicators...')
     result = verify_audit_chain(audit_log_path)
 
     if not result.valid:
@@ -135,6 +142,16 @@ def audit_verify_command(args: argparse.Namespace) -> int:
             failures_by_category[f.category] = (
                 failures_by_category.get(f.category, 0) + 1
             )
+
+        if ci_mode:
+            print_json(
+                {
+                    'status': 'invalid',
+                    'event_count': result.event_count,
+                    'failure_count': len(result.failures),
+                }
+            )
+            return 1
 
         print('\n[✗] AUDIT CHAIN VERIFICATION FAILED — TAMPERING DETECTED')
         print(
@@ -185,6 +202,10 @@ def audit_verify_command(args: argparse.Namespace) -> int:
             }
         )
         return 1
+
+    if ci_mode:
+        print_json({'status': 'valid', 'event_count': result.event_count})
+        return 0
 
     print(
         '\n[✓] Cryptographic Hash Chain: VALID '

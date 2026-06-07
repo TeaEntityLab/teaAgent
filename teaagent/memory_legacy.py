@@ -1,8 +1,16 @@
-"""Legacy memory catalog module (re-exported from teaagent.memory.catalog for compatibility)."""
+"""Legacy memory catalog module (deprecated — use ``teaagent.memory``)."""
 
 from __future__ import annotations
 
-from teaagent.memory.catalog import (
+import warnings
+
+warnings.warn(
+    'teaagent.memory_legacy is deprecated; import from teaagent.memory instead',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from teaagent.memory.catalog import (  # noqa: E402
     MemoryCatalog,
     MemoryEntry,
     MemoryHierarchy,

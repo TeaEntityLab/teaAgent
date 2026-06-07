@@ -34,6 +34,7 @@ exclude = [
 "teaagent/approval_manager.py" = ["T201"]
 "teaagent/audit.py" = ["T201"]
 "teaagent/cli/**" = ["T201"]
+"teaagent/__init__.py" = ["F401"]
 "teaagent/collectors/repo_watch.py" = ["T201"]
 "teaagent/control_plane_api.py" = ["T201"]
 "teaagent/env_manager.py" = ["T201"]

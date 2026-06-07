@@ -340,6 +340,11 @@ def _audit(
             default=None,
             help='Path to SSH/GPG key for signing attestation (e.g., ~/.ssh/id_ed25519).',
         )
+        verify_cmd.add_argument(
+            '--ci',
+            action='store_true',
+            help='CI mode: JSON-only output, non-zero exit on failure.',
+        )
         verify_cmd.set_defaults(func=verify_handler)
 
     if export_handler is not None:
@@ -412,3 +417,44 @@ def _env(
     )
     lock_cmd.add_argument('--root', default='.', help='Workspace root.')
     lock_cmd.set_defaults(func=lock_handler)
+
+
+def _health(subparsers: argparse._SubParsersAction, handler: Callable | None) -> None:
+    p = subparsers.add_parser('health', help='Check workspace and harness health.')
+    p.add_argument('--root', default='.', help='Workspace root.')
+    p.add_argument('--human', action='store_true', help='Human-readable output.')
+    p.add_argument('--json', action='store_true', help='Force JSON output.')
+    p.set_defaults(func=handler)
+
+
+def _metrics(subparsers: argparse._SubParsersAction, handler: Callable | None) -> None:
+    p = subparsers.add_parser('metrics', help='Show in-process operation metrics.')
+    p.add_argument(
+        '--structured-logs',
+        action='store_true',
+        help='Enable structured JSON logging while collecting metrics.',
+    )
+    p.set_defaults(func=handler)
+
+
+def _credentials(
+    subparsers: argparse._SubParsersAction, handler: Callable | None
+) -> None:
+    p = subparsers.add_parser('credentials', help='Manage provider credentials.')
+    subs = p.add_subparsers(dest='credentials_command', required=True)
+    rotate = subs.add_parser('rotate', help='Rotate a provider API key.')
+    rotate.add_argument('provider', choices=available_providers())
+    rotate.add_argument('--root', default='.', help='Workspace root.')
+    rotate.add_argument('--api-key', default=None, help='New API key value.')
+    rotate.add_argument(
+        '--write-env', action='store_true', help='Write key to .teaagent/env.'
+    )
+    rotate.add_argument(
+        '--write-global',
+        action='store_true',
+        help='Write key to ~/.teaagent/providers_env.zsh.',
+    )
+    rotate.add_argument(
+        '--dry-run', action='store_true', help='Show plan without writing files.'
+    )
+    rotate.set_defaults(func=handler)

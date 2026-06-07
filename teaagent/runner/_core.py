@@ -581,7 +581,7 @@ class AgentRunner:
             )
         drift_error = self.plan_validator.validate_write_allowed(
             tool_name=decision.tool_name,
-            context=context,  # type: ignore[arg-type]
+            context=cast(dict[str, Any], context),
             tool_arguments=decision.arguments,
         )
         if drift_error:
@@ -628,7 +628,7 @@ class AgentRunner:
                     audit=self.audit,
                     run_id=run_id,
                     checkpoint_store=self.checkpoint_store,
-                    context=context,  # type: ignore[arg-type]
+                    context=cast(dict[str, Any], context),
                     cost_cents=cost_cents,
                     reason_code=reason_code_str,
                 )
@@ -748,7 +748,7 @@ class AgentRunner:
             and len(context['observations']) > self.compact_after_observations
         ):
             pre_compact_count = len(context['observations'])
-            compacted = self.compactor.compact(context)  # type: ignore[arg-type]
+            compacted = self.compactor.compact(cast(dict[str, Any], context))
             context['observations'] = compacted.context['observations']
             context['compacted_summary'] = compacted.summary
             context['memory_keys'] = compacted.pinned

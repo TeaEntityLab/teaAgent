@@ -607,6 +607,8 @@ class TeaAgentTUI:
             try:
                 if use_split_pane:
                     self._print_state_panel()
+                else:
+                    self._print_status_bar()
 
                 if self.input_fn:
                     raw_command = self.input_fn(self._prompt())
@@ -1473,6 +1475,34 @@ class TeaAgentTUI:
         model = self.model or 'default'
         routed = ':route' if self.route_model_enabled else ''
         return f'teaagent[{self.provider}:{model}{routed}:{self.permission_mode.value}{destructive}]> '
+
+    def _print_status_bar(self) -> None:
+        from teaagent.tui.state import format_status_bar
+
+        pending = 0
+        run_status = 'idle'
+        if self._cockpit_state:
+            pending = self._cockpit_state.approvals.pending_count
+            run_status = self._cockpit_state.harness_health.overall
+            if run_status == 'unknown':
+                run_status = 'idle'
+        memory_mb = None
+        try:
+            import resource
+
+            memory_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (
+                1024 * 1024
+            )
+        except (ImportError, OSError, AttributeError):
+            pass
+        self.output_fn(
+            format_status_bar(
+                permission_mode=self.permission_mode.value,
+                pending_approvals=pending,
+                run_status=run_status,
+                memory_mb=memory_mb,
+            )
+        )
 
     def _print_json(self, value: Any) -> None:
         self.output_fn(json.dumps(value, ensure_ascii=False, sort_keys=True))

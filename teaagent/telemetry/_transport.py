@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+_otel_trace: Any
 try:
     from opentelemetry import trace as _otel_trace
 except ImportError:  # pragma: no cover

@@ -127,7 +127,7 @@ jobs:
         # @pytest.mark.skipif(sys.platform == 'win32', reason="shell-dependent")
         # to skip on Windows. Until then, Windows test failures do not block merge.
         continue-on-error: ${{ matrix.os == 'windows-latest' }}
-        run: pytest --cov=teaagent --cov-report=term-missing --cov-fail-under=75
+        run: pytest --random-order --cov=teaagent --cov-report=term-missing --cov-fail-under=75
 
   test-telemetry:
     runs-on: ubuntu-latest
@@ -166,6 +166,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+
+      - name: Check public API docstrings
+        run: python3 scripts/check_public_docstrings.py
+
+      - name: Config access audit
+        run: python3 scripts/audit_config_access.py --max 50
+
+      - name: Complexity baseline
+        run: python3 scripts/check_complexity.py --max 99
 
       - name: Lint with ruff
         run: ruff check .

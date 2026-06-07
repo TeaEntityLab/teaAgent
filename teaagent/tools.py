@@ -1,3 +1,5 @@
+"""Tool registry, definitions, and dispatch for TeaAgent."""
+
 from __future__ import annotations
 
 import logging
@@ -122,6 +124,7 @@ class ToolRegistry:
         self._rate_states: dict[str, _RateLimiterState] = {}
         self._mcp_trust_hook_roots: set[str] = set()
         self.hook_registry = hook_registry
+        self._lookup_cache: dict[str, ToolDefinition] = {}
 
     def register(
         self,
@@ -172,17 +175,25 @@ class ToolRegistry:
         )
         if rate_limit is not None:
             self._rate_states[name] = _RateLimiterState(rate_limit)
+        self._lookup_cache.pop(name, None)
 
     def unregister(self, name: str) -> None:
         """Remove a tool from the registry (used when plugin governance fails)."""
         self._tools.pop(name, None)
         self._rate_states.pop(name, None)
+        self._lookup_cache.pop(name, None)
 
     def get(self, name: str) -> ToolDefinition:
+        cached = self._lookup_cache.get(name)
+        if cached is not None:
+            return cached
         try:
-            return self._tools[name]
+            tool = self._tools[name]
         except KeyError as exc:
             raise KeyError(f"tool '{name}' is not registered") from exc
+        if len(self._lookup_cache) < 256:
+            self._lookup_cache[name] = tool
+        return tool
 
     def list_tools(self) -> list[str]:
         """Return names of all registered tools."""

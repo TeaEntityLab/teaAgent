@@ -101,6 +101,11 @@ def _setup(
         ),
     )
     _add_workspace_bootstrap_args(p)
+    p.add_argument(
+        '--verify',
+        action='store_true',
+        help='Verify existing setup without making changes.',
+    )
     p.set_defaults(func=handler)
 
 

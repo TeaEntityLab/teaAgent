@@ -57,6 +57,21 @@ Run `pytest tests/test_phase6_docker.py` locally before relying on container Cod
   directories.
 - Destructive-tool behavior must remain explicit, auditable, and approval-gated.
 
+## Docstrings
+
+Public API modules should use Google-style docstrings with `Args`, `Returns`, and
+`Raises` where applicable. Run `task docs` to regenerate API reference.
+
+## Deprecation policy
+
+- Public API: deprecate in release X.Y, remove no sooner than the next minor or major per ADR.
+- Emit `DeprecationWarning` with migration hint when deprecating.
+- See [breaking-changes.md](docs/processes/breaking-changes.md).
+
+## Dependency pinning
+
+Release builds may export pinned deps via `scripts/freeze-deps.sh`.
+
 ## Security
 
 Do not open public issues for security-sensitive findings. Follow `SECURITY.md`.

@@ -1,3 +1,5 @@
+"""Append-only audit logging with tiered levels and redaction."""
+
 from __future__ import annotations
 
 import json
