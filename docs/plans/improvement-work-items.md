@@ -1052,12 +1052,12 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 ## Summary Statistics
 
 > **Last updated:** 2026-06-07
-> **Completed this session:** ARC-003, CQ-001, CQ-002, CQ-006, SEC-001, TST-001, INFRA-002, DEV-002, DEV-005, DEP-001, TST-008 (partial), UX-001 (partial)
+> **Completed this session:** ARC-003, CQ-001, CQ-002, CQ-006, SEC-001, TST-001, TST-002, TST-003, TST-004, TST-005, TST-011, INFRA-002, DEV-002, DEV-005, DEP-001, TST-008 (partial), UX-001 (partial)
 
 | Category | Items | Done | Remaining | P1 | P2 | P3 |
 |----------|-------|:----:|:---------:|:--:|:--:|:--:|
 | Architecture (ARC) | 10 | **3** | 7 | 3 | 3 | 1 |
-| Testing (TST) | 12 | **3** | 9 | 3 | 4 | 2 |
+| Testing (TST) | 12 | **7** | 5 | 1 | 3 | 1 |
 | Developer Experience (DEV) | 8 | **4** | 4 | 0 | 2 | 2 |
 | Code Quality (CQ) | 6 | **3** | 3 | 1 | 1 | 1 |
 | Security (SEC) | 5 | **1** | 4 | 2 | 2 | 0 |
@@ -1068,7 +1068,7 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 | Governance (GOV) | 4 | **0** | 4 | 0 | 3 | 1 |
 | User Experience (UX) | 4 | **1** | 3 | 0 | 2 | 1 |
 | Infrastructure (INFRA) | 5 | **2** | 3 | 1 | 1 | 1 |
-| **Total** | **73** | **18** | **55** | **14** | **28** | **13** |
+| **Total** | **73** | **22** | **51** | **12** | **27** | **12** |
 
 ---
 
@@ -1083,6 +1083,11 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 
 ### Testing
 - **TST-001** — mypy `check_untyped_defs = true` enabled for `tests/` (commit `720f129`)
+- **TST-002** — Coverage omit reduced to only `tui/__init__.py` (thin facade). Core TUI code (`core.py`, `state.py`, `rendering.py`) is now covered. `_commands.py` removed from omit.
+- **TST-003** — Tournament module removed from coverage omit (was already clean).
+- **TST-004** — Validation module removed from coverage omit (was already clean).
+- **TST-005** — Zero-coverage and low-coverage module test files exist and pass (138 tests covering ACP, plugin_system, plan_mode, LLM retry, etc.).
+- **TST-011** — `test_governance_compliance.py` verifies AGENTS.md rules: ToolRegistry registration, schema/annotations requirements, destructive tool approval, run limits. 15 tests pass.
 - **TST-008 (partial)** — `conftest.py` already exists with shared fixtures
 
 ### Code Quality

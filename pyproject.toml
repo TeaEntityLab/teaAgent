@@ -202,7 +202,6 @@ targets = ["."]
 source = ["teaagent"]
 omit = [
     "teaagent/tui/__init__.py",
-    "teaagent/tui/_commands.py",
 ]
 
 [tool.ruff]
