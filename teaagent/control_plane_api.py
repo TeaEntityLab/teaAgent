@@ -154,7 +154,7 @@ class ControlPlaneServer:
         ]
 
 
-def _make_handler(
+def _make_handler(  # noqa: C901
     plane: ControlPlaneServer,
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
@@ -203,7 +203,7 @@ def _make_handler(
             self._json_response(HTTPStatus.UNAUTHORIZED, {'error': reason})
             return False
 
-        def do_GET(self) -> None:
+        def do_GET(self) -> None:  # noqa: C901
             path = urlparse(self.path).path
             if path == '/api/health':
                 if not self._require_auth(allow_public_health=True):

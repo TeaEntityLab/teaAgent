@@ -7,7 +7,7 @@ at startup with the shared ToolRegistry.
 
 from __future__ import annotations
 
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry
 
 
 def register(registry: ToolRegistry) -> None:

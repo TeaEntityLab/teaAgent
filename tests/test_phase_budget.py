@@ -3,8 +3,9 @@ from __future__ import annotations
 import unittest
 from dataclasses import FrozenInstanceError
 
-from teaagent.budget import Phase, PhaseBudget, RunBudget
+from teaagent.budget import Phase, PhaseBudget
 from teaagent.phase_tracker import PhaseTracker
+from teaagent.types import RunBudget
 
 
 class PhaseEnumTests(unittest.TestCase):
@@ -241,11 +242,9 @@ class AgentRunnerPhaseBudgetIntegrationTests(unittest.TestCase):
         max_iterations: int = 25,
         max_tool_calls: int = 25,
     ):
-        from teaagent.audit import AuditLogger
-        from teaagent.budget import RunBudget
         from teaagent.phase_tracker import PhaseTracker
         from teaagent.runner import AgentRunner
-        from teaagent.tools import ToolAnnotations, ToolRegistry
+        from teaagent.types import AuditLogger, RunBudget, ToolAnnotations, ToolRegistry
 
         registry = ToolRegistry()
         registry.register(

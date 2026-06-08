@@ -353,7 +353,7 @@ def _graph_rag_reason(
     return 'no_hybrid_index'
 
 
-def _graph_rag_evidence(
+def _graph_rag_evidence(  # noqa: C901
     root: Path,
     task: str,
     *,

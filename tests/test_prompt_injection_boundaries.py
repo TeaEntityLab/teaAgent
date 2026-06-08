@@ -14,15 +14,12 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from teaagent.approval_manager import (
-    ApprovalManager,
-    PermissionMode,
-    is_protected_skill_path,
-)
+from teaagent.approval import ApprovalManager
+from teaagent.approval_manager import is_protected_skill_path
 from teaagent.audit import redact_audit_payload
-from teaagent.errors import ToolPermissionError
 from teaagent.memory.catalog import MemoryCatalog
 from teaagent.policy import ApprovalPolicy
+from teaagent.types import PermissionMode, ToolPermissionError
 from tests.fixtures.injection_attack_payloads import (
     AUDIT_SENSITIVE_PAYLOADS,
     CLI_ARG_INJECTION_PAYLOADS,

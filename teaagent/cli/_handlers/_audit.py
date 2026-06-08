@@ -6,12 +6,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from teaagent.audit import AuditLogger
-from teaagent.audit_chain import verify_audit_chain
 from teaagent.audit_export import export_compliance_bundle, write_compliance_bundle
 from teaagent.cli._output import print_json
 from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.ssh_signatures import sign_message_ssh
+from teaagent.types import AuditLogger, verify_audit_chain
 
 
 def audit_list_command(args: argparse.Namespace) -> int:
@@ -115,7 +114,7 @@ def audit_serve_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def audit_verify_command(args: argparse.Namespace) -> int:
+def audit_verify_command(args: argparse.Namespace) -> int:  # noqa: C901
     """Verify cryptographic audit chain integrity and optionally sign attestation."""
     audit_log_path = Path(args.root) / '.teaagent' / 'audit.jsonl'
     ci_mode = bool(getattr(args, 'ci', False))

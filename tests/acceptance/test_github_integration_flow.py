@@ -10,7 +10,7 @@ from teaagent.github_integration import (
     github_list_prs,
     register_github_tools,
 )
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def test_github_tools_registered() -> None:

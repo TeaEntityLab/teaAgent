@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import _auto_curate_memory
 from teaagent.memory.catalog import MemoryCatalog
 from teaagent.provenance_gate import (
@@ -14,7 +13,7 @@ from teaagent.provenance_gate import (
     ProvenanceSourceKind,
     evaluate_persistent_write,
 )
-from teaagent.runner._types import FinalAnswer, RunResult
+from teaagent.types import AuditLogger, FinalAnswer, RunResult
 
 
 class ProvenanceGateMemoryQuarantineTests(unittest.TestCase):

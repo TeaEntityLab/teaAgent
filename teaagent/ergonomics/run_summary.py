@@ -34,7 +34,7 @@ def _changed_paths_from_undo_journal(path: Path) -> list[str]:
     return _unique_strs(paths)
 
 
-def summarize_run(
+def summarize_run(  # noqa: C901
     *,
     root: str | Path,
     run_id: str,

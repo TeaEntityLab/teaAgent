@@ -6,16 +6,13 @@ import threading
 import time
 import urllib.request
 
+from teaagent.approval import JITApprovalServer
 from teaagent.control_plane_api import (
     ControlPlaneServer,
     ControlPlaneState,
     format_sse_event,
 )
-from teaagent.jit_approval_server import (
-    ApprovalRequestRecord,
-    ApprovalStatus,
-    JITApprovalServer,
-)
+from teaagent.jit_approval_server import ApprovalRequestRecord, ApprovalStatus
 from teaagent.tool_permissions import (
     PermissionRequest,
     ToolPermission,

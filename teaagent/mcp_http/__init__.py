@@ -127,7 +127,7 @@ def serve_mcp_http(
     return 0
 
 
-def _make_handler(
+def _make_handler(  # noqa: C901
     registry: ToolRegistry,
     sessions: MCPSessionStore,
     auth_token: Optional[str],
@@ -324,7 +324,7 @@ def _make_handler(
 
         # -- HTTP method dispatchers --
 
-        def do_POST(self) -> None:
+        def do_POST(self) -> None:  # noqa: C901
             if self._is_oauth_path():
                 if self.path.startswith(_TOKEN_PATH):
                     return self._handle_oauth_token()

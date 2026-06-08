@@ -235,7 +235,7 @@ def update_global_tools(
     return policy
 
 
-def update_server_tools(
+def update_server_tools(  # noqa: C901
     policy: MCPTrustPolicy,
     server: str,
     *,

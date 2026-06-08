@@ -47,7 +47,7 @@ def _elapsed_seconds(
     return max(0.0, (current - start).total_seconds())
 
 
-def build_run_progress_summary(
+def build_run_progress_summary(  # noqa: C901
     store: RunStore,
     run_id: str,
     *,

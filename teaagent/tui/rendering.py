@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from teaagent.policy import PermissionMode
+from teaagent.types import PermissionMode
 
 from .core import TeaAgentTUI
 from .state import InputFn

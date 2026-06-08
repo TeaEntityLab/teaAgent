@@ -7,9 +7,8 @@ Uses a stub adapter so no real API key is needed.
 
 from __future__ import annotations
 
-from teaagent.audit import AuditLogger
 from teaagent.runner import RunResult
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import AuditLogger, ToolAnnotations, ToolRegistry
 
 
 class _StubAdapter:

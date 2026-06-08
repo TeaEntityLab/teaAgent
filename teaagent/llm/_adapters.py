@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from collections.abc import Iterator
 from typing import Any, Optional
@@ -29,6 +30,8 @@ from teaagent.llm._types import (
     ProviderConfig,
     SafetyCategory,
 )
+
+logger = logging.getLogger(__name__)
 
 _GEMINI_SAFETY_CATEGORY_MAP: dict[str, SafetyCategory] = {
     'HARM_CATEGORY_HARASSMENT': SafetyCategory.HARASSMENT,
@@ -205,6 +208,15 @@ class OpenAICompatibleAdapter:
         if self._rate_limiter is not None:
             allowed, reason = self._rate_limiter.allow(key)
             if not allowed:
+                logger.warning(
+                    'rate_limit_exceeded: %s',
+                    reason,
+                    extra={
+                        'event': 'rate_limit_exceeded',
+                        'provider': self.provider,
+                        'error_code': 'RATE_LIMIT',
+                    },
+                )
                 raise LLMHTTPError(
                     f'rate limit exceeded for provider {self.provider}: {reason}',
                     status_code=429,
@@ -463,6 +475,15 @@ class ClaudeAdapter:
         if self._rate_limiter is not None:
             allowed, reason = self._rate_limiter.allow(key)
             if not allowed:
+                logger.warning(
+                    'rate_limit_exceeded: %s',
+                    reason,
+                    extra={
+                        'event': 'rate_limit_exceeded',
+                        'provider': self.provider,
+                        'error_code': 'RATE_LIMIT',
+                    },
+                )
                 raise LLMHTTPError(
                     f'rate limit exceeded for provider {self.provider}: {reason}',
                     status_code=429,
@@ -609,6 +630,15 @@ class GeminiAdapter:
         if self._rate_limiter is not None:
             allowed, reason = self._rate_limiter.allow(key)
             if not allowed:
+                logger.warning(
+                    'rate_limit_exceeded: %s',
+                    reason,
+                    extra={
+                        'event': 'rate_limit_exceeded',
+                        'provider': self.provider,
+                        'error_code': 'RATE_LIMIT',
+                    },
+                )
                 raise LLMHTTPError(
                     f'rate limit exceeded for provider {self.provider}: {reason}',
                     status_code=429,

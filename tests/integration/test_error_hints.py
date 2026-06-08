@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from teaagent.errors import (
+from teaagent.types import (
     BudgetExceededError,
     RunCancelledError,
     ToolExecutionError,

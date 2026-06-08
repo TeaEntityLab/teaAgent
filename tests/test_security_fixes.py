@@ -10,13 +10,13 @@ from pathlib import Path
 import pytest
 
 from teaagent.context_bus import ContextBus, ContextBusConfig
-from teaagent.errors import ToolExecutionError, ToolValidationError
 from teaagent.llm._retry import LLMRetryConfig
 from teaagent.surface_auth import (
     hash_token,
     hash_token_with_salt,
     verify_token_with_salt,
 )
+from teaagent.types import ToolExecutionError, ToolValidationError
 from teaagent.workspace_tools._files import (
     WorkspaceToolConfig,
     build_workspace_tool_registry,

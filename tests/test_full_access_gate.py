@@ -18,15 +18,11 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from teaagent.approval_manager import (
-    ApprovalManager,
-    PermissionMode,
-    PermissionModeEnforcer,
-)
+from teaagent.approval import ApprovalManager, PermissionModeEnforcer
 from teaagent.auto_mode import AutoModeConfig
-from teaagent.errors import DenialReasonCode, ToolPermissionError
 from teaagent.policy import ApprovalPolicy
 from teaagent.runner._auto_mode_manager import AutoModeManager
+from teaagent.types import DenialReasonCode, PermissionMode, ToolPermissionError
 
 _DESTRUCTIVE_TOOL = 'workspace_write_file'
 

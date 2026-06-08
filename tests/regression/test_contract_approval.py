@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from teaagent.errors import ToolPermissionError
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
+from teaagent.types import PermissionMode, ToolPermissionError
 
 
 def test_read_only_mode_blocks_all_destructive() -> None:
@@ -104,7 +104,7 @@ def test_danger_full_access_flag_bypasses_approval() -> None:
 def test_allow_all_destructive_without_ack_blocks() -> None:
     # Regression guard for P0-TR-001: allow_all_destructive alone must NOT
     # silently bypass approval in prompt mode.
-    from teaagent.errors import DenialReasonCode, ToolPermissionError
+    from teaagent.types import DenialReasonCode, ToolPermissionError
 
     policy = ApprovalPolicy(
         permission_mode=PermissionMode.PROMPT,

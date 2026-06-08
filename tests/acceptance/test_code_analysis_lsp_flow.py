@@ -24,7 +24,7 @@ from teaagent.code_analysis import (
     extract_tree_sitter_relations,
 )
 from teaagent.code_analysis._tools import register_code_analysis_tools
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 READ_ONLY_TOOLS = {
     'code_definition',

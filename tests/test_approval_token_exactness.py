@@ -6,10 +6,9 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from teaagent.approval_manager import PermissionMode
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
-from teaagent.errors import ToolPermissionError
 from teaagent.policy import ApprovalPolicy
+from teaagent.types import PermissionMode, ToolPermissionError
 
 
 def _policy_with_store(tmp: str, run_id: str) -> ApprovalPolicy:

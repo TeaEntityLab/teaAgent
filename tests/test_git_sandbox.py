@@ -540,7 +540,7 @@ def test_git_sandbox_keep(tmp_path: Path) -> None:
 
 def test_git_transaction_sink(tmp_path: Path) -> None:
     """Test GitTransactionSink commits after successful tool calls."""
-    from teaagent.audit import AuditEvent
+    from teaagent.types import AuditEvent
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(
@@ -595,7 +595,7 @@ def test_git_transaction_sink(tmp_path: Path) -> None:
 
 def test_git_transaction_sink_ignores_failed_calls(tmp_path: Path) -> None:
     """Test GitTransactionSink does not commit failed tool calls."""
-    from teaagent.audit import AuditEvent
+    from teaagent.types import AuditEvent
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(
@@ -650,7 +650,7 @@ def test_git_transaction_sink_ignores_failed_calls(tmp_path: Path) -> None:
 
 def test_git_transaction_sink_commits_shell_mutate(tmp_path: Path) -> None:
     """Test GitTransactionSink commits for shell mutate tools."""
-    from teaagent.audit import AuditEvent
+    from teaagent.types import AuditEvent
 
     subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(

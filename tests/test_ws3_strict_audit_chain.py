@@ -7,9 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.audit import AuditLogger
-from teaagent.audit_chain import verify_audit_chain
 from teaagent.security_env import audit_chain_legacy_compat, audit_chain_strict
+from teaagent.types import AuditLogger, verify_audit_chain
 
 
 def test_strict_mode_rejects_legacy_reset_line(tmp_path: Path) -> None:

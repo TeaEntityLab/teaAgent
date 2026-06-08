@@ -75,7 +75,7 @@ def _path_under_dir(path: Path, directory: Path) -> bool:
         return False
 
 
-def load_plan_contract(
+def load_plan_contract(  # noqa: C901
     plan_path: str | Path,
     *,
     root: str | Path = '.',

@@ -16,8 +16,7 @@ from teaagent.anp_adapter import (
     ANPInboundAdapter,
     ANPOutboundClient,
 )
-from teaagent.errors import BudgetExceededError
-from teaagent.policy import PermissionMode
+from teaagent.types import BudgetExceededError, PermissionMode
 
 INPUT_SCHEMA = {
     'type': 'object',

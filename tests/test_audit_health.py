@@ -11,13 +11,12 @@ from unittest.mock import patch
 
 import pytest
 
-from teaagent.audit import AuditLogger
 from teaagent.audit_health import (
     AuditDurabilityHealth,
     assess_audit_health,
     format_audit_health,
 )
-from teaagent.errors import AuditDurabilityError
+from teaagent.types import AuditDurabilityError, AuditLogger
 
 # ---------------------------------------------------------------------------
 # AuditDurabilityHealth.to_dict()

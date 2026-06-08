@@ -61,7 +61,7 @@ def _extract_write_path(arguments: dict[str, Any] | None) -> str | None:
     return None
 
 
-def assert_write_scope(
+def assert_write_scope(  # noqa: C901
     *,
     tool_name: str,
     arguments: dict[str, Any] | None,

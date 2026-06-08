@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry
 
 
 @pytest.fixture
@@ -130,7 +130,7 @@ class TestRunBudgetLimits:
 
     def test_run_has_iteration_limit(self) -> None:
         """Check that the agent runner enforces iteration limits."""
-        from teaagent.budget import RunBudget
+        from teaagent.types import RunBudget
 
         budget = RunBudget()
         assert budget.max_iterations > 0, (
@@ -139,7 +139,7 @@ class TestRunBudgetLimits:
 
     def test_run_has_tool_call_limit(self) -> None:
         """Check that the agent runner enforces tool-call limits."""
-        from teaagent.budget import RunBudget
+        from teaagent.types import RunBudget
 
         budget = RunBudget()
         assert budget.max_tool_calls > 0, (
@@ -166,7 +166,7 @@ class TestAuditLogging:
 
     def test_audit_event_has_required_fields(self) -> None:
         """Audit events must carry run_id, event_type, and payload."""
-        from teaagent.audit import AuditEvent
+        from teaagent.types import AuditEvent
 
         event = AuditEvent(
             run_id='test-run',
@@ -186,13 +186,13 @@ class TestToolErrors:
 
     def test_tool_execution_error_has_message(self) -> None:
         """ToolExecutionError must carry a human-readable message."""
-        from teaagent.errors import ToolExecutionError
+        from teaagent.types import ToolExecutionError
 
         err = ToolExecutionError('test error message')
         assert 'test error message' in str(err)
 
     def test_tool_execution_error_is_classified(self) -> None:
         """ToolExecutionError is a subclass of Exception (classified by type)."""
-        from teaagent.errors import ToolExecutionError
+        from teaagent.types import ToolExecutionError
 
         assert issubclass(ToolExecutionError, Exception)

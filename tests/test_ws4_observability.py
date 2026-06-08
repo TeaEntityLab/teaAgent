@@ -9,8 +9,6 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.approval_manager import PermissionMode
-from teaagent.audit import AuditLogger
 from teaagent.audit_health import assess_audit_health, format_audit_health
 from teaagent.audit_tail import (
     classify_audit_event,
@@ -22,6 +20,7 @@ from teaagent.config_lint import lint_runtime_config
 from teaagent.run_metrics import summarize_run_latencies
 from teaagent.run_receipt import build_run_receipt
 from teaagent.run_store import RunResult, RunStore
+from teaagent.types import AuditLogger, PermissionMode
 
 
 def test_summarize_run_latencies_from_audit_pairs() -> None:

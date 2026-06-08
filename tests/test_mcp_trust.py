@@ -22,7 +22,7 @@ from teaagent.mcp_trust import (
     save_mcp_trust_policy,
     update_server_tools,
 )
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry
 
 
 def _register_mcp_tool(

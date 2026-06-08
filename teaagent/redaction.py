@@ -70,7 +70,7 @@ class RedactionConfig:
     ssh_keys: bool = True
     extra_patterns: list[_Pattern] = field(default_factory=list)
 
-    def build_patterns(self) -> list[_Pattern]:
+    def build_patterns(self) -> list[_Pattern]:  # noqa: C901
         """Return the active list of ``(pattern, replacement)`` pairs."""
         patterns: list[_Pattern] = []
         if self.bearer_tokens:

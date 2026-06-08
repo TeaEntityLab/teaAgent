@@ -242,7 +242,7 @@ def agent_attach_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def agent_undo_command(args: argparse.Namespace) -> int:
+def agent_undo_command(args: argparse.Namespace) -> int:  # noqa: C901
     import base64
     import difflib
 

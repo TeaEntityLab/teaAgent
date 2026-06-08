@@ -355,7 +355,7 @@ def _run_id_from_log(log_path: Path) -> Optional[str]:
     return None
 
 
-def build_agent_run_command(args: Any, task: str) -> list[str]:
+def build_agent_run_command(args: Any, task: str) -> list[str]:  # noqa: C901
     """Reconstruct a foreground ``agent run`` argv list for a background worker."""
     cmd = [
         sys.executable,

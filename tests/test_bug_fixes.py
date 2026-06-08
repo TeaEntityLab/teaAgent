@@ -13,8 +13,8 @@ from teaagent.audit_viewer import _status_class
 from teaagent.cli._handlers._agent import _resolve_selected_skills
 from teaagent.cli._handlers._doctor import _redact_sensitive_fields
 from teaagent.cli._handlers._ergonomics import _parse_approval_arguments
-from teaagent.errors import ToolExecutionError
 from teaagent.llm._retry import LLMRetryConfig
+from teaagent.types import ToolExecutionError
 from teaagent.workspace_tools._files import (
     WorkspaceToolConfig,
     build_workspace_tool_registry,
@@ -396,7 +396,7 @@ class TestLoggingImprovements:
 
     def test_docstring_expansion(self):
         """Test that _apply_audit_level docstring is expanded."""
-        from teaagent.audit import AuditLogger
+        from teaagent.types import AuditLogger
 
         assert AuditLogger._apply_audit_level.__doc__ is not None
         # Verify docstring lists specific fields removed at each level

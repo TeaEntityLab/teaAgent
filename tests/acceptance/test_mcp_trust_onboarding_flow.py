@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.audit import AuditLogger
 from teaagent.hooks import HookError
 from teaagent.mcp_trust import (
     MCPServerTrust,
@@ -28,6 +27,7 @@ from teaagent.mcp_trust import (
     save_mcp_trust_policy,
     update_server_tools,
 )
+from teaagent.types import AuditLogger
 
 
 class TestMCPServerTrustModel:

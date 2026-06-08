@@ -8,6 +8,7 @@ Legacy paths (``teaagent.approval_manager``, etc.) remain supported.
 """
 
 from teaagent.approval.core import (
+    ApprovalHandler,
     ApprovalRequest,
     JITApprovalState,
     MultiSigQuorumConfig,
@@ -28,6 +29,7 @@ from teaagent.approval.server import JITApprovalServer
 from teaagent.approval.ui import DiffApprovalHandler
 
 __all__ = [
+    'ApprovalHandler',
     'ApprovalManager',
     'ApprovalQueueStore',
     'CentralizedApprovalQueue',

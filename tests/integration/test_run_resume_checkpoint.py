@@ -8,11 +8,10 @@ Verifies that:
 
 from __future__ import annotations
 
-from teaagent.audit import AuditLogger
 from teaagent.checkpoint import InMemoryCheckpointStore, SQLiteCheckpointStore
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import AuditLogger, PermissionMode, ToolAnnotations, ToolRegistry
 
 
 def _make_registry_with_write_tool() -> ToolRegistry:

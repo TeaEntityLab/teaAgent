@@ -8,15 +8,13 @@ from __future__ import annotations
 
 import pytest
 
-from teaagent.approval_manager import (
+from teaagent.approval import (
     ApprovalManager,
-    JITApprovalState,
     MultiSigQuorumConfig,
-    PermissionMode,
     PermissionModeEnforcer,
-    _verify_ssh_signature,
 )
-from teaagent.errors import ToolPermissionError
+from teaagent.approval_manager import _verify_ssh_signature
+from teaagent.types import JITApprovalState, PermissionMode, ToolPermissionError
 
 
 def test_approval_manager_imports():

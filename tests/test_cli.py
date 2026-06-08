@@ -1023,7 +1023,7 @@ class CLITests(unittest.TestCase):
         self.assertEqual(create.call_args.kwargs['model'], 'profile-model')
 
     def test_audit_list_show_and_prune(self) -> None:
-        from teaagent.audit import AuditLogger
+        from teaagent.types import AuditLogger
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / '.teaagent' / 'runs' / 'run-1.jsonl'
@@ -1087,7 +1087,8 @@ class CLITests(unittest.TestCase):
 
     def test_audit_decrypt_includes_chain_validation(self) -> None:
         """Test that audit decrypt command includes chain validation in output."""
-        from teaagent.audit import CRYPTO_AVAILABLE, AuditLogger
+        from teaagent.audit import CRYPTO_AVAILABLE
+        from teaagent.types import AuditLogger
 
         if not CRYPTO_AVAILABLE:
             self.skipTest('cryptography not available')

@@ -761,7 +761,7 @@ class ApprovalManager:
         self.jit_state = self._jit_manager.jit_state
         self._signature_executor = self._multisig_manager._executor
 
-    def assert_allowed(
+    def assert_allowed(  # noqa: C901
         self,
         *,
         tool_name: str,

@@ -14,8 +14,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from teaagent.llm._config import PROVIDER_CONFIGS  # noqa: E402
-from teaagent.policy import PermissionMode  # noqa: E402
 from teaagent.run_evidence import check_evidence_completeness  # noqa: E402
+from teaagent.types import PermissionMode  # noqa: E402
 
 TIER_START = '<!-- ACCEPTANCE_TIERS:START -->'
 TIER_END = '<!-- ACCEPTANCE_TIERS:END -->'

@@ -100,7 +100,7 @@ class ChatAgentConfig:
     validation_profile: Optional[str] = None
 
     @classmethod
-    def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':
+    def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':  # noqa: C901
         from teaagent.config_loader import ConfigResolver
         from teaagent.policy import parse_permission_mode
 

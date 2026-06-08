@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from teaagent.errors import ToolValidationError
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry, ToolValidationError
 
 
 class ToolRegistryRegistrationTests(unittest.TestCase):

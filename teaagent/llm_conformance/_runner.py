@@ -158,7 +158,7 @@ def run_tiered_conformance(
     return TieredConformanceReport(tier=tier.value, results=results)
 
 
-def _run_tiered_provider(
+def _run_tiered_provider(  # noqa: C901
     provider: str,
     *,
     tier: ConformanceTier,

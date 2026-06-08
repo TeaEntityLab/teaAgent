@@ -10,11 +10,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.run_undo import UndoJournal, UndoResult
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import AuditLogger, PermissionMode, ToolAnnotations, ToolRegistry
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -207,7 +206,7 @@ def test_journal_path_traversal_ignored(tmp_path):
     audit = AuditLogger()
     audit.add_sink(journal)
 
-    from teaagent.audit import AuditEvent
+    from teaagent.types import AuditEvent
 
     evil_event = AuditEvent(
         event_type='tool_call_started',
@@ -243,7 +242,7 @@ def test_failed_write_must_not_create_undoable_journal(tmp_path):
     audit = AuditLogger()
     audit.add_sink(journal)
 
-    from teaagent.errors import ToolExecutionError
+    from teaagent.types import ToolExecutionError
 
     notes = tmp_path / 'notes.txt'
     notes.write_text('user version\n', encoding='utf-8')

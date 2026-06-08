@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
+from teaagent.approval import ApprovalQueueStore
 from teaagent.subagents._approval_queue import (
     ApprovalBatch,
     ApprovalRequestStatus,
@@ -14,7 +15,6 @@ from teaagent.subagents._approval_queue import (
 )
 from teaagent.subagents._approval_queue_store import (
     ApprovalQueuePruneReport,
-    ApprovalQueueStore,
     QueueDiskSnapshot,
     default_hmac_secret,
     pending_requests_from_snapshot,

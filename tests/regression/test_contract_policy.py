@@ -10,8 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.errors import ToolExecutionError, ToolValidationError
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    ToolAnnotations,
+    ToolExecutionError,
+    ToolRegistry,
+    ToolValidationError,
+)
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 

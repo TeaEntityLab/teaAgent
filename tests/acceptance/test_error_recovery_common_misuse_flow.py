@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from teaagent.cli import main
-from teaagent.errors import BudgetExceededError, ToolPermissionError
+from teaagent.types import BudgetExceededError, ToolPermissionError
 
 
 def test_provider_missing_exits_with_setup_hint(

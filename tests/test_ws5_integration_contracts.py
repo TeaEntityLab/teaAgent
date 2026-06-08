@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.errors import ToolPermissionError
 from teaagent.integration import (
     AgentService,
     CallbackApprovalStrategy,
@@ -18,9 +17,13 @@ from teaagent.integration import (
     validate_plugin_tools,
 )
 from teaagent.integration.event_stream import RunEventStream
-from teaagent.policy import PermissionMode
-from teaagent.runner._types import ApprovalRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    ApprovalRequest,
+    PermissionMode,
+    ToolAnnotations,
+    ToolPermissionError,
+    ToolRegistry,
+)
 
 
 def test_prepare_agent_run_builds_shared_objects(tmp_path: Path) -> None:

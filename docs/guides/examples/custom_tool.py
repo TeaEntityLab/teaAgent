@@ -11,11 +11,15 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
-from teaagent.budget import RunBudget
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    AuditLogger,
+    PermissionMode,
+    RunBudget,
+    ToolAnnotations,
+    ToolRegistry,
+)
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 

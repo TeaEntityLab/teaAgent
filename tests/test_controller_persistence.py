@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from teaagent.chat_session_controller import ChatSessionController, SessionState
-from teaagent.runner._types import FinalAnswer, RunResult
+from teaagent.types import FinalAnswer, RunResult
 
 
 def _make_store_mock_factory(failing_method: str, exc: Exception):

@@ -278,7 +278,7 @@ def _parse_timestamp(value: object) -> Optional[datetime]:
     return None
 
 
-def verify_audit_chain(
+def verify_audit_chain(  # noqa: C901
     log_path: Path,
     secret_key: Optional[bytes] = None,
     *,

@@ -16,7 +16,7 @@ from teaagent.guided_recovery import (
     RecoveryAdviceFormatter,
     RecoverySelector,
 )
-from teaagent.runner._types import FinalAnswer, RunResult
+from teaagent.types import FinalAnswer, RunResult
 
 
 def test_guided_recovery_end_to_end():

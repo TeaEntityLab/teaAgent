@@ -16,11 +16,9 @@ from teaagent.audit import (
     AUDIT_TRUNCATED,
     CRYPTO_AVAILABLE,
     MAX_AUDIT_STRING_LENGTH,
-    AuditEvent,
-    AuditLogger,
     utc_now,
 )
-from teaagent.audit_chain import verify_audit_chain
+from teaagent.types import AuditEvent, AuditLogger, verify_audit_chain
 
 if CRYPTO_AVAILABLE:
     from cryptography.fernet import Fernet
@@ -381,7 +379,7 @@ class AuditLoggerTests(unittest.TestCase):
             self.assertEqual(len(lines), 5)
 
             # Verify chain integrity is maintained under concurrent writes
-            from teaagent.audit_chain import verify_audit_chain
+            from teaagent.types import verify_audit_chain
 
             result = verify_audit_chain(path)
             self.assertTrue(result.valid, f'Chain validation failed: {result.error}')

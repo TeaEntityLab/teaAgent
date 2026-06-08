@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 
-from teaagent.policy import parse_permission_mode
+from teaagent.approval import parse_permission_mode
 
 
 def chat_command(args: argparse.Namespace) -> int:

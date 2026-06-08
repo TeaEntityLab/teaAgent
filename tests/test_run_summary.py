@@ -3,12 +3,16 @@ from __future__ import annotations
 import json
 import logging
 
-from teaagent.audit import AuditLogger
-from teaagent.budget import RunBudget
 from teaagent.ergonomics.run_summary import summarize_run
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    AuditLogger,
+    PermissionMode,
+    RunBudget,
+    ToolAnnotations,
+    ToolRegistry,
+)
 
 
 def test_summarize_run_counts_tools_and_files(tmp_path) -> None:

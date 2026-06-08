@@ -17,12 +17,11 @@ import json
 import tempfile
 from pathlib import Path
 
-from teaagent.audit import AuditEvent, AuditLogger
-from teaagent.budget import RunBudget
 from teaagent.cost_tracker import CostTracker
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
 from teaagent.telemetry import InMemoryMetricsSink
+from teaagent.types import AuditEvent, AuditLogger, PermissionMode, RunBudget
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 # ── 1. Custom metric counter via InMemoryMetricsSink ──────────────────────────

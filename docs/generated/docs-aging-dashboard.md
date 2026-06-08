@@ -4,11 +4,23 @@
 
 **Stale threshold:** 90 days since `Last reviewed`
 **Current-truth docs scanned:** 17
-**Needs attention:** 2
+**Needs attention:** 4
 
 Regenerate: `python3 scripts/report_docs_aging.py`
 
 ## Stale Or Incomplete By Owner Surface
+
+### architecture
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `docs/architecture.md` | stale_by_mtime | 2026-06-06 | 2026-06-07 | Missing owner banner; File modified after last reviewed date |
+
+### project
+
+| Document | Status | Last reviewed | File mtime | Notes |
+| --- | --- | --- | --- | --- |
+| `README.md` | stale_by_mtime | 2026-06-06 | 2026-06-07 | Missing owner banner; File modified after last reviewed date |
 
 ### roadmap
 

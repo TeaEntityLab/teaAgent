@@ -5,7 +5,6 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from teaagent.errors import ToolExecutionError, ToolValidationError
 from teaagent.hooks import (
     HookConfig,
     HookError,
@@ -17,7 +16,12 @@ from teaagent.tool_call_context import (
     bind_tool_call_context,
     reset_tool_call_context,
 )
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    ToolAnnotations,
+    ToolExecutionError,
+    ToolRegistry,
+    ToolValidationError,
+)
 
 
 def _init_repo(root: Path) -> None:
@@ -191,7 +195,7 @@ class TestHookIntegration(unittest.TestCase):
         self.assertEqual(result, {'value': 1, 'extra': 'added'})
 
     def test_hook_mutations_are_audited_when_context_is_bound(self) -> None:
-        from teaagent.audit import AuditLogger
+        from teaagent.types import AuditLogger
 
         audit = AuditLogger(path=None)
         token = bind_tool_call_context(
@@ -231,7 +235,7 @@ class TestHookIntegration(unittest.TestCase):
         self.assertIn('tool_hook_post_mutation', event_types)
 
     def test_hook_veto_is_audited_when_context_is_bound(self) -> None:
-        from teaagent.audit import AuditLogger
+        from teaagent.types import AuditLogger
 
         audit = AuditLogger(path=None)
         token = bind_tool_call_context(

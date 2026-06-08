@@ -4,7 +4,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from teaagent.errors import ToolValidationError
 from teaagent.prompt import (
     PromptBundle,
     assemble_agent_prompt,
@@ -13,7 +12,7 @@ from teaagent.prompt import (
     parse_model_decision,
 )
 from teaagent.runner import FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry, ToolValidationError
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 

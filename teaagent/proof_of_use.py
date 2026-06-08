@@ -146,7 +146,7 @@ def _skill_output_verification_time(
     return False, ''
 
 
-def _build_proofs_from_events(
+def _build_proofs_from_events(  # noqa: C901
     events: list[dict[str, Any]],
 ) -> list[ProofOfUse]:
     """Scan audit events and return one ``ProofOfUse`` per skill-backed tool-call.

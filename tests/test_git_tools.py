@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 from teaagent.workspace_tools._git import (
     GitToolConfig,
     git_add,

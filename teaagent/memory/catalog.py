@@ -463,7 +463,7 @@ class MemoryCatalog(AbstractStore['MemoryEntry']):
 
         return list(reversed(entries))[:limit]
 
-    def promote_quarantined(
+    def promote_quarantined(  # noqa: C901
         self,
         memory_id: str,
         *,

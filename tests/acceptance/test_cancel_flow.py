@@ -15,10 +15,9 @@ from __future__ import annotations
 import threading
 import time
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.runner import AgentRunner, FinalAnswer
-from teaagent.tools import ToolRegistry
+from teaagent.types import AuditLogger, ToolRegistry
 
 
 class _SlowStubAdapter:
@@ -51,7 +50,7 @@ def test_cancel_token_stops_run_cleanly(tmp_path):
     adapter = _SlowStubAdapter(cancel)
 
     # Register a noop tool so the ToolRequest can be dispatched once before cancel
-    from teaagent.tools import ToolAnnotations, ToolRegistry
+    from teaagent.types import ToolAnnotations, ToolRegistry
 
     registry = ToolRegistry()
     registry.register(

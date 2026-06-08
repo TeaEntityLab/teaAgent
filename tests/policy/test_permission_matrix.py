@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from teaagent.errors import ToolPermissionError
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
+from teaagent.types import PermissionMode, ToolPermissionError
 
 
 @pytest.mark.parametrize(

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from teaagent.audit_chain import verify_audit_chain
 from teaagent.run_store import RunStore
 from teaagent.runner import FinalAnswer, RunResult
+from teaagent.types import verify_audit_chain
 
 
 def test_record_undo_applied_appends_chained_event(tmp_path: Path) -> None:

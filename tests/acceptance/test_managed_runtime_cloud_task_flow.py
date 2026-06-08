@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from teaagent.audit import AuditLogger
 from teaagent.managed_runtime import ManagedAgentRunner, managed_runtime_capabilities
+from teaagent.types import AuditLogger
 
 
 class _CloudTaskStub:

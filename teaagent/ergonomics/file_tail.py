@@ -120,7 +120,7 @@ def _wait_for_growth(
             return
 
 
-def iter_jsonl_tail(
+def iter_jsonl_tail(  # noqa: C901
     path: Path,
     *,
     follow: bool = False,

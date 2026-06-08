@@ -7,9 +7,9 @@ import unittest
 from pathlib import Path
 from urllib.request import urlopen
 
-from teaagent.audit import AuditLogger
 from teaagent.audit_viewer import make_audit_server
 from teaagent.run_store import RunStore
+from teaagent.types import AuditLogger
 from test_support import skip_if_socket_bind_is_blocked
 
 

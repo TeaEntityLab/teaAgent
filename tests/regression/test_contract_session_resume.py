@@ -10,11 +10,10 @@ from pathlib import Path
 
 from conftest import FakeAdapter
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.memory import MemoryCatalog
 from teaagent.runner import AgentRunner, FinalAnswer
-from teaagent.tools import ToolRegistry
+from teaagent.types import AuditLogger, ToolRegistry
 
 
 def test_resume_preserves_task_across_run_boundary(tmp_path: Path) -> None:

@@ -13,8 +13,8 @@ from teaagent.cli.execution import (
     CommandExecutor,
     DefaultCommandExecutor,
 )
-from teaagent.policy import PermissionMode
 from teaagent.runner import RunResult
+from teaagent.types import PermissionMode
 
 
 def test_agent_execution_factory_creates_components(tmp_path: Path) -> None:

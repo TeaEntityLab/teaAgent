@@ -9,7 +9,7 @@ Verifies that:
 
 from __future__ import annotations
 
-from teaagent.audit import AuditEvent, AuditLogger
+from teaagent.types import AuditEvent, AuditLogger
 
 
 def test_crashing_sink_does_not_propagate():

@@ -5,9 +5,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from teaagent.approval_manager import JITApprovalState
-from teaagent.errors import ToolPermissionError
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
+from teaagent.types import JITApprovalState, PermissionMode, ToolPermissionError
 
 
 class JITApprovalStateTests(unittest.TestCase):

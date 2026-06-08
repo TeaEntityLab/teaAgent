@@ -21,9 +21,8 @@ from teaagent import (
 )
 from teaagent.chat_agent import _setup_tool_registry
 from teaagent.cli import main
-from teaagent.errors import ToolPermissionError
 from teaagent.runner import ToolRequest
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolPermissionError, ToolRegistry
 
 
 class ChatAgentTests(unittest.TestCase):
@@ -338,7 +337,7 @@ class ChatAgentTests(unittest.TestCase):
         )
 
         # Verify safety contract: prompt mode blocks even when acknowledged.
-        from teaagent.errors import DenialReasonCode
+        from teaagent.types import DenialReasonCode
 
         with self.assertRaises(ToolPermissionError) as ctx:
             ApprovalPolicy(

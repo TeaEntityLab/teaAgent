@@ -375,7 +375,7 @@ class HookPermissionMode(Enum):
     DENY = 'deny'
 
 
-def permission_check_hook(
+def permission_check_hook(  # noqa: C901
     mode: HookPermissionMode = HookPermissionMode.AUTO,
     *,
     allow_patterns: frozenset[str] = frozenset(),
@@ -393,7 +393,7 @@ def permission_check_hook(
 ) -> PreToolUseHookFn:
     """Permission check hook that enforces Allow/Ask/Deny patterns."""
 
-    def _hook(tool_name: str, _arguments: dict[str, Any]) -> dict[str, Any] | None:
+    def _hook(tool_name: str, _arguments: dict[str, Any]) -> dict[str, Any] | None:  # noqa: C901
         if mode == HookPermissionMode.ALLOW:
             return None
         if mode == HookPermissionMode.DENY:

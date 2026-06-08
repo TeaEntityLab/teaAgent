@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from teaagent.errors import ToolValidationError
 from teaagent.schema import validate_object_schema
+from teaagent.types import ToolValidationError
 
 
 class SchemaValidationTests(unittest.TestCase):

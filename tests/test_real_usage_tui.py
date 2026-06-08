@@ -24,8 +24,8 @@ from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
 
-from teaagent.policy import PermissionMode
 from teaagent.tui import TeaAgentTUI
+from teaagent.types import PermissionMode
 
 # ---------------------------------------------------------------------------
 # Helpers

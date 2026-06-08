@@ -393,7 +393,7 @@ class SubagentPermissionInheritanceTests(unittest.TestCase):
             (root / '.teaagent').mkdir()
             worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
             worktree.mkdir(parents=True)
-            from teaagent.policy import PermissionMode
+            from teaagent.types import PermissionMode
 
             config = ChatAgentConfig(
                 root=root, permission_mode=PermissionMode.DANGER_FULL_ACCESS
@@ -442,7 +442,7 @@ class SubagentPermissionInheritanceTests(unittest.TestCase):
             (root / '.teaagent').mkdir()
             worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
             worktree.mkdir(parents=True)
-            from teaagent.policy import PermissionMode
+            from teaagent.types import PermissionMode
 
             config = ChatAgentConfig(root=root, permission_mode=PermissionMode.ALLOW)
             manager = SubagentManager(
@@ -489,7 +489,7 @@ class SubagentPermissionInheritanceTests(unittest.TestCase):
             (root / '.teaagent').mkdir()
             worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
             worktree.mkdir(parents=True)
-            from teaagent.policy import PermissionMode
+            from teaagent.types import PermissionMode
 
             config = ChatAgentConfig(
                 root=root, permission_mode=PermissionMode.READ_ONLY

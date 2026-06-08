@@ -5,7 +5,7 @@ from typing import Any
 from teaagent.llm._types import LLMProviderError, LLMResponseFormatError
 
 
-def _extract_openai_content(provider: str, response: dict[str, Any]) -> str:
+def _extract_openai_content(provider: str, response: dict[str, Any]) -> str:  # noqa: C901
     _raise_provider_error(provider, response)
     choices = response.get('choices')
     if not isinstance(choices, list) or not choices:

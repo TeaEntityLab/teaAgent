@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 from teaagent.mcp_tool_adapter import register_mcp_tools
-from teaagent.tools import ToolRateLimit, ToolRegistry
+from teaagent.types import ToolRateLimit, ToolRegistry
 
 _TOOLS = [
     {

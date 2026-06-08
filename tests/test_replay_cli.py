@@ -18,7 +18,7 @@ from teaagent.cli._handlers._replay import (
 
 def _make_audit_log(run_path: Path, num_entries: int = 3) -> None:
     """Create a minimal audit JSONL at *run_path* for testing."""
-    from teaagent.audit import AuditLogger
+    from teaagent.types import AuditLogger
 
     run_path.parent.mkdir(parents=True, exist_ok=True)
     log = AuditLogger(path=run_path)

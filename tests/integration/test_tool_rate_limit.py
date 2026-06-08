@@ -11,8 +11,12 @@ import time
 
 import pytest
 
-from teaagent.errors import ToolExecutionError
-from teaagent.tools import ToolAnnotations, ToolRateLimit, ToolRegistry
+from teaagent.types import (
+    ToolAnnotations,
+    ToolExecutionError,
+    ToolRateLimit,
+    ToolRegistry,
+)
 
 
 def _make_registry_with_rate_limit(max_calls: int, window: float) -> ToolRegistry:

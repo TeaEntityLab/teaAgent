@@ -7,14 +7,14 @@ import unittest
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
 
-from teaagent.approval_manager import JITApprovalManager, MultiSigQuorumConfig
-from teaagent.ergonomics.approval_store import ApprovalPresetStore
-from teaagent.errors import ToolPermissionError
-from teaagent.policy import (
-    ApprovalPolicy,
-    PermissionMode,
+from teaagent.approval import (
+    JITApprovalManager,
+    MultiSigQuorumConfig,
     parse_permission_mode,
 )
+from teaagent.ergonomics.approval_store import ApprovalPresetStore
+from teaagent.policy import ApprovalPolicy
+from teaagent.types import PermissionMode, ToolPermissionError
 
 
 class PermissionModeTests(unittest.TestCase):
@@ -107,7 +107,7 @@ class ApprovalPolicyTests(unittest.TestCase):
 
     def test_prompt_mode_allow_all_destructive_without_ack_blocks(self) -> None:
         # P1-TR-011: Verify that allow_all_destructive without acknowledgment blocks.
-        from teaagent.errors import DenialReasonCode
+        from teaagent.types import DenialReasonCode
 
         policy = ApprovalPolicy(
             permission_mode=PermissionMode.PROMPT,

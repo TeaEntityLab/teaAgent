@@ -17,7 +17,7 @@ from teaagent import (
     register_workspace_tools,
 )
 from teaagent.cli import main
-from teaagent.errors import ToolExecutionError, ToolValidationError
+from teaagent.types import ToolExecutionError, ToolValidationError
 from teaagent.workspace_tools import classify_shell_command_policy
 from teaagent.workspace_tools.factory import ToolFactory
 

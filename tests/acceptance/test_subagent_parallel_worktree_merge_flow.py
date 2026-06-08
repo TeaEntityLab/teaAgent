@@ -14,7 +14,7 @@ from teaagent.runner import FinalAnswer, RunResult
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.subagents import SubagentManager
 from teaagent.subagents._tools import register_subagent_tools
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 class SubagentParallelWorktreeMergeFlowTests(unittest.TestCase):

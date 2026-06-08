@@ -6,10 +6,11 @@ import difflib
 import subprocess
 from pathlib import Path
 
+from teaagent.approval import parse_permission_mode
 from teaagent.cli._output import print_json
 from teaagent.ergonomics.human_output import format_preflight_summary
-from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.preflight import preflight
+from teaagent.types import PermissionMode
 
 
 def agent_preflight_command(args: argparse.Namespace) -> int:
@@ -62,7 +63,7 @@ def agent_plan_command(args: argparse.Namespace) -> int:
     return 0 if payload.get('ready') else 2
 
 
-def agent_undo_command(args: argparse.Namespace) -> int:
+def agent_undo_command(args: argparse.Namespace) -> int:  # noqa: C901
     from teaagent.cli.execution import AgentExecutionFactory
 
     factory = AgentExecutionFactory(args.root)

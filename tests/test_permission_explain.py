@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from teaagent.approval_manager import format_denial_message
-from teaagent.errors import DenialReasonCode, ToolPermissionError
+from teaagent.approval import format_denial_message
+from teaagent.types import DenialReasonCode, ToolPermissionError
 
 
 class TestPermissionExplain:

@@ -30,7 +30,7 @@ MAX_REDIRECTS = 5
 DEFAULT_ALLOWED_SCHEMES = {'https'}
 
 
-def safe_urlopen(
+def safe_urlopen(  # noqa: C901
     url: str,
     *,
     timeout: int = DEFAULT_TIMEOUT,

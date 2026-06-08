@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.audit import AuditLogger
 from teaagent.spec_exemption import (
     _VALID_REASONS,
     _VALID_RISK_LEVELS,
@@ -16,6 +15,7 @@ from teaagent.spec_exemption import (
     grant_spec_exemption,
     load_exemption,
 )
+from teaagent.types import AuditLogger
 
 
 class TestSpecExemptionReceipt:

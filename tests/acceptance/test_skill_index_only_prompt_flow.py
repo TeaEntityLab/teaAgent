@@ -10,7 +10,7 @@ from teaagent.skill_loader import (
     load_skills_with_report,
     skill_index_to_prompt_section,
 )
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def _install_skill(tmp_path: Path) -> None:

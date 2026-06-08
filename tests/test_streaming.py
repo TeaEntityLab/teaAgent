@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import argparse
 
-from teaagent.audit import AuditEvent, AuditLogger
 from teaagent.streaming.content_filter import DecisionContentStreamer
 from teaagent.streaming.events import audit_dict_to_stream_event, format_progress_line
 from teaagent.streaming.handlers import build_run_stream_handlers
+from teaagent.types import AuditEvent, AuditLogger
 
 
 def test_decision_content_streamer_emits_only_final_content() -> None:

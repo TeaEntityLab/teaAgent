@@ -31,7 +31,7 @@ def _event_payload(event: dict[str, Any]) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def check_audit_completeness(events: list[dict[str, Any]]) -> AuditCompletenessReport:
+def check_audit_completeness(events: list[dict[str, Any]]) -> AuditCompletenessReport:  # noqa: C901
     """Verify a run audit log supports basic accountability questions."""
     issues: list[str] = []
     if not events:

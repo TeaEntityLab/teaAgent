@@ -220,7 +220,7 @@ def _collect_artifacts(repo_root: Path) -> list[dict]:
 # ────────────────────────────────────────────────────────────────────────────
 
 
-def _check_spec_first(
+def _check_spec_first(  # noqa: C901
     root: Path,
     evidence_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -525,7 +525,7 @@ def _check_precise_memory(
     }
 
 
-def _check_human_review(
+def _check_human_review(  # noqa: C901
     root: Path,
     evidence_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:

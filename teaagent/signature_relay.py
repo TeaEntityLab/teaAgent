@@ -335,7 +335,7 @@ class SignatureRelayHTTPServer(ThreadingHTTPServer):
         super().__init__(server_address, handler)
 
 
-def _make_signature_relay_handler(
+def _make_signature_relay_handler(  # noqa: C901
     relay: SignatureRelayServer,
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
@@ -397,7 +397,7 @@ def _make_signature_relay_handler(
                 return
             self._json(HTTPStatus.NOT_FOUND, {'ok': False, 'error': 'not found'})
 
-        def do_POST(self) -> None:
+        def do_POST(self) -> None:  # noqa: C901
             path = urlparse(self.path).path
             if path not in {
                 '/api/v1/approval-requests',

@@ -13,12 +13,11 @@ from __future__ import annotations
 
 import pytest
 
-from teaagent.audit import AuditLogger
 from teaagent.ergonomics._approval_grants import _normalize_and_validate_path
 from teaagent.ergonomics._approval_state import ApprovalPresetStore
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, ApprovalRequest, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import AuditLogger, PermissionMode, ToolAnnotations, ToolRegistry
 
 
 def _make_registry() -> ToolRegistry:

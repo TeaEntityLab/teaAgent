@@ -4,7 +4,7 @@ import argparse
 from typing import Callable, Optional
 
 from teaagent.llm import available_providers
-from teaagent.policy import PermissionMode
+from teaagent.types import PermissionMode
 
 
 def _graphqlite(

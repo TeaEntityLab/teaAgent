@@ -116,7 +116,7 @@ def _format_cost(summary: RunEvidenceSummary) -> str:
     return f'{summary.total_cost_cents} cents ({summary.cost_state}); budget cap: {cap}'
 
 
-def format_run_receipt(
+def format_run_receipt(  # noqa: C901
     summary: RunEvidenceSummary,
     context: RunReceiptContext,
     *,

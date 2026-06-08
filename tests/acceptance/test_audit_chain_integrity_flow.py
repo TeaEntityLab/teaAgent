@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import json
 
-from teaagent.audit import AuditLogger
 from teaagent.run_store import RunStore
+from teaagent.types import AuditLogger
 
 
 def test_each_audit_line_is_valid_json(tmp_path):

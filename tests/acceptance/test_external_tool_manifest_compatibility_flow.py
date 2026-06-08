@@ -18,10 +18,9 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from teaagent.errors import ToolValidationError
 from teaagent.mcp_tool_adapter import register_mcp_tools
 from teaagent.skill_loader import load_skills
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry, ToolValidationError
 from test_support import skip_if_socket_bind_is_blocked
 
 _EXTERNAL_TOOLS = [

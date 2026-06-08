@@ -5,9 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
 from teaagent.managed_runtime import ManagedAgentRunner, managed_runtime_context
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import AuditLogger, ToolAnnotations, ToolRegistry
 
 
 class _CapturingManagedRuntime:

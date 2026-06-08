@@ -10,7 +10,7 @@ from teaagent.browser_tools import (
     _cleanup_browser,
     register_browser_tools,
 )
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def _playwright_runtime_available() -> bool:

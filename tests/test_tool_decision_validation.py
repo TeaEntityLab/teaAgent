@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import unittest
 
-from teaagent.audit import AuditLogger
-from teaagent.budget import RunBudget
-from teaagent.errors import ErrorCategory, InvalidToolDecision
 from teaagent.runner import (
     AgentRunner,
     FinalAnswer,
     ToolRequest,
     validate_tool_decision,
 )
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    AuditLogger,
+    ErrorCategory,
+    InvalidToolDecision,
+    RunBudget,
+    ToolAnnotations,
+    ToolRegistry,
+)
 
 
 class ValidateToolDecisionTests(unittest.TestCase):
@@ -127,7 +131,7 @@ class InvalidToolDecisionExceptionTests(unittest.TestCase):
         self.assertEqual(exc.raw_decision_preview, '{"tool_name":""}')
 
     def test_subclass_of_agent_harness_error(self) -> None:
-        from teaagent.errors import AgentHarnessError
+        from teaagent.types import AgentHarnessError
 
         exc = InvalidToolDecision('test')
         self.assertIsInstance(exc, AgentHarnessError)

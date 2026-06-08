@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
+from teaagent.approval import ApprovalQueueStore
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     SubagentApprovalRequest,
@@ -13,7 +14,6 @@ from teaagent.subagents._approval_queue import (
     list_active_parent_run_ids,
     try_get_approval_queue,
 )
-from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
 
 def test_queue_persisted_and_visible_from_new_process(tmp_path: Path) -> None:

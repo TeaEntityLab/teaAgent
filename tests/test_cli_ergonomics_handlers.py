@@ -24,9 +24,9 @@ from teaagent.ergonomics.daily_journal import (
     write_daily_journal,
 )
 from teaagent.external_backends import register_code_parse_backend
-from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore
 from teaagent.runner import RunResult
+from teaagent.types import PermissionMode
 from tests.test_external_backends import _FakeCodeParse
 
 
@@ -1021,7 +1021,7 @@ def test_table_driven_zero_footprint_queries_vs_mutating_initializers(
     )
     from teaagent.ergonomics.run_history import list_recall_runs, list_yesterday_runs
     from teaagent.ergonomics.status_short import build_status_short
-    from teaagent.policy import PermissionMode
+    from teaagent.types import PermissionMode
 
     teaagent_dir = tmp_path / '.teaagent'
 

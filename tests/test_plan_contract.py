@@ -6,12 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import _apply_plan_contract
 from teaagent.plan import load_plan_contract
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner
-from teaagent.tools import ToolRegistry
+from teaagent.types import AuditLogger, PermissionMode, ToolRegistry
 
 
 def _write_minimal_plan(path: Path, task: str) -> None:

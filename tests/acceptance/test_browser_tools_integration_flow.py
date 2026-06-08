@@ -10,7 +10,7 @@ from teaagent.browser_tools import (
     browser_navigate,
     register_browser_tools,
 )
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def test_browser_tools_registered() -> None:

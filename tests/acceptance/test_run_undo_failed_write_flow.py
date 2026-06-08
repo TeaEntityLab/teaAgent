@@ -6,10 +6,10 @@ from pathlib import Path
 
 from conftest import FakeAdapter
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.run_store import RunStore
 from teaagent.run_undo import UndoJournal
+from teaagent.types import AuditLogger
 
 
 def test_failed_write_does_not_persist_undo_journal(tmp_path: Path) -> None:

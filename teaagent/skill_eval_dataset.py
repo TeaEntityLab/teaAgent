@@ -103,7 +103,7 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding='utf-8')
 
 
-def _run_case(candidate_dir: Path, case: dict[str, Any]) -> str | None:
+def _run_case(candidate_dir: Path, case: dict[str, Any]) -> str | None:  # noqa: C901
     """Return an error message when the case fails."""
     check = str(case.get('check', '')).strip()
     case_id = str(case.get('id', check)).strip()

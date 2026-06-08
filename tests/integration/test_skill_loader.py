@@ -115,7 +115,7 @@ def test_skills_to_prompt_section_renders_all(tmp_path):
 def test_skills_injected_into_prompt_system(tmp_path):
     """Skills appear in the assembled system prompt."""
     from teaagent.prompt import assemble_agent_prompt
-    from teaagent.tools import ToolRegistry
+    from teaagent.types import ToolRegistry
 
     skill_dir = tmp_path / '.opencode' / 'skill'
     _write_skill(skill_dir, 'docgen', '# DocGen\nAlways generate docstrings.')

@@ -7,7 +7,7 @@ from teaagent.readiness import (
     ReadinessReport,
     assess_managed_agent_readiness,
 )
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry
 
 
 def _noop_handler(args: dict) -> dict:

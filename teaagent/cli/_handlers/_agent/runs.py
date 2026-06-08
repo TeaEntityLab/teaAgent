@@ -6,15 +6,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+from teaagent.approval import parse_permission_mode
 from teaagent.cli._output import print_json
 from teaagent.cli.execution import AgentExecutionFactory
-from teaagent.policy import PermissionMode, parse_permission_mode
+from teaagent.types import PermissionMode
 
 from .resume import agent_resume_command
 from .run import _emit_readiness_payload
 
 
-def agent_attach_command(args: argparse.Namespace) -> int:
+def agent_attach_command(args: argparse.Namespace) -> int:  # noqa: C901
     store = AgentExecutionFactory(args.root).create_run_store()
     try:
         heartbeat = store.heartbeat_for_run(args.run_id)
@@ -267,7 +268,7 @@ def agent_run_show(args: argparse.Namespace) -> int:
     return 0
 
 
-def _show_run_diff(args: argparse.Namespace) -> int:
+def _show_run_diff(args: argparse.Namespace) -> int:  # noqa: C901
     """Show git diff of changes made in a run."""
     import json
     from pathlib import Path
@@ -330,7 +331,7 @@ def _show_run_diff(args: argparse.Namespace) -> int:
     return 0
 
 
-def agent_runs_commit_command(args: argparse.Namespace) -> int:
+def agent_runs_commit_command(args: argparse.Namespace) -> int:  # noqa: C901
     """Commit changes from a run with metadata."""
     from pathlib import Path
 

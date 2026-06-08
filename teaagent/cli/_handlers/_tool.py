@@ -7,7 +7,7 @@ import json
 from typing import Any
 
 from teaagent.governance.tool_lint import lint_registry
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 

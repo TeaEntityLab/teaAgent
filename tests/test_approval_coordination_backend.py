@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
+from teaagent.approval import ApprovalQueueStore, CentralizedApprovalQueue
 from teaagent.coordination.approval_backend import (
     BACKEND_FILE,
     BACKEND_REMOTE,
@@ -17,11 +18,9 @@ from teaagent.coordination.approval_backend import (
 )
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
-    CentralizedApprovalQueue,
     SubagentApprovalRequest,
     get_approval_queue,
 )
-from teaagent.subagents._approval_queue_store import ApprovalQueueStore
 
 
 def test_resolve_file_backend_with_workspace() -> None:

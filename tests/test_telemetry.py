@@ -3,7 +3,6 @@ from __future__ import annotations
 import unittest
 from dataclasses import FrozenInstanceError
 
-from teaagent.audit import AuditEvent
 from teaagent.telemetry import (
     HAS_OTEL,
     InMemoryMetricsSink,
@@ -13,6 +12,7 @@ from teaagent.telemetry import (
     TracingHTTPTransport,
     configure_telemetry,
 )
+from teaagent.types import AuditEvent
 
 
 class _InMemorySpanExporter:

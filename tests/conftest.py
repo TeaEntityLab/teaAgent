@@ -7,10 +7,9 @@ from typing import Optional
 
 import pytest
 
-from teaagent.audit import AuditLogger
 from teaagent.llm import LLMResponse
 from teaagent.run_store import RunStore
-from teaagent.tools import ToolRegistry
+from teaagent.types import AuditLogger, ToolRegistry
 from test_support import can_bind_loopback, skip_if_socket_bind_is_blocked
 
 
@@ -85,8 +84,44 @@ def _reset_module_caches() -> None:
     from teaagent.config_loader import clear_config_cache
 
     clear_config_cache()
+    _clear_lazy_export_cache()
+    _clear_tui_completion_cache()
+    _clear_code_analysis_cache()
     yield
     clear_config_cache()
+    _clear_lazy_export_cache()
+    _clear_tui_completion_cache()
+    _clear_code_analysis_cache()
+
+
+def _clear_lazy_export_cache() -> None:
+    """Clear the teaagent lazy-import cache so tests start fresh."""
+    import contextlib
+
+    with contextlib.suppress(ImportError, AttributeError, KeyError):
+        from teaagent._lazy_exports import _CACHE
+
+        _CACHE.clear()
+
+
+def _clear_tui_completion_cache() -> None:
+    """Clear the TUI ontology completion cache."""
+    import contextlib
+
+    with contextlib.suppress(ImportError, AttributeError):
+        from teaagent.tui._completion import _ontology_cache
+
+        _ontology_cache.clear()
+
+
+def _clear_code_analysis_cache() -> None:
+    """Clear the code-analysis graph cache."""
+    import contextlib
+
+    with contextlib.suppress(ImportError, AttributeError):
+        from teaagent.code_analysis._tools import clear_graph_cache
+
+        clear_graph_cache()
 
 
 @pytest.fixture

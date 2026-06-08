@@ -32,9 +32,8 @@ from conftest import FakeAdapter
 from teaagent import ChatAgentConfig
 from teaagent.chat_agent import run_chat_agent
 from teaagent.cli import EXIT_BLOCKING, main
-from teaagent.policy import PermissionMode
 from teaagent.subagents import SubagentManager, register_subagent_tools
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import PermissionMode, ToolAnnotations, ToolRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -928,8 +927,8 @@ class ApprovalAndAuditScenarios(unittest.TestCase):
 
     def test_g1_approval_policy_read_only_blocks_destructive(self) -> None:
         """READ_ONLY policy blocks destructive tool assertions."""
-        from teaagent.errors import ToolPermissionError
         from teaagent.policy import ApprovalPolicy
+        from teaagent.types import ToolPermissionError
 
         policy = ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY)
         with self.assertRaises(ToolPermissionError):
@@ -941,8 +940,8 @@ class ApprovalAndAuditScenarios(unittest.TestCase):
 
     def test_g2_approval_policy_workspace_write_allows_file_blocks_shell(self) -> None:
         """WORKSPACE_WRITE allows file writes but blocks shell."""
-        from teaagent.errors import ToolPermissionError
         from teaagent.policy import ApprovalPolicy
+        from teaagent.types import ToolPermissionError
 
         policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
         policy.assert_allowed(
@@ -959,8 +958,8 @@ class ApprovalAndAuditScenarios(unittest.TestCase):
 
     def test_g3_approval_prompt_mode_blocks_unapproved(self) -> None:
         """PROMPT mode blocks destructive tools without approval handler."""
-        from teaagent.errors import ToolPermissionError
         from teaagent.policy import ApprovalPolicy
+        from teaagent.types import ToolPermissionError
 
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         with self.assertRaises(ToolPermissionError):
@@ -1045,7 +1044,7 @@ class McpAcpServerScenarios(unittest.TestCase):
     def test_h1_mcp_server_stdio_list_tools(self) -> None:
         """MCP stdio server responds to tools/list request."""
         from teaagent.mcp_server import handle_mcp_request
-        from teaagent.tools import ToolRegistry
+        from teaagent.types import ToolRegistry
 
         registry = ToolRegistry()
         registry.register(
@@ -1662,8 +1661,8 @@ class GitSandboxScenarios(unittest.TestCase):
 
     def test_n4_git_transaction_sink_records_file_writes(self) -> None:
         """GitTransactionSink commits transactions for workspace_write_file events."""
-        from teaagent.audit import AuditEvent
         from teaagent.sandbox import GitBranchSandbox, GitTransactionSink
+        from teaagent.types import AuditEvent
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1762,7 +1761,7 @@ class McpHttpScenarios(unittest.TestCase):
         from http.server import ThreadingHTTPServer
 
         from teaagent.mcp_http import MCPSessionStore, build_mcp_http_server
-        from teaagent.tools import ToolRegistry
+        from teaagent.types import ToolRegistry
 
         registry = ToolRegistry()
         server, store = build_mcp_http_server(registry)
@@ -1775,7 +1774,7 @@ class McpHttpScenarios(unittest.TestCase):
         from http.server import ThreadingHTTPServer
 
         from teaagent.mcp_http import build_mcp_http_server
-        from teaagent.tools import ToolRegistry
+        from teaagent.types import ToolRegistry
 
         registry = ToolRegistry()
         server, store = build_mcp_http_server(
@@ -1792,7 +1791,7 @@ class McpHttpScenarios(unittest.TestCase):
 
         from teaagent.mcp_http import build_mcp_http_server
         from teaagent.oauth21 import OAuth21AuthorizationServer
-        from teaagent.tools import ToolRegistry
+        from teaagent.types import ToolRegistry
 
         registry = ToolRegistry()
         oauth = OAuth21AuthorizationServer(
@@ -2400,9 +2399,9 @@ class PlanEnforcementScenarios(unittest.TestCase):
 
     def test_m1_require_plan_blocks_write_without_plan(self) -> None:
         """PlanValidator with require_plan=True raises on write without bound plan."""
-        from teaagent.errors import ToolPermissionError
-        from teaagent.policy import ApprovalPolicy, PermissionMode
+        from teaagent.policy import ApprovalPolicy
         from teaagent.runner._plan_validator import PlanValidator
+        from teaagent.types import PermissionMode, ToolPermissionError
 
         policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
         validator = PlanValidator(
@@ -2420,7 +2419,7 @@ class PlanEnforcementScenarios(unittest.TestCase):
     def test_m2_skip_plan_check_bypasses_enforcement(self) -> None:
         """PlanValidator with skip_plan_check=True allows writes without plan."""
         from teaagent.governance.plan_gate import assert_write_allowed
-        from teaagent.policy import PermissionMode
+        from teaagent.types import PermissionMode
 
         # Should NOT raise
         assert_write_allowed(
@@ -2433,8 +2432,9 @@ class PlanEnforcementScenarios(unittest.TestCase):
 
     def test_m3_plan_validator_contract_exists(self) -> None:
         """PlanValidator stores and returns the plan contract."""
-        from teaagent.policy import ApprovalPolicy, PermissionMode
+        from teaagent.policy import ApprovalPolicy
         from teaagent.runner._plan_validator import PlanValidator
+        from teaagent.types import PermissionMode
 
         policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
         validator = PlanValidator(

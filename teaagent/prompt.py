@@ -71,7 +71,7 @@ class PromptBundle:
     user: str
 
 
-async def run_aci_injector(
+async def run_aci_injector(  # noqa: C901
     task: str,
     retriever: Any,
     cache_db_path: str,
@@ -375,7 +375,7 @@ def _try_repair_json_at(text: str, start: int) -> dict[str, Any] | None:
     return None
 
 
-def _slice_json_object_candidate(text: str, start: int) -> str | None:
+def _slice_json_object_candidate(text: str, start: int) -> str | None:  # noqa: C901
     depth = 0
     in_string = False
     escaped = False

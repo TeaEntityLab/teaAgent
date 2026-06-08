@@ -9,12 +9,15 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from teaagent.audit import AuditLogger
-from teaagent.audit_chain import verify_audit_chain
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
-from teaagent.errors import ToolPermissionError
-from teaagent.policy import ApprovalPolicy, PermissionMode, _verify_ssh_signature
-from teaagent.tools import ToolRegistry
+from teaagent.policy import ApprovalPolicy, _verify_ssh_signature
+from teaagent.types import (
+    AuditLogger,
+    PermissionMode,
+    ToolPermissionError,
+    ToolRegistry,
+    verify_audit_chain,
+)
 from teaagent.vote_relay import VoteRelayPayload, verify_relay_vote
 
 

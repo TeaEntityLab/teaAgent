@@ -4,8 +4,7 @@ import unittest
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
 
-from teaagent.budget import RunBudget
-from teaagent.errors import BudgetExceededError
+from teaagent.types import BudgetExceededError, RunBudget
 
 
 class RunBudgetTests(unittest.TestCase):

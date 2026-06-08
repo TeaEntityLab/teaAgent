@@ -555,7 +555,7 @@ class AgentRunner:
             output_tokens=output_tokens,
         )
 
-    def _execute_tool_decision(
+    def _execute_tool_decision(  # noqa: C901
         self,
         decision: ToolRequest,
         context: RunContext,
@@ -799,7 +799,7 @@ class AgentRunner:
             output_tokens=output_tokens,
         )
 
-    def run(
+    def run(  # noqa: C901
         self,
         *,
         task: str,

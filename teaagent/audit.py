@@ -113,7 +113,7 @@ class AuditEvent:
 class AuditLogger:
     """Append-only audit logger with optional JSONL persistence and tiered audit levels."""
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         path: Optional[Path] = None,
         *,
@@ -371,7 +371,7 @@ class AuditLogger:
         except Exception as e:
             logger.error(f'Failed to enable OpenTelemetry: {e}')
 
-    def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:
+    def record(self, event_type: str, run_id: str, **payload: Any) -> AuditEvent:  # noqa: C901
         # Apply tiered audit level filtering
         filtered_payload = self._apply_audit_level(payload)
 

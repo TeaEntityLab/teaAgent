@@ -18,8 +18,8 @@ from teaagent.anp_adapter import (
     ANPInboundAdapter,
     ANPOutboundClient,
 )
-from teaagent.errors import BudgetExceededError
 from teaagent.llm._extract import _extract_openai_content
+from teaagent.types import BudgetExceededError
 
 INPUT_SCHEMA = {
     'type': 'object',

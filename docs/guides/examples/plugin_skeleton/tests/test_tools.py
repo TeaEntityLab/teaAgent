@@ -3,7 +3,7 @@
 import pytest
 from my_plugin.tools import register
 
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 @pytest.fixture()

@@ -10,7 +10,7 @@ Verifies that the handler:
 
 from __future__ import annotations
 
-from teaagent.approval_ui import DiffApprovalHandler
+from teaagent.approval import DiffApprovalHandler
 from teaagent.runner import ApprovalRequest
 
 

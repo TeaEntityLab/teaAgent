@@ -160,7 +160,7 @@ def fuzz_check_handler_code(handler_code: str, is_read_only: bool) -> list[str]:
     return write_operations
 
 
-def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:
+def _lint_tool(tool: ToolDefinition) -> list[ToolLintIssue]:  # noqa: C901
     issues: list[ToolLintIssue] = []
     name = tool.name
     ann = tool.annotations

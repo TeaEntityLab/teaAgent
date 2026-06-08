@@ -13,8 +13,8 @@ Acceptance criteria:
 
 from __future__ import annotations
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
+from teaagent.types import AuditLogger
 
 
 class _StubAdapter:

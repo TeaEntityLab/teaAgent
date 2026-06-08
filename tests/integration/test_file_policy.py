@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from teaagent.errors import ToolPermissionError
 from teaagent.file_policy import DenyRule, FilePolicy, load_file_policy
+from teaagent.types import ToolPermissionError
 
 # ── unit: DenyRule matching ────────────────────────────────────────────────
 
@@ -140,9 +140,8 @@ def test_load_file_policy_json_format(tmp_path):
 
 def test_file_policy_integrated_with_agent_runner(tmp_path):
     """FilePolicy.assert_allowed fires in AgentRunner before tool dispatch."""
-    from teaagent.audit import AuditLogger
     from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-    from teaagent.tools import ToolAnnotations, ToolRegistry
+    from teaagent.types import AuditLogger, ToolAnnotations, ToolRegistry
 
     registry = ToolRegistry()
     registry.register(
@@ -180,7 +179,8 @@ def test_file_policy_integrated_with_agent_runner(tmp_path):
     )
 
     audit = AuditLogger()
-    from teaagent.policy import ApprovalPolicy, PermissionMode
+    from teaagent.policy import ApprovalPolicy
+    from teaagent.types import PermissionMode
 
     runner = AgentRunner(
         registry=registry,

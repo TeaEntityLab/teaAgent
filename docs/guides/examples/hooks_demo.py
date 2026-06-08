@@ -15,15 +15,14 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from teaagent.audit import AuditLogger
-from teaagent.budget import RunBudget
 from teaagent.hooks import (
     HookError,
     HookRegistry,
     post_lint_check_hook,
 )
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
+from teaagent.types import AuditLogger, PermissionMode, RunBudget
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 # ── hook implementations ──────────────────────────────────────────────────────

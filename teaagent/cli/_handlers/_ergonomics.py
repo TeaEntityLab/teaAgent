@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable
 
+from teaagent.approval import parse_permission_mode
 from teaagent.cli._handlers._misc import print_json
 from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.daily import build_daily_brief
@@ -15,8 +16,8 @@ from teaagent.ergonomics.guidance import collect_workspace_guidance
 from teaagent.ergonomics.run_history import list_recall_runs, list_yesterday_runs
 from teaagent.ergonomics.status_short import build_status_short
 from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.recipes.registry import list_recipes, run_recipe
+from teaagent.types import PermissionMode
 
 
 def _truncate_string(s: str, max_len: int = 40, suffix: str = '...') -> str:
@@ -576,8 +577,8 @@ def approval_pending_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def approval_approve_command(args: argparse.Namespace) -> int:
-    def _approve() -> int:
+def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
+    def _approve() -> int:  # noqa: C901
         from teaagent.approval_selectors import (
             collect_pending_approval_views,
             resolve_selector,
@@ -870,7 +871,7 @@ def approval_preset_command(args: argparse.Namespace) -> int:
     return _wrap_approval_store_errors(_preset)
 
 
-def approval_doctor_command(args: argparse.Namespace) -> int:
+def approval_doctor_command(args: argparse.Namespace) -> int:  # noqa: C901
     from datetime import datetime, timezone
 
     readonly = not (
@@ -1204,7 +1205,7 @@ def approval_next_command(args: argparse.Namespace) -> int:
             arguments = {}
 
         # Explain why it's pending (lazy-create approval store only when needed)
-        from teaagent.policy import PermissionMode
+        from teaagent.types import PermissionMode
 
         permission_mode = PermissionMode.PROMPT.value
         approval_store = ApprovalPresetStore(args.root, readonly=True)

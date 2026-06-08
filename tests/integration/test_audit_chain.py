@@ -11,12 +11,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from teaagent.audit import AuditLogger
-from teaagent.audit_chain import (
-    GENESIS_HASH,
-    ChainVerificationResult,
-    verify_audit_chain,
-)
+from teaagent.audit_chain import GENESIS_HASH
+from teaagent.types import AuditLogger, ChainVerificationResult, verify_audit_chain
 
 
 def test_clean_log_is_valid(tmp_path):

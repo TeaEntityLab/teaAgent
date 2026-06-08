@@ -9,8 +9,9 @@ import unittest
 from pathlib import Path
 
 from teaagent.governance.tool_lint import fuzz_check_handler_code
-from teaagent.policy import PermissionMode, _verify_ssh_signature
+from teaagent.policy import _verify_ssh_signature
 from teaagent.redaction import RedactionConfig
+from teaagent.types import PermissionMode
 
 
 class SSHKeyRedactionTests(unittest.TestCase):
@@ -175,7 +176,7 @@ class HMACApprovalQueueTests(unittest.TestCase):
         self.tmpdir.cleanup()
 
     def _make_store(self, hmac_secret: str | None = None) -> 'ApprovalQueueStore':  # type: ignore[name-defined]  # noqa: F821
-        from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+        from teaagent.approval import ApprovalQueueStore
 
         return ApprovalQueueStore(self.store_path, hmac_secret=hmac_secret)
 

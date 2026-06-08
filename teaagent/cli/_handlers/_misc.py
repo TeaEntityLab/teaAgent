@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from teaagent.approval import parse_permission_mode
 from teaagent.code_ontology import CodeOntologyGraph
 from teaagent.graphqlite_store import GraphQLiteConfig, GraphQLiteGraphStore
 from teaagent.intent import clarify_task
 from teaagent.llm import available_providers, check_llm_configuration
-from teaagent.policy import parse_permission_mode
 from teaagent.tui import run_tui
 from teaagent.ultrawork import UltraworkStore
 from teaagent.wizard import run_first_session_setup

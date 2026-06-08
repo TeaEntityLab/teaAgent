@@ -5,8 +5,8 @@ from argparse import Namespace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from teaagent.approval import parse_permission_mode
 from teaagent.llm import check_llm_configuration
-from teaagent.policy import parse_permission_mode
 from teaagent.wizard import WizardResult, run_first_session_setup
 
 if TYPE_CHECKING:

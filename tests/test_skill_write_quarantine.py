@@ -14,13 +14,9 @@ from unittest.mock import patch
 
 import pytest
 
-from teaagent.approval_manager import (
-    ApprovalManager,
-    PermissionMode,
-    _is_skill_dev_opt_in,
-    is_protected_skill_path,
-)
-from teaagent.errors import DenialReasonCode, ToolPermissionError
+from teaagent.approval import ApprovalManager
+from teaagent.approval_manager import _is_skill_dev_opt_in, is_protected_skill_path
+from teaagent.types import DenialReasonCode, PermissionMode, ToolPermissionError
 
 
 class TestIsProtectedSkillPath:

@@ -6,14 +6,17 @@ import json
 
 import pytest
 
-from teaagent.audit import AuditLogger
-from teaagent.errors import ToolPermissionError
 from teaagent.governance.audit_completeness import check_audit_completeness
 from teaagent.governance.plan_gate import assert_write_allowed
 from teaagent.governance.tool_lint import lint_registry
-from teaagent.policy import PermissionMode
 from teaagent.run_trace import build_run_trace, export_run, replay_dry_run
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    AuditLogger,
+    PermissionMode,
+    ToolAnnotations,
+    ToolPermissionError,
+    ToolRegistry,
+)
 from teaagent.validation.profiles import run_profile_validation
 from teaagent.workspace_tools import build_workspace_tool_registry
 

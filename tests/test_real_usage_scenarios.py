@@ -13,10 +13,9 @@ from conftest import FakeAdapter
 
 from teaagent import ChatAgentConfig
 from teaagent.cli import main
-from teaagent.policy import PermissionMode
 from teaagent.subagents import SubagentManager
-from teaagent.tools import ToolRegistry
 from teaagent.tui import TeaAgentTUI
+from teaagent.types import PermissionMode, ToolRegistry
 
 
 class RealUsageScenariosTests(unittest.TestCase):

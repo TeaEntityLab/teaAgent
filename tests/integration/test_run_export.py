@@ -104,7 +104,7 @@ def test_export_nonexistent_run_raises(tmp_path):
 
 def test_hash_chain_survives_round_trip(tmp_path):
     """Exported and re-imported events must still form a valid hash chain."""
-    from teaagent.audit_chain import verify_audit_chain
+    from teaagent.types import verify_audit_chain
 
     src = RunStore(tmp_path / 'src')
     _seed_run(src, 'run-chain')

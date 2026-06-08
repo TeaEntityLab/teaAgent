@@ -598,7 +598,7 @@ class FederatedGraphSync:
 
         return results
 
-    async def collect_approval_signatures(
+    async def collect_approval_signatures(  # noqa: C901
         self,
         request_id: str,
         timeout_seconds: int,

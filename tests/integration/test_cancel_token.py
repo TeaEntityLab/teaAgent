@@ -10,9 +10,8 @@ from __future__ import annotations
 import threading
 import time
 
-from teaagent.audit import AuditLogger
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import AuditLogger, ToolAnnotations, ToolRegistry
 
 
 def _slow_decide(context: dict) -> ToolRequest | FinalAnswer:

@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from teaagent.policy import PermissionMode
 from teaagent.tui._setup import (
     apply_setup_result_to_tui,
     run_tui_setup,
     workspace_configured,
 )
+from teaagent.types import PermissionMode
 from teaagent.wizard import WizardResult
 
 

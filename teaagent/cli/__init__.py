@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 from teaagent import __version__
-from teaagent.errors import AgentHarnessError, ConfigError
 from teaagent.llm._types import LLMConfigurationError, ProviderKeyError
+from teaagent.types import AgentHarnessError, ConfigError
 
 
 def _ferr(msg: str) -> None:
@@ -244,7 +244,7 @@ from teaagent.llm_conformance import (  # noqa: E402
     run_model_conformance,  # noqa: F401  # kept for test patches
 )
 from teaagent.mcp_http import serve_mcp_http  # noqa: E402
-from teaagent.policy import PermissionMode  # noqa: E402
+from teaagent.types import PermissionMode  # noqa: E402
 
 _TOP_LEVEL_AGENT_COMMANDS = frozenset(
     {'run', 'ask', 'daily', 'resume', 'preflight', 'plan'}
@@ -787,7 +787,7 @@ def _require_provider_for_agent_commands(args: argparse.Namespace) -> None:
     )
 
 
-def apply_config_defaults(args: argparse.Namespace) -> None:
+def apply_config_defaults(args: argparse.Namespace) -> None:  # noqa: C901
     if getattr(args, 'command', None) in {'init', 'setup'}:
         return
     from teaagent.ergonomics.workspace_defaults import (

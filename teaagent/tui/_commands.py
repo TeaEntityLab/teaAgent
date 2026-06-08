@@ -6,13 +6,13 @@ import typing
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from teaagent.approval import parse_permission_mode
 from teaagent.graphqlite_store import (
     GraphQLiteRuntimeError,
     GraphQLiteUnavailableError,
     check_graphqlite_runtime,
 )
 from teaagent.llm import available_providers
-from teaagent.policy import parse_permission_mode
 from teaagent.run_store import RunStore
 
 logger = logging.getLogger(__name__)

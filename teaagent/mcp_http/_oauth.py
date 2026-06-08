@@ -100,7 +100,7 @@ def _handle_oauth_authorize(
         )
 
 
-def _handle_oauth_token(
+def _handle_oauth_token(  # noqa: C901
     handler: _HandlerProtocol, oauth_server: Optional[OAuth21AuthorizationServer]
 ) -> None:
     if oauth_server is None:

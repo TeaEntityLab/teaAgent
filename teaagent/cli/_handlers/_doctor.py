@@ -366,7 +366,7 @@ def doctor_env_order(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
-def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:
+def _doctor_aigateway_wizard(args: argparse.Namespace) -> int:  # noqa: C901
     requested_mode = getattr(args, 'mode', 'workers-ai')
     account_id = input('Cloudflare account id: ').strip()
     gateway_id = input('AI Gateway id: ').strip()
@@ -645,7 +645,7 @@ def _doctor_mcp_wizard(args: argparse.Namespace) -> int:
     return 0
 
 
-def doctor_all(args: argparse.Namespace) -> int:
+def doctor_all(args: argparse.Namespace) -> int:  # noqa: C901
     """Unified doctor command checking all subsystems with optional auto-repair."""
     checks: dict[str, Any] = {}
     repair_actions: list[str] = []

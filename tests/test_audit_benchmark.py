@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from teaagent.audit_chain import compute_event_hash, verify_audit_chain
+from teaagent.types import compute_event_hash, verify_audit_chain
 
 
 def _chain(n: int) -> list[dict]:

@@ -199,7 +199,7 @@ def print_chat_help() -> None:
     print('[TeaAgent] Any other input will be executed as a task')
 
 
-def run_chat_repl(
+def run_chat_repl(  # noqa: C901
     config: ChatAgentConfig,
     initial_task: str | None = None,
 ) -> int:

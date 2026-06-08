@@ -12,15 +12,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.ergonomics.background_run import BackgroundRunStore
-from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore
 from teaagent.run_undo import UndoJournal
 from teaagent.runner import ApprovalHandler, RunResult
 from teaagent.sandbox import GitBranchSandbox, GitTransactionSink
+from teaagent.types import AuditLogger, PermissionMode
 
 
 @dataclass

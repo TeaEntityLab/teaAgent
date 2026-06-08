@@ -34,7 +34,7 @@ class TestToolRegistryBuilder:
         assert 'workspace_read_file' in registry.list_tools()
 
     def test_custom_registry(self) -> None:
-        from teaagent.tools import ToolRegistry
+        from teaagent.types import ToolRegistry
 
         existing = ToolRegistry()
         result = ToolRegistryBuilder().with_registry(existing).build()

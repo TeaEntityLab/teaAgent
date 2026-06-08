@@ -7,10 +7,16 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from teaagent.approval_manager import ApprovalManager, PermissionMode
-from teaagent.errors import ToolExecutionError, ToolPermissionError, ToolValidationError
+from teaagent.approval import ApprovalManager
 from teaagent.policy import ApprovalPolicy
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    PermissionMode,
+    ToolAnnotations,
+    ToolExecutionError,
+    ToolPermissionError,
+    ToolRegistry,
+    ToolValidationError,
+)
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 

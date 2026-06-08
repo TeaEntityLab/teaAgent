@@ -123,24 +123,28 @@ def clear_config_cache() -> None:
     _CONFIG_CACHE.clear()
 
 
+def _coerce_list(value: Any) -> list:  # noqa: C901
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        if text.startswith('['):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                return [item.strip() for item in text.split(',') if item.strip()]
+            return parsed if isinstance(parsed, list) else [text]
+        return [item.strip() for item in text.split(',') if item.strip()]
+    return [value]
+
+
 def _coerce(value: Any, typ: type) -> Any:
     if value is None:
         return None
     if typ is list:
-        if isinstance(value, list):
-            return value
-        if isinstance(value, str):
-            text = value.strip()
-            if not text:
-                return []
-            if text.startswith('['):
-                try:
-                    parsed = json.loads(text)
-                except json.JSONDecodeError:
-                    return [item.strip() for item in text.split(',') if item.strip()]
-                return parsed if isinstance(parsed, list) else [text]
-            return [item.strip() for item in text.split(',') if item.strip()]
-        return [value]
+        return _coerce_list(value)
     if typ is int:
         return int(value)
     if typ is float:

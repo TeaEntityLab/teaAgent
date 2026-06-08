@@ -13,7 +13,7 @@ from teaagent.plugin_system import (
 )
 
 
-def plugin_list_command(args: argparse.Namespace) -> int:
+def plugin_list_command(args: argparse.Namespace) -> int:  # noqa: C901
     """List all discovered plugins."""
     root = Path(args.root).resolve()
     registry = PluginRegistry()

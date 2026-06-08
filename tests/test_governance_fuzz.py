@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from teaagent.errors import ToolPermissionError
+from teaagent.approval import CentralizedApprovalQueue
 from teaagent.governance.plan_gate import WRITE_TOOLS, assert_write_allowed
 from teaagent.memory.failure_card import (
     AutoInvalidationRule,
@@ -23,12 +23,11 @@ from teaagent.memory.failure_card import (
     FailureCardStorage,
     MemoryAutoInvalidationConfig,
 )
-from teaagent.policy import PermissionMode
 from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
-    CentralizedApprovalQueue,
     SubagentApprovalRequest,
 )
+from teaagent.types import PermissionMode, ToolPermissionError
 
 
 class TestPlanBeforeWriteFuzz:

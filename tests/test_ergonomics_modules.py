@@ -29,9 +29,9 @@ from teaagent.ergonomics.run_history import (
 )
 from teaagent.ergonomics.status_short import build_status_short
 from teaagent.ergonomics.workspace_defaults import _read_json, _read_toml
-from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore
 from teaagent.runner import RunResult
+from teaagent.types import PermissionMode
 
 
 def test_notify_darwin(monkeypatch: pytest.MonkeyPatch) -> None:

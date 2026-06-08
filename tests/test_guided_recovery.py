@@ -12,7 +12,7 @@ from teaagent.guided_recovery import (
     RecoverySelector,
     RecoveryStrategy,
 )
-from teaagent.runner._types import FinalAnswer, RunResult
+from teaagent.types import FinalAnswer, RunResult
 
 
 @pytest.fixture

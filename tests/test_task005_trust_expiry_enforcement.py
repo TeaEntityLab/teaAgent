@@ -29,7 +29,7 @@ from teaagent.mcp_trust import (
     merged_tool_filters,
     save_mcp_trust_policy,
 )
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry
 
 _EXPIRED = time.time() - 3600
 _ACTIVE = time.time() + 3600

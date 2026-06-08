@@ -17,11 +17,10 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_agent import ChatAgentConfig, run_chat_agent
 from teaagent.prompt import assemble_agent_prompt
 from teaagent.skill_loader import load_skills, skills_to_prompt_section
-from teaagent.tools import ToolRegistry
+from teaagent.types import AuditLogger, ToolRegistry
 
 
 def _install_skill(root: Path, name: str, content: str) -> None:

@@ -13,7 +13,7 @@ def _is_terminal(events: list[dict[str, Any]]) -> bool:
     return any(event.get('event_type') in terminal for event in events)
 
 
-def stream_run_events(
+def stream_run_events(  # noqa: C901
     run_id: str,
     *,
     root: str | Path = '.',

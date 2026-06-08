@@ -13,14 +13,13 @@ from unittest.mock import patch
 
 import pytest
 
-from teaagent.audit import AuditLogger
 from teaagent.audit_chain import (
     GENESIS_HASH,
     _last_chain_hash_full,
     last_chain_hash,
     read_audit_events,
-    verify_audit_chain,
 )
+from teaagent.types import AuditLogger, verify_audit_chain
 
 # ---------------------------------------------------------------------------
 # last_chain_hash() tests

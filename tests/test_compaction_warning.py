@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from teaagent.audit import AuditLogger
-from teaagent.budget import RunBudget
 from teaagent.context import ContextCompactor
 from teaagent.runner import AgentRunner, FinalAnswer
-from teaagent.tools import ToolRegistry
+from teaagent.types import AuditLogger, RunBudget, ToolRegistry
 
 
 class TestThresholdConfiguration:

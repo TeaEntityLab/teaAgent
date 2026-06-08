@@ -16,16 +16,14 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
-from teaagent.budget import RunBudget
-from teaagent.errors import ToolPermissionError
 from teaagent.hooks import (
     HookPermissionMode,
     HookRegistry,
     permission_check_hook,
 )
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
+from teaagent.types import AuditLogger, PermissionMode, RunBudget, ToolPermissionError
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 # ── helpers ──────────────────────────────────────────────────────────────────

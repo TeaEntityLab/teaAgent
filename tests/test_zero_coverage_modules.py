@@ -211,7 +211,7 @@ class TestACPServer(unittest.TestCase):
         emitted: list[dict] = []
         self.server.set_notification_sink(emitted.append, session_id='sess-1')
         sink = self.server.progress_audit_sink('sess-1')
-        from teaagent.audit import AuditEvent
+        from teaagent.types import AuditEvent
 
         sink(
             AuditEvent(

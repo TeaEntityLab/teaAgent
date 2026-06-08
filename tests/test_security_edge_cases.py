@@ -5,8 +5,8 @@ from __future__ import annotations
 import unittest
 
 from teaagent.governance.tool_lint import fuzz_check_handler_code
-from teaagent.policy import PermissionMode
 from teaagent.redaction import RedactionConfig
+from teaagent.types import PermissionMode
 
 
 class SSHRedactionEdgeCases(unittest.TestCase):

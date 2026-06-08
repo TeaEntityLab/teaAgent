@@ -4,11 +4,8 @@ import contextlib
 import threading
 import time
 
-from teaagent.jit_approval_server import (
-    ApprovalRequestRecord,
-    ApprovalStatus,
-    JITApprovalServer,
-)
+from teaagent.approval import JITApprovalServer
+from teaagent.jit_approval_server import ApprovalRequestRecord, ApprovalStatus
 from teaagent.tool_permissions import ToolPermissionManager
 
 

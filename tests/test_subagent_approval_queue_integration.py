@@ -7,14 +7,14 @@ import json
 import threading
 from contextlib import redirect_stdout
 
+from teaagent.approval import CentralizedApprovalQueue
 from teaagent.cli import main
-from teaagent.runner._types import ApprovalRequest
 from teaagent.subagents._approval_queue import (
-    CentralizedApprovalQueue,
     get_approval_queue,
     make_centralized_subagent_approval_handler,
     should_use_centralized_approval,
 )
+from teaagent.types import ApprovalRequest
 
 
 def test_should_use_centralized_approval_rules() -> None:

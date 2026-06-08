@@ -16,7 +16,6 @@ from unittest.mock import PropertyMock, patch
 
 from conftest import FakeAdapter
 
-from teaagent.approval_manager import PermissionMode
 from teaagent.chat_agent import (
     ChatAgentConfig,
     ModelDecisionEngine,
@@ -29,8 +28,8 @@ from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.llm import FakeLLMAdapter, LLMResponse
 from teaagent.policy import ApprovalPolicy
 from teaagent.runner import FinalAnswer, ToolRequest
-from teaagent.tools import ToolRegistry
 from teaagent.tui import TeaAgentTUI
+from teaagent.types import PermissionMode, ToolRegistry
 
 
 def _make_tmp_root() -> Path:
@@ -699,7 +698,7 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
     def test_decide_with_fake_llm_adapter(self) -> None:
         """decide() with FakeLLMAdapter returns a FinalAnswer for final-action JSON."""
-        from teaagent.tools import ToolAnnotations
+        from teaagent.types import ToolAnnotations
 
         tool_registry = ToolRegistry()
         tool_registry.register(
@@ -731,7 +730,7 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
     def test_decide_with_tool_request_from_fake_llm(self) -> None:
         """decide() returns a ToolRequest when JSON specifies type:tool."""
-        from teaagent.tools import ToolAnnotations
+        from teaagent.types import ToolAnnotations
 
         tool_registry = ToolRegistry()
         tool_registry.register(
@@ -763,7 +762,7 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
     def test_decide_falls_back_to_plain_text_after_retries(self) -> None:
         """After max retries with invalid JSON, decide falls back to plain text for simple tasks."""
-        from teaagent.tools import ToolAnnotations
+        from teaagent.types import ToolAnnotations
 
         tool_registry = ToolRegistry()
         tool_registry.register(
@@ -805,7 +804,7 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
     def test_decide_raises_for_workspace_task_after_max_retries(self) -> None:
         """For workspace tasks, decide raises RuntimeError after exhausting retries."""
-        from teaagent.tools import ToolAnnotations
+        from teaagent.types import ToolAnnotations
 
         tool_registry = ToolRegistry()
         tool_registry.register(
@@ -852,7 +851,7 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
     def test_decide_with_stream_on_chunk_called(self) -> None:
         """decide with stream=True triggers on_chunk callback."""
-        from teaagent.tools import ToolAnnotations
+        from teaagent.types import ToolAnnotations
 
         tool_registry = ToolRegistry()
         tool_registry.register(
@@ -889,7 +888,7 @@ class ModelDecisionEngineEdgeTests(unittest.TestCase):
 
     def test_decide_accumulates_cost_in_context(self) -> None:
         """decide updates _cost_cents in the context dict."""
-        from teaagent.tools import ToolAnnotations
+        from teaagent.types import ToolAnnotations
 
         tool_registry = ToolRegistry()
         tool_registry.register(
@@ -933,7 +932,7 @@ class PermissionModeTransitionTests(unittest.TestCase):
     def test_read_only_blocks_destructive_tools(self) -> None:
         """READ_ONLY mode blocks destructive tools via assert_allowed."""
         policy = ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY)
-        from teaagent.errors import ToolPermissionError
+        from teaagent.types import ToolPermissionError
 
         with self.assertRaises(ToolPermissionError):
             policy.assert_allowed(
@@ -970,7 +969,7 @@ class PermissionModeTransitionTests(unittest.TestCase):
 
     def test_workspace_write_blocks_shell_mutate(self) -> None:
         """WORKSPACE_WRITE blocks shell destructive tools."""
-        from teaagent.errors import ToolPermissionError
+        from teaagent.types import ToolPermissionError
 
         policy = ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
         with self.assertRaises(ToolPermissionError):
@@ -982,7 +981,7 @@ class PermissionModeTransitionTests(unittest.TestCase):
 
     def test_prompt_mode_requires_handler_for_destructive(self) -> None:
         """PROMPT mode for destructive tools without handler raises."""
-        from teaagent.errors import ToolPermissionError
+        from teaagent.types import ToolPermissionError
 
         policy = ApprovalPolicy(permission_mode=PermissionMode.PROMPT)
         with self.assertRaises(ToolPermissionError):

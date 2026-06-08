@@ -20,7 +20,7 @@ from teaagent.cli._handlers._agent import (
     interactive_review_mode,
 )
 from teaagent.cli._handlers._ergonomics import _truncate_string
-from teaagent.errors import ToolExecutionError
+from teaagent.types import ToolExecutionError
 from teaagent.workspace_tools._files import (
     WorkspaceToolConfig,
     build_workspace_tool_registry,

@@ -122,10 +122,8 @@ class SQLiteCheckpointStoreTests(unittest.TestCase):
 
 class AgentRunnerCheckpointTests(unittest.TestCase):
     def _make_runner(self, checkpoint_store=None):
-        from teaagent.audit import AuditLogger
-        from teaagent.budget import RunBudget
         from teaagent.runner import AgentRunner
-        from teaagent.tools import ToolAnnotations, ToolRegistry
+        from teaagent.types import AuditLogger, RunBudget, ToolAnnotations, ToolRegistry
 
         registry = ToolRegistry()
         registry.register(

@@ -5,7 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest import mock
 
 from teaagent.async_bridge import run_coroutine_sync
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
+from teaagent.types import PermissionMode
 
 
 def test_run_coroutine_sync_from_running_loop_leaves_loop_usable() -> None:

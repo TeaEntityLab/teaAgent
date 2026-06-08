@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def complete_file_path(text: str, root: Path) -> list[str]:
+def complete_file_path(text: str, root: Path) -> list[str]:  # noqa: C901
     """Complete file paths starting with @.
 
     Args:

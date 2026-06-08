@@ -48,7 +48,7 @@ def extract_tree_sitter_relations(path: str) -> list[CodeRelation]:
     return _extract_generic_tree_sitter_relations(source_path, language)
 
 
-def _extract_python_relations(path: Path) -> list[CodeRelation]:
+def _extract_python_relations(path: Path) -> list[CodeRelation]:  # noqa: C901
     text = path.read_text(encoding='utf-8')
     tree = ast.parse(text)
     relations: list[CodeRelation] = []

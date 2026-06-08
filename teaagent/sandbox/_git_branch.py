@@ -523,7 +523,7 @@ class GitTransactionSink:
             self._pending.pop(call_id, None)
 
 
-def find_orphaned_sandbox_branches(
+def find_orphaned_sandbox_branches(  # noqa: C901
     root: str | Path,
     background_store: Optional[BackgroundRunStore] = None,
 ) -> list[dict[str, Any]]:
@@ -880,7 +880,7 @@ def apply_llm_resolution(
         return False
 
 
-def resolve_conflicts_with_llm(
+def resolve_conflicts_with_llm(  # noqa: C901
     root: str | Path,
     conflicted_files: list[str],
     provider: str,

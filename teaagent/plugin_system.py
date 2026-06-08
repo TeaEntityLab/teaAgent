@@ -325,7 +325,7 @@ _USER_PLUGIN_DIR = Path.home() / '.config' / 'teaagent' / 'plugins'
 _BUILTIN_PLUGIN_DIR = Path(__file__).parent / 'plugins' / 'builtin'
 
 
-def discover_plugins(root: Path) -> list[Plugin]:
+def discover_plugins(root: Path) -> list[Plugin]:  # noqa: C901
     """Discover all file-based (manifest) plugins in priority order."""
     candidates: list[Path] = []
 

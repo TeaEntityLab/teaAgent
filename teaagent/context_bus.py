@@ -347,7 +347,7 @@ class ContextBus:
 
         return deltas
 
-    def archive_to_rag(self, rag_store: Any) -> None:
+    def archive_to_rag(self, rag_store: Any) -> None:  # noqa: C901
         """Archive Delta cards to RAG long-term memory.
 
         Split into two phases to avoid holding a SQLite transaction across

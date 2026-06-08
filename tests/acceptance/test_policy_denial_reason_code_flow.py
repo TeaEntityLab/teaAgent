@@ -7,9 +7,9 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from teaagent.cli import main
-from teaagent.errors import DenialReasonCode, ToolPermissionError
 from teaagent.run_store import RunStore
 from teaagent.runner import RunResult
+from teaagent.types import DenialReasonCode, ToolPermissionError
 
 
 def test_denied_audit_event_includes_reason_code(tmp_path: Path) -> None:

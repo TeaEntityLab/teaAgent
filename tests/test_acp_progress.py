@@ -10,8 +10,8 @@ from teaagent.acp_progress import (
     stream_event_to_session_update,
     text_sink_for_acp_progress,
 )
-from teaagent.audit import AuditEvent
 from teaagent.streaming.events import StreamEvent
+from teaagent.types import AuditEvent
 
 
 def test_build_session_update_notification() -> None:

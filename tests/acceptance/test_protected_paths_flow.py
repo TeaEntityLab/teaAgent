@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import pytest
 
-from teaagent.errors import ToolPermissionError
 from teaagent.file_policy import (
     FilePolicy,
     build_protected_dir_rules,
     load_file_policy,
 )
+from teaagent.types import ToolPermissionError
 
 
 def test_build_protected_dir_rules_returns_git_and_teaagent():

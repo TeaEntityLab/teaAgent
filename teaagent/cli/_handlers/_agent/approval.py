@@ -40,7 +40,7 @@ def run_result_payload(
     return payload
 
 
-def make_cli_approval_handler(
+def make_cli_approval_handler(  # noqa: C901
     root: str | Path, *, permission_mode: str = 'prompt'
 ) -> ApprovalHandler:
     from teaagent.ergonomics.approval_store import ApprovalPresetStore

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import logging
 
-from teaagent.audit import AuditLogger
-from teaagent.budget import RunBudget
 from teaagent.budget_monitor import BudgetAction, BudgetMonitor
 from teaagent.runner import AgentRunner, FinalAnswer
-from teaagent.tools import ToolRegistry
+from teaagent.types import AuditLogger, RunBudget, ToolRegistry
 
 
 def test_budget_warning_events_emitted_at_thresholds() -> None:

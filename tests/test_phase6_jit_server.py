@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
-from teaagent.jit_approval_server import ApprovalStatus, JITApprovalServer
+from teaagent.approval import JITApprovalServer
+from teaagent.jit_approval_server import ApprovalStatus
 from teaagent.tool_permissions import ToolPermissionManager
 
 

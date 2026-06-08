@@ -10,7 +10,7 @@ import json
 import os
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
+from teaagent.types import AuditLogger
 
 
 def test_each_audit_event_has_unique_id(tmp_path: Path) -> None:

@@ -42,7 +42,7 @@ def write_real_eval_report(candidate_dir: Path, report: EvalReport) -> Path:
     return path
 
 
-def run_real_model_eval(
+def run_real_model_eval(  # noqa: C901
     candidate_dir: Path,
     *,
     model: str = 'gpt-4o',

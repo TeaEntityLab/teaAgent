@@ -104,7 +104,7 @@ class ParallelExperimentStack:
         """
         return self._sandboxes.get(option)
 
-    def compare_branches(self) -> dict[str, dict[str, Any]]:
+    def compare_branches(self) -> dict[str, dict[str, Any]]:  # noqa: C901
         """Compare all experimental branches against original.
 
         Returns:

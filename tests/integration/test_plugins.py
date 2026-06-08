@@ -10,7 +10,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from teaagent.plugins import PLUGIN_GROUP, PluginLoadResult, load_plugins
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolAnnotations, ToolRegistry
 
 
 def _make_registrar(name: str):

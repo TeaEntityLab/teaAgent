@@ -15,7 +15,7 @@ Acceptance criteria:
 
 from __future__ import annotations
 
-from teaagent.errors import (
+from teaagent.types import (
     BudgetExceededError,
     RunCancelledError,
     ToolExecutionError,

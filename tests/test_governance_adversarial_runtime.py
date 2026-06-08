@@ -6,13 +6,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from teaagent.audit import AuditLogger
-from teaagent.errors import ToolPermissionError
 from teaagent.governance.tool_lint import lint_registry
 from teaagent.plugins import load_plugins
-from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, FinalAnswer, ToolRequest
-from teaagent.tools import ToolAnnotations, ToolRegistry
+from teaagent.types import (
+    AuditLogger,
+    PermissionMode,
+    ToolAnnotations,
+    ToolPermissionError,
+    ToolRegistry,
+)
 
 
 def _mislabelled_write_registrar(registry: ToolRegistry) -> None:

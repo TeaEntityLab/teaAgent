@@ -13,7 +13,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
-from teaagent.audit import AuditLogger
+from teaagent.types import AuditLogger
 from teaagent.webhook_sink import WebhookAuditSink
 
 

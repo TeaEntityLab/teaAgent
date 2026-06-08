@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from teaagent.errors import (
+from teaagent.types import (
     AgentHarnessError,
     BudgetExceededError,
     DenialReasonCode,

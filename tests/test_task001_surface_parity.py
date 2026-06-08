@@ -17,9 +17,9 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from teaagent.audit import AuditLogger
 from teaagent.chat_session_controller import ChatSessionController
 from teaagent.run_undo import UndoJournal
+from teaagent.types import AuditLogger
 
 
 def _fake_result(cost_cents: float) -> MagicMock:

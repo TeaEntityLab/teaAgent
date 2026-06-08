@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Any, Callable, Optional, cast
 
-from teaagent.policy import PermissionMode
+from teaagent.types import PermissionMode
 
 
 def register(

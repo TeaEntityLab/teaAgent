@@ -16,7 +16,7 @@ from teaagent.subagent_run_context import (
 )
 from teaagent.subagents import SubagentManager
 from teaagent.subagents._tools import register_subagent_tools
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def _stub_result(run_id: str = 'child-run-1') -> RunResult:

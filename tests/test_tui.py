@@ -13,8 +13,8 @@ from conftest import FakeAdapter
 from teaagent.cli import main
 from teaagent.ergonomics._approval_grants import _compute_argument_digest
 from teaagent.graphqlite_store import GraphQLiteRuntimeError
-from teaagent.policy import PermissionMode
 from teaagent.tui import TeaAgentTUI
+from teaagent.types import PermissionMode
 from test_support import can_bind_loopback
 
 
@@ -1547,7 +1547,7 @@ class TUITests(unittest.TestCase):
 
             # Initialize journal and record the original state of touched.py
             journal = UndoJournal(tmpdir_path)
-            from teaagent.audit import AuditEvent
+            from teaagent.types import AuditEvent
 
             started_event = AuditEvent(
                 event_type='tool_call_started',
@@ -1707,7 +1707,7 @@ class TUITests(unittest.TestCase):
         from argparse import Namespace
 
         from teaagent.cli._handlers._chat import chat_command
-        from teaagent.policy import PermissionMode
+        from teaagent.types import PermissionMode
 
         args = Namespace(
             provider='test-provider',
@@ -1762,7 +1762,7 @@ class TUITests(unittest.TestCase):
         from argparse import Namespace
 
         from teaagent.cli._handlers._chat import chat_command
-        from teaagent.policy import PermissionMode
+        from teaagent.types import PermissionMode
 
         args = Namespace(
             task='fix the bug in auth.py',
@@ -1862,7 +1862,7 @@ class TUITests(unittest.TestCase):
         from argparse import Namespace
 
         from teaagent.cli._handlers._chat import chat_command
-        from teaagent.policy import PermissionMode
+        from teaagent.types import PermissionMode
 
         args = Namespace(
             provider=None,

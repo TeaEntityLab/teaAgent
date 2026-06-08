@@ -20,7 +20,7 @@ from teaagent.chat_agent import ChatAgentConfig
 from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
 from teaagent.subagents import SubagentManager
 from teaagent.subagents._tools import register_subagent_tools
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 class SubagentWorktreeIsolationFlowTests(unittest.TestCase):

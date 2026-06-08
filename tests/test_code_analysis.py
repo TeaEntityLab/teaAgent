@@ -7,7 +7,7 @@ from teaagent.code_analysis import (
     register_code_analysis_tools,
 )
 from teaagent.graph_rag import KnowledgeGraph
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def test_code_analysis_tools_not_registered_when_disabled(tmp_path):

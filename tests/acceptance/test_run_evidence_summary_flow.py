@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import json
 
-from teaagent.audit import AuditLogger
 from teaagent.run_evidence import (
     build_run_evidence_bundle,
 )
 from teaagent.run_store import RunStore
+from teaagent.types import AuditLogger
 
 
 def test_evidence_summary_includes_all_required_fields(tmp_path):

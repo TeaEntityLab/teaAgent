@@ -6,8 +6,8 @@ audit logs and supply extra custom patterns.
 
 from __future__ import annotations
 
-from teaagent.audit import AuditLogger
 from teaagent.redaction import RedactionConfig
+from teaagent.types import AuditLogger
 
 
 def test_default_redaction_removes_bearer_token(tmp_path):

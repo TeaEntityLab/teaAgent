@@ -2,10 +2,13 @@
 
 from teaagent.errors import (
     AgentHarnessError,
+    AuditDurabilityError,
     BudgetExceededError,
     ConfigError,
     DenialReasonCode,
     ErrorCategory,
+    InvalidToolDecision,
+    RunCancelledError,
     ToolExecutionError,
     ToolPermissionError,
     ToolValidationError,
@@ -13,10 +16,13 @@ from teaagent.errors import (
 
 __all__ = [
     'AgentHarnessError',
+    'AuditDurabilityError',
     'BudgetExceededError',
     'ConfigError',
     'DenialReasonCode',
     'ErrorCategory',
+    'InvalidToolDecision',
+    'RunCancelledError',
     'ToolExecutionError',
     'ToolPermissionError',
     'ToolValidationError',

@@ -9,15 +9,16 @@ import sys
 from pathlib import Path
 from typing import Any, Literal, Optional
 
+from teaagent.approval import parse_permission_mode
 from teaagent.chat_agent import run_chat_agent
 from teaagent.cli._output import print_json
 from teaagent.cli.execution import AgentExecutionFactory
 from teaagent.code_analysis import CodeAnalysisConfig
 from teaagent.intent import build_task_spec, clarify_task
 from teaagent.model_routing import route_model
-from teaagent.policy import PermissionMode, parse_permission_mode
 from teaagent.run_store import RunStore, safe_run_id, summarize_audit_events
 from teaagent.runner import RunResult
+from teaagent.types import PermissionMode
 
 logger = logging.getLogger(__name__)
 
@@ -424,7 +425,7 @@ def agent_run_task(args: argparse.Namespace) -> int:
     return _execute_agent_task(args, task, plan_contract=plan_contract)
 
 
-def _execute_agent_task(
+def _execute_agent_task(  # noqa: C901
     args: argparse.Namespace,
     task: str,
     *,

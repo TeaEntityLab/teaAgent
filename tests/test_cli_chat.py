@@ -311,7 +311,7 @@ def test_chat_repl_displays_answer(monkeypatch, capsys):
     """Test REPL displays final answer on success and error message on failure."""
     from unittest.mock import MagicMock, patch
 
-    from teaagent.runner._types import FinalAnswer, RunResult
+    from teaagent.types import FinalAnswer, RunResult
 
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ChatAgentConfig.from_root(tmpdir)
@@ -433,7 +433,7 @@ def test_chat_session_controller_execute_task(monkeypatch, capsys):
     from unittest.mock import MagicMock, patch
 
     from teaagent.chat_session_controller import ChatSessionController, SessionState
-    from teaagent.runner._types import FinalAnswer, RunResult
+    from teaagent.types import FinalAnswer, RunResult
 
     with tempfile.TemporaryDirectory() as tmpdir:
         session_state = SessionState()
@@ -615,7 +615,7 @@ def test_chat_surface_parity(monkeypatch, capsys):
     from unittest.mock import MagicMock, patch
 
     from teaagent.chat_session_controller import ChatSessionController, SessionState
-    from teaagent.runner._types import FinalAnswer, RunResult
+    from teaagent.types import FinalAnswer, RunResult
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create two controllers (simulating CLI and TUI)

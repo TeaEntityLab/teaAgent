@@ -7,9 +7,8 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from teaagent.audit import AuditLogger
-from teaagent.errors import AuditDurabilityError
 from teaagent.security_env import compliance_mode
+from teaagent.types import AuditDurabilityError, AuditLogger
 
 
 def test_compliance_mode_env_helper(monkeypatch: pytest.MonkeyPatch) -> None:

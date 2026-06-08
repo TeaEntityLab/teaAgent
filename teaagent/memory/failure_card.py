@@ -529,7 +529,7 @@ class FailureCardStorage:
         except (OSError, IOError):
             return None
 
-    def apply_auto_invalidation(
+    def apply_auto_invalidation(  # noqa: C901
         self, config: Optional[MemoryAutoInvalidationConfig] = None
     ) -> dict[str, int]:
         """Apply automated invalidation rules based on file system state.

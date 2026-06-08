@@ -11,9 +11,9 @@ Verifies that:
 from __future__ import annotations
 
 from teaagent.chat_agent import ChatAgentConfig, register_subagent_tool, run_chat_agent
-from teaagent.policy import ApprovalPolicy, JITApprovalState
+from teaagent.policy import ApprovalPolicy
 from teaagent.runner._approval_manager import RunnerApprovalCoordinator
-from teaagent.tools import ToolRegistry
+from teaagent.types import JITApprovalState, ToolRegistry
 
 
 class _StubAdapter:

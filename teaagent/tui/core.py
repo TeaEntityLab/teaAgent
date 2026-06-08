@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from teaagent.memory.file_watcher import FileWatcher
 
 from teaagent import __version__
-from teaagent.audit import AuditEvent
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
 from teaagent.cockpit import CockpitState, ControlCockpitState, build_control_cockpit
@@ -29,7 +28,6 @@ from teaagent.intent import build_task_spec, clarify_task
 from teaagent.llm import LLMMessage
 from teaagent.memory import MemoryCatalog
 from teaagent.model_routing import route_model
-from teaagent.policy import PermissionMode
 from teaagent.run_store import RunStore, summarize_audit_events
 from teaagent.runner import ApprovalRequest, RunResult
 from teaagent.sandbox import (
@@ -41,6 +39,7 @@ from teaagent.skill_loader import (
     discover_skill_index,
     explain_skill_activation,
 )
+from teaagent.types import AuditEvent, PermissionMode
 
 from .state import (
     AdapterFactory,
@@ -1443,8 +1442,8 @@ class TeaAgentTUI:
         return self._store
 
     def _load_workspace_defaults(self) -> None:
+        from teaagent.approval import parse_permission_mode
         from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
-        from teaagent.policy import parse_permission_mode
 
         defaults = load_workspace_defaults(self.root)
         provider = defaults.get('provider')

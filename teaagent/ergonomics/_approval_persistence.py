@@ -244,7 +244,7 @@ class ApprovalPersistence:
             return []
         return [item for item in audit[-limit:] if isinstance(item, dict)]
 
-    def check_security_health(self, *, fix_permissions: bool = False) -> dict[str, Any]:
+    def check_security_health(self, *, fix_permissions: bool = False) -> dict[str, Any]:  # noqa: C901
         """Run comprehensive security health checks on .teaagent runtime state.
 
         Args:

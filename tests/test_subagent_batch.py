@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.subagents import SubagentManager
 from teaagent.subagents._tools import register_subagent_tools
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def _make_manager(root: Path) -> tuple[SubagentManager, MagicMock]:

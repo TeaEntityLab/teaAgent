@@ -15,7 +15,7 @@ import pytest
 
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.chat_session_controller import ChatSessionController, SessionState
-from teaagent.runner._types import FinalAnswer, RunResult
+from teaagent.types import FinalAnswer, RunResult
 
 _FAKE_RESULT = RunResult(
     run_id='parity-run-001',

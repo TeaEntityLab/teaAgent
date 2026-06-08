@@ -159,7 +159,7 @@ def test_load_workspace_config_empty_when_missing(tmp_path):
 
 def test_chat_agent_config_from_root_applies_profile(tmp_path):
     from teaagent.chat_agent import ChatAgentConfig
-    from teaagent.policy import PermissionMode
+    from teaagent.types import PermissionMode
 
     cfg_dir = tmp_path / '.teaagent'
     cfg_dir.mkdir()
@@ -174,7 +174,7 @@ def test_chat_agent_config_from_root_applies_profile(tmp_path):
 
 def test_chat_agent_config_from_root_defaults_when_no_profile(tmp_path):
     from teaagent.chat_agent import ChatAgentConfig
-    from teaagent.policy import PermissionMode
+    from teaagent.types import PermissionMode
 
     config = ChatAgentConfig.from_root(tmp_path)
     assert config.permission_mode == PermissionMode.PROMPT  # default
@@ -184,7 +184,7 @@ def test_chat_agent_config_from_root_defaults_when_no_profile(tmp_path):
 def test_chat_agent_config_kwargs_override_profile(tmp_path):
     """Explicit kwargs to from_root() beat the workspace profile."""
     from teaagent.chat_agent import ChatAgentConfig
-    from teaagent.policy import PermissionMode
+    from teaagent.types import PermissionMode
 
     cfg_dir = tmp_path / '.teaagent'
     cfg_dir.mkdir()

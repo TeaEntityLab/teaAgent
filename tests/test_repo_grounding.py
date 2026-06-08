@@ -6,7 +6,6 @@ import json
 import tempfile
 from pathlib import Path
 
-from teaagent.audit import AuditLogger
 from teaagent.goal_record import GoalRecord, GoalStore
 from teaagent.spec_grounding import (
     GroundingCheck,
@@ -17,6 +16,7 @@ from teaagent.spec_grounding import (
     perform_grounding_check,
     persist_grounding,
 )
+from teaagent.types import AuditLogger
 
 # ── extract_file_refs ────────────────────────────────────────────────────
 

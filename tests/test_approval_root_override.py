@@ -5,8 +5,8 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from teaagent.policy import PermissionMode
 from teaagent.tui import TeaAgentTUI
+from teaagent.types import PermissionMode
 
 
 class TeaAgentTUITestHelper(TeaAgentTUI):

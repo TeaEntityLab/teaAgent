@@ -114,7 +114,7 @@ class JITApprovalServer:
             self._loop = None
             logger.info('JIT Approval Server stopped')
 
-    async def _handle_connection(
+    async def _handle_connection(  # noqa: C901
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         """Handle incoming SSE client connections."""

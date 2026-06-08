@@ -9,7 +9,7 @@ from teaagent.code_analysis._tools import (
     clear_graph_cache,
     register_code_analysis_tools,
 )
-from teaagent.tools import ToolRegistry
+from teaagent.types import ToolRegistry
 
 
 def test_graph_cache_evicts_oldest_when_over_capacity(tmp_path: Path) -> None:

@@ -12,7 +12,7 @@ from pathlib import Path
 from teaagent.cli._output import print_json
 
 
-def interactive_review_mode(root: str, run_id: str) -> int:
+def interactive_review_mode(root: str, run_id: str) -> int:  # noqa: C901
     """Interactive review mode for suspended sessions.
 
     Args:

@@ -94,7 +94,7 @@ def test_json_agent_definition(tmp_path):
     assert 'tester' in defs
     d = defs['tester']
     assert d.max_tool_calls == 12
-    from teaagent.policy import PermissionMode
+    from teaagent.types import PermissionMode
 
     assert d.permission_mode == PermissionMode.READ_ONLY
 

@@ -184,7 +184,7 @@ class ContainerCodeModeBackend:
         return cmd
 
 
-def _communicate_with_output_limit(
+def _communicate_with_output_limit(  # noqa: C901
     process: subprocess.Popen[bytes],
     stdin_payload: bytes,
     *,

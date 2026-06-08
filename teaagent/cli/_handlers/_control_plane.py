@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 
+from teaagent.approval import JITApprovalServer
 from teaagent.control_plane_api import ControlPlaneServer
 from teaagent.control_plane_tenant import ControlPlaneRegistry
-from teaagent.jit_approval_server import JITApprovalServer
 from teaagent.tool_permissions import ToolPermissionManager
 
 

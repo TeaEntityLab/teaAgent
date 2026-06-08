@@ -21,7 +21,7 @@ from teaagent.chat_agent import ChatAgentConfig
 from teaagent.cli._agent_parsers import _interactive_review
 from teaagent.cli._handlers._agent import agent_run_task
 from teaagent.run_store import RunStore, RunSummary
-from teaagent.runner._types import FinalAnswer, RunResult
+from teaagent.types import FinalAnswer, RunResult
 
 # ---- resumable flag on RunSummary (P1-A-003) ----
 

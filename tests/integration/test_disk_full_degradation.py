@@ -16,8 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
-from teaagent.audit import AuditLogger
-from teaagent.errors import AuditDurabilityError
+from teaagent.types import AuditDurabilityError, AuditLogger
 
 
 def _enospc_fsync(fd: int) -> None:
