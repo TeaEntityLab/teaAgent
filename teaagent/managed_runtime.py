@@ -496,12 +496,13 @@ class VertexAgentRuntime:
         project_id: Optional[str] = None,
         location: str = 'us-central1',
     ) -> None:
-        if not _sdk_import_available('google.cloud.aiplatform'):
+        try:
+            import google.cloud.aiplatform as _vertex  # noqa: F401
+        except ImportError as exc:
             raise ImportError(
                 f'VertexAgentRuntime requires the Vertex AI SDK. '
                 f'Install with: {_INSTALL_VERTEX}'
-            )
-        import google.cloud.aiplatform as _vertex  # noqa: F401
+            ) from exc
 
         self._agent_id = agent_id
         self._project_id = project_id

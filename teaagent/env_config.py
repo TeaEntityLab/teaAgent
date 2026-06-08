@@ -14,18 +14,19 @@ from pathlib import Path
 from typing import Any
 
 # Use tomllib from stdlib for Python 3.11+, fall back to tomli
-tomllib: Any
+tomllib: Any = None
 if sys.version_info >= (3, 11):
-    import tomllib
+    import tomllib as _tomllib
 
+    tomllib = _tomllib
     TOMLLIB_AVAILABLE = True
 else:
     try:
-        import tomli as tomllib
+        import tomli as _tomli
 
+        tomllib = _tomli
         TOMLLIB_AVAILABLE = True
     except ImportError:
-        tomllib = None
         TOMLLIB_AVAILABLE = False
 
 
