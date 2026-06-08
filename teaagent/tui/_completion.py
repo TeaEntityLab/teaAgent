@@ -126,9 +126,8 @@ def complete_symbols(text: str, root: Path) -> list[str]:
     if not text.startswith('@'):
         return []
 
-    partial = text[1:]
     all_symbols = _get_cached_symbols(root)
-    return [s for s in all_symbols if s.lower().startswith(partial.lower())]
+    return [s for s in all_symbols if s.lower().startswith(text.lower())]
 
 
 class TeaAgentCompleter(Completer):

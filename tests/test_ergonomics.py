@@ -667,7 +667,7 @@ def test_agent_resume_auto_approve_creates_scoped_approval(
         return 0
 
     monkeypatch.setattr(
-        'teaagent.cli._handlers._agent._execute_agent_task', mock_execute
+        'teaagent.cli._handlers._agent.resume._execute_agent_task', mock_execute
     )
 
     # 3. Call agent_resume_command

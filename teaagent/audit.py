@@ -144,6 +144,7 @@ class AuditLogger:
         self._chain_key = self._load_or_save_chain_key()
         self._audit_level = audit_level
         self._file_chmod_done = False  # Track if chmod has been done
+        self._last_timestamp_str: Optional[str] = None
 
         # Encryption setup for L3 audit logs
         self._encryption_key: Optional[bytes] = encryption_key
@@ -158,7 +159,8 @@ class AuditLogger:
                 # Generate a new encryption key if not provided
                 self._encryption_key = self._load_or_save_encryption_key()
             try:
-                assert self._encryption_key is not None
+                if self._encryption_key is None:
+                    raise ValueError('Encryption key is required')
                 self._fernet = Fernet(self._encryption_key)
             except Exception as exc:
                 raise AuditDurabilityError(
@@ -180,6 +182,9 @@ class AuditLogger:
                                 last_entry = json.loads(line)
                                 if 'hash' in last_entry:
                                     self._prev_hash = last_entry['hash']
+                                    self._last_timestamp_str = last_entry.get(
+                                        'created_at'
+                                    )
                                     break
                             except json.JSONDecodeError:
                                 continue
@@ -383,32 +388,30 @@ class AuditLogger:
                 filtered_payload, string_patterns=self._string_patterns
             )
 
-        event = AuditEvent(
-            event_type=event_type,
-            run_id=run_id,
-            payload=event_payload,
-        )
-        # SAFETY: self._lock and file_lock must never be held simultaneously (deadlock).
+        event_id = uuid4().hex
+        created_at = utc_now()
+
         with self._lock:
-            self.events.append(event)
             path = self.path
-            sinks = list(self._sinks)
 
         if path is not None and self.disk_error is None:
             from teaagent.audit_chain import _hash_hex, compute_chain_hmac
 
             try:
                 with file_lock(path):
-                    # Read _prev_hash under file_lock to prevent race
-                    # SAFETY: We read _prev_hash without self._lock here because:
-                    # 1. _prev_hash is only written here (atomic string assignment)
-                    # 2. We're inside file_lock which serializes all writes
-                    # 3. The stale read risk is acceptable - it would just cause
-                    #    a hash mismatch that would be caught by verification
+                    # Enforce monotonicity under file lock
+                    created_at = utc_now()
+                    if (
+                        self._last_timestamp_str
+                        and created_at < self._last_timestamp_str
+                    ):
+                        created_at = self._last_timestamp_str
+                    self._last_timestamp_str = created_at
+
                     prev = self._prev_hash
 
                     # Encrypt payload for L3
-                    payload_to_write = event.payload
+                    payload_to_write = event_payload
                     if self._audit_level == 'L3':
                         # Encryption is required for L3 - fail closed if it fails
                         if self._fernet is None:
@@ -417,7 +420,7 @@ class AuditLogger:
                                 hint="Reinitialize AuditLogger with audit_level='L3' to set up encryption.",
                             )
                         try:
-                            payload_json = json.dumps(event.payload, sort_keys=True)
+                            payload_json = json.dumps(event_payload, sort_keys=True)
                             encrypted_bytes = self._fernet.encrypt(
                                 payload_json.encode('utf-8')
                             )
@@ -432,10 +435,10 @@ class AuditLogger:
 
                     canonical = json.dumps(
                         {
-                            'event_id': event.event_id,
-                            'event_type': event.event_type,
-                            'run_id': event.run_id,
-                            'created_at': event.created_at,
+                            'event_id': event_id,
+                            'event_type': event_type,
+                            'run_id': run_id,
+                            'created_at': created_at,
                             'payload': payload_to_write,
                             'prev_hash': prev,
                         },
@@ -475,7 +478,7 @@ class AuditLogger:
                     self._consecutive_disk_failures += 1
                     err_event = AuditEvent(
                         event_type='_disk_write_error',
-                        run_id=event.run_id,
+                        run_id=run_id,
                         payload={'error': str(exc), 'errno': exc.errno},
                     )
                     self.events.append(err_event)
@@ -508,6 +511,24 @@ class AuditLogger:
                         'error_code': 'AUDIT_DISK_WRITE',
                     },
                 )
+        else:
+            with self._lock:
+                if self._last_timestamp_str and created_at < self._last_timestamp_str:
+                    created_at = self._last_timestamp_str
+                self._last_timestamp_str = created_at
+
+        event = AuditEvent(
+            event_type=event_type,
+            run_id=run_id,
+            payload=event_payload,
+            event_id=event_id,
+            created_at=created_at,
+        )
+
+        with self._lock:
+            self.events.append(event)
+            sinks = list(self._sinks)
+
         failed_sinks = []
         for sink in sinks:
             try:

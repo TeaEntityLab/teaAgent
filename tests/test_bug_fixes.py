@@ -447,17 +447,21 @@ class TestImportOrganization:
         """Test that imports are at module level, not in functions."""
         import inspect
 
-        from teaagent.cli._handlers import _agent
+        from teaagent.cli._handlers._agent import automation, experiment
 
-        # Verify that sandbox and skill_candidates are imported at top level
-        source = inspect.getsource(_agent)
-        # Check that imports are before first function definition
-        first_def = source.find('def ')
-        sandbox_import = source.find('from teaagent.sandbox import')
-        skill_import = source.find('from teaagent.skill_candidates import')
+        # Verify that sandbox is imported at top level in experiment
+        exp_source = inspect.getsource(experiment)
+        first_def_exp = exp_source.find('def ')
+        sandbox_import = exp_source.find('from teaagent.sandbox import')
+        assert sandbox_import != -1
+        assert sandbox_import < first_def_exp
 
-        assert sandbox_import < first_def
-        assert skill_import < first_def
+        # Verify that skill_candidates is imported at top level in automation
+        auto_source = inspect.getsource(automation)
+        first_def_auto = auto_source.find('def ')
+        skill_import = auto_source.find('from teaagent.skill_candidates import')
+        assert skill_import != -1
+        assert skill_import < first_def_auto
 
 
 class TestErrorRecoveryImprovement:

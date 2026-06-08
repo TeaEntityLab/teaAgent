@@ -137,32 +137,29 @@ class TestValidationRunner:
         test_file = temp_root / 'test.py'
         test_file.write_text('x = 1\nprint(y)')  # Error: undefined variable
 
-        runner = ValidationRunner(root=temp_root, timeout=30)
+        with patch('shutil.which', return_value='/usr/bin/ruff'):
+            runner = ValidationRunner(root=temp_root, timeout=30)
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    stdout="test.py:2:7: F821 Undefined variable 'y'",
+                    stderr='',
+                    returncode=1,
+                )
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = MagicMock(
-                stdout="test.py:2:7: F821 Undefined variable 'y'",
-                stderr='',
-                returncode=1,
-            )
+                results = runner.validate_file(test_file)
 
-            results = runner.validate_file(test_file)
-
-            # Should have at least one result
-            assert len(results) >= 1
-            # Check that at least one tool ran
-            assert any(r.tool in ['ruff', 'mypy', 'tsc', 'eslint'] for r in results)
+                # Should have at least one result
+                assert len(results) >= 1
+                # Check that at least one tool ran
+                assert any(r.tool in ['ruff', 'mypy', 'tsc', 'eslint'] for r in results)
 
     def test_timeout_handling(self, temp_root: Path) -> None:
         """Test timeout handling during validation."""
         test_file = temp_root / 'test.py'
         test_file.write_text('x = 1')
 
-        runner = ValidationRunner(root=temp_root, timeout=0.1)
-
-        with patch('shutil.which') as mock_which:
-            mock_which.return_value = '/usr/bin/ruff'
-
+        with patch('shutil.which', return_value='/usr/bin/ruff'):
+            runner = ValidationRunner(root=temp_root, timeout=0.1)
             with patch('subprocess.run') as mock_run:
                 from subprocess import TimeoutExpired
 

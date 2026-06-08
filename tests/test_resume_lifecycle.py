@@ -229,9 +229,7 @@ def test_background_allows_legitimate_task(capsys):
     with tempfile.TemporaryDirectory() as tmp:
         args = _make_background_args(tmp, task='legitimate task string')
 
-        with patch(
-            'teaagent.ergonomics.background_run.BackgroundRunStore'
-        ) as mock_bg_store_class:
+        with patch('teaagent.cli.execution.BackgroundRunStore') as mock_bg_store_class:
             mock_bg_store = MagicMock()
             mock_bg_store.start.return_value = MagicMock(
                 to_dict=lambda: {

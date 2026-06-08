@@ -225,26 +225,54 @@ class GoogleADKRuntimeTests(unittest.TestCase):
 
 class VertexAgentRuntimeTests(unittest.TestCase):
     def setUp(self) -> None:
-        try:
-            import google.cloud.aiplatform  # noqa: F401
-        except ImportError:
-            self.skipTest('google-cloud-aiplatform not installed')
+        import sys
+        from unittest.mock import MagicMock, patch
+
+        # Patch _sdk_import_available to return True to avoid importlib.util.find_spec checking mocked modules
+        self._sdk_patcher = patch(
+            'teaagent.managed_runtime._sdk_import_available', return_value=True
+        )
+        self._sdk_patcher.start()
+
+        # Mock sys.modules for google.cloud.aiplatform and vertexai to avoid MemoryError from loading large libraries
+        self._orig_aiplatform = sys.modules.get('google.cloud.aiplatform')
+        self._orig_vertexai = sys.modules.get('vertexai')
+        self._orig_agent_engines = sys.modules.get('vertexai.agent_engines')
+
+        sys.modules['google.cloud.aiplatform'] = MagicMock()
+        sys.modules['vertexai'] = MagicMock()
+        sys.modules['vertexai.agent_engines'] = MagicMock()
+
+    def tearDown(self) -> None:
+        import sys
+
+        self._sdk_patcher.stop()
+        for name, orig in [
+            ('google.cloud.aiplatform', self._orig_aiplatform),
+            ('vertexai', self._orig_vertexai),
+            ('vertexai.agent_engines', self._orig_agent_engines),
+        ]:
+            if orig is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = orig
 
     def test_run_task_fetches_engine_and_queries(self) -> None:
+        import sys
+
         engine = MagicMock()
         engine.query.return_value = 'remote-response'
         engine.resource_name = 'projects/p/locations/us-central1/reasoningEngines/1'
 
-        with (
-            patch('vertexai.init'),
-            patch('vertexai.agent_engines.get', return_value=engine),
-        ):
-            runtime = VertexAgentRuntime(
-                agent_id='1',
-                project_id='p',
-                location='us-central1',
-            )
-            output = runtime.run_task('task', context={})
+        # Configure the mocked modules in sys.modules
+        sys.modules['vertexai'].agent_engines.get.return_value = engine
+
+        runtime = VertexAgentRuntime(
+            agent_id='1',
+            project_id='p',
+            location='us-central1',
+        )
+        output = runtime.run_task('task', context={})
 
         self.assertEqual(output, 'remote-response')
         self.assertTrue(runtime.health_check())

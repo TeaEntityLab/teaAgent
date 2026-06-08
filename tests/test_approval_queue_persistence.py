@@ -32,7 +32,7 @@ def test_queue_persisted_and_visible_from_new_process(tmp_path: Path) -> None:
         batch_index=0,
         status=ApprovalRequestStatus.PENDING,
     )
-    queue_a._persist()
+    queue_a._persist(force=True)
     # Simulate separate CLI process: no in-memory registry
     from teaagent.subagents import _approval_queue as mod
 
@@ -67,7 +67,7 @@ def test_cross_process_approve_unblocks_waiter(tmp_path: Path) -> None:
 
     request_id: str | None = None
     for _ in range(40):
-        queue.reload_from_store()
+        queue.reload_from_store(force=True)
         pending = queue.get_pending_requests()
         if pending:
             request_id = pending[0].request_id
@@ -136,7 +136,7 @@ def test_reload_from_store_handles_invalid_snapshot_structure(tmp_path: Path) ->
     )
 
     # Should not crash, just log warning and skip
-    queue.reload_from_store()
+    queue.reload_from_store(force=True)
     assert len(queue._requests) == 0
 
 
@@ -160,7 +160,7 @@ def test_reload_from_store_handles_invalid_request_data(tmp_path: Path) -> None:
     )
 
     # Should load valid request, skip invalid one
-    queue.reload_from_store()
+    queue.reload_from_store(force=True)
     assert len(queue._requests) == 1
     assert 'r1' in queue._requests
     assert 'r2' not in queue._requests
@@ -184,7 +184,7 @@ def test_reload_from_store_handles_missing_required_fields(tmp_path: Path) -> No
     )
 
     # Should skip request with missing fields
-    queue.reload_from_store()
+    queue.reload_from_store(force=True)
     assert len(queue._requests) == 0
 
 
@@ -207,5 +207,5 @@ def test_reload_from_store_handles_invalid_status_enum(tmp_path: Path) -> None:
     )
 
     # Should skip request with invalid status
-    queue.reload_from_store()
+    queue.reload_from_store(force=True)
     assert len(queue._requests) == 0

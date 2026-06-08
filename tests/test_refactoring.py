@@ -279,9 +279,9 @@ class TestImportOrganization:
         """Test that subagent review imports are at top level."""
         import inspect
 
-        from teaagent.cli._handlers import _agent
+        from teaagent.cli._handlers._agent import subagent_review
 
-        source = inspect.getsource(_agent)
+        source = inspect.getsource(subagent_review)
 
         # Verify imports are at top level (also allowed inside function bodies for lazy loading)
         assert 'from teaagent.subagents._review import' in source
@@ -296,7 +296,9 @@ class TestTypeSafety:
         from pathlib import Path
 
         root = Path(__file__).parent.parent
-        agent_path = root / 'teaagent' / 'cli' / '_handlers' / '_agent.py'
+        agent_path = (
+            root / 'teaagent' / 'cli' / '_handlers' / '_agent' / 'experiment.py'
+        )
         source = agent_path.read_text(encoding='utf-8')
 
         # Verify getattr with default None is used to safely access _branch_name

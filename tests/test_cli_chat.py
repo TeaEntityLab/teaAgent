@@ -1555,7 +1555,9 @@ def test_repl_suspend_resume_roundtrip(capsys):
         )
 
         # Patch _execute_agent_task to avoid actually running
-        with patch('teaagent.cli._handlers._agent._execute_agent_task') as mock_execute:
+        with patch(
+            'teaagent.cli._handlers._agent.resume._execute_agent_task'
+        ) as mock_execute:
             mock_execute.return_value = 0
             result = agent_resume_command(args)
             assert result == 0, 'resume should succeed'

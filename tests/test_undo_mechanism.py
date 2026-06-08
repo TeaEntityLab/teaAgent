@@ -117,7 +117,7 @@ class TestCheckpointFallbackOutput:
         mock_sandbox.rollback.return_value = mock_result
 
         with patch(
-            'teaagent.sandbox.GitBranchSandbox',
+            'teaagent.cli.execution.GitBranchSandbox',
             return_value=mock_sandbox,
         ):
             undo_out = io.StringIO()
@@ -153,7 +153,7 @@ class TestCheckpointFallbackOutput:
         mock_sandbox.rollback.return_value = mock_result
 
         with patch(
-            'teaagent.sandbox.GitBranchSandbox',
+            'teaagent.cli.execution.GitBranchSandbox',
             return_value=mock_sandbox,
         ):
             undo_out = io.StringIO()

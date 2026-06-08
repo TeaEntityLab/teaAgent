@@ -72,13 +72,13 @@ def test_queue_recovery_after_registry_clear() -> None:
             isolation='worktree',
             status=ApprovalRequestStatus.PENDING,
         )
-        queue._persist()  # noqa: SLF001
+        queue._persist(force=True)  # noqa: SLF001
 
         from teaagent.subagents import _approval_queue as mod
 
         mod._approval_queues.clear()
         recovered = get_approval_queue(parent_id, workspace_root=root)
-        recovered.reload_from_store()
+        recovered.reload_from_store(force=True)
         assert len(recovered.get_pending_requests()) == 1
 
 

@@ -32,7 +32,7 @@ Regenerate: `python3 scripts/report_docs_aging.py`
 
 | Document | Status | Last reviewed | File mtime | Notes |
 | --- | --- | --- | --- | --- |
-| `docs/acceptance.md` | stale_by_mtime | 2026-06-06 | 2026-06-07 | File modified after last reviewed date |
+| `docs/acceptance.md` | stale_by_mtime | 2026-06-06 | 2026-06-08 | File modified after last reviewed date |
 
 ## Review Triggers
 

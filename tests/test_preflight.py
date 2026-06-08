@@ -7,8 +7,9 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from teaagent import MemoryCatalog, PermissionMode, preflight
+from teaagent import MemoryCatalog, PermissionMode
 from teaagent.cli import main
+from teaagent.preflight import preflight
 from test_support import can_bind_loopback
 
 

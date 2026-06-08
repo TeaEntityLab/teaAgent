@@ -157,12 +157,35 @@ class TUITests(unittest.TestCase):
             self.assertIn('provider: gpt', output)
             self.assertIn('model: test-model', output)
             self.assertIn('permission: workspace-write', output)
-            agent_payload = json.loads(output[-2])
-            if isinstance(agent_payload, list):
-                agent_payload = json.loads(output[-3])
+            json_outputs = []
+            for line in output:
+                try:
+                    parsed = json.loads(line)
+                    json_outputs.append(parsed)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+            # Find the agent run payload (dict with status and final_answer keys)
+            agent_payloads = [
+                item
+                for item in json_outputs
+                if isinstance(item, dict)
+                and 'status' in item
+                and 'final_answer' in item
+            ]
+            self.assertTrue(
+                len(agent_payloads) > 0, 'No agent run payload found in TUI output'
+            )
+            agent_payload = agent_payloads[-1]
             self.assertEqual(agent_payload['status'], 'completed')
             self.assertEqual(agent_payload['final_answer'], 'note read')
-            runs_payload = json.loads(output[-2])
+
+            # Find the runs list payload (list of dicts)
+            runs_payloads = [item for item in json_outputs if isinstance(item, list)]
+            self.assertTrue(
+                len(runs_payloads) > 0, 'No runs list payload found in TUI output'
+            )
+            runs_payload = runs_payloads[-1]
             self.assertEqual(runs_payload[0]['status'], 'completed')
 
     def test_tui_destructive_toggle(self) -> None:

@@ -460,14 +460,16 @@ class TSBVerifier:
             if not ok:
                 return False, err
 
+            msg = 'TSB verification successful'
             if verify_signature:
                 ok, err = self._verify_tsb_signature(
                     manifest_data, allow_unsigned, identity, issuer
                 )
                 if not ok:
                     return False, err
+                msg = err
 
-            return True, 'TSB verification successful'
+            return True, msg
 
     def _extract_tsb_safe(self, tmp_path: Path) -> tuple[bool, str]:
         try:
