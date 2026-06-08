@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
-_otel_trace: Any
-try:
-    from opentelemetry import trace as _otel_trace
-except ImportError:  # pragma: no cover
-    _otel_trace = None
+_otel_trace: Any = None
+with contextlib.suppress(ImportError):
+    from opentelemetry import trace
+
+    _otel_trace = trace
 
 
 class TracingHTTPTransport:

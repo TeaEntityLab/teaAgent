@@ -76,10 +76,11 @@ def refresh_competitive_docs(
         print(f'wrote {dashboard_output}')
 
     validate_docs = _load_module('validate_docs_consistency.py')
-    inventory_module = _load_module('generate_docs_inventory.py')
-    inventory_module.write_docs_inventory()
     aging_module = _load_module('report_docs_aging.py')
     aging_module.write_docs_aging_dashboard()
+    inventory_module = _load_module('generate_docs_inventory.py')
+    inventory_module.write_docs_inventory()
+
     errors.extend(
         validate_docs.validate_docs_consistency(
             readme_path=_REPO_ROOT / 'README.md',

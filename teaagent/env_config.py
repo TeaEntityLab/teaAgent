@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 # Use tomllib from stdlib for Python 3.11+, fall back to tomli
+tomllib: Any
 if sys.version_info >= (3, 11):
     import tomllib
 

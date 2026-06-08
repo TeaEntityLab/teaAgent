@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import time
@@ -9,11 +10,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from cryptography.fernet import Fernet, InvalidToken
-
 from teaagent.audit import AuditLogger
 from teaagent.hooks import HookError, HookRegistry
 from teaagent.tools import ToolRegistry
+
+Fernet: Any = None
+with contextlib.suppress(ImportError):
+    from cryptography import fernet
+
+    Fernet = fernet.Fernet
 
 
 @dataclass
@@ -96,8 +101,14 @@ def trust_policy_path(root: str | Path) -> Path:
     return Path(root).resolve() / '.teaagent' / 'mcp-trust.json'
 
 
-def _get_trust_policy_fernet() -> Fernet:
+def _get_trust_policy_fernet() -> Any:
     """Get Fernet instance for MCP trust policy encryption with validation."""
+    if Fernet is None:
+        raise ValueError(
+            "MCP trust policy encryption requires the 'cryptography' package. "
+            "Install it using: pip install 'teaagent[crypto]'"
+        )
+
     if 'TEAAGENT_MCP_TRUST_KEY' not in os.environ:
         raise ValueError(
             'TEAAGENT_MCP_TRUST_KEY environment variable is required for MCP trust policy encryption. '
@@ -143,8 +154,12 @@ def load_mcp_trust_policy(root: str | Path) -> MCPTrustPolicy:
     try:
         raw_text = path.read_text(encoding='utf-8')
         payload = _deserialize_policy(raw_text)
-    except (OSError, json.JSONDecodeError, InvalidToken, KeyError, ValueError):
+    except (OSError, json.JSONDecodeError, KeyError, ValueError):
         return MCPTrustPolicy()
+    except Exception as exc:
+        if exc.__class__.__name__ == 'InvalidToken':
+            return MCPTrustPolicy()
+        raise
     return MCPTrustPolicy.from_dict(payload)
 
 

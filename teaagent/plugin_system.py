@@ -45,7 +45,6 @@ import importlib.metadata
 import importlib.util
 import json
 import logging
-import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -81,10 +80,8 @@ def _entry_points(group: str) -> list[Any]:
     """Thin wrapper so tests can patch without touching importlib.metadata."""
     try:
         eps = importlib.metadata.entry_points()
-        if sys.version_info >= (3, 12):
-            return list(eps.select(group=group))
-        return list(eps.get(group, []))
-    except (ImportError, ValueError) as exc:
+        return list(eps.select(group=group))
+    except (ImportError, AttributeError, ValueError) as exc:
         logger.warning('Failed to load entry points: %s', exc)
         return []
 
