@@ -141,7 +141,7 @@ override-dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "tests"]
 markers = [
     "integration: real entry-point behavioral tests (run with -m integration)",
 ]

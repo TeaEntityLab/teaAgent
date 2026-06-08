@@ -13,12 +13,20 @@ BASELINE = 99
 
 
 def count_violations(repo: Path) -> int:
-    result = subprocess.run(
-        ['uv', 'run', 'ruff', 'check', 'teaagent/', '--select=C901'],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ['uv', 'run', 'ruff', 'check', 'teaagent/', '--select=C901'],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        result = subprocess.run(
+            ['ruff', 'check', 'teaagent/', '--select=C901'],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+        )
     output = result.stdout + result.stderr
     matches = re.findall(r'Found (\d+) error', output)
     if matches:
