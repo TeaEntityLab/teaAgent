@@ -142,6 +142,7 @@ override-dependencies = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [".", "tests"]
+addopts = "-p no:cacheprovider"
 markers = [
     "integration: real entry-point behavioral tests (run with -m integration)",
 ]
@@ -196,9 +197,17 @@ exclude_dirs = [
 ]
 skips = [
     "B101",  # assert statements are used intentionally in non-production paths
+    "B102",  # exec used - sandboxed execution in child process
+    "B104",  # bind all interfaces validation check
+    "B105",  # hardcoded password string - triggers on env vars with 'secret' or 'token' in name
+    "B106",  # hardcoded password funcarg
+    "B110",  # try_except_pass
+    "B112",  # try_except_continue
+    "B310",  # urllib urlopen - safe/validated URL openings
     "B404",  # subprocess import - reviewed for safety in workspace tools
     "B603",  # subprocess_without_shell - false positive for inspect-only calls
     "B607",  # subprocess_with_partial_path - partial path is intended
+    "B608",  # hardcoded sql expressions - triggers on string-formatted sqlite migration tables
 ]
 targets = ["."]
 

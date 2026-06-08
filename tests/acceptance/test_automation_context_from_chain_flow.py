@@ -48,7 +48,7 @@ def test_automation_context_from_chain_flow(tmp_path: Path) -> None:
     )
 
     with patch(
-        'teaagent.cli._handlers._agent._start_automation_background_run',
+        'teaagent.cli._handlers._agent.automation._start_automation_background_run',
         return_value={
             'background_id': 'bg-down',
             'pid': 1,
