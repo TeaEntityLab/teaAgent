@@ -42,10 +42,10 @@ robustness paths (6, 7) were genuinely untested and are now closed.
 > held. The three P0 tests now guard it against regression.
 
 ## Adversarial checklist (L3)
-- [ ] permission escalation: tampered digest must not grant (row 3)
-- [ ] safe-by-default: legacy/undigested must not grant (row 4)
-- [ ] consent scope: explicit pre-approval must not double-grant (row 5)
-- [ ] state post-condition: approval store unchanged on rejection (T7, row 3)
+- [x] permission escalation: tampered digest must not grant (row 3)
+- [x] safe-by-default: legacy/undigested must not grant (row 4)
+- [x] consent scope: explicit pre-approval must not double-grant (row 5)
+- [x] state post-condition: approval store unchanged on rejection (T7, row 3)
 
 ## Mutation checks (T4/T5)
 - **Spec (T5) — DONE 2026-06-09:** flipped the legacy guard `if not digest:` → `if False:` in

@@ -38,6 +38,7 @@ from teaagent.prompt import (
     load_project_instructions,
     parse_model_decision,
 )
+from teaagent.run_context import DecisionUsage
 from teaagent.runner import (
     AgentRunner,
     ApprovalHandler,
@@ -206,6 +207,10 @@ class ModelDecisionEngine:
         self.skills = skills
         self.skill_index = skill_index
         self.max_parse_retries = 2
+        self.usage = DecisionUsage()
+
+    def reset_usage(self) -> None:
+        self.usage = DecisionUsage()
 
     def decide(self, context: dict) -> Decision:
         prompt = assemble_agent_prompt(
@@ -256,14 +261,12 @@ class ModelDecisionEngine:
                 )
             )
             last_response_content = response.content
-            previous_cost = context.get('_cost_cents', 0.0)
-            context['_cost_cents'] = previous_cost + response.estimated_cost_cents
-            context['_input_tokens'] = (
-                context.get('_input_tokens', 0) + response.input_tokens
-            )
-            context['_output_tokens'] = (
-                context.get('_output_tokens', 0) + response.output_tokens
-            )
+            self.usage.cost_cents += float(response.estimated_cost_cents)
+            self.usage.input_tokens += int(response.input_tokens)
+            self.usage.output_tokens += int(response.output_tokens)
+            context['_cost_cents'] = self.usage.cost_cents
+            context['_input_tokens'] = self.usage.input_tokens
+            context['_output_tokens'] = self.usage.output_tokens
             try:
                 return parse_model_decision(response.content)
             except ToolValidationError as exc:
@@ -649,6 +652,11 @@ def _create_runner_and_engine(
         auto_mode_config=config.auto_mode_config,
         require_plan=config.require_plan,
         skip_plan_check=config.skip_plan_check,
+        usage_reader=lambda: (
+            engine.usage.cost_cents,
+            engine.usage.input_tokens,
+            engine.usage.output_tokens,
+        ),
     )
     return runner, engine
 
@@ -750,6 +758,7 @@ def _run_chat_agent_impl(
     }
 
     try:
+        engine.reset_usage()
         result = runner.run(
             task=task,
             decide=lambda context: engine.decide(with_memories(context, memories)),

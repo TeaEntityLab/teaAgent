@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Optional, cast
 from uuid import uuid4
@@ -29,7 +30,12 @@ from teaagent.policy import ApprovalPolicy, JITApprovalState, PermissionMode
 from teaagent.proof_of_use import build_proof_of_use, emit_proof_of_use_audit
 from teaagent.run_context import RunContext
 from teaagent.run_logging import setup_run_logging, teardown_run_logging
-from teaagent.subagent_run_context import bind_parent_run_id, reset_parent_run_id
+from teaagent.subagent_run_context import (
+    bind_parent_run_id,
+    bind_parent_session_cost_cents,
+    reset_parent_run_id,
+    reset_parent_session_cost_cents,
+)
 from teaagent.tool_call_context import (
     ToolCallContext,
     bind_tool_call_context,
@@ -50,6 +56,8 @@ from ._types import (  # noqa: E402
     RunResult,
     ToolRequest,
 )
+
+UsageReader = Callable[[], tuple[float, int, int]]
 
 
 def validate_tool_decision(decision_json: dict) -> tuple[bool, str]:
@@ -116,6 +124,7 @@ class AgentRunner:
         scratchpad: Any = None,
         decision_log: Any = None,
         phase_tracker: Optional[PhaseTracker] = None,
+        usage_reader: Optional[UsageReader] = None,
     ) -> None:
         self.registry = registry
         self.audit = audit
@@ -135,6 +144,7 @@ class AgentRunner:
         self.show_summary = show_summary
         self.workspace_root = workspace_root
         self.decision_log = decision_log
+        self._usage_reader = usage_reader
 
         # Initialize manager classes
         self.approval_policy = approval_policy or ApprovalPolicy()
@@ -190,6 +200,27 @@ class AgentRunner:
             return
         if cost_cents > max_cost:
             raise BudgetExceededError('cost budget exceeded')
+
+    def _read_usage(
+        self,
+        context: RunContext,
+        cost_cents: float,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> tuple[float, int, int]:
+        """Return authoritative usage totals for budget enforcement (SEC-05)."""
+        if self._usage_reader is not None:
+            return self._usage_reader()
+        reported_cost = context.get('_cost_cents', cost_cents)
+        if reported_cost >= cost_cents:
+            cost_cents = float(reported_cost)
+        reported_in = context.get('_input_tokens', input_tokens)
+        if reported_in >= input_tokens:
+            input_tokens = int(reported_in)
+        reported_out = context.get('_output_tokens', output_tokens)
+        if reported_out >= output_tokens:
+            output_tokens = int(reported_out)
+        return cost_cents, input_tokens, output_tokens
 
     def _check_phase_budget(
         self,
@@ -668,6 +699,7 @@ class AgentRunner:
         tool_started_at = time.monotonic()
         try:
             parent_token = bind_parent_run_id(run_id)
+            cost_token = bind_parent_session_cost_cents(cost_cents)
             tool_ctx_token = bind_tool_call_context(
                 ToolCallContext(
                     audit=self.audit,
@@ -679,6 +711,7 @@ class AgentRunner:
                 result = self.registry.execute(decision.tool_name, decision.arguments)
             finally:
                 reset_tool_call_context(tool_ctx_token)
+                reset_parent_session_cost_cents(cost_token)
                 reset_parent_run_id(parent_token)
         except ToolExecutionError as exc:
             tool_calls += 1
@@ -836,9 +869,9 @@ class AgentRunner:
                 )
                 self._assert_cost_budget(cost_cents)
                 decision = decide(cast(dict[str, Any], context))
-                cost_cents = context.get('_cost_cents', cost_cents)
-                input_tokens = context.get('_input_tokens', input_tokens)
-                output_tokens = context.get('_output_tokens', output_tokens)
+                cost_cents, input_tokens, output_tokens = self._read_usage(
+                    context, cost_cents, input_tokens, output_tokens
+                )
                 self._check_phase_budget(
                     run_id=current_run_id,
                     cost_cents=cost_cents,

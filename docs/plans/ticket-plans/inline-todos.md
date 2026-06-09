@@ -1,5 +1,5 @@
 # Inline TODO / FIXME / XXX Catalog
-**Generated:** 2026-06-02 | **Scope:** `teaagent/` and `scripts/`
+**Generated:** 2026-06-02 | **Last reviewed:** 2026-06-09 | **Scope:** `teaagent/` and `scripts/`
 
 ---
 
@@ -38,9 +38,9 @@ traceable without re-opening closed work.
 | `chat_session_controller.py` | `except (AttributeError, TypeError): pass` | Fixed: TICKET-13 removed exception-swallowing mock detection |
 | `chat_repl.py` | `suspension_data['audit_trail']` | Fixed: TICKET-15 removed redundant suspension `audit_trail` |
 | `chat_repl.py::suspend_to_background` | Broken resume commands printed at suspend | Fixed: TICKET-16 Phase 1 now prints the working `interactive-review` path only |
-| `run_store.py:143-149` | `task_for_run` raises on REPL suspensions | TICKET-16 Phase 2: write `run_started` at suspend time |
-| `_chat.py:538-586` | `chat_command` ignores `args.task` | TASK-DD2-001: forward positional task to `run_tui` |
-| `tui/__init__.py:1107` | `_load_tui_state` unconditionally overwrites `self.root` | TASK-DD2-002: guard with `_root_explicit` flag |
+| `run_store.py:143-149` | `task_for_run` raises on REPL suspensions | Fixed: TICKET-16 Phase 2 writes `run_started` at suspend time |
+| `_chat.py:538-586` | `chat_command` ignores `args.task` | Fixed: TASK-DD2-001 forwards positional task to `run_tui` |
+| `tui/__init__.py:1107` | `_load_tui_state` unconditionally overwrites `self.root` | Fixed: TASK-DD2-002 guards with `_root_explicit` flag |
 
 ---
 
@@ -48,9 +48,8 @@ traceable without re-opening closed work.
 
 | Category | Count |
 |----------|-------|
-| Explicit `# TODO` in production (`teaagent/`) | 1 |
-| Explicit `# TODO` in scripts | 9 |
-| Implicit architectural TODOs (ticketed) | 3 active, 4 fixed |
-| **Active total** | **13** |
-| `issue_intake.py:195` stub | 1 | Fixed: now raises `NotImplementedError` instead of returning fake data |
-| **Fixed historical entries retained** | **5** |
+| Explicit `# TODO` in production (`teaagent/`) | 0 |
+| Explicit `# TODO` in scripts (unfixed stubs) | 0 |
+| Implicit architectural TODOs (ticketed) | 0 active |
+| **Active total** | **0** |
+| Fixed historical entries retained | 9 |

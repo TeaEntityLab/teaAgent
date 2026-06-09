@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from teaagent.approval_manager import PermissionMode
+from teaagent.security_env import allow_dev_signatures
 
 
 @dataclass(frozen=True)
@@ -94,6 +95,18 @@ def lint_runtime_config(
                 message=(
                     'No explicit cost cap env var set (TEAAGENT_MAX_ESTIMATED_COST_CENTS). '
                     'Runs use CLI/default budget limits only.'
+                ),
+            )
+        )
+
+    if allow_dev_signatures():
+        findings.append(
+            ConfigLintFinding(
+                severity='error',
+                code='dev_signatures_enabled',
+                message=(
+                    'TEAAGENT_ALLOW_DEV_SIGNATURES is enabled; dev-hash signatures '
+                    'bypass cryptographic verification. Never use in production.'
                 ),
             )
         )

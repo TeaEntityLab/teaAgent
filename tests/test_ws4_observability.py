@@ -163,6 +163,15 @@ def test_audit_tail_cli_human_and_json(tmp_path: Path) -> None:
     assert len(payload['events']) >= 2
 
 
+def test_config_lint_flags_dev_signatures_enabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv('TEAAGENT_ALLOW_DEV_SIGNATURES', '1')
+    findings = lint_runtime_config(root=tmp_path)
+    codes = {finding.code for finding in findings}
+    assert 'dev_signatures_enabled' in codes
+
+
 def test_config_lint_flags_unsafe_combinations(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

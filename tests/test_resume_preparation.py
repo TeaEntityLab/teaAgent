@@ -174,3 +174,21 @@ def test_fresh_restart_skips_pending_auto_grant() -> None:
         assert prepared.initial_observations == []
         store = ApprovalPresetStore(tmp)
         assert store.list_scoped_approvals_for_run('fresh-run') == []
+
+
+def test_auto_approve_pending_false_warns_without_granting() -> None:
+    """Row 11 (P1): auto_approve_pending=False (TUI default) must warn, never grant.
+
+    The branch was added when CLI/TUI resume diverged; this guards it at the
+    prepare layer so the surface-independent contract is enforced directly.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        _seed_pending(tmp, 'noauto-run')
+
+        prepared = prepare_run_resume(tmp, 'noauto-run', auto_approve_pending=False)
+
+        assert prepared.auto_approved_call_id is None
+        assert prepared.pending_warning is not None
+        assert 'noauto-run' in prepared.pending_warning
+        store = ApprovalPresetStore(tmp)
+        assert store.list_scoped_approvals_for_run('noauto-run') == []

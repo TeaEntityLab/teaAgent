@@ -554,23 +554,21 @@ warn_at_pct = 50
 - **DS-05**: TUI undo now routes journal-first: `_handle_undo()` at `tui/__init__.py:860` calls `controller.undo_last_run()` first; falls back to `_restore_checkpoint()` only if journal is empty. Tests: `test_tui_undo_uses_journal()`, `test_tui_handle_undo_calls_controller_first()` in `tests/test_tui.py::TUITests`.
 - **DS-09**: `agent run --background <id>` now rejects task args that match known run IDs or suspension IDs, preventing silent launch of a bogus LLM task. Test: `test_agent_run_background_rejects_known_run_or_suspension_id()` in `tests/test_cli_chat.py:167`.
 
-**Still Open — Active:**
-- **SEC-01**: VERIFY/CLOSE — HMAC key persisted per code at `audit.py:165`; pending final test sign-off (`test_audit_key_file_permissions_readable`). (Active — no ticket)
-- **SEC-05**: Cost field injectable via adapter context dict. (Active — no ticket; P2)
-- **SEC-09**: Multi-sig 1-hour replay window; duplicated hash function. (Active — no ticket; P2)
-- **SEC-11**: Shell mutations not tracked in undo journal. (Active — no ticket; P2)
-- **SEC-12**: fsync failure silenced. (Active — no ticket; P2)
-- **SEC-13**: Security paths mocked in tests. (Active — no ticket; P1)
-- **SEC-14**: `preapproved_call_ids` still live. (Active — no ticket; P3)
-- **SEC-15**: `TEAAGENT_ALLOW_DEV_SIGNATURES` has no production guard. (Active — no ticket; P2)
-- **SEC-16**: Dead code at `budget_monitor.py:104-119`. (Active — no ticket; QW)
-- **DS-01**: TUI cost always $0.00. (Active — TICKET-12; P1)
-- **DS-03**: Controller swallows persistence errors. (Active — TICKET-13; P2)
-- **DS-04**: Stale `audit_trail` field in suspension JSON. (Active — TICKET-15; P3)
-- **DS-06**: Cost test masks accumulation bug. (Active — TICKET-14; P1)
-- **DS-08**: `teaagent resume <id>` always errors. (Active — TICKET-16; P1)
-- **DS-10**: Suspension observations not rehydrated. (Active — TICKET-16; P2)
-- **DS-11**: Initial task silently dropped in `chat_command`. (Active — TASK-DD2-001; P1)
+**Still Open — Active (2026-06-09 review):**
+
+Daily-driver items DS-01..DS-11 and TICKET-12..16 were **closed** in the June 4–9 ticket pass.
+See [`active-findings-status-ledger-2026-06-06.md`](../analysis/active-findings-status-ledger-2026-06-06.md).
+
+| ID | Status | Notes |
+|---|---|---|
+| SEC-01 | Verify/close | HMAC key persisted per code at `audit.py:165`; pending final permissions test sign-off |
+| SEC-05 | Mitigated (2026-06-09) | Runner reads authoritative usage via `usage_reader`; engine tracks `DecisionUsage` |
+| SEC-09 | Mitigated (2026-06-09) | Multisig hash binds `request_id`; stale signatures rejected by timeout |
+| SEC-14 | Mitigated (2026-06-09) | Set `TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS=1` in production; deprecation warning retained |
+| SEC-16 | Fixed | Dead code removed from `budget_monitor.py` (prior refactor) |
+| WS3-001 | Implemented | Compliance mode fatal audit — `test_ws3_compliance_audit.py` |
+| WS3-006 | Implemented | Approval-token exactness — `tests/test_approval_token_exactness.py` |
+| MA-01..04 | Implemented | Isolation default, batch timeout, budget/depth caps — `test_subagent_isolation_policy.py`, `test_subagent_batch.py` |
 
 ### Backlog — Design decisions required
 

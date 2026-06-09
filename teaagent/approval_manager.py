@@ -433,11 +433,17 @@ class MultiSigQuorumManager:
             )
             return False
 
-        request_hash = self._generate_approval_hash(tool_name, call_id, arguments)
+        request_id = hashlib.sha256(
+            f'{self.agent_id}{call_id}{time.time()}'.encode()
+        ).hexdigest()[:16]
+        request_hash = self._generate_approval_hash(
+            tool_name,
+            call_id,
+            arguments,
+            request_id=request_id,
+        )
         request = ApprovalRequest(
-            request_id=hashlib.sha256(
-                f'{self.agent_id}{call_id}{time.time()}'.encode()
-            ).hexdigest()[:16],
+            request_id=request_id,
             tool_name=tool_name,
             call_id=call_id,
             arguments=arguments or {},
@@ -481,6 +487,7 @@ class MultiSigQuorumManager:
         call_id: str,
         arguments: dict[str, Any] | None,
         *,
+        request_id: str = '',
         run_id: str = '',
     ) -> str:
         """Generate cryptographic hash for approval request."""
@@ -490,7 +497,7 @@ class MultiSigQuorumManager:
                 'call_id': call_id,
                 'arguments': arguments or {},
                 'run_id': run_id,
-                'time_window': int(time.time() / 3600),
+                'request_id': request_id,
             },
             sort_keys=True,
         )
@@ -550,6 +557,13 @@ class MultiSigQuorumManager:
         peer_signatures: list[PeerSignature] = []
         for sig_msg in signature_messages:
             message_to_verify = request.request_hash
+            sig_age = abs(float(sig_msg.timestamp) - float(request.timestamp))
+            if sig_age > float(self.config.timeout_seconds):
+                print(
+                    f'[Security] Rejected stale signature from peer {sig_msg.peer_id} '
+                    f'(age={sig_age:.0f}s > timeout={self.config.timeout_seconds}s)'
+                )
+                continue
             from teaagent.security_env import (
                 allow_dev_signatures as env_allow_dev,
             )
@@ -859,6 +873,23 @@ class ApprovalManager:
             arguments=arguments,
         ):
             return
+
+        if self.preapproved_call_ids:
+            import os
+
+            if os.environ.get(
+                'TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS', ''
+            ).strip().lower() in {
+                '1',
+                'true',
+                'yes',
+                'on',
+            }:
+                raise ToolPermissionError(
+                    'preapproved_call_ids are disabled; use scoped approvals '
+                    'with argument digests instead.',
+                    reason_code=DenialReasonCode.MISSING_STATE,
+                )
 
         if arguments is not None and self._store_manager.handle_preapproved(
             call_id=call_id,

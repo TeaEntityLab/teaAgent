@@ -124,6 +124,53 @@ class SubagentIsolationPolicyTests(unittest.TestCase):
             self.assertEqual(captured['max_iterations'], 3)
             self.assertEqual(captured['max_tool_calls'], 4)
 
+    def test_manager_caps_child_cost_to_parent_remaining(self) -> None:
+        from teaagent.subagent_run_context import (
+            bind_parent_session_cost_cents,
+            reset_parent_session_cost_cents,
+        )
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.teaagent').mkdir()
+            config = ChatAgentConfig(
+                root=root,
+                max_estimated_cost_cents=1000,
+                max_subagent_depth=2,
+            )
+            manager = SubagentManager(
+                root=root,
+                parent_config=config,
+                parent_adapter=MagicMock(),
+            )
+            captured: dict[str, int | None] = {}
+
+            def fake_run_chat_agent(cfg, *args, **kwargs):
+                captured['max_estimated_cost_cents'] = cfg.max_estimated_cost_cents
+                from teaagent.runner import FinalAnswer, RunResult
+
+                return RunResult(
+                    run_id='child-cost',
+                    final_answer=FinalAnswer(content='ok'),
+                    iterations=1,
+                    tool_calls=0,
+                    status='completed',
+                )
+
+            token = bind_parent_session_cost_cents(750.0)
+            try:
+                with patch('teaagent.chat_agent.run_chat_agent', fake_run_chat_agent):
+                    manager.run_subagent(
+                        task='spend carefully',
+                        parent_run_id='parent-cost',
+                        depth=0,
+                        isolation='shared',
+                    )
+            finally:
+                reset_parent_session_cost_cents(token)
+
+            self.assertEqual(captured['max_estimated_cost_cents'], 250)
+
 
 if __name__ == '__main__':
     unittest.main()

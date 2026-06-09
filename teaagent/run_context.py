@@ -16,7 +16,21 @@ Usage::
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, TypedDict, cast
+
+
+@dataclass
+class DecisionUsage:
+    """Authoritative LLM usage totals for a run (SEC-05).
+
+    Tracked on ``ModelDecisionEngine`` and read by ``AgentRunner`` via
+    ``usage_reader`` so budget enforcement does not trust mutable context keys.
+    """
+
+    cost_cents: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 class RunContext(TypedDict, total=False):

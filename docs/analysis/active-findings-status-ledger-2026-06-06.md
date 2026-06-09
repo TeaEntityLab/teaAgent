@@ -11,7 +11,7 @@
 > prose in dated analysis files.
 >
 > **Review trigger:** Finding closure status or new CG/AG/DS ids.
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-09
 
 **Successor to:** [Daily-Driver Findings Status Ledger (2026-06-01)](daily-driver-findings-status-ledger-2026-06-01.md)
 
@@ -23,7 +23,7 @@ authoritative. Dated detail docs remain evidence for reasoning and test names.
 | Bucket | Count | Notes |
 | --- | ---: | --- |
 | Fixed | 18 | Verified in code + named regression or acceptance tests |
-| Partially fixed | 1 | TASK-DD2-005 git sandbox — core lifecycle fixed; broader ACs deferred |
+| Partially fixed | 0 | — |
 | Active | 0 | No daily-driver defects remain open from the June 1 review package |
 
 ## Finding rows
@@ -55,7 +55,7 @@ authoritative. Dated detail docs remain evidence for reasoning and test names.
 | DS-08 | P1 | Fixed | Resume after REPL suspend | TICKET-16 Phase 2 | `test_repl_suspend_resume_roundtrip` |
 | DS-11 | P1 | Fixed | Positional chat task forwarded to TUI | TASK-DD2-001 | `test_cli_chat.py` task forwarding |
 | DS-12 | P0 | Fixed | Empty-path approval rejected | TASK-DD2-004 | `test_empty_path_globs_rejected_ds12` |
-| TASK-DD2-005 | P1 | Partially fixed | Git sandbox lifecycle | TASK-DD2-005 plan | Core object preserved; broader ACs need human review |
+| TASK-DD2-005 | P1 | Fixed | Git sandbox lifecycle | TASK-DD2-005 plan | `tests/test_git_tools.py`, `tests/test_cli_execution.py` sandbox tests |
 
 ## Superseded June 1 rows
 

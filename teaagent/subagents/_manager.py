@@ -9,7 +9,10 @@ from typing import Any, Optional
 from teaagent.approval_manager import PermissionMode
 from teaagent.llm import LLMAdapter
 from teaagent.run_store import RunStore
-from teaagent.subagent_run_context import get_parallel_approval_mode
+from teaagent.subagent_run_context import (
+    get_parallel_approval_mode,
+    get_parent_session_cost_cents,
+)
 from teaagent.subagents._approval_queue import (
     make_centralized_subagent_approval_handler,
     should_use_centralized_approval,
@@ -149,6 +152,15 @@ def _resolve_permission_mode(
     return inherited_mode
 
 
+def _resolve_child_cost_cap(parent_config: Any) -> int | None:
+    """Cap child spend to the parent's remaining budget envelope (MA-03)."""
+    parent_cap = parent_config.max_estimated_cost_cents
+    if parent_cap is None:
+        return None
+    parent_spent = max(0.0, get_parent_session_cost_cents())
+    return max(0, int(parent_cap) - int(parent_spent))
+
+
 def _build_subagent_config(
     sub_def: SubagentDef | None,
     parent_config: Any,
@@ -165,7 +177,7 @@ def _build_subagent_config(
         root=iso_ctx.child_root,
         max_iterations=int(resolved_max_iterations),
         max_tool_calls=int(resolved_max_tool_calls),
-        max_estimated_cost_cents=parent_config.max_estimated_cost_cents,
+        max_estimated_cost_cents=_resolve_child_cost_cap(parent_config),
         model=(sub_def.model if sub_def and sub_def.model else parent_config.model),
         permission_mode=inherited_mode,
         approval_handler=approval_handler,

@@ -12,31 +12,36 @@ consumers: `cli/_handlers/_agent/resume.py`, `tui/_commands.py`, `chat_session_c
   digest scheme itself; does not add new permission modes.
 
 ## Inputs / Outputs (schema)
-**Input — `prepare_run_resume(root, run_id, *, approve_call_ids, fresh_restart, auto_compact, checkpoint_path)`**
+**Input — `prepare_run_resume(root, run_id, *, approve_call_ids, fresh_restart, auto_compact, checkpoint_path, auto_approve_pending)`**
 - `root: str|Path` — run store root.
 - `run_id: str` — run to resume.
 - `approve_call_ids: frozenset[str]` — call_ids the human has explicitly pre-approved (default empty).
 - `fresh_restart: bool` — if True, skip observations + pending-approval handling entirely.
 - `auto_compact: bool` — if True, truncate to last 20 when >40 observations.
 - `checkpoint_path: str|Path|None` — optional SQLite checkpoint source.
+- `auto_approve_pending: bool` — default `True` (CLI). When `False` (TUI, `tui/_commands.py:284`),
+  a digest-bearing pending call is **not** auto-granted; the caller is warned so the user approves
+  explicitly first. This is a surface *policy* knob, not a relaxation of the digest rule below.
 
 **Output — `PreparedRunResume` (frozen dataclass):**
 `run_id`, `original_task`, `initial_observations: list[dict]`, `initial_context_extra: dict|None`,
 `auto_approved_call_id: str|None`, `pending_warning: str|None`; plus `to_dict()` for parity comparison.
 
 ## Acceptance Criteria (each testable)
-- [ ] **AC-1** Missing/invalid run → raises `ResumePreparationError` (wraps `FileNotFoundError`/`ValueError`).
-- [ ] **AC-2** Same `(root, run_id, kwargs)` from CLI and TUI yields equal `to_dict()` (surface parity).
-- [ ] **AC-3** Pending approval **with** valid `argument_digest`, `call_id ∉ approve_call_ids`, not
+- [x] **AC-1** Missing/invalid run → raises `ResumePreparationError` (wraps `FileNotFoundError`/`ValueError`).
+- [x] **AC-2** Same `(root, run_id, kwargs)` from CLI and TUI yields equal `to_dict()` (surface parity).
+- [x] **AC-3** Pending approval **with** valid `argument_digest`, `call_id ∉ approve_call_ids`, not
   already scoped → a scoped approval is added **and** `auto_approved_call_id == call_id`.
-- [ ] **AC-4** Pending approval **without** digest (legacy/redacted) → `pending_warning` set, **no**
+- [x] **AC-4** Pending approval **without** digest (legacy/redacted) → `pending_warning` set, **no**
   scoped approval added, `auto_approved_call_id is None`.
-- [ ] **AC-5** Pending `call_id ∈ approve_call_ids` → skipped: no auto-grant, no warning.
-- [ ] **AC-6** Already-scoped approval (digest matches) → not re-added, but `auto_approved_call_id` still
+- [x] **AC-5** Pending `call_id ∈ approve_call_ids` → skipped: no auto-grant, no warning.
+- [x] **AC-6** Already-scoped approval (digest matches) → not re-added, but `auto_approved_call_id` still
   reports the call_id (idempotent).
-- [ ] **AC-7** `fresh_restart=True` → no observations, no auto-grant, no warning.
-- [ ] **AC-8** `auto_compact=True` with >40 observations → kept 20, `initial_context_extra` records
+- [x] **AC-7** `fresh_restart=True` → no observations, no auto-grant, no warning.
+- [x] **AC-8** `auto_compact=True` with >40 observations → kept 20, `initial_context_extra` records
   `resume_compaction.truncated = True`.
+- [x] **AC-9** `auto_approve_pending=False` with a digest-bearing pending call → `pending_warning` set,
+  **no** scoped approval added, `auto_approved_call_id is None` (TUI explicit-approval policy).
 
 ## Edge Cases / Failure Conditions
 - Tampered recorded arguments → recomputed digest ≠ stored digest → scoped-approval check fails → **no

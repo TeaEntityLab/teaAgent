@@ -10,6 +10,7 @@ from teaagent.errors import ToolPermissionError
 from teaagent.governance.audit_completeness import check_audit_completeness
 from teaagent.governance.tool_lint import lint_registry
 from teaagent.policy import ApprovalPolicy, PermissionMode
+from teaagent.security_env import allow_dev_signatures
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 
@@ -88,8 +89,15 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
     ]
     audit_report = check_audit_completeness(sample_events)
     jaraco_report = _jaraco_context_version_ok()
+    dev_signatures_enabled = allow_dev_signatures()
 
-    ok = not lint_errors and permission_ok and audit_report.ok and jaraco_report['ok']
+    ok = (
+        not lint_errors
+        and permission_ok
+        and audit_report.ok
+        and jaraco_report['ok']
+        and not dev_signatures_enabled
+    )
     return {
         'ok': ok,
         'tool_lint': {
@@ -111,4 +119,12 @@ def run_security_selftest(root: str | Path = '.') -> dict[str, Any]:
             'issues': audit_report.issues,
         },
         'jaraco_context': jaraco_report,
+        'dev_signatures': {
+            'ok': not dev_signatures_enabled,
+            'detail': (
+                'TEAAGENT_ALLOW_DEV_SIGNATURES must not be set in production'
+                if dev_signatures_enabled
+                else 'dev signatures disabled'
+            ),
+        },
     }
