@@ -15,7 +15,6 @@ _SENSITIVE_KEY_MARKERS: tuple[str, ...] = (
     'password',
     'passwd',
     'secret',
-    'token',
     'api_key',
     'apikey',
     'authorization',
@@ -40,6 +39,9 @@ def _is_sensitive_key(key: str) -> bool:
     # LLM usage counters (*_tokens) are metrics, not credentials.
     if normalized.endswith('_tokens'):
         return False
+    # Credential fields use *_token or bare token, not token_budget/token_source.
+    if normalized == 'token' or normalized.endswith('_token'):
+        return True
     return any(marker in normalized for marker in _SENSITIVE_KEY_MARKERS)
 
 
