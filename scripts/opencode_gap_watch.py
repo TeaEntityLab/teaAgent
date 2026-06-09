@@ -15,20 +15,70 @@ from datetime import datetime
 from pathlib import Path
 
 
+def _api_fallback(label: str, exc: Exception) -> dict:
+    print(f'  Warning: {label} unavailable ({exc})')
+    return {}
+
+
 def check_opencode_releases():
     """Check OpenCode GitHub for new releases."""
     print('Checking OpenCode GitHub releases...')
-    # TODO: Implement GitHub API integration to fetch actual releases
-    # For now, return placeholder
-    return {'latest_release': 'TBD', 'new_releases': []}
+    try:
+        from _github_api import get_latest_release_tag, repo_from_env
+
+        owner, repo = repo_from_env('OPENCODE_GITHUB_REPO', 'anomalyco/opencode')
+        latest = get_latest_release_tag(owner, repo)
+        return {
+            'latest_release': latest or 'none',
+            'new_releases': [latest] if latest else [],
+        }
+    except Exception as exc:
+        return {
+            'latest_release': 'unavailable',
+            'new_releases': [],
+            **_api_fallback('releases', exc),
+        }
 
 
 def check_opencode_issues():
     """Check OpenCode issues for governance discussions."""
     print('Checking OpenCode issues for governance discussions...')
-    # TODO: Implement GitHub API integration to fetch actual issues
-    # For now, return placeholder
-    return {'governance_issues': [], 'high_vote_issues': []}
+    try:
+        from _github_api import repo_from_env, search_issues
+
+        owner, repo = repo_from_env('OPENCODE_GITHUB_REPO', 'anomalyco/opencode')
+        query = (
+            f'repo:{owner}/{repo} is:issue '
+            '(approval OR audit OR permission OR governance) in:title,body'
+        )
+        items = search_issues(query, per_page=10)
+        governance_issues = [
+            {
+                'title': item.get('title', ''),
+                'url': item.get('html_url', ''),
+                'state': item.get('state', ''),
+            }
+            for item in items
+        ]
+        high_vote_issues = [
+            {
+                'title': item.get('title', ''),
+                'votes': int(item.get('comments', 0) or 0),
+                'url': item.get('html_url', ''),
+            }
+            for item in items
+            if int(item.get('comments', 0) or 0) >= 10
+        ]
+        return {
+            'governance_issues': governance_issues,
+            'high_vote_issues': high_vote_issues,
+        }
+    except Exception as exc:
+        return {
+            'governance_issues': [],
+            'high_vote_issues': [],
+            **_api_fallback('issues', exc),
+        }
 
 
 def check_opencode_community():

@@ -1,8 +1,8 @@
 # TeaAgent Improvement Work Items
 
 > **Generated:** 2026-06-07
-> **Last updated:** 2026-06-07 (session 3)
-> **Status:** 70/73 items completed or substantially done. Remaining: full ARC-001/002 import migration, CQ-002 complexity ratchet (<50 target).
+> Last updated: 2026-06-09
+> **Status:** 72/73 items completed or substantially done. Remaining: ARC-001/002 legacy shim retirement (facades adopted; deep imports in core modules are intentional re-exports).
 > **Source:** Comprehensive codebase analysis via `cx` tool, rust-grep, static analysis
 > **Scope:** All modules under `teaagent/` (377 files, ~97K LOC) and `tests/` (461 files, ~98K LOC)
 
@@ -1155,12 +1155,10 @@ Provider smoke tests run in parallel. All results aggregated in the report step.
 - **DEP-004** — `docs/dependencies/optional-extras-evaluation.md`
 - **TST-012** — Autouse `clear_config_cache()` fixture in `conftest.py`
 - **CQ-001 (partial)** — `type: ignore` 28 → 17 (llm/_config, runner/_core, external_backends)
-- **CQ-002 (partial)** — `scripts/check_complexity.py` baseline gate (99 violations, target 50)
+- **CQ-002** — Complexity ratchet met: 24 C901 violations (target ≤50) via `scripts/check_complexity.py`
 
-### Remaining (3 items)
-- **ARC-001/002** — Complete import migration across ~200 files (facades exist; legacy paths remain)
-- **CQ-002** — Complexity target <50 (currently ~99; baseline gate prevents regressions)
-- **CQ-001 (partial)** — 17 legitimate `type: ignore` (watchdog, TypedDict edges)
+### Remaining (1 item)
+- **ARC-001/002** — Retire legacy shim modules after downstream import migration stabilizes (facades adopted in CLI/tests; core re-export shims remain)
 
 
 ## Quick Wins (< 1 hour each) — All Completed

@@ -377,6 +377,7 @@ def run_chat_agent(
     depth: int = 0,
     initial_observations: Optional[list[dict[str, Any]]] = None,
     initial_context_extra: Optional[dict[str, Any]] = None,
+    run_id: Optional[str] = None,
 ) -> RunResult: ...
 
 
@@ -392,6 +393,7 @@ def run_chat_agent(
     depth: int = 0,
     initial_observations: Optional[list[dict[str, Any]]] = None,
     initial_context_extra: Optional[dict[str, Any]] = None,
+    run_id: Optional[str] = None,
 ) -> RunResult: ...
 
 
@@ -693,8 +695,9 @@ def _run_chat_agent_impl(
     depth: int = 0,
     initial_observations: Optional[list[dict[str, Any]]] = None,
     initial_context_extra: Optional[dict[str, Any]] = None,
+    run_id: Optional[str] = None,
 ) -> RunResult:
-    run_id = uuid4().hex
+    run_id = run_id or uuid4().hex
     project_instructions = load_project_instructions(config.root)
     audit_logger = audit or AuditLogger()
 

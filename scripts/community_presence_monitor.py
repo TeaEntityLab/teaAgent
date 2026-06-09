@@ -18,9 +18,24 @@ from pathlib import Path
 def check_github_metrics():
     """Check GitHub stars and activity."""
     print('Checking GitHub metrics...')
-    # TODO: Implement GitHub API integration to fetch actual metrics
-    # For now, return placeholder
-    return {'stars': 'TBD', 'recent_activity': []}
+    try:
+        from _github_api import get_repo, repo_from_env
+
+        owner, repo = repo_from_env('TEAAGENT_GITHUB_REPO', 'TeaEntityLab/teaAgent')
+        data = get_repo(owner, repo)
+        return {
+            'stars': int(data.get('stargazers_count', 0)),
+            'recent_activity': [
+                {
+                    'type': 'repo_snapshot',
+                    'open_issues': int(data.get('open_issues_count', 0)),
+                    'updated_at': data.get('updated_at', ''),
+                }
+            ],
+        }
+    except Exception as exc:
+        print(f'  Warning: GitHub metrics unavailable ({exc})')
+        return {'stars': 'unavailable', 'recent_activity': []}
 
 
 def check_reddit_mentions():
@@ -34,9 +49,32 @@ def check_reddit_mentions():
 def check_hacker_news():
     """Check Hacker News for TeaAgent posts."""
     print('Checking Hacker News...')
-    # HN API requires additional integration
-    # For now, return placeholder
-    return {'posts': [], 'upvotes': []}
+    import json
+    import urllib.parse
+    import urllib.request
+
+    query = urllib.parse.quote('teaagent OR tea-agent')
+    url = f'https://hn.algolia.com/api/v1/search?query={query}&tags=story&hitsPerPage=5'
+    try:
+        with urllib.request.urlopen(url, timeout=20) as response:
+            data = json.loads(response.read().decode())
+    except Exception as exc:
+        print(f'  Warning: Hacker News search unavailable ({exc})')
+        return {'posts': [], 'upvotes': []}
+    hits = data.get('hits', [])
+    posts = [
+        {
+            'title': hit.get('title', ''),
+            'url': hit.get('url')
+            or f'https://news.ycombinator.com/item?id={hit.get("objectID")}',
+            'points': int(hit.get('points', 0) or 0),
+        }
+        for hit in hits
+    ]
+    return {
+        'posts': posts,
+        'upvotes': [post['points'] for post in posts],
+    }
 
 
 def check_dev_to():

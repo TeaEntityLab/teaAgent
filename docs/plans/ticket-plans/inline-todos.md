@@ -7,7 +7,7 @@
 
 | File | Line | Comment | Context | Action |
 |------|------|---------|---------|--------|
-| [`teaagent/issue_intake.py`](../../teaagent/issue_intake.py) | 195 | `# TODO: Implement GitHub API integration` | Fixed: stub now raises `NotImplementedError` with a helpful message instead of returning fake data that could mislead callers. | Implement GitHub API call (needs a PAT or app credential) to replace the `NotImplementedError`. |
+| [`teaagent/issue_intake.py`](../../teaagent/issue_intake.py) | 195 | GitHub API integration | **Fixed (2026-06-09):** `extract_github_issue()` uses PyGithub with `GITHUB_TOKEN`; raises actionable errors when library/token missing. | None — closed. |
 
 ---
 
@@ -18,10 +18,8 @@ are stubs left from scaffolding and are lower priority.
 
 | File | Lines | Comment | Context | Action |
 |------|-------|---------|---------|--------|
-| [`scripts/opencode_gap_watch.py`](../../scripts/opencode_gap_watch.py) | 21, 29 | `# TODO: Implement actual GitHub API check` | Two stubs in `check_opencode_releases` and `check_competing_tools` — both return hardcoded dummy data. | Implement or delete if the script is unused. |
-| [`scripts/opencode_gap_watch.py`](../../scripts/opencode_gap_watch.py) | 37 | `# TODO: Implement actual community platform checks` | `check_community_signals` returns dummy data. | Same. |
-| [`scripts/opencode_gap_watch.py`](../../scripts/opencode_gap_watch.py) | 82 | `# TODO: Implement actual document update` | `update_gap_analysis_document` is a no-op. | Implement or delete. |
-| [`scripts/community_presence_monitor.py`](../../scripts/community_presence_monitor.py) | 21, 29, 37, 45, 53, 71 | Multiple `# TODO: Implement actual * API check` stubs | Functions return hardcoded dummy data for GitHub, Reddit, HN, Dev.to, community scanning, and document update. | Implement or quarantine behind a `--dry-run` flag if the script is meant to be operational. |
+| [`scripts/opencode_gap_watch.py`](../../scripts/opencode_gap_watch.py) | 21, 29 | GitHub API integration | **Fixed (2026-06-09):** release and governance-issue checks use `scripts/_github_api.py` (OpenCode repo configurable via `OPENCODE_GITHUB_REPO`). | Community platform checks remain manual (Reddit/Discord need separate credentials). |
+| [`scripts/community_presence_monitor.py`](../../scripts/community_presence_monitor.py) | 21, 37 | GitHub + HN API integration | **Fixed (2026-06-09):** GitHub stars via REST API; HN via Algolia public API. | Reddit/Dev.to still return empty lists until credentials are configured. |
 
 ---
 

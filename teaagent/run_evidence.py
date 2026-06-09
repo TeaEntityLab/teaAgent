@@ -120,6 +120,34 @@ class SkillActivationRecord:
 
 
 @dataclass
+class GitSandboxEvidence:
+    """Git sandbox lifecycle state captured from audit events."""
+
+    branch_name: str = ''
+    original_branch: str = ''
+    stash_id: str | None = None
+    auto_stash: bool = False
+    started: bool = False
+    resolution: str | None = None
+    resolved: bool = False
+    success: bool = False
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'branch_name': self.branch_name,
+            'original_branch': self.original_branch,
+            'stash_id': self.stash_id,
+            'auto_stash': self.auto_stash,
+            'started': self.started,
+            'resolution': self.resolution,
+            'resolved': self.resolved,
+            'success': self.success,
+            'error': self.error,
+        }
+
+
+@dataclass
 class RunEvidenceBundle:
     """Complete evidence bundle for a run."""
 
@@ -145,6 +173,8 @@ class RunEvidenceBundle:
     cost_cents: float = 0.0
     cost_state: str = 'unavailable'
     budget_cap_cents: int | None = None
+
+    git_sandbox: GitSandboxEvidence | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -228,7 +258,46 @@ class RunEvidenceBundle:
             'cost_cents': self.cost_cents,
             'cost_state': self.cost_state,
             'budget_cap_cents': self.budget_cap_cents,
+            'git_sandbox': self.git_sandbox.to_dict()
+            if self.git_sandbox is not None
+            else None,
         }
+
+
+def extract_git_sandbox(events: list[dict[str, Any]]) -> GitSandboxEvidence | None:
+    """Extract git sandbox lifecycle evidence from audit events."""
+    evidence = GitSandboxEvidence()
+    saw_event = False
+    for event in events:
+        event_type = event.get('event_type')
+        payload = event.get('payload') or {}
+        if not isinstance(payload, dict):
+            continue
+        if event_type == 'git_sandbox_started':
+            saw_event = True
+            evidence.started = bool(payload.get('success', False))
+            evidence.auto_stash = bool(payload.get('auto_stash', False))
+            evidence.branch_name = str(payload.get('branch_name', '') or '')
+            evidence.original_branch = str(payload.get('original_branch', '') or '')
+            stash_id = payload.get('stash_id')
+            evidence.stash_id = str(stash_id) if stash_id else None
+            error = payload.get('error')
+            evidence.error = str(error) if error else None
+        elif event_type == 'git_sandbox_resolved':
+            saw_event = True
+            evidence.resolved = True
+            evidence.resolution = str(payload.get('resolution', '') or '') or None
+            evidence.success = bool(payload.get('success', False))
+            error = payload.get('error')
+            evidence.error = str(error) if error else None
+            if not evidence.branch_name:
+                evidence.branch_name = str(payload.get('branch_name', '') or '')
+            if not evidence.original_branch:
+                evidence.original_branch = str(payload.get('original_branch', '') or '')
+            if evidence.stash_id is None:
+                stash_id = payload.get('stash_id')
+                evidence.stash_id = str(stash_id) if stash_id else None
+    return evidence if saw_event else None
 
 
 def _extract_scope_path(payload: dict[str, Any]) -> str:
@@ -656,6 +725,7 @@ def build_run_evidence_bundle(
     approvals = extract_approvals(events)
     routes = extract_routes(events)
     known_gaps = auto_derive_known_gaps(events, commands)
+    git_sandbox = extract_git_sandbox(events)
 
     undo_mechanism, undo_outcome = _extract_undo_evidence(events)
     store = RunStore(root)
@@ -694,6 +764,7 @@ def build_run_evidence_bundle(
         undo_mechanism=undo_mechanism,
         undo_outcome=undo_outcome,
         context_health=ctx_health_dict,
+        git_sandbox=git_sandbox,
     )
 
 

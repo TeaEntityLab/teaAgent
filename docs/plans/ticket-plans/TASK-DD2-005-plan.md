@@ -1,7 +1,7 @@
 # TASK-DD2-005: Repair Git Sandbox Lifecycle
 
 **Priority:** P1
-**Status:** Partially Fixed — core `_agent.py` fix delivered (removed sandbox re-creation in commit 4cc6c51); `git_sandbox.py` not modified. Broader ACs (run evidence persistence, stash restoration, help text alignment) need verification before full close. See verification audit at docs/work-log/roadmap-work-items-2026-06-04.md.
+**Status:** Fixed (2026-06-09) — run_id pre-generated before sandbox start; squash/discard/keep resolution paths implemented; stash pop uses labeled stash ref; `git_sandbox_started` / `git_sandbox_resolved` audit events persisted; `RunEvidenceBundle.git_sandbox` extracts lifecycle state.
 **Primary files:** `teaagent/cli/_handlers/_agent.py`, `teaagent/git_sandbox.py`, `tests/test_git_tools.py`
 
 ## Problem
