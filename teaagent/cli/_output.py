@@ -37,6 +37,9 @@ def _is_sensitive_key(key: str) -> bool:
     normalized = key.lower().replace('-', '_')
     if normalized in _SENSITIVE_EXACT_KEYS:
         return True
+    # LLM usage counters (*_tokens) are metrics, not credentials.
+    if normalized.endswith('_tokens'):
+        return False
     return any(marker in normalized for marker in _SENSITIVE_KEY_MARKERS)
 
 
