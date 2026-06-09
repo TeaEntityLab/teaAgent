@@ -6,7 +6,7 @@ via :meth:`teaagent.run_store.RunStore.heartbeat_for_run`.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from teaagent.run_evidence import extract_git_sandbox
@@ -30,6 +30,9 @@ class RunStateSnapshot:
     liveness_updated_at: str | None = None
     liveness_age_seconds: float | None = None
     liveness_stale: bool | None = None
+    pending_approval: dict[str, Any] | None = None
+    warnings: list[str] = field(default_factory=list)
+    token_pressure: str = 'unknown'
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -41,6 +44,9 @@ class RunStateSnapshot:
             'cost_cents': self.cost_cents,
             'permission_mode': self.permission_mode,
             'undo_available': self.undo_available,
+            'pending_approval': self.pending_approval,
+            'warnings': self.warnings,
+            'token_pressure': self.token_pressure,
         }
         if self.git_sandbox is not None:
             payload['git_sandbox'] = self.git_sandbox
@@ -66,6 +72,11 @@ def build_run_state_snapshot(
     cost_cents = 0.0
     permission_mode: str | None = None
 
+    warnings: list[str] = []
+    pending_approval: dict[str, Any] | None = None
+    token_pressure = 'unknown'
+    total_tokens = 0
+
     for event in events:
         event_type = event.get('event_type')
         payload = event.get('payload') or {}
@@ -89,6 +100,56 @@ def build_run_state_snapshot(
             mode = payload.get('permission_mode')
             if isinstance(mode, str) and mode:
                 permission_mode = mode
+
+        if event_type in (
+            'budget_warning',
+            'phase_budget_warning',
+            'warning',
+            'compaction_warning',
+        ):
+            msg = (
+                payload.get('message') or event.get('message') or payload.get('summary')
+            )
+            if msg:
+                warnings.append(str(msg))
+
+        if event_type == 'tool_call_pending_approval':
+            call_id = payload.get('call_id')
+            tool_name = payload.get('tool_name')
+            arguments = payload.get('arguments')
+            if isinstance(call_id, str) and isinstance(tool_name, str):
+                pending_approval = {
+                    'call_id': call_id,
+                    'tool_name': tool_name,
+                    'arguments': arguments if isinstance(arguments, dict) else {},
+                    'argument_digest': payload.get('argument_digest'),
+                    'argument_digest_version': payload.get('argument_digest_version'),
+                }
+        elif event_type in {
+            'tool_call_approved',
+            'tool_call_denied',
+            'run_completed',
+            'run_failed',
+        }:
+            if pending_approval:
+                pending_call_id = pending_approval.get('call_id')
+                payload_call_id = payload.get('call_id')
+                if pending_call_id is not None and pending_call_id == payload_call_id:
+                    pending_approval = None
+
+        in_tok = int(payload.get('input_tokens', 0))
+        out_tok = int(payload.get('output_tokens', 0))
+        if in_tok or out_tok:
+            total_tokens = max(total_tokens, in_tok + out_tok)
+
+    if total_tokens > 0:
+        ratio = total_tokens / 200000
+        if ratio >= 0.92:
+            token_pressure = 'red'
+        elif ratio >= 0.75:
+            token_pressure = 'yellow'
+        else:
+            token_pressure = 'green'
 
     git_sandbox_evidence = extract_git_sandbox(events)
     git_sandbox = (
@@ -124,6 +185,9 @@ def build_run_state_snapshot(
         liveness_stale=(
             bool(liveness['stale']) if liveness and 'stale' in liveness else None
         ),
+        pending_approval=pending_approval,
+        warnings=warnings,
+        token_pressure=token_pressure,
     )
 
 

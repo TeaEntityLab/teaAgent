@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
@@ -23,6 +23,9 @@ class RunSummary:
     final_answer: Optional[str] = None
     cost_cents: float = 0.0
     resumable: bool = False
+    pending_approval: Optional[dict[str, Any]] = None
+    warnings: list[str] = field(default_factory=list)
+    token_pressure: str = 'unknown'
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -35,6 +38,9 @@ class RunSummary:
             'final_answer': self.final_answer,
             'cost_cents': self.cost_cents,
             'resumable': self.resumable,
+            'pending_approval': self.pending_approval,
+            'warnings': self.warnings,
+            'token_pressure': self.token_pressure,
         }
 
 
@@ -122,6 +128,9 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
                         final_answer=data.get('final_answer'),
                         cost_cents=data.get('cost_cents', 0.0),
                         resumable=data.get('resumable', False),
+                        pending_approval=data.get('pending_approval'),
+                        warnings=data.get('warnings') or [],
+                        token_pressure=data.get('token_pressure', 'unknown'),
                     )
                 )
             except (json.JSONDecodeError, KeyError, TypeError):
@@ -196,7 +205,9 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
                 key=lambda p: p.stat().st_mtime,
                 reverse=True,
             )
-            if (summary := self.summarize(path)) is not None
+            if path.name != 'runs-index.jsonl'
+            and not path.name.startswith('pending-')
+            and (summary := self.summarize(path)) is not None
         ][:limit]
 
     def show_run(self, run_id: str) -> list[dict[str, Any]]:
@@ -384,9 +395,17 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         cost_cents = 0.0
         created_at = events[0].get('created_at', utc_now())
         updated_at = events[-1].get('created_at', created_at)
+
+        warnings = []
+        pending_approval = None
+        token_pressure = 'unknown'
+        total_tokens = 0
+
         for event in events:
             event_type = event.get('event_type')
             payload = event.get('payload', {})
+            if not isinstance(payload, dict):
+                payload = {}
             if event_type == 'run_started':
                 task = payload.get('task', '')
                 status = 'running'
@@ -399,6 +418,64 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
                 cost_cents = float(payload.get('cost_cents', 0.0))
             elif event_type == 'run_paused':
                 status = payload.get('status', 'paused')
+
+            if event_type in (
+                'budget_warning',
+                'phase_budget_warning',
+                'warning',
+                'compaction_warning',
+            ):
+                msg = (
+                    payload.get('message')
+                    or event.get('message')
+                    or payload.get('summary')
+                )
+                if msg:
+                    warnings.append(str(msg))
+
+            if event_type == 'tool_call_pending_approval':
+                call_id = payload.get('call_id')
+                tool_name = payload.get('tool_name')
+                arguments = payload.get('arguments')
+                if isinstance(call_id, str) and isinstance(tool_name, str):
+                    pending_approval = {
+                        'call_id': call_id,
+                        'tool_name': tool_name,
+                        'arguments': arguments if isinstance(arguments, dict) else {},
+                        'argument_digest': payload.get('argument_digest'),
+                        'argument_digest_version': payload.get(
+                            'argument_digest_version'
+                        ),
+                    }
+            elif event_type in {
+                'tool_call_approved',
+                'tool_call_denied',
+                'run_completed',
+                'run_failed',
+            }:
+                if pending_approval:
+                    pending_call_id = pending_approval.get('call_id')
+                    payload_call_id = payload.get('call_id')
+                    if (
+                        pending_call_id is not None
+                        and pending_call_id == payload_call_id
+                    ):
+                        pending_approval = None
+
+            in_tok = int(payload.get('input_tokens', 0))
+            out_tok = int(payload.get('output_tokens', 0))
+            if in_tok or out_tok:
+                total_tokens = max(total_tokens, in_tok + out_tok)
+
+        if total_tokens > 0:
+            ratio = total_tokens / 200000
+            if ratio >= 0.92:
+                token_pressure = 'red'
+            elif ratio >= 0.75:
+                token_pressure = 'yellow'
+            else:
+                token_pressure = 'green'
+
         resumable = (
             not (status == 'completed' or status.startswith('failed:'))
             and status != 'unknown'
@@ -413,6 +490,9 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
             final_answer=final_answer,
             cost_cents=cost_cents,
             resumable=resumable,
+            pending_approval=pending_approval,
+            warnings=warnings,
+            token_pressure=token_pressure,
         )
 
     def health_report(self) -> dict[str, Any]:
@@ -459,6 +539,8 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         ):
+            if path.name == 'runs-index.jsonl' or path.name.startswith('pending-'):
+                continue
             summary = self.summarize(path)
             if summary is not None:
                 summaries.append(summary)

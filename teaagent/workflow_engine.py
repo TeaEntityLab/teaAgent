@@ -17,7 +17,7 @@ import subprocess
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from teaagent.agent_factory import AgentFactory
 from teaagent.audit import AuditLogger
@@ -72,6 +72,100 @@ class WorkflowExecution:
     state: WorkflowState = WorkflowState.PENDING
     step_results: dict[int, StepExecution] = field(default_factory=dict)
     total_execution_time: float = 0.0
+    run_id: Optional[str] = None
+    depth: int = 0
+
+
+def workflow_execution_to_dict(execution: WorkflowExecution) -> dict[str, Any]:
+    return {
+        'run_id': execution.run_id,
+        'current_step': execution.current_step,
+        'state': execution.state.value,
+        'total_execution_time': execution.total_execution_time,
+        'depth': execution.depth,
+        'step_results': {
+            str(k): {
+                'step_id': v.step_id,
+                'success': v.success,
+                'output': v.output,
+                'error': v.error,
+                'execution_time_seconds': v.execution_time_seconds,
+                'validation_passed': v.validation_passed,
+                'validation_errors': v.validation_errors,
+                'self_healing_attempts': v.self_healing_attempts,
+                'requires_rollback': v.requires_rollback,
+            }
+            for k, v in execution.step_results.items()
+        },
+        'plan': {
+            'task_description': execution.plan.task_description,
+            'steps': [
+                {
+                    'step_id': s.step_id,
+                    'description': s.description,
+                    'agent_name': s.agent_name,
+                    'tools': list(s.tools) if s.tools else [],
+                    'dependencies': list(s.dependencies) if s.dependencies else [],
+                    'validation_profile': getattr(s, 'validation_profile', 'standard'),
+                }
+                for s in execution.plan.steps
+            ],
+            'estimated_duration_seconds': execution.plan.estimated_duration_seconds,
+        },
+    }
+
+
+def workflow_execution_from_dict(d: dict[str, Any]) -> WorkflowExecution:
+    from teaagent.coordinator import TaskClassification, TaskComplexity, TaskType
+
+    plan_dict = d['plan']
+    steps = [
+        WorkflowStep(
+            step_id=s['step_id'],
+            description=s['description'],
+            agent_name=s['agent_name'],
+            tools=tuple(s.get('tools') or []),
+            dependencies=tuple(s.get('dependencies') or []),
+            validation_profile=s.get('validation_profile', 'standard'),
+        )
+        for s in plan_dict.get('steps', [])
+    ]
+    dummy_classification = TaskClassification(
+        task_type=TaskType.GENERAL,
+        complexity=TaskComplexity.SIMPLE,
+        confidence=1.0,
+    )
+    plan = WorkflowPlan(
+        task_description=plan_dict['task_description'],
+        classification=dummy_classification,
+        steps=steps,
+        estimated_duration_seconds=plan_dict.get('estimated_duration_seconds', 0),
+    )
+
+    execution = WorkflowExecution(
+        plan=plan,
+        current_step=d.get('current_step', 0),
+        state=WorkflowState(d.get('state', 'pending')),
+        total_execution_time=d.get('total_execution_time', 0.0),
+        run_id=d.get('run_id'),
+        depth=d.get('depth', 0),
+    )
+
+    step_results = {}
+    for k, v in d.get('step_results', {}).items():
+        step_results[int(k)] = StepExecution(
+            step_id=v['step_id'],
+            success=v['success'],
+            output=v.get('output', ''),
+            error=v.get('error'),
+            execution_time_seconds=v.get('execution_time_seconds', 0.0),
+            validation_passed=v.get('validation_passed', True),
+            validation_errors=v.get('validation_errors', []),
+            self_healing_attempts=v.get('self_healing_attempts', 0),
+            requires_rollback=v.get('requires_rollback', False),
+        )
+    execution.step_results = step_results
+    return execution
 
 
 class WorkflowEngine:
@@ -84,6 +178,7 @@ class WorkflowEngine:
         root: str = '.',
         enable_self_healing: bool = True,
         max_self_healing_attempts: int = 3,
+        checkpoint_store: Optional[Any] = None,
     ) -> None:
         self._plugin_registry = plugin_registry
         self._agent_factory = agent_factory
@@ -91,10 +186,15 @@ class WorkflowEngine:
         self._active_workflow: Optional[WorkflowExecution] = None
         self._enable_self_healing = enable_self_healing
         self._max_self_healing_attempts = max_self_healing_attempts
-        self._workflow_lock = threading.Lock()
+        self._workflow_lock = threading.RLock()
+        self.checkpoint_store = checkpoint_store
 
     def execute_workflow(
-        self, plan: WorkflowPlan, audit_logger: Optional[AuditLogger] = None
+        self,
+        plan: WorkflowPlan,
+        audit_logger: Optional[AuditLogger] = None,
+        depth: int = 0,
+        run_id: Optional[str] = None,
     ) -> WorkflowExecution:
         """Execute a workflow plan from start to finish.
 
@@ -102,12 +202,54 @@ class WorkflowEngine:
             plan: WorkflowPlan to execute.
             audit_logger: Optional shared AuditLogger; if provided, the
                 UndoJournal sink is attached to it so rollback events are captured.
+            depth: Orchestration recursion depth.
+            run_id: Optional run identifier.
 
         Returns:
             WorkflowExecution with results.
         """
+        max_depth = 5
+        if depth > max_depth:
+            logger.error(
+                f'Workflow execution failed: max orchestration depth exceeded '
+                f'(depth {depth} > {max_depth})'
+            )
+            # Create a failed execution with a step 0 result describing the failure
+            execution = WorkflowExecution(
+                plan=plan,
+                state=WorkflowState.FAILED,
+                depth=depth,
+            )
+            execution.step_results[0] = StepExecution(
+                step_id=0,
+                success=False,
+                error=f'Max workflow orchestration depth exceeded (depth {depth} > {max_depth})',
+            )
+            return execution
+
         with self._workflow_lock:
-            execution = WorkflowExecution(plan=plan, state=WorkflowState.IN_PROGRESS)
+            actual_run_id = run_id or getattr(plan, 'run_id', None)
+            if not actual_run_id and audit_logger:
+                actual_run_id = getattr(audit_logger, 'run_id', None)
+
+            if self.checkpoint_store and actual_run_id:
+                ckpt = self.checkpoint_store.load(actual_run_id)
+                if ckpt and 'workflow_execution' in ckpt:
+                    logger.info(
+                        f'Found durable workflow checkpoint for run {actual_run_id}. Resuming...'
+                    )
+                    execution = workflow_execution_from_dict(ckpt['workflow_execution'])
+                    execution.depth = depth
+                    self._active_workflow = execution
+                    # Resume from the next pending step
+                    return self.resume_workflow(execution, audit_logger=audit_logger)
+
+            execution = WorkflowExecution(
+                plan=plan,
+                state=WorkflowState.IN_PROGRESS,
+                depth=depth,
+                run_id=actual_run_id,
+            )
             self._active_workflow = execution
 
             # Set up UndoJournal for rollback support on strict validation failures
@@ -119,6 +261,13 @@ class WorkflowEngine:
                 execution.current_step = step.step_id
                 result = self._execute_step(step)
                 execution.step_results[step.step_id] = result
+
+                # Save checkpoint after each step is executed!
+                if self.checkpoint_store and execution.run_id:
+                    self.checkpoint_store.save(
+                        execution.run_id,
+                        {'workflow_execution': workflow_execution_to_dict(execution)},
+                    )
 
                 # Check if strict validation requested rollback
                 if result.requires_rollback:
@@ -133,6 +282,16 @@ class WorkflowEngine:
                         f'Errors: {len(undo_result.errors)}'
                     )
                     execution.state = WorkflowState.FAILED
+                    # Update checkpoint with failure state
+                    if self.checkpoint_store and execution.run_id:
+                        self.checkpoint_store.save(
+                            execution.run_id,
+                            {
+                                'workflow_execution': workflow_execution_to_dict(
+                                    execution
+                                )
+                            },
+                        )
                     break
 
                 if not result.success:
@@ -140,10 +299,26 @@ class WorkflowEngine:
                     logger.error(
                         f'Workflow failed at step {step.step_id}: {result.error}'
                     )
+                    # Update checkpoint with failure state
+                    if self.checkpoint_store and execution.run_id:
+                        self.checkpoint_store.save(
+                            execution.run_id,
+                            {
+                                'workflow_execution': workflow_execution_to_dict(
+                                    execution
+                                )
+                            },
+                        )
                     break
 
             if execution.state == WorkflowState.IN_PROGRESS:
                 execution.state = WorkflowState.COMPLETED
+                # Save final completed checkpoint
+                if self.checkpoint_store and execution.run_id:
+                    self.checkpoint_store.save(
+                        execution.run_id,
+                        {'workflow_execution': workflow_execution_to_dict(execution)},
+                    )
 
             self._active_workflow = None
             return execution
@@ -427,6 +602,20 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
         Returns:
             Updated WorkflowExecution.
         """
+        max_depth = 5
+        if execution.depth > max_depth:
+            logger.error(
+                f'Workflow resume failed: max orchestration depth exceeded '
+                f'(depth {execution.depth} > {max_depth})'
+            )
+            execution.state = WorkflowState.FAILED
+            execution.step_results[0] = StepExecution(
+                step_id=0,
+                success=False,
+                error=f'Max workflow orchestration depth exceeded (depth {execution.depth} > {max_depth})',
+            )
+            return execution
+
         with self._workflow_lock:
             execution.state = WorkflowState.IN_PROGRESS
 
@@ -443,9 +632,26 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
             ]
 
             for step in steps_to_execute:
+                # Skip already completed steps
+                if (
+                    step.step_id in execution.step_results
+                    and execution.step_results[step.step_id].success
+                ):
+                    logger.info(
+                        f'Step {step.step_id} already completed successfully. Skipping.'
+                    )
+                    continue
+
                 execution.current_step = step.step_id
                 result = self._execute_step(step)
                 execution.step_results[step.step_id] = result
+
+                # Save checkpoint after each step is executed!
+                if self.checkpoint_store and execution.run_id:
+                    self.checkpoint_store.save(
+                        execution.run_id,
+                        {'workflow_execution': workflow_execution_to_dict(execution)},
+                    )
 
                 # Check if strict validation requested rollback
                 if result.requires_rollback:
@@ -460,6 +666,15 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
                         f'Errors: {len(undo_result.errors)}'
                     )
                     execution.state = WorkflowState.FAILED
+                    if self.checkpoint_store and execution.run_id:
+                        self.checkpoint_store.save(
+                            execution.run_id,
+                            {
+                                'workflow_execution': workflow_execution_to_dict(
+                                    execution
+                                )
+                            },
+                        )
                     break
 
                 if not result.success:
@@ -467,10 +682,24 @@ Focus on fixing the specific errors reported. Do not make unnecessary changes.
                     logger.error(
                         f'Workflow failed at step {step.step_id}: {result.error}'
                     )
+                    if self.checkpoint_store and execution.run_id:
+                        self.checkpoint_store.save(
+                            execution.run_id,
+                            {
+                                'workflow_execution': workflow_execution_to_dict(
+                                    execution
+                                )
+                            },
+                        )
                     break
 
             if execution.state == WorkflowState.IN_PROGRESS:
                 execution.state = WorkflowState.COMPLETED
+                if self.checkpoint_store and execution.run_id:
+                    self.checkpoint_store.save(
+                        execution.run_id,
+                        {'workflow_execution': workflow_execution_to_dict(execution)},
+                    )
 
             self._active_workflow = None
             return execution

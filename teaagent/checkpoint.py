@@ -6,7 +6,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-_CHECKPOINT_KEYS = ('task', 'observations', 'compacted_summary', 'memory_keys')
+_CHECKPOINT_KEYS = (
+    'task',
+    'observations',
+    'compacted_summary',
+    'memory_keys',
+    'workflow_execution',
+)
 _SCHEMA_VERSION = 1
 
 

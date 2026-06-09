@@ -135,6 +135,40 @@ class RunStateContractTests(unittest.TestCase):
             self.assertEqual(cli_payload['schema_version'], RUN_STATE_SCHEMA_VERSION)
             self.assertIn('git_sandbox', cli_payload)
 
+    def test_build_run_state_includes_warnings_approvals_and_token_pressure(
+        self,
+    ) -> None:
+        events = [
+            {'event_type': 'run_started', 'payload': {'task': 't'}},
+            {
+                'event_type': 'budget_warning',
+                'payload': {'message': 'approaching budget'},
+            },
+            {
+                'event_type': 'tool_call_pending_approval',
+                'payload': {
+                    'call_id': 'call-456',
+                    'tool_name': 'execute_command',
+                    'arguments': {'cmd': 'ls'},
+                },
+            },
+            {
+                'event_type': 'heartbeat',
+                'payload': {
+                    'input_tokens': 180000,
+                    'output_tokens': 10000,
+                },
+            },
+        ]
+        snapshot = build_run_state_snapshot(events, 'run2')
+        payload = snapshot.to_dict()
+
+        self.assertEqual(payload['warnings'], ['approaching budget'])
+        self.assertIsNotNone(payload['pending_approval'])
+        self.assertEqual(payload['pending_approval']['call_id'], 'call-456')
+        self.assertEqual(payload['pending_approval']['tool_name'], 'execute_command')
+        self.assertEqual(payload['token_pressure'], 'red')
+
 
 if __name__ == '__main__':
     unittest.main()

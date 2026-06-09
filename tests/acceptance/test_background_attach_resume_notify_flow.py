@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import sys
 import time
 from contextlib import redirect_stdout
@@ -96,3 +97,57 @@ def test_agent_status_notify_flag_invokes_desktop_notify(tmp_path: Path) -> None
     assert code == 0
     assert notified
     assert 'run-notify' in notified[0][1] or 'run-notify' in notified[0][0]
+
+
+def test_background_attach_with_notify_triggers_desktop_notification(
+    tmp_path: Path,
+) -> None:
+    run_id = 'bg-notify-run'
+    store = RunStore(tmp_path)
+    audit = store.audit_logger(run_id)
+    audit.record('run_started', run_id, task='notify test')
+    audit.record('heartbeat', run_id, tick=1, interval_seconds=0.1)
+    audit.record('run_completed', run_id, answer='done')
+
+    with patch('teaagent.ergonomics.notify.notify') as mock_notify:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main(
+                ['agent', 'attach', run_id, '--notify', '--root', str(tmp_path)]
+            )
+
+        assert code == 0
+        mock_notify.assert_called_once_with('TeaAgent', 'Run bg-notify-run: completed')
+
+        payload = json.loads(out.getvalue())
+        assert payload['run_id'] == run_id
+        assert payload['run_state']['status'] == 'completed'
+
+
+def test_background_attach_follow_with_notify(tmp_path: Path) -> None:
+    run_id = 'bg-follow-notify-run'
+    store = RunStore(tmp_path)
+    audit = store.audit_logger(run_id)
+    audit.record('run_started', run_id, task='follow notify test')
+    audit.record('heartbeat', run_id, tick=1, interval_seconds=0.1)
+    audit.record('run_completed', run_id, answer='done')
+
+    with patch('teaagent.ergonomics.notify.notify') as mock_notify:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main(
+                [
+                    'agent',
+                    'attach',
+                    run_id,
+                    '--follow',
+                    '--notify',
+                    '--root',
+                    str(tmp_path),
+                ]
+            )
+
+        assert code == 0
+        mock_notify.assert_called_once_with(
+            'TeaAgent', 'Run bg-follow-notify-run: completed'
+        )

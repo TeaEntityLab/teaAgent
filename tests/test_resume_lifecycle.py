@@ -475,3 +475,70 @@ def _make_background_args(root, *, task='test task', provider='gpt', model=None)
         context_profile='balanced',
         max_estimated_cost_cents=0,
     )
+
+
+def test_run_summary_serialization_warnings_approvals_tokens():
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+
+        audit.record('run_started', 'run-s', task='serialize state')
+        audit.record(
+            'budget_warning',
+            'run-s',
+            level=80,
+            percent=80.0,
+            cost_cents=80.0,
+            max_cost_cents=100.0,
+            message='Cost is approaching limit',
+        )
+        audit.record(
+            'tool_call_pending_approval',
+            'run-s',
+            call_id='call-123',
+            tool_name='workspace_write_file',
+            arguments={'path': 'foo.txt'},
+            argument_digest='abcd1234',
+            argument_digest_version='1',
+        )
+        audit.record(
+            'run_failed',
+            'run-s',
+            category='model_logic',
+            message='failed',
+            cost_cents=80.0,
+            input_tokens=150000,
+            output_tokens=10000,
+        )
+
+        store.logger_for_result(
+            RunResult(
+                run_id='run-s',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
+                status='failed:model_logic',
+            ),
+            audit,
+        )
+
+        summaries = store.list_runs()
+        assert len(summaries) == 1
+        summary = summaries[0]
+
+        assert 'Cost is approaching limit' in summary.warnings
+        assert summary.pending_approval is not None
+        assert summary.pending_approval['call_id'] == 'call-123'
+        assert summary.pending_approval['tool_name'] == 'workspace_write_file'
+        assert summary.pending_approval['arguments'] == {'path': 'foo.txt'}
+        assert summary.token_pressure == 'yellow'
+
+        store.rebuild_index()
+        summaries_from_index = store.list_runs()
+        assert len(summaries_from_index) == 1
+        summary_idx = summaries_from_index[0]
+
+        assert 'Cost is approaching limit' in summary_idx.warnings
+        assert summary_idx.pending_approval is not None
+        assert summary_idx.pending_approval['call_id'] == 'call-123'
+        assert summary_idx.token_pressure == 'yellow'
