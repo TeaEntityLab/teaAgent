@@ -127,7 +127,9 @@ jobs:
         # @pytest.mark.skipif(sys.platform == 'win32', reason="shell-dependent")
         # to skip on Windows. Until then, Windows test failures do not block merge.
         continue-on-error: ${{ matrix.os == 'windows-latest' }}
-        run: pytest --random-order --cov=teaagent --cov-report=term-missing --cov-fail-under=75
+        env:
+          PYTHONHASHSEED: "0"
+        run: pytest --random-order --cov=teaagent --cov-context=test --cov-report=term-missing --cov-fail-under=75
 
   test-telemetry:
     runs-on: ubuntu-latest

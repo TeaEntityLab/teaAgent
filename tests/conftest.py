@@ -80,18 +80,27 @@ def fake_adapter(
 
 @pytest.fixture(autouse=True)
 def _reset_module_caches() -> None:
-    """Reset global caches between tests (TST-012)."""
+    """Reset global caches between tests (TST-012).
+
+    Collects garbage to free thread objects and reduce memory pressure
+    under ``--cov``, which can otherwise cause pydantic segfaults and
+    ``RuntimeError: can't start new thread`` on CI (Python 3.10).
+    """
+    import gc
+
     from teaagent.config_loader import clear_config_cache
 
     clear_config_cache()
     _clear_lazy_export_cache()
     _clear_tui_completion_cache()
     _clear_code_analysis_cache()
+    gc.collect()
     yield
     clear_config_cache()
     _clear_lazy_export_cache()
     _clear_tui_completion_cache()
     _clear_code_analysis_cache()
+    gc.collect()
 
 
 def _clear_lazy_export_cache() -> None:
@@ -138,6 +147,33 @@ def temp_workspace(*files: tuple[str, str]) -> tempfile.TemporaryDirectory[str]:
         filepath.parent.mkdir(parents=True, exist_ok=True)
         filepath.write_text(content, encoding='utf-8')
     return td
+
+
+def pytest_sessionstart(session: pytest.Session) -> None:
+    """Pre-warm common modules to reduce segfault risk under ``--cov``.
+
+    Coverage instrumentation of type-annotation evaluation (used by
+    ``pydantic-core``, ``typing.get_type_hints``, and ``dataclasses``)
+    can trigger segfaults on Python 3.10.  Pre-importing modules here
+    warms schema caches before the bulk of coverage tracking begins.
+    """
+    # Pre-import high-traffic teaagent modules so their type-evaluation
+    # happens once, not under coverage pressure.
+    _preimport_modules = [
+        'teaagent.run_store',
+        'teaagent.audit',
+        'teaagent.runner',
+        'teaagent.budget',
+        'teaagent.policy',
+        'teaagent.types',
+        'teaagent.tool_registry',
+    ]
+    import contextlib
+    import importlib
+
+    for mod in _preimport_modules:
+        with contextlib.suppress(Exception):
+            importlib.import_module(mod)
 
 
 __all__ = [
