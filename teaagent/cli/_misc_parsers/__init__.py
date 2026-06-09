@@ -22,6 +22,7 @@ from .diagnostics import (
     _selftest_top_level,
 )
 from .setup import _clarify, _completion, _configure, _init, _setup
+from .surfaces import _surfaces
 from .tui_parser import _tui
 
 
@@ -57,6 +58,8 @@ def register(
     )
     _selftest_top_level(subparsers, handlers.get('doctor_selftest'))
     _completion(subparsers, handlers['completion'])
+    if handlers.get('surfaces_explain') is not None:
+        _surfaces(subparsers, handlers['surfaces_explain'])
     _audit(
         subparsers,
         handlers['audit_list'],

@@ -239,6 +239,7 @@ from ._skill_publish import (
     skill_publish_command,
     skill_verify_tsb_command,
 )
+from ._surfaces import surfaces_explain_command
 from ._sync import (
     sync_export,
     sync_import,
@@ -348,6 +349,7 @@ __all__ = [
     'configure_command',
     'init_command',
     'setup_command',
+    'surfaces_explain_command',
     'doctor_all',
     'doctor_graphqlite',
     'doctor_model',
