@@ -834,7 +834,11 @@ def test_readonly_commands_dont_mutate_fresh_workspace(tmp_path: Path) -> None:
     with redirect_stdout(out):
         assert main(['approval', 'pending', '--root', str(tmp_path)]) == 0
     pending = json.loads(out.getvalue())
-    assert pending == {'queue_depth': 0, 'pending': []}
+    assert pending == {
+        'schema_version': '1',
+        'queue_depth': 0,
+        'pending': [],
+    }
     assert not teaagent_dir.exists()
 
     # Test approval list (should return empty policy without creating .teaagent)

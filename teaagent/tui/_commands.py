@@ -686,20 +686,12 @@ def _cmd_approvals(tui: 'TeaAgentTUI', args: list[str]) -> bool:
             tui.output_fn(f'revoked: {grant_id}')
         return True
     if sub == 'pending':
+        from teaagent.integration.approval_parity import (
+            build_pending_approvals_snapshot,
+        )
+
         run_store = RunStore(tui.root)
-        pending_runs = []
-        for summary in run_store.list_runs(limit=20):
-            pending = run_store.pending_approval_for_run(summary.run_id)
-            if pending:
-                pending_runs.append(
-                    {
-                        'run_id': summary.run_id,
-                        'task': summary.task,
-                        'status': summary.status,
-                        'pending_approval': pending,
-                    }
-                )
-        tui._print_json(pending_runs)
+        tui._print_json(build_pending_approvals_snapshot(run_store, limit=20))
         return True
     tui.output_fn(f"error: unknown approvals subcommand '{sub}'")
     return True

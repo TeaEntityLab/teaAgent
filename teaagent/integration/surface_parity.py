@@ -92,8 +92,9 @@ TUI_SURFACE_COMMANDS: list[str] = [
     'resume <run_id>',
     'undo',
     'runs',
-    'approvals',
+    'approvals pending',
     'approve',
+    'approve --selector N',
     'receipt',
     'background',
 ]

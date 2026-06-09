@@ -565,15 +565,15 @@ def approval_pending_command(args: argparse.Namespace) -> int:
     from teaagent.approval_selectors import (
         collect_pending_approval_views,
         format_pending_approvals,
-        pending_approvals_payload,
     )
+    from teaagent.integration.approval_parity import build_pending_approvals_snapshot
 
     store = AgentExecutionFactory(args.root).create_run_store(readonly=True)
-    views = collect_pending_approval_views(store, limit=args.limit)
     if getattr(args, 'human', False):
+        views = collect_pending_approval_views(store, limit=args.limit)
         print(format_pending_approvals(views))
         return 0
-    print_json(pending_approvals_payload(views))
+    print_json(build_pending_approvals_snapshot(store, limit=args.limit))
     return 0
 
 

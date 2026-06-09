@@ -45,6 +45,7 @@ background work, integrations, recovery, and reporting.
 | Slack/message intake | P1 | Gateway task becomes a scoped run ticket with provenance, approval, and audit lineage. | `test_gateway_task_intake_flow.py` | 📋 Not implemented |
 | MCP trust onboarding | P1 | Remote MCP server requires trust review, scoped authorization, list, call, revoke, and audit. | `test_mcp_trust_onboarding_flow.py` | 🔄 Unit test exists (`test_mcp_trust.py`), acceptance test not yet created |
 | IDE command parity | P1 | VS Code/ACP can run daily, preflight, plan, run, status, and evidence summary. | `test_ide_command_parity_flow.py` | 🔄 In progress (VS Code daily workflow commands + parity tests; dashboard/gateway gaps remain) |
+| Approval UX parity | P1 | Same pending approval queue and selector semantics across CLI/TUI/IDE. | `test_approval_ux_parity_flow.py` | 🔄 In progress (shared pending queue contract; dashboard parity pending) |
 | Subagent review merge | P1 | Parent compares child worktree results, applies one patch, rejects others, records rationale. | `test_subagent_review_merge_flow.py` | 🔄 Similar test exists (`test_subagent_parallel_worktree_merge_flow.py`) |
 | Extension activation explain | P1 | Hooks, skills, plugins, and MCP tools show why they activated and how to disable them. | `test_extension_activation_explain_flow.py` | 📋 Not implemented |
 | Provider fallback day two | P1 | Provider outage or capability mismatch yields safe fallback suggestion without silent escalation. | `test_provider_fallback_recovery_flow.py` | 📋 Not implemented |
