@@ -40,6 +40,11 @@ repos:
         pass_filenames: false
       - id: pytest
         name: pytest
-        entry: bash -c 'if [ "${TEAAGENT_PRECOMMIT_FULL:-0}" = 1 ]; then env UV_CACHE_DIR=.uv-cache uv run pytest -q; else env UV_CACHE_DIR=.uv-cache uv run pytest tests/test_p0_harness.py tests/test_surface_auth_hardening.py tests/test_policy.py tests/test_phase5_context_bus.py tests/test_governance_hardening.py -q; fi'
+        # Smoke subset = governance core + regression contracts (fast, ~0.5s).
+        # The regression tests would have caught the permission_mode enum vs
+        # string bugs and the sandbox run_id collision — real regressions that
+        # the governance-only subset missed.
+        # Full suite: TEAAGENT_PRECOMMIT_FULL=1 pre-commit run --all-files
+        entry: bash -c 'if [ "${TEAAGENT_PRECOMMIT_FULL:-0}" = 1 ]; then env UV_CACHE_DIR=.uv-cache uv run pytest -q; else env UV_CACHE_DIR=.uv-cache uv run pytest tests/test_p0_harness.py tests/test_surface_auth_hardening.py tests/test_policy.py tests/test_phase5_context_bus.py tests/test_governance_hardening.py tests/regression/ tests/acceptance/test_subagent_lineage_flow.py -q; fi'
         language: system
         pass_filenames: false
