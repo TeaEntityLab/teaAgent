@@ -738,8 +738,10 @@ class ApprovalManager:
         preapproved_call_ids: frozenset[str] = frozenset(),
         extra_path_keys: set[str] | None = None,
         approval_backend: _ApprovalBackend | None = None,
+        tenant_id: str = 'default',
     ) -> None:
         self.permission_mode = permission_mode
+        self.tenant_id = tenant_id
         self.approval_store = approval_store
         self.approval_origin_run_id = approval_origin_run_id
         self.enable_jit_prompt = enable_jit_prompt
@@ -792,6 +794,9 @@ class ApprovalManager:
         Raises:
             ToolPermissionError: If the tool call is not allowed.
         """
+        if arguments and isinstance(arguments, dict):
+            self._assert_tenant_paths_match(tool_name, arguments)
+
         from teaagent.approval_backend import ApprovalRequest as _BeApprovalRequest
 
         backend_request = _BeApprovalRequest(
@@ -931,6 +936,62 @@ class ApprovalManager:
 
     # Path argument keys checked for workspace containment.
     _PATH_ARGUMENT_KEYS: tuple[str, ...] = ('path', 'file_path', 'target_path', 'file')
+
+    def _assert_tenant_paths_match(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> None:
+        """Enforce that runs under a tenant cannot access files/paths belonging to other tenants."""
+        values = []
+
+        def collect_values(val: Any) -> None:
+            if isinstance(val, (str, Path)):
+                values.append(val)
+            elif isinstance(val, dict):
+                for v in val.values():
+                    collect_values(v)
+            elif isinstance(val, (list, tuple, set)):
+                for v in val:
+                    collect_values(v)
+
+        collect_values(arguments)
+
+        for val in values:
+            val_str = str(val)
+            try:
+                resolved_val = Path(val_str).resolve()
+            except Exception:
+                continue
+
+            parts = resolved_val.parts
+
+            # Determine the path's owner tenant (if any)
+            owner_tenant = None
+            if 'tenants' in parts:
+                idx = parts.index('tenants')
+                if idx + 1 < len(parts):
+                    owner_tenant = parts[idx + 1]
+            else:
+                if '.teaagent' in parts:
+                    idx = parts.index('.teaagent')
+                    if idx + 1 < len(parts):
+                        sub = parts[idx + 1]
+                        if sub in (
+                            'runs',
+                            'undo',
+                            'background',
+                            'run-keys',
+                            'audit-encryption',
+                        ):
+                            owner_tenant = 'default'
+
+            if owner_tenant is not None and owner_tenant != self.tenant_id:
+                raise ToolPermissionError(
+                    f"Tenant mismatch: Tool '{tool_name}' target path '{val_str}' "
+                    f"belongs to tenant '{owner_tenant}', which does not match active tenant '{self.tenant_id}'.",
+                    reason_code=DenialReasonCode.WORKSPACE_WRITE_MODE,
+                )
 
     def _get_extended_path_keys(self) -> set[str]:
         """Return the full set of path argument keys (defaults + extensions)."""

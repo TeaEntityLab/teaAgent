@@ -74,11 +74,13 @@ class WorkflowExecution:
     total_execution_time: float = 0.0
     run_id: Optional[str] = None
     depth: int = 0
+    tenant_id: str = 'default'
 
 
 def workflow_execution_to_dict(execution: WorkflowExecution) -> dict[str, Any]:
     return {
         'run_id': execution.run_id,
+        'tenant_id': execution.tenant_id,
         'current_step': execution.current_step,
         'state': execution.state.value,
         'total_execution_time': execution.total_execution_time,
@@ -99,6 +101,7 @@ def workflow_execution_to_dict(execution: WorkflowExecution) -> dict[str, Any]:
         },
         'plan': {
             'task_description': execution.plan.task_description,
+            'tenant_id': execution.plan.tenant_id,
             'steps': [
                 {
                     'step_id': s.step_id,
@@ -135,11 +138,13 @@ def workflow_execution_from_dict(d: dict[str, Any]) -> WorkflowExecution:
         complexity=TaskComplexity.SIMPLE,
         confidence=1.0,
     )
+    tenant_id = plan_dict.get('tenant_id', 'default')
     plan = WorkflowPlan(
         task_description=plan_dict['task_description'],
         classification=dummy_classification,
         steps=steps,
         estimated_duration_seconds=plan_dict.get('estimated_duration_seconds', 0),
+        tenant_id=tenant_id,
     )
 
     execution = WorkflowExecution(
@@ -149,6 +154,7 @@ def workflow_execution_from_dict(d: dict[str, Any]) -> WorkflowExecution:
         total_execution_time=d.get('total_execution_time', 0.0),
         run_id=d.get('run_id'),
         depth=d.get('depth', 0),
+        tenant_id=d.get('tenant_id', 'default'),
     )
 
     step_results = {}

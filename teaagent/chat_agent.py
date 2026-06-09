@@ -64,9 +64,22 @@ from teaagent.workspace_tools import (
 )
 
 
+def _extract_tenant_id_from_argv() -> str:
+    import sys
+
+    for i, arg in enumerate(sys.argv):
+        if arg == '--tenant-id':
+            if i + 1 < len(sys.argv):
+                return sys.argv[i + 1]
+        elif arg.startswith('--tenant-id='):
+            return arg.split('=', 1)[1]
+    return 'default'
+
+
 @dataclass(frozen=True)
 class ChatAgentConfig:
     root: Path
+    tenant_id: str = 'default'
     max_iterations: int = 10
     max_tool_calls: int = 10
     max_estimated_cost_cents: int | None = 500
@@ -166,6 +179,8 @@ class ChatAgentConfig:
             configured_profile = rc.get('skill_source_profile')
             if configured_profile in {'default', 'extended', 'custom'}:
                 profile_overrides['skill_source_profile'] = configured_profile
+        if 'tenant_id' not in kwargs:
+            profile_overrides['tenant_id'] = _extract_tenant_id_from_argv()
 
         merged = {**profile_overrides, **kwargs}
         # Convert string permission_mode to enum — callers may pass the
@@ -635,6 +650,7 @@ def _create_runner_and_engine(
             run_id=run_id,
             resumed_from=context_extra.get('resumed_from'),
             load_plugins=False,
+            tenant_id=config.tenant_id,
         ),
         approval_origin_run_id=context_extra.get('resumed_from') or run_id,
     )

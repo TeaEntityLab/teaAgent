@@ -18,6 +18,21 @@ from typing import Any
 from teaagent.audit_chain import verify_audit_chain
 
 
+def _get_tenant_dir_for_path(path: Path | None, sub_dir: str) -> Path:
+    if path is not None:
+        try:
+            resolved = Path(path).resolve()
+            parts = resolved.parts
+            if 'tenants' in parts:
+                idx = parts.index('tenants')
+                if idx + 1 < len(parts):
+                    tenant_id = parts[idx + 1]
+                    return Path.home() / '.teaagent' / 'tenants' / tenant_id / sub_dir
+        except Exception:
+            pass
+    return Path.home() / '.teaagent' / sub_dir
+
+
 def export_compliance_bundle(
     events: list[dict[str, Any]],
     *,
@@ -59,7 +74,8 @@ def export_compliance_bundle(
             ''.join(ch for ch in run_id_for_key if ch.isalnum() or ch in {'-', '_'})
             or 'run'
         )
-        key_path = Path.home() / '.teaagent' / 'run-keys' / f'{safe_id}.key'
+        key_dir = _get_tenant_dir_for_path(log_path, 'run-keys')
+        key_path = key_dir / f'{safe_id}.key'
         if key_path.is_file():
             try:
                 key = key_path.read_bytes()

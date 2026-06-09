@@ -51,6 +51,18 @@ class CommandExecutor(ABC):
         # Abstract method: implementation provided by subclasses
 
 
+def extract_tenant_id_from_argv() -> str:
+    import sys
+
+    for i, arg in enumerate(sys.argv):
+        if arg == '--tenant-id':
+            if i + 1 < len(sys.argv):
+                return sys.argv[i + 1]
+        elif arg.startswith('--tenant-id='):
+            return arg.split('=', 1)[1]
+    return 'default'
+
+
 class AgentExecutionFactory:
     """Factory for constructing agent execution components.
 
@@ -59,12 +71,15 @@ class AgentExecutionFactory:
     clean and focused on argument parsing and user interaction.
     """
 
-    def __init__(self, root: Path | str):
+    def __init__(self, root: Path | str, tenant_id: Optional[str] = None):
         self.root = Path(root).resolve()
+        if tenant_id is None:
+            tenant_id = extract_tenant_id_from_argv()
+        self.tenant_id = tenant_id
 
     def create_run_store(self, readonly: bool = False) -> RunStore:
         """Create a RunStore instance."""
-        return RunStore(self.root, readonly=readonly)
+        return RunStore(self.root, tenant_id=self.tenant_id, readonly=readonly)
 
     def create_audit_logger(
         self, store: RunStore, run_id: Optional[str] = None
@@ -90,7 +105,9 @@ class AgentExecutionFactory:
 
     def create_background_run_store(self, readonly: bool = False) -> BackgroundRunStore:
         """Create a BackgroundRunStore instance."""
-        return BackgroundRunStore(self.root, readonly=readonly)
+        return BackgroundRunStore(
+            self.root, tenant_id=self.tenant_id, readonly=readonly
+        )
 
     @staticmethod
     def create_audit_logger_from_path(path: Path) -> AuditLogger:

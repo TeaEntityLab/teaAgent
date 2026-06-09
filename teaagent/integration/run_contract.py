@@ -34,6 +34,7 @@ class RunSetupRequest:
     require_plan: bool = False
     skip_plan_check: bool = False
     registry: ToolRegistry | None = None
+    tenant_id: str = 'default'
 
 
 @dataclass
@@ -88,13 +89,14 @@ def build_approval_policy(
         or request.run_id,
         multi_sig_config=MultiSigQuorumConfig.from_workspace_config(request.root),
         workspace_root=str(Path(request.root).resolve()),
+        tenant_id=request.tenant_id,
     )
 
 
 def prepare_agent_run(request: RunSetupRequest) -> PreparedAgentRun:
     """Build the shared run object graph for harness entry points."""
     root = Path(request.root).resolve()
-    run_store = RunStore(root)
+    run_store = RunStore(root, tenant_id=request.tenant_id)
     run_id = request.run_id or f'pending-{uuid4().hex}'
 
     registry = request.registry or build_workspace_tool_registry(root)

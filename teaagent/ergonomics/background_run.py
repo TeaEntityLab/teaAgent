@@ -17,6 +17,30 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _extract_tenant_id_from_argv() -> str:
+    import sys
+
+    for i, arg in enumerate(sys.argv):
+        if arg == '--tenant-id':
+            if i + 1 < len(sys.argv):
+                return sys.argv[i + 1]
+        elif arg.startswith('--tenant-id='):
+            return arg.split('=', 1)[1]
+    return 'default'
+
+
+def _get_tenant_id_from_path(path: Path) -> str:
+    try:
+        parts = Path(path).resolve().parts
+        if 'tenants' in parts:
+            idx = parts.index('tenants')
+            if idx + 1 < len(parts):
+                return parts[idx + 1]
+    except Exception:
+        pass
+    return 'default'
+
+
 @dataclass(frozen=True)
 class BackgroundRunRecord:
     background_id: str
@@ -36,10 +60,22 @@ class BackgroundRunRecord:
 class BackgroundRunStore:
     """Detached agent runs persisted under ``.teaagent/background/``."""
 
-    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
+    def __init__(
+        self,
+        root: str | Path = '.',
+        *,
+        tenant_id: Optional[str] = None,
+        readonly: bool = False,
+    ) -> None:
         self.root = Path(root).resolve()
         self.readonly = readonly
-        self.dir = self.root / '.teaagent' / 'background'
+        if tenant_id is None:
+            tenant_id = _extract_tenant_id_from_argv()
+        self.tenant_id = tenant_id
+        if tenant_id == 'default':
+            self.dir = self.root / '.teaagent' / 'background'
+        else:
+            self.dir = self.root / '.teaagent' / 'tenants' / tenant_id / 'background'
         if not readonly:
             self.dir.mkdir(parents=True, exist_ok=True)
 
@@ -209,13 +245,16 @@ def _process_exists(pid: int) -> bool:
         return False
 
 
-def _capture_failure_card(root: Path, run_id: str, exit_code: int) -> None:
+def _capture_failure_card(
+    root: Path, run_id: str, exit_code: int, tenant_id: str = 'default'
+) -> None:
     """Capture a failure card when a background task fails.
 
     Args:
         root: The workspace root directory
         run_id: The run ID of the failed task
         exit_code: The exit code of the failed task
+        tenant_id: The tenant identifier
     """
     try:
         from teaagent.memory.failure_card import FailureCard, FailureCardStorage
@@ -225,7 +264,7 @@ def _capture_failure_card(root: Path, run_id: str, exit_code: int) -> None:
         if exit_code == 0:
             return
 
-        store = RunStore(root)
+        store = RunStore(root, tenant_id=tenant_id)
         try:
             # Get task description
             task = store.task_for_run(run_id)
@@ -323,8 +362,13 @@ def _refresh_process_state(
             # early, and None would break downstream consumers).
             data['exit_code'] = 0
         if data['exit_code'] != 0 and data.get('run_id'):
+            tenant_id = _get_tenant_id_from_path(record_path)
+            if tenant_id == 'default':
+                w_root = record_path.parent.parent.parent
+            else:
+                w_root = record_path.parent.parent.parent.parent.parent
             _capture_failure_card(
-                record_path.parent.parent.parent, data['run_id'], data['exit_code']
+                w_root, data['run_id'], data['exit_code'], tenant_id=tenant_id
             )
         if persist:
             _persist_record_state(record_path, data)
@@ -441,4 +485,6 @@ def build_agent_run_command(args: Any, task: str) -> list[str]:  # noqa: C901
         else:
             for skill_name in selected_skills:
                 cmd.extend(['--skill', skill_name])
+    if getattr(args, 'tenant_id', 'default') != 'default':
+        cmd.extend(['--tenant-id', args.tenant_id])
     return cmd

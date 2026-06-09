@@ -72,6 +72,7 @@ class WorkflowPlan:
     classification: TaskClassification
     steps: list[WorkflowStep]
     estimated_duration_seconds: int = 0
+    tenant_id: str = 'default'
 
 
 class TaskCoordinator:

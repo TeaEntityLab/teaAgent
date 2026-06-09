@@ -61,6 +61,7 @@ class ApprovalPolicy:
     agent_id: str = ''  # Agent ID for multi-sig quorum identification
     workspace_root: str = '.'  # Workspace root for sync operations
     extra_path_keys: set[str] | None = None
+    tenant_id: str = 'default'
     _signature_executor: concurrent.futures.ThreadPoolExecutor = field(
         init=False, repr=False
     )
@@ -91,6 +92,7 @@ class ApprovalPolicy:
                 full_access_acknowledged=self.full_access_acknowledged,
                 preapproved_call_ids=self.preapproved_call_ids,
                 extra_path_keys=self.extra_path_keys,
+                tenant_id=self.tenant_id,
             ),
         )
 

@@ -20,6 +20,7 @@ class GatewayMessage:
     username: str = ''
     thread_ts: Optional[str] = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    tenant_id: str = 'default'
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -31,6 +32,7 @@ class GatewayMessage:
             'username': self.username,
             'thread_ts': self.thread_ts,
             'metadata': self.metadata,
+            'tenant_id': self.tenant_id,
         }
 
 

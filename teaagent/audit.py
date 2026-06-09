@@ -44,6 +44,23 @@ AuditLevel = Literal['L0', 'L1', 'L2', 'L3']
 MAX_AUDIT_STRING_LENGTH = 20_000
 AUDIT_DIR_MODE = 0o700
 AUDIT_FILE_MODE = 0o600
+
+
+def _get_tenant_dir_for_path(path: Path | None, sub_dir: str) -> Path:
+    if path is not None:
+        try:
+            resolved = Path(path).resolve()
+            parts = resolved.parts
+            if 'tenants' in parts:
+                idx = parts.index('tenants')
+                if idx + 1 < len(parts):
+                    tenant_id = parts[idx + 1]
+                    return Path.home() / '.teaagent' / 'tenants' / tenant_id / sub_dir
+        except Exception:
+            pass
+    return Path.home() / '.teaagent' / sub_dir
+
+
 SENSITIVE_KEY_PARTS = (
     'api_key',
     'authorization',
@@ -214,7 +231,7 @@ class AuditLogger:
         safe_id = (
             ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
         )
-        key_dir = Path.home() / '.teaagent' / 'run-keys'
+        key_dir = _get_tenant_dir_for_path(self.path, 'run-keys')
         key_path = key_dir / f'{safe_id}.key'
         if key_path.is_file():
             try:
@@ -252,7 +269,7 @@ class AuditLogger:
         safe_id = (
             ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
         )
-        key_dir = Path.home() / '.teaagent' / 'audit-encryption'
+        key_dir = _get_tenant_dir_for_path(self.path, 'audit-encryption')
         key_path = key_dir / f'{safe_id}.enc'
 
         if key_path.is_file():
@@ -628,7 +645,7 @@ class AuditLogger:
         safe_id = (
             ''.join(ch for ch in run_id if ch.isalnum() or ch in {'-', '_'}) or 'run'
         )
-        key_dir = Path.home() / '.teaagent' / 'audit-encryption'
+        key_dir = _get_tenant_dir_for_path(audit_path, 'audit-encryption')
         key_path = key_dir / f'{safe_id}.enc'
         if not key_path.is_file():
             raise AuditDurabilityError(

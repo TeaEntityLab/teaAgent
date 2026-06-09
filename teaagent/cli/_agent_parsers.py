@@ -105,6 +105,11 @@ def add_agent_run_arguments(
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
+    )
     p.add_argument('--model', default=None, help='Override model name.')
     p.add_argument(
         '--route-model',
@@ -439,6 +444,11 @@ def _preflight(
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
+    )
     p.add_argument('--model', default=None, help='Override model name.')
     p.add_argument(
         '--route-model', action='store_true', help='Apply task category routing.'
@@ -492,6 +502,11 @@ def _plan(
     p.add_argument('task', help='Task to plan.')
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
     )
     p.add_argument('--model', default=None, help='Override model name.')
     p.add_argument(
@@ -552,6 +567,11 @@ def _daily(
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
+    )
     p.add_argument('--model', default=None, help='Override model name.')
     p.add_argument(
         '--route-model', action='store_true', help='Apply task category routing.'
@@ -610,6 +630,11 @@ def _attach(subs: argparse._SubParsersAction, handler: Callable) -> None:
     )
     p.add_argument('run_id', help='Run id to attach.')
     p.add_argument('--root', default='.', help='Workspace root.')
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
+    )
     p.add_argument(
         '--follow',
         action='store_true',
@@ -684,6 +709,11 @@ def _resume(
     p.add_argument('run_id', help='Run id to resume.')
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
     )
     p.add_argument('--model', default=None, help='Override model name.')
     p.add_argument(
@@ -804,6 +834,11 @@ def _undo(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
+    )
     p.set_defaults(func=handler, agent_command='undo')
 
 
@@ -812,6 +847,11 @@ def _status(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p.add_argument('run_id', help='Run id to inspect.')
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
     )
     p.add_argument(
         '--evidence',
@@ -1063,6 +1103,11 @@ def _runs(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
     )
     p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
+    )
+    p.add_argument(
         '--limit',
         type=int,
         default=20,
@@ -1126,6 +1171,11 @@ def _show(subs: argparse._SubParsersAction, handler: Callable) -> None:
     p.add_argument('run_id', help='Run id to show.')
     p.add_argument(
         '--root', default='.', help='Workspace root. Defaults to current directory.'
+    )
+    p.add_argument(
+        '--tenant-id',
+        default='default',
+        help='Tenant identifier for resource partitioning and isolation.',
     )
     p.set_defaults(func=handler)
 

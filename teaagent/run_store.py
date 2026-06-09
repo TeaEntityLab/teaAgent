@@ -45,15 +45,28 @@ class RunSummary:
 
 
 class RunStore(AbstractStore[list[dict[str, Any]]]):
-    def __init__(self, root: str | Path = '.', *, readonly: bool = False) -> None:
+    def __init__(
+        self,
+        root: str | Path = '.',
+        *,
+        tenant_id: str = 'default',
+        readonly: bool = False,
+    ) -> None:
         self.root = Path(root).resolve()
         self.readonly = readonly
-        self.store_dir = self.root / '.teaagent' / 'runs'
+        self.tenant_id = tenant_id
+        if tenant_id == 'default':
+            self.store_dir = self.root / '.teaagent' / 'runs'
+        else:
+            self.store_dir = self.root / '.teaagent' / 'tenants' / tenant_id / 'runs'
         self._index_path = self.store_dir / 'runs-index.jsonl'
         self._corrupt_count = 0  # Track corrupt run files for health reporting
         if not readonly:
             self.store_dir.mkdir(parents=True, exist_ok=True)
             secure_audit_dir(self.root / '.teaagent')
+            if tenant_id != 'default':
+                secure_audit_dir(self.root / '.teaagent' / 'tenants')
+                secure_audit_dir(self.root / '.teaagent' / 'tenants' / tenant_id)
             secure_audit_dir(self.store_dir)
         elif not self.store_dir.exists():
             # Read-only mode but directory doesn't exist - this is expected for first use
@@ -82,7 +95,12 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         atomic_write_text(target, content)
         secure_audit_file(target)
         # SEC-01: Move the run key file as well
-        key_dir = Path.home() / '.teaagent' / 'run-keys'
+        if self.tenant_id == 'default':
+            key_dir = Path.home() / '.teaagent' / 'run-keys'
+        else:
+            key_dir = (
+                Path.home() / '.teaagent' / 'tenants' / self.tenant_id / 'run-keys'
+            )
         old_key = key_dir / f'{audit.path.stem}.key'
         new_key = key_dir / f'{safe_run_id(result.run_id)}.key'
         if old_key.is_file():
@@ -143,7 +161,10 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
     def undo_dir(self) -> Path:
         if self.readonly:
             raise RuntimeError('Cannot access undo directory in readonly mode')
-        path = self.root / '.teaagent' / 'undo'
+        if self.tenant_id == 'default':
+            path = self.root / '.teaagent' / 'undo'
+        else:
+            path = self.root / '.teaagent' / 'tenants' / self.tenant_id / 'undo'
         path.mkdir(parents=True, exist_ok=True)
         secure_audit_dir(path)
         return path
