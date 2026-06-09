@@ -1,7 +1,8 @@
 # Phase 06: Data Flywheel — Turn Usage Signals into Product Improvement
+Last updated: 2026-06-09
 
 **Priority:** P2
-**Concept doc:** [Defensibility & Moat Analysis](../docs/architecture-reflection/07-defensibility-moat-analysis.md)
+**Concept doc:** [Defensibility & Moat Analysis](../architecture-reflection/07-defensibility-moat-analysis.md)
 **Estimated effort:** 4-6 sessions
 **Dependencies:** Phase 04 (PMF telemetry infra)
 

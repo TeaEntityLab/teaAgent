@@ -1,7 +1,8 @@
 # Phase 01: Persistent Context — Create CLAUDE.md & Refactor AGENTS.md
+Last updated: 2026-06-09
 
 **Priority:** P0
-**Concept doc:** [Persistent Context Strategy](../docs/architecture-reflection/02-persistent-context-strategy.md)
+**Concept doc:** [Persistent Context Strategy](../architecture-reflection/02-persistent-context-strategy.md)
 **Estimated effort:** 2-3 sessions
 **Dependencies:** None
 

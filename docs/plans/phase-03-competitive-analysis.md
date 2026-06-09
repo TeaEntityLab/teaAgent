@@ -1,7 +1,8 @@
 # Phase 03: Competitive Analysis — Structured Devil's Advocate
+Last updated: 2026-06-09
 
 **Priority:** P1
-**Concept doc:** [Competitive Threat Model](../docs/architecture-reflection/04-competitive-threat-model.md)
+**Concept doc:** [Competitive Threat Model](../architecture-reflection/04-competitive-threat-model.md)
 **Estimated effort:** 2-3 sessions
 **Dependencies:** None
 

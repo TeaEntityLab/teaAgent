@@ -1,7 +1,8 @@
 # Phase 05: Founder Systematization — Reduce Single-Point-of-Failure Risk
+Last updated: 2026-06-09
 
 **Priority:** P2
-**Concept doc:** [Founder Bottleneck Audit](../docs/architecture-reflection/06-founder-bottleneck-audit.md)
+**Concept doc:** [Founder Bottleneck Audit](../architecture-reflection/06-founder-bottleneck-audit.md)
 **Estimated effort:** 4-6 sessions (spread across 2-3 weeks)
 **Dependencies:** Phase 01 (CLAUDE.md), Phase 02 (scope clarity)
 

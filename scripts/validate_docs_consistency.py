@@ -269,8 +269,8 @@ def _parse_risk_register_rows(text: str) -> dict[str, tuple[str, str, str]]:
     """Parse risk-register table rows into {id: (status_text, priority, full_row)}.
 
     Handles free-text Status cells (e.g. '**FIXED 2026-06-05** — test: test_foo')
-    by splitting lines on '|' and treating column index 6 as Status (0-based, after
-    stripping the leading empty column) and column index 7 as Priority.
+    by splitting lines on '|' and dynamically mapping Status and Priority indices
+    based on the number of columns (supports 8-column and 10-column formats).
     """
     rows: dict[str, tuple[str, str, str]] = {}
     for line in text.splitlines():
@@ -278,15 +278,22 @@ def _parse_risk_register_rows(text: str) -> dict[str, tuple[str, str, str]]:
             continue
         parts = [p.strip() for p in line.split('|')]
         # parts[0] is empty (before first |), parts[-1] is empty (after last |)
-        # parts[1]=ID, [2]=Category, [3]=Description, [4]=L, [5]=I, [6]=Score,
-        # [7]=Status, [8]=Priority (8 data columns)
         if len(parts) < 9:
             continue
         row_id = parts[1].strip()
         if not re.match(r'^[A-Z]{2,4}-\d+$', row_id):
             continue
-        status_text = parts[7].strip()
-        priority = parts[8].strip() if len(parts) > 8 else ''
+
+        # Determine Status and Priority indices based on column count
+        if len(parts) >= 11:
+            # 10-column format: | ID | Category | Description | L | I | Score | Owner | Due | Status | Priority |
+            status_text = parts[9].strip()
+            priority = parts[10].strip() if len(parts) > 10 else ''
+        else:
+            # 8-column format: | ID | Category | Description | L | I | Score | Status | Priority |
+            status_text = parts[7].strip()
+            priority = parts[8].strip() if len(parts) > 8 else ''
+
         rows[row_id] = (status_text, priority, line)
     return rows
 

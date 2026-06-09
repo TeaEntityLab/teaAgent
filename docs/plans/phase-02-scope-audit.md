@@ -1,7 +1,8 @@
 # Phase 02: Scope Governance — Feature Necessity Audit
+Last updated: 2026-06-09
 
 **Priority:** P0
-**Concept doc:** [Scope Governance Framework](../docs/architecture-reflection/03-scope-governance-framework.md)
+**Concept doc:** [Scope Governance Framework](../architecture-reflection/03-scope-governance-framework.md)
 **Estimated effort:** 3-4 sessions
 **Dependencies:** Phase 01 (CLAUDE.md for architectural clarity)
 

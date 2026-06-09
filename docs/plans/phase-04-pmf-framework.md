@@ -1,7 +1,7 @@
 # Phase 04: PMF Measurement Framework
 
 **Priority:** P1
-**Concept doc:** [PMF Measurement Framework](../docs/architecture-reflection/05-pmf-measurement-framework.md)
+**Concept doc:** [PMF Measurement Framework](../architecture-reflection/05-pmf-measurement-framework.md)
 **Estimated effort:** 3-5 sessions
 **Dependencies:** Phase 02 (scope clarity before measuring)
 
