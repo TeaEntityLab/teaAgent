@@ -72,7 +72,7 @@ class TestMCPTrustPolicyModel:
         update_server_tools(
             policy, 'mcp.example.com', allow=['tool_a', 'tool_b'], trusted=True
         )
-        assert 'mcp.example.com' in policy.servers
+        assert policy.servers.get('mcp.example.com') is not None
         server = policy.servers['mcp.example.com']
         assert server.trusted
         assert 'tool_a' in server.allowed_tools
@@ -89,7 +89,7 @@ class TestMCPTrustPolicyModel:
         update_server_tools(policy, 'mcp.example.com', allow=['read'], trusted=True)
         save_mcp_trust_policy(tmp_path, policy)
         loaded = load_mcp_trust_policy(tmp_path)
-        assert 'mcp.example.com' in loaded.servers
+        assert loaded.servers.get('mcp.example.com') is not None
         assert loaded.servers['mcp.example.com'].trusted
         assert 'read' in loaded.servers['mcp.example.com'].allowed_tools
 

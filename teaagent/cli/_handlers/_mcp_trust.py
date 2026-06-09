@@ -6,6 +6,7 @@ import argparse
 import json
 from typing import Any
 
+from teaagent.cli._output import _redact_value
 from teaagent.mcp_trust import (
     load_mcp_trust_policy,
     revoke_server_trust,
@@ -58,16 +59,10 @@ def _redact_sensitive(value: Any) -> Any:
 
 
 def _print_json(value: Any) -> None:
-    def _mask_leaf_values(obj: Any) -> Any:
-        if isinstance(obj, dict):
-            return {key: _mask_leaf_values(item) for key, item in obj.items()}
-        if isinstance(obj, list):
-            return [_mask_leaf_values(item) for item in obj]
-        return '[REDACTED]'
-
+    sanitized = _redact_value(_redact_sensitive(_strip_sensitive_fields(value)))
     print(
         json.dumps(
-            _mask_leaf_values(_redact_sensitive(_strip_sensitive_fields(value))),
+            sanitized,
             ensure_ascii=False,
             indent=2,
             sort_keys=True,

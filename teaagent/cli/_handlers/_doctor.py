@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.cli._output import _redact_value
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.llm import available_providers
 from teaagent.llm._config import PROVIDER_CONFIGS
@@ -958,6 +959,7 @@ def print_json(value: Any) -> None:
     safe_value = _redact_sensitive_fields(_sanitize_doctor_payload(safe_value))
     safe_value = _ensure_log_safe(safe_value)
     safe_value = _strict_log_sanitize(safe_value)
+    safe_value = _redact_value(safe_value)
     print(
         json.dumps(
             safe_value, ensure_ascii=False, sort_keys=True, default=_json_default
