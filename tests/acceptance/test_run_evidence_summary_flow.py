@@ -67,6 +67,22 @@ def test_evidence_summary_includes_all_required_fields(tmp_path):
         duration_ms=100.0,
     )
     audit.record(
+        'git_sandbox_started',
+        run_id,
+        success=True,
+        auto_stash=False,
+        branch_name=f'teaagent-sandbox-{run_id}',
+        original_branch='main',
+    )
+    audit.record(
+        'git_sandbox_resolved',
+        run_id,
+        resolution='merge',
+        success=True,
+        branch_name=f'teaagent-sandbox-{run_id}',
+        original_branch='main',
+    )
+    audit.record(
         'run_completed', run_id, answer='done', total_tokens=1000, total_cost=0.01
     )
 
@@ -78,6 +94,8 @@ def test_evidence_summary_includes_all_required_fields(tmp_path):
     assert len(bundle.commands_run) > 0, 'Must include commands'
     assert len(bundle.approvals) > 0, 'Must include approvals'
     assert len(bundle.tests) > 0, 'Must include tests'
+    assert bundle.git_sandbox is not None
+    assert bundle.git_sandbox.resolution == 'merge'
 
     # Verify command evidence
     cmd = bundle.commands_run[0]

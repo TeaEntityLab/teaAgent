@@ -27,7 +27,10 @@ __all__ = [
     'RunEventStream',
     'RunEventSubscriber',
     'RunSetupRequest',
+    'RunStateSnapshot',
     'RunStorage',
+    'RUN_STATE_SCHEMA_VERSION',
+    'build_run_state_snapshot',
     'approval_handler_from_strategy',
     'approval_strategy_from_policy',
     'build_approval_policy',
@@ -76,6 +79,14 @@ def __getattr__(name: str) -> Any:
         from teaagent.integration import run_contract as run_module
 
         return getattr(run_module, name)
+    if name in {
+        'RunStateSnapshot',
+        'RUN_STATE_SCHEMA_VERSION',
+        'build_run_state_snapshot',
+    }:
+        from teaagent.integration import run_state as state_module
+
+        return getattr(state_module, name)
     if name in {
         'ApprovalPresetStorage',
         'AuditStorage',

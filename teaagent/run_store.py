@@ -346,31 +346,16 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         return pending
 
     def heartbeat_for_run(self, run_id: str) -> dict[str, Any]:
+        from teaagent.integration.run_state import build_run_state_snapshot
+
         events = self.show_run(run_id)
-        last_heartbeat: Optional[dict[str, Any]] = None
-        terminal_status: Optional[str] = None
-        for event in events:
-            event_type = event.get('event_type')
-            if event_type == 'heartbeat':
-                last_heartbeat = event
-            elif event_type in {'run_completed', 'run_failed'}:
-                terminal_status = (
-                    'completed'
-                    if event_type == 'run_completed'
-                    else f'failed:{event.get("payload", {}).get("category", "unknown")}'
-                )
-            elif event_type == 'run_paused':
-                terminal_status = event.get('payload', {}).get('status', 'paused')
-        return {
-            'run_id': run_id,
-            'status': terminal_status or 'running',
-            'last_heartbeat_at': last_heartbeat.get('created_at')
-            if last_heartbeat
-            else None,
-            'last_heartbeat_tick': last_heartbeat.get('payload', {}).get('tick')
-            if last_heartbeat
-            else None,
-        }
+        undo_file = self.root / '.teaagent' / 'undo' / f'{safe_run_id(run_id)}.jsonl'
+        snapshot = build_run_state_snapshot(
+            events,
+            run_id,
+            undo_available=undo_file.is_file(),
+        )
+        return snapshot.to_dict()
 
     def summarize(self, path: Path) -> Optional[RunSummary]:
         try:
