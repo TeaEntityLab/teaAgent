@@ -125,3 +125,13 @@ def build_run_state_snapshot(
             bool(liveness['stale']) if liveness and 'stale' in liveness else None
         ),
     )
+
+
+def build_attach_snapshot(store: Any, run_id: str) -> dict[str, Any]:
+    """Build the attach/status payload shared by CLI attach and IDE surfaces."""
+    return {
+        'run_id': run_id,
+        'run_state': store.heartbeat_for_run(run_id),
+        'pending_approval': store.pending_approval_for_run(run_id),
+        'event_count': len(store.show_run(run_id)),
+    }

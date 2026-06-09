@@ -22,6 +22,10 @@
   "activationEvents": [
     "onCommand:teaagent.doctor",
     "onCommand:teaagent.agentRun",
+    "onCommand:teaagent.agentDaily",
+    "onCommand:teaagent.agentStatus",
+    "onCommand:teaagent.agentResume",
+    "onCommand:teaagent.agentAttach",
     "onCommand:teaagent.agentPreflight",
     "onCommand:teaagent.modelProviders",
     "onCommand:teaagent.graphqliteSmoke",
@@ -38,6 +42,26 @@
       {
         "command": "teaagent.agentRun",
         "title": "TeaAgent: Run Agent",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentDaily",
+        "title": "TeaAgent: Daily Brief",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentStatus",
+        "title": "TeaAgent: Run Status",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentResume",
+        "title": "TeaAgent: Resume Run",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentAttach",
+        "title": "TeaAgent: Attach to Run",
         "category": "TeaAgent"
       },
       {

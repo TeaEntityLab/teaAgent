@@ -11,6 +11,7 @@ from contextlib import redirect_stdout
 from teaagent.cli import main
 from teaagent.integration.run_state import (
     RUN_STATE_SCHEMA_VERSION,
+    build_attach_snapshot,
     build_run_state_snapshot,
 )
 from teaagent.run_store import RunStore
@@ -80,6 +81,24 @@ class RunStateContractTests(unittest.TestCase):
         self.assertTrue(payload['undo_available'])
         self.assertIsNotNone(payload['git_sandbox'])
         self.assertEqual(payload['git_sandbox']['resolution'], 'merge')
+
+    def test_build_attach_snapshot_exposes_run_state_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RunStore(tmp)
+            audit = store.audit_logger('attach-run')
+            audit.record(
+                'run_started', 'attach-run', task='attach', permission_mode='prompt'
+            )
+            audit.record('heartbeat', 'attach-run', tick=1, interval_seconds=0.1)
+            audit.record('run_completed', 'attach-run', answer='ok')
+
+            snapshot = build_attach_snapshot(store, 'attach-run')
+            self.assertEqual(snapshot['run_id'], 'attach-run')
+            self.assertEqual(snapshot['event_count'], 3)
+            self.assertEqual(
+                snapshot['run_state']['schema_version'], RUN_STATE_SCHEMA_VERSION
+            )
+            self.assertIsNone(snapshot['pending_approval'])
 
     def test_cli_and_tui_status_return_identical_run_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

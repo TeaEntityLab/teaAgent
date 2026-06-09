@@ -102,6 +102,51 @@ export function activate(context: vscode.ExtensionContext): void {
         runTeaAgent(args, workspaceRoot);
     });
 
+    const disposableDaily = vscode.commands.registerCommand('teaagent.agentDaily', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const provider = vscode.workspace.getConfiguration('teaagent').get<string>('defaultProvider', 'gpt');
+        const permMode = vscode.workspace.getConfiguration('teaagent').get<string>('defaultPermissionMode', 'prompt');
+        const task = await promptForInput('Enter daily task (optional)', 'Daily readiness check');
+
+        const args = ['agent', 'daily', provider];
+        if (task) {
+            args.push(task);
+        }
+        args.push('--permission-mode', permMode);
+
+        await runTeaAgentWithOutput(args, { title: 'Running Daily Brief', cwd: workspaceRoot });
+    });
+
+    const disposableStatus = vscode.commands.registerCommand('teaagent.agentStatus', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const runId = await promptForInput('Enter run id');
+        if (!runId) {
+            return;
+        }
+
+        await runTeaAgentWithOutput(['agent', 'status', runId], { title: 'Run Status', cwd: workspaceRoot });
+    });
+
+    const disposableResume = vscode.commands.registerCommand('teaagent.agentResume', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const runId = await promptForInput('Enter run id to resume');
+        if (!runId) {
+            return;
+        }
+
+        runTeaAgent(['agent', 'resume', runId], workspaceRoot);
+    });
+
+    const disposableAttach = vscode.commands.registerCommand('teaagent.agentAttach', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const runId = await promptForInput('Enter run id to attach');
+        if (!runId) {
+            return;
+        }
+
+        runTeaAgent(['agent', 'attach', runId, '--follow'], workspaceRoot);
+    });
+
     const disposablePreflight = vscode.commands.registerCommand('teaagent.agentPreflight', async () => {
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
         const provider = vscode.workspace.getConfiguration('teaagent').get<string>('defaultProvider', 'gpt');
@@ -176,6 +221,10 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         disposableDoctor,
         disposableAgentRun,
+        disposableDaily,
+        disposableStatus,
+        disposableResume,
+        disposableAttach,
         disposablePreflight,
         disposableProviders,
         disposableGQLSmoke,
