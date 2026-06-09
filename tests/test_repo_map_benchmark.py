@@ -1,115 +1,169 @@
-"""Tests for repo_map_benchmark script and evaluation logic."""
+"""Tests for repo-map benchmark automation (TASK-H5-001-03)."""
 
-from __future__ import annotations
-
-import json
-import subprocess
-import sys
+import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-_SCRIPT = _REPO_ROOT / 'scripts' / 'repo_map_benchmark.py'
-_TEST_REPO = _REPO_ROOT / 'tests' / 'test_data' / 'repo_map'
-
-
-def _run_benchmark(*extra_args: str) -> str:
-    result = subprocess.run(
-        [sys.executable, str(_SCRIPT), *extra_args],
-        capture_output=True,
-        text=True,
-        cwd=str(_REPO_ROOT),
-    )
-    return result.stdout.strip()
+from teaagent.repo_map_benchmark import (
+    BenchmarkResult,
+    RepoMapBenchmark,
+    RepoMapBenchmarkRunner,
+)
 
 
-def test_script_runs_without_errors() -> None:
-    result = subprocess.run(
-        [sys.executable, str(_SCRIPT), '--repo', str(_TEST_REPO)],
-        capture_output=True,
-        text=True,
-        cwd=str(_REPO_ROOT),
-    )
-    assert result.returncode == 0, f'stderr: {result.stderr}'
+class TestRepoMapBenchmark(unittest.TestCase):
+    """Test repo-map benchmark management."""
+
+    def test_to_dict_and_from_dict(self):
+        """Test benchmark serialization."""
+        benchmark = RepoMapBenchmark(
+            benchmark_id='benchmark-001',
+            name='Test Benchmark',
+            codebase_path='.',
+            query='test query',
+            expected_files={'file1.py', 'file2.py'},
+        )
+
+        data = benchmark.to_dict()
+        restored = RepoMapBenchmark.from_dict(data)
+
+        self.assertEqual(restored.benchmark_id, benchmark.benchmark_id)
+        self.assertEqual(restored.name, benchmark.name)
+        self.assertEqual(restored.expected_files, benchmark.expected_files)
 
 
-def test_output_is_valid_json() -> None:
-    output = _run_benchmark('--repo', str(_TEST_REPO))
-    report = json.loads(output)
-    assert isinstance(report, dict)
-    required_keys = {
-        'symbol_count',
-        'mapped_count',
-        'coverage_pct',
-        'accuracy_pct',
-        'duration_seconds',
-    }
-    missing = required_keys - set(report.keys())
-    assert not missing, f'Missing keys: {missing}'
+class TestBenchmarkResult(unittest.TestCase):
+    """Test benchmark result management."""
+
+    def test_to_dict_and_from_dict(self):
+        """Test result serialization."""
+        result = BenchmarkResult(
+            benchmark_id='benchmark-001',
+            actual_files={'file1.py', 'file2.py'},
+            overall_accuracy=0.85,
+            passed=True,
+        )
+
+        data = result.to_dict()
+        restored = BenchmarkResult.from_dict(data)
+
+        self.assertEqual(restored.benchmark_id, result.benchmark_id)
+        self.assertEqual(restored.overall_accuracy, result.overall_accuracy)
+        self.assertEqual(restored.passed, result.passed)
 
 
-def test_coverage_pct_is_valid() -> None:
-    output = _run_benchmark('--repo', str(_TEST_REPO))
-    report = json.loads(output)
-    coverage = report['coverage_pct']
-    assert isinstance(coverage, (int, float))
-    assert 0.0 <= coverage <= 100.0, f'coverage_pct out of range: {coverage}'
-    accuracy = report['accuracy_pct']
-    assert isinstance(accuracy, (int, float))
-    assert 0.0 <= accuracy <= 100.0, f'accuracy_pct out of range: {accuracy}'
+class TestRepoMapBenchmarkRunner(unittest.TestCase):
+    """Test repo-map benchmark runner."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.runner = RepoMapBenchmarkRunner()
+        self.temp_dir = TemporaryDirectory()
+
+        # Create a simple test codebase
+        self.codebase_root = Path(self.temp_dir.name)
+        (self.codebase_root / 'test1.py').write_text('def test_func(): pass\n')
+        (self.codebase_root / 'test2.py').write_text('class TestClass: pass\n')
+        (self.codebase_root / 'config.py').write_text('CONFIG = "value"\n')
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        self.temp_dir.cleanup()
+
+    def test_calculate_accuracy_perfect(self):
+        """Test accuracy calculation for perfect match."""
+        expected = {'file1.py', 'file2.py'}
+        actual = {'file1.py', 'file2.py'}
+        accuracy = self.runner.calculate_accuracy(expected, actual)
+        self.assertEqual(accuracy, 1.0)
+
+    def test_calculate_accuracy_partial(self):
+        """Test accuracy calculation for partial match."""
+        expected = {'file1.py', 'file2.py', 'file3.py'}
+        actual = {'file1.py', 'file2.py'}
+        accuracy = self.runner.calculate_accuracy(expected, actual)
+        self.assertLess(accuracy, 1.0)
+        self.assertGreater(accuracy, 0.0)
+
+    def test_calculate_accuracy_no_match(self):
+        """Test accuracy calculation for no match."""
+        expected = {'file1.py', 'file2.py'}
+        actual = {'file3.py', 'file4.py'}
+        accuracy = self.runner.calculate_accuracy(expected, actual)
+        self.assertEqual(accuracy, 0.0)
+
+    def test_calculate_accuracy_empty(self):
+        """Test accuracy calculation for empty sets."""
+        accuracy = self.runner.calculate_accuracy(set(), set())
+        self.assertEqual(accuracy, 1.0)
+
+    def test_run_benchmark(self):
+        """Test running a benchmark."""
+        benchmark = RepoMapBenchmark(
+            benchmark_id='benchmark-001',
+            name='Test Benchmark',
+            codebase_path='.',
+            query='test',
+            expected_files={'test1.py'},
+        )
+
+        result = self.runner.run_benchmark(benchmark, self.codebase_root)
+
+        self.assertEqual(result.benchmark_id, benchmark.benchmark_id)
+        self.assertGreater(result.duration_seconds, 0)
+        self.assertIn('file_count', result.performance_metrics)
+
+    def test_run_benchmark_with_time_limit(self):
+        """Test running a benchmark with time limit."""
+        benchmark = RepoMapBenchmark(
+            benchmark_id='benchmark-001',
+            name='Test Benchmark',
+            codebase_path='.',
+            query='test',
+            max_duration_seconds=1.0,
+        )
+
+        result = self.runner.run_benchmark(benchmark, self.codebase_root)
+
+        self.assertIn('within_time_limit', result.performance_metrics)
+
+    def test_extract_functions(self):
+        """Test extracting functions from files."""
+        file_paths = {'test1.py'}
+        functions = self.runner._extract_functions(self.codebase_root, file_paths)
+
+        self.assertIn('test_func', functions)
+
+    def test_extract_classes(self):
+        """Test extracting classes from files."""
+        file_paths = {'test2.py'}
+        classes = self.runner._extract_classes(self.codebase_root, file_paths)
+
+        self.assertIn('TestClass', classes)
+
+    def test_create_default_benchmarks(self):
+        """Test creating default benchmarks."""
+        benchmarks = self.runner.create_default_benchmarks()
+
+        self.assertGreaterEqual(len(benchmarks), 3)
+        self.assertTrue(all(isinstance(b, RepoMapBenchmark) for b in benchmarks))
+
+    def test_convert_to_eval_test(self):
+        """Test converting benchmark to eval test."""
+        benchmark = RepoMapBenchmark(
+            benchmark_id='benchmark-001',
+            name='Test Benchmark',
+            codebase_path='.',
+            query='test query',
+        )
+
+        eval_test = self.runner.convert_to_eval_test(benchmark)
+
+        self.assertEqual(eval_test.test_id, benchmark.benchmark_id)
+        self.assertEqual(eval_test.name, benchmark.name)
+        self.assertIn('query', eval_test.metadata)
+        self.assertIn('codebase_path', eval_test.metadata)
 
 
-def test_all_repo_map_symbols_are_mapped() -> None:
-    output = _run_benchmark('--repo', str(_TEST_REPO))
-    report = json.loads(output)
-    missing = report.get('missing_symbols', [])
-    assert len(missing) == 0, (
-        f'Expected all __all__ symbols to be mapped, missing: {missing}'
-    )
-
-
-def test_parse_errors_is_empty() -> None:
-    output = _run_benchmark('--repo', str(_TEST_REPO))
-    report = json.loads(output)
-    assert report.get('parse_errors') == [], (
-        f'Expected no parse errors, got: {report["parse_errors"]}'
-    )
-
-
-def test_output_file_writes_json(tmp_path: Path) -> None:
-    out_file = tmp_path / 'report.json'
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(_SCRIPT),
-            '--repo',
-            str(_TEST_REPO),
-            '--output',
-            str(out_file),
-        ],
-        capture_output=True,
-        text=True,
-        cwd=str(_REPO_ROOT),
-    )
-    assert result.returncode == 0, f'stderr: {result.stderr}'
-    assert out_file.exists()
-    content = out_file.read_text(encoding='utf-8')
-    report = json.loads(content)
-    assert 'coverage_pct' in report
-
-
-def test_pretty_flag_produces_readable_json() -> None:
-    output = _run_benchmark('--repo', str(_TEST_REPO), '--pretty')
-    lines = output.split('\n')
-    assert len(lines) > 1, 'Pretty output should be multi-line'
-    report = json.loads(output)
-    assert 'coverage_pct' in report
-
-
-def test_missing_repo_reports_error() -> None:
-    result = subprocess.run(
-        [sys.executable, str(_SCRIPT), '--repo', '/nonexistent/path'],
-        capture_output=True,
-        text=True,
-        cwd=str(_REPO_ROOT),
-    )
-    assert result.returncode != 0
+if __name__ == '__main__':
+    unittest.main()
