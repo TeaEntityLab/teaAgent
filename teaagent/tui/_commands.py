@@ -590,7 +590,11 @@ def _cmd_permission(tui: 'TeaAgentTUI', args: list[str]) -> bool:
 
 
 def _cmd_approve(tui: 'TeaAgentTUI', args: list[str]) -> bool:
-    """Handle approve command: `approve <call_id>` or `approve --selector N`."""
+    """Handle approve command: `approve <call_id>` or `approve --selector N [--resume]`."""
+    resume = '--resume' in args
+    args = [arg for arg in args if arg != '--resume']
+    call_id: str | None = None
+
     if len(args) >= 2 and args[0] == '--selector':
         try:
             selector = int(args[1])
@@ -611,14 +615,25 @@ def _cmd_approve(tui: 'TeaAgentTUI', args: list[str]) -> bool:
         if view is None:
             tui.output_fn(f'error: selector {selector} out of range (1..{len(views)})')
             return True
-        tui.approved_call_ids.add(view.call_id)
-        tui.output_fn(f'approved: {view.call_id} (via selector {selector})')
+        call_id = view.call_id
+        selector_label = f' (via selector {selector})'
+    elif len(args) == 1:
+        call_id = args[0]
+        selector_label = ''
+    else:
+        tui.output_fn('error: approve requires one call id or --selector N')
         return True
-    if len(args) != 1:
-        tui.output_fn('error: approve requires one call id')
+
+    from teaagent.integration.approval_parity import grant_pending_approval
+
+    grant = grant_pending_approval(tui.root, call_id)
+    if grant is None:
+        tui.output_fn(f"error: call_id '{call_id}' not found in pending approvals")
         return True
-    tui.approved_call_ids.add(args[0])
-    tui.output_fn(f'approved: {args[0]}')
+    tui.approved_call_ids.add(call_id)
+    tui.output_fn(f'approved: {call_id}{selector_label}')
+    if resume:
+        return _handle_tui_command(tui, f'resume {grant["run_id"]}')
     return True
 
 

@@ -7,8 +7,10 @@ import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from unittest.mock import patch
 
 from teaagent.cli import main
+from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.integration.approval_parity import (
     APPROVAL_QUEUE_SCHEMA_VERSION,
     build_pending_approvals_snapshot,
@@ -121,6 +123,24 @@ class ApprovalUxParityFlowTests(unittest.TestCase):
             cli_payload = json.loads(cli_out.getvalue())
             self.assertEqual(cli_payload['status'], 'approved')
             self.assertEqual(cli_payload['call_id'], 'call-123')
+
+    def test_tui_approve_resume_grants_scoped_approval_like_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _seed_pending_run(tmp)
+            tui_out: list[str] = []
+            tui = TeaAgentTUI(
+                root=tmp,
+                input_fn=lambda _prompt: 'exit',
+                output_fn=tui_out.append,
+            )
+            with patch('teaagent.tui._commands._safe_run_agent_task'):
+                self.assertTrue(tui.handle_command('approve --selector 1 --resume'))
+
+            store = ApprovalPresetStore(tmp)
+            scoped = store.list_scoped_approvals_for_run('approval-parity')
+            self.assertEqual(len(scoped), 1)
+            self.assertEqual(scoped[0].call_id, 'call-123')
+            self.assertEqual(scoped[0].tool_name, 'workspace_write_file')
 
 
 if __name__ == '__main__':

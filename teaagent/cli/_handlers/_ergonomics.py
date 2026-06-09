@@ -583,10 +583,8 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
             collect_pending_approval_views,
             resolve_selector,
         )
-        from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
         store = AgentExecutionFactory(args.root).create_run_store()
-        approval_store = ApprovalPresetStore(args.root)
         call_id = args.call_id
         if getattr(args, 'selector', None) is not None:
             views = collect_pending_approval_views(store, limit=100)
@@ -610,17 +608,13 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
             )
             return 1
 
-        # Find the run with this pending call_id
-        target_run_id = None
-        pending_approval = None
-        for summary in store.list_runs(limit=100):
-            pending = store.pending_approval_for_run(summary.run_id)
-            if pending and pending.get('call_id') == call_id:
-                target_run_id = summary.run_id
-                pending_approval = pending
-                break
+        from teaagent.integration.approval_parity import (
+            build_approval_granted_payload,
+            grant_pending_approval,
+        )
 
-        if not target_run_id or pending_approval is None:
+        grant = grant_pending_approval(args.root, call_id, limit=100)
+        if grant is None:
             print_json(
                 {
                     'status': 'error',
@@ -628,17 +622,9 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
                 }
             )
             return 1
+        target_run_id = str(grant['run_id'])
+        pending_approval = store.pending_approval_for_run(target_run_id)
 
-        pending = pending_approval
-        # Persist the approval as a scoped record for exact tool call matching
-        approval_store.add_scoped_approval(
-            run_id=target_run_id,
-            call_id=call_id,
-            tool_name=pending.get('tool_name', 'unknown'),
-            arguments=pending.get('arguments', {}),
-        )
-
-        # Approve the call
         from teaagent.cli._handlers._agent import agent_resume_command
 
         if args.resume:
@@ -694,7 +680,6 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
                 return 1
             return agent_resume_command(ns)
         else:
-            # Record the approval in the audit log
             audit = store.audit_logger(target_run_id)
             audit.record(
                 'tool_call_approved',
@@ -702,17 +687,9 @@ def approval_approve_command(args: argparse.Namespace) -> int:  # noqa: C901
                 call_id=call_id,
                 tool_name=pending_approval.get('tool_name')
                 if pending_approval
-                else 'unknown',
+                else grant.get('tool_name', 'unknown'),
             )
-            # Just approve without resuming
-            print_json(
-                {
-                    'status': 'approved',
-                    'call_id': call_id,
-                    'run_id': target_run_id,
-                    'note': 'Use --resume to continue the run',
-                }
-            )
+            print_json(build_approval_granted_payload(grant))
             return 0
 
     return _wrap_approval_store_errors(_approve)

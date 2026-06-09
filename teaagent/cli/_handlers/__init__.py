@@ -59,6 +59,7 @@ from ._cloud import (
     cloud_show_command,
     cloud_submit_command,
 )
+from ._cockpit import cockpit_show_command
 from ._consensus import (
     consensus_config_set_command,
     consensus_history_command,
@@ -350,6 +351,7 @@ __all__ = [
     'init_command',
     'setup_command',
     'surfaces_explain_command',
+    'cockpit_show_command',
     'doctor_all',
     'doctor_graphqlite',
     'doctor_model',

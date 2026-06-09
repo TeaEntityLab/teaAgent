@@ -32,10 +32,12 @@ HELP_TEXT = """Commands:
   heartbeat <seconds>       Set heartbeat interval for ask runs. 0 disables.
   status <run_id>           Show heartbeat liveness for a persisted run.
   permission <mode>         Set permission mode: read-only, workspace-write, prompt, allow, danger-full-access.
-  approve <call_id|--selector N>  Approve one destructive tool call by id or pending selector.
+  approve <call_id|--selector N> [--resume]
+                            Approve one destructive tool call; --resume continues the run.
   unapprove <call_id>       Remove one approved call id.
   receipt <run_id>          Show human-readable run receipt including goal, cost, and audit path.
   approvals                 List approved call ids for this session.
+  approvals pending         Show the shared pending-approval queue (same JSON as CLI).
   approvals subagents       Batch view of parallel subagent destructive-tool queue.
   approvals subagents approve|deny|approve-all|deny-all
   clarify <task>            Score task ambiguity without calling a model.

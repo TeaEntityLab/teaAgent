@@ -24,6 +24,7 @@ def register(
     _session(subparsers, handlers)
     _recipes(subparsers, handlers)
     _approval(subparsers, handlers)
+    _cockpit(subparsers, handlers['cockpit_show'])
     _guidance(subparsers, handlers['guidance'])
     _permission(subparsers, handlers['permission_explain'])
     _ci(subparsers, handlers['ci_review'])
@@ -45,6 +46,26 @@ def _recall(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
     p.add_argument('--root', default='.', help='Workspace root.')
     p.add_argument('--limit', type=int, default=5)
     p.set_defaults(func=handler, command='recall')
+
+
+def _cockpit(subparsers: argparse._SubParsersAction, handler: Callable) -> None:
+    p = subparsers.add_parser(
+        'cockpit',
+        help='Operator cockpit snapshot for dashboards and automation.',
+    )
+    p.add_argument('--root', default='.', help='Workspace root.')
+    p.add_argument(
+        '--permission-mode',
+        choices=[mode.value for mode in PermissionMode],
+        default=PermissionMode.PROMPT.value,
+        help='Permission mode label for cockpit approval state.',
+    )
+    p.add_argument(
+        '--human',
+        action='store_true',
+        help='Print a short summary instead of JSON.',
+    )
+    p.set_defaults(func=handler, command='cockpit')
 
 
 def _status_short(subparsers: argparse._SubParsersAction, handler: Callable) -> None:

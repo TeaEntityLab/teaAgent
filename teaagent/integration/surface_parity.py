@@ -82,6 +82,7 @@ CLI_SURFACE_COMMANDS: list[str] = [
     'approval pending',
     'approval approve',
     'surfaces explain',
+    'cockpit',
 ]
 
 TUI_SURFACE_COMMANDS: list[str] = [
