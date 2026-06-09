@@ -92,7 +92,7 @@ class BackgroundRunStore:
             data['run_id'] = run_id
             if previous_run_id != run_id and not self.readonly:
                 _persist_record_state(record_path, data)
-        return data
+        return _enrich_liveness(self.root, data)
 
     def update_run_id(self, background_id: str, run_id: str) -> None:
         if self.readonly:
@@ -122,7 +122,7 @@ class BackgroundRunStore:
                     data['run_id'] = run_id
                     if not self.readonly:
                         _persist_record_state(path, data)
-            rows.append(data)
+            rows.append(_enrich_liveness(self.root, data))
         return rows
 
     def logs(self, background_id: str, *, max_bytes: int = 64_000) -> dict[str, Any]:
@@ -170,6 +170,21 @@ class BackgroundRunStore:
         if not self.readonly:
             _persist_record_state(self._record_path(background_id), data)
         return data
+
+
+def _enrich_liveness(root: Path, data: dict[str, Any]) -> dict[str, Any]:
+    run_id = data.get('run_id')
+    if not isinstance(run_id, str) or not run_id:
+        return data
+    from teaagent.ergonomics.run_liveness import liveness_snapshot
+
+    snap = liveness_snapshot(root, run_id)
+    if snap is None:
+        return data
+    data['liveness_updated_at'] = snap['updated_at']
+    data['liveness_age_seconds'] = snap['age_seconds']
+    data['liveness_stale'] = snap['stale']
+    return data
 
 
 def _persist_record_state(path: Path, data: dict[str, Any]) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Optional
 
 from teaagent.audit import AuditLogger
@@ -16,6 +17,7 @@ class Heartbeat:
         *,
         interval_seconds: float,
         sleep: Callable[[float], None] = time.sleep,
+        liveness_root: Path | None = None,
     ) -> None:
         if interval_seconds <= 0:
             raise ValueError('interval_seconds must be positive')
@@ -23,6 +25,7 @@ class Heartbeat:
         self.run_id = run_id
         self.interval_seconds = interval_seconds
         self._sleep = sleep
+        self._liveness_root = liveness_root
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self.tick_count = 0
@@ -42,6 +45,15 @@ class Heartbeat:
             tick=self.tick_count,
             interval_seconds=self.interval_seconds,
         )
+        if self._liveness_root is not None:
+            from teaagent.ergonomics.run_liveness import touch_liveness
+
+            touch_liveness(
+                self._liveness_root,
+                self.run_id,
+                tick=self.tick_count,
+                interval_seconds=self.interval_seconds,
+            )
 
     def start(self) -> None:
         if self._thread is not None:

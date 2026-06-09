@@ -646,7 +646,10 @@ def _setup_heartbeat(
     heartbeat: Optional[Heartbeat] = None
     if config.heartbeat_seconds > 0:
         heartbeat = Heartbeat(
-            audit_logger, run_id, interval_seconds=config.heartbeat_seconds
+            audit_logger,
+            run_id,
+            interval_seconds=config.heartbeat_seconds,
+            liveness_root=config.root,
         )
         heartbeat.start()
     return heartbeat
@@ -720,7 +723,11 @@ def _run_chat_agent_impl(
         audit_logger,
     )
     heartbeat = _setup_heartbeat(config, audit_logger, run_id)
-    run_started_extra = _apply_plan_contract(runner, context_extra)
+    run_started_extra = _apply_plan_contract(runner, context_extra) or {}
+    run_started_extra = {
+        **run_started_extra,
+        'permission_mode': config.permission_mode.value,
+    }
 
     try:
         result = runner.run(
@@ -743,6 +750,9 @@ def _run_chat_agent_impl(
     finally:
         if heartbeat is not None:
             heartbeat.stop()
+            from teaagent.ergonomics.run_liveness import clear_liveness
+
+            clear_liveness(config.root, run_id)
 
 
 def with_memories(context: dict, memories: list[dict]) -> dict:

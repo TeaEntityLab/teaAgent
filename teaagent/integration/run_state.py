@@ -27,6 +27,9 @@ class RunStateSnapshot:
     permission_mode: str | None = None
     undo_available: bool = False
     git_sandbox: dict[str, Any] | None = None
+    liveness_updated_at: str | None = None
+    liveness_age_seconds: float | None = None
+    liveness_stale: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -41,6 +44,12 @@ class RunStateSnapshot:
         }
         if self.git_sandbox is not None:
             payload['git_sandbox'] = self.git_sandbox
+        if self.liveness_updated_at is not None:
+            payload['liveness_updated_at'] = self.liveness_updated_at
+        if self.liveness_age_seconds is not None:
+            payload['liveness_age_seconds'] = self.liveness_age_seconds
+        if self.liveness_stale is not None:
+            payload['liveness_stale'] = self.liveness_stale
         return payload
 
 
@@ -49,6 +58,7 @@ def build_run_state_snapshot(
     run_id: str,
     *,
     undo_available: bool = False,
+    liveness: dict[str, Any] | None = None,
 ) -> RunStateSnapshot:
     """Derive the shared run-state contract from persisted audit events."""
     last_heartbeat: dict[str, Any] | None = None
@@ -101,4 +111,17 @@ def build_run_state_snapshot(
         permission_mode=permission_mode,
         undo_available=undo_available,
         git_sandbox=git_sandbox,
+        liveness_updated_at=(
+            str(liveness['updated_at'])
+            if liveness and liveness.get('updated_at')
+            else None
+        ),
+        liveness_age_seconds=(
+            float(liveness['age_seconds'])
+            if liveness and liveness.get('age_seconds') is not None
+            else None
+        ),
+        liveness_stale=(
+            bool(liveness['stale']) if liveness and 'stale' in liveness else None
+        ),
     )

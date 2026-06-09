@@ -349,11 +349,14 @@ class RunStore(AbstractStore[list[dict[str, Any]]]):
         from teaagent.integration.run_state import build_run_state_snapshot
 
         events = self.show_run(run_id)
+        from teaagent.ergonomics.run_liveness import liveness_snapshot
+
         undo_file = self.root / '.teaagent' / 'undo' / f'{safe_run_id(run_id)}.jsonl'
         snapshot = build_run_state_snapshot(
             events,
             run_id,
             undo_available=undo_file.is_file(),
+            liveness=liveness_snapshot(self.root, run_id),
         )
         return snapshot.to_dict()
 

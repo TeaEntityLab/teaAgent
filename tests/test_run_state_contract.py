@@ -18,6 +18,28 @@ from teaagent.tui import TeaAgentTUI
 
 
 class RunStateContractTests(unittest.TestCase):
+    def test_build_run_state_includes_liveness_fields(self) -> None:
+        events = [
+            {'event_type': 'run_started', 'payload': {'task': 't'}},
+            {
+                'event_type': 'heartbeat',
+                'created_at': '2026-06-09T00:00:00Z',
+                'payload': {'tick': 1},
+            },
+        ]
+        snapshot = build_run_state_snapshot(
+            events,
+            'run1',
+            liveness={
+                'updated_at': '2026-06-09T00:00:10Z',
+                'age_seconds': 5.0,
+                'stale': False,
+            },
+        )
+        payload = snapshot.to_dict()
+        self.assertEqual(payload['liveness_age_seconds'], 5.0)
+        self.assertFalse(payload['liveness_stale'])
+
     def test_build_run_state_includes_git_sandbox_and_cost(self) -> None:
         events = [
             {
