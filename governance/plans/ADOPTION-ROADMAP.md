@@ -65,15 +65,23 @@
   test asserting a Forbidden behavior is blocked. ✅
 - _Follow-up (not blocking): annotate the module docstrings with a one-line pointer to their spec._
 
-### A3 · Mutation gate for L3 only (nightly)
+### A3 · Mutation gate for L3 only (nightly) — DONE 2026-06-09
 **Goal:** verify the *tests themselves* catch regressions on the trust boundary — without taxing the
 whole tree.
 
-- Introduce `mutmut` (or `cosmic-ray`) as a **nightly** job (extend `nightly-smoke.yml`), **scoped to
-  the permission/approval/resume modules only**. Mutating the full tree is explicitly out of scope.
-- Add **spec mutation** (T5) as a manual checklist item per L3 spec — not automation yet.
-- **Acceptance:** a deliberately-injected logic mutation in `resume_preparation.py`
-  (e.g. flip the digest-match condition) is caught by the existing P0 tests in the nightly run.
+- Implemented as a **deterministic, curated** mutation-smoke harness rather than a full `mutmut`/
+  `cosmic-ray` sweep — `scripts/run_mutation_smoke.py` injects 4 dangerous logic mutations on the
+  permission/approval/resume modules (invert pre-approval skip, invert legacy guard, invert
+  `auto_approve_pending`, flip the scoped-approval digest match) and requires each to be **killed** by
+  its named P0 guard test. _Rationale for the deviation:_ deterministic, fast, no equivalent-mutant
+  noise, and it directly asserts the specific trust-boundary faults are caught — mirroring the A1
+  approach. A `mutmut` broad sweep can be layered later if desired.
+- Runs nightly via `.github/workflows/nightly-mutation.yml` (05:00 UTC + manual dispatch); has a hard
+  worktree-clean race guard and unconditional file restore.
+- Registry kept honest by `tests/test_mutation_smoke_registry.py` (fast suite): fails if a target
+  string drifts out of the code, so the harness can't silently no-op.
+- **Acceptance — met:** injected mutations in `resume_preparation.py` (and the approval digest check)
+  are caught by the existing P0 tests; verified locally — all 4 mutants killed, files restored clean. ✅
 
 ### A4 · (Deferred) Zero-Trust Spec Registry
 Explicitly **not** justified until teaagent exposes specs over MCP. When/if that surface appears, apply
