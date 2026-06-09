@@ -120,6 +120,34 @@ def _emit_readiness_payload(args: argparse.Namespace, payload: dict[str, Any]) -
     print_json(payload)
 
 
+def _emit_run_completion_output(
+    args: argparse.Namespace,
+    *,
+    store: RunStore,
+    run_id: str,
+    payload: dict[str, Any],
+) -> None:
+    """Print JSON run payload and/or a human-readable receipt (WS1-001)."""
+    if getattr(args, 'json_stream', False):
+        from teaagent.streaming.events import StreamEvent, emit_stream_event
+
+        emit_stream_event(StreamEvent('run_result', payload))
+        return
+
+    if getattr(args, 'human', False):
+        from teaagent.run_receipt import build_run_receipt
+
+        print(build_run_receipt(store, run_id, args.root))
+        return
+
+    print_json(payload)
+    if sys.stderr.isatty():
+        from teaagent.run_receipt import build_run_receipt
+
+        receipt = build_run_receipt(store, run_id, args.root)
+        print(f'\n{receipt}', file=sys.stderr)
+
+
 def _resolve_run_task(
     args: argparse.Namespace,
 ) -> tuple[str, Optional[Any]]:
@@ -799,6 +827,17 @@ def _execute_agent_task(  # noqa: C901
         skip_plan_check=getattr(args, 'skip_plan_check', False),
         validation_profile=_resolve_validation_profile(args),
     )
+    from teaagent.provider_fallback import maybe_wrap_adapter_with_fallback
+
+    adapter = maybe_wrap_adapter_with_fallback(
+        adapter,
+        root=args.root,
+        primary_provider=args.provider,
+        primary_model=selected_model,
+        audit=audit,
+        run_id=pending_run_id,
+        adapter_factory=args._adapter_factory,
+    )
     result = run_chat_agent(
         config,
         task,
@@ -902,12 +941,12 @@ def _execute_agent_task(  # noqa: C901
             payload['resume_compaction'] = initial_context_extra['resume_compaction']
         if auto_approved_call_id is not None:
             payload['auto_approved_call_id'] = auto_approved_call_id
-    if getattr(args, 'json_stream', False):
-        from teaagent.streaming.events import StreamEvent, emit_stream_event
-
-        emit_stream_event(StreamEvent('run_result', payload))
-    else:
-        print_json(payload)
+    _emit_run_completion_output(
+        args,
+        store=store,
+        run_id=result.run_id,
+        payload=payload,
+    )
     if getattr(args, 'notify', False):
         from teaagent.ergonomics.notify import notify
 

@@ -208,3 +208,75 @@ def test_format_cost_zero_cents_specific_budget():
     assert '0 cents' in text
     assert 'unknown' in text
     assert 'budget cap: 1000 cents' in text
+
+
+def test_emit_run_completion_output_human_replaces_json(capsys) -> None:
+    import argparse
+
+    from teaagent.cli._handlers._agent.run import _emit_run_completion_output
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        events = [
+            {
+                'event_type': 'run_started',
+                'payload': {'task': 'ship receipt', 'provider': 'stub', 'model': 'm'},
+            },
+            {'event_type': 'run_completed', 'payload': {'cost_cents': 5}},
+        ]
+        run_id = 'emit-human'
+        path = RunStore(tmpdir).run_path(run_id)
+        path.write_text(
+            '\n'.join(json.dumps(event, sort_keys=True) for event in events) + '\n',
+            encoding='utf-8',
+        )
+        store = RunStore(tmpdir)
+        args = argparse.Namespace(
+            root=tmpdir,
+            human=True,
+            json_stream=False,
+        )
+        _emit_run_completion_output(
+            args,
+            store=store,
+            run_id=run_id,
+            payload={'run_id': run_id, 'status': 'completed'},
+        )
+        captured = capsys.readouterr()
+        assert 'Run receipt: emit-human' in captured.out
+        assert 'Goal: ship receipt' in captured.out
+        assert captured.out.strip().startswith('Run receipt:')
+        assert 'emit-human' not in captured.err
+
+
+def test_emit_run_completion_output_tty_receipt_on_stderr(monkeypatch, capsys) -> None:
+    import argparse
+
+    from teaagent.cli._handlers._agent.run import _emit_run_completion_output
+
+    monkeypatch.setattr('sys.stderr.isatty', lambda: True)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        events = [
+            {
+                'event_type': 'run_started',
+                'payload': {'task': 'tty receipt'},
+            },
+            {'event_type': 'run_completed', 'payload': {}},
+        ]
+        run_id = 'emit-tty'
+        path = RunStore(tmpdir).run_path(run_id)
+        path.write_text(
+            '\n'.join(json.dumps(event, sort_keys=True) for event in events) + '\n',
+            encoding='utf-8',
+        )
+        store = RunStore(tmpdir)
+        args = argparse.Namespace(root=tmpdir, human=False, json_stream=False)
+        _emit_run_completion_output(
+            args,
+            store=store,
+            run_id=run_id,
+            payload={'run_id': run_id, 'status': 'completed'},
+        )
+        captured = capsys.readouterr()
+        assert '"run_id"' in captured.out
+        assert 'Run receipt: emit-tty' in captured.err

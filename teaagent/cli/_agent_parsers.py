@@ -277,7 +277,10 @@ def add_agent_run_arguments(
     p.add_argument(
         '--human',
         action='store_true',
-        help=('With --dry-run, print a beginner-friendly summary instead of JSON.'),
+        help=(
+            'Print a human-readable run receipt instead of JSON on completion. '
+            'With --dry-run, print a beginner-friendly preflight summary instead.'
+        ),
     )
     p.add_argument(
         '--background',

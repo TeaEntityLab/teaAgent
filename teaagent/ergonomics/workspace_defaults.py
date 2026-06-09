@@ -30,6 +30,8 @@ DEFAULT_KEYS = {
     'daily_cost_cap_cents': 0,
     'auto_compact_on_resume': True,
     'git_sandbox_consent': 'prompt',
+    'fallback_provider': None,
+    'fallback_model': None,
     'root': '.',
 }
 

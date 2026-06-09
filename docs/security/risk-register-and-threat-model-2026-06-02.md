@@ -1,6 +1,6 @@
 # Risk Register & Threat Model — teaagent
 **Date:** 2026-06-02  
-**Last updated:** 2026-06-05 (SEC-04 fixed; SEC-02, SEC-07, SEC-10, DS-02, DS-05, DS-09 verified fixed with test evidence — see Fix Status §9)
+**Last updated:** 2026-06-09 (SEC-01 verified/closed; SEC-05/09/13/14/15 mitigated — see Fix Status §9)
 **Branch:** fix/task-dd2-001-initial-task-passthrough  
 **Scope:** Full system — CLI, TUI, REPL, MCP, subagents, Docker, audit, OAuth, approval, budget  
 **Sources:** security-risk-assessment-2026-06-02.md · defeat-scenarios-and-cascade-effects-2026-06-02.md · dependency-audit-and-security-2026-06-02.md · agent-enterprise-security-risks-2026-05-31.md · docs/threat-model.md · static source analysis
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer; most high-severity gaps have been closed. **One P0 finding remains open** (SEC-01 — ephemeral audit HMAC, status VERIFY/CLOSE pending test sign-off). **Fixed 2026-06-04/05:** SEC-02 (MCP trust expiry), SEC-04 (budget default), SEC-06 (JIT isolation), SEC-07 (Docker hardening), SEC-10 (shell allowlist), DS-02 (TUI controller routing), DS-05 (TUI undo via journal), DS-09 (background UUID rejection), DS-12 (empty-path approval), DS-13 (budget semantics). See §9 Fix Status for test evidence on each.
+teaagent is a governance-first AI agent harness with strong policy enforcement, a 5-loop governance architecture, and a comprehensive approval system. The security posture is solid at the policy layer; most high-severity gaps have been closed. **No P0 findings remain open.** **Fixed 2026-06-04/05:** SEC-02 (MCP trust expiry), SEC-04 (budget default), SEC-06 (JIT isolation), SEC-07 (Docker hardening), SEC-10 (shell allowlist), DS-02 (TUI controller routing), DS-05 (TUI undo via journal), DS-09 (background UUID rejection), DS-12 (empty-path approval), DS-13 (budget semantics). **Verified 2026-06-09:** SEC-01 (HMAC key persist + verify), SEC-13 (non-mocked integration tests). See §9 Fix Status for test evidence on each.
 
 | Severity | Count | Immediately Blocking |
 |---|---|---|
@@ -128,18 +128,18 @@ Each row: **ID · Category · Description · Likelihood (H/M/L) · Impact (H/M/L
 | SEC-02 | Access Control | MCP server trust `expires_at` never checked at call time; `is_server_trust_expired()` is dead call — expired servers remain trusted indefinitely | H | H | 9 | security | | **Fixed** (2026-06-05) — `is_server_trust_expired()` enforced in hot path at `mcp_trust.py:148,168`; `test_server_trust_expiry()` in `tests/test_mcp_trust.py` | — |
 | SEC-03 | Permission | Historical: `allow_all_destructive=True` short-circuited the approval gate outside explicit full-access mode. Current branch blocks it in `prompt` mode and requires explicit broad-mode promotion for bypass callers. | L | H | 3 | security | | **FIXED / WATCH** | P1 |
 | SEC-04 | Budget | ~~`ChatAgentConfig.max_estimated_cost_cents` defaults to `0`, interpreted as "no cap"~~ Default changed to `500`; `0`=no-spend, `None`=unlimited. Tests: `test_budget_zero_cents_rejects_any_spend`, `test_budget_none_allows_unlimited`, `test_budget_default_500_cents` | H | H | 9 | security | | **FIXED 2026-06-05** | — |
-| SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-05 | Budget | Cost accounting reads `context['_cost_cents']` written by the LLM adapter — injectable by malicious adapter or prompt-injected response | L | H | 3 | security | 2026-07-15 | **Mitigated 2026-06-09** — runner uses authoritative `usage_reader` from `ModelDecisionEngine`; residual: malicious adapter can still report `estimated_cost_cents=0`; tests: `test_sec_tier1_hardening.py`, `test_sec13_security_paths.py` | P2 |
 | SEC-06 | Permission | Bidirectional JIT session approval sync leaks parent-approved tools to subagents via shared `jit_state`; subagent inherits `workspace_run_shell_mutate` without fresh approval | M | H | 6 | security | | **FIXED 2026-06-05** | — |
 | SEC-07 | Isolation | Docker subagent runs as root, no `--network none`, no `--cap-drop ALL`, no seccomp — allows exfiltration and container escape | H | H | 9 | security | | **FIXED 2026-06-05** — all flags present in `_isolation.py:223-242`: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges`; test: `test_subagent_docker_container_hardened`; documented in `docs/ops/security-hardening.md` | — |
 | SEC-08 | Isolation | `directory-snapshot` mode provides only filesystem isolation, not process isolation — agent reads `/etc/`, `/proc/`, `~/.ssh/`, spawns host processes | H | M | 6 | security | | **DOCUMENTED 2026-06-05** — `logger.warning()` emitted at every `directory-snapshot` selection (`_isolation.py:181`); isolation modes table and dev-vs-production guidance added to `docs/ops/security-hardening.md` | P1 |
-| SEC-09 | Multi-sig | Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files | M | M | 4 | security | 2026-07-15 | **OPEN** | P2 |
+| SEC-09 | Multi-sig | Multi-sig approval hash uses 1-hour time bucket (`int(time.time()/3600)`); captured signature replayable for up to 59:59 within same window; hash logic duplicated in two files | M | M | 4 | security | 2026-07-15 | **Mitigated 2026-06-09** — hash binds `request_id`; stale peer signatures rejected by timeout; test: `test_sec_tier1_hardening.py` | P2 |
 | SEC-10 | Shell | `cat`, `head`, `tail` in `_INSPECT_EXECUTABLES` — classified as read-only inspect but can read `~/.ssh/id_rsa`, `.env`, `/etc/shadow` | H | H | 9 | security | | **FIXED 2026-06-05** — `_INSPECT_EXECUTABLES` contains only `{pwd, ls, rg, grep, wc}`; `cat/head/tail` absent; tests: `test_cat_not_in_inspect_allowlist`, `test_head_not_in_inspect_allowlist`, `test_tail_not_in_inspect_allowlist`, `test_inspect_shell_cannot_read_ssh_keys` | — |
 | SEC-11 | Undo | `UndoJournal._PATH_WRITE_TOOLS` covers file tools only; `workspace_run_shell_mutate` not tracked — UI shows "undo available" but shell side-effects are unrecoverable | H | M | 6 | security | 2026-07-15 | **OPEN** | P2 |
 | SEC-12 | Audit | `os.fsync()` failure caught and silenced; audit degrades to in-memory only with no operator notification; disk-full attack eliminates all log persistence | L | M | 2 | security | 2026-07-15 | **OPEN** | P2 |
-| SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | security | 2026-06-20 | **OPEN** — remediation plan in §9; target tests include `tests/test_chat_agent.py`, audit HMAC persistence/wrong-key tests, and MCP trust-expiry enforcement tests | P1 |
-| SEC-14 | Permission | `preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification | L | L | 1 | security | | **OPEN** | P3 |
-| SEC-15 | Multi-sig | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment | L | M | 2 | security | 2026-07-15 | **OPEN** | P2 |
-| SEC-16 | Code Quality | Dead code at `budget_monitor.py:104-119` after early return — maintenance hazard that could accidentally activate on refactor | H | L | 3 | security | | **OPEN** | QW |
+| SEC-13 | Testing | Critical security paths (cost tracking, audit HMAC, approval denial) mocked out in tests — bugs live undetected (confirmed: CG-03 lived months this way) | H | M | 6 | security | 2026-06-20 | **Fixed 2026-06-09** — integration suite: `tests/integration/test_sec13_security_paths.py`, `test_audit_chain.py` (SEC-01), `test_runner_cost_tracking.py`, `test_task005_trust_expiry_enforcement.py`, `test_sec_tier1_hardening.py` | — |
+| SEC-14 | Permission | `preapproved_call_ids` deprecated but still functional — old integrations or adversarial callers can pre-approve arbitrary call IDs without HMAC digest verification | L | L | 1 | security | | **Mitigated 2026-06-09** — opt-in hard-disable via `TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS=1`; test: `test_sec_tier1_hardening.py` | P3 |
+| SEC-15 | Multi-sig | `TEAAGENT_ALLOW_DEV_SIGNATURES=1` accepts SHA-256 of `(message+pubkey)` as valid signature; no runtime guard prevents this in production WAN deployment | L | M | 2 | security | 2026-07-15 | **Mitigated 2026-06-09** — `config_lint` errors when set; `selftest` fails; test: `test_config_lint_flags_dev_signatures_enabled` | P2 |
+| SEC-16 | Code Quality | Dead code at `budget_monitor.py:104-119` after early return — maintenance hazard that could accidentally activate on refactor | H | L | 3 | security | | **Fixed** — dead loop removed in prior refactor | QW |
 | SEC-17 | Engineering | `ApprovalPolicy` creates a `ThreadPoolExecutor` in `__post_init__` with no shutdown — every policy instance leaks threads (`policy.py:70`) | M | M | 4 | engineering | | **FIXED 2026-06-06 (ENG-01)** — `__del__` added to call `shutdown(wait=False, cancel_futures=True)`; tests: `ApprovalPolicyThreadLeakTests::test_del_shuts_down_signature_executor`, `test_del_is_safe_to_call_twice` | — |
 | SEC-18 | Budget | `fake`, `ollama`, and `vllm` providers had `0.0` cost rates — budget guard never triggered for local/test providers, masking runaway inference | M | M | 4 | budget | | **FIXED 2026-06-06 (RISK-02)** — `fake=0.001`, `ollama=0.0001`, `vllm=0.0001` (nominal compute-cost sentinels); budget guard now exercisable with all providers; tests: `ProviderCostRateTests::test_fake_cost_rates_nonzero`, `test_ollama_cost_rates_nonzero`, `test_vllm_cost_rates_nonzero` | — |
 | SEC-19 | Permission | JIT approval `input()` prompt has no timeout — agent blocks indefinitely waiting for human response on unattended TTY | M | M | 4 | permission | | **FIXED 2026-06-06 (OPS-01)** — 60-second default timeout via daemon thread; auto-denies with log message; configurable via `approval_timeout_seconds`; tests: `JITApprovalTimeoutTests::test_prompt_auto_denies_on_timeout`, `test_prompt_respects_valid_choice_before_timeout` | — |
@@ -508,7 +508,7 @@ warn_at_pct = 50
 
 ### Sprint 1 (this week) — Blockers
 
-1. **SEC-01** — ~~Persist HMAC key~~ **VERIFY/CLOSE**: key persisted at `audit.py:165`; tests listed in table row. Pending test sign-off.
+1. **SEC-01** — ~~Persist HMAC key~~ **FIXED 2026-06-09**: key persisted at `audit.py:209-244`; verify autoload at `audit_chain.py:422`; tests: `test_audit_hmac_persisted_across_instances`, `test_audit_key_file_permissions_readable`, `test_verify_audit_chain_autoloads_persisted_hmac_key`.
 2. **SEC-02** — ~~Call `is_server_trust_expired()`~~ **FIXED 2026-06-05**: enforced at `mcp_trust.py:148,168`; `test_server_trust_expiry()` passes.
 3. **SEC-04** — ~~Change default~~ **FIXED 2026-06-05**: default 500 cents, `0`=no-spend, `None`=unlimited.
 4. **SEC-07** — ~~Add Docker flags~~ **FIXED 2026-06-05**: `--user 65534:65534 --network none --cap-drop ALL --read-only --security-opt no-new-privileges` at `_isolation.py:234-241`.
@@ -521,7 +521,7 @@ warn_at_pct = 50
 
 9. **DS-12** — Validate non-empty path on path-scoped approval; reject empty or confirm-expand
 10. **SEC-06** — `clone_for_subagent()` one-way JIT state sync
-11. **SEC-13** — Integration tests: real cost path, HMAC verify, trust expiry enforcement
+11. **SEC-13** — ~~Integration tests~~ **FIXED 2026-06-09**: `tests/integration/test_sec13_security_paths.py` + existing `test_runner_cost_tracking.py`, `test_audit_chain.py`, `test_task005_trust_expiry_enforcement.py`.
 12. **DS-06** — Fixed in current branch: TUI cost test exercises runtime path
 13. **DS-01** — Fixed in current branch: TUI cost accumulation stop-gap is covered
 14. **SEC-08** — Add runtime warning for `directory-snapshot` mode
@@ -561,10 +561,12 @@ See [`active-findings-status-ledger-2026-06-06.md`](../analysis/active-findings-
 
 | ID | Status | Notes |
 |---|---|---|
-| SEC-01 | Verify/close | HMAC key persisted per code at `audit.py:165`; pending final permissions test sign-off |
+| SEC-01 | Fixed (2026-06-09) | HMAC key persisted + verify autoload; 4 tests pass including permissions |
 | SEC-05 | Mitigated (2026-06-09) | Runner reads authoritative usage via `usage_reader`; engine tracks `DecisionUsage` |
 | SEC-09 | Mitigated (2026-06-09) | Multisig hash binds `request_id`; stale signatures rejected by timeout |
+| SEC-13 | Fixed (2026-06-09) | Non-mocked integration suite — `test_sec13_security_paths.py` |
 | SEC-14 | Mitigated (2026-06-09) | Set `TEAAGENT_DISABLE_PREAPPROVED_CALL_IDS=1` in production; deprecation warning retained |
+| SEC-15 | Mitigated (2026-06-09) | `config_lint` + `selftest` reject dev signatures |
 | SEC-16 | Fixed | Dead code removed from `budget_monitor.py` (prior refactor) |
 | WS3-001 | Implemented | Compliance mode fatal audit — `test_ws3_compliance_audit.py` |
 | WS3-006 | Implemented | Approval-token exactness — `tests/test_approval_token_exactness.py` |
