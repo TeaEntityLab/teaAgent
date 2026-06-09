@@ -21,7 +21,7 @@ def test_git_sandbox_audit_payload_fields() -> None:
 
     payload = git_sandbox_audit_payload(sandbox)
 
-    assert payload['run_id'] == 'abc123'
+    assert 'run_id' not in payload
     assert payload['branch_name'] == 'teaagent-sandbox-abc123'
     assert payload['original_branch'] == 'main'
     assert payload['stash_id'] == 'stash@{0}'

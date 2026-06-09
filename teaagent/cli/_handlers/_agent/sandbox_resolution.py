@@ -16,12 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 def git_sandbox_audit_payload(sandbox: GitBranchSandbox) -> dict[str, Any]:
-    """Serialize sandbox lifecycle fields for audit/evidence."""
+    """Serialize sandbox lifecycle fields for audit/evidence.
+
+    Note: ``run_id`` is intentionally excluded — it is passed as the second
+    positional argument to ``AuditLogger.record()``, and including it in the
+    payload dict would cause a ``multiple values for argument 'run_id'`` error.
+    """
     return {
         'branch_name': sandbox._branch_name,
         'original_branch': sandbox._original_branch,
         'stash_id': sandbox._stash_id,
-        'run_id': sandbox._run_id,
     }
 
 

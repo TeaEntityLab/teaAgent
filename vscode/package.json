@@ -26,6 +26,11 @@
     "onCommand:teaagent.agentStatus",
     "onCommand:teaagent.agentResume",
     "onCommand:teaagent.agentAttach",
+    "onCommand:teaagent.agentPlan",
+    "onCommand:teaagent.agentEvidence",
+    "onCommand:teaagent.agentUndo",
+    "onCommand:teaagent.agentApprovalPending",
+    "onCommand:teaagent.agentApprovalApprove",
     "onCommand:teaagent.agentPreflight",
     "onCommand:teaagent.modelProviders",
     "onCommand:teaagent.graphqliteSmoke",
@@ -62,6 +67,31 @@
       {
         "command": "teaagent.agentAttach",
         "title": "TeaAgent: Attach to Run",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentPlan",
+        "title": "TeaAgent: Create Plan",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentEvidence",
+        "title": "TeaAgent: Run Evidence",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentUndo",
+        "title": "TeaAgent: Undo Run",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentApprovalPending",
+        "title": "TeaAgent: Pending Approvals",
+        "category": "TeaAgent"
+      },
+      {
+        "command": "teaagent.agentApprovalApprove",
+        "title": "TeaAgent: Approve and Resume",
         "category": "TeaAgent"
       },
       {

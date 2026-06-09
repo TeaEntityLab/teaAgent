@@ -5,18 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-# command id -> substrings that must appear in extension.ts near that registration
-IDE_COMMAND_CLI_PARITY: dict[str, list[str]] = {
-    'teaagent.agentRun': ["'agent', 'run'"],
-    'teaagent.agentDaily': ["'agent', 'daily'"],
-    'teaagent.agentStatus': ["'agent', 'status'"],
-    'teaagent.agentResume': ["'agent', 'resume'"],
-    'teaagent.agentAttach': ["'agent', 'attach'"],
-    'teaagent.agentPreflight': ["'agent', 'preflight'"],
-    'teaagent.doctor': ["'doctor', 'all'"],
-    'teaagent.startMcpServer': ["'mcp', 'serve', '--http'"],
-    'teaagent.openTUI': ["+ ' tui'"],
-}
+from teaagent.integration.surface_parity import (
+    IDE_COMMAND_CLI_PARITY,
+    SURF002_REQUIRED_COMMANDS,
+)
 
 
 def test_vscode_manifest_declares_daily_workflow_commands() -> None:
@@ -31,6 +23,11 @@ def test_vscode_manifest_declares_daily_workflow_commands() -> None:
     }
     for command_id in IDE_COMMAND_CLI_PARITY:
         assert command_id in command_ids, f'missing manifest command {command_id}'
+
+
+def test_surf002_required_commands_are_registered() -> None:
+    missing = SURF002_REQUIRED_COMMANDS - set(IDE_COMMAND_CLI_PARITY)
+    assert not missing, f'SURF-002 registry missing commands: {sorted(missing)}'
 
 
 def _command_registration_block(

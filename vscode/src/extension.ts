@@ -147,6 +147,69 @@ export function activate(context: vscode.ExtensionContext): void {
         runTeaAgent(['agent', 'attach', runId, '--follow'], workspaceRoot);
     });
 
+    const disposablePlan = vscode.commands.registerCommand('teaagent.agentPlan', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const provider = vscode.workspace.getConfiguration('teaagent').get<string>('defaultProvider', 'gpt');
+        const task = await promptForInput('Enter task to plan');
+        if (!task) {
+            return;
+        }
+
+        await runTeaAgentWithOutput(
+            ['agent', 'plan', provider, task, '--permission-mode', 'read-only'],
+            { title: 'Creating Plan', cwd: workspaceRoot }
+        );
+    });
+
+    const disposableEvidence = vscode.commands.registerCommand('teaagent.agentEvidence', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const runId = await promptForInput('Enter run id for evidence summary');
+        if (!runId) {
+            return;
+        }
+
+        await runTeaAgentWithOutput(
+            ['agent', 'status', runId, '--evidence', '--human'],
+            { title: 'Run Evidence', cwd: workspaceRoot }
+        );
+    });
+
+    const disposableUndo = vscode.commands.registerCommand('teaagent.agentUndo', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const runId = await promptForInput('Enter run id to undo (empty = last run with journal)');
+        const args = ['agent', 'undo'];
+        if (runId) {
+            args.push(runId);
+        } else {
+            args.push('--last');
+        }
+
+        await runTeaAgentWithOutput(args, { title: 'Undo Run Changes', cwd: workspaceRoot });
+    });
+
+    const disposableApprovalPending = vscode.commands.registerCommand('teaagent.agentApprovalPending', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        await runTeaAgentWithOutput(
+            ['approval', 'pending', '--human'],
+            { title: 'Pending Approvals', cwd: workspaceRoot }
+        );
+    });
+
+    const disposableApprovalApprove = vscode.commands.registerCommand('teaagent.agentApprovalApprove', async () => {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
+        const selector = await promptForInput(
+            'Enter pending action number from approval pending list'
+        );
+        if (!selector) {
+            return;
+        }
+
+        runTeaAgent(
+            ['approval', 'approve', '--selector', selector, '--resume'],
+            workspaceRoot
+        );
+    });
+
     const disposablePreflight = vscode.commands.registerCommand('teaagent.agentPreflight', async () => {
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '.';
         const provider = vscode.workspace.getConfiguration('teaagent').get<string>('defaultProvider', 'gpt');
@@ -225,6 +288,11 @@ export function activate(context: vscode.ExtensionContext): void {
         disposableStatus,
         disposableResume,
         disposableAttach,
+        disposablePlan,
+        disposableEvidence,
+        disposableUndo,
+        disposableApprovalPending,
+        disposableApprovalApprove,
         disposablePreflight,
         disposableProviders,
         disposableGQLSmoke,
