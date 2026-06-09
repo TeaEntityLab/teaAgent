@@ -42,34 +42,32 @@ Enumerate P0 security rows, then diff against existing tests
 | fresh_restart | `fresh_restart=True` must skip all auto-grant | check |
 **Accept:** matrix lists every P0 row with a coverage verdict (covered / gap). — _Done; see the matrix._
 
-### Step 3 — Add the missing P0 tests → `tests/test_resume_preparation.py`
-Write tests for the three gaps above. **This is the step that can surface a real hole.**
-**Accept:** tests added and run on Python 3.12. If any fail → real permission defect → fix in
-`resume_preparation.py` (and only then is code touched). If all pass → the digest binding already
-holds; value is the now-explicit regression guard.
+### Step 3 — Add the missing P0 tests → `tests/test_resume_preparation.py`  ✅ done
+Wrote tests for the three gaps (rows 3/4/5) plus idempotency (6) and fresh-restart (7).
+**Outcome:** all five **passed on first run** → the digest binding already held; **no permission hole**.
+`resume_preparation.py` was **not** changed (verified byte-identical to HEAD). Value = explicit
+regression guard.
 
-### Step 4 — T7 state-machine assertion (strengthen, don't just add)
-Upgrade ≥1 test from "returns `auto_approved_call_id`" to also assert the **post-condition** in the
-approval store (a scoped grant with the *exact* digest exists), **and** that a mismatching digest
-leaves the store **unchanged** (no partial grant).
-**Accept:** test asserts both the positive post-state and the negative no-op state.
+### Step 4 — T7 state-machine assertion (strengthen, don't just add)  ✅ done
+`test_auto_grant_is_bound_to_exact_digest` asserts both the **positive** post-state (a scoped grant
+exists for the exact recorded digest) and the **negative** post-state (a different/tampered digest
+matches nothing; exactly one grant exists — no over-granting). The legacy and pre-approved tests assert
+the store is left **unchanged**.
 
-### Step 5 — One spec-mutation check (manual, T5) → log in `LOCAL_FEEDBACK.md`
-Flip the spec's "legacy → warn" rule to "legacy → auto-grant" and confirm Step 3's legacy test would
-catch it. Record the result (Evidence + Anti-regression Rule) in
-[`LOCAL_FEEDBACK.md`](../LOCAL_FEEDBACK.md).
-**Accept:** a `LOCAL_FEEDBACK.md` entry exists with Evidence and an Anti-regression Rule.
+### Step 5 — One spec-mutation check (manual, T5)  ✅ done
+Flipped the legacy guard `if not digest:` → `if False:`; the legacy test failed exactly as required;
+mutation reverted. Logged in [`../LOCAL_FEEDBACK.md`](../LOCAL_FEEDBACK.md) with Evidence and an
+Anti-regression Rule.
 
-## Scope guard
-Layer B is **additive** (specs + tests). It changes `resume_preparation.py` **only if** a P0 test
-actually fails. The committed feature itself is not refactored. This docs commit lands Steps 1–2;
-Steps 3–5 are tracked here for the follow-up implementation pass.
+## Scope guard (honored)
+Layer B stayed **additive** — only specs + tests were added. `resume_preparation.py` is unchanged from
+HEAD `c37e181` because no P0 test failed. The committed feature was not refactored.
 
 ## Status tracker
 | Step | State | Artifact |
 |---|---|---|
 | 1 · SPEC | ✅ done | `specs/SURF-010-resume-parity.md` |
 | 2 · Matrix + gaps | ✅ done | `test-matrices/SURF-010.md` |
-| 3 · P0 tests | ⏳ pending | `tests/test_resume_preparation.py` |
-| 4 · State-machine assertion | ⏳ pending | same |
-| 5 · Spec mutation + feedback | ⏳ pending | `LOCAL_FEEDBACK.md` |
+| 3 · P0 tests | ✅ done (all pass; no hole) | `tests/test_resume_preparation.py` |
+| 4 · State-machine assertion | ✅ done | `tests/test_resume_preparation.py` |
+| 5 · Spec mutation + feedback | ✅ done (mutation caught) | `LOCAL_FEEDBACK.md` |

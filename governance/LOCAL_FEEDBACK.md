@@ -31,4 +31,25 @@
 - **Anti-regression Rule:** any change classified L3 by the §4 cost model MUST carry a `specs/<ticket>.md`
   + `test-matrices/<ticket>.md` with P0 covered before merge. (To be CI-enforced per Roadmap A1.)
 
-<!-- Add SURF-010 Step 5 spec-mutation result here once Steps 3–5 of the executable plan are run. -->
+### 2026-06-09 — SURF-010 P0 permission gaps closed; spec-mutation verified
+- **Step:** executable plan Steps 3–5 — add the 3 untested P0 permission paths for `prepare_run_resume`
+  and prove the legacy-warn rule is test-enforced (T5).
+- **Evidence:**
+  - `python -m pytest tests/test_resume_preparation.py -v` → 7 passed (5 new). The new P0 tests
+    **passed on first run**, so the digest binding already held — **no permission hole existed**.
+  - T5 mutation: changed `if not digest:` → `if False:` in `resume_preparation.py`; the legacy test
+    failed with `AssertionError: assert 'write-1' is None` (legacy record auto-granted). Reverted;
+    `git diff teaagent/integration/resume_preparation.py` is empty (byte-identical to HEAD `c37e181`).
+- **Error Type:** test-gap (not a code defect) — the safe behavior was correct but unguarded.
+- **Root Cause:** SURF-010 shipped with only happy-path + parity tests; the dangerous branches
+  (legacy / tampered-digest / pre-approved) had no regression guard.
+- **Correction:** added `test_legacy_record_without_digest_warns_and_does_not_auto_grant`,
+  `test_pre_approved_call_id_is_skipped_not_re_granted`, `test_auto_grant_is_bound_to_exact_digest`
+  (T7 +/- post-state), `test_auto_grant_is_idempotent_when_already_scoped`,
+  `test_fresh_restart_skips_pending_auto_grant`. No production code changed.
+- **Verification:** `pytest tests/test_resume_preparation.py tests/acceptance/test_cli_tui_resume_parity_flow.py`
+  → 9 passed; resume code unchanged from HEAD.
+- **Anti-regression Rule:** the legacy-record branch in `prepare_run_resume` must keep
+  `pending_warning` + no auto-grant; the T5 mutation (`if not digest:` → `if False:`) MUST fail the
+  legacy test. Any future change to the auto-grant condition is **Requires Human Review** per
+  [`AGENT_RULES.md`](AGENT_RULES.md) and must keep these five P0/P1 tests green.
