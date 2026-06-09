@@ -21,7 +21,7 @@ permission / migration / delete / deploy) pays the full cost.
 | [LOCAL_FEEDBACK.md](LOCAL_FEEDBACK.md) | Failure-learning log. No fix is real without Evidence + Anti-regression Rule. | After every failure / correction. |
 | [templates/SPEC.template.md](templates/SPEC.template.md) | Copy-to-start spec skeleton (T1). | New L2/L3 change. |
 | [templates/TEST_MATRIX.template.md](templates/TEST_MATRIX.template.md) | Copy-to-start test-matrix skeleton (T2). | New L2/L3 change. |
-| [specs/](specs/) | Live specs for real changes. First: `SURF-010-resume-parity.md`. | Per change. |
+| [specs/](specs/) | Live specs. `SURF-010-resume-parity.md` (resume trust inputs) + `approval-store-permission-binding.md` (CV-8 boundary of the grant engine). | Per change / per L3 module. |
 | [test-matrices/](test-matrices/) | Live test matrices + gap analyses. First: `SURF-010.md`. | Per change. |
 
 ## The nine-stage workflow (quick reference)

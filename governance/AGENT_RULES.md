@@ -26,7 +26,9 @@
 - **authentication / authorization** changes.
 - **payment / billing** changes.
 - **permission / approval** flows — including `ergonomics/approval_store.py`,
-  `integration/resume_preparation.py`, `pending_approval` handling, permission modes.
+  `integration/resume_preparation.py`, `pending_approval` handling, permission modes. These are L3
+  trust modules with permission-binding specs under `governance/specs/`; their boundary is
+  structurally enforced by `tests/test_governance_permission_binding.py`.
 - **migration** / run-store schema changes.
 - **production config**, deploy, release, MCP scope grants.
 - **Modifying a test specifically to make a failing test pass** (vs. legitimately updating a test

@@ -22,12 +22,15 @@
 | 8 | missing run | bad `run_id` | raises `ResumePreparationError` | unit | P1 | `test_resume_preparation.py::test_prepare_run_resume_missing_run_raises` ✅ |
 | 9 | auto-compaction | >40 observations, `auto_compact=True` | keep 20; `resume_compaction.truncated=True` | unit | P2 | `test_resume_preparation.py::test_prepare_run_resume_compacts_large_observation_history` ✅ |
 | 10 | checkpoint source | `checkpoint_path` present | obs/context from checkpoint, bypass compaction | integration | P2 | not yet covered (P2, deferred) |
+| 11 | `auto_approve_pending=False` | digest-bearing pending, TUI policy | `pending_warning` set; no grant; `auto_approved_call_id is None` | unit | P1 | `test_resume_preparation.py::test_auto_approve_pending_false_warns_without_granting` ✅ |
 
 ## Gap analysis (resolved)
 
 Before this pass, coverage = rows 1, 2, 8, 9 (the original matrix incorrectly flagged 8 & 9 as gaps —
 they were already covered in `test_resume_preparation.py`). The **dangerous** paths (3, 4, 5) and the
-robustness paths (6, 7) were genuinely untested and are now closed.
+robustness paths (6, 7) were genuinely untested and are now closed. Row 11 (`auto_approve_pending`) was
+added when CLI/TUI resume policy diverged in later commits; it had only TUI-level coverage
+(`test_tui.py::test_tui_resume_does_not_auto_approve_pending`) and is now guarded at the prepare layer.
 
 | Row | Priority | Verdict | Outcome |
 |---|---|---|---|

@@ -49,15 +49,21 @@
 - **Acceptance:** the five governance entry-points exist and are linked from `governance/README.md`,
   **and** the test-weakening gate is enforced in both pre-commit and CI. ✅
 
-### A2 · Permission binding for L3 paths
+### A2 · Permission binding for L3 paths — DONE 2026-06-09
 **Goal:** make CV-8 concrete where it matters in *this* repo.
 
-- Add an `Allowed / Forbidden / Requires Human Review` matrix to the trust-bearing modules:
-  `teaagent/ergonomics/approval_store.py`, `teaagent/integration/resume_preparation.py`, and anything
-  reading `pending_approval` / permission modes.
-- Each L3 spec under `specs/` must declare this matrix (see SURF-010 spec for the first instance).
-- **Acceptance:** every module that can auto-grant or escalate a permission has a written, spec-linked
-  Forbidden list, and a test asserting at least one Forbidden behavior is blocked.
+- Permission-binding specs (Allowed / Forbidden / Requires Human Review) now exist for both trust
+  modules: `resume_preparation.py` → [`specs/SURF-010-resume-parity.md`](../specs/SURF-010-resume-parity.md);
+  `ergonomics/_approval_state.py` (public `approval_store`) →
+  [`specs/approval-store-permission-binding.md`](../specs/approval-store-permission-binding.md).
+- Each Forbidden rule is **bound to a guard test** that already enforces it (the approval store's were
+  pre-existing — DS-12, token-exactness; SURF-010's are the P0 tests added in the prior pass).
+- Made structural via `tests/test_governance_permission_binding.py`: an L3 trust module must have a
+  spec declaring Forbidden + Requires-Human-Review, and **every guard test a spec cites must exist**
+  (this caught a missing-citation drift on first run).
+- **Acceptance — met:** every grant/escalation module has a spec-linked Forbidden list and ≥1 guard
+  test asserting a Forbidden behavior is blocked. ✅
+- _Follow-up (not blocking): annotate the module docstrings with a one-line pointer to their spec._
 
 ### A3 · Mutation gate for L3 only (nightly)
 **Goal:** verify the *tests themselves* catch regressions on the trust boundary — without taxing the

@@ -61,6 +61,11 @@ consumers: `cli/_handlers/_agent/resume.py`, `tui/_commands.py`, `chat_session_c
 - **Forbidden:** auto-grant when `argument_digest` is absent; auto-grant when the recomputed digest does
   not match the stored digest; broaden a scoped grant beyond `(run_id, call_id, tool_name, digest)`;
   silently drop the `pending_warning`.
+  - Guards: `tests/test_resume_preparation.py::test_legacy_record_without_digest_warns_and_does_not_auto_grant`
+    (digest absent), `tests/test_resume_preparation.py::test_auto_grant_is_bound_to_exact_digest`
+    (digest mismatch / no over-grant),
+    `tests/test_resume_preparation.py::test_pre_approved_call_id_is_skipped_not_re_granted`,
+    `tests/test_resume_preparation.py::test_auto_approve_pending_false_warns_without_granting`.
 - **Requires Human Review:** any change to the auto-grant condition, the digest computation, or the
   legacy-record handling.
 
