@@ -153,6 +153,12 @@ class ChatAgentConfig:
                 profile_overrides['skill_source_profile'] = configured_profile
 
         merged = {**profile_overrides, **kwargs}
+        # Convert string permission_mode to enum — callers may pass the
+        # string form directly (e.g. from_root(…, permission_mode='read-only')),
+        # but the dataclass field is typed PermissionMode and downstream code
+        # calls .value on it.
+        if isinstance(merged.get('permission_mode'), str):
+            merged['permission_mode'] = parse_permission_mode(merged['permission_mode'])
         return cls(root=resolved_root, **merged)
 
 

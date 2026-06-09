@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from teaagent.approval_manager import PermissionMode
 from teaagent.llm import LLMAdapter
 from teaagent.run_store import RunStore
 from teaagent.subagent_run_context import get_parallel_approval_mode
@@ -30,7 +31,7 @@ from teaagent.subagents._types import (
 logger = logging.getLogger(__name__)
 
 UNSAFE_PARENT_MODES = frozenset({'allow', 'danger-full-access'})
-MAX_CHILD_PERMISSION = 'workspace-write'
+MAX_CHILD_PERMISSION = PermissionMode.WORKSPACE_WRITE
 
 
 def _resolve_budget_limits(
