@@ -1130,6 +1130,7 @@ class TeaAgentTUI:
         *,
         clarify_first: bool = False,
         initial_observations: Optional[list[dict[str, Any]]] = None,
+        initial_context_extra: Optional[dict[str, Any]] = None,
         resumed_from: Optional[str] = None,
     ) -> None:
         from teaagent.ergonomics.context_inject import expand_at_references
@@ -1204,6 +1205,7 @@ class TeaAgentTUI:
             audit=audit,
             undo_journal=undo_journal,
             initial_observations=initial_observations,
+            initial_context_extra=initial_context_extra,
             resumed_from=resumed_from,
             task_spec=task_spec,
             emit_answer=False,

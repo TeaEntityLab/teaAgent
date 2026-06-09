@@ -23,6 +23,8 @@ __all__ = [
     'PluginGovernanceReport',
     'PolicyApprovalStrategy',
     'PreparedAgentRun',
+    'PreparedRunResume',
+    'ResumePreparationError',
     'RunEvent',
     'RunEventStream',
     'RunEventSubscriber',
@@ -37,6 +39,7 @@ __all__ = [
     'build_run_budget',
     'normalize_run_event',
     'prepare_agent_run',
+    'prepare_run_resume',
     'replay_run_events',
     'storage_bundle_for_workspace',
     'validate_plugin_tools',
@@ -87,6 +90,14 @@ def __getattr__(name: str) -> Any:
         from teaagent.integration import run_state as state_module
 
         return getattr(state_module, name)
+    if name in {
+        'PreparedRunResume',
+        'ResumePreparationError',
+        'prepare_run_resume',
+    }:
+        from teaagent.integration import resume_preparation as resume_module
+
+        return getattr(resume_module, name)
     if name in {
         'ApprovalPresetStorage',
         'AuditStorage',

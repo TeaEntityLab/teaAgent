@@ -27,6 +27,7 @@ def _safe_run_agent_task(
     clarify_first: bool = False,
     resumed_from: str | None = None,
     initial_observations: list[dict[str, object]] | None = None,
+    initial_context_extra: dict[str, object] | None = None,
 ) -> None:
     """Run _run_agent_task with error guard to prevent TUI crash on adapter/network errors.
 
@@ -39,6 +40,7 @@ def _safe_run_agent_task(
             clarify_first=clarify_first,
             resumed_from=resumed_from,
             initial_observations=initial_observations,
+            initial_context_extra=initial_context_extra,
         )
     except (OSError, ValueError, TypeError, RuntimeError) as exc:
         tui.output_fn(f'error: agent task failed — {exc}')
@@ -265,32 +267,39 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
             tui.output_fn('error: resume requires a run id')
             return True
         run_id = args[0]
-        run_store = RunStore(tui.root)
-        if not run_store.run_path(run_id).is_file():
-            tui.output_fn(f"error: run '{run_id}' not found")
-            return True
+        from teaagent.ergonomics.workspace_defaults import load_workspace_defaults
+        from teaagent.integration.resume_preparation import (
+            ResumePreparationError,
+            prepare_run_resume,
+        )
+
+        defaults = load_workspace_defaults(tui.root)
+        auto_compact = bool(defaults.get('auto_compact_on_resume', True))
         try:
-            original_task = run_store.task_for_run(run_id)
-        except (FileNotFoundError, ValueError) as exc:
+            prepared = prepare_run_resume(
+                tui.root,
+                run_id,
+                approve_call_ids=frozenset(tui.approved_call_ids),
+                auto_compact=auto_compact,
+            )
+        except ResumePreparationError as exc:
             tui.output_fn(f'error: {exc}')
             return True
 
-        initial_observations = run_store.observations_for_run(run_id)
-        pending = run_store.pending_approval_for_run(run_id)
-        if pending:
-            call_id = pending.get('call_id', '?')
-            tool_name = pending.get('tool_name', '?')
+        if prepared.pending_warning:
+            tui.output_fn(f'warning: {prepared.pending_warning}')
+        elif prepared.auto_approved_call_id:
             tui.output_fn(
-                f'warning: run {run_id} has a pending approval for {tool_name} '
-                f'({call_id}) — approval was NOT auto-granted on resume. '
-                f'The agent will re-request approval through the normal flow.'
+                f'resume: {run_id} (auto-approved pending call {prepared.auto_approved_call_id})'
             )
-        tui.output_fn(f'resume: {run_id}')
+        else:
+            tui.output_fn(f'resume: {run_id}')
         _safe_run_agent_task(
             tui,
-            original_task,
-            resumed_from=run_id,
-            initial_observations=initial_observations,
+            prepared.original_task,
+            resumed_from=prepared.run_id,
+            initial_observations=prepared.initial_observations,
+            initial_context_extra=prepared.initial_context_extra,
         )
         return True
 

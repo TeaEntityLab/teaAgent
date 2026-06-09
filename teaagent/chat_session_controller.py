@@ -100,6 +100,7 @@ class ChatSessionController:
         audit: Optional[AuditLogger] = None,
         undo_journal: Optional[UndoJournal] = None,
         initial_observations: Optional[list[dict[str, Any]]] = None,
+        initial_context_extra: Optional[dict[str, Any]] = None,
         resumed_from: Optional[str] = None,
         task_spec: Optional[Any] = None,
         emit_answer: bool = True,
@@ -150,6 +151,12 @@ class ChatSessionController:
             adapter = create_llm_adapter(provider, model=model_part)
 
         # Run the agent
+        merged_context_extra: dict[str, Any] | None = None
+        if initial_context_extra or resumed_from:
+            merged_context_extra = dict(initial_context_extra or {})
+            if resumed_from:
+                merged_context_extra['resumed_from'] = resumed_from
+
         result = run_chat_agent(
             config,
             task,
@@ -157,9 +164,7 @@ class ChatSessionController:
             audit=audit,
             task_spec=task_spec,
             initial_observations=initial_observations,
-            initial_context_extra={'resumed_from': resumed_from}
-            if resumed_from
-            else None,
+            initial_context_extra=merged_context_extra,
         )
 
         # Save result to store

@@ -6,93 +6,46 @@ import os
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from teaagent.cli._output import print_json
-from teaagent.cli.execution import AgentExecutionFactory
 
 from .run import _execute_agent_task, _resolve_auto_compact
 
 
 def agent_resume_command(args: argparse.Namespace) -> int:
-    store = AgentExecutionFactory(args.root).create_run_store()
+    from teaagent.integration.resume_preparation import (
+        ResumePreparationError,
+        prepare_run_resume,
+    )
+
     try:
-        original_task = store.task_for_run(args.run_id)
-    except (FileNotFoundError, ValueError) as exc:
+        prepared = prepare_run_resume(
+            args.root,
+            args.run_id,
+            approve_call_ids=frozenset(args.approve_call_id),
+            fresh_restart=args.fresh_restart,
+            auto_compact=_resolve_auto_compact(args),
+            checkpoint_path=getattr(args, 'checkpoint_store', None),
+        )
+    except ResumePreparationError as exc:
         print_json({'status': 'error', 'message': str(exc)})
         return 1
 
-    initial_observations: list[dict[str, Any]] = []
-    initial_context_extra: Optional[dict[str, Any]] = None
-    auto_approved: Optional[str] = None
+    if prepared.pending_warning:
+        import sys
 
-    # Load scoped approvals for this specific run only
-    from teaagent.ergonomics.approval_store import ApprovalPresetStore
+        print(f'Warning: {prepared.pending_warning}', file=sys.stderr)
 
-    approval_store = ApprovalPresetStore(args.root)
-
-    if not args.fresh_restart:
-        checkpoint_path = getattr(args, 'checkpoint_store', None)
-        checkpoint = None
-        if checkpoint_path:
-            from teaagent.checkpoint import SQLiteCheckpointStore
-
-            checkpoint = SQLiteCheckpointStore(checkpoint_path).load(args.run_id)
-        if checkpoint is not None:
-            initial_observations = checkpoint.get('observations', [])
-            initial_context_extra = {
-                k: v for k, v in checkpoint.items() if k not in ('task', 'observations')
-            }
-        else:
-            initial_observations = store.observations_for_run(args.run_id)
-            if _resolve_auto_compact(args) and len(initial_observations) > 40:
-                initial_observations = initial_observations[-20:]
-                initial_context_extra = {
-                    'resume_compaction': {
-                        'truncated': True,
-                        'kept_observations': 20,
-                    }
-                }
-        pending = store.pending_approval_for_run(args.run_id)
-        if pending and pending['call_id'] not in args.approve_call_id:
-            digest = pending.get('argument_digest')
-            if not digest:
-                import sys
-
-                print(
-                    f"Warning: Pending call '{pending['call_id']}' is a legacy record and "
-                    f'cannot be auto-approved safely due to redacted arguments. '
-                    f'Please approve explicitly with --approve-call-id {pending["call_id"]}.',
-                    file=sys.stderr,
-                )
-            else:
-                # Check if this pending call already has a valid scoped approval to avoid duplicate storage writes
-                if not approval_store.check_scoped_approval_digest(
-                    run_id=args.run_id,
-                    call_id=pending['call_id'],
-                    tool_name=pending['tool_name'],
-                    argument_digest=digest,
-                ):
-                    approval_store.add_scoped_approval(
-                        run_id=args.run_id,
-                        call_id=pending['call_id'],
-                        tool_name=pending['tool_name'],
-                        arguments=pending['arguments'],
-                        argument_digest=digest,
-                    )
-                auto_approved = pending['call_id']
-
-    # Legacy Escape Hatch: keep only explicitly provided bare call IDs from the --approve-call-id CLI flag
-    # for backward compatibility. We never merge database-persisted scoped approvals here as bare IDs.
     args.approve_call_id = frozenset(args.approve_call_id)
 
     return _execute_agent_task(
         args,
-        original_task,
-        resumed_from=args.run_id,
-        initial_observations=initial_observations,
-        initial_context_extra=initial_context_extra,
-        auto_approved_call_id=auto_approved,
+        prepared.original_task,
+        resumed_from=prepared.run_id,
+        initial_observations=prepared.initial_observations,
+        initial_context_extra=prepared.initial_context_extra,
+        auto_approved_call_id=prepared.auto_approved_call_id,
     )
 
 
