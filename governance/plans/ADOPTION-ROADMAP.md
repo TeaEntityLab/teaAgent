@@ -37,11 +37,17 @@
 
 - Land `governance/` with: `AGENT_RULES.md`, `LOCAL_FEEDBACK.md`, `DONE_CHECKLIST.md`,
   `templates/SPEC.template.md`, `templates/TEST_MATRIX.template.md`, the framework doc, and this roadmap.
-- **Future hardening (not in this docs-only commit):** a CI check that fails any PR which *deletes or
-  weakens an existing test assertion* without a `Requires Human Review` label — the practical form of
-  the framework's "test files effectively read-only" (T3 / CV-5). Evidence basis: RHB env-hardening
-  cut exploit rate 5.7pp (−87.7%); ImpossibleBench: read-only tests drive cheating ≈0.
-- **Acceptance:** the five governance entry-points exist and are linked from `governance/README.md`.
+- **Test-weakening gate — DONE 2026-06-09:** `scripts/check_test_assertion_regression.py` AST-counts
+  assertions per `test_*` function in the base vs the change and **fails** when an existing test is
+  deleted or loses assertions. Wired into **pre-commit** (`check-test-assertion-regression`, diffs vs
+  HEAD) and **CI** (`lint` job, diffs vs PR base / `github.event.before`). Override:
+  `ALLOW_TEST_WEAKENING=1` or an `Allow-test-weakening: <reason>` commit trailer — the practical form of
+  the framework's "test files effectively read-only" (T3 / CV-5). Evidence basis: RHB env-hardening cut
+  exploit rate 5.7pp (−87.7%); ImpossibleBench: read-only tests drive cheating ≈0. Covered by
+  `tests/test_check_test_assertion_regression.py` (8 cases) and verified end-to-end (real weakening
+  flagged; override downgrades to warning).
+- **Acceptance:** the five governance entry-points exist and are linked from `governance/README.md`,
+  **and** the test-weakening gate is enforced in both pre-commit and CI. ✅
 
 ### A2 · Permission binding for L3 paths
 **Goal:** make CV-8 concrete where it matters in *this* repo.

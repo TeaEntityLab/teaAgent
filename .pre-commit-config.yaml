@@ -31,6 +31,13 @@ repos:
         entry: python3 scripts/check_public_docstrings.py
         language: system
         pass_filenames: false
+      - id: check-test-assertion-regression
+        name: check-test-assertion-regression
+        # A1 governance gate: blocks weakening/deleting existing test assertions vs HEAD.
+        # Override with ALLOW_TEST_WEAKENING=1 for a genuine refactor/rename.
+        entry: python3 scripts/check_test_assertion_regression.py
+        language: system
+        pass_filenames: false
       - id: pytest
         name: pytest
         entry: bash -c 'if [ "${TEAAGENT_PRECOMMIT_FULL:-0}" = 1 ]; then env UV_CACHE_DIR=.uv-cache uv run pytest -q; else env UV_CACHE_DIR=.uv-cache uv run pytest tests/test_p0_harness.py tests/test_surface_auth_hardening.py tests/test_policy.py tests/test_phase5_context_bus.py tests/test_governance_hardening.py -q; fi'

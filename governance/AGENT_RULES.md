@@ -12,7 +12,9 @@
 - L1 cosmetic changes (logging, docstrings, formatting) under existing test coverage.
 
 ## Forbidden (reject the change)
-- Delete or weaken an existing test assertion to make a failing test pass. **(enforce: manual → CI A1)**
+- Delete or weaken an existing test assertion to make a failing test pass. **(enforced: pre-commit +
+  CI `check-test-assertion-regression`; override only via `ALLOW_TEST_WEAKENING=1` /
+  `Allow-test-weakening:` trailer with human review)**
 - Skip / disable type checking (`# type: ignore` without justification), ruff, or bandit.
 - `mock` away a *real* error to produce a green light.
 - Modify a security/permission policy as a side effect of an unrelated change.

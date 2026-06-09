@@ -156,6 +156,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history so the A1 gate can diff against the base ref
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -191,6 +193,17 @@ jobs:
 
       - name: Audit test quality
         run: python3 scripts/audit_test_quality.py --fail-on severe
+
+      - name: Test assertion regression gate (A1)
+        # Fails if the change weakens/deletes existing test assertions.
+        # Override: ALLOW_TEST_WEAKENING=1 or an "Allow-test-weakening:" commit trailer.
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            BASE="HEAD~1"
+          fi
+          echo "Comparing test assertions against base: $BASE"
+          python3 scripts/check_test_assertion_regression.py --base "$BASE"
 
   governance-gate:
     runs-on: ubuntu-latest
