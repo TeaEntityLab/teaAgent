@@ -1,0 +1,82 @@
+# Layer A — Adoption Roadmap: Governed Agentic Engineering → teaagent
+
+> **Scope:** A risk-scaled roadmap to wire the [framework](../framework/GOVERNED-AGENTIC-ENGINEERING.md)
+> into teaagent as real tooling/CI — not file-level steps, direction first. Companion to the file-level
+> [SURF-010 executable plan](SURF-010-EXECUTABLE-PLAN.md).
+>
+> **Why → What → Done.**
+> **Why:** the repo had no spec/permission/feedback layer (T0 files all missing) yet ships L3-class
+> changes (e.g. SURF-010 auto-grants tool permissions on resume). **What:** a minimal enforceable
+> governance core that scales with risk. **Done:** L3 changes cannot merge without spec + closed P0
+> test matrix + permission binding, and the gate is enforced by CI, not prose.
+
+## Guiding constraint — scale governance with risk (framework §4)
+
+| Level | teaagent examples | Governance applied |
+|---|---|---|
+| **L1** | typo, log message, docstring, CSS-equivalent cosmetic | task brief + existing tests. No spec, no mutation. |
+| **L2** | new CLI flag, new workspace tool, data transform, non-security TUI command | mini spec (`templates/SPEC.template.md`) + test matrix + CI. Mutation optional. |
+| **L3** | approval/permission flow, resume/trust inputs, run-store schema/migration, sandbox, deploy/release, MCP scope, anything touching `ergonomics/approval_store`, `pending_approval`, `permission` modes | full: 4-layer spec + permission binding + P0 matrix + state-machine assertions + mutation (nightly). Human gate + rollback mandatory. |
+
+> The whole point of §4 is to **not** over-invest. Most of teaagent's day-to-day is L1/L2. The heavy
+> machinery exists to protect the handful of L3 trust boundaries.
+
+## Current state (verified 2026-06-09 @ HEAD `c37e181`)
+
+- T0 five files: **all missing** before this work.
+- CI exists: `.github/workflows/{ci,security,nightly-smoke,release}.yml`.
+- Static analysis already present: **bandit** (security), **mypy**, **ruff**, **coverage**.
+- Test runner: **pytest** (`pytest-xdist`, `pytest-random-order`, `pytest-cov`, `pytest-benchmark`).
+- Mutation testing: **none**.
+- MCP spec-serving surface: **none yet** → Zero-Trust Spec Registry (§5) is **deferred, not built**.
+
+## Phases
+
+### A1 · Minimal enforceable core (one-time, this commit)
+**Goal:** land the T0 skeleton and make `AGENT_RULES.md` an *environment* constraint, not advice.
+
+- Land `governance/` with: `AGENT_RULES.md`, `LOCAL_FEEDBACK.md`, `DONE_CHECKLIST.md`,
+  `templates/SPEC.template.md`, `templates/TEST_MATRIX.template.md`, the framework doc, and this roadmap.
+- **Future hardening (not in this docs-only commit):** a CI check that fails any PR which *deletes or
+  weakens an existing test assertion* without a `Requires Human Review` label — the practical form of
+  the framework's "test files effectively read-only" (T3 / CV-5). Evidence basis: RHB env-hardening
+  cut exploit rate 5.7pp (−87.7%); ImpossibleBench: read-only tests drive cheating ≈0.
+- **Acceptance:** the five governance entry-points exist and are linked from `governance/README.md`.
+
+### A2 · Permission binding for L3 paths
+**Goal:** make CV-8 concrete where it matters in *this* repo.
+
+- Add an `Allowed / Forbidden / Requires Human Review` matrix to the trust-bearing modules:
+  `teaagent/ergonomics/approval_store.py`, `teaagent/integration/resume_preparation.py`, and anything
+  reading `pending_approval` / permission modes.
+- Each L3 spec under `specs/` must declare this matrix (see SURF-010 spec for the first instance).
+- **Acceptance:** every module that can auto-grant or escalate a permission has a written, spec-linked
+  Forbidden list, and a test asserting at least one Forbidden behavior is blocked.
+
+### A3 · Mutation gate for L3 only (nightly)
+**Goal:** verify the *tests themselves* catch regressions on the trust boundary — without taxing the
+whole tree.
+
+- Introduce `mutmut` (or `cosmic-ray`) as a **nightly** job (extend `nightly-smoke.yml`), **scoped to
+  the permission/approval/resume modules only**. Mutating the full tree is explicitly out of scope.
+- Add **spec mutation** (T5) as a manual checklist item per L3 spec — not automation yet.
+- **Acceptance:** a deliberately-injected logic mutation in `resume_preparation.py`
+  (e.g. flip the digest-match condition) is caught by the existing P0 tests in the nightly run.
+
+### A4 · (Deferred) Zero-Trust Spec Registry
+Explicitly **not** justified until teaagent exposes specs over MCP. When/if that surface appears, apply
+framework §5 items 1–10 (scope binding, ticket-bound access, read receipts, deny-by-default, capability
+attestation per *Breaking the Protocol* / ATTESTMCP). Documented here so the decision is on record, not
+forgotten.
+
+## Sequencing decision
+Per the planning discussion: do **Layer B steps 1–3 first** (concrete, likely to surface a real
+permission-test gap today), then return to A1's CI hardening (A2/A3). Rationale: find the bug before
+building the scaffolding around it.
+
+## Falsifiability (when this roadmap is wrong)
+- If, with read-only tests + mutation + state-machine assertions in place, L3 modules' defect rate is
+  **not** measurably below pre-framework baseline → the tactical layer adds cost without value; cut it.
+- If A3's nightly mutation run produces mostly equivalent-mutant noise and no real signal → descope to
+  manual spec-mutation only.
+- If maintaining specs costs more reviewer time than the bugs they prevent → drop to L3-only specs.
