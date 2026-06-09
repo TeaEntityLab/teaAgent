@@ -281,6 +281,7 @@ def _handle_tui_command(tui: 'TeaAgentTUI', raw_command: str) -> bool:
                 run_id,
                 approve_call_ids=frozenset(tui.approved_call_ids),
                 auto_compact=auto_compact,
+                auto_approve_pending=False,
             )
         except ResumePreparationError as exc:
             tui.output_fn(f'error: {exc}')

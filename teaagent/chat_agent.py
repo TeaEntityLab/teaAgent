@@ -99,6 +99,20 @@ class ChatAgentConfig:
     skip_plan_check: bool = False
     validation_profile: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        """Convert string permission_mode to PermissionMode enum.
+
+        Callers may construct the dataclass directly with a string
+        (e.g. ``ChatAgentConfig(root=…, permission_mode='allow')``),
+        but the field is typed ``PermissionMode`` and downstream code
+        calls ``.value`` on it.  A frozen dataclass requires
+        ``object.__setattr__`` to coerce the value.
+        """
+        if isinstance(self.permission_mode, str):
+            object.__setattr__(
+                self, 'permission_mode', PermissionMode(self.permission_mode)
+            )
+
     @classmethod
     def from_root(cls, root: str | Path, **kwargs: Any) -> 'ChatAgentConfig':  # noqa: C901
         from teaagent.config_loader import ConfigResolver

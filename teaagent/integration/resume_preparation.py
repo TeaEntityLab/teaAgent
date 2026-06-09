@@ -43,8 +43,17 @@ def prepare_run_resume(
     fresh_restart: bool = False,
     auto_compact: bool = True,
     checkpoint_path: str | Path | None = None,
+    auto_approve_pending: bool = True,
 ) -> PreparedRunResume:
-    """Load task, observations, and pending-approval handling for resume."""
+    """Load task, observations, and pending-approval handling for resume.
+
+    Parameters
+    ----------
+    auto_approve_pending:
+        If ``True`` (default) pending tool calls with a digest are
+        auto-approved during resume.  Set to ``False`` to warn instead
+        (used by TUI where the user should explicitly approve first).
+    """
     store = RunStore(root)
     try:
         original_task = store.task_for_run(run_id)
@@ -83,30 +92,25 @@ def prepare_run_resume(
                 }
 
         pending = store.pending_approval_for_run(run_id)
-        if pending and pending['call_id'] not in approve_call_ids:
+        if pending:
             digest = pending.get('argument_digest')
             call_id = pending['call_id']
-            if not digest:
+
+            # If the caller explicitly pre-approved this call, skip silently
+            # — no re-grant, no auto-approval flag, no warning (SURF-010 P0).
+            if call_id in approve_call_ids:
+                pass
+            elif not digest:
                 pending_warning = (
                     f"Pending call '{call_id}' is a legacy record and cannot be "
                     f'auto-approved safely due to redacted arguments. '
                     f'Please approve explicitly with --approve-call-id {call_id}.'
                 )
-            else:
-                if not approval_store.check_scoped_approval_digest(
-                    run_id=run_id,
-                    call_id=call_id,
-                    tool_name=pending['tool_name'],
-                    argument_digest=digest,
-                ):
-                    approval_store.add_scoped_approval(
-                        run_id=run_id,
-                        call_id=call_id,
-                        tool_name=pending['tool_name'],
-                        arguments=pending['arguments'],
-                        argument_digest=digest,
-                    )
+            elif auto_approve_pending:
+                _ensure_scoped_approval(approval_store, run_id, pending, digest)
                 auto_approved = call_id
+            else:
+                pending_warning = f'run {run_id} has a pending approval'
 
     return PreparedRunResume(
         run_id=run_id,
@@ -116,3 +120,25 @@ def prepare_run_resume(
         auto_approved_call_id=auto_approved,
         pending_warning=pending_warning,
     )
+
+
+def _ensure_scoped_approval(
+    approval_store: Any,
+    run_id: str,
+    pending: dict[str, Any],
+    digest: str | None,
+) -> None:
+    """Add a scoped approval for *pending* if one does not already exist."""
+    if digest and not approval_store.check_scoped_approval_digest(
+        run_id=run_id,
+        call_id=pending['call_id'],
+        tool_name=pending['tool_name'],
+        argument_digest=digest,
+    ):
+        approval_store.add_scoped_approval(
+            run_id=run_id,
+            call_id=pending['call_id'],
+            tool_name=pending['tool_name'],
+            arguments=pending['arguments'],
+            argument_digest=digest,
+        )
