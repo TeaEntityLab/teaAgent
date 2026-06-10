@@ -1,6 +1,6 @@
 """Policy engine for collaboration rules and team operations.
 
-experimental — unwired
+Wired in shadow mode via ``teaagent.governance.h4_integration`` (WDA-002).
 
 This module provides the foundation for defining, storing, and evaluating
 policies for collaborative agent workflows, including role-based access

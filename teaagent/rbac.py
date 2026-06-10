@@ -1,6 +1,6 @@
 """Role-Based Access Control (RBAC) system.
 
-experimental — unwired
+Wired in shadow/enforce mode via ``teaagent.governance.h4_integration`` (WDA-003).
 
 This module provides role definitions, role assignment, and permission
 checking for collaborative agent workflows.

@@ -30,6 +30,7 @@ SMOKE_TARGETS: tuple[str, ...] = (
     str(_TESTS / 'test_phase5_context_bus.py'),
     str(_TESTS / 'test_governance_hardening.py'),
     str(_TESTS / 'test_validate_wiring.py'),
+    str(_TESTS / 'test_h4_shadow_wiring.py'),
     str(_TESTS / 'regression'),
 )
 

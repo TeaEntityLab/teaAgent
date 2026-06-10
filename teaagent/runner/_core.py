@@ -152,6 +152,7 @@ class AgentRunner:
             approval_policy=self.approval_policy,
             approval_handler=approval_handler,
             jit_state=jit_state,
+            workspace_root=workspace_root,
         )
         self._budget_prompt_handler = budget_prompt_handler
         self._budget_monitor = budget_monitor or BudgetMonitor(budget=self.budget)

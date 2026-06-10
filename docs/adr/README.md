@@ -31,6 +31,7 @@ This directory contains all Architecture Decision Records (ADRs) for the TeaAgen
 | 0023 | Strict Plan-Before-Write Enforcement | Accepted and Implemented | 2026-05-29 | - |
 | 0024 | Automated Memory Invalidation | Accepted and Implemented | 2026-05-29 | - |
 | 0025 | Shared ChatSessionController for Chat Surfaces | Accepted and Implemented | 2026-06-01 | 2026-06-04 13:18:00 +0800 |
+| 0029 | Consensus Validation Deferred Behind Approval Queue | Accepted | 2026-06-10 | 2026-12-10 (expiry review) |
 
 ## ADR Categories
 

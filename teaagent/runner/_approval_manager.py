@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Optional
 
 from teaagent.audit import AuditLogger
@@ -26,10 +27,12 @@ class RunnerApprovalCoordinator:
         approval_policy: ApprovalPolicy,
         approval_handler: Optional[ApprovalHandler] = None,
         jit_state: Optional[JITApprovalState] = None,
+        workspace_root: Optional[Path] = None,
     ) -> None:
         self.approval_policy = approval_policy
         self.approval_handler = approval_handler
         self.jit_state = jit_state or JITApprovalState()
+        self.workspace_root = workspace_root
 
     def can_request_approval(self, destructive: bool) -> bool:
         """Check if approval can be requested for a tool call."""
@@ -77,6 +80,18 @@ class RunnerApprovalCoordinator:
 
         Returns True if approved, False if denied.
         """
+        from teaagent.governance.h4_integration import evaluate_approval_policy_shadow
+
+        evaluate_approval_policy_shadow(
+            workspace_root=self.workspace_root,
+            audit=audit,
+            run_id=run_id,
+            tool_name=approval_request.tool_name,
+            arguments=approval_request.arguments,
+            destructive=bool(approval_request.annotations.get('destructive')),
+            call_id=approval_request.call_id,
+        )
+
         pending_payload = approval_request.to_dict()
         pending_payload.pop('run_id', None)
         if reason_code is not None:

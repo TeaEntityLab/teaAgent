@@ -266,6 +266,34 @@ class SubagentManager:
             max_iterations, max_tool_calls, sub_def, self._parent_config
         )
 
+        def_used = sub_def.name if sub_def else 'generic'
+        child_depth = depth + 1
+        assignee = str(
+            getattr(self._parent_config, 'operator_id', None)
+            or getattr(self._parent_config, 'agent_id', None)
+            or parent_run_id
+            or 'default-operator'
+        )
+        from teaagent.governance.h4_integration import check_subagent_launch_rbac
+        from teaagent.run_store import RunStore
+
+        parent_audit = RunStore(self._root).audit_logger()
+        rbac_ok, rbac_reason = check_subagent_launch_rbac(
+            workspace_root=self._root,
+            audit=parent_audit,
+            parent_run_id=parent_run_id,
+            assignee=assignee,
+            def_name=def_used,
+            depth=child_depth,
+        )
+        if not rbac_ok:
+            return _error(
+                rbac_reason,
+                lineage=_lineage_or_none(
+                    parent_run_id, def_used, child_depth, batch_index, isolation
+                ),
+            )
+
         isolation, cpu_quota, memory_limit, iso_err = _resolve_subagent_isolation(
             isolation,
             parent_run_id,
@@ -279,7 +307,6 @@ class SubagentManager:
             err_msg = str(iso_err) if not isinstance(iso_err, str) else iso_err
             return _error(err_msg)
 
-        def_used = sub_def.name if sub_def else 'generic'
         iso_ctx, iso_error = prepare_subagent_isolation(
             self._root,
             isolation=isolation,
@@ -300,8 +327,6 @@ class SubagentManager:
         task_spec = task
         if sub_def and sub_def.system_prompt.strip():
             task_spec = f'[{sub_def.name} role]\n{sub_def.system_prompt.strip()}\n\n---\n\nTask: {task}'
-
-        child_depth = depth + 1
 
         worktree_rel = _rel_if_set(iso_ctx.worktree_path, self._root)
         container_rel = _rel_if_set(iso_ctx.container_path, self._root)

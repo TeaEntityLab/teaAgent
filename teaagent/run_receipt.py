@@ -185,6 +185,22 @@ def format_run_receipt(  # noqa: C901
             suffix = f' ({scope})' if scope else ''
             lines.append(f'  - {tool}: {decision}{suffix}')
 
+    if events:
+        shadow_events = [
+            event
+            for event in events
+            if event.get('event_type') == 'h4_governance_shadow'
+        ]
+        if shadow_events:
+            lines.append('H4 governance (shadow):')
+            for event in shadow_events[:10]:
+                payload = _safe_payload(event)
+                surface = payload.get('surface', '?')
+                allowed = payload.get('allowed', '?')
+                mode = payload.get('mode', 'shadow')
+                reason = payload.get('reason', '')
+                lines.append(f'  - {surface}: allowed={allowed} mode={mode} ({reason})')
+
     if bundle and bundle.routes:
         route = bundle.routes[-1]
         lines.append(

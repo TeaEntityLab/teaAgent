@@ -24,7 +24,9 @@ def test_head_wiring_watch_modules_labeled() -> None:
 def test_analyze_wiring_finds_unwired_watch_modules() -> None:
     report = analyze_wiring()
     assert report.unwired_watch
-    assert 'teaagent.rbac' in report.unwired_watch
+    assert 'teaagent.policy_routing' in report.unwired_watch
+    assert 'teaagent.rbac' not in report.unwired_watch
+    assert 'teaagent.policy_engine' not in report.unwired_watch
     assert 'teaagent.eval_suite' not in report.unwired_watch
 
 
@@ -33,16 +35,16 @@ def test_unlabeled_fixture_fails_validation() -> None:
         root = Path(tmp)
         package = root / 'teaagent'
         package.mkdir()
-        island = package / 'rbac.py'
+        island = package / 'policy_routing.py'
         island.write_text(
-            '"""RBAC without label."""\n',
+            '"""Policy routing without label."""\n',
             encoding='utf-8',
         )
         (package / 'cli').mkdir()
         (package / 'cli' / '__init__.py').write_text('', encoding='utf-8')
 
         errors = validate_wiring(repo_root=root)
-        assert any('teaagent.rbac' in error for error in errors)
+        assert any('teaagent.policy_routing' in error for error in errors)
 
 
 def test_labeled_fixture_passes_validation() -> None:
@@ -50,9 +52,9 @@ def test_labeled_fixture_passes_validation() -> None:
         root = Path(tmp)
         package = root / 'teaagent'
         package.mkdir()
-        island = package / 'rbac.py'
+        island = package / 'policy_routing.py'
         island.write_text(
-            '"""RBAC.\n\nexperimental — unwired\n"""\n',
+            '"""Policy routing.\n\nexperimental — unwired\n"""\n',
             encoding='utf-8',
         )
         (package / 'cli').mkdir()
@@ -73,5 +75,5 @@ def test_has_unwired_label_detects_banner() -> None:
 
 
 def test_watch_modules_include_h4_h5_h6_clusters() -> None:
-    assert 'teaagent.policy_engine' in WATCH_MODULES
+    assert 'teaagent.policy_routing' in WATCH_MODULES
     assert 'teaagent.update.installer' in WATCH_MODULES

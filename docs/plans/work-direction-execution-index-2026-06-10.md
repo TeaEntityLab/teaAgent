@@ -69,7 +69,7 @@ any time after S1 WDA-001 lands (needs honest module labels for concept audit).
 
 | Sprint | IDs | Notes |
 | --- | --- | --- |
-| S2 | WDA-002, WDA-003, WDA-006 | Shadow policy + RBAC; consensus ADR |
+| S2 | WDA-002, WDA-003, WDA-006 | **Closed** — shadow policy + RBAC enforce; ADR 0029 |
 | S3 | WDA-004, WDA-005, WDD-001, WDD-002 | Release gate CI; single-platform update proof |
 | S4 | WDC-002, WDC-003, WDC-004 | Three-concept onboarding; terminology freeze |
 | S5 | WDE-001, WDE-002, WDE-003, WDF-001, WDF-002 | Remote backend; root-module freeze |
