@@ -1,10 +1,24 @@
 # TeaAgent Terminology Guide
 
-**Last reviewed:** 2026-06-06
+**Last reviewed:** 2026-06-10
 
 > **Review trigger:** Canonical terminology or state vocabulary changes.
 
 This document standardizes terminology across all TeaAgent documentation.
+
+## Canonical Core Nouns (WDC-004)
+
+These nouns are frozen for general-user documentation. Use them consistently;
+do not invent synonyms in user-facing copy.
+
+| Noun | Meaning |
+| --- | --- |
+| **tenant** | Isolated operator boundary for policy, budgets, and audit scope |
+| **workspace** | On-disk project root the agent may read or mutate |
+| **session** | One interactive conversation loop (chat/TUI) until exit or suspend |
+| **run** | One agent execution with audit trail, receipts, and terminal status |
+| **goal** | Operator intent for a run (task description or objective text) |
+| **background** | Durable work that continues outside the foreground session |
 
 ## Permission Modes
 

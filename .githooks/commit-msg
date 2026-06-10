@@ -49,9 +49,27 @@ def check_lore_trailers(commit_msg_file: str) -> int:
     return 0
 
 
+def check_claim_commit(commit_msg_file: str) -> int:
+    repo_root = Path(__file__).resolve().parents[1]
+    validate_claim = repo_root / 'scripts' / 'validate_claim_commit.py'
+    if not validate_claim.is_file():
+        return 0
+    import subprocess
+
+    result = subprocess.run(
+        [sys.executable, str(validate_claim), commit_msg_file],
+        cwd=repo_root,
+        check=False,
+    )
+    return int(result.returncode)
+
+
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("Usage: commit-msg <commit-msg-file>", file=sys.stderr)
         sys.exit(1)
-    
-    sys.exit(check_lore_trailers(sys.argv[1]))
+
+    lore_rc = check_lore_trailers(sys.argv[1])
+    if lore_rc != 0:
+        sys.exit(lore_rc)
+    sys.exit(check_claim_commit(sys.argv[1]))

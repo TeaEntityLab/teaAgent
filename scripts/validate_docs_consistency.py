@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
@@ -128,7 +130,7 @@ def validate_test_quality(tests_dir: Path, mode: str = 'report') -> list[str]:
     Returns:
         List of error strings (empty in 'report' or 'off' mode unless audit fails)
     """
-    errors = []
+    errors: list[str] = []
 
     if mode == 'off':
         return errors
@@ -1106,6 +1108,71 @@ def validate_survey_doc(survey_text: str) -> list[str]:
     return errors
 
 
+SUITE_COUNT_CLAIM_RE = re.compile(
+    r'\b\d[\d,]*\s+tests?\s+pass(?:ing)?\b',
+    re.IGNORECASE,
+)
+CANONICAL_TERMINOLOGY_NOUNS = (
+    'tenant',
+    'workspace',
+    'session',
+    'run',
+    'goal',
+    'background',
+)
+
+
+def validate_suite_summary_freshness(
+    *,
+    docs_to_scan: list[Path],
+    summary_path: Path,
+    max_age_hours: float = 72.0,
+) -> list[str]:
+    """WDB-004: docs quoting test counts must cite a fresh suite summary."""
+    errors: list[str] = []
+    claiming_docs = [
+        path
+        for path in docs_to_scan
+        if path.is_file()
+        and SUITE_COUNT_CLAIM_RE.search(path.read_text(encoding='utf-8'))
+    ]
+    if not claiming_docs:
+        return errors
+    if not summary_path.is_file():
+        errors.append(
+            f'Suite summary artifact missing ({summary_path}); required for test-count claims.'
+        )
+        return errors
+    summary = json.loads(summary_path.read_text(encoding='utf-8'))
+    generated_raw = str(summary.get('generated_at', '')).strip()
+    try:
+        generated = datetime.fromisoformat(generated_raw.replace('Z', '+00:00'))
+    except ValueError:
+        errors.append(f'Invalid generated_at in suite summary: {generated_raw!r}')
+        return errors
+    age_hours = (
+        datetime.now(timezone.utc) - generated.astimezone(timezone.utc)
+    ).total_seconds() / 3600.0
+    if age_hours > max_age_hours:
+        joined = ', '.join(str(path) for path in claiming_docs)
+        errors.append(
+            f'Suite summary is {age_hours:.1f}h old (> {max_age_hours:.0f}h); '
+            f'refresh {summary_path} before citing test counts in: {joined}'
+        )
+    return errors
+
+
+def validate_terminology_canonical_nouns(terminology_path: Path) -> list[str]:
+    """WDC-004: docs/terminology.md must declare canonical core nouns."""
+    if not terminology_path.is_file():
+        return [f'Terminology doc not found: {terminology_path}']
+    text = terminology_path.read_text(encoding='utf-8').lower()
+    missing = [noun for noun in CANONICAL_TERMINOLOGY_NOUNS if noun not in text]
+    if missing:
+        return [f'docs/terminology.md missing canonical nouns: {", ".join(missing)}']
+    return []
+
+
 def validate_docs_consistency(
     *,
     readme_path: Path,
@@ -1763,8 +1830,9 @@ def validate_audit_evidence_completeness(
     total_runs = 0
     verified = 0
 
-    for run_id in runs:
+    for summary in runs:
         total_runs += 1
+        run_id = summary.run_id
         try:
             events = store.show_run(run_id)
         except Exception:
@@ -1925,6 +1993,18 @@ def main() -> int:
 
     wiring_module = _load_validate_wiring_module()
     errors.extend(wiring_module.validate_wiring())
+    errors.extend(
+        validate_terminology_canonical_nouns(_REPO_ROOT / 'docs' / 'terminology.md')
+    )
+    errors.extend(
+        validate_suite_summary_freshness(
+            docs_to_scan=[
+                Path(args.roadmap_status),
+                Path(args.acceptance_doc),
+            ],
+            summary_path=_REPO_ROOT / 'docs' / 'generated' / 'suite-summary.json',
+        )
+    )
 
     if args.audit_evidence_root:
         errors.extend(

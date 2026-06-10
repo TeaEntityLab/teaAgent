@@ -338,15 +338,35 @@ class JITApprovalManager:
     ) -> str:
         import threading
 
-        print(f'\n[TeaAgent] Permission required for tool: {tool_name}')
-        print(f'[TeaAgent] Call ID: {call_id}')
-        if arguments:
-            print(f'[TeaAgent] Arguments: {arguments}')
-        print('[TeaAgent] Approve this tool call?')
-        print('[TeaAgent]   [o] Once - approve this single call')
-        print('[TeaAgent]   [s] Session - approve for entire session')
-        print('[TeaAgent]   [d] Deny - block this call')
-        print('[TeaAgent]   [e] Explain - show details and deny')
+        from teaagent.governance.conversation_ux import format_approval_prompt_human
+
+        json_mode = os.environ.get('TEAAGENT_JSON_APPROVALS', '').lower() in (
+            '1',
+            'true',
+            'yes',
+        )
+        if json_mode:
+            print(
+                format_approval_prompt_human(
+                    tool_name,
+                    call_id,
+                    arguments,
+                    json_mode=True,
+                )
+            )
+        else:
+            print(
+                '\n[TeaAgent] '
+                + format_approval_prompt_human(tool_name, call_id, arguments)
+            )
+        if not json_mode:
+            if arguments:
+                print(f'[TeaAgent] Arguments: {arguments}')
+            print('[TeaAgent] Approve this tool call?')
+            print('[TeaAgent]   [o] Once - approve this single call')
+            print('[TeaAgent]   [s] Session - approve for entire session')
+            print('[TeaAgent]   [d] Deny - block this call')
+            print('[TeaAgent]   [e] Explain - show details and deny')
 
         def _read_input(result_holder: list[str]) -> None:
             try:

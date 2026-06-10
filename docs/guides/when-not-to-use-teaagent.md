@@ -1,7 +1,7 @@
 # When Not to Use TeaAgent
 
-> **Last reviewed:** 2026-06-06
-> **Purpose:** Honest non-fit guidance (WS6-005)
+> **Last reviewed:** 2026-06-10
+> **Purpose:** Honest non-fit guidance (WS6-005 / WDH-003)
 
 TeaAgent is a **local-first governed harness**. Choosing the wrong tool wastes
 everyone's time. Prefer another product when your primary need matches one of

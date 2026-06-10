@@ -11,6 +11,7 @@ from typing import Any
 
 from teaagent.audit_health import assess_audit_health, format_audit_health
 from teaagent.evidence_summary import RunEvidenceSummary, build_evidence_summary
+from teaagent.governance.conversation_ux import plain_run_receipt_summary
 from teaagent.run_evidence import RunEvidenceBundle, build_run_evidence_bundle
 from teaagent.run_metrics import format_latency_summary, summarize_run_latencies
 from teaagent.run_store import RunStore
@@ -125,6 +126,7 @@ def format_run_receipt(  # noqa: C901
 ) -> str:
     """Render a human-readable run receipt."""
     lines = [
+        plain_run_receipt_summary(status=summary.status, goal=context.goal),
         f'Run receipt: {summary.run_id}',
         f'Status: {summary.status}',
     ]

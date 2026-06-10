@@ -105,6 +105,18 @@ def test_remote_backend_stub_documents_extension_point(
         backend.load_snapshot('parent-1')
 
 
+def test_remote_backend_file_url_delegates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        monkeypatch.setenv('TEAAGENT_APPROVAL_COORDINATION_BACKEND', BACKEND_REMOTE)
+        monkeypatch.setenv('TEAAGENT_APPROVAL_COORDINATION_URL', f'file://{root}')
+        backend = resolve_approval_backend(root)
+        assert isinstance(backend, RemoteApprovalCoordinationBackend)
+        assert not backend.exists('missing-parent')
+
+
 def test_approval_backend_for_workspace_never_none() -> None:
     with TemporaryDirectory() as tmp:
         backend = approval_backend_for_workspace(Path(tmp))

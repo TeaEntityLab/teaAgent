@@ -137,14 +137,11 @@ class FileBackedApprovalBackend:
 
 
 class RemoteApprovalCoordinationBackend:
-    """Remote orchestration extension point (HTTP contract documented, not wired).
+    """Cross-process approval backend via shared ``file://`` workspace storage.
 
-    Expected REST shape (future implementation):
-
-    - ``GET  {base}/queues/{parent_run_id}`` → queue snapshot JSON
-    - ``PUT  {base}/queues/{parent_run_id}`` → replace snapshot
-    - ``POST {base}/queues/{parent_run_id}/requests/{request_id}/status`` → resolve
-    - ``GET  {base}/queues`` → list parent run IDs
+    HTTP transport remains documented for future gateway wiring; ``file://`` URLs
+    delegate to :class:`FileBackedApprovalBackend` so a second process can grant
+    approvals against the same durable queue artifacts.
     """
 
     def __init__(
@@ -152,23 +149,36 @@ class RemoteApprovalCoordinationBackend:
         base_url: str,
         *,
         auth_token: Optional[str] = None,
+        hmac_secret: Optional[str] = None,
     ) -> None:
         self._base_url = base_url.rstrip('/')
         self._auth_token = auth_token
+        if self._base_url.startswith('file://'):
+            workspace = Path(self._base_url[7:])
+            self._delegate: Optional[FileBackedApprovalBackend] = (
+                FileBackedApprovalBackend(
+                    workspace,
+                    hmac_secret=hmac_secret,
+                )
+            )
+        else:
+            self._delegate = None
 
     @property
     def backend_id(self) -> str:
         return BACKEND_REMOTE
 
-    def _not_implemented(self, method: str) -> None:
-        raise NotImplementedError(
-            f'Remote approval backend {method} is not implemented yet. '
-            f'Configure TEAAGENT_APPROVAL_COORDINATION_BACKEND=file for local runs.'
-        )
+    def _require_delegate(self) -> FileBackedApprovalBackend:
+        if self._delegate is None:
+            raise NotImplementedError(
+                'Remote approval backend supports file:// URLs only. '
+                'Set TEAAGENT_APPROVAL_COORDINATION_URL=file:///path/to/workspace '
+                'or use TEAAGENT_APPROVAL_COORDINATION_BACKEND=file.'
+            )
+        return self._delegate
 
     def load_snapshot(self, parent_run_id: str) -> QueueDiskSnapshot:
-        self._not_implemented('load_snapshot')
-        return QueueDiskSnapshot(parent_run_id, {}, {})
+        return self._require_delegate().load_snapshot(parent_run_id)
 
     def save(
         self,
@@ -176,7 +186,7 @@ class RemoteApprovalCoordinationBackend:
         requests: dict[str, SubagentApprovalRequest],
         batches: dict[str, ApprovalBatch],
     ) -> None:
-        self._not_implemented('save')
+        self._require_delegate().save(parent_run_id, requests, batches)
 
     def update_request_status(
         self,
@@ -187,16 +197,19 @@ class RemoteApprovalCoordinationBackend:
         reason: Optional[str] = None,
         approved_by: str = 'human',
     ) -> bool:
-        self._not_implemented('update_request_status')
-        return False
+        return self._require_delegate().update_request_status(
+            parent_run_id,
+            request_id,
+            status,
+            reason=reason,
+            approved_by=approved_by,
+        )
 
     def list_parent_run_ids(self) -> list[str]:
-        self._not_implemented('list_parent_run_ids')
-        return []
+        return self._require_delegate().list_parent_run_ids()
 
     def exists(self, parent_run_id: str) -> bool:
-        self._not_implemented('exists')
-        return False
+        return self._require_delegate().exists(parent_run_id)
 
     def prune_stale(
         self,
@@ -204,8 +217,10 @@ class RemoteApprovalCoordinationBackend:
         max_age_seconds: float,
         now: Optional[float] = None,
     ) -> ApprovalQueuePruneReport:
-        self._not_implemented('prune_stale')
-        return ApprovalQueuePruneReport()
+        return self._require_delegate().prune_stale(
+            max_age_seconds=max_age_seconds,
+            now=now,
+        )
 
 
 def resolve_approval_backend(
@@ -236,7 +251,12 @@ def resolve_approval_backend(
                 'TEAAGENT_APPROVAL_COORDINATION_BACKEND=remote'
             )
         token = os.environ.get('TEAAGENT_APPROVAL_COORDINATION_TOKEN') or None
-        return RemoteApprovalCoordinationBackend(base_url, auth_token=token)
+        secret = hmac_secret if hmac_secret is not None else default_hmac_secret()
+        return RemoteApprovalCoordinationBackend(
+            base_url,
+            auth_token=token,
+            hmac_secret=secret,
+        )
 
     if workspace_root is None:
         return None

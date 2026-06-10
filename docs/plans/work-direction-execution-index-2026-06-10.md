@@ -71,11 +71,14 @@ any time after S1 WDA-001 lands (needs honest module labels for concept audit).
 | --- | --- | --- |
 | S2 | WDA-002, WDA-003, WDA-006 | **Closed** — shadow policy + RBAC enforce; ADR 0029 |
 | S3 | WDA-004, WDD-001, WDD-002 | **Closed** — release eval gate + conversational corpus; [eval gate design](../analysis/eval-gate-design-2026-06-10.md) |
-| S3b | WDA-005 | Single-platform update proof (queued) |
-| S4 | WDC-002, WDC-003, WDC-004 | Three-concept onboarding; terminology freeze |
-| S5 | WDE-001, WDE-002, WDE-003, WDF-001, WDF-002 | Remote backend; root-module freeze |
-| S6 | WDH-001, WDH-002, WDH-003 | Stop surveys; external users; "when not to use" page |
-| Ongoing | WDB-002, WDB-004, WDG-003 | Claim-commit hook; suite freshness rule; machine-readable summary |
+| S3b | WDA-005 | **Closed** — `governance/update_platform.py` + `prove_update_platform.py` |
+| S4 | WDC-001, WDC-002, WDC-003, WDC-004 | **Closed** — stranger baseline, 3-concept path, plain receipts, terminology freeze |
+| S5 | WDE-001, WDE-002, WDE-003, WDF-001 | **Closed** — `file://` remote backend, Ed25519 signed queue, WS2 gap tests, ADR 0030 |
+| S5 defer | WDF-002 | Root-module fold/re-exports (deferred post-freeze) |
+| S6 | WDH-001, WDH-003 | **Closed** — survey moratorium; when-not-to-use refresh |
+| S6 open | WDH-002 | Protocol ready; external sessions not yet recorded |
+| S3 note | WDD-003 | **Closed** — [competitor absence note](../analysis/eval-gate-competitor-absence-2026-06-10.md) |
+| Ongoing | WDB-002, WDB-004, WDG-003 | **Closed** — claim-commit hook, suite freshness, `suite-summary.json` |
 
 Ticket plans for S2+ items are created when the prior sprint exit gate passes.
 
