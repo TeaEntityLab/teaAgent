@@ -132,6 +132,13 @@ def build_release_evidence_bundle(
                 timeout_seconds=900,
             )
         )
+        results.append(
+            _run(
+                [python, 'scripts/run_release_eval_gate.py', '--root', '.'],
+                cwd=repo_root,
+                timeout_seconds=300,
+            )
+        )
 
     pytest_counts = _collect_pytest_counts(python=python, cwd=repo_root)
 

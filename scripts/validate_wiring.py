@@ -30,9 +30,7 @@ ENTRY_ROOTS: tuple[str, ...] = (
 WATCH_MODULES: tuple[str, ...] = (
     'teaagent.policy_routing',
     'teaagent.consensus_validation',
-    'teaagent.release_gate',
     'teaagent.scope_creep',
-    'teaagent.prompt_regression',
     'teaagent.repo_map_benchmark',
     'teaagent.update',
     'teaagent.update.changelog',

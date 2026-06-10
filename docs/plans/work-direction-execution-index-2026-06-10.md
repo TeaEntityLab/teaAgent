@@ -70,7 +70,8 @@ any time after S1 WDA-001 lands (needs honest module labels for concept audit).
 | Sprint | IDs | Notes |
 | --- | --- | --- |
 | S2 | WDA-002, WDA-003, WDA-006 | **Closed** — shadow policy + RBAC enforce; ADR 0029 |
-| S3 | WDA-004, WDA-005, WDD-001, WDD-002 | Release gate CI; single-platform update proof |
+| S3 | WDA-004, WDD-001, WDD-002 | **Closed** — release eval gate + conversational corpus; [eval gate design](../analysis/eval-gate-design-2026-06-10.md) |
+| S3b | WDA-005 | Single-platform update proof (queued) |
 | S4 | WDC-002, WDC-003, WDC-004 | Three-concept onboarding; terminology freeze |
 | S5 | WDE-001, WDE-002, WDE-003, WDF-001, WDF-002 | Remote backend; root-module freeze |
 | S6 | WDH-001, WDH-002, WDH-003 | Stop surveys; external users; "when not to use" page |

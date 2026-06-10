@@ -17,6 +17,10 @@ from teaagent.governance.plan_gate import (
     assert_write_allowed,
     require_review_gate,
 )
+from teaagent.governance.release_eval import (
+    run_release_eval_gate,
+    should_block_release,
+)
 from teaagent.governance.tool_lint import ToolLintIssue, lint_registry
 
 __all__ = [
@@ -33,4 +37,6 @@ __all__ = [
     'policy_governance_mode',
     'rbac_governance_mode',
     'require_review_gate',
+    'run_release_eval_gate',
+    'should_block_release',
 ]

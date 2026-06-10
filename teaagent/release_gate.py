@@ -1,6 +1,6 @@
 """Release pipeline integration for eval-gating (TASK-H5-001-06).
 
-experimental — unwired
+Wired into CI release profile via ``scripts/run_release_eval_gate.py`` (WDA-004).
 
 This module provides integration between the eval suite and release pipelines,
 including gating logic, result aggregation, and release decision making.
@@ -251,6 +251,7 @@ class ReleaseGate:
             required_success_rate=0.9,
             critical_test_categories={
                 'prompt_regression',
+                'conversational',
                 'repo_map_benchmark',
             },
             block_on_critical_failure=True,

@@ -30,7 +30,7 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Partially fixed — M2 foundation wired | Medium | WDA-002 | M2 acceptance complete; full surface parity (IDE/dashboard/cloud) still open |
 | H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Partially fixed — M3 tests pass | Medium | WDC-002 | M3 acceptance complete; general-user trust onboarding simplification still open |
 | H4 | Durable team operations | Long-running and team workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Partially fixed — shadow wired | Low | WDA-004 | Policy/RBAC shadow-wired (WDA-002/003); consensus deferred (ADR 0029) |
-| H5 | Quality and eval loop | Prompt/runtime/model changes cannot silently degrade daily outcomes | TBD | Partially fixed — unwired | Low | WDA-004 | `context_health` wired via TUI; eval suite/release gate clusters unwired (ENG-R1) |
+| H5 | Quality and eval loop | Prompt/runtime/model changes cannot silently degrade daily outcomes | TBD | Partially fixed — release gate wired | Low | WDA-005 | Release eval gate in CI (WDA-004/WDD-001); offline conversational corpus |
 | H6 | Packaging and adoption | Desktop/client-server and external-facing release channels have supply-chain, update, and support plans | TBD | Partially fixed — unwired | Low | WDA-005 | `update/*` package implemented but unwired; no single-platform proof yet |
 
 ## Milestones

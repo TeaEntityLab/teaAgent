@@ -33,6 +33,9 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           bash scripts/release-changelog.sh "$VERSION"
 
+      - name: Run release eval gate
+        run: python scripts/run_release_eval_gate.py --root . --report dist/evidence/release-eval-gate.json
+
       - name: Build release evidence bundle
         run: python scripts/build_release_evidence_bundle.py --output-dir dist/evidence
 

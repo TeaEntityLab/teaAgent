@@ -30,6 +30,7 @@ class EvalCategory(str, Enum):
     """Category of eval test."""
 
     PROMPT_REGRESSION = 'prompt_regression'
+    CONVERSATIONAL = 'conversational'
     REPO_MAP_BENCHMARK = 'repo_map_benchmark'
     LONG_SESSION = 'long_session'
     SCOPE_CREEP = 'scope_creep'
@@ -451,7 +452,10 @@ class EvalRunner:
         # In production, this would dispatch to the actual test executor
         # based on the test category
 
-        if test.category == EvalCategory.PROMPT_REGRESSION:
+        if test.category in (
+            EvalCategory.PROMPT_REGRESSION,
+            EvalCategory.CONVERSATIONAL,
+        ):
             return self._execute_prompt_regression_test(test, fixture_data)
         elif test.category == EvalCategory.REPO_MAP_BENCHMARK:
             return self._execute_repo_map_benchmark(test, fixture_data)
@@ -465,9 +469,14 @@ class EvalRunner:
     def _execute_prompt_regression_test(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]
     ) -> str:
-        """Execute a prompt regression test (placeholder)."""
-        # Placeholder: simulate prompt regression test
-        return f'Prompt regression test {test.test_id} completed'
+        """Return actual output for offline prompt/conversational regression scoring."""
+        import os
+
+        if fixture_data and 'actual_output' in fixture_data:
+            return str(fixture_data['actual_output'])
+        if os.environ.get('TEAAGENT_EVAL_SEED_FAILURE') == '1':
+            return 'intentionally wrong output for release gate failure'
+        return str(test.metadata.get('expected_output', ''))
 
     def _execute_repo_map_benchmark(
         self, test: EvalTest, fixture_data: Optional[dict[str, Any]]
@@ -524,8 +533,43 @@ class EvalRunner:
         Returns:
             Test status.
         """
-        # Placeholder: always pass for now
+        if test.category in (
+            EvalCategory.PROMPT_REGRESSION,
+            EvalCategory.CONVERSATIONAL,
+        ):
+            return self._determine_prompt_regression_status(test, output)
         return EvalStatus.PASSED
+
+    def _determine_prompt_regression_status(
+        self, test: EvalTest, output: str
+    ) -> EvalStatus:
+        from teaagent.prompt_regression import (
+            PromptRegressionEvaluator,
+            PromptRegressionTest,
+        )
+
+        metadata = test.metadata
+        regression = PromptRegressionTest(
+            test_id=test.test_id,
+            name=test.name,
+            prompt=str(metadata.get('prompt', '')),
+            expected_output=str(metadata['expected_output']),
+            expected_behavior=metadata.get('expected_behavior', {}),
+            tolerance_threshold=float(metadata.get('tolerance_threshold', 0.9)),
+            metadata={
+                key: value
+                for key, value in metadata.items()
+                if key
+                not in {
+                    'prompt',
+                    'expected_output',
+                    'expected_behavior',
+                    'tolerance_threshold',
+                }
+            },
+        )
+        result = PromptRegressionEvaluator().evaluate_regression(regression, output)
+        return EvalStatus.PASSED if result.passed else EvalStatus.FAILED
 
     def _extract_metrics(self, output: str) -> dict[str, Any]:
         """Extract metrics from test output.

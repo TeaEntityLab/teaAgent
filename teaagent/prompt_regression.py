@@ -1,6 +1,6 @@
 """Prompt regression suite for detecting model behavior changes (TASK-H5-001-02).
 
-experimental — unwired
+Wired into release eval corpus via ``teaagent.eval_corpus`` (WDA-004 / WDD-001).
 
 This module provides test cases and evaluation logic for detecting regression
 in model behavior when prompts are updated or changed.
