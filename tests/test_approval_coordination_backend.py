@@ -95,13 +95,15 @@ def test_remote_backend_requires_url(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_remote_backend_stub_documents_extension_point(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from teaagent.coordination.approval_http_client import ApprovalHttpError
+
     monkeypatch.setenv('TEAAGENT_APPROVAL_COORDINATION_BACKEND', BACKEND_REMOTE)
     monkeypatch.setenv(
         'TEAAGENT_APPROVAL_COORDINATION_URL', 'https://approvals.example'
     )
     backend = resolve_approval_backend(Path('/tmp/workspace'))
     assert isinstance(backend, RemoteApprovalCoordinationBackend)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ApprovalHttpError):
         backend.load_snapshot('parent-1')
 
 

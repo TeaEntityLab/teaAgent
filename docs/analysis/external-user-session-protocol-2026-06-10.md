@@ -1,7 +1,8 @@
 # External User Session Protocol — 2026-06-10
 
 **Work item:** WDH-002 (protocol template; sessions pending)  
-**Status:** Ready for recruitment — **0 external sessions recorded yet**.
+**Status:** Pilot harness shipped — **3 simulated pilots** recorded; non-maintainer
+sessions still required ([pilot evidence](external-user-sessions-pilot-2026-06-10.md)).
 
 ## Goal
 

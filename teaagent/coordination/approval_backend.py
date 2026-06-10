@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Optional, Protocol, runtime_checkable
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from teaagent.subagents._approval_queue import (
     ApprovalBatch,
@@ -135,14 +135,21 @@ class FileBackedApprovalBackend:
     ) -> ApprovalQueuePruneReport:
         return self._store.prune_stale(max_age_seconds=max_age_seconds, now=now)
 
+    def save_raw_snapshot(
+        self,
+        parent_run_id: str,
+        requests: dict[str, dict[str, Any]],
+        batches: dict[str, dict[str, Any]],
+    ) -> None:
+        """Persist queue JSON without reconstructing in-memory request objects."""
+        self._store._save_unlocked(  # noqa: SLF001
+            parent_run_id,
+            QueueDiskSnapshot(parent_run_id, requests, batches),
+        )
+
 
 class RemoteApprovalCoordinationBackend:
-    """Cross-process approval backend via shared ``file://`` workspace storage.
-
-    HTTP transport remains documented for future gateway wiring; ``file://`` URLs
-    delegate to :class:`FileBackedApprovalBackend` so a second process can grant
-    approvals against the same durable queue artifacts.
-    """
+    """Cross-process approval backend via ``file://`` or HTTP coordination service."""
 
     def __init__(
         self,
@@ -153,13 +160,25 @@ class RemoteApprovalCoordinationBackend:
     ) -> None:
         self._base_url = base_url.rstrip('/')
         self._auth_token = auth_token
+        self._delegate: (
+            FileBackedApprovalBackend
+            | Any  # HttpApprovalCoordinationBackend
+            | None
+        )
         if self._base_url.startswith('file://'):
             workspace = Path(self._base_url[7:])
-            self._delegate: Optional[FileBackedApprovalBackend] = (
-                FileBackedApprovalBackend(
-                    workspace,
-                    hmac_secret=hmac_secret,
-                )
+            self._delegate = FileBackedApprovalBackend(
+                workspace,
+                hmac_secret=hmac_secret,
+            )
+        elif self._base_url.startswith(('http://', 'https://')):
+            from teaagent.coordination.approval_http_client import (
+                HttpApprovalCoordinationBackend,
+            )
+
+            self._delegate = HttpApprovalCoordinationBackend(
+                self._base_url,
+                auth_token=auth_token,
             )
         else:
             self._delegate = None
@@ -168,12 +187,11 @@ class RemoteApprovalCoordinationBackend:
     def backend_id(self) -> str:
         return BACKEND_REMOTE
 
-    def _require_delegate(self) -> FileBackedApprovalBackend:
+    def _require_delegate(self) -> Any:
         if self._delegate is None:
             raise NotImplementedError(
-                'Remote approval backend supports file:// URLs only. '
-                'Set TEAAGENT_APPROVAL_COORDINATION_URL=file:///path/to/workspace '
-                'or use TEAAGENT_APPROVAL_COORDINATION_BACKEND=file.'
+                'Remote approval backend requires file:// or http(s):// URL. '
+                'Set TEAAGENT_APPROVAL_COORDINATION_URL or use backend=file.'
             )
         return self._delegate
 

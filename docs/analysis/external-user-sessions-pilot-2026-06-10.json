@@ -1,0 +1,57 @@
+{
+  "session_type": "simulated_pilot",
+  "target_happy_path_concepts": [
+    "ask",
+    "approve",
+    "undo"
+  ],
+  "baseline_concept_count": 3,
+  "records": [
+    {
+      "participant_id": "pilot-01",
+      "participant_type": "simulated_pilot",
+      "concepts_before_first_success": [
+        "ask",
+        "approve",
+        "undo"
+      ],
+      "happy_path_concept_count": 3,
+      "advanced_disclosed": false,
+      "completed_happy_path": true,
+      "notes": "Automated pilot using onboarding copy; not a non-maintainer session.",
+      "captured_at": "2026-06-10T03:16:25.933687+00:00"
+    },
+    {
+      "participant_id": "pilot-02",
+      "participant_type": "simulated_pilot",
+      "concepts_before_first_success": [
+        "ask",
+        "approve",
+        "undo"
+      ],
+      "happy_path_concept_count": 3,
+      "advanced_disclosed": false,
+      "completed_happy_path": true,
+      "notes": "Automated pilot using onboarding copy; not a non-maintainer session.",
+      "captured_at": "2026-06-10T03:16:25.933847+00:00"
+    },
+    {
+      "participant_id": "pilot-03-advanced",
+      "participant_type": "simulated_pilot",
+      "concepts_before_first_success": [
+        "ask",
+        "approve",
+        "undo",
+        "receipt",
+        "budget",
+        "tenant",
+        "trust tier"
+      ],
+      "happy_path_concept_count": 3,
+      "advanced_disclosed": true,
+      "completed_happy_path": true,
+      "notes": "Automated pilot using onboarding copy; not a non-maintainer session.",
+      "captured_at": "2026-06-10T03:16:25.933853+00:00"
+    }
+  ]
+}

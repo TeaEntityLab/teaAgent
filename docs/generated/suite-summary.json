@@ -1,10 +1,10 @@
 {
   "tier": "smoke",
-  "generated_at": "2026-06-10T03:00:06.462543+00:00",
-  "commit": "cdc23316def191ffe30c42d40a920ddd77fa18c0",
+  "generated_at": "2026-06-10T03:16:54.954786+00:00",
+  "commit": "676fd93b90b16f4a65a25f7c944a8de85cf611e7",
   "exit_code": 0,
-  "duration_seconds": 11.0,
-  "passed": 196,
+  "duration_seconds": 13.48,
+  "passed": 200,
   "failed": 0,
-  "total": 196
+  "total": 200
 }

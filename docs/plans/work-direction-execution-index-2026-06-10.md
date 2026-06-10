@@ -76,7 +76,8 @@ any time after S1 WDA-001 lands (needs honest module labels for concept audit).
 | S5 | WDE-001, WDE-002, WDE-003, WDF-001 | **Closed** — `file://` remote backend, Ed25519 signed queue, WS2 gap tests, ADR 0030 |
 | S5 | WDF-002 | **Closed** — H4/H5 folded to `governance/` + `consensus/`; compat aliases (177 root modules) |
 | S6 | WDH-001, WDH-003 | **Closed** — survey moratorium; when-not-to-use refresh |
-| S6 open | WDH-002 | Protocol ready; external sessions not yet recorded |
+| S6 | WDE-001b | **Closed** — HTTP approval coordination server + client (`approval_http_*`) |
+| S6 partial | WDH-002 | Pilot harness + 3 simulated sessions; non-maintainer recruitment open |
 | S3 note | WDD-003 | **Closed** — [competitor absence note](../analysis/eval-gate-competitor-absence-2026-06-10.md) |
 | Ongoing | WDB-002, WDB-004, WDG-003 | **Closed** — claim-commit hook, suite freshness, `suite-summary.json` |
 

@@ -39,6 +39,8 @@ SMOKE_TARGETS: tuple[str, ...] = (
     str(_TESTS / 'test_claim_commit_gate.py'),
     str(_TESTS / 'test_update_platform_proof.py'),
     str(_TESTS / 'test_remote_approval_backend.py'),
+    str(_TESTS / 'test_http_remote_approval_backend.py'),
+    str(_TESTS / 'test_stranger_session_capture.py'),
     str(_TESTS / 'test_signed_approval_queue.py'),
     str(_TESTS / 'test_conversation_ux.py'),
     str(_TESTS / 'test_ws2_verification_gaps.py'),
