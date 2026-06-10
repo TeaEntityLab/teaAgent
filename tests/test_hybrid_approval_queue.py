@@ -22,6 +22,7 @@ from teaagent.subagents._approval_queue_redis_store import (
     RedisApprovalQueueConfig,
 )
 from teaagent.subagents._approval_queue_store import ApprovalQueueStore
+from teaagent.subagents._circuit_breaker import CircuitBreakerConfig
 
 
 @pytest.fixture
@@ -421,3 +422,202 @@ class TestHybridApprovalQueueStore:
 
             assert result['synced'] >= 0
             assert 'errors' in result
+
+    def test_circuit_breaker_enabled(self, temp_workspace):
+        """Test that circuit breaker is enabled when configured."""
+        redis_config = RedisApprovalQueueConfig(host='localhost', port=6379)
+        circuit_breaker_config = CircuitBreakerConfig(
+            failure_threshold=3,
+            timeout_seconds=30,
+        )
+        config = HybridApprovalQueueConfig(
+            workspace_root=temp_workspace,
+            redis_config=redis_config,
+            enable_circuit_breaker=True,
+            circuit_breaker_config=circuit_breaker_config,
+        )
+
+        mock_redis = MagicMock()
+        mock_redis.ping.return_value = True
+
+        with patch(
+            'teaagent.subagents._approval_queue_redis_store.redis.Redis',
+            return_value=mock_redis,
+        ):
+            store = HybridApprovalQueueStore(config)
+
+            # Circuit breaker should be initialized
+            assert store._circuit_breaker is not None
+            assert store._circuit_breaker.name == 'redis_approval_queue'
+            assert store._circuit_breaker.config.failure_threshold == 3
+            assert store._circuit_breaker.config.timeout_seconds == 30
+
+    def test_circuit_breaker_disabled(self, temp_workspace):
+        """Test that circuit breaker is disabled when configured."""
+        redis_config = RedisApprovalQueueConfig(host='localhost', port=6379)
+        config = HybridApprovalQueueConfig(
+            workspace_root=temp_workspace,
+            redis_config=redis_config,
+            enable_circuit_breaker=False,
+        )
+
+        mock_redis = MagicMock()
+        mock_redis.ping.return_value = True
+
+        with patch(
+            'teaagent.subagents._approval_queue_redis_store.redis.Redis',
+            return_value=mock_redis,
+        ):
+            store = HybridApprovalQueueStore(config)
+
+            # Circuit breaker should not be initialized
+            assert store._circuit_breaker is None
+
+    def test_metrics_collection(self, temp_workspace, sample_request):
+        """Test that metrics are collected for operations."""
+        config = HybridApprovalQueueConfig(workspace_root=temp_workspace)
+        store = HybridApprovalQueueStore(config)
+
+        # Perform operations
+        store.save_request('parent-1', sample_request)
+        store.get_request('parent-1', sample_request.request_id)
+        store.update_request_status(
+            'parent-1',
+            sample_request.request_id,
+            ApprovalRequestStatus.APPROVED,
+        )
+
+        # Get metrics
+        metrics = store.get_metrics()
+
+        assert metrics is not None
+        assert 'backend_type' in metrics
+        assert 'operation_metrics' in metrics
+        assert 'request_metrics' in metrics
+        assert 'uptime_seconds' in metrics
+
+        # Check operation metrics
+        assert 'save_request' in metrics['operation_metrics']
+        assert 'get_request' in metrics['operation_metrics']
+        assert 'update_request_status' in metrics['operation_metrics']
+
+        # Check counts
+        assert metrics['operation_metrics']['save_request']['count'] >= 1
+        assert metrics['operation_metrics']['get_request']['count'] >= 1
+        assert metrics['operation_metrics']['update_request_status']['count'] >= 1
+
+    def test_dynamic_sync_interval_disabled(self, temp_workspace):
+        """Test that dynamic sync interval is disabled when configured."""
+        config = HybridApprovalQueueConfig(
+            workspace_root=temp_workspace,
+            enable_dynamic_sync=False,
+            sync_interval_seconds=60,
+        )
+        store = HybridApprovalQueueStore(config)
+
+        # Should return fixed interval
+        interval = store._calculate_dynamic_sync_interval()
+        assert interval == 60
+
+    def test_dynamic_sync_interval_enabled(self, temp_workspace, sample_request):
+        """Test that dynamic sync interval adjusts based on load."""
+        config = HybridApprovalQueueConfig(
+            workspace_root=temp_workspace,
+            enable_dynamic_sync=True,
+            sync_interval_seconds=60,
+            min_sync_interval_seconds=10,
+            max_sync_interval_seconds=300,
+        )
+        store = HybridApprovalQueueStore(config)
+
+        # Perform some operations to generate metrics
+        for _ in range(10):
+            store.save_request('parent-1', sample_request)
+
+        # Calculate dynamic interval
+        interval = store._calculate_dynamic_sync_interval()
+
+        # Should be within bounds
+        assert 10 <= interval <= 300
+
+    def test_should_sync(self, temp_workspace):
+        """Test sync timing logic."""
+        config = HybridApprovalQueueConfig(
+            workspace_root=temp_workspace,
+            sync_interval_seconds=60,
+        )
+        store = HybridApprovalQueueStore(config)
+
+        # First call should return True (no previous sync)
+        assert store.should_sync() is True
+
+        # Record sync
+        store.record_sync()
+
+        # Immediate call should return False
+        assert store.should_sync() is False
+
+    def test_cleanup_orphaned_requests(self, temp_workspace, sample_request):
+        """Test cleanup of orphaned requests."""
+        config = HybridApprovalQueueConfig(workspace_root=temp_workspace)
+        store = HybridApprovalQueueStore(config)
+
+        # Save a request
+        store.save_request('parent-1', sample_request)
+
+        # Mark as approved
+        store.update_request_status(
+            'parent-1',
+            sample_request.request_id,
+            ApprovalRequestStatus.APPROVED,
+        )
+
+        # Run cleanup with very short max_age
+        cleanup_report = store.cleanup_orphaned_requests(
+            max_age_seconds=0,
+            timeout_seconds=180,
+        )
+
+        assert 'timed_out_requests' in cleanup_report
+        assert 'expired_resolved_requests' in cleanup_report
+        assert 'orphaned_parent_runs' in cleanup_report
+        assert 'errors' in cleanup_report
+
+    def test_get_circuit_breaker_stats(self, temp_workspace):
+        """Test getting circuit breaker statistics."""
+        redis_config = RedisApprovalQueueConfig(host='localhost', port=6379)
+        config = HybridApprovalQueueConfig(
+            workspace_root=temp_workspace,
+            redis_config=redis_config,
+            enable_circuit_breaker=True,
+        )
+
+        mock_redis = MagicMock()
+        mock_redis.ping.return_value = True
+
+        with patch(
+            'teaagent.subagents._approval_queue_redis_store.redis.Redis',
+            return_value=mock_redis,
+        ):
+            store = HybridApprovalQueueStore(config)
+
+            # Get stats
+            stats = store.get_circuit_breaker_stats()
+
+            assert stats is not None
+            assert 'name' in stats
+            assert 'state' in stats
+            assert 'failures' in stats
+            assert 'successes' in stats
+
+    def test_circuit_breaker_stats_disabled(self, temp_workspace):
+        """Test circuit breaker stats when disabled."""
+        config = HybridApprovalQueueConfig(
+            workspace_root=temp_workspace,
+            enable_circuit_breaker=False,
+        )
+        store = HybridApprovalQueueStore(config)
+
+        # Should return None
+        stats = store.get_circuit_breaker_stats()
+        assert stats is None

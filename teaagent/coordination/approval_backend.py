@@ -272,6 +272,7 @@ def resolve_approval_backend(
         from teaagent.subagents._approval_queue_redis_store import (
             RedisApprovalQueueConfig,
         )
+        from teaagent.subagents._circuit_breaker import CircuitBreakerConfig
 
         # Load Redis configuration from environment
         redis_host = os.environ.get('TEAAGENT_REDIS_HOST', 'localhost')
@@ -284,6 +285,29 @@ def resolve_approval_backend(
         sync_interval = int(os.environ.get('TEAAGENT_HYBRID_SYNC_INTERVAL', '60'))
         enable_fallback = (
             os.environ.get('TEAAGENT_HYBRID_FALLBACK', 'true').lower() == 'true'
+        )
+        enable_circuit_breaker = (
+            os.environ.get('TEAAGENT_HYBRID_CIRCUIT_BREAKER', 'true').lower() == 'true'
+        )
+        enable_dynamic_sync = (
+            os.environ.get('TEAAGENT_HYBRID_DYNAMIC_SYNC', 'true').lower() == 'true'
+        )
+
+        # Load circuit breaker configuration from environment
+        cb_failure_threshold = int(
+            os.environ.get('TEAAGENT_CIRCUIT_BREAKER_FAILURE_THRESHOLD', '5')
+        )
+        cb_timeout_seconds = int(
+            os.environ.get('TEAAGENT_CIRCUIT_BREAKER_TIMEOUT_SECONDS', '60')
+        )
+        cb_success_threshold = int(
+            os.environ.get('TEAAGENT_CIRCUIT_BREAKER_SUCCESS_THRESHOLD', '2')
+        )
+
+        circuit_breaker_config = CircuitBreakerConfig(
+            failure_threshold=cb_failure_threshold,
+            timeout_seconds=cb_timeout_seconds,
+            success_threshold=cb_success_threshold,
         )
 
         redis_config = RedisApprovalQueueConfig(
@@ -301,6 +325,9 @@ def resolve_approval_backend(
             redis_primary=redis_primary,
             sync_interval_seconds=sync_interval,
             enable_fallback=enable_fallback,
+            enable_circuit_breaker=enable_circuit_breaker,
+            circuit_breaker_config=circuit_breaker_config,
+            enable_dynamic_sync=enable_dynamic_sync,
         )
 
     if selected == BACKEND_REMOTE:

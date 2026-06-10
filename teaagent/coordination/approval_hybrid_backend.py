@@ -27,6 +27,7 @@ from teaagent.subagents._approval_queue_store import (
     ApprovalQueueStore,
     default_hmac_secret,
 )
+from teaagent.subagents._circuit_breaker import CircuitBreakerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,9 @@ class HybridApprovalCoordinationBackend:
         redis_primary: bool = True,
         sync_interval_seconds: int = 60,
         enable_fallback: bool = True,
+        enable_circuit_breaker: bool = True,
+        circuit_breaker_config: Optional[CircuitBreakerConfig] = None,
+        enable_dynamic_sync: bool = True,
     ) -> None:
         self._workspace_root = Path(workspace_root).resolve()
         self._hmac_secret = hmac_secret or default_hmac_secret()
@@ -63,6 +67,9 @@ class HybridApprovalCoordinationBackend:
             redis_primary=redis_primary,
             sync_interval_seconds=sync_interval_seconds,
             enable_fallback=enable_fallback,
+            enable_circuit_breaker=enable_circuit_breaker,
+            circuit_breaker_config=circuit_breaker_config,
+            enable_dynamic_sync=enable_dynamic_sync,
         )
 
         self._store = HybridApprovalQueueStore(config)
@@ -81,21 +88,27 @@ class HybridApprovalCoordinationBackend:
         # Fallback: reconstruct from Redis
         if self._store.redis_available and self._store.redis_store:
             try:
-                request_ids = self._store.redis_store.get_all_request_ids(parent_run_id)
-                batch_ids = self._store.redis_store.get_all_batch_ids(parent_run_id)
+                request_ids = self._store._call_redis(
+                    self._store.redis_store.get_all_request_ids, parent_run_id
+                )
+                batch_ids = self._store._call_redis(
+                    self._store.redis_store.get_all_batch_ids, parent_run_id
+                )
 
                 requests: dict[str, dict[str, Any]] = {}
                 batches: dict[str, dict[str, Any]] = {}
 
                 for request_id in request_ids:
-                    request = self._store.redis_store.get_request(
-                        parent_run_id, request_id
+                    request = self._store._call_redis(
+                        self._store.redis_store.get_request, parent_run_id, request_id
                     )
                     if request:
                         requests[request_id] = request.to_dict()
 
                 for batch_id in batch_ids:
-                    batch = self._store.redis_store.get_batch(parent_run_id, batch_id)
+                    batch = self._store._call_redis(
+                        self._store.redis_store.get_batch, parent_run_id, batch_id
+                    )
                     if batch:
                         batches[batch_id] = batch.to_dict()
 
@@ -164,7 +177,9 @@ class HybridApprovalCoordinationBackend:
         if self._store.redis_available and self._store.redis_store:
             for parent_run_id in file_report.removed_parent_run_ids:
                 try:
-                    self._store.redis_store.delete_parent_run(parent_run_id)
+                    self._store._call_redis(
+                        self._store.redis_store.delete_parent_run, parent_run_id
+                    )
                     redis_deleted += 1
                 except Exception as e:
                     logger.error(f'Redis prune failed for {parent_run_id}: {e}')
@@ -201,3 +216,93 @@ class HybridApprovalCoordinationBackend:
     def redis_store(self) -> Optional[RedisApprovalQueueStore]:
         """Get the Redis store."""
         return self._store.redis_store
+
+    def get_circuit_breaker_stats(self) -> Optional[dict]:
+        """Get circuit breaker statistics."""
+        return self._store.get_circuit_breaker_stats()
+
+    def get_metrics(self) -> dict[str, Any]:
+        """Get metrics for the hybrid backend."""
+        return self._store.get_metrics()
+
+    def cleanup_orphaned_requests(
+        self,
+        max_age_seconds: float = 3600,
+        timeout_seconds: float = 180,
+    ) -> dict:
+        """Clean up orphaned requests."""
+        return self._store.cleanup_orphaned_requests(
+            max_age_seconds=max_age_seconds,
+            timeout_seconds=timeout_seconds,
+        )
+
+    def health_check(self) -> dict[str, Any]:
+        """Perform health check on the hybrid backend."""
+        return self._store.health_check()
+
+    def set_request_priority(
+        self, parent_run_id: str, request_id: str, priority: int
+    ) -> bool:
+        """Set priority for a request."""
+        return self._store.set_request_priority(parent_run_id, request_id, priority)
+
+    def get_pending_requests_by_priority(
+        self, parent_run_id: str
+    ) -> list[SubagentApprovalRequest]:
+        """Get pending requests sorted by priority."""
+        return self._store.get_pending_requests_by_priority(parent_run_id)
+
+    def validate_request(
+        self, request: SubagentApprovalRequest
+    ) -> tuple[bool, list[str]]:
+        """Validate a request."""
+        return self._store.validate_request(request)
+
+    def shutdown(self) -> None:
+        """Gracefully shutdown the hybrid backend."""
+        self._store.shutdown()
+
+    def cancel_request(self, parent_run_id: str, request_id: str, reason: str) -> bool:
+        """Cancel a pending request."""
+        return self._store.cancel_request(parent_run_id, request_id, reason)
+
+    def search_requests(
+        self,
+        parent_run_id: str,
+        *,
+        subagent_id: Optional[str] = None,
+        tool_name: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[SubagentApprovalRequest]:
+        """Search and filter requests."""
+        return self._store.search_requests(
+            parent_run_id,
+            subagent_id=subagent_id,
+            tool_name=tool_name,
+            status=status,
+            limit=limit,
+        )
+
+    def export_requests(self, parent_run_id: str, format: str = 'json') -> str:
+        """Export requests from a parent run."""
+        return self._store.export_requests(parent_run_id, format)
+
+    def import_requests(
+        self, parent_run_id: str, data: str, format: str = 'json'
+    ) -> int:
+        """Import requests to a parent run."""
+        return self._store.import_requests(parent_run_id, data, format)
+
+    def get_audit_trail(
+        self,
+        parent_run_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Get audit trail entries."""
+        return self._store.get_audit_trail(parent_run_id, request_id, limit)
+
+    def archive_old_requests(self, max_age_days: int = 30) -> dict[str, Any]:
+        """Archive old requests."""
+        return self._store.archive_old_requests(max_age_days)
