@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 BACKEND_FILE = 'file'
 BACKEND_REMOTE = 'remote'
+BACKEND_HYBRID = 'hybrid'
 
 
 @runtime_checkable
@@ -260,6 +261,47 @@ def resolve_approval_backend(
         .strip()
         .lower()
     )
+
+    if selected == BACKEND_HYBRID:
+        if workspace_root is None:
+            raise ValueError('Workspace root is required for hybrid backend')
+
+        from teaagent.coordination.approval_hybrid_backend import (
+            HybridApprovalCoordinationBackend,
+        )
+        from teaagent.subagents._approval_queue_redis_store import (
+            RedisApprovalQueueConfig,
+        )
+
+        # Load Redis configuration from environment
+        redis_host = os.environ.get('TEAAGENT_REDIS_HOST', 'localhost')
+        redis_port = int(os.environ.get('TEAAGENT_REDIS_PORT', '6379'))
+        redis_password = os.environ.get('TEAAGENT_REDIS_PASSWORD') or None
+        redis_ssl = os.environ.get('TEAAGENT_REDIS_SSL', 'false').lower() == 'true'
+        redis_primary = (
+            os.environ.get('TEAAGENT_REDIS_PRIMARY', 'true').lower() == 'true'
+        )
+        sync_interval = int(os.environ.get('TEAAGENT_HYBRID_SYNC_INTERVAL', '60'))
+        enable_fallback = (
+            os.environ.get('TEAAGENT_HYBRID_FALLBACK', 'true').lower() == 'true'
+        )
+
+        redis_config = RedisApprovalQueueConfig(
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
+            ssl=redis_ssl,
+        )
+
+        secret = hmac_secret if hmac_secret is not None else default_hmac_secret()
+        return HybridApprovalCoordinationBackend(
+            workspace_root=Path(workspace_root).resolve(),
+            hmac_secret=secret,
+            redis_config=redis_config,
+            redis_primary=redis_primary,
+            sync_interval_seconds=sync_interval,
+            enable_fallback=enable_fallback,
+        )
 
     if selected == BACKEND_REMOTE:
         base_url = os.environ.get('TEAAGENT_APPROVAL_COORDINATION_URL', '').strip()
