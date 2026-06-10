@@ -1,7 +1,10 @@
 # System Critical Review Package — TeaAgent
 # 2026-06-06
 
-> **Status:** Current dated evidence package.
+> **Status:** Dated evidence package — refreshed by the
+> [2026-06-10 System Critical Review Package](system-critical-review-2026-06-10-INDEX.md),
+> which re-scores these findings at HEAD `8fcd781`. Use this package for
+> reasoning history; use the 06-10 package for current finding status.
 > **Scope:** TeaAgent at commit `ad5e2d7`, plus official competitor documentation
 > checked on 2026-06-06.
 > **Audience:** Maintainers, product/engineering leads, security reviewers, and

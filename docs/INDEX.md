@@ -56,6 +56,13 @@ governance ledgers should prefer the canonical set above.
 
 | Topic | Evidence package |
 | --- | --- |
+| **June 10 system critical review package (current)** | [System Critical Review Package 2026-06-10](analysis/system-critical-review-2026-06-10-INDEX.md) |
+| June 10 engineering critique refresh | [Engineering Architecture Critique Refresh](analysis/engineering-critique-refresh-2026-06-10.md) |
+| June 10 remote multi-agent readiness refresh | [Remote Multi-Agent Readiness Refresh](analysis/remote-multi-agent-readiness-refresh-2026-06-10.md) |
+| June 10 conversation experience refresh | [General-User Conversation Experience Refresh](analysis/conversation-experience-refresh-2026-06-10.md) |
+| June 10 competitor analyses vs self consolidation | [Competitor Analyses vs Self Consolidation](analysis/competitor-analyses-vs-self-consolidation-2026-06-10.md) |
+| June 10 public reasoning ledger | [System Review Reasoning Ledger 2026-06-10](analysis/system-review-reasoning-ledger-2026-06-10.md) |
+| June 10 work direction decomposition | [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) |
 | June 4 project-state fact check | [Project State Cross-Review Fact Check](analysis/project-state-cross-review-fact-check-2026-06-04.md) |
 | June 4 total review | [Total Review Index](analysis/total-review-2026-06-04-INDEX.md) |
 | June 4 documentation critique | [Documentation Critical Questioning](reviews/documentation-critical-questioning-2026-06-04.md) |
