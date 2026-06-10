@@ -1,5 +1,7 @@
 """Role-Based Access Control (RBAC) system.
 
+experimental — unwired
+
 This module provides role definitions, role assignment, and permission
 checking for collaborative agent workflows.
 """

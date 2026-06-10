@@ -1,5 +1,7 @@
 """Prompt regression suite for detecting model behavior changes (TASK-H5-001-02).
 
+experimental — unwired
+
 This module provides test cases and evaluation logic for detecting regression
 in model behavior when prompts are updated or changed.
 """

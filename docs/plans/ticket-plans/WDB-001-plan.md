@@ -1,7 +1,7 @@
 # WDB-001: Import-Graph Wiring Validator
 
 **Priority:** P0  
-**Status:** Scheduled (Sprint 1)  
+**Status:** Fixed  
 **Sprint:** 2026-06-10 → 2026-06-17  
 **Depends on:** WDA-001 (label registry)  
 **Primary files:** `scripts/validate_wiring.py` (new), `tests/test_validate_wiring.py` (new), `.github/workflows/*` or pre-commit config

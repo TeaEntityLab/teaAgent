@@ -658,6 +658,64 @@ def validate_roadmap_status(roadmap_text: str) -> list[str]:
     if not ROADMAP_DOC_VS_HEAD.search(roadmap_text):
         errors.append('Roadmap status missing doc-vs-HEAD guard reference.')
     errors.extend(validate_roadmap_required_fields(roadmap_text))
+    errors.extend(validate_roadmap_horizon_milestone_consistency(roadmap_text))
+    return errors
+
+
+def _normalize_roadmap_status(value: str) -> str:
+    return re.sub(r'[*_`]', '', value).strip().lower()
+
+
+def _roadmap_status_maps(roadmap_text: str) -> tuple[dict[str, str], dict[str, str]]:
+    horizon_status: dict[str, str] = {}
+    milestone_status: dict[str, str] = {}
+    section: str | None = None
+    status_index: int | None = None
+
+    for line in roadmap_text.splitlines():
+        if line.strip() == '## Roadmap Horizons':
+            section = 'horizon'
+            status_index = None
+            continue
+        if line.strip() == '## Milestones':
+            section = 'milestone'
+            status_index = None
+            continue
+        if not line.strip().startswith('|'):
+            continue
+        if _is_markdown_table_separator(line):
+            continue
+
+        cells = _split_markdown_table_row(line)
+        if 'Status' in cells and 'Owner' in cells:
+            status_index = cells.index('Status')
+            continue
+        if status_index is None or len(cells) <= status_index:
+            continue
+
+        key = cells[0].strip()
+        if section == 'horizon' and key.upper().startswith('H') and key[1:].isdigit():
+            horizon_status[key[1:]] = _normalize_roadmap_status(cells[status_index])
+        if section == 'milestone' and key.upper().startswith('M') and key[1:].isdigit():
+            milestone_status[key[1:]] = _normalize_roadmap_status(cells[status_index])
+
+    return horizon_status, milestone_status
+
+
+def validate_roadmap_horizon_milestone_consistency(roadmap_text: str) -> list[str]:
+    """Flag horizon Hn Pending while milestone Mn is Complete."""
+    errors: list[str] = []
+    horizon_status, milestone_status = _roadmap_status_maps(roadmap_text)
+
+    for index in sorted(set(horizon_status) & set(milestone_status), key=int):
+        horizon = horizon_status[index]
+        milestone = milestone_status[index]
+        if 'complete' not in milestone:
+            continue
+        if horizon == 'pending':
+            errors.append(
+                f'Roadmap contradiction: H{index} is Pending while M{index} is Complete.'
+            )
     return errors
 
 
@@ -911,6 +969,16 @@ def validate_documentation_audit_cadence(
 def _load_control_loop_freshness_module() -> ModuleType:
     script = Path(__file__).with_name('validate_control_loop_freshness.py')
     spec = spec_from_file_location('validate_control_loop_freshness', script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f'Unable to load {script}')
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_validate_wiring_module() -> ModuleType:
+    script = Path(__file__).with_name('validate_wiring.py')
+    spec = spec_from_file_location('validate_wiring', script)
     if spec is None or spec.loader is None:
         raise RuntimeError(f'Unable to load {script}')
     module = module_from_spec(spec)
@@ -1854,6 +1922,9 @@ def main() -> int:
         mode=args.test_quality_mode,
     )
     errors.extend(test_quality_errors)
+
+    wiring_module = _load_validate_wiring_module()
+    errors.extend(wiring_module.validate_wiring())
 
     if args.audit_evidence_root:
         errors.extend(

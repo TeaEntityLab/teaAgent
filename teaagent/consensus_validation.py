@@ -1,5 +1,7 @@
 """Multi-agent consensus validation system.
 
+experimental — unwired
+
 This module provides consensus validation for collaborative agent workflows,
 including consensus rules, vote tracking, and consensus decision logic.
 """

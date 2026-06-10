@@ -38,6 +38,9 @@ jobs:
       - name: Validate docs consistency
         run: python3 scripts/validate_docs_consistency.py
 
+      - name: Validate H4/H5/H6 wiring labels
+        run: python3 scripts/validate_wiring.py
+
       - name: Upload use-case matrix artifact
         uses: actions/upload-artifact@v7
         with:
@@ -122,11 +125,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run tests
-        # NOTE: Shell-dependent tests should be marked with
-        # @pytest.mark.skipif(sys.platform == 'win32', reason="shell-dependent")
-        # to skip on Windows. Until then, Windows test failures do not block merge.
+      - name: Run smoke tier
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         continue-on-error: ${{ matrix.os == 'windows-latest' }}
+        env:
+          PYTHONHASHSEED: "0"
+        run: python3 scripts/run_test_tier.py --tier smoke
+
+      - name: Run full suite with coverage
+        # Nightly/full tier on canonical ubuntu 3.12 cell (WDG-002).
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         env:
           PYTHONHASHSEED: "0"
         run: pytest --random-order --cov=teaagent --cov-context=test --cov-report=term-missing --cov-fail-under=75

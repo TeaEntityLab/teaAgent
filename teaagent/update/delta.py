@@ -1,5 +1,7 @@
 """Delta update mechanism for efficient updates (TASK-H6-003-02).
 
+experimental — unwired
+
 This module provides delta generation, application, and verification for
 efficient binary updates without downloading full packages.
 """

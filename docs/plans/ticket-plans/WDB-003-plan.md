@@ -1,7 +1,7 @@
 # WDB-003: Fix Roadmap Contradictions (H2–H6 vs Milestones)
 
 **Priority:** P0  
-**Status:** Scheduled (Sprint 1)  
+**Status:** Fixed  
 **Sprint:** 2026-06-10 → 2026-06-17  
 **Depends on:** WDA-001 evidence  
 **Primary files:** `docs/roadmap-status.md`, `scripts/validate_docs_consistency.py`, `tests/test_validate_docs_consistency_mode.py`

@@ -9,10 +9,10 @@
 > or historical review reasoning in dated analysis files.
 >
 > **Review trigger:** Roadmap horizon, milestone, or track status changes.
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-10
 
 **Status:** Canonical roadmap tracking document
-**Last updated:** 2026-06-07 (H1 Complete: all P0–P2 daily-driver workstreams implemented, 4758 tests pass, journey acceptance tests pass across CLI/TUI baseline)
+**Last updated:** 2026-06-10 (Sprint 1 truth pass: H4/H5/H6 clusters labeled unwired; acceptance tier 628 passed at `85109e4`; full-suite count unverified — see [suite truncation analysis](analysis/suite-truncation-root-cause-2026-06-10.md))
 **Owner:** TBD
 
 > **Canonical source of truth.** All other status docs (`docs/security/risk-register-and-threat-model-2026-06-02.md`, `docs/analysis/defeat-scenarios-and-cascade-effects-2026-06-02.md`, `docs/analysis/active-findings-status-ledger-2026-06-06.md`) defer to this document for overall completion status. Per-item test evidence lives in the risk register §9.
@@ -26,12 +26,12 @@ Provide a single source of truth for roadmap item status, ownership, confidence,
 | Horizon | Name | Target Outcome | Owner | Status | Confidence | Next Gate | Exit Evidence |
 |---------|------|----------------|-------|--------|------------|-----------|---------------|
 | H0 | Claim and risk hygiene | Public claims, risk register, docs gates, and tool warnings are owned | governance | Complete | High | H1 | H0 exit evidence met; all M0 checks pass |
-| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | governance | Complete | High | H2 | Journey acceptance tests pass across CLI/TUI baseline; 576 acceptance + 4758 total pass |
-| H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Pending | Medium | M2 complete | Surface parity tests prove identity, permissions, audit, cost, and recovery continuity |
-| H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Pending | Medium | M3 complete | Trust-onboarding and activation-explain acceptance tests pass |
-| H4 | Durable team operations | Long-running and team workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Pending | Low | M4 complete | Background/cloud/team lifecycle tests pass with evidence bundle export |
-| H5 | Quality and eval loop | Prompt/runtime/model changes cannot silently degrade daily outcomes | TBD | Pending | Low | M5 complete | Prompt/config eval gates, long-session tests, repo-map benchmarks, and scope-creep tests run in release profile |
-| H6 | Packaging and adoption | Desktop/client-server and external-facing release channels have supply-chain, update, and support plans | TBD | Pending | Low | M6 complete | SBOM/signing/update docs, packaged smoke tests, and onboarding metrics exist |
+| H1 | Daily operator loop | Setup, daily cockpit, plan, execute, approve, verify, recover, and remember are one coherent journey | governance | Complete | High | H2 | Journey acceptance tests pass across CLI/TUI baseline; acceptance tier 628 passed at `85109e4` (2026-06-10) |
+| H2 | Multi-surface continuity | CLI, TUI, IDE, dashboard, background, cloud, and gateway share one run-state contract | TBD | Partially fixed — M2 foundation wired | Medium | WDA-002 | M2 acceptance complete; full surface parity (IDE/dashboard/cloud) still open |
+| H3 | Ecosystem trust | MCP, plugins, skills, hooks, subagents, and automations are explainable, revocable, and testable | TBD | Partially fixed — M3 tests pass | Medium | WDC-002 | M3 acceptance complete; general-user trust onboarding simplification still open |
+| H4 | Durable team operations | Long-running and team workflows have durable execution, control-plane views, policy, audit, and cost attribution | TBD | Partially fixed — unwired | Low | WDA-002 | RBAC/policy/consensus modules exist but unwired; cockpit data source only wired H4 surface (ENG-R1) |
+| H5 | Quality and eval loop | Prompt/runtime/model changes cannot silently degrade daily outcomes | TBD | Partially fixed — unwired | Low | WDA-004 | `context_health` wired via TUI; eval suite/release gate clusters unwired (ENG-R1) |
+| H6 | Packaging and adoption | Desktop/client-server and external-facing release channels have supply-chain, update, and support plans | TBD | Partially fixed — unwired | Low | WDA-005 | `update/*` package implemented but unwired; no single-platform proof yet |
 
 ## Milestones
 

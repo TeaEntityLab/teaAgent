@@ -7,7 +7,19 @@
 > **Does not own:** Full-suite CI results (see dated evidence) or roadmap priorities.
 >
 > **Review trigger:** Acceptance test inventory or count changes.
-> **Last reviewed:** 2026-06-06
+> **Last reviewed:** 2026-06-10
+
+## Suite Tiers (WDG-002)
+
+| Tier | Command | Purpose |
+| --- | --- | --- |
+| **smoke** | `python3 scripts/run_test_tier.py --tier smoke` | Fast PR gate (&lt;2 min target); governance core + `tests/regression/` + wiring validator tests (matches pre-commit smoke subset) |
+| **acceptance** | `python3 scripts/run_acceptance_tier.py --tier all` | User-facing workflow verification (P0/P1/P2 streams below) |
+| **nightly** | `python3 scripts/run_test_tier.py --tier nightly` | Full corpus including integration, mutation, and slow paths |
+
+Full-suite truncation in constrained environments is documented in
+[suite truncation root cause](analysis/suite-truncation-root-cause-2026-06-10.md).
+Cite tier + run date + commit for any test-count claim in roadmap or release docs.
 
 TeaAgent acceptance tests live under `tests/acceptance/` and verify
 user-facing workflows rather than isolated primitives. Integration tests live

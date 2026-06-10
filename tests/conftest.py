@@ -184,15 +184,34 @@ __all__ = [
 ]
 
 
+_NIGHTLY_NODE_FRAGMENTS = (
+    'tests/integration/',
+    'test_audit_benchmark.py',
+    'test_cli_fuzz_parsers.py',
+    'test_mutation_smoke_registry.py',
+    'test_governance_adversarial_runtime.py',
+    'test_property_invariants.py',
+    'integration/test_benchmark.py',
+)
+
+
+def _apply_suite_tier_markers(items: list[pytest.Item]) -> None:
+    for item in items:
+        nodeid = item.nodeid
+        if 'tests/acceptance/' in nodeid:
+            item.add_marker(pytest.mark.acceptance)
+        if item.get_closest_marker('slow') or any(
+            fragment in nodeid for fragment in _NIGHTLY_NODE_FRAGMENTS
+        ):
+            item.add_marker(pytest.mark.nightly)
+
+
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    """Skip network-binding tests when the environment forbids loopback listeners.
+    """Apply suite tier markers and skip network tests in bind-blocked sandboxes."""
 
-    Some sandboxed runners disallow `socket.bind()` entirely. Those tests are still
-    valuable in normal dev/CI environments, but should not fail the suite when
-    loopback binding is prohibited.
-    """
+    _apply_suite_tier_markers(items)
 
     if can_bind_loopback():
         return

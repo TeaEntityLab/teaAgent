@@ -1,5 +1,7 @@
 """Update application with rollback mechanism (TASK-H6-003-03).
 
+experimental — unwired
+
 This module provides update download, installation, and rollback functionality
 for safe and reliable updates.
 """

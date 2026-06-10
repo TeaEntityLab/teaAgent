@@ -9,7 +9,10 @@ from pathlib import Path
 # Add scripts directory to path for import
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 
-from validate_docs_consistency import validate_test_quality
+from validate_docs_consistency import (
+    validate_roadmap_horizon_milestone_consistency,
+    validate_test_quality,
+)
 
 
 def test_validate_test_quality_off_mode():
@@ -87,3 +90,33 @@ def test_validate_test_quality_security_path_strict_mode():
         # Should flag security path
         assert len(errors) > 0
         assert any('security' in err for err in errors)
+
+
+def test_validate_roadmap_horizon_milestone_consistency_flags_pending_complete() -> (
+    None
+):
+    roadmap = """
+## Roadmap Horizons
+| Horizon | Name | Target Outcome | Owner | Status | Confidence | Next Gate | Exit Evidence |
+| H2 | Example | Outcome | TBD | Pending | Medium | M2 | Evidence |
+## Milestones
+| Milestone | Target | Outcome | Owner | Status | Confidence | Next Gate | Exit Criteria |
+| M2 | weeks | Outcome | TBD | Complete | High | M3 | Criteria |
+"""
+    errors = validate_roadmap_horizon_milestone_consistency(roadmap)
+    assert any('H2 is Pending while M2 is Complete' in err for err in errors)
+
+
+def test_validate_roadmap_horizon_milestone_consistency_allows_partially_fixed() -> (
+    None
+):
+    roadmap = """
+## Roadmap Horizons
+| Horizon | Name | Target Outcome | Owner | Status | Confidence | Next Gate | Exit Evidence |
+| H2 | Example | Outcome | TBD | Partially fixed — foundation | Medium | WDA | Evidence |
+## Milestones
+| Milestone | Target | Outcome | Owner | Status | Confidence | Next Gate | Exit Criteria |
+| M2 | weeks | Outcome | TBD | Complete | High | M3 | Criteria |
+"""
+    errors = validate_roadmap_horizon_milestone_consistency(roadmap)
+    assert errors == []

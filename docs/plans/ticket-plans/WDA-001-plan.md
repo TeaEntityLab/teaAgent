@@ -1,7 +1,7 @@
 # WDA-001: Label Unwired H4/H5/H6 Modules
 
 **Priority:** P0  
-**Status:** Scheduled (Sprint 1)  
+**Status:** Fixed  
 **Sprint:** 2026-06-10 → 2026-06-17  
 **Primary files:** `teaagent/rbac.py`, `teaagent/policy_engine.py`, `teaagent/policy_routing.py`, `teaagent/consensus_validation.py`, `teaagent/eval_suite.py`, `teaagent/release_gate.py`, `teaagent/scope_creep.py`, `teaagent/prompt_regression.py`, `teaagent/repo_map_benchmark.py`, `teaagent/update/*`, `docs/roadmap-status.md`
 

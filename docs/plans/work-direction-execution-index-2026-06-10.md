@@ -57,11 +57,11 @@ any time after S1 WDA-001 lands (needs honest module labels for concept audit).
 
 | ID | Priority | Size | Plan | Summary |
 | --- | --- | --- | --- | --- |
-| WDA-001 | P0 | S | [WDA-001-plan](ticket-plans/WDA-001-plan.md) | Label every unwired H4/H5/H6 module; honest roadmap rows |
-| WDB-001 | P0 | M | [WDB-001-plan](ticket-plans/WDB-001-plan.md) | Import-graph wiring validator from production entry points |
-| WDB-003 | P0 | S | [WDB-003-plan](ticket-plans/WDB-003-plan.md) | Fix H2–H6 vs M2–M6 roadmap contradictions with evidence |
-| WDG-001 | P0 | M | [WDG-001-plan](ticket-plans/WDG-001-plan.md) | Diagnose full-suite SIGXCPU truncation at ~50% |
-| WDG-002 | P0 | M | [WDG-002-plan](ticket-plans/WDG-002-plan.md) | Smoke / acceptance / nightly suite tiers + CI profiles |
+| WDA-001 | P0 | S | [WDA-001-plan](ticket-plans/WDA-001-plan.md) | **Closed** — 13 watch-list modules labeled; roadmap H4–H6 honest |
+| WDB-001 | P0 | M | [WDB-001-plan](ticket-plans/WDB-001-plan.md) | **Closed** — `scripts/validate_wiring.py` + CI/docs gate |
+| WDB-003 | P0 | S | [WDB-003-plan](ticket-plans/WDB-003-plan.md) | **Closed** — roadmap reconciled; horizon/milestone validator |
+| WDG-001 | P0 | M | [WDG-001-plan](ticket-plans/WDG-001-plan.md) | **Closed** — [root-cause note](../analysis/suite-truncation-root-cause-2026-06-10.md) |
+| WDG-002 | P0 | M | [WDG-002-plan](ticket-plans/WDG-002-plan.md) | **Closed** — `run_test_tier.py`, markers, CI smoke split |
 
 ---
 
@@ -82,11 +82,11 @@ Ticket plans for S2+ items are created when the prior sprint exit gate passes.
 
 ## Definition of Done — Sprint 1
 
-- [ ] Every unwired `teaagent/*` module carries `experimental — unwired` in docstring and roadmap.
-- [ ] `scripts/validate_wiring.py` (or equivalent) fails CI on unlabeled unreachable modules.
-- [ ] `docs/roadmap-status.md` H2–H6 rows match import-graph reality and milestone table.
-- [ ] `pytest -m smoke` completes in &lt;2 min; acceptance and nightly profiles documented.
-- [ ] WDG-001 root-cause note exists (SIGXCPU, pipe masking, or harness fix).
+- [x] Every unwired `teaagent/*` module carries `experimental — unwired` in docstring and roadmap.
+- [x] `scripts/validate_wiring.py` fails CI on unlabeled unreachable watch-list modules.
+- [x] `docs/roadmap-status.md` H2–H6 rows match import-graph reality and milestone table.
+- [x] `scripts/run_test_tier.py` smoke/acceptance/nightly profiles documented in `docs/acceptance.md`.
+- [x] WDG-001 root-cause note exists ([suite truncation analysis](../analysis/suite-truncation-root-cause-2026-06-10.md)).
 
 ---
 

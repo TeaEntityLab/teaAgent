@@ -1,5 +1,7 @@
 """Update check mechanism for teaagent (TASK-H6-003-01).
 
+experimental — unwired
+
 This module provides version checking, update server communication, and
 version comparison for detecting available updates.
 """

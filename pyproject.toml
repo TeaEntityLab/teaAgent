@@ -145,6 +145,10 @@ pythonpath = [".", "tests"]
 addopts = "-p no:cacheprovider"
 markers = [
     "integration: real entry-point behavioral tests (run with -m integration)",
+    "smoke: fast PR-gate unit/regression tests (run with scripts/run_test_tier.py --tier smoke)",
+    "acceptance: user-facing workflow tests under tests/acceptance/",
+    "nightly: slow, integration, mutation, or full-suite tests (run with --tier nightly)",
+    "slow: long-running test excluded from smoke tier",
 ]
 
 [tool.mypy]

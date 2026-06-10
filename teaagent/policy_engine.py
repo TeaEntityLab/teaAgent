@@ -1,5 +1,7 @@
 """Policy engine for collaboration rules and team operations.
 
+experimental — unwired
+
 This module provides the foundation for defining, storing, and evaluating
 policies for collaborative agent workflows, including role-based access
 control, consensus validation, and policy-based routing.

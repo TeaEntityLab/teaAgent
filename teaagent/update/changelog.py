@@ -1,5 +1,7 @@
 """Changelog display for update UI (TASK-H6-003-04).
 
+experimental — unwired
+
 This module provides changelog formatting, display, and version history
 for the update mechanism.
 """

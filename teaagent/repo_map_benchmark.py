@@ -1,5 +1,7 @@
 """Repo-map benchmark automation for testing codebase understanding (TASK-H5-001-03).
 
+experimental — unwired
+
 This module provides automated benchmarking for repo-map functionality to ensure
 it works correctly across different codebase structures and sizes.
 """

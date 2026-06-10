@@ -1,5 +1,7 @@
 """Release pipeline integration for eval-gating (TASK-H5-001-06).
 
+experimental — unwired
+
 This module provides integration between the eval suite and release pipelines,
 including gating logic, result aggregation, and release decision making.
 """

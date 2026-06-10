@@ -1,5 +1,7 @@
 """Policy-based routing for collaborative agent workflows.
 
+experimental — unwired
+
 This module provides routing rules and decision logic for routing actions
 based on policies, including role-aware routing and policy-based dispatch.
 """

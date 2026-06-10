@@ -1,7 +1,7 @@
 # WDG-002: Suite Tiering (Smoke / Acceptance / Nightly)
 
 **Priority:** P0  
-**Status:** Scheduled (Sprint 1)  
+**Status:** Fixed  
 **Sprint:** 2026-06-10 → 2026-06-17  
 **Depends on:** WDG-001 findings (tier boundaries)  
 **Primary files:** `pyproject.toml`, `tests/conftest.py`, `docs/acceptance.md`, CI workflows, `scripts/validate_docs_consistency.py`

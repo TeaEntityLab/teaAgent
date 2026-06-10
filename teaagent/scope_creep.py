@@ -1,5 +1,7 @@
 """Scope-creep detection tests for monitoring agent behavior boundaries (TASK-H5-001-05).
 
+experimental — unwired
+
 This module provides tests for detecting when agents expand beyond their intended
 scope during execution, including file access monitoring, API call tracking, and
 action boundary validation.

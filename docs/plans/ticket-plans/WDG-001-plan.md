@@ -1,7 +1,7 @@
 # WDG-001: Diagnose Full-Suite SIGXCPU Truncation
 
 **Priority:** P0  
-**Status:** Scheduled (Sprint 1, parallel)  
+**Status:** Fixed  
 **Sprint:** 2026-06-10 → 2026-06-17  
 **Primary files:** `pyproject.toml`, `tests/conftest.py`, CI workflow logs, new `docs/analysis/suite-truncation-root-cause-2026-06-*.md`
 

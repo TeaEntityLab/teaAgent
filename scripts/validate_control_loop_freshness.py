@@ -51,6 +51,7 @@ _STATUS_MARKERS = (
     'Blocked',
     'Proposed',
     'Pending',
+    'Partially fixed',
     'On Hold',
     '\U0001f534',  # 🔴
     '\U0001f7e1',  # 🟡

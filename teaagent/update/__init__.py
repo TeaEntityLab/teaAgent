@@ -1,4 +1,7 @@
-"""Update mechanism package for teaagent."""
+"""Update mechanism package for teaagent.
+
+experimental — unwired
+"""
 
 from .changelog import (
     ChangeEntry,
