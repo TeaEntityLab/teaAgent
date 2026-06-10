@@ -4,6 +4,7 @@
 > **Claim class:** Proposal (execution backlog candidate).
 > **Derived from:** the [2026-06-10 System Critical Review Package](../analysis/system-critical-review-2026-06-10-INDEX.md).
 > **Succeeds:** [System Improvement Work Directions (2026-06-06)](system-improvement-work-directions-2026-06-06.md) — that backlog's WS1/WS2/WS3 spine is substantially executed (see refresh docs for per-item evidence); WS0/WS4/WS5/WS6 items not restated here remain valid.
+> **Execution schedule:** [Work Direction Execution Index](work-direction-execution-index-2026-06-10.md) — Sprint 1–6 calendar and ticket plans.
 >
 > Every direction below names its source finding, a falsifiable acceptance
 > gate, and an explicit "do not do" boundary, per the governed-engineering

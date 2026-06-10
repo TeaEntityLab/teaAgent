@@ -26,6 +26,7 @@
 | [Competitor Analyses vs Self Consolidation](competitor-analyses-vs-self-consolidation-2026-06-10.md) | 14-document market synthesis vs verified HEAD | Where does TeaAgent actually stand on every axis the corpus measured? |
 | [System Review Reasoning Ledger](system-review-reasoning-ledger-2026-06-10.md) | Public reasoning record | What was asked, what answered it, what remains unknown? |
 | [Work Direction Decomposition](../plans/work-direction-decomposition-2026-06-10.md) | Execution backlog (WD-A … WD-H) | What should be done next, in what order, with what gates? |
+| [Work Direction Execution Index](../plans/work-direction-execution-index-2026-06-10.md) | Sprint calendar + S1 ticket plans | What is scheduled this week, and what is the critical path? |
 
 ---
 

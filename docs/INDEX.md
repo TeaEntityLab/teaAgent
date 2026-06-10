@@ -15,7 +15,8 @@ follow dated evidence documents only when you need the reasoning trail.
 | What can a daily user trust today? | [Daily-Driver Current Status](daily-driver-current-status.md) | Current truth; update whenever TUI, chat, agent mode, approval, cost, undo, or resume behavior changes. |
 | What is the current documentation-state assessment? | [Documentation State Review](analysis/documentation-state-review-2026-06-04.md) | Current dated evidence for corpus shape, drift risks, and consolidation priorities. |
 | What is the documentation operating model? | [Documentation Operating Model](governance/documentation-operating-model-2026-06-04.md) | Governance rulebook for claim types, TTL, owners, supersession, and CI guard targets. |
-| What should be done next? | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Execution plan for reducing drift and improving discoverability. |
+| What should be done next? | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) | Sprint 1 truth pass (WDA-001, WDB-001, WDB-003, WDG-001/002) after the June 10 critical review. |
+| Documentation corpus optimization | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Execution plan for reducing drift and improving discoverability. |
 | What are the concrete work items? | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Task ledger with priority, status, dependencies, and acceptance criteria. |
 | Exhaustive docs inventory (generated) | [Docs Inventory](generated/docs-inventory.md) | Deterministic catalog; not current truth — use this index table first. |
 | Documentation aging dashboard (generated) | [Docs Aging Dashboard](generated/docs-aging-dashboard.md) | Current-truth review freshness grouped by owner surface. |
@@ -46,7 +47,8 @@ governance ledgers should prefer the canonical set above.
 | Current daily-driver behavior | [Daily-Driver Current Status](daily-driver-current-status.md) |
 | Acceptance flow inventory | [Acceptance Coverage](acceptance.md) |
 | Roadmap state | [Roadmap Status](roadmap-status.md) |
-| Ticket execution order | [Ticket Execution Plans](plans/ticket-plans/index.md) |
+| Ticket execution order (daily-driver) | [Ticket Execution Plans](plans/ticket-plans/index.md) |
+| Work direction Sprint 1 tickets | [Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md) |
 | Module ownership and inspection paths | [Module Documentation Index](modules/INDEX.md) |
 | Release gates | [Release Checklist](release-checklist.md) and [Daily-Driver Release Gates](governance/daily-driver-release-gates-2026-06-02.md) |
 | Permission and approval behavior | [Permission And Approval Playbook](permission-and-approval-playbook.md) |
@@ -128,6 +130,8 @@ governance ledgers should prefer the canonical set above.
 
 | Plan | Use it for |
 | --- | --- |
+| **[Work Direction Execution Index](plans/work-direction-execution-index-2026-06-10.md)** | **Current execution order: Sprint 1 truth pass (WDA/WDB/WDG) after June 10 review.** |
+| [Work Direction Decomposition](plans/work-direction-decomposition-2026-06-10.md) | Full WD-A … WD-H backlog with acceptance gates. |
 | [Documentation Optimization Master Plan](plans/documentation-optimization-master-plan-2026-06-04.md) | Prioritizing documentation work by stability, UX, risk, and ROI. |
 | [Documentation Optimization Work Items](work-log/documentation-optimization-work-items-2026-06-04.md) | Concrete task execution ledger. |
 | [Daily-Driver Complete Work Plan](plans/daily-driver-complete-work-plan-risk-roi-2026-06-04.md) | Daily-driver risk, feasibility, ROI, and sequence. |
