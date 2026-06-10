@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from .eval_suite import EvalCategory, EvalTest
+from teaagent.eval_suite import EvalCategory, EvalTest
 
 
 class BenchmarkMetric(str, Enum):

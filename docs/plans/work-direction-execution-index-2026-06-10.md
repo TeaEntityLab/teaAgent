@@ -74,7 +74,7 @@ any time after S1 WDA-001 lands (needs honest module labels for concept audit).
 | S3b | WDA-005 | **Closed** — `governance/update_platform.py` + `prove_update_platform.py` |
 | S4 | WDC-001, WDC-002, WDC-003, WDC-004 | **Closed** — stranger baseline, 3-concept path, plain receipts, terminology freeze |
 | S5 | WDE-001, WDE-002, WDE-003, WDF-001 | **Closed** — `file://` remote backend, Ed25519 signed queue, WS2 gap tests, ADR 0030 |
-| S5 defer | WDF-002 | Root-module fold/re-exports (deferred post-freeze) |
+| S5 | WDF-002 | **Closed** — H4/H5 folded to `governance/` + `consensus/`; compat aliases (177 root modules) |
 | S6 | WDH-001, WDH-003 | **Closed** — survey moratorium; when-not-to-use refresh |
 | S6 open | WDH-002 | Protocol ready; external sessions not yet recorded |
 | S3 note | WDD-003 | **Closed** — [competitor absence note](../analysis/eval-gate-competitor-absence-2026-06-10.md) |

@@ -14,7 +14,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from .eval_suite import EvalRunner, EvalStatus, EvalStore
+from teaagent.eval_suite import EvalRunner, EvalStatus, EvalStore
 
 
 class ReleaseDecision(str, Enum):

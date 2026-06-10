@@ -12,7 +12,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
-from teaagent.policy_engine import PolicyEffect, PolicyEngine, PolicyStore, PolicyType
+from teaagent.governance.policy_engine import (
+    PolicyEffect,
+    PolicyEngine,
+    PolicyStore,
+    PolicyType,
+)
 
 
 class H4GovernanceMode(str, Enum):
@@ -125,7 +130,7 @@ def check_subagent_launch_rbac(
     depth: int,
 ) -> tuple[bool, str]:
     """RBAC gate for subagent launch. Shadow by default; enforce when configured."""
-    from teaagent.rbac import Permission, RBACSystem
+    from teaagent.governance.rbac import Permission, RBACSystem
 
     mode = rbac_governance_mode()
     context = {

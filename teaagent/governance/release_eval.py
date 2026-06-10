@@ -9,7 +9,11 @@ from typing import Any
 
 from teaagent.eval_corpus import register_release_eval_suite
 from teaagent.eval_suite import EvalStore
-from teaagent.release_gate import ReleaseDecision, ReleaseGate, ReleaseGateResult
+from teaagent.governance.release_gate import (
+    ReleaseDecision,
+    ReleaseGate,
+    ReleaseGateResult,
+)
 
 
 def release_eval_store_path(workspace_root: str | Path) -> Path:

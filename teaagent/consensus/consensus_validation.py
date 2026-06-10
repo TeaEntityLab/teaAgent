@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
-from .policy_engine import PolicyEffect, PolicyEngine, PolicyStore, PolicyType
+from teaagent.governance.policy_engine import (
+    PolicyEffect,
+    PolicyEngine,
+    PolicyStore,
+    PolicyType,
+)
 
 
 class ConsensusStatus(str, Enum):

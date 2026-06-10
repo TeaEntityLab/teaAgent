@@ -10,7 +10,10 @@ try:
 except PackageNotFoundError:
     __version__ = '0+local'
 
+from teaagent._compat_modules import install_deprecated_module_aliases
 from teaagent._lazy_exports import _EXPORTS, lazy_dir, lazy_getattr
+
+install_deprecated_module_aliases()
 
 
 def __getattr__(name: str) -> object:

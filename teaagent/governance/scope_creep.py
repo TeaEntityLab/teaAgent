@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from .eval_suite import EvalCategory, EvalTest
+from teaagent.eval_suite import EvalCategory, EvalTest
 
 
 class ScopeBoundary(str, Enum):

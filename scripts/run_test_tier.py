@@ -43,6 +43,7 @@ SMOKE_TARGETS: tuple[str, ...] = (
     str(_TESTS / 'test_conversation_ux.py'),
     str(_TESTS / 'test_ws2_verification_gaps.py'),
     str(_TESTS / 'test_root_module_count.py'),
+    str(_TESTS / 'test_import_compat_wdf002.py'),
     str(_TESTS / 'test_terminology_lint.py'),
     str(_TESTS / 'test_suite_summary_freshness.py'),
     str(_TESTS / 'regression'),

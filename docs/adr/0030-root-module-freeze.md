@@ -23,9 +23,10 @@ consolidation into `teaagent/governance/`, `teaagent/consensus/`, and
    - `scripts/check_root_module_count.py` fails CI when count exceeds baseline.
    - New root modules require an ADR exception with explicit justification.
 
-3. **WDF-002 deferred**
-   - Deprecation re-exports for remaining H4 root modules are a follow-up; this
-     ADR establishes the freeze without a mass move.
+3. **WDF-002 complete (2026-06-10)**
+   - Folded seven H4/H5 root modules into `teaagent/governance/` and
+     `teaagent/consensus/`; deprecated import aliases via `_compat_modules.py`.
+   - Root count at HEAD: **177** (down from 184 baseline).
 
 ## Consequences
 
