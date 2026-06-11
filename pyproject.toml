@@ -96,8 +96,7 @@ github = [
     "PyGithub>=2.0.0",
 ]
 dev = [
-    "graphqlite>=0.6.0",
-    "pysqlite3>=0.6.0",
+    "teaagent[graphqlite]",
     "teaagent[crypto]",
     "watchdog>=3.0.0",
     "prompt-toolkit>=3.0.0",

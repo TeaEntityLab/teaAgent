@@ -11,6 +11,8 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import sys
+import tarfile
 import tempfile
 from dataclasses import dataclass, field
 from enum import Enum
@@ -160,6 +162,18 @@ class UpdateDownloader:
         return sha256_hash.hexdigest() == expected_checksum
 
 
+def _safe_extract(tar: tarfile.TarFile, path: Path) -> None:
+    """Extract tar safely, preventing path traversal."""
+    for member in tar.getmembers():
+        member_path = (path.resolve() / member.name).resolve()
+        if not str(member_path).startswith(str(path.resolve())):
+            raise tarfile.ExtractError(
+                f'Unsafe tar member: {member.name} would escape {path}'
+            )
+    # bandit B202: members validated above — safe to extract
+    tar.extractall(path)  # nosec
+
+
 class UpdateInstaller:
     """Installer for update packages."""
 
@@ -221,10 +235,11 @@ class UpdateInstaller:
 
         try:
             # Extract package (placeholder - assumes tar.gz)
-            import tarfile
-
             with tarfile.open(package_path, 'r:gz') as tar:
-                tar.extractall(self.install_dir)
+                if sys.version_info >= (3, 12):
+                    tar.extractall(self.install_dir, filter='data')
+                else:
+                    _safe_extract(tar, self.install_dir)
 
             if progress_callback:
                 progress_callback(75)

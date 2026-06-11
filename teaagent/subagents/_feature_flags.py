@@ -183,7 +183,9 @@ class FeatureFlags:
         # Use consistent hashing based on request_id
         import hashlib
 
-        hash_value = int(hashlib.md5(request_id.encode()).hexdigest(), 16)
+        hash_value = int(
+            hashlib.md5(request_id.encode(), usedforsecurity=False).hexdigest(), 16
+        )
         threshold = (rollout_percentage / 100) * (2**32)
         return hash_value % (2**32) < threshold
 
