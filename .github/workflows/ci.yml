@@ -138,7 +138,7 @@ jobs:
         env:
           PYTHONHASHSEED: "0"
         # Use xdist -n auto to parallelize and avoid OOM on GH runners
-        run: pytest --random-order -n auto --dist worksteal --cov=teaagent --cov-context=test --cov-report=term-missing --cov-fail-under=75
+        run: pytest --random-order -n auto --dist worksteal --cov=teaagent --cov-report=term-missing --cov-fail-under=75
 
   test-telemetry:
     runs-on: ubuntu-latest

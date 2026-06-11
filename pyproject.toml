@@ -236,9 +236,6 @@ targets = ["."]
 
 [tool.coverage.run]
 source = ["teaagent"]
-# Per-test context reduces memory pressure from coverage tracking
-# across 5000+ tests under pydantic-core instrumentation.
-context = "test"
 omit = [
     "teaagent/tui/*",
     "teaagent/tournament/*",

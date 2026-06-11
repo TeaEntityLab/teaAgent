@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 try:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -13,8 +13,9 @@ try:
         Ed25519PublicKey,
     )
 except ImportError:  # pragma: no cover - optional dependency path
-    Ed25519PrivateKey = None  # type: ignore[misc, assignment]
-    Ed25519PublicKey = None  # type: ignore[misc, assignment]
+    if not TYPE_CHECKING:
+        Ed25519PrivateKey = None
+        Ed25519PublicKey = None
 
 
 @dataclass(frozen=True)
