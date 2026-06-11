@@ -12,6 +12,9 @@ from teaagent.preflight import PreflightReport
 from teaagent.storage import atomic_write_text
 
 _PLAN_TASK_LINE = re.compile(r'^-\s+\*\*Task:\*\*\s*(.+)\s*$', re.MULTILINE)
+_PLAN_PERMISSION_LINE = re.compile(
+    r'^-\s+\*\*Permission mode:\*\*\s*(.+)\s*$', re.MULTILINE
+)
 
 
 @dataclass(frozen=True)
@@ -25,6 +28,7 @@ class PlanContract:
     file_targets: frozenset[str] = (
         frozenset()
     )  # Approved file targets for write operations
+    permission_mode: str = 'prompt'  # Suggested permission mode from plan
 
     def to_dict(self) -> dict[str, str | list[str]]:
         return {
@@ -33,6 +37,7 @@ class PlanContract:
             'content_hash': self.content_hash,
             'task': self.task,
             'file_targets': sorted(self.file_targets),
+            'permission_mode': self.permission_mode,
         }
 
     def allows_file_write(self, file_path: str) -> bool:
@@ -100,6 +105,12 @@ def load_plan_contract(  # noqa: C901
     task = match.group(1).strip()
     rel_path = path.relative_to(workspace).as_posix()
 
+    # Extract permission mode from plan content (if specified in Summary section)
+    permission_match = _PLAN_PERMISSION_LINE.search(content)
+    permission_mode = (
+        permission_match.group(1).strip() if permission_match else 'prompt'
+    )
+
     # Extract file targets from plan content (if specified in "Files likely touched" section)
     file_targets: frozenset[str] = frozenset()
     if 'Files likely touched' in content:
@@ -130,6 +141,7 @@ def load_plan_contract(  # noqa: C901
         content_hash=plan_content_hash(content),
         task=task,
         file_targets=file_targets,
+        permission_mode=permission_mode,
     )
 
 

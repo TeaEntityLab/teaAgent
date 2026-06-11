@@ -160,6 +160,7 @@ def _resolve_run_task(
             root=args.root,
             allow_external_plan=getattr(args, 'allow_external_plan', False),
         )
+    if plan_contract is not None:
         raw_task = plan_contract.task
     elif getattr(args, 'task', None):
         raw_task = args.task
@@ -530,6 +531,9 @@ def _execute_agent_task(  # noqa: C901
         merged_context_extra['resumed_from'] = resumed_from
     if plan_contract is not None:
         merged_context_extra['plan_contract'] = plan_contract.to_dict()
+    # The plan contract provides the task and scope, but permission mode is always
+    # taken from the command-line argument to allow the user to override the plan's
+    # suggested mode for the actual execution.
     gate_exit = _require_plan_gate(args, plan_contract)
     if gate_exit is not None:
         return gate_exit

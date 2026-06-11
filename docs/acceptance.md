@@ -7,7 +7,7 @@
 > **Does not own:** Full-suite CI results (see dated evidence) or roadmap priorities.
 >
 > **Review trigger:** Acceptance test inventory or count changes.
-> **Last reviewed:** 2026-06-10
+> **Last reviewed:** 2026-06-12
 
 ## Suite Tiers (WDG-002)
 
@@ -42,7 +42,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `643 passed`** (pytest-collected guard target; suite summary at `docs/generated/suite-summary.json`, 2026-06-11)
+**Current acceptance test count: `648 passed`** (pytest-collected guard target; suite summary at `docs/generated/suite-summary.json`, 2026-06-12)
 
 Keep historical acceptance-count snapshots in dated analysis or roadmap docs.
 This file only owns the live guard target.
