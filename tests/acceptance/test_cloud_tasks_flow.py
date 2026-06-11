@@ -1,6 +1,36 @@
-"""Acceptance test for cloud/managed runtime task lifecycle.
+"""Test module for cloud/managed runtime task lifecycle.
 
-Verifies: CloudTaskStore CRUD, CloudTaskManager submit/poll/cancel.
+This module tests the cloud task system for managed runtime environments, which
+enables task submission, polling, and cancellation in cloud environments. The
+system provides a task store and manager for cloud-based agent execution.
+
+Key concepts tested:
+- Task Submission: CloudTaskManager submits tasks for execution
+- Task Polling: CloudTaskManager polls task status
+- Task Cancellation: CloudTaskManager cancels pending tasks
+- Task Persistence: CloudTaskStore persists task metadata
+- Task Listing: CloudTaskManager lists all tasks
+- Capabilities: CloudTaskManager exposes available capabilities
+
+Acceptance Criteria:
+- AC1: CloudTaskManager.submit() creates and executes a task
+- AC2: CloudTaskManager.poll() returns current task status
+- AC3: CloudTaskManager.cancel() cancels a pending task
+- AC4: CloudTaskStore persists tasks to .teaagent/cloud-tasks/tasks.jsonl
+- AC5: CloudTaskManager.list_tasks() returns all tasks
+- AC6: CloudTaskManager.capabilities() returns available providers
+
+Technical Details:
+- CloudTaskStore manages task persistence in JSONL format
+- CloudTaskManager integrates with ManagedAgentRunner for execution
+- Tasks include: task_id, name, prompt, status, result
+- Task states: pending, completed, cancelled
+- Manifest file tracks all tasks for observability
+- Capabilities expose available LLM providers
+
+References:
+- Cloud runtime design: /docs/architecture/cloud_runtime.md
+- Task lifecycle spec: /docs/specs/cloud_tasks.md
 """
 
 from __future__ import annotations

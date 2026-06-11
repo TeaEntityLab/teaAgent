@@ -1,4 +1,45 @@
-"""First-hour daily loop: setup -> daily -> plan -> edit -> test evidence -> undo."""
+"""Test module for first-hour end-to-end user flow.
+
+This module tests the complete first-hour user journey, covering the essential
+workflow from initial setup through daily operations, planning, editing, testing,
+and undo. This is a critical integration test that validates the entire TeaAgent
+workflow as a user would experience it.
+
+Key concepts tested:
+- Initial Setup: Configuration creation with provider, API key, and permission mode
+- Daily Command: Token budget and permission mode validation for daily operations
+- Plan Command: Plan artifact generation with read-only safety
+- Agent Run: Task execution with permission mode and tool call limits
+- Test Evidence: Verification that changes pass local tests (pytest)
+- Run Show: Audit trail inspection and run history retrieval
+- Undo Operation: Restoration of workspace to pre-run state
+- Git Integration: Baseline commits and change tracking
+
+Acceptance Criteria:
+- AC1: Setup command creates .teaagent/config.toml with provider and API key
+- AC2: Daily command returns token_budget and respects permission_mode
+- AC3: Plan command generates artifact under .teaagent/plans/ with read_only=True
+- AC4: Agent run completes successfully with workspace-write permission mode
+- AC5: Agent run makes actual edits to files (calc.py fix)
+- AC6: Local tests (pytest) pass after agent edits
+- AC7: Agent show command returns run history with correct run_id
+- AC8: Undo command restores workspace to baseline state
+- AC9: All commands respect permission_mode flags throughout the flow
+
+Technical Details:
+- Uses subprocess for git operations (init, add, commit)
+- Uses FakeAdapter for mocking LLM responses in tests
+- Tests both read-only and workspace-write permission modes
+- Validates JSON output from CLI commands
+- Checks file content before and after operations
+- Requires loopback socket binding for plan command (skipped if unavailable)
+- Uses can_bind_loopback() to detect socket binding restrictions
+
+References:
+- First-hour UX design: /docs/architecture/first_hour_ux.md
+- CLI workflow spec: /docs/specs/cli_workflow.md
+- Undo operation design: /docs/architecture/undo_operation.md
+"""
 
 from __future__ import annotations
 

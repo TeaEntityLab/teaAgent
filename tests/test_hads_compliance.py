@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import unittest
 from pathlib import Path
 
 
@@ -30,9 +29,8 @@ def is_hads_compliant(content: str) -> bool:
     return has_title
 
 
-class TestHADSCompliance(unittest.TestCase):
-    def test_sample_hads_document(self) -> None:
-        content = """---
+def test_sample_hads_document() -> None:
+    content = """---
 type: documentation
 audience: human, ai
 status: stable
@@ -41,16 +39,11 @@ status: stable
 
 Overview: How to use TeaAgent.
 """
-        self.assertTrue(is_hads_compliant(content))
-
-    def test_existing_usage_doc_is_now_hads(self) -> None:
-        usage_path = Path('docs/USAGE.md')
-        if usage_path.exists():
-            content = usage_path.read_text(encoding='utf-8')
-            self.assertTrue(
-                is_hads_compliant(content), 'docs/USAGE.md should now be HADS compliant'
-            )
+    assert is_hads_compliant(content)
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_existing_usage_doc_is_now_hads() -> None:
+    usage_path = Path('docs/USAGE.md')
+    if usage_path.exists():
+        content = usage_path.read_text(encoding='utf-8')
+        assert is_hads_compliant(content), 'docs/USAGE.md should now be HADS compliant'

@@ -42,6 +42,16 @@ class FeatureFlags:
             'redis_primary_writes': True,
             'enable_redis_fallback': True,
             'hybrid_queue_sync_interval': 60,
+            'hybrid_queue_rollout_percentage': 0,  # 0-100% of traffic to hybrid queue
+            'hybrid_queue_enable_circuit_breaker': True,
+            'hybrid_queue_enable_compression': False,
+            'hybrid_queue_enable_deduplication': True,
+            'hybrid_queue_enable_ttl': True,
+            'hybrid_queue_enable_priority': False,
+            'hybrid_queue_enable_rate_limiting': False,
+            'hybrid_queue_enable_audit_trail': True,
+            'hybrid_queue_enable_encryption': False,
+            'hybrid_queue_enable_archival': False,
         }
 
         # Load from config file if provided
@@ -153,6 +163,29 @@ class FeatureFlags:
         for flag_name in self._defaults:
             result[flag_name] = self.is_enabled(flag_name)
         return result
+
+    def should_use_hybrid_queue(self, request_id: str) -> bool:
+        """Check if a request should use the hybrid queue based on rollout percentage.
+
+        Args:
+            request_id: Request ID to use for consistent hashing
+
+        Returns:
+            True if request should use hybrid queue, False otherwise
+        """
+        rollout_percentage = self.get('hybrid_queue_rollout_percentage', 0)
+
+        if rollout_percentage >= 100:
+            return True
+        if rollout_percentage <= 0:
+            return False
+
+        # Use consistent hashing based on request_id
+        import hashlib
+
+        hash_value = int(hashlib.md5(request_id.encode()).hexdigest(), 16)
+        threshold = (rollout_percentage / 100) * (2**32)
+        return hash_value % (2**32) < threshold
 
     def save_to_file(self, path: Optional[Path] = None) -> None:
         """Save current feature flags to configuration file.

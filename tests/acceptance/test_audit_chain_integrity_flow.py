@@ -1,14 +1,38 @@
-"""AC-NEW-13: Audit log integrity flow.
+"""Test module for audit chain integrity and security.
 
-As a security lead, I want the audit JSONL log to be verifiable so that
-any tampering is detectable.
+This module tests the audit logging system's integrity guarantees, which are
+critical for security and compliance. The audit chain provides a verifiable
+record of all agent operations, enabling detection of tampering and ensuring
+accountability for all actions taken by the agent.
 
-Acceptance criteria:
-- Every event written by ``AuditLogger`` is valid JSON parseable individually.
-- Event IDs are unique within a run.
-- Events are ordered by creation (monotonic event stream).
-- No sensitive key values appear in persisted log lines (redaction works).
-- Persisted log can be re-read and reconstructed to match in-memory events.
+Key concepts tested:
+- JSON Line Format: Each audit event is valid JSON on its own line
+- Event Uniqueness: Event IDs are unique within a run to prevent duplication
+- Event Ordering: Events are ordered by creation time (monotonic stream)
+- Sensitive Data Redaction: Sensitive values (e.g., file contents) are redacted in logs
+- Log Persistence: Logs can be re-read and reconstructed to match in-memory events
+- File Permissions: Audit files have restricted permissions (mode 0o600)
+
+Acceptance Criteria:
+- AC1: Every event written by AuditLogger is valid JSON parseable individually
+- AC2: Event IDs are unique within a run (no duplicates)
+- AC3: Events are ordered by creation (monotonic event stream)
+- AC4: No sensitive key values appear in persisted log lines (redaction works)
+- AC5: Persisted log can be re-read and reconstructed to match in-memory events
+- AC6: Audit files are not world-readable (mode 0o600)
+
+Technical Details:
+- AuditLogger writes events in JSONL format (one JSON object per line)
+- Each event includes event_type, run_id, event_id, and payload
+- Event IDs are UUIDs to ensure uniqueness
+- Sensitive fields (e.g., 'content' in file operations) are redacted as [REDACTED]
+- RunStore manages audit file paths and permissions
+- File permissions are set to 0o600 (owner read/write only)
+
+References:
+- Audit chain design: /docs/architecture/audit_chain.md
+- Security requirements: /docs/security/audit_requirements.md
+- Redaction policy: /docs/security/data_redaction.md
 """
 
 from __future__ import annotations

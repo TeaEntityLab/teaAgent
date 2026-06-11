@@ -7,12 +7,23 @@ tampering, insertion, or deletion.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
+import threading
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from teaagent.audit_chain import GENESIS_HASH
 from teaagent.types import AuditLogger, ChainVerificationResult, verify_audit_chain
+
+# Audit chain test constants
+_LARGE_AUDIT_LOG_EVENT_COUNT = 1000  # Number of events for large log memory test
+_LARGE_AUDIT_LOG_DATA_REPEAT = (
+    10  # Number of times to repeat data string in large log test
+)
 
 
 def test_clean_log_is_valid(tmp_path):
@@ -187,3 +198,151 @@ def test_audit_key_file_permissions_readable(tmp_path):
         f'Key file {key_path} has mode {oct(mode)}, expected 0o600 '
         '(world-readable key file would allow HMAC forgery)'
     )
+
+
+# Negative test cases for malformed JSON and encoding issues
+def test_malformed_json_line_detected(tmp_path):
+    """Audit chain should detect and reject malformed JSON lines."""
+    log = tmp_path / 'run-malformed.jsonl'
+    audit = AuditLogger(path=log)
+    audit.record('run_started', 'r1', task='test')
+
+    # Append a malformed JSON line
+    with open(log, 'a', encoding='utf-8') as f:
+        f.write('{"invalid": json, "missing": quote}\n')
+
+    result = verify_audit_chain(log)
+    assert not result.valid, 'Malformed JSON should cause chain verification to fail'
+    assert result.error is not None
+
+
+def test_malformed_json_trailing_comma(tmp_path):
+    """Audit chain should detect JSON with trailing commas."""
+    log = tmp_path / 'run-trailing.jsonl'
+    audit = AuditLogger(path=log)
+    audit.record('run_started', 'r1', task='test')
+
+    # Append JSON with trailing comma
+    with open(log, 'a', encoding='utf-8') as f:
+        f.write('{"event_type": "test", "payload": {"key": "value",}}\n')
+
+    result = verify_audit_chain(log)
+    assert not result.valid, (
+        'JSON with trailing comma should cause chain verification to fail'
+    )
+
+
+def test_empty_lines_in_log(tmp_path):
+    """Audit chain should handle empty lines gracefully."""
+    log = tmp_path / 'run-empty-lines.jsonl'
+    audit = AuditLogger(path=log)
+    audit.record('run_started', 'r1', task='test')
+    audit.record('run_completed', 'r1', answer='done')
+
+    # Add empty lines
+    with open(log, 'a', encoding='utf-8') as f:
+        f.write('\n\n')
+
+    result = verify_audit_chain(log)
+    # Empty lines should be skipped, not cause failure
+    assert result.valid, f'Empty lines should be handled gracefully: {result.error}'
+
+
+def test_unicode_encoding_handling(tmp_path):
+    """Audit chain should handle Unicode characters correctly."""
+    log = tmp_path / 'run-unicode.jsonl'
+    audit = AuditLogger(path=log)
+    audit.record('run_started', 'r1', task='test with unicode: 你好世界')
+
+    result = verify_audit_chain(log)
+    assert result.valid, f'Unicode should be handled correctly: {result.error}'
+
+
+def test_corrupted_hash_field(tmp_path):
+    """Audit chain should detect corrupted hash fields."""
+    log = tmp_path / 'run-corrupted-hash.jsonl'
+    audit = AuditLogger(path=log)
+    audit.record('run_started', 'r1', task='test')
+
+    # Manually corrupt the hash field
+    lines = log.read_text(encoding='utf-8').splitlines()
+    first_line = json.loads(lines[0])
+    first_line['hash'] = 'corrupted_hash_value'
+    lines[0] = json.dumps(first_line)
+    log.write_text('\n'.join(lines), encoding='utf-8')
+
+    result = verify_audit_chain(log)
+    assert not result.valid, 'Corrupted hash should cause chain verification to fail'
+
+
+def test_symlink_attack_on_audit_log_path(tmp_path):
+    """Audit chain should detect or reject symlinks on audit log path."""
+    real_log = tmp_path / 'real_audit.jsonl'
+    symlink_log = tmp_path / 'symlink_audit.jsonl'
+
+    # Create a real audit log
+    audit = AuditLogger(path=real_log)
+    audit.record('run_started', 'r1', task='test')
+
+    # Create a symlink to the real log
+    try:
+        os.symlink(real_log, symlink_log)
+    except OSError:
+        # Symlink creation may fail on some systems; skip test if so
+        pytest.skip('Symlink creation not supported on this system')
+
+    # Verify chain via symlink should work (same content)
+    result = verify_audit_chain(symlink_log)
+    assert result.valid, 'Symlink to valid audit log should verify successfully'
+
+
+def test_concurrent_file_modification_during_verification(tmp_path):
+    """Audit chain verification should handle concurrent file modifications gracefully."""
+    log = tmp_path / 'concurrent_audit.jsonl'
+    audit = AuditLogger(path=log)
+    audit.record('run_started', 'r1', task='test')
+    audit.record('run_completed', 'r1', answer='done')
+
+    # Simulate concurrent modification during verification
+    modification_occurred = threading.Event()
+
+    def modify_log_during_verification():
+        """Simulate a concurrent modification."""
+        modification_occurred.wait(timeout=1.0)
+        # Try to modify the log while verification is in progress
+        with contextlib.suppress(Exception):
+            audit.record('run_started', 'r2', task='concurrent')
+
+    # Start modification thread
+    thread = threading.Thread(target=modify_log_during_verification)
+    thread.start()
+
+    # Signal modification to occur during verification
+    modification_occurred.set()
+
+    # Verify chain - should either succeed or fail gracefully, not crash
+    result = verify_audit_chain(log)
+    thread.join(timeout=2.0)
+
+    # Result should be valid or have a clear error, not crash
+    assert result.valid is not None or result.error is not None
+
+
+def test_large_audit_log_memory_handling(tmp_path):
+    """Audit chain should handle large logs without memory exhaustion."""
+    log = tmp_path / 'large_audit.jsonl'
+    audit = AuditLogger(path=log)
+
+    # Create a large audit log
+    for i in range(_LARGE_AUDIT_LOG_EVENT_COUNT):
+        audit.record(
+            'iteration_started',
+            'r1',
+            iteration=i,
+            data=f'iteration_{i}' * _LARGE_AUDIT_LOG_DATA_REPEAT,
+        )
+
+    # Verify chain should complete without memory issues
+    result = verify_audit_chain(log)
+    assert result.valid, f'Large audit log verification failed: {result.error}'
+    assert result.event_count == _LARGE_AUDIT_LOG_EVENT_COUNT

@@ -1,3 +1,41 @@
+"""Test module for ANP (Agent Network Protocol) adapter integration.
+
+This module tests the ANP adapter system, which enables federated agent communication
+and task delegation across network boundaries. The ANP adapter provides bidirectional
+routing, governed service execution, and integration with external agent networks.
+
+Key concepts tested:
+- Inbound Adapter: Handles incoming tasks from remote ANP peers
+- Outbound Client: Sends tasks to remote ANP peers via transport layer
+- Bidirectional Router: Auto-selects local execution with remote fallback
+- Governed Service: Enforces tool governance (approvals, budgets) on ANP requests
+- Budget Enforcement: ANP operations respect runtime budget limits
+- Content Extraction: Parses provider-specific response formats (e.g., OpenCodeZen Go Kimi)
+
+Acceptance Criteria:
+- AC1: ANPInboundAdapter routes tasks to local handlers and returns results
+- AC2: ANPBidirectionalRouter prefers local execution, falls back to remote on failure
+- AC3: Remote routing requires explicit endpoint configuration
+- AC4: Destructive tool calls via ANP require approval before execution
+- AC5: ANP operations enforce budget limits (max_tool_calls, etc.)
+- AC6: Audit trail records ANP-specific events (anp_inbound_started, anp_outbound_started)
+- AC7: Content extraction works for provider-specific response formats
+
+Technical Details:
+- ANPInboundAdapter wraps local task handlers with ANP protocol
+- ANPOutboundClient uses transport function to send tasks to remote endpoints
+- ANPBidirectionalRouter implements auto-routing with fallback logic
+- ANPGovernedService integrates ToolRegistry, AuditLogger, and RunBudget
+- Tool governance (destructive flag) triggers approval workflow for ANP requests
+- Budget violations raise BudgetExceededError and record audit events
+- _extract_openai_content handles provider-specific response parsing
+
+References:
+- ANP protocol spec: /docs/specs/anp_protocol.md
+- Federation architecture: /docs/architecture/federation.md
+- Tool governance: /docs/security/tool_governance.md
+"""
+
 from __future__ import annotations
 
 import json

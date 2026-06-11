@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import time
-import unittest
 from typing import Any, Optional
+
+import pytest
 
 from teaagent.oauth21._pg_store import PostgreSQLOAuthStore
 from teaagent.oauth21._types import OAuth21Client, _AuthorizationCode
@@ -185,134 +186,133 @@ def _make_code(
     )
 
 
-class PostgreSQLOAuthStoreImportGuardTests(unittest.TestCase):
-    def test_raises_import_error_without_psycopg2(self) -> None:
-        import teaagent.oauth21._pg_store as pg_mod
+def test_raises_import_error_without_psycopg2() -> None:
+    import teaagent.oauth21._pg_store as pg_mod
 
-        original = pg_mod.HAS_PSYCOPG2
-        try:
-            pg_mod.HAS_PSYCOPG2 = False
-            with self.assertRaises(ImportError):
-                PostgreSQLOAuthStore('postgresql://localhost/test')
-        finally:
-            pg_mod.HAS_PSYCOPG2 = original
-
-    def test_conn_factory_bypasses_import_check(self) -> None:
-        db = _FakeDB()
-        store = PostgreSQLOAuthStore('unused', _conn_factory=db.conn)
-        self.assertIsNotNone(store)
+    original = pg_mod.HAS_PSYCOPG2
+    try:
+        pg_mod.HAS_PSYCOPG2 = False
+        with pytest.raises(ImportError):
+            PostgreSQLOAuthStore('postgresql://localhost/test')
+    finally:
+        pg_mod.HAS_PSYCOPG2 = original
 
 
-class PostgreSQLOAuthStoreClientTests(unittest.TestCase):
-    def test_register_and_get_client(self) -> None:
-        store = _make_store()
-        client = OAuth21Client(
-            client_id='client-1',
-            client_secret='secret-1',
-            redirect_uris=frozenset(['https://client.example/cb']),
-            scope='mcp',
-        )
-        store.register_client(client)
-        retrieved = store.get_client('client-1')
-        self.assertIsNotNone(retrieved)
-        assert retrieved is not None
-        self.assertEqual(retrieved.client_id, 'client-1')
-        self.assertEqual(retrieved.scope, 'mcp')
-        self.assertIn('https://client.example/cb', retrieved.redirect_uris)
-
-    def test_get_missing_client_returns_none(self) -> None:
-        store = _make_store()
-        self.assertIsNone(store.get_client('no-such-client'))
-
-    def test_validate_client_secret_correct(self) -> None:
-        store = _make_store()
-        store.register_client(
-            OAuth21Client('c1', 'my-secret', frozenset(['https://x/cb']))
-        )
-        self.assertTrue(store.validate_client_secret('c1', 'my-secret'))
-
-    def test_validate_client_secret_wrong(self) -> None:
-        store = _make_store()
-        store.register_client(
-            OAuth21Client('c1', 'my-secret', frozenset(['https://x/cb']))
-        )
-        self.assertFalse(store.validate_client_secret('c1', 'wrong'))
-
-    def test_validate_client_secret_unknown_client(self) -> None:
-        store = _make_store()
-        self.assertFalse(store.validate_client_secret('no-such', 'anything'))
-
-    def test_client_secret_not_stored_in_plaintext(self) -> None:
-        db = _FakeDB()
-        store = PostgreSQLOAuthStore('unused', _conn_factory=db.conn)
-        store.register_client(
-            OAuth21Client('c1', 'plain-secret', frozenset(['https://x/cb']))
-        )
-        row = db.clients['c1']
-        self.assertNotIn(b'plain-secret', row['client_secret_hash'])
+def test_conn_factory_bypasses_import_check() -> None:
+    db = _FakeDB()
+    store = PostgreSQLOAuthStore('unused', _conn_factory=db.conn)
+    assert store is not None
 
 
-class PostgreSQLOAuthStoreCodeTests(unittest.TestCase):
-    def test_save_and_consume_code(self) -> None:
-        store = _make_store()
-        code = _make_code()
-        store.save_code(code)
-        result = store.consume_code(code.code)
-        self.assertIsNotNone(result)
-        assert result is not None
-        self.assertEqual(result.code, code.code)
-        self.assertEqual(result.client_id, 'client-1')
-
-    def test_consume_is_one_time(self) -> None:
-        store = _make_store()
-        code = _make_code()
-        store.save_code(code)
-        self.assertIsNotNone(store.consume_code(code.code))
-        self.assertIsNone(store.consume_code(code.code))
-
-    def test_consume_missing_code_returns_none(self) -> None:
-        store = _make_store()
-        self.assertIsNone(store.consume_code('no-such-code'))
-
-    def test_prune_removes_expired_codes(self) -> None:
-        store = _make_store()
-        expired = _make_code('expired', expires_at=time.time() - 1)
-        fresh = _make_code('fresh', expires_at=time.time() + 600)
-        store.save_code(expired)
-        store.save_code(fresh)
-        store.prune(now=time.time(), code_ttl_cutoff=time.time(), nonce_ttl=300)
-        self.assertIsNone(store.consume_code('expired'))
-        self.assertIsNotNone(store.consume_code('fresh'))
+def test_register_and_get_client() -> None:
+    store = _make_store()
+    client = OAuth21Client(
+        client_id='client-1',
+        client_secret='secret-1',
+        redirect_uris=frozenset(['https://client.example/cb']),
+        scope='mcp',
+    )
+    store.register_client(client)
+    retrieved = store.get_client('client-1')
+    assert retrieved is not None
+    assert retrieved.client_id == 'client-1'
+    assert retrieved.scope == 'mcp'
+    assert 'https://client.example/cb' in retrieved.redirect_uris
 
 
-class PostgreSQLOAuthStoreNonceTests(unittest.TestCase):
-    def test_save_and_get_nonce(self) -> None:
-        store = _make_store()
-        store.save_nonce('nonce-1', 1000.0)
-        self.assertEqual(store.get_nonce('nonce-1'), 1000.0)
-
-    def test_get_missing_nonce_returns_none(self) -> None:
-        store = _make_store()
-        self.assertIsNone(store.get_nonce('no-such'))
-
-    def test_consume_nonce_is_one_time(self) -> None:
-        store = _make_store()
-        store.save_nonce('n1', time.time())
-        self.assertIsNotNone(store.consume_nonce('n1'))
-        self.assertIsNone(store.consume_nonce('n1'))
-
-    def test_delete_nonce(self) -> None:
-        store = _make_store()
-        store.save_nonce('n1', time.time())
-        store.delete_nonce('n1')
-        self.assertIsNone(store.get_nonce('n1'))
-
-    def test_save_nonce_idempotent(self) -> None:
-        store = _make_store()
-        store.save_nonce('n1', 1000.0)
-        store.save_nonce('n1', 9999.0)
-        self.assertEqual(store.get_nonce('n1'), 1000.0)
+def test_get_missing_client_returns_none() -> None:
+    store = _make_store()
+    assert store.get_client('no-such-client') is None
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_validate_client_secret_correct() -> None:
+    store = _make_store()
+    store.register_client(OAuth21Client('c1', 'my-secret', frozenset(['https://x/cb'])))
+    assert store.validate_client_secret('c1', 'my-secret') is True
+
+
+def test_validate_client_secret_wrong() -> None:
+    store = _make_store()
+    store.register_client(OAuth21Client('c1', 'my-secret', frozenset(['https://x/cb'])))
+    assert store.validate_client_secret('c1', 'wrong') is False
+
+
+def test_validate_client_secret_unknown_client() -> None:
+    store = _make_store()
+    assert store.validate_client_secret('no-such', 'anything') is False
+
+
+def test_client_secret_not_stored_in_plaintext() -> None:
+    db = _FakeDB()
+    store = PostgreSQLOAuthStore('unused', _conn_factory=db.conn)
+    store.register_client(
+        OAuth21Client('c1', 'plain-secret', frozenset(['https://x/cb']))
+    )
+    row = db.clients['c1']
+    assert b'plain-secret' not in row['client_secret_hash']
+
+
+def test_save_and_consume_code() -> None:
+    store = _make_store()
+    code = _make_code()
+    store.save_code(code)
+    result = store.consume_code(code.code)
+    assert result is not None
+    assert result.code == code.code
+    assert result.client_id == 'client-1'
+
+
+def test_consume_is_one_time() -> None:
+    store = _make_store()
+    code = _make_code()
+    store.save_code(code)
+    assert store.consume_code(code.code) is not None
+    assert store.consume_code(code.code) is None
+
+
+def test_consume_missing_code_returns_none() -> None:
+    store = _make_store()
+    assert store.consume_code('no-such-code') is None
+
+
+def test_prune_removes_expired_codes() -> None:
+    store = _make_store()
+    expired = _make_code('expired', expires_at=time.time() - 1)
+    fresh = _make_code('fresh', expires_at=time.time() + 600)
+    store.save_code(expired)
+    store.save_code(fresh)
+    store.prune(now=time.time(), code_ttl_cutoff=time.time(), nonce_ttl=300)
+    assert store.consume_code('expired') is None
+    assert store.consume_code('fresh') is not None
+
+
+def test_save_and_get_nonce() -> None:
+    store = _make_store()
+    store.save_nonce('nonce-1', 1000.0)
+    assert store.get_nonce('nonce-1') == 1000.0
+
+
+def test_get_missing_nonce_returns_none() -> None:
+    store = _make_store()
+    assert store.get_nonce('no-such') is None
+
+
+def test_consume_nonce_is_one_time() -> None:
+    store = _make_store()
+    store.save_nonce('n1', time.time())
+    assert store.consume_nonce('n1') is not None
+    assert store.consume_nonce('n1') is None
+
+
+def test_delete_nonce() -> None:
+    store = _make_store()
+    store.save_nonce('n1', time.time())
+    store.delete_nonce('n1')
+    assert store.get_nonce('n1') is None
+
+
+def test_save_nonce_idempotent() -> None:
+    store = _make_store()
+    store.save_nonce('n1', 1000.0)
+    store.save_nonce('n1', 9999.0)
+    assert store.get_nonce('n1') == 1000.0

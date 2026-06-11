@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import os
 import time
 from contextlib import contextmanager
@@ -17,6 +18,8 @@ from teaagent.subagents._approval_queue import (
     ApprovalRequestStatus,
     SubagentApprovalRequest,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -60,6 +63,25 @@ class ApprovalQueueStore:
         for path in sorted(self.queue_dir.glob('*.json')):
             ids.append(path.stem)
         return ids
+
+    def get_all_requests(self) -> list[dict[str, Any]]:
+        """Get all requests from all parent runs.
+
+        Returns:
+            List of all request dictionaries
+        """
+        all_requests = []
+        parent_run_ids = self.list_parent_run_ids()
+
+        for parent_run_id in parent_run_ids:
+            try:
+                snapshot = self.load(parent_run_id)
+                for _request_id, request_data in snapshot.requests.items():
+                    all_requests.append(request_data)
+            except Exception as e:
+                logger.warning(f'Failed to load requests for {parent_run_id}: {e}')
+
+        return all_requests
 
     def exists(self, parent_run_id: str) -> bool:
         return self.queue_path(parent_run_id).is_file()
@@ -176,6 +198,39 @@ class ApprovalQueueStore:
             )
             os.replace(temp, path)
         self._snapshot_cache.pop(parent_run_id, None)
+
+    def batch_update_requests(
+        self,
+        parent_run_id: str,
+        updates: dict[str, dict[str, Any]],
+    ) -> bool:
+        """Update multiple requests in a single file write operation.
+
+        Args:
+            parent_run_id: Parent run ID
+            updates: Dictionary mapping request_id to update fields
+
+        Returns:
+            True if successful
+        """
+        try:
+            with self.lock(parent_run_id):
+                snapshot = self.load(parent_run_id)
+                requests = dict(snapshot.requests)
+
+                # Apply all updates
+                for request_id, update_fields in updates.items():
+                    if request_id in requests:
+                        request_dict = requests[request_id]
+                        request_dict.update(update_fields)
+                        requests[request_id] = request_dict
+
+                # Save in single operation
+                self.save(parent_run_id, requests, snapshot.batches)
+            return True
+        except Exception as e:
+            logger.error(f'Batch update failed: {e}')
+            return False
 
     def update_request_status(
         self,

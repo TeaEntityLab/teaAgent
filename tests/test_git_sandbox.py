@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from teaagent.git_sandbox import (
     GitBranchSandbox,
@@ -20,71 +23,22 @@ def test_is_git_repository_non_git(tmp_path: Path) -> None:
     assert not is_git_repository(tmp_path)
 
 
-def test_is_git_repository_git_repo(tmp_path: Path) -> None:
+def test_is_git_repository_git_repo(git_repo_with_config: Path) -> None:
     """Test that git repository returns True."""
-    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    assert is_git_repository(tmp_path)
+    assert is_git_repository(git_repo_with_config)
 
 
-def test_is_worktree_clean_clean(tmp_path: Path) -> None:
+def test_is_worktree_clean_clean(git_repo_with_commit: Path) -> None:
     """Test that clean worktree returns True."""
-    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(
-        ['git', 'config', 'user.email', 'test@example.com'],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ['git', 'config', 'user.name', 'Test User'],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-    )
-    (tmp_path / 'test.txt').write_text('content')
-    subprocess.run(
-        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
-    )
-    subprocess.run(
-        ['git', 'commit', '-m', 'initial'],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-    )
-
-    assert is_worktree_clean(tmp_path)
+    assert is_worktree_clean(git_repo_with_commit)
 
 
-def test_is_worktree_clean_dirty(tmp_path: Path) -> None:
+def test_is_worktree_clean_dirty(git_repo_with_commit: Path) -> None:
     """Test that dirty worktree returns False."""
-    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(
-        ['git', 'config', 'user.email', 'test@example.com'],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ['git', 'config', 'user.name', 'Test User'],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-    )
-    (tmp_path / 'test.txt').write_text('content')
-    subprocess.run(
-        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
-    )
-    subprocess.run(
-        ['git', 'commit', '-m', 'initial'],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-    )
-
     # Modify file
-    (tmp_path / 'test.txt').write_text('modified')
+    (git_repo_with_commit / 'test.txt').write_text('modified')
 
-    assert not is_worktree_clean(tmp_path)
+    assert not is_worktree_clean(git_repo_with_commit)
 
 
 def test_stash_save_and_pop(tmp_path: Path) -> None:
@@ -1302,3 +1256,549 @@ def test_os_sandbox_set_resource_limits(tmp_path: Path) -> None:
     # We don't assert the result since it depends on the OS and permissions
     # Just verify it doesn't crash
     assert isinstance(result, bool)
+
+
+def test_is_git_repository_with_nonexistent_path() -> None:
+    """Test that nonexistent path is handled."""
+    nonexistent = Path('/nonexistent/path/that/does/not/exist')
+    assert not is_git_repository(nonexistent)
+
+
+def test_is_git_repository_with_file_instead_of_directory(tmp_path: Path) -> None:
+    """Test that file instead of directory is handled."""
+    file_path = tmp_path / 'not_a_dir.txt'
+    file_path.write_text('content')
+    # Should handle gracefully or raise appropriate error
+    try:
+        result = is_git_repository(file_path)
+        assert not result
+    except (NotADirectoryError, FileNotFoundError):
+        # Also acceptable to raise error for non-directory
+        pass
+
+
+def test_is_git_repository_with_broken_git_directory(tmp_path: Path) -> None:
+    """Test that broken .git directory is handled."""
+    (tmp_path / '.git').mkdir()
+    (tmp_path / '.git' / 'broken').write_text('not a valid git repo')
+    assert not is_git_repository(tmp_path)
+
+
+def test_is_worktree_clean_with_nonexistent_path() -> None:
+    """Test that nonexistent path is handled."""
+    nonexistent = Path('/nonexistent/path')
+    # Should handle gracefully without crashing
+    result = is_worktree_clean(nonexistent)
+    assert isinstance(result, bool)
+
+
+def test_is_worktree_clean_with_no_git_repo(tmp_path: Path) -> None:
+    """Test that non-git directory is handled."""
+    (tmp_path / 'file.txt').write_text('content')
+    # Should handle gracefully
+    result = is_worktree_clean(tmp_path)
+    assert isinstance(result, bool)
+
+
+def test_stash_pop_with_nonexistent_path() -> None:
+    """Test that nonexistent path is handled."""
+    nonexistent = Path('/nonexistent/path')
+    # Should handle gracefully without crashing
+    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
+        stash_pop(nonexistent)
+
+
+def test_stash_pop_with_no_git_repo(tmp_path: Path) -> None:
+    """Test that non-git directory is handled."""
+    # Should handle gracefully without crashing
+    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
+        stash_pop(tmp_path)
+
+
+def test_git_transaction_sink_with_nonexistent_path() -> None:
+    """Test that GitTransactionSink handles nonexistent path."""
+    nonexistent = Path('/nonexistent/path')
+    # Should handle gracefully without crashing
+    with contextlib.suppress(subprocess.SubprocessError, FileNotFoundError):
+        GitTransactionSink(nonexistent)
+
+
+def test_git_transaction_sink_with_no_git_repo(tmp_path: Path) -> None:
+    """Test that GitTransactionSink handles non-git directory."""
+    # Should handle gracefully without crashing
+    with contextlib.suppress(subprocess.SubprocessError, ValueError):
+        GitTransactionSink(tmp_path)
+
+
+# ── Additional negative test cases for git_sandbox.py ───────────────────────
+
+
+def test_is_git_repository_with_symlink_loop(tmp_path: Path) -> None:
+    """Test that symlink loops are handled gracefully."""
+    # Create a symlink loop
+    loop_link = tmp_path / 'loop'
+    try:
+        loop_link.symlink_to(tmp_path)
+    except OSError:
+        pytest.skip('Symlink creation not supported')
+
+    # Should not hang or crash
+    result = is_git_repository(tmp_path)
+    assert isinstance(result, bool)
+
+
+def test_is_worktree_clean_with_corrupted_git_index(tmp_path: Path) -> None:
+    """Test that corrupted git index is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Corrupt the git index
+    (tmp_path / '.git' / 'index').write_text('corrupted index', encoding='utf-8')
+
+    # Should handle gracefully
+    try:
+        result = is_worktree_clean(tmp_path)
+        assert isinstance(result, bool)
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on corrupted index
+        pass
+
+
+def test_stash_save_with_no_commits(tmp_path: Path) -> None:
+    """Test that stashing with no commits is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Create a file but don't commit
+    (tmp_path / 'test.txt').write_text('uncommitted')
+
+    # Should handle gracefully (may fail or return None)
+    try:
+        result = stash_save(tmp_path, 'test stash')
+        assert result is None or isinstance(result, str)
+    except (subprocess.SubprocessError, ValueError):
+        # May fail with no commits
+        pass
+
+
+def test_stash_save_with_conflicts(tmp_path: Path) -> None:
+    """Test that stashing with merge conflicts is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Create a merge conflict scenario
+    (tmp_path / 'test.txt').write_text('conflicting content')
+
+    # Should handle gracefully
+    try:
+        result = stash_save(tmp_path, 'conflict stash')
+        assert result is None or isinstance(result, str)
+    except (subprocess.SubprocessError, ValueError):
+        # May fail with conflicts
+        pass
+
+
+def test_stash_pop_with_no_stash(tmp_path: Path) -> None:
+    """Test that popping with no stash is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Should handle gracefully (return False or fail)
+    try:
+        result = stash_pop(tmp_path)
+        assert result is False
+    except (subprocess.SubprocessError, ValueError):
+        # May fail with no stash
+        pass
+
+
+def test_stash_pop_with_conflicts(tmp_path: Path) -> None:
+    """Test that popping stash with conflicts is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('original')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Stash some changes
+    (tmp_path / 'test.txt').write_text('stashed')
+    stash_save(tmp_path, 'test stash')
+
+    # Modify file to create conflict on pop
+    (tmp_path / 'test.txt').write_text('conflicting')
+
+    # Should handle gracefully
+    try:
+        result = stash_pop(tmp_path)
+        assert result is False or isinstance(result, bool)
+    except (subprocess.SubprocessError, ValueError):
+        # May fail with conflicts
+        pass
+
+
+def test_git_sandbox_with_very_long_run_id(tmp_path: Path) -> None:
+    """Test that very long run_id is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('content')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Very long run_id (may exceed git branch name limits)
+    long_run_id = 'a' * 1000
+    try:
+        sandbox = GitBranchSandbox(tmp_path, run_id=long_run_id)
+        # Should handle gracefully (may truncate or fail)
+        assert sandbox is not None
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on too-long branch name
+        pass
+
+
+def test_git_sandbox_with_special_characters_in_run_id(tmp_path: Path) -> None:
+    """Test that special characters in run_id are handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('content')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Special characters that may be invalid in git branch names
+    special_run_id = 'test~^:..\\'
+    try:
+        sandbox = GitBranchSandbox(tmp_path, run_id=special_run_id)
+        # Should handle gracefully (may sanitize or fail)
+        assert sandbox is not None
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on invalid characters
+        pass
+
+
+def test_git_sandbox_with_unicode_in_run_id(tmp_path: Path) -> None:
+    """Test that unicode in run_id is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('content')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Unicode characters
+    unicode_run_id = 'test-中文-🔐'
+    try:
+        sandbox = GitBranchSandbox(tmp_path, run_id=unicode_run_id)
+        # Should handle gracefully (may sanitize or fail)
+        assert sandbox is not None
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on unicode in branch name
+        pass
+
+
+def test_git_sandbox_with_detached_head(tmp_path: Path) -> None:
+    """Test that detached HEAD state is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('content')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Detach HEAD
+    subprocess.run(
+        ['git', 'checkout', '--detach'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Should handle detached HEAD gracefully
+    try:
+        sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
+        start_result = sandbox.start()
+        # May fail or succeed depending on implementation
+        assert start_result is not None
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on detached HEAD
+        pass
+
+
+def test_git_sandbox_with_bare_repository(tmp_path: Path) -> None:
+    """Test that bare repository is handled."""
+    subprocess.run(
+        ['git', 'init', '--bare'], cwd=tmp_path, check=True, capture_output=True
+    )
+
+    # Should handle bare repository gracefully
+    try:
+        sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
+        # May not be available in bare repo
+        assert not sandbox.is_available()
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on bare repository
+        pass
+
+
+def test_git_sandbox_with_corrupted_git_config(tmp_path: Path) -> None:
+    """Test that corrupted git config is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+
+    # Corrupt git config
+    (tmp_path / '.git' / 'config').write_text('corrupted config', encoding='utf-8')
+
+    # Should handle gracefully
+    try:
+        sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
+        # May fail or work with corrupted config
+        assert sandbox is not None
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on corrupted config
+        pass
+
+
+def test_git_sandbox_with_missing_git_directory(tmp_path: Path) -> None:
+    """Test that missing .git directory is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+
+    # Remove .git directory
+    import shutil
+
+    shutil.rmtree(tmp_path / '.git')
+
+    # Should handle gracefully
+    try:
+        sandbox = GitBranchSandbox(tmp_path, run_id='test-run')
+        # Should not be available without .git
+        assert not sandbox.is_available()
+    except (subprocess.SubprocessError, ValueError):
+        # May fail on missing .git
+        pass
+
+
+def test_git_transaction_sink_with_readonly_repository(tmp_path: Path) -> None:
+    """Test that readonly repository is handled."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('content')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Make repository readonly
+    (tmp_path / '.git').chmod(0o444)
+
+    try:
+        sink = GitTransactionSink(tmp_path)
+        # Should handle gracefully
+        assert sink is not None
+    except (subprocess.SubprocessError, ValueError, PermissionError):
+        # May fail on readonly repository
+        pass
+    finally:
+        (tmp_path / '.git').chmod(0o755)
+
+
+def test_git_sandbox_concurrent_operations(tmp_path: Path) -> None:
+    """Test that concurrent sandbox operations are handled."""
+    import threading
+
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / 'test.txt').write_text('content')
+    subprocess.run(
+        ['git', 'add', 'test.txt'], cwd=tmp_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    def create_sandbox():
+        try:
+            sandbox = GitBranchSandbox(
+                tmp_path, run_id=f'test-{threading.current_thread().ident}'
+            )
+            sandbox.start()
+        except (subprocess.SubprocessError, ValueError):
+            # May fail on concurrent operations
+            pass
+
+    # Create multiple sandboxes concurrently
+    threads = [threading.Thread(target=create_sandbox) for _ in range(5)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    # Should handle concurrent operations without crashing

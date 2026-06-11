@@ -1,4 +1,35 @@
-"""context_from chains upstream handoff into downstream automation agent tasks."""
+"""Test module for automation context chaining and handoff flow.
+
+This module tests the automation chain system, which enables downstream automations
+to receive context from upstream automations. This allows automations to be composed
+into pipelines where later automations can leverage results and summaries from earlier
+ones.
+
+Key concepts tested:
+- Context Chaining: Downstream automations reference upstream automation IDs via context_from
+- Handoff Persistence: Upstream results are persisted for downstream consumption
+- Task Enrichment: Downstream tasks are enriched with upstream summaries
+- CLI Integration: Automation add command supports --context-from flag
+- Dry-Run Validation: Chained automations show upstream handoff preview in dry-run
+
+Acceptance Criteria:
+- AC1: Downstream automation can reference upstream via context_from field
+- AC2: Upstream results are persisted via persist_automation_handoff
+- AC3: Downstream task includes upstream summary in the task prompt
+- AC4: CLI --context-from flag links automations in the spec
+- AC5: Dry-run shows upstream_handoff_preview in the ticket
+
+Technical Details:
+- AutomationStore manages automation specs with context_from references
+- persist_automation_handoff saves upstream results to .teaagent/automation_handoffs/
+- _run_automation_once injects upstream context into the task prompt
+- Context includes: collector_summary, summary, and upstream metadata
+- Chaining enables automation pipelines (e.g., collector → triage → action)
+
+References:
+- Automation v2 design: /docs/architecture/automation_v2.md
+- Chaining spec: /docs/specs/automation_chaining.md
+"""
 
 from __future__ import annotations
 

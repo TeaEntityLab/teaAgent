@@ -20,6 +20,7 @@ from teaagent.mcp_trust import (
     merged_tool_filters,
     revoke_server_trust,
     save_mcp_trust_policy,
+    update_global_tools,
     update_server_tools,
 )
 from teaagent.types import ToolAnnotations, ToolRegistry
@@ -379,3 +380,251 @@ def test_mcp_trust_policy_persistence():
             assert loaded.servers['server1'].trusted is True
         finally:
             del os.environ['TEAAGENT_MCP_TRUST_KEY']
+
+
+# ---------------------------------------------------------------------------
+# Additional negative test cases for mcp_trust
+# ---------------------------------------------------------------------------
+
+
+def test_mcp_trust_policy_with_empty_lists():
+    """Test that empty allow/deny lists are handled."""
+    policy = MCPTrustPolicy(
+        allowed_tools=[],
+        denied_tools=[],
+    )
+    assert policy.allowed_tools == []
+    assert policy.denied_tools == []
+
+
+def test_mcp_trust_policy_with_duplicate_tools():
+    """Test that duplicate tools in lists are handled."""
+    policy = MCPTrustPolicy(
+        allowed_tools=['tool1', 'tool1', 'tool2'],
+        denied_tools=['tool3', 'tool3'],
+    )
+    # Duplicates should be preserved as-is
+    assert len(policy.allowed_tools) == 3
+    assert len(policy.denied_tools) == 2
+
+
+def test_mcp_trust_policy_with_special_characters():
+    """Test that special characters in tool names are handled."""
+    policy = MCPTrustPolicy(
+        allowed_tools=['tool-with-dash', 'tool_with_underscore', 'tool.with.dot'],
+    )
+    assert 'tool-with-dash' in policy.allowed_tools
+    assert 'tool_with_underscore' in policy.allowed_tools
+    assert 'tool.with.dot' in policy.allowed_tools
+
+
+def test_mcp_trust_policy_with_unicode_tool_names():
+    """Test that unicode characters in tool names are handled."""
+    policy = MCPTrustPolicy(
+        allowed_tools=['工具-1', 'tool-工具'],
+    )
+    assert '工具-1' in policy.allowed_tools
+    assert 'tool-工具' in policy.allowed_tools
+
+
+def test_mcp_trust_policy_negative_ttl():
+    """Test that negative TTL is handled."""
+    policy = MCPTrustPolicy(default_ttl_seconds=-100.0)
+    assert policy.default_ttl_seconds == -100.0
+
+
+def test_mcp_trust_policy_zero_ttl():
+    """Test that zero TTL is handled."""
+    policy = MCPTrustPolicy(default_ttl_seconds=0.0)
+    assert policy.default_ttl_seconds == 0.0
+
+
+def test_mcp_trust_policy_very_large_ttl():
+    """Test that very large TTL is handled."""
+    policy = MCPTrustPolicy(default_ttl_seconds=999999999.0)
+    assert policy.default_ttl_seconds == 999999999.0
+
+
+def test_mcp_server_trust_with_empty_lists():
+    """Test that empty server tool lists are handled."""
+    server = MCPServerTrust(
+        allowed_tools=[],
+        denied_tools=[],
+    )
+    assert server.allowed_tools == []
+    assert server.denied_tools == []
+
+
+def test_mcp_server_trust_with_negative_expiry():
+    """Test that negative expiry timestamp is handled."""
+    server = MCPServerTrust(
+        trusted=True,
+        expires_at=-100.0,
+    )
+    assert is_server_trust_expired(server) is True
+
+
+def test_mcp_server_trust_with_zero_expiry():
+    """Test that zero expiry timestamp is handled."""
+    server = MCPServerTrust(
+        trusted=True,
+        expires_at=0.0,
+    )
+    # Zero timestamp is in the past (epoch)
+    assert is_server_trust_expired(server) is True
+
+
+def test_mcp_server_trust_with_very_large_expiry():
+    """Test that very large expiry timestamp is handled."""
+    server = MCPServerTrust(
+        trusted=True,
+        expires_at=9999999999.0,
+    )
+    assert is_server_trust_expired(server) is False
+
+
+def test_update_global_tools_with_empty_lists():
+    """Test that updating with empty lists is handled."""
+    policy = MCPTrustPolicy(allowed_tools=['tool1'])
+    policy = update_global_tools(policy, allow=[], deny=[])
+    assert policy.allowed_tools == ['tool1']
+
+
+def test_update_global_tools_with_duplicate_in_allow():
+    """Test that adding duplicate tools is handled."""
+    policy = MCPTrustPolicy(allowed_tools=['tool1'])
+    policy = update_global_tools(policy, allow=['tool1', 'tool2'])
+    # Should add duplicate
+    assert 'tool1' in policy.allowed_tools
+    assert 'tool2' in policy.allowed_tools
+
+
+def test_update_global_tools_with_special_characters():
+    """Test that special characters in tool names are handled."""
+    policy = MCPTrustPolicy()
+    policy = update_global_tools(
+        policy, allow=['tool-with-dash', 'tool_with_underscore']
+    )
+    assert 'tool-with-dash' in policy.allowed_tools
+    assert 'tool_with_underscore' in policy.allowed_tools
+
+
+def test_update_server_tools_with_empty_server_name():
+    """Test that empty server name is handled."""
+    policy = MCPTrustPolicy()
+    policy = update_server_tools(policy, '', trusted=True)
+    assert '' in policy.servers
+
+
+def test_update_server_tools_with_special_characters():
+    """Test that special characters in server name are handled."""
+    policy = MCPTrustPolicy()
+    policy = update_server_tools(policy, 'server-with-dash', trusted=True)
+    assert 'server-with-dash' in policy.servers
+
+
+def test_update_server_tools_with_unicode_server_name():
+    """Test that unicode characters in server name are handled."""
+    policy = MCPTrustPolicy()
+    policy = update_server_tools(policy, '服务器-1', trusted=True)
+    assert '服务器-1' in policy.servers
+
+
+def test_revoke_server_trust_with_nonexistent_server():
+    """Test that revoking nonexistent server is handled."""
+    policy = MCPTrustPolicy()
+    policy = revoke_server_trust(policy, 'nonexistent')
+    assert 'nonexistent' not in policy.servers
+
+
+def test_revoke_server_trust_with_empty_server_name():
+    """Test that revoking with empty server name is handled."""
+    policy = MCPTrustPolicy()
+    policy.servers[''] = MCPServerTrust(trusted=True)
+    policy = revoke_server_trust(policy, '')
+    assert '' not in policy.servers
+
+
+def test_merged_tool_filters_with_empty_policy():
+    """Test that merging with empty policy returns empty sets."""
+    policy = MCPTrustPolicy()
+    allowed, denied = merged_tool_filters(policy)
+    assert allowed == frozenset()
+    assert denied == frozenset()
+
+
+def test_merged_tool_filters_with_expired_server():
+    """Test that expired server tools are excluded."""
+    policy = MCPTrustPolicy()
+    policy.servers['expired'] = MCPServerTrust(
+        allowed_tools=['tool1'],
+        expires_at=time.time() - 100,
+    )
+    allowed, denied = merged_tool_filters(policy)
+    assert 'tool1' not in allowed
+
+
+def test_check_unknown_tool_prompt_with_empty_policy():
+    """Test that empty policy returns True (unknown)."""
+    policy = MCPTrustPolicy()
+    result = check_unknown_tool_prompt(policy, 'any_tool')
+    assert result is True
+
+
+def test_check_unknown_tool_prompt_with_special_characters():
+    """Test that special characters in tool names are handled."""
+    policy = MCPTrustPolicy(allowed_tools=['tool-with-dash'])
+    result = check_unknown_tool_prompt(policy, 'tool-with-dash')
+    assert result is False
+
+
+def test_check_unknown_tool_prompt_with_unicode():
+    """Test that unicode characters in tool names are handled."""
+    policy = MCPTrustPolicy(allowed_tools=['工具-1'])
+    result = check_unknown_tool_prompt(policy, '工具-1')
+    assert result is False
+
+
+def test_mcp_trust_policy_to_dict_with_empty_servers():
+    """Test that to_dict handles empty servers dict."""
+    policy = MCPTrustPolicy()
+    data = policy.to_dict()
+    assert data['servers'] == {}
+
+
+def test_mcp_trust_policy_from_dict_with_invalid_data():
+    """Test that from_dict raises ValueError on invalid data."""
+    data = {
+        'version': 'invalid',  # Should be int
+        'allowed_tools': 'not_a_list',  # Should be list
+        'denied_tools': None,
+        'servers': 'not_a_dict',
+    }
+    with pytest.raises(ValueError, match='invalid literal for int'):
+        MCPTrustPolicy.from_dict(data)
+
+
+def test_mcp_trust_policy_from_dict_with_missing_fields():
+    """Test that from_dict handles missing fields."""
+    data = {}
+    policy = MCPTrustPolicy.from_dict(data)
+    # Should use defaults
+    assert policy.version == 1
+    assert policy.allowed_tools == []
+    assert policy.denied_tools == []
+
+
+def test_mcp_trust_policy_public_dict_excludes_trusted():
+    """Test that to_public_dict excludes trusted field."""
+    policy = MCPTrustPolicy()
+    policy.servers['server1'] = MCPServerTrust(trusted=True)
+    public = policy.to_public_dict()
+    assert 'trusted' not in public['servers']['server1']
+
+
+def test_mcp_trust_policy_version_mismatch():
+    """Test that version mismatch is handled."""
+    data = {'version': 999, 'allowed_tools': [], 'denied_tools': [], 'servers': {}}
+    policy = MCPTrustPolicy.from_dict(data)
+    # Should still load despite version mismatch
+    assert policy.version == 999

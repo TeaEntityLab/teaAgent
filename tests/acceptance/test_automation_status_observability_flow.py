@@ -1,4 +1,36 @@
-"""automation status exposes prompt ledger, token contributors, and gate reasons."""
+"""Test module for automation status observability.
+
+This module tests that the automation status command exposes detailed observability
+information including prompt ledger, token contributors, and gate reasons. This enables
+operators to understand why automations are blocked, what resources they consume,
+and what prompts are being used.
+
+Key concepts tested:
+- Status Exposure: Automation status includes token_contributors and prompt_ledger
+- Gate Reasons: Status shows blocked_gate_reason when automation is blocked
+- Output Preview: Status includes last_output_preview for recent runs
+- Subagent Flag: Status exposes requires_subagent configuration
+- CLI Integration: Automation status command returns structured JSON
+
+Acceptance Criteria:
+- AC1: Automation status includes token_contributors key
+- AC2: Automation status includes prompt_ledger key
+- AC3: Automation status includes blocked_gate_reason key
+- AC4: Automation status includes last_output_preview key
+- AC5: Automation status exposes requires_subagent flag
+
+Technical Details:
+- AutomationStore stores status metadata including observability fields
+- token_contributors tracks which components contributed to token usage
+- prompt_ledger records prompt templates and their versions
+- blocked_gate_reason indicates why an automation is blocked (e.g., budget, schedule)
+- last_output_preview shows the most recent output for quick inspection
+- Status is computed from spec, recent runs, and gate state
+
+References:
+- Automation v2 design: /docs/architecture/automation_v2.md
+- Observability spec: /docs/specs/automation_observability.md
+"""
 
 from __future__ import annotations
 

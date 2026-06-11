@@ -1,4 +1,44 @@
-"""WS1-006: Conversation UX acceptance tests."""
+"""Test module for conversation UX and run receipt display.
+
+This module tests the conversation user experience, including approval display,
+run status progress, and run receipt generation. The system provides human-readable
+and JSON outputs for monitoring agent runs and approvals.
+
+Key concepts tested:
+- Approval Display: Human-readable display of pending approvals
+- Run Status Progress: Progress tracking for active runs
+- Run Receipt: Comprehensive receipt showing run details
+- Cost Display: Cost tracking including spent and budget cap
+- Evidence Display: Detailed evidence of run actions
+- Resume Vocabulary: Checkpoint and resume terminology
+
+Acceptance Criteria:
+- AC1: Approval pending --human shows tool name, path, and risk class
+- AC2: Agent status --progress --human shows phase and budget
+- AC3: Run receipt includes cost and audit log path
+- AC4: Agent status --progress returns JSON with phase and run_id
+- AC5: Receipt includes cost state (spent and cap)
+- AC6: Receipt includes status and progress information
+- AC7: Cost display includes spent amount and budget cap
+- AC8: Receipt uses background resume vocabulary
+- AC9: Full receipt includes all fields (status, goal, provider, cost, audit, tools, files, commands, tests, approvals, rollback)
+- AC10: TUI progress includes resume vocabulary
+- AC11: Evidence --human produces complete receipt
+- AC12: Approval pending display includes age and expiry
+
+Technical Details:
+- approval pending --human formats approval queue for human reading
+- agent status --progress shows current phase and budget usage
+- build_run_receipt generates comprehensive run summary
+- Receipt includes: status, goal, provider/model, cost, audit log, resume/checkpoint, tools used, files touched, commands run, tests run, approvals, rollback/undo
+- Cost display shows spent cents and budget cap
+- Age and expiry calculated from created_at timestamp
+- JSON output for programmatic consumption, --human for readability
+
+References:
+- Conversation UX design: /docs/architecture/conversation_ux.md
+- Run receipt spec: /docs/specs/run_receipt.md
+"""
 
 from __future__ import annotations
 

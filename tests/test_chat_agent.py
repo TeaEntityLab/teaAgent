@@ -3,11 +3,11 @@ from __future__ import annotations
 import io
 import json
 import tempfile
-import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from conftest import FakeAdapter
 
 from teaagent import (
@@ -25,309 +25,360 @@ from teaagent.runner import ToolRequest
 from teaagent.types import ToolPermissionError, ToolRegistry
 
 
-class ChatAgentTests(unittest.TestCase):
-    def test_parse_model_decision_accepts_tool_and_final(self) -> None:
-        tool = parse_model_decision(
-            '{"type":"tool","tool_name":"x","arguments":{"a":1},"call_id":"c1"}'
-        )
-        final = parse_model_decision('```json\n{"type":"final","content":"done"}\n```')
+def test_parse_model_decision_accepts_tool_and_final() -> None:
+    tool = parse_model_decision(
+        '{"type":"tool","tool_name":"x","arguments":{"a":1},"call_id":"c1"}'
+    )
+    final = parse_model_decision('```json\n{"type":"final","content":"done"}\n```')
 
-        self.assertIsInstance(tool, ToolRequest)
-        self.assertEqual(tool.call_id, 'c1')
-        self.assertEqual(final.content, 'done')
+    assert isinstance(tool, ToolRequest)
+    assert tool.call_id == 'c1'
+    assert final.content == 'done'
 
-    def test_chat_agent_runs_tool_then_final(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / 'hello.txt').write_text('hello', encoding='utf-8')
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"hello.txt"},"call_id":"read-1"}',
-                    '{"type":"final","content":"read hello.txt"}',
-                ]
-            )
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(root, max_iterations=3, max_tool_calls=2),
-                'read hello',
-                adapter=adapter,
-            )
+def test_chat_agent_runs_tool_then_final(
+    hello_file_in_workspace: Path,
+    fake_adapter_with_tool_response: FakeAdapter,
+) -> None:
+    root = hello_file_in_workspace.parent
 
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual(result.tool_calls, 1)
-            self.assertEqual(result.final_answer.content, 'read hello.txt')
-            self.assertIn('workspace_read_file', adapter.requests[0].system)
-            self.assertIsNotNone(adapter.requests[0].response_format)
+    result = run_chat_agent(
+        ChatAgentConfig.from_root(root, max_iterations=3, max_tool_calls=2),
+        'read hello',
+        adapter=fake_adapter_with_tool_response,
+    )
 
-    def test_setup_tool_registry_applies_mcp_trust_to_external_registry(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            registry = ToolRegistry()
-            config = ChatAgentConfig.from_root(tmp)
-            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
+    assert result.status == 'completed'
+    assert result.tool_calls == 1
+    assert result.final_answer.content == 'done'
+    assert 'workspace_read_file' in fake_adapter_with_tool_response.requests[0].system
+    assert fake_adapter_with_tool_response.requests[0].response_format is not None
 
-            _setup_tool_registry(config, adapter, registry, 'task', None, 0, None)
-            self.assertIsNotNone(registry.hook_registry)
-            first_count = len(registry.hook_registry.config.pre_hooks)
 
-            _setup_tool_registry(config, adapter, registry, 'task', None, 0, None)
-            self.assertEqual(len(registry.hook_registry.config.pre_hooks), first_count)
+def test_setup_tool_registry_applies_mcp_trust_to_external_registry(
+    chat_agent_config: ChatAgentConfig,
+    fake_adapter_with_final_response: FakeAdapter,
+    empty_tool_registry: ToolRegistry,
+) -> None:
+    _setup_tool_registry(
+        chat_agent_config,
+        fake_adapter_with_final_response,
+        empty_tool_registry,
+        'task',
+        None,
+        0,
+        None,
+    )
+    assert empty_tool_registry.hook_registry is not None
+    first_count = len(empty_tool_registry.hook_registry.config.pre_hooks)
 
-    def test_chat_agent_retries_on_invalid_decision_then_recovers(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(
-                [
-                    'not-json',
-                    '{"type":"final","content":"done"}',
-                ]
-            )
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp),
-                'say done',
-                adapter=adapter,
-            )
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual(result.final_answer.content, 'done')
-            self.assertEqual(len(adapter.requests), 2)
+    _setup_tool_registry(
+        chat_agent_config,
+        fake_adapter_with_final_response,
+        empty_tool_registry,
+        'task',
+        None,
+        0,
+        None,
+    )
+    assert len(empty_tool_registry.hook_registry.config.pre_hooks) == first_count
 
-    def test_chat_agent_gracefully_degrades_after_parse_retries(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(['bad', 'still bad', 'also bad'])
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp),
-                'what is 2+2',
-                adapter=adapter,
-            )
-            self.assertEqual(result.status, 'completed')
-            self.assertIn('"status":"error"', result.final_answer.content)
-            self.assertEqual(
-                result.final_answer.metadata.get('decision_fallback'),
-                'invalid_model_decision_json',
-            )
 
-    def test_chat_agent_accepts_plain_text_for_simple_question_after_parse_retries(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            answer = (
-                'Cloudflare is a cloud platform that provides CDN, security, '
-                'DNS, developer, and edge-computing services.'
-            )
-            adapter = FakeAdapter([answer, answer, answer])
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp),
-                'can you tell me about cloudflare',
-                adapter=adapter,
-            )
+def test_chat_agent_retries_on_invalid_decision_then_recovers(
+    chat_agent_config: ChatAgentConfig,
+    fake_adapter_with_invalid_then_final: FakeAdapter,
+) -> None:
+    result = run_chat_agent(
+        chat_agent_config,
+        'say done',
+        adapter=fake_adapter_with_invalid_then_final,
+    )
+    assert result.status == 'completed'
+    assert result.final_answer.content == 'done'
+    assert len(fake_adapter_with_invalid_then_final.requests) == 2
 
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual(result.final_answer.content, answer)
-            self.assertEqual(
-                result.final_answer.metadata.get('decision_fallback'),
-                'plain_text_final_answer',
-            )
 
-    def test_chat_agent_rejects_plain_text_fallback_for_workspace_task(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            answer = 'I need to inspect the workspace before I can answer this.'
-            adapter = FakeAdapter([answer, answer, answer])
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp),
-                'modify the workspace file',
-                adapter=adapter,
-            )
-            # When the model produces meaningful plain text after exhausting parse
-            # retries, it is now accepted as a final answer via post-retry fallback
-            # rather than failing with system error.
-            self.assertEqual(result.status, 'completed')
-            self.assertIsNotNone(result.final_answer)
-            self.assertEqual(result.final_answer.content, answer)
+def test_chat_agent_gracefully_degrades_after_parse_retries(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    adapter = FakeAdapter(['bad', 'still bad', 'also bad'])
+    result = run_chat_agent(
+        chat_agent_config,
+        'what is 2+2',
+        adapter=adapter,
+    )
+    assert result.status == 'completed'
+    assert '"status":"error"' in result.final_answer.content
+    assert (
+        result.final_answer.metadata.get('decision_fallback')
+        == 'invalid_model_decision_json'
+    )
 
-    def test_chat_agent_can_use_code_analysis_tools_when_enabled(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"code_diagnostics","arguments":{"path":"README.md"},"call_id":"diag-1"}',
-                    '{"type":"final","content":"analysis done"}',
-                ]
-            )
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    tmp,
-                    code_analysis_config=CodeAnalysisConfig.from_root(
-                        tmp, enabled=True
-                    ),
-                ),
-                'inspect diagnostics',
-                adapter=adapter,
-            )
+def test_chat_agent_accepts_plain_text_for_simple_question_after_parse_retries(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    answer = (
+        'Cloudflare is a cloud platform that provides CDN, security, '
+        'DNS, developer, and edge-computing services.'
+    )
+    adapter = FakeAdapter([answer, answer, answer])
+    result = run_chat_agent(
+        chat_agent_config,
+        'can you tell me about cloudflare',
+        adapter=adapter,
+    )
 
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual(result.tool_calls, 1)
+    assert result.status == 'completed'
+    assert result.final_answer.content == answer
+    assert (
+        result.final_answer.metadata.get('decision_fallback')
+        == 'plain_text_final_answer'
+    )
 
-    def test_chat_agent_includes_lsp_context_when_task_mentions_code_file(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    tmp,
-                    code_analysis_config=CodeAnalysisConfig.from_root(
-                        tmp, enabled=True
-                    ),
-                ),
-                'inspect src/app.py',
-                adapter=adapter,
-            )
+def test_chat_agent_rejects_plain_text_fallback_for_workspace_task(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    answer = 'I need to inspect the workspace before I can answer this.'
+    adapter = FakeAdapter([answer, answer, answer])
+    result = run_chat_agent(
+        chat_agent_config,
+        'modify the workspace file',
+        adapter=adapter,
+    )
+    # When the model produces meaningful plain text after exhausting parse
+    # retries, it is now accepted as a final answer via post-retry fallback
+    # rather than failing with system error.
+    assert result.status == 'completed'
+    assert result.final_answer is not None
+    assert result.final_answer.content == answer
 
-            self.assertEqual(result.status, 'completed')
-            self.assertIn('lsp_context', adapter.requests[0].messages[0].content)
 
-    def test_chat_agent_injects_task_spec_into_prompt(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
+def test_chat_agent_can_use_code_analysis_tools_when_enabled(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"code_diagnostics","arguments":{"path":"README.md"},"call_id":"diag-1"}',
+            '{"type":"final","content":"analysis done"}',
+        ]
+    )
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp),
-                'Update docs',
-                adapter=adapter,
-                task_spec='Clarified task specification:\nTASK: Update docs',
-            )
+    result = run_chat_agent(
+        ChatAgentConfig.from_root(
+            chat_agent_config.root,
+            code_analysis_config=CodeAnalysisConfig.from_root(
+                chat_agent_config.root, enabled=True
+            ),
+        ),
+        'inspect diagnostics',
+        adapter=adapter,
+    )
 
-            self.assertEqual(result.status, 'completed')
-            self.assertIn(
-                'Clarified task specification', adapter.requests[0].messages[0].content
-            )
+    assert result.status == 'completed'
+    assert result.tool_calls == 1
 
-    def test_chat_agent_injects_matching_memories_into_prompt(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            MemoryCatalog(tmp).add(
-                'docs cli clarify command should mention ambiguity gate'
-            )
-            adapter = FakeAdapter(['{"type":"final","content":"done"}'])
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp),
-                'docs cli clarify',
-                adapter=adapter,
-            )
+def test_chat_agent_includes_lsp_context_when_task_mentions_code_file(
+    chat_agent_config: ChatAgentConfig,
+    fake_adapter_with_final_response: FakeAdapter,
+) -> None:
+    result = run_chat_agent(
+        ChatAgentConfig.from_root(
+            chat_agent_config.root,
+            code_analysis_config=CodeAnalysisConfig.from_root(
+                chat_agent_config.root, enabled=True
+            ),
+        ),
+        'inspect src/app.py',
+        adapter=fake_adapter_with_final_response,
+    )
 
-            self.assertEqual(result.status, 'completed')
-            self.assertIn('ambiguity gate', adapter.requests[0].messages[0].content)
+    assert result.status == 'completed'
+    assert (
+        'lsp_context'
+        in fake_adapter_with_final_response.requests[0].messages[0].content
+    )
 
-    def test_destructive_decision_returns_pending_approval_by_default(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}'
-                ]
-            )
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp),
-                'write',
-                adapter=adapter,
-            )
+def test_chat_agent_injects_task_spec_into_prompt(
+    chat_agent_config: ChatAgentConfig,
+    fake_adapter_with_final_response: FakeAdapter,
+) -> None:
+    result = run_chat_agent(
+        chat_agent_config,
+        'Update docs',
+        adapter=fake_adapter_with_final_response,
+        task_spec='Clarified task specification:\nTASK: Update docs',
+    )
 
-            self.assertEqual(result.status, 'pending_approval')
-            self.assertEqual(result.metadata['approval']['call_id'], 'write-1')
+    assert result.status == 'completed'
+    assert (
+        'Clarified task specification'
+        in fake_adapter_with_final_response.requests[0].messages[0].content
+    )
 
-    def test_destructive_decision_can_be_approved_by_hitl_handler(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
-                    '{"type":"final","content":"wrote"}',
-                ]
-            )
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp, approval_handler=lambda _request: True),
-                'write',
-                adapter=adapter,
-            )
+def test_chat_agent_injects_matching_memories_into_prompt(
+    chat_agent_config: ChatAgentConfig,
+    fake_adapter_with_final_response: FakeAdapter,
+) -> None:
+    MemoryCatalog(chat_agent_config.root).add(
+        'docs cli clarify command should mention ambiguity gate'
+    )
 
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual((Path(tmp) / 'x.txt').read_text(encoding='utf-8'), 'x')
+    result = run_chat_agent(
+        chat_agent_config,
+        'docs cli clarify',
+        adapter=fake_adapter_with_final_response,
+    )
 
-    def test_destructive_decision_can_be_allowed(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
-                    '{"type":"final","content":"wrote"}',
-                ]
-            )
+    assert result.status == 'completed'
+    assert (
+        'ambiguity gate'
+        in fake_adapter_with_final_response.requests[0].messages[0].content
+    )
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp, allow_destructive=True),
-                'write',
-                adapter=adapter,
-            )
 
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual((Path(tmp) / 'x.txt').read_text(encoding='utf-8'), 'x')
+def test_destructive_decision_returns_pending_approval_by_default(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}'
+        ]
+    )
 
-    def test_destructive_decision_can_be_approved_by_call_id(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
-                    '{"type":"final","content":"wrote"}',
-                ]
-            )
+    result = run_chat_agent(
+        chat_agent_config,
+        'write',
+        adapter=adapter,
+    )
 
-            result = run_chat_agent(
-                ChatAgentConfig.from_root(tmp, allow_destructive=True),
-                'write',
-                adapter=adapter,
-            )
+    assert result.status == 'pending_approval'
+    assert result.metadata['approval']['call_id'] == 'write-1'
 
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual((Path(tmp) / 'x.txt').read_text(encoding='utf-8'), 'x')
 
-    def test_workspace_write_permission_allows_file_write_not_shell(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            write_adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
-                    '{"type":"final","content":"wrote"}',
-                ]
-            )
-            shell_adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_run_shell_mutate","arguments":{"command":"touch y.txt"},"call_id":"shell-1"}'
-                ]
-            )
+def test_destructive_decision_can_be_approved_by_hitl_handler(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+            '{"type":"final","content":"wrote"}',
+        ]
+    )
 
-            write_result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    tmp,
-                    permission_mode=PermissionMode.WORKSPACE_WRITE,
-                    skip_plan_check=True,
-                ),
-                'write',
-                adapter=write_adapter,
-            )
-            shell_result = run_chat_agent(
-                ChatAgentConfig.from_root(
-                    tmp,
-                    permission_mode=PermissionMode.WORKSPACE_WRITE,
-                    skip_plan_check=True,
-                ),
-                'shell',
-                adapter=shell_adapter,
-            )
+    result = run_chat_agent(
+        ChatAgentConfig.from_root(
+            chat_agent_config.root, approval_handler=lambda _request: True
+        ),
+        'write',
+        adapter=adapter,
+    )
 
-            self.assertEqual(write_result.status, 'completed')
-            # Shell operations in WORKSPACE_WRITE mode now return pending_approval
-            # instead of failed:permission (approval gate fix)
-            self.assertEqual(shell_result.status, 'pending_approval')
+    assert result.status == 'completed'
+    assert (Path(chat_agent_config.root) / 'x.txt').read_text(encoding='utf-8') == 'x'
 
-    def test_approval_policy_allow_all_destructive(self) -> None:
-        # allow_all_destructive bypass only works in danger-full-access mode.
+
+def test_destructive_decision_can_be_allowed(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+            '{"type":"final","content":"wrote"}',
+        ]
+    )
+
+    result = run_chat_agent(
+        ChatAgentConfig.from_root(chat_agent_config.root, allow_destructive=True),
+        'write',
+        adapter=adapter,
+    )
+
+    assert result.status == 'completed'
+    assert (Path(chat_agent_config.root) / 'x.txt').read_text(encoding='utf-8') == 'x'
+
+
+def test_destructive_decision_can_be_approved_by_call_id(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+            '{"type":"final","content":"wrote"}',
+        ]
+    )
+
+    result = run_chat_agent(
+        ChatAgentConfig.from_root(chat_agent_config.root, allow_destructive=True),
+        'write',
+        adapter=adapter,
+    )
+
+    assert result.status == 'completed'
+    assert (Path(chat_agent_config.root) / 'x.txt').read_text(encoding='utf-8') == 'x'
+
+
+def test_workspace_write_permission_allows_file_write_not_shell(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    write_adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+            '{"type":"final","content":"wrote"}',
+        ]
+    )
+    shell_adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_run_shell_mutate","arguments":{"command":"touch y.txt"},"call_id":"shell-1"}'
+        ]
+    )
+
+    write_result = run_chat_agent(
+        ChatAgentConfig.from_root(
+            chat_agent_config.root,
+            permission_mode=PermissionMode.WORKSPACE_WRITE,
+            skip_plan_check=True,
+        ),
+        'write',
+        adapter=write_adapter,
+    )
+    shell_result = run_chat_agent(
+        ChatAgentConfig.from_root(
+            chat_agent_config.root,
+            permission_mode=PermissionMode.WORKSPACE_WRITE,
+            skip_plan_check=True,
+        ),
+        'shell',
+        adapter=shell_adapter,
+    )
+
+    assert write_result.status == 'completed'
+    # Shell operations in WORKSPACE_WRITE mode now return pending_approval
+    # instead of failed:permission (approval gate fix)
+    assert shell_result.status == 'pending_approval'
+
+
+def test_approval_policy_allow_all_destructive() -> None:
+    # allow_all_destructive bypass only works in danger-full-access mode.
+    ApprovalPolicy(
+        permission_mode=PermissionMode.DANGER_FULL_ACCESS,
+        allow_all_destructive=True,
+        full_access_acknowledged=True,
+    ).assert_allowed(
+        tool_name='workspace_write_file',
+        call_id='any',
+        destructive=True,
+    )
+
+    # Verify safety contract: prompt mode blocks even when acknowledged.
+    from teaagent.types import DenialReasonCode
+
+    with pytest.raises(ToolPermissionError) as ctx:
         ApprovalPolicy(
-            permission_mode=PermissionMode.DANGER_FULL_ACCESS,
             allow_all_destructive=True,
             full_access_acknowledged=True,
         ).assert_allowed(
@@ -335,264 +386,276 @@ class ChatAgentTests(unittest.TestCase):
             call_id='any',
             destructive=True,
         )
+    assert ctx.value.reason_code == DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
 
-        # Verify safety contract: prompt mode blocks even when acknowledged.
-        from teaagent.types import DenialReasonCode
 
-        with self.assertRaises(ToolPermissionError) as ctx:
-            ApprovalPolicy(
-                allow_all_destructive=True,
-                full_access_acknowledged=True,
-            ).assert_allowed(
-                tool_name='workspace_write_file',
-                call_id='any',
-                destructive=True,
-            )
-        self.assertEqual(
-            ctx.exception.reason_code, DenialReasonCode.FULL_ACCESS_NOT_ACKNOWLEDGED
+def test_read_only_permission_blocks_destructive() -> None:
+    with pytest.raises(ToolPermissionError):
+        ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY).assert_allowed(
+            tool_name='workspace_write_file',
+            call_id='any',
+            destructive=True,
         )
 
-    def test_read_only_permission_blocks_destructive(self) -> None:
-        with self.assertRaises(ToolPermissionError):
-            ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY).assert_allowed(
-                tool_name='workspace_write_file',
-                call_id='any',
-                destructive=True,
-            )
 
-    def test_cli_agent_help(self) -> None:
+def test_cli_agent_help() -> None:
+    output = io.StringIO()
+
+    with pytest.raises(SystemExit) as context, redirect_stdout(output):
+        main(['agent', 'run', '--help'])
+
+    assert context.value.code == 0
+    assert 'Run one autonomous task' in output.getvalue()
+
+
+def test_cli_agent_run_route_model_uses_routed_model(
+    chat_agent_config: ChatAgentConfig,
+    fake_adapter_with_final_response: FakeAdapter,
+) -> None:
+    output = io.StringIO()
+
+    with (
+        patch(
+            'teaagent.cli.create_llm_adapter',
+            return_value=fake_adapter_with_final_response,
+        ) as create_adapter,
+        redirect_stdout(output),
+    ):
+        exit_code = main(
+            [
+                'agent',
+                'run',
+                'gpt',
+                'review this patch',
+                '--route-model',
+                '--root',
+                str(chat_agent_config.root),
+            ]
+        )
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 0
+    # With complexity-based routing, "review this patch" routes to gpt-4o-mini (medium complexity)
+    create_adapter.assert_called_once_with('gpt', model='gpt-4o-mini')
+    assert payload['routing']['category'] == 'review'
+    assert payload['routing']['complexity'] == 'medium'
+    assert payload['final_answer'] == 'done'
+
+
+def test_cli_agent_run_approve_call_id_allows_exact_write(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    output = io.StringIO()
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+            '{"type":"final","content":"wrote"}',
+        ]
+    )
+
+    with (
+        patch('teaagent.cli.create_llm_adapter', return_value=adapter),
+        redirect_stdout(output),
+    ):
+        exit_code = main(
+            [
+                'agent',
+                'run',
+                'gpt',
+                'write',
+                '--root',
+                str(chat_agent_config.root),
+                '--approve-call-id',
+                'write-1',
+            ]
+        )
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 0
+    assert payload['status'] == 'completed'
+    assert (Path(chat_agent_config.root) / 'x.txt').read_text(encoding='utf-8') == 'x'
+
+
+def test_cli_agent_run_returns_pending_approval_for_unapproved_write(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    output = io.StringIO()
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}'
+        ]
+    )
+
+    with (
+        patch('teaagent.cli.create_llm_adapter', return_value=adapter),
+        redirect_stdout(output),
+    ):
+        exit_code = main(
+            ['agent', 'run', 'gpt', 'write', '--root', str(chat_agent_config.root)]
+        )
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 1
+    assert payload['status'] == 'pending_approval'
+    assert payload['approval']['call_id'] == 'write-1'
+    assert payload['approval']['arguments']['path'] == 'x.txt'
+    # Note: content redaction may not be applied in all scenarios
+    # This is a test expectation issue, not a functional bug
+    # self.assertEqual(
+    #     payload['approval']['arguments']['content'], AUDIT_REDACTED
+    # )
+
+
+def test_cli_agent_run_hitl_approval_continues_same_run(
+    chat_agent_config: ChatAgentConfig,
+) -> None:
+    output = io.StringIO()
+    adapter = FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
+            '{"type":"final","content":"wrote"}',
+        ]
+    )
+
+    with (
+        patch('teaagent.cli.create_llm_adapter', return_value=adapter),
+        patch('builtins.input', return_value='yes'),
+        redirect_stdout(output),
+    ):
+        exit_code = main(
+            [
+                'agent',
+                'run',
+                'gpt',
+                'write',
+                '--root',
+                str(chat_agent_config.root),
+                '--hitl-approval',
+            ]
+        )
+
+    payload = json.loads(output.getvalue())
+    assert exit_code == 0
+    assert payload['status'] == 'completed'
+    assert (Path(chat_agent_config.root) / 'x.txt').read_text(encoding='utf-8') == 'x'
+
+
+def test_cli_agent_resume_replays_original_task(
+    chat_agent_config: ChatAgentConfig,
+    fake_adapter_with_final_response: FakeAdapter,
+) -> None:
+    first_adapter = FakeAdapter(['{"type":"final","content":"first"}'])
+    with (
+        patch('teaagent.cli.create_llm_adapter', return_value=first_adapter),
+        redirect_stdout(io.StringIO()) as first_out,
+    ):
+        assert (
+            main(
+                [
+                    'agent',
+                    'run',
+                    'gpt',
+                    'summarize repo',
+                    '--root',
+                    str(chat_agent_config.root),
+                ]
+            )
+            == 0
+        )
+    run_id = json.loads(first_out.getvalue())['run_id']
+
+    resume_adapter = FakeAdapter(['{"type":"final","content":"second"}'])
+    with (
+        patch('teaagent.cli.create_llm_adapter', return_value=resume_adapter),
+        redirect_stdout(io.StringIO()) as resume_out,
+    ):
+        exit_code = main(
+            ['agent', 'resume', 'gpt', run_id, '--root', str(chat_agent_config.root)]
+        )
+
+    payload = json.loads(resume_out.getvalue())
+    assert exit_code == 0
+    assert payload['resumed_from'] == run_id
+    assert payload['task'] == 'summarize repo'
+    assert payload['final_answer'] == 'second'
+
+
+def test_cli_agent_resume_replays_observations_and_auto_approves_pending() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / 'note.txt').write_text('hello', encoding='utf-8')
+        first_adapter = FakeAdapter(
+            [
+                '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"read-1"}',
+                '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"out.txt","content":"hello!"},"call_id":"write-1"}',
+            ]
+        )
+        with (
+            patch('teaagent.cli.create_llm_adapter', return_value=first_adapter),
+            redirect_stdout(io.StringIO()) as first_out,
+        ):
+            first_code = main(['agent', 'run', 'gpt', 'process notes', '--root', tmp])
+        first_payload = json.loads(first_out.getvalue())
+        assert first_code == 1
+        assert first_payload['status'] == 'pending_approval'
+        assert first_payload['approval']['call_id'] == 'write-1'
+        run_id = first_payload['run_id']
+
+        resume_adapter = FakeAdapter(
+            [
+                '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"out.txt","content":"hello!"},"call_id":"write-1"}',
+                '{"type":"final","content":"wrote"}',
+            ]
+        )
+        with (
+            patch('teaagent.cli.create_llm_adapter', return_value=resume_adapter),
+            redirect_stdout(io.StringIO()) as resume_out,
+        ):
+            resume_code = main(['agent', 'resume', 'gpt', run_id, '--root', tmp])
+        resume_payload = json.loads(resume_out.getvalue())
+
+        assert resume_code == 0
+        assert resume_payload['status'] == 'completed'
+        assert resume_payload['resumed_from'] == run_id
+        assert resume_payload['replayed_observations'] == 1
+        assert resume_payload['auto_approved_call_id'] == 'write-1'
+        assert (Path(tmp) / 'out.txt').read_text(encoding='utf-8') == 'hello!'
+
+
+def test_cli_agent_resume_fresh_restart_skips_replay() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / 'note.txt').write_text('hi', encoding='utf-8')
+        first_adapter = FakeAdapter(
+            [
+                '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"read-1"}',
+                '{"type":"final","content":"first"}',
+            ]
+        )
+        with (
+            patch('teaagent.cli.create_llm_adapter', return_value=first_adapter),
+            redirect_stdout(io.StringIO()) as first_out,
+        ):
+            main(['agent', 'run', 'gpt', 'read note', '--root', tmp])
+        run_id = json.loads(first_out.getvalue())['run_id']
+
+        resume_adapter = FakeAdapter(['{"type":"final","content":"fresh"}'])
+        with (
+            patch('teaagent.cli.create_llm_adapter', return_value=resume_adapter),
+            redirect_stdout(io.StringIO()) as resume_out,
+        ):
+            main(['agent', 'resume', 'gpt', run_id, '--root', tmp, '--fresh-restart'])
+        payload = json.loads(resume_out.getvalue())
+
+        assert payload['final_answer'] == 'fresh'
+        assert 'replayed_observations' not in payload
+        assert 'auto_approved_call_id' not in payload
+
+
+def test_cli_agent_resume_unknown_run_id_returns_error() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
         output = io.StringIO()
+        with redirect_stdout(output):
+            exit_code = main(['agent', 'resume', 'gpt', 'missing', '--root', tmp])
 
-        with self.assertRaises(SystemExit) as context, redirect_stdout(output):
-            main(['agent', 'run', '--help'])
-
-        self.assertEqual(context.exception.code, 0)
-        self.assertIn('Run one autonomous task', output.getvalue())
-
-    def test_cli_agent_run_route_model_uses_routed_model(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            output = io.StringIO()
-            adapter = FakeAdapter(['{"type":"final","content":"reviewed"}'])
-
-            with (
-                patch(
-                    'teaagent.cli.create_llm_adapter', return_value=adapter
-                ) as create_adapter,
-                redirect_stdout(output),
-            ):
-                exit_code = main(
-                    [
-                        'agent',
-                        'run',
-                        'gpt',
-                        'review this patch',
-                        '--route-model',
-                        '--root',
-                        tmp,
-                    ]
-                )
-
-            payload = json.loads(output.getvalue())
-            self.assertEqual(exit_code, 0)
-            # With complexity-based routing, "review this patch" routes to gpt-4o-mini (medium complexity)
-            create_adapter.assert_called_once_with('gpt', model='gpt-4o-mini')
-            self.assertEqual(payload['routing']['category'], 'review')
-            self.assertEqual(payload['routing']['complexity'], 'medium')
-            self.assertEqual(payload['final_answer'], 'reviewed')
-
-    def test_cli_agent_run_approve_call_id_allows_exact_write(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            output = io.StringIO()
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
-                    '{"type":"final","content":"wrote"}',
-                ]
-            )
-
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=adapter),
-                redirect_stdout(output),
-            ):
-                exit_code = main(
-                    [
-                        'agent',
-                        'run',
-                        'gpt',
-                        'write',
-                        '--root',
-                        tmp,
-                        '--approve-call-id',
-                        'write-1',
-                    ]
-                )
-
-            payload = json.loads(output.getvalue())
-            self.assertEqual(exit_code, 0)
-            self.assertEqual(payload['status'], 'completed')
-            self.assertEqual((Path(tmp) / 'x.txt').read_text(encoding='utf-8'), 'x')
-
-    def test_cli_agent_run_returns_pending_approval_for_unapproved_write(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            output = io.StringIO()
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}'
-                ]
-            )
-
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=adapter),
-                redirect_stdout(output),
-            ):
-                exit_code = main(['agent', 'run', 'gpt', 'write', '--root', tmp])
-
-            payload = json.loads(output.getvalue())
-            self.assertEqual(exit_code, 1)
-            self.assertEqual(payload['status'], 'pending_approval')
-            self.assertEqual(payload['approval']['call_id'], 'write-1')
-            self.assertEqual(payload['approval']['arguments']['path'], 'x.txt')
-            # Note: content redaction may not be applied in all scenarios
-            # This is a test expectation issue, not a functional bug
-            # self.assertEqual(
-            #     payload['approval']['arguments']['content'], AUDIT_REDACTED
-            # )
-
-    def test_cli_agent_run_hitl_approval_continues_same_run(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            output = io.StringIO()
-            adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"x.txt","content":"x"},"call_id":"write-1"}',
-                    '{"type":"final","content":"wrote"}',
-                ]
-            )
-
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=adapter),
-                patch('builtins.input', return_value='yes'),
-                redirect_stdout(output),
-            ):
-                exit_code = main(
-                    ['agent', 'run', 'gpt', 'write', '--root', tmp, '--hitl-approval']
-                )
-
-            payload = json.loads(output.getvalue())
-            self.assertEqual(exit_code, 0)
-            self.assertEqual(payload['status'], 'completed')
-            self.assertEqual((Path(tmp) / 'x.txt').read_text(encoding='utf-8'), 'x')
-
-    def test_cli_agent_resume_replays_original_task(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            first_adapter = FakeAdapter(['{"type":"final","content":"first"}'])
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=first_adapter),
-                redirect_stdout(io.StringIO()) as first_out,
-            ):
-                self.assertEqual(
-                    main(['agent', 'run', 'gpt', 'summarize repo', '--root', tmp]), 0
-                )
-            run_id = json.loads(first_out.getvalue())['run_id']
-
-            resume_adapter = FakeAdapter(['{"type":"final","content":"second"}'])
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=resume_adapter),
-                redirect_stdout(io.StringIO()) as resume_out,
-            ):
-                exit_code = main(['agent', 'resume', 'gpt', run_id, '--root', tmp])
-
-            payload = json.loads(resume_out.getvalue())
-            self.assertEqual(exit_code, 0)
-            self.assertEqual(payload['resumed_from'], run_id)
-            self.assertEqual(payload['task'], 'summarize repo')
-            self.assertEqual(payload['final_answer'], 'second')
-
-    def test_cli_agent_resume_replays_observations_and_auto_approves_pending(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / 'note.txt').write_text('hello', encoding='utf-8')
-            first_adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"read-1"}',
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"out.txt","content":"hello!"},"call_id":"write-1"}',
-                ]
-            )
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=first_adapter),
-                redirect_stdout(io.StringIO()) as first_out,
-            ):
-                first_code = main(
-                    ['agent', 'run', 'gpt', 'process notes', '--root', tmp]
-                )
-            first_payload = json.loads(first_out.getvalue())
-            self.assertEqual(first_code, 1)
-            self.assertEqual(first_payload['status'], 'pending_approval')
-            self.assertEqual(first_payload['approval']['call_id'], 'write-1')
-            run_id = first_payload['run_id']
-
-            resume_adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_write_file","arguments":{"path":"out.txt","content":"hello!"},"call_id":"write-1"}',
-                    '{"type":"final","content":"wrote"}',
-                ]
-            )
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=resume_adapter),
-                redirect_stdout(io.StringIO()) as resume_out,
-            ):
-                resume_code = main(['agent', 'resume', 'gpt', run_id, '--root', tmp])
-            resume_payload = json.loads(resume_out.getvalue())
-
-            self.assertEqual(resume_code, 0)
-            self.assertEqual(resume_payload['status'], 'completed')
-            self.assertEqual(resume_payload['resumed_from'], run_id)
-            self.assertEqual(resume_payload['replayed_observations'], 1)
-            self.assertEqual(resume_payload['auto_approved_call_id'], 'write-1')
-            self.assertEqual(
-                (Path(tmp) / 'out.txt').read_text(encoding='utf-8'), 'hello!'
-            )
-
-    def test_cli_agent_resume_fresh_restart_skips_replay(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / 'note.txt').write_text('hi', encoding='utf-8')
-            first_adapter = FakeAdapter(
-                [
-                    '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"note.txt"},"call_id":"read-1"}',
-                    '{"type":"final","content":"first"}',
-                ]
-            )
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=first_adapter),
-                redirect_stdout(io.StringIO()) as first_out,
-            ):
-                main(['agent', 'run', 'gpt', 'read note', '--root', tmp])
-            run_id = json.loads(first_out.getvalue())['run_id']
-
-            resume_adapter = FakeAdapter(['{"type":"final","content":"fresh"}'])
-            with (
-                patch('teaagent.cli.create_llm_adapter', return_value=resume_adapter),
-                redirect_stdout(io.StringIO()) as resume_out,
-            ):
-                main(
-                    ['agent', 'resume', 'gpt', run_id, '--root', tmp, '--fresh-restart']
-                )
-            payload = json.loads(resume_out.getvalue())
-
-            self.assertEqual(payload['final_answer'], 'fresh')
-            self.assertNotIn('replayed_observations', payload)
-            self.assertNotIn('auto_approved_call_id', payload)
-
-    def test_cli_agent_resume_unknown_run_id_returns_error(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            output = io.StringIO()
-            with redirect_stdout(output):
-                exit_code = main(['agent', 'resume', 'gpt', 'missing', '--root', tmp])
-
-            payload = json.loads(output.getvalue())
-            self.assertEqual(exit_code, 1)
-            self.assertEqual(payload['status'], 'error')
-
-
-if __name__ == '__main__':
-    unittest.main()
+        payload = json.loads(output.getvalue())
+        assert exit_code == 1
+        assert payload['status'] == 'error'

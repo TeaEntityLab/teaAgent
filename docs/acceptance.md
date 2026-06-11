@@ -42,7 +42,7 @@ acceptance flow writes the user TUI state file. In sandboxed environments, run
 them with permission to bind localhost ports and write the TeaAgent state
 directory.
 
-**Current acceptance test count: `609 passed`** (pytest-collected guard target; suite summary at `docs/generated/suite-summary.json`, 2026-06-10)
+**Current acceptance test count: `621 passed`** (pytest-collected guard target; suite summary at `docs/generated/suite-summary.json`, 2026-06-11)
 
 ## Acceptance Flows
 

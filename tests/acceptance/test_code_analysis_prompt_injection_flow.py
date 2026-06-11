@@ -1,7 +1,33 @@
-"""AC-NEW: LSP prompt-injection smoke without external LSP binaries.
+"""Test module for LSP code analysis prompt injection.
 
-Verifies that enabling code analysis injects `lsp_context` into the model user
-payload when the task mentions source-code paths.
+This module tests that enabling code analysis injects LSP context into the model
+user payload when the task mentions source-code paths. This ensures that code analysis
+results are available to the model without requiring external LSP binaries.
+
+Key concepts tested:
+- Prompt Injection: Code analysis injects lsp_context into user payload
+- Path Detection: Task mentions of source-code paths trigger code analysis
+- Context Enrichment: LSP context enriches model with code understanding
+- Configuration: CodeAnalysisConfig enables/disables code analysis
+- Smoke Test: Validation without external LSP binaries
+
+Acceptance Criteria:
+- AC1: Enabling code analysis injects lsp_context into user payload
+- AC2: Task mentions of source-code paths trigger code analysis
+- AC3: lsp_context is included in the model request messages
+- AC4: Code analysis works without external LSP binaries (smoke test)
+- AC5: CodeAnalysisConfig.from_root with enabled=True enables code analysis
+
+Technical Details:
+- CodeAnalysisConfig controls code analysis feature
+- lsp_context is injected into the user message content
+- Path detection identifies Python/TS/JS paths in task text
+- Code analysis uses tree-sitter for relation extraction
+- Smoke test validates the injection mechanism without full LSP
+
+References:
+- Code analysis design: /docs/architecture/code_analysis.md
+- LSP integration: /docs/integration/lsp.md
 """
 
 from __future__ import annotations

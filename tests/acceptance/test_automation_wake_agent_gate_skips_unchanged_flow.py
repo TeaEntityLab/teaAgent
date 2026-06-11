@@ -1,4 +1,35 @@
-"""AC-NEW: Collector wake_agent=false skips LLM automation runs."""
+"""Test module for automation wake agent gate.
+
+This module tests the wake agent gate, which allows collector scripts to skip
+LLM automation runs when there are no changes to process. This prevents unnecessary
+LLM calls and costs when the collector reports wake_agent=false.
+
+Key concepts tested:
+- Wake Agent Gate: Collector output includes wake_agent boolean flag
+- Skip Logic: wake_agent=false skips background LLM run
+- Status Reporting: Skipped runs return skipped_no_wake status
+- Collector Output: Collector must emit JSON with wake_agent and summary
+- Background Prevention: No background process is started when skipped
+
+Acceptance Criteria:
+- AC1: Collector with wake_agent=false skips LLM automation run
+- AC2: Skipped runs return status=skipped_no_wake
+- AC3: Skipped runs include collector output in response
+- AC4: No background process files are created when skipped
+- AC5: Collector summary is preserved in the response
+
+Technical Details:
+- Collector scripts must emit JSON: {"wake_agent": bool, "summary": string}
+- wake_agent=false indicates no changes, skip LLM run
+- wake_agent=true indicates changes, proceed with LLM run
+- Skipped status avoids unnecessary LLM API calls and costs
+- Background process is only started when wake_agent=true
+- Collector summary is still available for logging/observability
+
+References:
+- Automation v2 design: /docs/architecture/automation_v2.md
+- Collector spec: /docs/specs/automation_collectors.md
+"""
 
 from __future__ import annotations
 

@@ -242,9 +242,11 @@ def test_emit_run_completion_output_human_replaces_json(capsys) -> None:
             payload={'run_id': run_id, 'status': 'completed'},
         )
         captured = capsys.readouterr()
+        assert (
+            'Your run for "ship receipt" finished with status: success.' in captured.out
+        )
         assert 'Run receipt: emit-human' in captured.out
         assert 'Goal: ship receipt' in captured.out
-        assert captured.out.strip().startswith('Run receipt:')
         assert 'emit-human' not in captured.err
 
 

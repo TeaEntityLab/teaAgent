@@ -1,4 +1,37 @@
-"""Background runs: start, list, log run_id, stream events, notify hook."""
+"""Test module for background run lifecycle and notification.
+
+This module tests the background run system, which enables long-running agent
+tasks to execute asynchronously. The system supports starting, listing, monitoring,
+and receiving notifications for background runs.
+
+Key concepts tested:
+- Background Start: BackgroundRunStore starts processes with metadata
+- Background List: BackgroundRunStore lists all background processes
+- Process Monitoring: Background processes are monitored for completion
+- Session Streaming: stream_run_events streams audit events for a run
+- Desktop Notification: --notify flag triggers desktop notifications on completion
+- Attach Integration: agent attach --notify triggers notifications
+
+Acceptance Criteria:
+- AC1: BackgroundRunStore.start() creates a background process record
+- AC2: BackgroundRunStore.list() returns all background processes
+- AC3: BackgroundRunStore.get() returns process status including alive flag
+- AC4: stream_run_events streams audit events for a completed run
+- AC5: agent attach --notify triggers desktop notification on completion
+- AC6: agent attach --follow --notify triggers notification on completion
+
+Technical Details:
+- BackgroundRunStore manages .teaagent/background/*.json files
+- Each background record includes: background_id, pid, command, started_at, log_path
+- Process monitoring checks if process is alive via _process_exists
+- stream_run_events reads audit log and yields events
+- Desktop notifications use platform-specific notify functions
+- Notifications include run_id and status in the message
+
+References:
+- Background run design: /docs/architecture/background_runs.md
+- Session streaming: /docs/specs/session_streaming.md
+"""
 
 from __future__ import annotations
 

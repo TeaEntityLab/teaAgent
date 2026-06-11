@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import subprocess
-import unittest
 import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from teaagent.chat_agent import ChatAgentConfig
 from teaagent.runner import FinalAnswer, RunResult
@@ -60,187 +61,191 @@ def _stub_result(run_id: str = 'child-run-1') -> RunResult:
     )
 
 
-class SubagentIsolationTests(unittest.TestCase):
-    def test_normalize_subagent_isolation_defaults_and_rejects_unknown(self) -> None:
-        self.assertEqual(normalize_subagent_isolation(None), 'shared')
-        self.assertEqual(normalize_subagent_isolation('worktree'), 'worktree')
-        self.assertEqual(
-            normalize_subagent_isolation('directory-snapshot'), 'directory-snapshot'
+def test_normalize_subagent_isolation_defaults_and_rejects_unknown() -> None:
+    assert normalize_subagent_isolation(None) == 'shared'
+    assert normalize_subagent_isolation('worktree') == 'worktree'
+    assert normalize_subagent_isolation('directory-snapshot') == 'directory-snapshot'
+    assert normalize_subagent_isolation('invalid') is None
+
+
+def test_normalize_subagent_isolation_deprecated_container_alias() -> None:
+    # Test that 'container' is deprecated but still works via alias
+    # normalize_subagent_isolation handles the alias without warning
+    result = normalize_subagent_isolation('container')
+    assert result == 'directory-snapshot'
+
+
+def test_prepare_worktree_requires_git_repository() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        ctx, error = prepare_subagent_isolation(
+            root, isolation='worktree', session_key='child-1'
         )
-        self.assertIsNone(normalize_subagent_isolation('invalid'))
+        assert ctx is None
+        assert 'git repository' in error
 
-    def test_normalize_subagent_isolation_deprecated_container_alias(self) -> None:
-        # Test that 'container' is deprecated but still works via alias
-        # normalize_subagent_isolation handles the alias without warning
-        result = normalize_subagent_isolation('container')
-        self.assertEqual(result, 'directory-snapshot')
 
-    def test_prepare_worktree_requires_git_repository(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            ctx, error = prepare_subagent_isolation(
-                root, isolation='worktree', session_key='child-1'
-            )
-            self.assertIsNone(ctx)
-            self.assertIn('git repository', error)
+def test_prepare_worktree_creates_and_cleans_up() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        try:
+            _init_git_repo(root)
+        except subprocess.CalledProcessError:
+            pytest.skip('git unavailable in this environment')
+        ctx, error = prepare_subagent_isolation(
+            root, isolation='worktree', session_key='child-1'
+        )
+        if error:
+            pytest.skip(error)
+        assert ctx is not None
+        assert ctx.worktree_path is not None
+        assert ctx.child_root.is_dir()
+        marker = ctx.child_root / 'README.md'
+        assert marker.is_file()
+        ctx.cleanup()
+        assert not ctx.worktree_path.exists()
 
-    def test_prepare_worktree_creates_and_cleans_up(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            try:
-                _init_git_repo(root)
-            except subprocess.CalledProcessError:
-                self.skipTest('git unavailable in this environment')
-            ctx, error = prepare_subagent_isolation(
-                root, isolation='worktree', session_key='child-1'
-            )
-            if error:
-                self.skipTest(error)
-            assert ctx is not None
-            self.assertTrue(ctx.worktree_path is not None)
-            self.assertTrue(ctx.child_root.is_dir())
-            marker = ctx.child_root / 'README.md'
-            self.assertTrue(marker.is_file())
-            ctx.cleanup()
-            self.assertFalse(ctx.worktree_path.exists())
 
-    def test_run_subagent_worktree_uses_isolated_root(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
-            worktree.mkdir(parents=True)
-            config = ChatAgentConfig(root=root)
-            manager = SubagentManager(
-                root=root, parent_config=config, parent_adapter=MagicMock()
-            )
-            captured: dict[str, Path] = {}
-            iso_ctx = IsolationContext(
-                parent_root=root,
-                child_root=worktree,
+def test_run_subagent_worktree_uses_isolated_root() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
+        worktree.mkdir(parents=True)
+        config = ChatAgentConfig(root=root)
+        manager = SubagentManager(
+            root=root, parent_config=config, parent_adapter=MagicMock()
+        )
+        captured: dict[str, Path] = {}
+        iso_ctx = IsolationContext(
+            parent_root=root,
+            child_root=worktree,
+            isolation='worktree',
+            worktree_path=worktree,
+        )
+
+        def capture_run(*args: object, **kwargs: object) -> RunResult:
+            cfg = args[0]  # First positional arg is config
+            captured['child_root'] = cfg.root  # type: ignore[attr-defined]
+            return _stub_result('child-wt')
+
+        with (
+            patch(
+                'teaagent.subagents._manager.prepare_subagent_isolation',
+                return_value=(iso_ctx, ''),
+            ),
+            patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+            patch('teaagent.run_store.RunStore.logger_for_result'),
+        ):
+            payload = manager.run_subagent(
+                task='inspect README',
+                parent_run_id='parent-1',
+                depth=0,
                 isolation='worktree',
-                worktree_path=worktree,
             )
 
-            def capture_run(*args: object, **kwargs: object) -> RunResult:
-                cfg = args[0]  # First positional arg is config
-                captured['child_root'] = cfg.root  # type: ignore[attr-defined]
-                return _stub_result('child-wt')
+        assert payload['status'] == 'completed'
+        assert payload['lineage']['isolation'] == 'worktree'
+        assert 'worktree_path' in payload['lineage']
+        assert captured['child_root'].resolve() == worktree.resolve()
 
-            with (
-                patch(
-                    'teaagent.subagents._manager.prepare_subagent_isolation',
-                    return_value=(iso_ctx, ''),
-                ),
-                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
-                patch('teaagent.run_store.RunStore.logger_for_result'),
-            ):
-                payload = manager.run_subagent(
-                    task='inspect README',
-                    parent_run_id='parent-1',
-                    depth=0,
-                    isolation='worktree',
-                )
 
-            self.assertEqual(payload['status'], 'completed')
-            self.assertEqual(payload['lineage']['isolation'], 'worktree')
-            self.assertIn('worktree_path', payload['lineage'])
-            self.assertEqual(captured['child_root'].resolve(), worktree.resolve())
+def test_prepare_directory_snapshot_creates_snapshot_and_cleans_up() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / 'src').mkdir()
+        (root / 'src' / 'app.py').write_text('print("hi")\n', encoding='utf-8')
+        (root / '.teaagent').mkdir()
+        (root / '.teaagent' / 'runs').mkdir()
+        (root / '.teaagent' / 'runs' / 'parent.jsonl').write_text(
+            'parent\n', encoding='utf-8'
+        )
 
-    def test_prepare_directory_snapshot_creates_snapshot_and_cleans_up(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / 'src').mkdir()
-            (root / 'src' / 'app.py').write_text('print("hi")\n', encoding='utf-8')
-            (root / '.teaagent').mkdir()
-            (root / '.teaagent' / 'runs').mkdir()
-            (root / '.teaagent' / 'runs' / 'parent.jsonl').write_text(
-                'parent\n', encoding='utf-8'
-            )
+        ctx, error = prepare_subagent_isolation(
+            root, isolation='directory-snapshot', session_key='child-1'
+        )
+        assert error == ''
+        assert ctx is not None
+        assert (ctx.child_root / 'src' / 'app.py').is_file()
+        assert not (ctx.child_root / '.teaagent' / 'runs').exists()
+        ctx.cleanup()
+        assert not ctx.container_path.exists()
 
-            ctx, error = prepare_subagent_isolation(
-                root, isolation='directory-snapshot', session_key='child-1'
-            )
-            self.assertEqual(error, '')
-            assert ctx is not None
-            self.assertTrue((ctx.child_root / 'src' / 'app.py').is_file())
-            self.assertFalse((ctx.child_root / '.teaagent' / 'runs').exists())
-            ctx.cleanup()
-            self.assertFalse(ctx.container_path.exists())
 
-    def test_run_subagent_directory_snapshot_uses_isolated_root(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            snapshot = root / '.teaagent' / 'subagent-snapshots' / 'child-1'
-            snapshot.mkdir(parents=True)
-            config = ChatAgentConfig(root=root)
-            manager = SubagentManager(
-                root=root, parent_config=config, parent_adapter=MagicMock()
-            )
-            captured: dict[str, Path] = {}
-            iso_ctx = IsolationContext(
-                parent_root=root,
-                child_root=snapshot,
+def test_run_subagent_directory_snapshot_uses_isolated_root() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        snapshot = root / '.teaagent' / 'subagent-snapshots' / 'child-1'
+        snapshot.mkdir(parents=True)
+        config = ChatAgentConfig(root=root)
+        manager = SubagentManager(
+            root=root, parent_config=config, parent_adapter=MagicMock()
+        )
+        captured: dict[str, Path] = {}
+        iso_ctx = IsolationContext(
+            parent_root=root,
+            child_root=snapshot,
+            isolation='directory-snapshot',
+            container_path=snapshot,
+        )
+
+        def capture_run(*args: object, **kwargs: object) -> RunResult:
+            cfg = args[0]  # First positional arg is config
+            captured['child_root'] = cfg.root  # type: ignore[attr-defined]
+            return _stub_result('child-ds')
+
+        with (
+            patch(
+                'teaagent.subagents._manager.prepare_subagent_isolation',
+                return_value=(iso_ctx, ''),
+            ),
+            patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+            patch('teaagent.run_store.RunStore.logger_for_result'),
+        ):
+            payload = manager.run_subagent(
+                task='inspect app',
+                parent_run_id='parent-1',
+                depth=0,
                 isolation='directory-snapshot',
-                container_path=snapshot,
             )
 
-            def capture_run(*args: object, **kwargs: object) -> RunResult:
-                cfg = args[0]  # First positional arg is config
-                captured['child_root'] = cfg.root  # type: ignore[attr-defined]
-                return _stub_result('child-ds')
+        assert payload['status'] == 'completed'
+        assert payload['lineage']['isolation'] == 'directory-snapshot'
+        assert 'container_path' in payload['lineage']
+        assert captured['child_root'].resolve() == snapshot.resolve()
 
-            with (
-                patch(
-                    'teaagent.subagents._manager.prepare_subagent_isolation',
-                    return_value=(iso_ctx, ''),
-                ),
-                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
-                patch('teaagent.run_store.RunStore.logger_for_result'),
-            ):
-                payload = manager.run_subagent(
-                    task='inspect app',
-                    parent_run_id='parent-1',
-                    depth=0,
-                    isolation='directory-snapshot',
-                )
 
-            self.assertEqual(payload['status'], 'completed')
-            self.assertEqual(payload['lineage']['isolation'], 'directory-snapshot')
-            self.assertIn('container_path', payload['lineage'])
-            self.assertEqual(captured['child_root'].resolve(), snapshot.resolve())
+def test_deprecated_container_alias_still_works() -> None:
+    """Test that deprecated 'container' alias still works for backward compatibility."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / 'src').mkdir()
+        (root / 'src' / 'app.py').write_text('print("hi")\n', encoding='utf-8')
+        (root / '.teaagent').mkdir()
+        (root / '.teaagent' / 'runs').mkdir()
+        (root / '.teaagent' / 'runs' / 'parent.jsonl').write_text(
+            'parent\n', encoding='utf-8'
+        )
 
-    def test_deprecated_container_alias_still_works(self) -> None:
-        """Test that deprecated 'container' alias still works for backward compatibility."""
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / 'src').mkdir()
-            (root / 'src' / 'app.py').write_text('print("hi")\n', encoding='utf-8')
-            (root / '.teaagent').mkdir()
-            (root / '.teaagent' / 'runs').mkdir()
-            (root / '.teaagent' / 'runs' / 'parent.jsonl').write_text(
-                'parent\n', encoding='utf-8'
+        # Test that prepare_subagent_isolation triggers the deprecation warning
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            ctx, error = prepare_subagent_isolation(
+                root, isolation='container', session_key='child-1'
             )
+            # Should trigger deprecation warning
+            assert len(w) > 0
+            assert issubclass(w[0].category, DeprecationWarning)
+            assert 'container' in str(w[0].message)
+            assert 'directory-snapshot' in str(w[0].message)
 
-            # Test that prepare_subagent_isolation triggers the deprecation warning
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter('always')
-                ctx, error = prepare_subagent_isolation(
-                    root, isolation='container', session_key='child-1'
-                )
-                # Should trigger deprecation warning
-                self.assertTrue(len(w) > 0)
-                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-                self.assertIn('container', str(w[0].message))
-                self.assertIn('directory-snapshot', str(w[0].message))
-
-            self.assertEqual(error, '')
-            assert ctx is not None
-            self.assertEqual(ctx.isolation, 'directory-snapshot')
-            self.assertTrue((ctx.child_root / 'src' / 'app.py').is_file())
-            ctx.cleanup()
-            self.assertFalse(ctx.container_path.exists())
+        assert error == ''
+        assert ctx is not None
+        assert ctx.isolation == 'directory-snapshot'
+        assert (ctx.child_root / 'src' / 'app.py').is_file()
+        ctx.cleanup()
+        assert not ctx.container_path.exists()
 
 
 def test_docker_isolation_with_resource_limits():
@@ -384,218 +389,213 @@ def test_subagent_docker_container_hardened():
         )
 
 
-class SubagentPermissionInheritanceTests(unittest.TestCase):
+def test_danger_full_access_parent_caps_child_to_workspace_write() -> None:
     """P2-A-003: Subagent permission mode must be capped for safety."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
+        worktree.mkdir(parents=True)
+        from teaagent.types import PermissionMode
 
-    def test_danger_full_access_parent_caps_child_to_workspace_write(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
-            worktree.mkdir(parents=True)
-            from teaagent.types import PermissionMode
+        config = ChatAgentConfig(
+            root=root, permission_mode=PermissionMode.DANGER_FULL_ACCESS
+        )
+        manager = SubagentManager(
+            root=root, parent_config=config, parent_adapter=MagicMock()
+        )
+        captured_mode: list[object] = []
+        iso_ctx = IsolationContext(
+            parent_root=root,
+            child_root=worktree,
+            isolation='worktree',
+            worktree_path=worktree,
+        )
 
-            config = ChatAgentConfig(
-                root=root, permission_mode=PermissionMode.DANGER_FULL_ACCESS
-            )
-            manager = SubagentManager(
-                root=root, parent_config=config, parent_adapter=MagicMock()
-            )
-            captured_mode: list[object] = []
-            iso_ctx = IsolationContext(
-                parent_root=root,
-                child_root=worktree,
+        def capture_run(*args: object, **kwargs: object) -> RunResult:
+            cfg = args[0]
+            captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
+            return _stub_result('child-1')
+
+        with (
+            patch(
+                'teaagent.subagents._manager.prepare_subagent_isolation',
+                return_value=(iso_ctx, ''),
+            ),
+            patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+            patch('teaagent.run_store.RunStore.logger_for_result'),
+        ):
+            payload = manager.run_subagent(
+                task='test',
+                parent_run_id='parent-1',
+                depth=0,
                 isolation='worktree',
-                worktree_path=worktree,
             )
 
-            def capture_run(*args: object, **kwargs: object) -> RunResult:
-                cfg = args[0]
-                captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
-                return _stub_result('child-1')
+        assert payload['status'] == 'completed'
+        child_mode = captured_mode[0]
+        child_mode_str = (
+            child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
+        )
+        assert child_mode_str == 'workspace-write'
 
-            with (
-                patch(
-                    'teaagent.subagents._manager.prepare_subagent_isolation',
-                    return_value=(iso_ctx, ''),
-                ),
-                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
-                patch('teaagent.run_store.RunStore.logger_for_result'),
-            ):
-                payload = manager.run_subagent(
-                    task='test',
-                    parent_run_id='parent-1',
-                    depth=0,
-                    isolation='worktree',
-                )
 
-            self.assertEqual(payload['status'], 'completed')
-            child_mode = captured_mode[0]
-            child_mode_str = (
-                child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
-            )
-            self.assertEqual(child_mode_str, 'workspace-write')
+def test_allow_mode_parent_caps_child_to_workspace_write() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
+        worktree.mkdir(parents=True)
+        from teaagent.types import PermissionMode
 
-    def test_allow_mode_parent_caps_child_to_workspace_write(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
-            worktree.mkdir(parents=True)
-            from teaagent.types import PermissionMode
+        config = ChatAgentConfig(root=root, permission_mode=PermissionMode.ALLOW)
+        manager = SubagentManager(
+            root=root, parent_config=config, parent_adapter=MagicMock()
+        )
+        captured_mode: list[object] = []
+        iso_ctx = IsolationContext(
+            parent_root=root,
+            child_root=worktree,
+            isolation='worktree',
+            worktree_path=worktree,
+        )
 
-            config = ChatAgentConfig(root=root, permission_mode=PermissionMode.ALLOW)
-            manager = SubagentManager(
-                root=root, parent_config=config, parent_adapter=MagicMock()
-            )
-            captured_mode: list[object] = []
-            iso_ctx = IsolationContext(
-                parent_root=root,
-                child_root=worktree,
+        def capture_run(*args: object, **kwargs: object) -> RunResult:
+            cfg = args[0]
+            captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
+            return _stub_result('child-1')
+
+        with (
+            patch(
+                'teaagent.subagents._manager.prepare_subagent_isolation',
+                return_value=(iso_ctx, ''),
+            ),
+            patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+            patch('teaagent.run_store.RunStore.logger_for_result'),
+        ):
+            payload = manager.run_subagent(
+                task='test',
+                parent_run_id='parent-1',
+                depth=0,
                 isolation='worktree',
-                worktree_path=worktree,
             )
 
-            def capture_run(*args: object, **kwargs: object) -> RunResult:
-                cfg = args[0]
-                captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
-                return _stub_result('child-1')
+        assert payload['status'] == 'completed'
+        child_mode = captured_mode[0]
+        child_mode_str = (
+            child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
+        )
+        assert child_mode_str == 'workspace-write'
 
-            with (
-                patch(
-                    'teaagent.subagents._manager.prepare_subagent_isolation',
-                    return_value=(iso_ctx, ''),
-                ),
-                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
-                patch('teaagent.run_store.RunStore.logger_for_result'),
-            ):
-                payload = manager.run_subagent(
-                    task='test',
-                    parent_run_id='parent-1',
-                    depth=0,
-                    isolation='worktree',
-                )
 
-            self.assertEqual(payload['status'], 'completed')
-            child_mode = captured_mode[0]
-            child_mode_str = (
-                child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
-            )
-            self.assertEqual(child_mode_str, 'workspace-write')
+def test_read_only_parent_does_not_elevate_child() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
+        worktree.mkdir(parents=True)
+        from teaagent.types import PermissionMode
 
-    def test_read_only_parent_does_not_elevate_child(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            worktree = root / '.teaagent' / 'subagent-worktrees' / 'child-1'
-            worktree.mkdir(parents=True)
-            from teaagent.types import PermissionMode
+        config = ChatAgentConfig(root=root, permission_mode=PermissionMode.READ_ONLY)
+        manager = SubagentManager(
+            root=root, parent_config=config, parent_adapter=MagicMock()
+        )
+        captured_mode: list[object] = []
+        iso_ctx = IsolationContext(
+            parent_root=root,
+            child_root=worktree,
+            isolation='worktree',
+            worktree_path=worktree,
+        )
 
-            config = ChatAgentConfig(
-                root=root, permission_mode=PermissionMode.READ_ONLY
-            )
-            manager = SubagentManager(
-                root=root, parent_config=config, parent_adapter=MagicMock()
-            )
-            captured_mode: list[object] = []
-            iso_ctx = IsolationContext(
-                parent_root=root,
-                child_root=worktree,
+        def capture_run(*args: object, **kwargs: object) -> RunResult:
+            cfg = args[0]
+            captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
+            return _stub_result('child-1')
+
+        with (
+            patch(
+                'teaagent.subagents._manager.prepare_subagent_isolation',
+                return_value=(iso_ctx, ''),
+            ),
+            patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
+            patch('teaagent.run_store.RunStore.logger_for_result'),
+        ):
+            payload = manager.run_subagent(
+                task='test',
+                parent_run_id='parent-1',
+                depth=0,
                 isolation='worktree',
-                worktree_path=worktree,
             )
 
-            def capture_run(*args: object, **kwargs: object) -> RunResult:
-                cfg = args[0]
-                captured_mode.append(cfg.permission_mode)  # type: ignore[attr-defined]
-                return _stub_result('child-1')
-
-            with (
-                patch(
-                    'teaagent.subagents._manager.prepare_subagent_isolation',
-                    return_value=(iso_ctx, ''),
-                ),
-                patch('teaagent.chat_agent.run_chat_agent', side_effect=capture_run),
-                patch('teaagent.run_store.RunStore.logger_for_result'),
-            ):
-                payload = manager.run_subagent(
-                    task='test',
-                    parent_run_id='parent-1',
-                    depth=0,
-                    isolation='worktree',
-                )
-
-            self.assertEqual(payload['status'], 'completed')
-            child_mode = captured_mode[0]
-            child_mode_str = (
-                child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
-            )
-            self.assertEqual(child_mode_str, 'read-only')
+        assert payload['status'] == 'completed'
+        child_mode = captured_mode[0]
+        child_mode_str = (
+            child_mode.value if hasattr(child_mode, 'value') else str(child_mode)
+        )
+        assert child_mode_str == 'read-only'
 
 
-class WorkspaceCopySecretExclusionTests(unittest.TestCase):
+def test_env_files_excluded_from_snapshot() -> None:
     """P2-A-003: workspace snapshots must exclude secret files."""
+    from teaagent.subagents._isolation import _copy_workspace_snapshot
 
-    def test_env_files_excluded_from_snapshot(self) -> None:
-        from teaagent.subagents._isolation import _copy_workspace_snapshot
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.env').write_text('SECRET_KEY=abc123')
+        (root / 'app.py').write_text('print("hello")')
+        (root / '.teaagent').mkdir()
 
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.env').write_text('SECRET_KEY=abc123')
-            (root / 'app.py').write_text('print("hello")')
-            (root / '.teaagent').mkdir()
+        dest = Path(tmp) / 'snapshot'
+        _copy_workspace_snapshot(root, dest)
 
-            dest = Path(tmp) / 'snapshot'
-            _copy_workspace_snapshot(root, dest)
-
-            self.assertFalse((dest / '.env').exists())
-            self.assertTrue((dest / 'app.py').exists())
-
-    def test_pem_files_excluded_from_snapshot(self) -> None:
-        from teaagent.subagents._isolation import _copy_workspace_snapshot
-
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / 'id_rsa.pem').write_text('PRIVATE KEY')
-            (root / 'app.py').write_text('print("hello")')
-            (root / '.teaagent').mkdir()
-
-            dest = Path(tmp) / 'snapshot'
-            _copy_workspace_snapshot(root, dest)
-
-            self.assertFalse((dest / 'id_rsa.pem').exists())
-            self.assertTrue((dest / 'app.py').exists())
-
-    def test_credentials_files_excluded_from_snapshot(self) -> None:
-        from teaagent.subagents._isolation import _copy_workspace_snapshot
-
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / 'credentials.json').write_text('{"key":"secret"}')
-            (root / 'app.py').write_text('print("hello")')
-            (root / '.teaagent').mkdir()
-
-            dest = Path(tmp) / 'snapshot'
-            _copy_workspace_snapshot(root, dest)
-
-            self.assertFalse((dest / 'credentials.json').exists())
-            self.assertTrue((dest / 'app.py').exists())
-
-    def test_ssh_dir_excluded_from_snapshot(self) -> None:
-        from teaagent.subagents._isolation import _copy_workspace_snapshot
-
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.ssh').mkdir()
-            (root / '.ssh' / 'id_rsa').write_text('PRIVATE KEY')
-            (root / 'app.py').write_text('print("hello")')
-            (root / '.teaagent').mkdir()
-
-            dest = Path(tmp) / 'snapshot'
-            _copy_workspace_snapshot(root, dest)
-
-            self.assertFalse((dest / '.ssh').exists())
+        assert not (dest / '.env').exists()
+        assert (dest / 'app.py').exists()
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_pem_files_excluded_from_snapshot() -> None:
+    from teaagent.subagents._isolation import _copy_workspace_snapshot
+
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / 'id_rsa.pem').write_text('PRIVATE KEY')
+        (root / 'app.py').write_text('print("hello")')
+        (root / '.teaagent').mkdir()
+
+        dest = Path(tmp) / 'snapshot'
+        _copy_workspace_snapshot(root, dest)
+
+        assert not (dest / 'id_rsa.pem').exists()
+        assert (dest / 'app.py').exists()
+
+
+def test_credentials_files_excluded_from_snapshot() -> None:
+    from teaagent.subagents._isolation import _copy_workspace_snapshot
+
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / 'credentials.json').write_text('{"key":"secret"}')
+        (root / 'app.py').write_text('print("hello")')
+        (root / '.teaagent').mkdir()
+
+        dest = Path(tmp) / 'snapshot'
+        _copy_workspace_snapshot(root, dest)
+
+        assert not (dest / 'credentials.json').exists()
+        assert (dest / 'app.py').exists()
+
+
+def test_ssh_dir_excluded_from_snapshot() -> None:
+    from teaagent.subagents._isolation import _copy_workspace_snapshot
+
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.ssh').mkdir()
+        (root / '.ssh' / 'id_rsa').write_text('PRIVATE KEY')
+        (root / 'app.py').write_text('print("hello")')
+        (root / '.teaagent').mkdir()
+
+        dest = Path(tmp) / 'snapshot'
+        _copy_workspace_snapshot(root, dest)
+
+        assert not (dest / '.ssh').exists()

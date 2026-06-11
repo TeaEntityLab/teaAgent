@@ -7,12 +7,31 @@ the circuit half-opens and the next refresh retries the endpoint.
 
 from __future__ import annotations
 
+import os
 import time
 from unittest.mock import patch
 
 from teaagent.agentcard import (
     CircuitBreakerConfig,
     FederatedAgentRegistry,
+)
+
+# Configurable timeout for circuit breaker reset tests
+# Can be overridden via environment variable for slow CI systems
+# Default is conservative (1.0s) to avoid flakiness on slow CI systems
+_CIRCUIT_RESET_WAIT_SECONDS = float(
+    os.environ.get('TEAAGENT_TEST_CIRCUIT_RESET_WAIT', '1.0')
+)
+
+# Circuit breaker test constants
+_CIRCUIT_FAILURE_THRESHOLD_STANDARD = (
+    2  # Standard failure threshold for circuit opening
+)
+_CIRCUIT_FAILURE_THRESHOLD_LOW = 1  # Low failure threshold for quick circuit opening
+_CIRCUIT_FAILURE_THRESHOLD_HIGH = 3  # High failure threshold for flaky endpoint test
+_CIRCUIT_RESET_TIMEOUT_LONG = 60.0  # Long reset timeout (seconds) for standard tests
+_CIRCUIT_NO_CIRCUIT_BREAKER_CALL_COUNT = (
+    3  # Expected call count when no circuit breaker
 )
 
 _CARD_DATA = {
@@ -52,7 +71,10 @@ def _fail_fetch(
 
 
 def test_circuit_opens_after_threshold():
-    cb = CircuitBreakerConfig(failure_threshold=2, reset_timeout_seconds=60.0)
+    cb = CircuitBreakerConfig(
+        failure_threshold=_CIRCUIT_FAILURE_THRESHOLD_STANDARD,
+        reset_timeout_seconds=_CIRCUIT_RESET_TIMEOUT_LONG,
+    )
     reg = FederatedAgentRegistry(
         ['http://bad.local'], circuit_breaker=cb, allow_http=True
     )
@@ -66,7 +88,10 @@ def test_circuit_opens_after_threshold():
 
 
 def test_open_circuit_skips_endpoint():
-    cb = CircuitBreakerConfig(failure_threshold=1, reset_timeout_seconds=60.0)
+    cb = CircuitBreakerConfig(
+        failure_threshold=_CIRCUIT_FAILURE_THRESHOLD_LOW,
+        reset_timeout_seconds=_CIRCUIT_RESET_TIMEOUT_LONG,
+    )
     reg = FederatedAgentRegistry(
         ['http://bad.local', 'http://good.local'],
         circuit_breaker=cb,
@@ -92,7 +117,10 @@ def test_open_circuit_skips_endpoint():
 
 
 def test_success_resets_failure_count():
-    cb = CircuitBreakerConfig(failure_threshold=3, reset_timeout_seconds=60.0)
+    cb = CircuitBreakerConfig(
+        failure_threshold=_CIRCUIT_FAILURE_THRESHOLD_HIGH,
+        reset_timeout_seconds=_CIRCUIT_RESET_TIMEOUT_LONG,
+    )
     reg = FederatedAgentRegistry(
         ['http://flaky.local'], circuit_breaker=cb, allow_http=True
     )
@@ -117,7 +145,10 @@ def test_success_resets_failure_count():
 
 
 def test_circuit_resets_after_timeout():
-    cb = CircuitBreakerConfig(failure_threshold=1, reset_timeout_seconds=0.05)
+    # Use a short timeout that's 2x the configurable wait time
+    cb = CircuitBreakerConfig(
+        failure_threshold=1, reset_timeout_seconds=_CIRCUIT_RESET_WAIT_SECONDS / 2
+    )
     reg = FederatedAgentRegistry(
         ['http://temp-bad.local'], circuit_breaker=cb, allow_http=True
     )
@@ -127,7 +158,7 @@ def test_circuit_resets_after_timeout():
 
     assert reg.circuit_state('http://temp-bad.local') == 'open'
 
-    time.sleep(0.1)  # wait for reset
+    time.sleep(_CIRCUIT_RESET_WAIT_SECONDS)  # wait for reset (configurable)
 
     # After timeout, circuit should allow a retry
     with patch(
@@ -155,11 +186,14 @@ def test_no_circuit_breaker_behaves_as_before():
         reg.refresh()
         reg.refresh()
 
-    assert call_count['n'] >= 3  # no skipping
+    assert call_count['n'] >= _CIRCUIT_NO_CIRCUIT_BREAKER_CALL_COUNT  # no skipping
 
 
 def test_cards_from_healthy_endpoints_still_returned():
-    cb = CircuitBreakerConfig(failure_threshold=1, reset_timeout_seconds=60.0)
+    cb = CircuitBreakerConfig(
+        failure_threshold=_CIRCUIT_FAILURE_THRESHOLD_LOW,
+        reset_timeout_seconds=_CIRCUIT_RESET_TIMEOUT_LONG,
+    )
     reg = FederatedAgentRegistry(
         ['http://bad.local', 'http://good.local'],
         circuit_breaker=cb,

@@ -1,9 +1,9 @@
 """Tests for repo-map benchmark automation (TASK-H5-001-03)."""
 
-import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
 from teaagent.repo_map_benchmark import (
     BenchmarkResult,
     RepoMapBenchmark,
@@ -11,159 +11,177 @@ from teaagent.repo_map_benchmark import (
 )
 
 
-class TestRepoMapBenchmark(unittest.TestCase):
-    """Test repo-map benchmark management."""
+def test_repo_map_benchmark_to_dict_and_from_dict():
+    """Test benchmark serialization."""
+    benchmark = RepoMapBenchmark(
+        benchmark_id='benchmark-001',
+        name='Test Benchmark',
+        codebase_path='.',
+        query='test query',
+        expected_files={'file1.py', 'file2.py'},
+    )
 
-    def test_to_dict_and_from_dict(self):
-        """Test benchmark serialization."""
-        benchmark = RepoMapBenchmark(
-            benchmark_id='benchmark-001',
-            name='Test Benchmark',
-            codebase_path='.',
-            query='test query',
-            expected_files={'file1.py', 'file2.py'},
-        )
+    data = benchmark.to_dict()
+    restored = RepoMapBenchmark.from_dict(data)
 
-        data = benchmark.to_dict()
-        restored = RepoMapBenchmark.from_dict(data)
-
-        self.assertEqual(restored.benchmark_id, benchmark.benchmark_id)
-        self.assertEqual(restored.name, benchmark.name)
-        self.assertEqual(restored.expected_files, benchmark.expected_files)
+    assert restored.benchmark_id == benchmark.benchmark_id
+    assert restored.name == benchmark.name
+    assert restored.expected_files == benchmark.expected_files
 
 
-class TestBenchmarkResult(unittest.TestCase):
-    """Test benchmark result management."""
+def test_benchmark_result_to_dict_and_from_dict():
+    """Test result serialization."""
+    result = BenchmarkResult(
+        benchmark_id='benchmark-001',
+        actual_files={'file1.py', 'file2.py'},
+        overall_accuracy=0.85,
+        passed=True,
+    )
 
-    def test_to_dict_and_from_dict(self):
-        """Test result serialization."""
-        result = BenchmarkResult(
-            benchmark_id='benchmark-001',
-            actual_files={'file1.py', 'file2.py'},
-            overall_accuracy=0.85,
-            passed=True,
-        )
+    data = result.to_dict()
+    restored = BenchmarkResult.from_dict(data)
 
-        data = result.to_dict()
-        restored = BenchmarkResult.from_dict(data)
-
-        self.assertEqual(restored.benchmark_id, result.benchmark_id)
-        self.assertEqual(restored.overall_accuracy, result.overall_accuracy)
-        self.assertEqual(restored.passed, result.passed)
+    assert restored.benchmark_id == result.benchmark_id
+    assert restored.overall_accuracy == result.overall_accuracy
+    assert restored.passed == result.passed
 
 
-class TestRepoMapBenchmarkRunner(unittest.TestCase):
-    """Test repo-map benchmark runner."""
+@pytest.fixture
+def benchmark_runner():
+    """Fixture for RepoMapBenchmarkRunner with test codebase."""
+    temp_dir = TemporaryDirectory()
+    runner = RepoMapBenchmarkRunner()
 
-    def setUp(self):
-        """Set up test fixtures."""
-        self.runner = RepoMapBenchmarkRunner()
-        self.temp_dir = TemporaryDirectory()
+    # Create a simple test codebase
+    codebase_root = Path(temp_dir.name)
+    (codebase_root / 'test1.py').write_text('def test_func(): pass\n')
+    (codebase_root / 'test2.py').write_text('class TestClass: pass\n')
+    (codebase_root / 'config.py').write_text('CONFIG = "value"\n')
 
-        # Create a simple test codebase
-        self.codebase_root = Path(self.temp_dir.name)
-        (self.codebase_root / 'test1.py').write_text('def test_func(): pass\n')
-        (self.codebase_root / 'test2.py').write_text('class TestClass: pass\n')
-        (self.codebase_root / 'config.py').write_text('CONFIG = "value"\n')
+    yield runner, codebase_root, temp_dir
 
-    def tearDown(self):
-        """Clean up test fixtures."""
-        self.temp_dir.cleanup()
+    # Verify cleanup
+    import os
 
-    def test_calculate_accuracy_perfect(self):
-        """Test accuracy calculation for perfect match."""
-        expected = {'file1.py', 'file2.py'}
-        actual = {'file1.py', 'file2.py'}
-        accuracy = self.runner.calculate_accuracy(expected, actual)
-        self.assertEqual(accuracy, 1.0)
-
-    def test_calculate_accuracy_partial(self):
-        """Test accuracy calculation for partial match."""
-        expected = {'file1.py', 'file2.py', 'file3.py'}
-        actual = {'file1.py', 'file2.py'}
-        accuracy = self.runner.calculate_accuracy(expected, actual)
-        self.assertLess(accuracy, 1.0)
-        self.assertGreater(accuracy, 0.0)
-
-    def test_calculate_accuracy_no_match(self):
-        """Test accuracy calculation for no match."""
-        expected = {'file1.py', 'file2.py'}
-        actual = {'file3.py', 'file4.py'}
-        accuracy = self.runner.calculate_accuracy(expected, actual)
-        self.assertEqual(accuracy, 0.0)
-
-    def test_calculate_accuracy_empty(self):
-        """Test accuracy calculation for empty sets."""
-        accuracy = self.runner.calculate_accuracy(set(), set())
-        self.assertEqual(accuracy, 1.0)
-
-    def test_run_benchmark(self):
-        """Test running a benchmark."""
-        benchmark = RepoMapBenchmark(
-            benchmark_id='benchmark-001',
-            name='Test Benchmark',
-            codebase_path='.',
-            query='test',
-            expected_files={'test1.py'},
-        )
-
-        result = self.runner.run_benchmark(benchmark, self.codebase_root)
-
-        self.assertEqual(result.benchmark_id, benchmark.benchmark_id)
-        self.assertGreater(result.duration_seconds, 0)
-        self.assertIn('file_count', result.performance_metrics)
-
-    def test_run_benchmark_with_time_limit(self):
-        """Test running a benchmark with time limit."""
-        benchmark = RepoMapBenchmark(
-            benchmark_id='benchmark-001',
-            name='Test Benchmark',
-            codebase_path='.',
-            query='test',
-            max_duration_seconds=1.0,
-        )
-
-        result = self.runner.run_benchmark(benchmark, self.codebase_root)
-
-        self.assertIn('within_time_limit', result.performance_metrics)
-
-    def test_extract_functions(self):
-        """Test extracting functions from files."""
-        file_paths = {'test1.py'}
-        functions = self.runner._extract_functions(self.codebase_root, file_paths)
-
-        self.assertIn('test_func', functions)
-
-    def test_extract_classes(self):
-        """Test extracting classes from files."""
-        file_paths = {'test2.py'}
-        classes = self.runner._extract_classes(self.codebase_root, file_paths)
-
-        self.assertIn('TestClass', classes)
-
-    def test_create_default_benchmarks(self):
-        """Test creating default benchmarks."""
-        benchmarks = self.runner.create_default_benchmarks()
-
-        self.assertGreaterEqual(len(benchmarks), 3)
-        self.assertTrue(all(isinstance(b, RepoMapBenchmark) for b in benchmarks))
-
-    def test_convert_to_eval_test(self):
-        """Test converting benchmark to eval test."""
-        benchmark = RepoMapBenchmark(
-            benchmark_id='benchmark-001',
-            name='Test Benchmark',
-            codebase_path='.',
-            query='test query',
-        )
-
-        eval_test = self.runner.convert_to_eval_test(benchmark)
-
-        self.assertEqual(eval_test.test_id, benchmark.benchmark_id)
-        self.assertEqual(eval_test.name, benchmark.name)
-        self.assertIn('query', eval_test.metadata)
-        self.assertIn('codebase_path', eval_test.metadata)
+    temp_path = temp_dir.name
+    assert os.path.exists(temp_path), (
+        f'Temporary directory {temp_path} should still exist before cleanup'
+    )
+    temp_dir.cleanup()
+    assert not os.path.exists(temp_path), (
+        f'Temporary directory {temp_path} was not cleaned up'
+    )
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_calculate_accuracy_perfect(benchmark_runner):
+    """Test accuracy calculation for perfect match."""
+    runner, codebase_root, _ = benchmark_runner
+    expected = {'file1.py', 'file2.py'}
+    actual = {'file1.py', 'file2.py'}
+    accuracy = runner.calculate_accuracy(expected, actual)
+    assert accuracy == 1.0
+
+
+def test_calculate_accuracy_partial(benchmark_runner):
+    """Test accuracy calculation for partial match."""
+    runner, codebase_root, _ = benchmark_runner
+    expected = {'file1.py', 'file2.py', 'file3.py'}
+    actual = {'file1.py', 'file2.py'}
+    accuracy = runner.calculate_accuracy(expected, actual)
+    assert accuracy < 1.0
+    assert accuracy > 0.0
+
+
+def test_calculate_accuracy_no_match(benchmark_runner):
+    """Test accuracy calculation for no match."""
+    runner, codebase_root, _ = benchmark_runner
+    expected = {'file1.py', 'file2.py'}
+    actual = {'file3.py', 'file4.py'}
+    accuracy = runner.calculate_accuracy(expected, actual)
+    assert accuracy == 0.0
+
+
+def test_calculate_accuracy_empty(benchmark_runner):
+    """Test accuracy calculation for empty sets."""
+    runner, codebase_root, _ = benchmark_runner
+    accuracy = runner.calculate_accuracy(set(), set())
+    assert accuracy == 1.0
+
+
+def test_run_benchmark(benchmark_runner):
+    """Test running a benchmark."""
+    runner, codebase_root, _ = benchmark_runner
+    benchmark = RepoMapBenchmark(
+        benchmark_id='benchmark-001',
+        name='Test Benchmark',
+        codebase_path='.',
+        query='test',
+        expected_files={'test1.py'},
+    )
+
+    result = runner.run_benchmark(benchmark, codebase_root)
+
+    assert result.benchmark_id == benchmark.benchmark_id
+    assert result.duration_seconds > 0
+    assert 'file_count' in result.performance_metrics
+
+
+def test_run_benchmark_with_time_limit(benchmark_runner):
+    """Test running a benchmark with time limit."""
+    runner, codebase_root, _ = benchmark_runner
+    benchmark = RepoMapBenchmark(
+        benchmark_id='benchmark-001',
+        name='Test Benchmark',
+        codebase_path='.',
+        query='test',
+        max_duration_seconds=1.0,
+    )
+
+    result = runner.run_benchmark(benchmark, codebase_root)
+
+    assert 'within_time_limit' in result.performance_metrics
+
+
+def test_extract_functions(benchmark_runner):
+    """Test extracting functions from files."""
+    runner, codebase_root, _ = benchmark_runner
+    file_paths = {'test1.py'}
+    functions = runner._extract_functions(codebase_root, file_paths)
+
+    assert 'test_func' in functions
+
+
+def test_extract_classes(benchmark_runner):
+    """Test extracting classes from files."""
+    runner, codebase_root, _ = benchmark_runner
+    file_paths = {'test2.py'}
+    classes = runner._extract_classes(codebase_root, file_paths)
+
+    assert 'TestClass' in classes
+
+
+def test_create_default_benchmarks(benchmark_runner):
+    """Test creating default benchmarks."""
+    runner, codebase_root, _ = benchmark_runner
+    benchmarks = runner.create_default_benchmarks()
+
+    assert len(benchmarks) >= 3
+    assert all(isinstance(b, RepoMapBenchmark) for b in benchmarks)
+
+
+def test_convert_to_eval_test(benchmark_runner):
+    """Test converting benchmark to eval test."""
+    runner, codebase_root, _ = benchmark_runner
+    benchmark = RepoMapBenchmark(
+        benchmark_id='benchmark-001',
+        name='Test Benchmark',
+        codebase_path='.',
+        query='test query',
+    )
+
+    eval_test = runner.convert_to_eval_test(benchmark)
+
+    assert eval_test.test_id == benchmark.benchmark_id
+    assert eval_test.name == benchmark.name
+    assert 'query' in eval_test.metadata
+    assert 'codebase_path' in eval_test.metadata

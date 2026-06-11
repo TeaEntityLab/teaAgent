@@ -1,15 +1,39 @@
-"""AC-NEW-14: Policy-as-Code deny rule enforcement flow.
+"""Test module for policy-as-code deny rule enforcement.
 
-As a security lead, I want a ``policy.yaml`` deny-rule that blocks specific
-tool calls regardless of permission mode, so that hard safety boundaries are
-declarative and auditable.
+This module tests the policy-as-code system, which enables declarative security
+policies that block specific tool calls regardless of permission mode. This provides
+hard safety boundaries that are auditable and version-controlled, complementing the
+runtime permission mode system with additional declarative constraints.
 
-Acceptance criteria:
-- A ``policy.yaml`` in the workspace root is loaded automatically.
-- Matching deny rules block the tool call and the run fails with a clear message.
-- Non-matching tool calls are not affected.
-- The rule fires regardless of the active ``PermissionMode``.
-- Rules can match on both tool_pattern and argument_pattern simultaneously.
+Key concepts tested:
+- Policy File Loading: policy.yaml in workspace root is loaded automatically
+- Deny Rule Matching: Rules match on tool_pattern and argument_pattern
+- Rule Enforcement: Matching rules block tool calls with clear error messages
+- Permission Mode Independence: Rules fire regardless of active PermissionMode
+- Pattern Matching: Rules can match both tool names and argument values
+- Danger Mode Override: Even DANGER_FULL_ACCESS mode is blocked by policy
+
+Acceptance Criteria:
+- AC1: policy.yaml in workspace root is loaded automatically
+- AC2: Matching deny rules block the tool call and the run fails with a clear message
+- AC3: Non-matching tool calls are not affected by deny rules
+- AC4: The rule fires regardless of the active PermissionMode
+- AC5: Rules can match on both tool_pattern and argument_pattern simultaneously
+- AC6: Even DANGER_FULL_ACCESS mode is blocked by deny rules (hard safety boundary)
+
+Technical Details:
+- FilePolicy loads deny rules from policy.yaml
+- DenyRule specifies tool_pattern, argument_pattern, and message
+- AgentRunner enforces file_policy before tool execution
+- Rules are evaluated before permission mode checks
+- Pattern matching uses glob-style patterns for tool names
+- Argument pattern matching supports simple string matching
+- Policy violations result in pending_approval status with error message
+
+References:
+- Policy-as-code design: /docs/architecture/policy_as_code.md
+- Security boundaries: /docs/security/hard_boundaries.md
+- Policy file format: /docs/specs/policy_yaml_format.md
 """
 
 from __future__ import annotations
@@ -56,9 +80,15 @@ def test_policy_yaml_loaded_from_workspace(tmp_path):
     )
     policy = load_file_policy(tmp_path)
     user_rule_ids = [r.id for r in policy.rules if r.id == 'block-rm']
-    assert len(user_rule_ids) == 1
+    # Verify user-defined rule was loaded
+    assert len(user_rule_ids) == 1, (
+        f'Expected exactly 1 user rule with id "block-rm", got {len(user_rule_ids)}'
+    )
     all_ids = [r.id for r in policy.rules]
-    assert 'block-rm' in all_ids
+    # Verify block-rm rule is in the loaded policy
+    assert 'block-rm' in all_ids, (
+        f'Expected "block-rm" to be in loaded policy rules, got {all_ids}'
+    )
 
 
 def test_deny_rule_blocks_matching_tool_in_runner(tmp_path):
@@ -87,13 +117,25 @@ def test_deny_rule_blocks_matching_tool_in_runner(tmp_path):
             call_id='c1',
         ),
     )
-    assert result.status == 'pending_approval'
-    assert 'shell blocked' in result.error_message
-    assert result.metadata == {'approval': {}}
+    # Verify matching tool is blocked by policy
+    assert result.status == 'pending_approval', (
+        f'Expected status "pending_approval" when tool is blocked by policy, got {result.status!r}'
+    )
+    # Verify error message contains policy rule message
+    assert 'shell blocked' in result.error_message, (
+        f'Expected error message to contain "shell blocked", got {result.error_message!r}'
+    )
+    # Verify metadata is empty approval dict
+    assert result.metadata == {'approval': {}}, (
+        f'Expected empty approval metadata, got {result.metadata}'
+    )
+    # Verify audit events stopped at iteration_started (tool was blocked)
     assert [e.event_type for e in audit.events] == [
         'run_started',
         'iteration_started',
-    ]
+    ], (
+        f'Expected audit events to stop at iteration_started, got {[e.event_type for e in audit.events]}'
+    )
 
 
 def test_deny_rule_does_not_block_non_matching_tool():
@@ -125,7 +167,10 @@ def test_deny_rule_does_not_block_non_matching_tool():
         ]
     )
     result = runner.run(task='read file', decide=lambda _: next(call_seq))
-    assert result.status == 'completed'
+    # Verify non-matching tool is not blocked by policy
+    assert result.status == 'completed', (
+        f'Expected status "completed" for non-matching tool, got {result.status!r}'
+    )
 
 
 def test_deny_rule_fires_in_danger_full_access_mode():
@@ -158,10 +203,22 @@ def test_deny_rule_fires_in_danger_full_access_mode():
             call_id='c3',
         ),
     )
-    assert result.status == 'pending_approval'
-    assert 'rm always blocked' in result.error_message
-    assert result.metadata == {'approval': {}}
+    # Verify policy blocks tool even in DANGER_FULL_ACCESS mode (hard safety boundary)
+    assert result.status == 'pending_approval', (
+        f'Expected status "pending_approval" even in DANGER_FULL_ACCESS mode, got {result.status!r}'
+    )
+    # Verify error message contains policy rule message
+    assert 'rm always blocked' in result.error_message, (
+        f'Expected error message to contain "rm always blocked", got {result.error_message!r}'
+    )
+    # Verify metadata is empty approval dict
+    assert result.metadata == {'approval': {}}, (
+        f'Expected empty approval metadata, got {result.metadata}'
+    )
+    # Verify audit events stopped at iteration_started (tool was blocked)
     assert [e.event_type for e in audit.events] == [
         'run_started',
         'iteration_started',
-    ]
+    ], (
+        f'Expected audit events to stop at iteration_started, got {[e.event_type for e in audit.events]}'
+    )

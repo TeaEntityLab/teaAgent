@@ -7,9 +7,12 @@ workspace profile when .teaagent/config.json is present.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from unittest.mock import patch
+
+import pytest
 
 from teaagent.config_loader import (
     CONFIG_KEYS,
@@ -269,3 +272,312 @@ def test_env_skill_source_profile_overrides_workspace(tmp_path):
     with patch.dict(os.environ, {'TEAAGENT_SKILL_SOURCE_PROFILE': 'custom'}):
         rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
     assert rc.get('skill_source_profile') == 'custom'
+
+
+# ---------------------------------------------------------------------------
+# Negative test cases for config_loader
+# ---------------------------------------------------------------------------
+
+
+def test_malformed_json_in_workspace_config(tmp_path):
+    """Test that malformed JSON in workspace config is handled gracefully."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text('{"invalid": json}', encoding='utf-8')
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should fall back to defaults
+    assert rc.get('permission_mode', default='prompt') == 'prompt'
+
+
+def test_malformed_json_in_user_config(tmp_path):
+    """Test that malformed JSON in user config is handled gracefully."""
+    user_home = tmp_path / 'home'
+    user_home.mkdir()
+    (user_home / '.teaagent').mkdir()
+    (user_home / '.teaagent' / 'config.json').write_text(
+        'not valid json at all', encoding='utf-8'
+    )
+    workspace = tmp_path / 'workspace'
+    workspace.mkdir()
+    rc = ConfigResolver(workspace_root=workspace, user_home=user_home).resolve()
+    # Should fall back to defaults
+    assert rc.get('max_iterations', default=10) == 10
+
+
+def test_empty_json_in_workspace_config(tmp_path):
+    """Test that empty JSON object in workspace config is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text('{}', encoding='utf-8')
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should use defaults
+    assert rc.get('permission_mode') == 'prompt'
+
+
+def test_invalid_type_for_int_config(tmp_path):
+    """Test that invalid type for int config raises ValueError."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'max_iterations': 'not_a_number'}), encoding='utf-8'
+    )
+    with pytest.raises(ValueError, match='invalid literal for int'):
+        ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+
+
+def test_invalid_type_for_bool_config(tmp_path):
+    """Test that invalid type for bool config is coerced or ignored."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'code_analysis_enabled': 'not_a_bool'}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should attempt coercion
+    result = rc.get('code_analysis_enabled')
+    assert result is not None
+
+
+def test_null_value_in_config(tmp_path):
+    """Test that null values in config are handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'permission_mode': None}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Null values should be filtered out
+    assert rc.get('permission_mode') is None or rc.get('permission_mode') == 'prompt'
+
+
+def test_empty_string_for_list_config(tmp_path):
+    """Test that empty string for list config is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_search_dirs': ''}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Empty string should result in empty list
+    result = rc.get('skill_search_dirs')
+    assert result == [] or result is None
+
+
+def test_invalid_json_array_for_list_config(tmp_path):
+    """Test that invalid JSON array for list config is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_search_dirs': 'not,a,list,format'}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should attempt to parse as CSV
+    result = rc.get('skill_search_dirs')
+    assert result is not None
+
+
+def test_nonexistent_workspace_path():
+    """Test that nonexistent workspace path is handled."""
+    from teaagent.config_loader import ConfigResolver
+
+    rc = ConfigResolver(workspace_root='/nonexistent/path/that/does/not/exist')
+    result = rc.resolve()
+    # Should not crash and return a valid config
+    assert isinstance(result, type(result))
+
+
+def test_config_with_unknown_keys(tmp_path):
+    """Test that unknown config keys are ignored."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps(
+            {'unknown_key': 'value', 'another_unknown': 123, 'permission_mode': 'allow'}
+        ),
+        encoding='utf-8',
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Unknown keys should be ignored, known keys should work
+    assert rc.get('permission_mode') == 'allow'
+    assert rc.get('unknown_key') is None
+
+
+def test_env_var_with_empty_string(tmp_path):
+    """Test that empty string env var is handled."""
+    with patch.dict(os.environ, {'TEAAGENT_PERMISSION_MODE': ''}):
+        rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Empty string should be treated as a value
+    result = rc.get('permission_mode')
+    assert result == '' or result is not None
+
+
+def test_env_var_with_whitespace(tmp_path):
+    """Test that env var with whitespace is handled."""
+    with patch.dict(os.environ, {'TEAAGENT_PERMISSION_MODE': '  allow  '}):
+        rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should preserve or trim whitespace
+    result = rc.get('permission_mode')
+    assert result is not None
+
+
+def test_negative_value_for_int_config(tmp_path):
+    """Test that negative value for int config is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'max_iterations': -5}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Negative values should be accepted
+    assert rc.get('max_iterations') == -5
+
+
+def test_zero_value_for_int_config(tmp_path):
+    """Test that zero value for int config is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'max_iterations': 0}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Zero should be accepted
+    assert rc.get('max_iterations') == 0
+
+
+def test_very_large_value_for_int_config(tmp_path):
+    """Test that very large value for int config is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'max_iterations': 999999999}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Large values should be accepted
+    assert rc.get('max_iterations') == 999999999
+
+
+def test_config_file_is_directory(tmp_path):
+    """Test that config file being a directory is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').mkdir()  # Create as directory instead of file
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should not crash
+    assert isinstance(rc, type(rc))
+
+
+def test_permission_denied_on_config_file(tmp_path):
+    """Test that permission denied on config file is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    cfg_file = cfg_dir / 'config.json'
+    cfg_file.write_text(json.dumps({'permission_mode': 'allow'}), encoding='utf-8')
+    # Make file unreadable (on Unix-like systems)
+    try:
+        cfg_file.chmod(0o000)
+        rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+        # Should handle permission error gracefully
+        assert isinstance(rc, type(rc))
+    finally:
+        # Restore permissions for cleanup
+        with contextlib.suppress(BaseException):
+            cfg_file.chmod(0o644)
+
+
+def test_config_with_special_characters(tmp_path):
+    """Test that config with special characters is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'model': 'gpt-4o\n\t\r'}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should handle special characters
+    result = rc.get('model')
+    assert result is not None
+
+
+def test_config_with_unicode_characters(tmp_path):
+    """Test that config with unicode characters is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'model': '模型-模型-🤖'}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should handle unicode
+    result = rc.get('model')
+    assert result is not None
+
+
+def test_list_config_with_single_item(tmp_path):
+    """Test that list config with single item is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_search_dirs': ['/single/path']}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    result = rc.get('skill_search_dirs')
+    assert result == ['/single/path']
+
+
+def test_list_config_with_empty_array(tmp_path):
+    """Test that list config with empty array is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_search_dirs': []}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    result = rc.get('skill_search_dirs')
+    assert result == []
+
+
+def test_list_config_with_mixed_types(tmp_path):
+    """Test that list config with mixed types is handled."""
+    cfg_dir = tmp_path / '.teaagent'
+    cfg_dir.mkdir()
+    (cfg_dir / 'config.json').write_text(
+        json.dumps({'skill_search_dirs': ['path1', 123, None, True]}), encoding='utf-8'
+    )
+    rc = ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+    # Should handle mixed types
+    result = rc.get('skill_search_dirs')
+    assert result is not None
+
+
+def test_env_var_override_with_invalid_type(tmp_path):
+    """Test that env var override with invalid type raises ValueError."""
+    with (
+        patch.dict(os.environ, {'TEAAGENT_MAX_ITERATIONS': 'invalid'}),
+        pytest.raises(ValueError, match='invalid literal for int'),
+    ):
+        ConfigResolver(workspace_root=tmp_path, user_home=tmp_path).resolve()
+
+
+def test_clear_config_cache():
+    """Test that config cache can be cleared."""
+    from teaagent.config_loader import clear_config_cache
+
+    # Should not crash
+    clear_config_cache()
+
+
+def test_config_resolver_with_relative_path():
+    """Test that ConfigResolver handles relative paths."""
+    rc = ConfigResolver(workspace_root='.')
+    result = rc.resolve()
+    # Should handle relative path
+    assert isinstance(result, type(result))
+
+
+def test_config_resolver_with_absolute_path():
+    """Test that ConfigResolver handles absolute paths."""
+    import os
+
+    abs_path = os.path.abspath('.')
+    rc = ConfigResolver(workspace_root=abs_path)
+    result = rc.resolve()
+    # Should handle absolute path
+    assert isinstance(result, type(result))

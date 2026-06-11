@@ -1,4 +1,35 @@
-"""Automation background argv must match foreground agent run for the same spec."""
+"""Test module for automation foreground/background parity.
+
+This module tests that automation background runs use the same command-line arguments
+as manual foreground agent runs for the same specification. This ensures that automations
+behave identically to manual runs, preventing configuration drift and ensuring reproducibility.
+
+Key concepts tested:
+- Command Parity: Background automation commands match manual run commands
+- Flag Preservation: All governance flags (permission-mode, context-profile, etc.) are preserved
+- Skill Loading: Selected skills and subagent flags are passed through
+- Cost Budgeting: Max estimated cost is included in both command types
+- Argument Builder: build_agent_run_command generates consistent argv
+
+Acceptance Criteria:
+- AC1: Automation background command includes --permission-mode from spec
+- AC2: Automation background command includes --context-profile from spec
+- AC3: Automation background command includes --skill flags from spec
+- AC4: Automation background command includes --subagent flag when required
+- AC5: Automation background command includes --max-estimated-cost-cents from spec
+- AC6: Manual foreground run command matches automation background command exactly
+
+Technical Details:
+- AutomationSpec stores all configuration (provider, model, permission_mode, etc.)
+- _start_automation_background_run builds the background command from spec
+- build_agent_run_command generates argv from argparse.Namespace
+- Parity ensures automations can be debugged by running the same command manually
+- All governance flags must be preserved to maintain security boundaries
+
+References:
+- Automation v2 design: /docs/architecture/automation_v2.md
+- Background run spec: /docs/specs/background_runs.md
+"""
 
 from __future__ import annotations
 

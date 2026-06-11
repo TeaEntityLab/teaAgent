@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import tempfile
-import unittest
 from pathlib import Path
+
+import pytest
 
 from teaagent.env_config import (
     EnvironmentSpec,
@@ -21,71 +22,73 @@ from teaagent.env_config import (
 )
 
 
-class PackageSpecTests(unittest.TestCase):
-    def test_package_spec_defaults(self) -> None:
-        spec = PackageSpec(name='ruff')
-        self.assertEqual(spec.name, 'ruff')
-        self.assertIsNone(spec.version)
-        self.assertEqual(spec.extras, [])
-        self.assertIsNone(spec.source)
-
-    def test_package_spec_with_version(self) -> None:
-        spec = PackageSpec(name='ruff', version='0.4.0')
-        self.assertEqual(spec.name, 'ruff')
-        self.assertEqual(spec.version, '0.4.0')
-
-    def test_package_spec_with_extras(self) -> None:
-        spec = PackageSpec(name='ruff', extras=['lint', 'format'])
-        self.assertEqual(spec.extras, ['lint', 'format'])
+def test_package_spec_defaults() -> None:
+    spec = PackageSpec(name='ruff')
+    assert spec.name == 'ruff'
+    assert spec.version is None
+    assert spec.extras == []
+    assert spec.source is None
 
 
-class EnvironmentSpecTests(unittest.TestCase):
-    def test_environment_spec_defaults(self) -> None:
-        spec = EnvironmentSpec()
-        self.assertEqual(spec.packages, [])
-        self.assertIsNone(spec.python_version)
-        self.assertEqual(spec.linters, [])
-        self.assertEqual(spec.tools, [])
-        self.assertEqual(spec.environment_type, 'uv')
-
-    def test_environment_spec_with_packages(self) -> None:
-        spec = EnvironmentSpec(
-            packages=[PackageSpec(name='ruff'), PackageSpec(name='mypy')],
-            python_version='3.11',
-        )
-        self.assertEqual(len(spec.packages), 2)
-        self.assertEqual(spec.python_version, '3.11')
+def test_package_spec_with_version() -> None:
+    spec = PackageSpec(name='ruff', version='0.4.0')
+    assert spec.name == 'ruff'
+    assert spec.version == '0.4.0'
 
 
-class ParseTeaagentTomlTests(unittest.TestCase):
-    def test_parse_missing_file(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'teaagent.toml'
-            with self.assertRaises(FileNotFoundError):
-                parse_teaagent_toml(path)
+def test_package_spec_with_extras() -> None:
+    spec = PackageSpec(name='ruff', extras=['lint', 'format'])
+    assert spec.extras == ['lint', 'format']
 
-    def test_parse_simple_config(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'teaagent.toml'
-            path.write_text(
-                """
+
+def test_environment_spec_defaults() -> None:
+    spec = EnvironmentSpec()
+    assert spec.packages == []
+    assert spec.python_version is None
+    assert spec.linters == []
+    assert spec.tools == []
+    assert spec.environment_type == 'uv'
+
+
+def test_environment_spec_with_packages() -> None:
+    spec = EnvironmentSpec(
+        packages=[PackageSpec(name='ruff'), PackageSpec(name='mypy')],
+        python_version='3.11',
+    )
+    assert len(spec.packages) == 2
+    assert spec.python_version == '3.11'
+
+
+def test_parse_missing_file() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'teaagent.toml'
+        with pytest.raises(FileNotFoundError):
+            parse_teaagent_toml(path)
+
+
+def test_parse_simple_config() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'teaagent.toml'
+        path.write_text(
+            """
 [env]
 python_version = "3.11"
 packages = ["ruff", "mypy"]
 """,
-                encoding='utf-8',
-            )
-            spec = parse_teaagent_toml(path)
-            self.assertEqual(spec.python_version, '3.11')
-            self.assertEqual(len(spec.packages), 2)
-            self.assertEqual(spec.packages[0].name, 'ruff')
-            self.assertEqual(spec.packages[1].name, 'mypy')
+            encoding='utf-8',
+        )
+        spec = parse_teaagent_toml(path)
+        assert spec.python_version == '3.11'
+        assert len(spec.packages) == 2
+        assert spec.packages[0].name == 'ruff'
+        assert spec.packages[1].name == 'mypy'
 
-    def test_parse_complex_config(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'teaagent.toml'
-            path.write_text(
-                """
+
+def test_parse_complex_config() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'teaagent.toml'
+        path.write_text(
+            """
 [env]
 python_version = "3.11"
 type = "nix"
@@ -101,28 +104,72 @@ extras = ["lint"]
 name = "mypy"
 version = "1.10.0"
 """,
-                encoding='utf-8',
+            encoding='utf-8',
+        )
+        spec = parse_teaagent_toml(path)
+        assert spec.environment_type == 'nix'
+        assert len(spec.packages) == 2
+        assert spec.packages[0].version == '0.4.0'
+        assert spec.packages[0].extras == ['lint']
+        assert spec.linters == ['ruff', 'mypy']
+        assert spec.tools == ['ripgrep']
+
+
+def test_lockfile_generation() -> None:
+    spec = EnvironmentSpec(packages=[PackageSpec(name='ruff', version='0.4.0')])
+    lockfile = generate_lockfile(spec, '3.11')
+    assert lockfile.python_version == '3.11'
+    assert len(lockfile.entries) == 1
+    assert lockfile.entries[0].name == 'ruff'
+    assert lockfile.entries[0].version == '0.4.0'
+    assert len(lockfile.lockfile_hash) > 0
+
+
+def test_lockfile_serialization() -> None:
+    lockfile = Lockfile(
+        python_version='3.11',
+        environment_type='uv',
+        entries=[
+            LockEntry(
+                name='ruff',
+                version='0.4.0',
+                hash='abc123',
+                source='pypi',
             )
-            spec = parse_teaagent_toml(path)
-            self.assertEqual(spec.environment_type, 'nix')
-            self.assertEqual(len(spec.packages), 2)
-            self.assertEqual(spec.packages[0].version, '0.4.0')
-            self.assertEqual(spec.packages[0].extras, ['lint'])
-            self.assertEqual(spec.linters, ['ruff', 'mypy'])
-            self.assertEqual(spec.tools, ['ripgrep'])
+        ],
+        lockfile_hash='xyz789',
+    )
+    data = lockfile_to_dict(lockfile)
+    assert data['python_version'] == '3.11'
+    assert data['environment_type'] == 'uv'
+    assert len(data['entries']) == 1
+    assert data['lockfile_hash'] == 'xyz789'
 
 
-class LockfileTests(unittest.TestCase):
-    def test_lockfile_generation(self) -> None:
-        spec = EnvironmentSpec(packages=[PackageSpec(name='ruff', version='0.4.0')])
-        lockfile = generate_lockfile(spec, '3.11')
-        self.assertEqual(lockfile.python_version, '3.11')
-        self.assertEqual(len(lockfile.entries), 1)
-        self.assertEqual(lockfile.entries[0].name, 'ruff')
-        self.assertEqual(lockfile.entries[0].version, '0.4.0')
-        self.assertTrue(len(lockfile.lockfile_hash) > 0)
+def test_lockfile_deserialization() -> None:
+    data = {
+        'python_version': '3.11',
+        'environment_type': 'uv',
+        'entries': [
+            {
+                'name': 'ruff',
+                'version': '0.4.0',
+                'hash': 'abc123',
+                'source': 'pypi',
+                'extras': [],
+            }
+        ],
+        'lockfile_hash': 'xyz789',
+    }
+    lockfile = dict_to_lockfile(data)
+    assert lockfile.python_version == '3.11'
+    assert len(lockfile.entries) == 1
+    assert lockfile.entries[0].name == 'ruff'
 
-    def test_lockfile_serialization(self) -> None:
+
+def test_lockfile_write_read() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'teaagent.lock'
         lockfile = Lockfile(
             python_version='3.11',
             environment_type='uv',
@@ -136,83 +183,40 @@ class LockfileTests(unittest.TestCase):
             ],
             lockfile_hash='xyz789',
         )
-        data = lockfile_to_dict(lockfile)
-        self.assertEqual(data['python_version'], '3.11')
-        self.assertEqual(data['environment_type'], 'uv')
-        self.assertEqual(len(data['entries']), 1)
-        self.assertEqual(data['lockfile_hash'], 'xyz789')
+        write_lockfile(lockfile, path)
+        assert path.exists()
 
-    def test_lockfile_deserialization(self) -> None:
-        data = {
-            'python_version': '3.11',
-            'environment_type': 'uv',
-            'entries': [
-                {
-                    'name': 'ruff',
-                    'version': '0.4.0',
-                    'hash': 'abc123',
-                    'source': 'pypi',
-                    'extras': [],
-                }
-            ],
-            'lockfile_hash': 'xyz789',
-        }
-        lockfile = dict_to_lockfile(data)
-        self.assertEqual(lockfile.python_version, '3.11')
-        self.assertEqual(len(lockfile.entries), 1)
-        self.assertEqual(lockfile.entries[0].name, 'ruff')
+        read_lock = read_lockfile(path)
+        assert read_lock is not None
+        assert read_lock.python_version == '3.11'
+        assert len(read_lock.entries) == 1
 
-    def test_lockfile_write_read(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'teaagent.lock'
-            lockfile = Lockfile(
-                python_version='3.11',
-                environment_type='uv',
-                entries=[
-                    LockEntry(
-                        name='ruff',
-                        version='0.4.0',
-                        hash='abc123',
-                        source='pypi',
-                    )
-                ],
-                lockfile_hash='xyz789',
+
+def test_read_missing_lockfile() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'teaagent.lock'
+        lockfile = read_lockfile(path)
+        assert lockfile is None
+
+
+def test_lockfile_integrity_verification() -> None:
+    spec = EnvironmentSpec(packages=[PackageSpec(name='ruff', version='0.4.0')])
+    lockfile = generate_lockfile(spec, '3.11')
+    assert verify_lockfile_integrity(lockfile)
+
+
+def test_lockfile_integrity_tampered() -> None:
+    lockfile = Lockfile(
+        python_version='3.11',
+        environment_type='uv',
+        entries=[
+            LockEntry(
+                name='ruff',
+                version='0.4.0',
+                hash='abc123',
+                source='pypi',
             )
-            write_lockfile(lockfile, path)
-            self.assertTrue(path.exists())
-
-            read_lock = read_lockfile(path)
-            self.assertIsNotNone(read_lock)
-            self.assertEqual(read_lock.python_version, '3.11')
-            self.assertEqual(len(read_lock.entries), 1)
-
-    def test_read_missing_lockfile(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'teaagent.lock'
-            lockfile = read_lockfile(path)
-            self.assertIsNone(lockfile)
-
-    def test_lockfile_integrity_verification(self) -> None:
-        spec = EnvironmentSpec(packages=[PackageSpec(name='ruff', version='0.4.0')])
-        lockfile = generate_lockfile(spec, '3.11')
-        self.assertTrue(verify_lockfile_integrity(lockfile))
-
-    def test_lockfile_integrity_tampered(self) -> None:
-        lockfile = Lockfile(
-            python_version='3.11',
-            environment_type='uv',
-            entries=[
-                LockEntry(
-                    name='ruff',
-                    version='0.4.0',
-                    hash='abc123',
-                    source='pypi',
-                )
-            ],
-            lockfile_hash='wrong_hash',
-        )
-        self.assertFalse(verify_lockfile_integrity(lockfile))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        ],
+        lockfile_hash='wrong_hash',
+    )
+    assert not verify_lockfile_integrity(lockfile)

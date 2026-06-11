@@ -1,4 +1,36 @@
-"""Acceptance: local background runs preserve CLI permission/audit contract."""
+"""Test module for cloud/background run parity.
+
+This module tests that local background runs preserve the same CLI permission
+and audit contract as foreground runs. This ensures that background runs have
+identical governance and observability as manual runs.
+
+Key concepts tested:
+- Command Parity: Background commands include governance flags
+- Attach Snapshot: Background and foreground runs share attach snapshot schema
+- Permission Mode: Permission mode is preserved in background runs
+- Cost Tracking: Cost tracking works identically for both run types
+- Schema Version: Both run types use RUN_STATE_SCHEMA_VERSION
+
+Acceptance Criteria:
+- AC1: Background command includes --permission-mode from args
+- AC2: Background command includes --root path
+- AC3: Background and foreground runs share attach snapshot schema
+- AC4: Attach snapshot includes run_state, pending_approval, event_count
+- AC5: Run state preserves permission_mode and cost_cents
+- AC6: Schema version is consistent across run types
+
+Technical Details:
+- build_agent_run_command generates argv from argparse.Namespace
+- build_attach_snapshot creates run state snapshot for attach
+- RUN_STATE_SCHEMA_VERSION ensures schema compatibility
+- Background runs must preserve all governance flags
+- Attach snapshot enables resume and inspection of completed runs
+- Cost tracking is identical for foreground and background runs
+
+References:
+- Background run design: /docs/architecture/background_runs.md
+- Run state spec: /docs/specs/run_state.md
+"""
 
 from __future__ import annotations
 

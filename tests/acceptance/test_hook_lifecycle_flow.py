@@ -1,20 +1,49 @@
-"""AC-NEW: Hook lifecycle acceptance test (elevated from integration).
+"""Test module for hook lifecycle and event interception.
 
-Verifies that the 8-event hook system correctly intercepts the agent
-tool lifecycle: PreToolUse can veto destructive operations, PostToolUse
-can chain results, permission hooks enforce allow/deny patterns, and
-multi-hook chaining preserves order.
+This module tests the 8-event hook system that intercepts the agent tool lifecycle,
+enabling custom logic at key points in agent execution. Hooks provide extensibility
+for security policies, logging, result transformation, and other cross-cutting concerns.
 
-Acceptance criteria:
-- PreToolUse hook can veto a tool call by raising HookError.
-- PostToolUse hook can modify the result of a tool call.
-- Multiple PreToolUse hooks run in registration order and pass-through
-  when no veto.
-- permission_check_hook with DENY mode blocks all destructive tools.
-- permission_check_hook with ALLOW mode passes through.
-- SessionStart hooks fire with correct session_id and context.
-- PreCompact hooks can modify compaction context.
-- HookRegistry respects the enabled flag.
+Key concepts tested:
+- PreToolUse Hooks: Can veto tool calls or modify arguments before execution
+- PostToolUse Hooks: Can modify tool results after execution
+- Hook Chaining: Multiple hooks run in registration order
+- Permission Hooks: Enforce allow/deny patterns for tool access
+- SessionStart Hooks: Fire at session initialization with context
+- PreCompact Hooks: Can modify context before compaction
+- Hook Registry: Manages hook registration and execution
+- Hook Enablement: Hooks can be globally enabled/disabled
+
+Acceptance Criteria:
+- AC1: PreToolUse hook can veto a tool call by raising HookError
+- AC2: PreToolUse hook can modify arguments before tool execution
+- AC3: Multiple PreToolUse hooks run in registration order and pass-through when no veto
+- AC4: PreToolUse hook error stops the chain (later hooks don't run)
+- AC5: PostToolUse hook can modify the result of a tool call
+- AC6: PostToolUse hook with no modification returns original result
+- AC7: permission_check_hook with DENY mode blocks all destructive tools
+- AC8: permission_check_hook with ALLOW mode passes through
+- AC9: permission_check_hook with ASK mode respects deny_patterns
+- AC10: permission_check_hook with ALLOW mode respects allow_patterns
+- AC11: SessionStart hooks fire with correct session_id and context
+- AC12: HookRegistry respects the enabled flag (disabled hooks don't run)
+- AC13: PreCompact hooks can modify compaction context
+- AC14: All 8 hook events exist in HookEvent enum
+
+Technical Details:
+- HookRegistry manages hook registration and execution
+- HookError is raised to veto tool calls in PreToolUse hooks
+- Hooks run in registration order (first registered runs first)
+- permission_check_hook creates hooks for permission enforcement
+- HookPermissionMode defines DENY, ALLOW, and ASK modes
+- HookEvent enum defines 8 hook types: SessionStart, UserPromptSubmit, PreToolUse,
+  PostToolUse, PreCompact, Stop, SubagentStop, SessionEnd
+- HookRegistry.config.enabled controls global hook enablement
+
+References:
+- Hook system design: /docs/architecture/hook_system.md
+- Hook lifecycle: /docs/specs/hook_lifecycle.md
+- Security hooks: /docs/security/security_hooks.md
 """
 
 from __future__ import annotations

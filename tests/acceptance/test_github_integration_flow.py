@@ -17,10 +17,11 @@ def test_github_tools_registered() -> None:
     registry = ToolRegistry()
     register_github_tools(registry)
     tools = registry.list_tools()
-    assert 'github_create_pr' in tools
-    assert 'github_list_prs' in tools
-    assert 'github_review_pr' in tools
-    assert 'github_ci_status' in tools
+    # Verify all expected GitHub tools are registered
+    assert 'github_create_pr' in tools, 'Expected github_create_pr to be registered'
+    assert 'github_list_prs' in tools, 'Expected github_list_prs to be registered'
+    assert 'github_review_pr' in tools, 'Expected github_review_pr to be registered'
+    assert 'github_ci_status' in tools, 'Expected github_ci_status to be registered'
 
 
 def test_github_create_pr_no_token() -> None:
@@ -30,7 +31,10 @@ def test_github_create_pr_no_token() -> None:
     if 'GITHUB_TOKEN' not in os.environ and 'GH_TOKEN' not in os.environ:
         try:
             github_create_pr('owner/repo', 'title', 'branch')
-            raise AssertionError('should have raised')
+            # Should not reach here - PermissionError should be raised
+            raise AssertionError(
+                'Expected PermissionError when GITHUB_TOKEN is not set'
+            )
         except PermissionError:
             # Expected: no GitHub token available, so PermissionError is raised
             pass
@@ -40,14 +44,20 @@ def test_github_list_prs_registration_schema() -> None:
     registry = ToolRegistry()
     register_github_tools(registry)
     tool = registry.get('github_list_prs')
-    assert tool.annotations.read_only
+    # Verify github_list_prs is marked as read-only
+    assert tool.annotations.read_only, (
+        'Expected github_list_prs to be marked as read-only'
+    )
 
 
 def test_github_ci_status_annotations() -> None:
     registry = ToolRegistry()
     register_github_tools(registry)
     tool = registry.get('github_ci_status')
-    assert tool.annotations.read_only
+    # Verify github_ci_status is marked as read-only
+    assert tool.annotations.read_only, (
+        'Expected github_ci_status to be marked as read-only'
+    )
 
 
 def test_github_tool_execution_errors() -> None:

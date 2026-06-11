@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import unittest
+import tempfile
 
 from teaagent import (
     AgentRunner,
@@ -12,6 +12,7 @@ from teaagent import (
     ToolRegistry,
     ToolRequest,
 )
+from teaagent.ergonomics.approval_store import ApprovalPresetStore
 
 INPUT_SCHEMA = {
     'type': 'object',
@@ -43,267 +44,262 @@ def build_registry(*, destructive: bool = False) -> ToolRegistry:
     return registry
 
 
-class P0HarnessTests(unittest.TestCase):
-    def test_runner_executes_registered_tool_and_audits_result(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(registry=build_registry(), audit=audit)
+def test_runner_executes_registered_tool_and_audits_result() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(registry=build_registry(), audit=audit)
 
-        def decide(context):
-            if not context['observations']:
-                return ToolRequest(tool_name='pilot_echo', arguments={'value': 'ok'})
-            return FinalAnswer(content=context['observations'][0]['result']['value'])
+    def decide(context):
+        if not context['observations']:
+            return ToolRequest(tool_name='pilot_echo', arguments={'value': 'ok'})
+        return FinalAnswer(content=context['observations'][0]['result']['value'])
 
-        result = runner.run(task='echo ok', decide=decide, run_id='run-1')
+    result = runner.run(task='echo ok', decide=decide, run_id='run-1')
 
-        self.assertEqual(result.status, 'completed')
-        self.assertEqual(result.final_answer.content, 'ok')
-        self.assertIn(
-            'tool_call_completed', [event.event_type for event in audit.events]
+    assert result.status == 'completed'
+    assert result.final_answer.content == 'ok'
+    assert 'tool_call_completed' in [event.event_type for event in audit.events]
+
+
+def test_destructive_tool_requires_exact_call_approval() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(registry=build_registry(destructive=True), audit=audit)
+
+    def decide(_context):
+        return ToolRequest(
+            tool_name='pilot_echo',
+            arguments={'value': 'delete'},
+            call_id='call-1',
         )
 
-    def test_destructive_tool_requires_exact_call_approval(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(registry=build_registry(destructive=True), audit=audit)
+    result = runner.run(task='destructive action', decide=decide, run_id='run-2')
 
-        def decide(_context):
+    assert result.status == 'pending_approval'
+    assert result.metadata['approval']['call_id'] == 'call-1'
+    assert result.metadata['approval']['arguments']['value'] == 'delete'
+    pending = [
+        event
+        for event in audit.events
+        if event.event_type == 'tool_call_pending_approval'
+    ]
+    assert len(pending) == 1
+    assert pending[0].payload['tool_name'] == 'pilot_echo'
+    assert pending[0].payload['annotations']['destructive'] is True
+    assert 'explicit approval' in pending[0].payload['reason']
+    assert audit.events[-1].event_type == 'run_paused'
+
+
+def test_destructive_tool_can_be_approved_by_hitl_handler() -> None:
+    audit = AuditLogger()
+    approvals = []
+    runner = AgentRunner(
+        registry=build_registry(destructive=True),
+        audit=audit,
+        approval_handler=lambda request: approvals.append(request.call_id) or True,
+    )
+
+    def decide(context):
+        if not context['observations']:
             return ToolRequest(
-                tool_name='pilot_echo',
-                arguments={'value': 'delete'},
-                call_id='call-1',
-            )
-
-        result = runner.run(task='destructive action', decide=decide, run_id='run-2')
-
-        self.assertEqual(result.status, 'pending_approval')
-        self.assertEqual(result.metadata['approval']['call_id'], 'call-1')
-        self.assertEqual(result.metadata['approval']['arguments']['value'], 'delete')
-        pending = [
-            event
-            for event in audit.events
-            if event.event_type == 'tool_call_pending_approval'
-        ]
-        self.assertEqual(len(pending), 1)
-        self.assertEqual(pending[0].payload['tool_name'], 'pilot_echo')
-        self.assertEqual(pending[0].payload['annotations']['destructive'], True)
-        self.assertIn('explicit approval', pending[0].payload['reason'])
-        self.assertEqual(audit.events[-1].event_type, 'run_paused')
-
-    def test_destructive_tool_can_be_approved_by_hitl_handler(self) -> None:
-        audit = AuditLogger()
-        approvals = []
-        runner = AgentRunner(
-            registry=build_registry(destructive=True),
-            audit=audit,
-            approval_handler=lambda request: approvals.append(request.call_id) or True,
-        )
-
-        def decide(context):
-            if not context['observations']:
-                return ToolRequest(
-                    tool_name='pilot_echo',
-                    arguments={'value': 'approved'},
-                    call_id='call-hitl',
-                )
-            return FinalAnswer(content='done')
-
-        result = runner.run(task='destructive action', decide=decide, run_id='run-hitl')
-
-        self.assertEqual(result.status, 'completed')
-        self.assertEqual(result.tool_calls, 1)
-        self.assertEqual(approvals, ['call-hitl'])
-        self.assertIn(
-            'tool_call_approved', [event.event_type for event in audit.events]
-        )
-
-    def test_denied_hitl_approval_fails_without_tool_execution(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(
-            registry=build_registry(destructive=True),
-            audit=audit,
-            approval_handler=lambda _request: False,
-        )
-
-        def decide(_context):
-            return ToolRequest(
-                tool_name='pilot_echo',
-                arguments={'value': 'denied'},
-                call_id='call-deny',
-            )
-
-        result = runner.run(task='destructive action', decide=decide, run_id='run-deny')
-
-        # After approval gate fix, denied approvals return pending_approval instead of failed:permission
-        self.assertEqual(result.status, 'pending_approval')
-        self.assertEqual(result.tool_calls, 0)
-        self.assertIn('tool_call_denied', [event.event_type for event in audit.events])
-
-    def test_approved_destructive_tool_can_run(self) -> None:
-        import tempfile
-
-        from teaagent.ergonomics.approval_store import ApprovalPresetStore
-
-        def decide(context):
-            if not context['observations']:
-                return ToolRequest(
-                    tool_name='pilot_echo',
-                    arguments={'value': 'approved'},
-                    call_id='call-1',
-                )
-            return FinalAnswer(content='done')
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store = ApprovalPresetStore(tmpdir)
-            store.add_scoped_approval(
-                run_id='run-3',
-                call_id='call-1',
                 tool_name='pilot_echo',
                 arguments={'value': 'approved'},
+                call_id='call-hitl',
             )
-            audit = AuditLogger()
-            runner = AgentRunner(
-                registry=build_registry(destructive=True),
-                audit=audit,
-                approval_policy=ApprovalPolicy(
-                    approval_store=store,
-                    approval_origin_run_id='run-3',
-                ),
-            )
+        return FinalAnswer(content='done')
 
-            result = runner.run(task='approved action', decide=decide, run_id='run-3')
+    result = runner.run(task='destructive action', decide=decide, run_id='run-hitl')
 
-            self.assertEqual(result.status, 'completed')
-            self.assertEqual(result.tool_calls, 1)
+    assert result.status == 'completed'
+    assert result.tool_calls == 1
+    assert approvals == ['call-hitl']
+    assert 'tool_call_approved' in [event.event_type for event in audit.events]
 
-    def test_iteration_budget_stops_non_terminating_agent(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(
-            registry=build_registry(),
-            audit=audit,
-            budget=RunBudget(max_iterations=2, max_tool_calls=5),
+
+def test_denied_hitl_approval_fails_without_tool_execution() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(
+        registry=build_registry(destructive=True),
+        audit=audit,
+        approval_handler=lambda _request: False,
+    )
+
+    def decide(_context):
+        return ToolRequest(
+            tool_name='pilot_echo',
+            arguments={'value': 'denied'},
+            call_id='call-deny',
         )
 
-        def decide(_context):
-            return ToolRequest(tool_name='pilot_echo', arguments={'value': 'loop'})
+    result = runner.run(task='destructive action', decide=decide, run_id='run-deny')
 
-        result = runner.run(task='loop forever', decide=decide, run_id='run-4')
+    # After approval gate fix, denied approvals return pending_approval instead of failed:permission
+    assert result.status == 'pending_approval'
+    assert result.tool_calls == 0
+    assert 'tool_call_denied' in [event.event_type for event in audit.events]
 
-        self.assertEqual(result.status, 'failed:model_logic')
-        self.assertEqual(result.iterations, 2)
 
-    def test_schema_rejects_unexpected_arguments(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(registry=build_registry(), audit=audit)
-
-        def decide(_context):
+def test_approved_destructive_tool_can_run() -> None:
+    def decide(context):
+        if not context['observations']:
             return ToolRequest(
                 tool_name='pilot_echo',
-                arguments={'value': 'ok', 'extra': 'blocked'},
+                arguments={'value': 'approved'},
+                call_id='call-1',
             )
+        return FinalAnswer(content='done')
 
-        result = runner.run(task='bad schema', decide=decide, run_id='run-5')
-
-        self.assertEqual(result.status, 'failed:model_logic')
-
-    def test_cost_budget_blocks_tool_after_decision_cost_update(self) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        store = ApprovalPresetStore(tmpdir)
+        store.add_scoped_approval(
+            run_id='run-3',
+            call_id='call-1',
+            tool_name='pilot_echo',
+            arguments={'value': 'approved'},
+        )
         audit = AuditLogger()
         runner = AgentRunner(
-            registry=build_registry(),
+            registry=build_registry(destructive=True),
             audit=audit,
-            budget=RunBudget(
-                max_iterations=1, max_tool_calls=1, max_estimated_cost_cents=1
+            approval_policy=ApprovalPolicy(
+                approval_store=store,
+                approval_origin_run_id='run-3',
             ),
         )
 
-        def decide(context):
-            context['_cost_cents'] = 2.0
-            return ToolRequest(tool_name='pilot_echo', arguments={'value': 'over'})
+        result = runner.run(task='approved action', decide=decide, run_id='run-3')
 
-        result = runner.run(task='cost overflow', decide=decide, run_id='run-cost-tool')
+        assert result.status == 'completed'
+        assert result.tool_calls == 1
 
-        self.assertEqual(result.status, 'failed:model_logic')
-        self.assertEqual(result.tool_calls, 0)
-        self.assertNotIn(
-            'tool_call_started', [event.event_type for event in audit.events]
-        )
-        self.assertEqual(audit.events[-1].payload['cost_cents'], 2.0)
 
-    def test_initial_observations_replayed_into_context(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(registry=build_registry(), audit=audit)
-        seen: list[list[dict]] = []
+def test_iteration_budget_stops_non_terminating_agent() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(
+        registry=build_registry(),
+        audit=audit,
+        budget=RunBudget(max_iterations=2, max_tool_calls=5),
+    )
 
-        def decide(context):
-            seen.append(list(context['observations']))
-            return FinalAnswer(content='ok')
+    def decide(_context):
+        return ToolRequest(tool_name='pilot_echo', arguments={'value': 'loop'})
 
-        replayed = [
-            {
-                'call_id': 'r1',
-                'tool_name': 'pilot_echo',
-                'result': {'value': 'earlier'},
-            },
-            {'call_id': 'r2', 'tool_name': 'pilot_echo', 'result': {'value': 'later'}},
-        ]
-        result = runner.run(
-            task='resume',
-            decide=decide,
-            run_id='run-replay',
-            initial_observations=replayed,
+    result = runner.run(task='loop forever', decide=decide, run_id='run-4')
+
+    assert result.status == 'failed:model_logic'
+    assert result.iterations == 2
+
+
+def test_schema_rejects_unexpected_arguments() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(registry=build_registry(), audit=audit)
+
+    def decide(_context):
+        return ToolRequest(
+            tool_name='pilot_echo',
+            arguments={'value': 'ok', 'extra': 'blocked'},
         )
 
-        self.assertEqual(result.status, 'completed')
-        self.assertEqual(result.tool_calls, 2)
-        self.assertEqual(seen[0], replayed)
-        run_started = next(e for e in audit.events if e.event_type == 'run_started')
-        self.assertEqual(run_started.payload['replayed_observations'], 2)
+    result = runner.run(task='bad schema', decide=decide, run_id='run-5')
 
-    def test_initial_observations_count_against_tool_call_budget(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(
-            registry=build_registry(),
-            audit=audit,
-            budget=RunBudget(max_iterations=3, max_tool_calls=2),
-        )
-
-        def decide(_context):
-            return ToolRequest(tool_name='pilot_echo', arguments={'value': 'next'})
-
-        replayed = [
-            {'call_id': 'r1', 'tool_name': 'pilot_echo', 'result': {'value': 'a'}},
-            {'call_id': 'r2', 'tool_name': 'pilot_echo', 'result': {'value': 'b'}},
-        ]
-        result = runner.run(
-            task='budget-replay',
-            decide=decide,
-            run_id='run-budget-replay',
-            initial_observations=replayed,
-        )
-
-        self.assertEqual(result.status, 'failed:model_logic')
-        self.assertEqual(result.tool_calls, 2)
-
-    def test_cost_budget_blocks_final_after_decision_cost_update(self) -> None:
-        audit = AuditLogger()
-        runner = AgentRunner(
-            registry=build_registry(),
-            audit=audit,
-            budget=RunBudget(
-                max_iterations=1, max_tool_calls=1, max_estimated_cost_cents=1
-            ),
-        )
-
-        def decide(context):
-            context['_cost_cents'] = 2.0
-            return FinalAnswer(content='too expensive')
-
-        result = runner.run(
-            task='cost overflow final', decide=decide, run_id='run-cost-final'
-        )
-
-        self.assertEqual(result.status, 'failed:model_logic')
-        self.assertIsNone(result.final_answer)
-        self.assertNotIn('run_completed', [event.event_type for event in audit.events])
+    assert result.status == 'failed:model_logic'
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_cost_budget_blocks_tool_after_decision_cost_update() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(
+        registry=build_registry(),
+        audit=audit,
+        budget=RunBudget(
+            max_iterations=1, max_tool_calls=1, max_estimated_cost_cents=1
+        ),
+    )
+
+    def decide(context):
+        context['_cost_cents'] = 2.0
+        return ToolRequest(tool_name='pilot_echo', arguments={'value': 'over'})
+
+    result = runner.run(task='cost overflow', decide=decide, run_id='run-cost-tool')
+
+    assert result.status == 'failed:model_logic'
+    assert result.tool_calls == 0
+    assert 'tool_call_started' not in [event.event_type for event in audit.events]
+    assert audit.events[-1].payload['cost_cents'] == 2.0
+
+
+def test_initial_observations_replayed_into_context() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(registry=build_registry(), audit=audit)
+    seen: list[list[dict]] = []
+
+    def decide(context):
+        seen.append(list(context['observations']))
+        return FinalAnswer(content='ok')
+
+    replayed = [
+        {
+            'call_id': 'r1',
+            'tool_name': 'pilot_echo',
+            'result': {'value': 'earlier'},
+        },
+        {'call_id': 'r2', 'tool_name': 'pilot_echo', 'result': {'value': 'later'}},
+    ]
+    result = runner.run(
+        task='resume',
+        decide=decide,
+        run_id='run-replay',
+        initial_observations=replayed,
+    )
+
+    assert result.status == 'completed'
+    assert result.tool_calls == 2
+    assert seen[0] == replayed
+    run_started = next(e for e in audit.events if e.event_type == 'run_started')
+    assert run_started.payload['replayed_observations'] == 2
+
+
+def test_initial_observations_count_against_tool_call_budget() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(
+        registry=build_registry(),
+        audit=audit,
+        budget=RunBudget(max_iterations=3, max_tool_calls=2),
+    )
+
+    def decide(_context):
+        return ToolRequest(tool_name='pilot_echo', arguments={'value': 'next'})
+
+    replayed = [
+        {'call_id': 'r1', 'tool_name': 'pilot_echo', 'result': {'value': 'a'}},
+        {'call_id': 'r2', 'tool_name': 'pilot_echo', 'result': {'value': 'b'}},
+    ]
+    result = runner.run(
+        task='budget-replay',
+        decide=decide,
+        run_id='run-budget-replay',
+        initial_observations=replayed,
+    )
+
+    assert result.status == 'failed:model_logic'
+    assert result.tool_calls == 2
+
+
+def test_cost_budget_blocks_final_after_decision_cost_update() -> None:
+    audit = AuditLogger()
+    runner = AgentRunner(
+        registry=build_registry(),
+        audit=audit,
+        budget=RunBudget(
+            max_iterations=1, max_tool_calls=1, max_estimated_cost_cents=1
+        ),
+    )
+
+    def decide(context):
+        context['_cost_cents'] = 2.0
+        return FinalAnswer(content='too expensive')
+
+    result = runner.run(
+        task='cost overflow final', decide=decide, run_id='run-cost-final'
+    )
+
+    assert result.status == 'failed:model_logic'
+    assert result.final_answer is None
+    assert 'run_completed' not in [event.event_type for event in audit.events]

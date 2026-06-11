@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import unittest
-
 from teaagent.llm._types import (
     LLMMessage,
     LLMRequest,
@@ -96,153 +94,146 @@ def _checker_ok(provider: str) -> tuple[bool, str]:
     return True, 'configured'
 
 
-class LLMToolDefinitionTests(unittest.TestCase):
-    def test_defaults(self) -> None:
-        t = LLMToolDefinition(name='foo', description='does foo')
-        self.assertEqual(t.name, 'foo')
-        self.assertEqual(t.description, 'does foo')
-        self.assertEqual(t.input_schema, {'type': 'object', 'properties': {}})
-
-    def test_custom_schema(self) -> None:
-        schema = {'type': 'object', 'properties': {'x': {'type': 'integer'}}}
-        t = LLMToolDefinition(name='bar', description='', input_schema=schema)
-        self.assertEqual(t.input_schema['properties']['x']['type'], 'integer')
+def test_llm_tool_definition_defaults() -> None:
+    t = LLMToolDefinition(name='foo', description='does foo')
+    assert t.name == 'foo'
+    assert t.description == 'does foo'
+    assert t.input_schema == {'type': 'object', 'properties': {}}
 
 
-class LLMToolCallTests(unittest.TestCase):
-    def test_fields(self) -> None:
-        tc = LLMToolCall(
-            tool_name='get_weather', tool_input={'city': 'NYC'}, call_id='c1'
-        )
-        self.assertEqual(tc.tool_name, 'get_weather')
-        self.assertEqual(tc.tool_input['city'], 'NYC')
-        self.assertEqual(tc.call_id, 'c1')
-
-    def test_call_id_default(self) -> None:
-        tc = LLMToolCall(tool_name='x', tool_input={})
-        self.assertEqual(tc.call_id, '')
+def test_llm_tool_definition_custom_schema() -> None:
+    schema = {'type': 'object', 'properties': {'x': {'type': 'integer'}}}
+    t = LLMToolDefinition(name='bar', description='', input_schema=schema)
+    assert t.input_schema['properties']['x']['type'] == 'integer'
 
 
-class LLMSafetyBlockTests(unittest.TestCase):
-    def test_blocked_with_category(self) -> None:
-        sb = LLMSafetyBlock(
-            blocked=True, category=SafetyCategory.DANGEROUS, detail='test'
-        )
-        self.assertTrue(sb.blocked)
-        self.assertEqual(sb.category, SafetyCategory.DANGEROUS)
-
-    def test_not_blocked(self) -> None:
-        sb = LLMSafetyBlock(blocked=False)
-        self.assertFalse(sb.blocked)
-        self.assertIsNone(sb.category)
+def test_llm_tool_call_fields() -> None:
+    tc = LLMToolCall(tool_name='get_weather', tool_input={'city': 'NYC'}, call_id='c1')
+    assert tc.tool_name == 'get_weather'
+    assert tc.tool_input['city'] == 'NYC'
+    assert tc.call_id == 'c1'
 
 
-class LLMRequestToolsTests(unittest.TestCase):
-    def test_default_tools_empty(self) -> None:
-        req = LLMRequest(messages=[LLMMessage(role='user', content='hi')])
-        self.assertEqual(req.tools, [])
-
-    def test_tools_passed_through(self) -> None:
-        tool = LLMToolDefinition(name='foo', description='bar')
-        req = LLMRequest(
-            messages=[LLMMessage(role='user', content='hi')],
-            tools=[tool],
-        )
-        self.assertEqual(len(req.tools), 1)
-        self.assertEqual(req.tools[0].name, 'foo')
+def test_llm_tool_call_call_id_default() -> None:
+    tc = LLMToolCall(tool_name='x', tool_input={})
+    assert tc.call_id == ''
 
 
-class LLMResponseToolCallsTests(unittest.TestCase):
-    def test_default_tool_calls_empty(self) -> None:
-        resp = LLMResponse(provider='p', model='m', content='ok')
-        self.assertEqual(resp.tool_calls, [])
-        self.assertIsNone(resp.safety)
-
-    def test_tool_calls_populated(self) -> None:
-        tc = LLMToolCall(tool_name='t', tool_input={})
-        resp = LLMResponse(provider='p', model='m', content='', tool_calls=[tc])
-        self.assertEqual(len(resp.tool_calls), 1)
+def test_llm_safety_block_blocked_with_category() -> None:
+    sb = LLMSafetyBlock(blocked=True, category=SafetyCategory.DANGEROUS, detail='test')
+    assert sb.blocked
+    assert sb.category == SafetyCategory.DANGEROUS
 
 
-class ToolCallingTierTests(unittest.TestCase):
-    def test_passed_when_tool_called(self) -> None:
-        report = run_tiered_conformance(
-            ['fake'],
-            tier=ConformanceTier.TOOL_CALLING,
-            adapter_factory=_factory(_ToolCallingAdapter()),
-            configuration_checker=_checker_ok,
-        )
-        self.assertEqual(len(report.results), 1)
-        result = report.results[0]
-        self.assertEqual(result.status, 'passed')
-        check_names = {c.name for c in result.checks}
-        self.assertIn('tool_call_invoked', check_names)
-
-    def test_failed_when_no_tool_call(self) -> None:
-        report = run_tiered_conformance(
-            ['fake'],
-            tier=ConformanceTier.TOOL_CALLING,
-            adapter_factory=_factory(_NoToolAdapter()),
-            configuration_checker=_checker_ok,
-        )
-        self.assertEqual(report.results[0].status, 'failed')
-
-    def test_skipped_when_not_configured(self) -> None:
-        report = run_tiered_conformance(
-            ['fake'],
-            tier=ConformanceTier.TOOL_CALLING,
-            adapter_factory=_factory(_ToolCallingAdapter()),
-            configuration_checker=lambda p: (False, 'key missing'),
-        )
-        self.assertEqual(report.results[0].status, 'skipped')
+def test_llm_safety_block_not_blocked() -> None:
+    sb = LLMSafetyBlock(blocked=False)
+    assert not sb.blocked
+    assert sb.category is None
 
 
-class SafetyTierTests(unittest.TestCase):
-    def test_passed_on_api_level_block(self) -> None:
-        report = run_tiered_conformance(
-            ['fake'],
-            tier=ConformanceTier.SAFETY,
-            adapter_factory=_factory(_SafetyBlockAdapter()),
-            configuration_checker=_checker_ok,
-        )
-        result = report.results[0]
-        self.assertEqual(result.status, 'passed')
-        names = {c.name for c in result.checks}
-        self.assertIn('safety_block', names)
-
-    def test_passed_on_text_refusal(self) -> None:
-        report = run_tiered_conformance(
-            ['fake'],
-            tier=ConformanceTier.SAFETY,
-            adapter_factory=_factory(_SafetyRefusalAdapter()),
-            configuration_checker=_checker_ok,
-        )
-        self.assertEqual(report.results[0].status, 'passed')
-
-    def test_failed_when_no_refusal(self) -> None:
-        report = run_tiered_conformance(
-            ['fake'],
-            tier=ConformanceTier.SAFETY,
-            adapter_factory=_factory(_SafetyNoRefusalAdapter()),
-            configuration_checker=_checker_ok,
-        )
-        self.assertEqual(report.results[0].status, 'failed')
+def test_llm_request_tools_default_tools_empty() -> None:
+    req = LLMRequest(messages=[LLMMessage(role='user', content='hi')])
+    assert req.tools == []
 
 
-class ConformanceTierEnumTests(unittest.TestCase):
-    def test_all_tiers_present(self) -> None:
-        values = {t.value for t in ConformanceTier}
-        for expected in (
-            'smoke',
-            'contract',
-            'streaming',
-            'structured_output',
-            'latency',
-            'tool_calling',
-            'safety',
-        ):
-            self.assertIn(expected, values)
+def test_llm_request_tools_tools_passed_through() -> None:
+    tool = LLMToolDefinition(name='foo', description='bar')
+    req = LLMRequest(
+        messages=[LLMMessage(role='user', content='hi')],
+        tools=[tool],
+    )
+    assert len(req.tools) == 1
+    assert req.tools[0].name == 'foo'
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_llm_response_tool_calls_default_tool_calls_empty() -> None:
+    resp = LLMResponse(provider='p', model='m', content='ok')
+    assert resp.tool_calls == []
+    assert resp.safety is None
+
+
+def test_llm_response_tool_calls_tool_calls_populated() -> None:
+    tc = LLMToolCall(tool_name='t', tool_input={})
+    resp = LLMResponse(provider='p', model='m', content='', tool_calls=[tc])
+    assert len(resp.tool_calls) == 1
+
+
+def test_tool_calling_tier_passed_when_tool_called() -> None:
+    report = run_tiered_conformance(
+        ['fake'],
+        tier=ConformanceTier.TOOL_CALLING,
+        adapter_factory=_factory(_ToolCallingAdapter()),
+        configuration_checker=_checker_ok,
+    )
+    assert len(report.results) == 1
+    result = report.results[0]
+    assert result.status == 'passed'
+    check_names = {c.name for c in result.checks}
+    assert 'tool_call_invoked' in check_names
+
+
+def test_tool_calling_tier_failed_when_no_tool_call() -> None:
+    report = run_tiered_conformance(
+        ['fake'],
+        tier=ConformanceTier.TOOL_CALLING,
+        adapter_factory=_factory(_NoToolAdapter()),
+        configuration_checker=_checker_ok,
+    )
+    assert report.results[0].status == 'failed'
+
+
+def test_tool_calling_tier_skipped_when_not_configured() -> None:
+    report = run_tiered_conformance(
+        ['fake'],
+        tier=ConformanceTier.TOOL_CALLING,
+        adapter_factory=_factory(_ToolCallingAdapter()),
+        configuration_checker=lambda p: (False, 'key missing'),
+    )
+    assert report.results[0].status == 'skipped'
+
+
+def test_safety_tier_passed_on_api_level_block() -> None:
+    report = run_tiered_conformance(
+        ['fake'],
+        tier=ConformanceTier.SAFETY,
+        adapter_factory=_factory(_SafetyBlockAdapter()),
+        configuration_checker=_checker_ok,
+    )
+    result = report.results[0]
+    assert result.status == 'passed'
+    names = {c.name for c in result.checks}
+    assert 'safety_block' in names
+
+
+def test_safety_tier_passed_on_text_refusal() -> None:
+    report = run_tiered_conformance(
+        ['fake'],
+        tier=ConformanceTier.SAFETY,
+        adapter_factory=_factory(_SafetyRefusalAdapter()),
+        configuration_checker=_checker_ok,
+    )
+    assert report.results[0].status == 'passed'
+
+
+def test_safety_tier_failed_when_no_refusal() -> None:
+    report = run_tiered_conformance(
+        ['fake'],
+        tier=ConformanceTier.SAFETY,
+        adapter_factory=_factory(_SafetyNoRefusalAdapter()),
+        configuration_checker=_checker_ok,
+    )
+    assert report.results[0].status == 'failed'
+
+
+def test_conformance_tier_enum_all_tiers_present() -> None:
+    values = {t.value for t in ConformanceTier}
+    for expected in (
+        'smoke',
+        'contract',
+        'streaming',
+        'structured_output',
+        'latency',
+        'tool_calling',
+        'safety',
+    ):
+        assert expected in values

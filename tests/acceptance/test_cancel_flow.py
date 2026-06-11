@@ -75,8 +75,9 @@ def test_cancel_token_stops_run_cleanly(tmp_path):
         registry=registry,
     )
 
-    assert result.status.startswith('failed'), (
-        f'expected failed status after cancel, got {result.status!r}'
+    # Cancelled runs should have failed:system status per acceptance criteria
+    assert result.status == 'failed:system', (
+        f'expected failed:system status after cancel, got {result.status!r}'
     )
 
 
@@ -111,4 +112,7 @@ def test_cancel_token_without_set_runs_normally(tmp_path):
 
     config = ChatAgentConfig.from_root(tmp_path, cancel_token=cancel)
     result = run_chat_agent(config, 'hello', adapter=_QuickAdapter())
-    assert result.status == 'completed'
+    # Verify that a run completes normally when cancel token is never set
+    assert result.status == 'completed', (
+        f'Expected completed status when cancel token is not set, got {result.status!r}'
+    )

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import tempfile
-import unittest
 from pathlib import Path
 
 from teaagent.run_store import RunStore
@@ -38,317 +37,321 @@ def _rewrite_index(store_dir: Path, runs_dir: Path) -> None:
     )
 
 
-class ApproveSelectorTests(unittest.TestCase):
-    def test_approve_selector_selects_pending_approval(self) -> None:
-        """approve --selector 1 approves the first pending call_id."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            runs_dir = root / '.teaagent' / 'runs'
-            _seed_run_events(
-                runs_dir,
-                'run-1',
-                [
-                    {
-                        'event_type': 'run_started',
-                        'run_id': 'run-1',
-                        'created_at': '2026-06-07T00:00:00Z',
-                        'payload': {'task': 'write file'},
-                    },
-                    {
-                        'event_type': 'tool_call_pending_approval',
-                        'run_id': 'run-1',
-                        'created_at': '2026-06-07T00:01:00Z',
-                        'payload': {
-                            'call_id': 'call-abc123',
-                            'tool_name': 'workspace_write_file',
-                            'reason': 'destructive write',
-                            'arguments': {'path': 'foo.txt'},
-                        },
-                    },
-                ],
-            )
-            _rewrite_index(root / '.teaagent', runs_dir)
-
-            output: list[str] = []
-            tui = TeaAgentTUI(
-                root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
-            )
-            result = tui.handle_command('approve --selector 1')
-            self.assertTrue(result)
-            self.assertIn('call-abc123', output[0])
-            self.assertIn('via selector 1', output[0])
-
-    def test_approve_selector_out_of_range(self) -> None:
-        """approve --selector with out-of-range number returns error."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            runs_dir = root / '.teaagent' / 'runs'
-            _seed_run_events(
-                runs_dir,
-                'run-1',
-                [
-                    {
-                        'event_type': 'run_started',
-                        'run_id': 'run-1',
-                        'created_at': '2026-06-07T00:00:00Z',
-                        'payload': {'task': 'write file'},
-                    },
-                    {
-                        'event_type': 'tool_call_pending_approval',
-                        'run_id': 'run-1',
-                        'created_at': '2026-06-07T00:01:00Z',
-                        'payload': {
-                            'call_id': 'call-abc123',
-                            'tool_name': 'workspace_write_file',
-                            'reason': 'destructive write',
-                            'arguments': {'path': 'foo.txt'},
-                        },
-                    },
-                ],
-            )
-            _rewrite_index(root / '.teaagent', runs_dir)
-
-            output: list[str] = []
-            tui = TeaAgentTUI(
-                root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
-            )
-            result = tui.handle_command('approve --selector 99')
-            self.assertTrue(result)
-            self.assertIn('out of range', output[0])
-
-    def test_approve_selector_no_pending_approvals(self) -> None:
-        """approve --selector when no pending approvals returns error."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            runs_dir = root / '.teaagent' / 'runs'
-            _seed_run_events(
-                runs_dir,
-                'run-1',
-                [
-                    {
-                        'event_type': 'run_started',
-                        'run_id': 'run-1',
-                        'created_at': '2026-06-07T00:00:00Z',
-                        'payload': {'task': 'write file'},
-                    },
-                    {
-                        'event_type': 'tool_call_approved',
-                        'run_id': 'run-1',
-                        'created_at': '2026-06-07T00:02:00Z',
-                        'payload': {
-                            'call_id': 'call-abc123',
-                            'tool_name': 'workspace_write_file',
-                        },
-                    },
-                ],
-            )
-            _rewrite_index(root / '.teaagent', runs_dir)
-
-            output: list[str] = []
-            tui = TeaAgentTUI(
-                root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
-            )
-            result = tui.handle_command('approve --selector 1')
-            self.assertTrue(result)
-            self.assertIn('no pending approvals', output[0])
-
-    def test_approve_selector_non_integer(self) -> None:
-        """approve --selector with non-integer returns error."""
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
-        result = tui.handle_command('approve --selector abc')
-        self.assertTrue(result)
-        self.assertIn('selector must be an integer', output[0])
-
-    def test_approve_call_id_still_works(self) -> None:
-        """approve <call_id> backward compat works."""
-        output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
-        result = tui.handle_command('approve write-1')
-        self.assertTrue(result)
-        self.assertEqual(output[0], 'approved: write-1')
-        self.assertIn('write-1', tui.approved_call_ids)
-
-
-class ProgressRunIdTests(unittest.TestCase):
-    def _seed_run(self, runs_dir: Path, run_id: str) -> None:
+def test_approve_selector_selects_pending_approval() -> None:
+    """approve --selector 1 approves the first pending call_id."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        runs_dir = root / '.teaagent' / 'runs'
         _seed_run_events(
             runs_dir,
-            run_id,
+            'run-1',
             [
                 {
                     'event_type': 'run_started',
-                    'run_id': run_id,
+                    'run_id': 'run-1',
                     'created_at': '2026-06-07T00:00:00Z',
-                    'payload': {
-                        'task': 'analyze code',
-                        'max_estimated_cost_cents': 1000,
-                    },
+                    'payload': {'task': 'write file'},
                 },
                 {
-                    'event_type': 'iteration_started',
-                    'run_id': run_id,
-                    'created_at': '2026-06-07T00:00:10Z',
-                    'payload': {'iteration': 1},
-                },
-                {
-                    'event_type': 'tool_call_started',
-                    'run_id': run_id,
-                    'created_at': '2026-06-07T00:00:11Z',
-                    'payload': {'tool_name': 'workspace_read_file'},
-                },
-                {
-                    'event_type': 'tool_call_completed',
-                    'run_id': run_id,
-                    'created_at': '2026-06-07T00:00:12Z',
-                    'payload': {'tool_name': 'workspace_read_file'},
-                },
-                {
-                    'event_type': 'run_completed',
-                    'run_id': run_id,
+                    'event_type': 'tool_call_pending_approval',
+                    'run_id': 'run-1',
                     'created_at': '2026-06-07T00:01:00Z',
-                    'payload': {'cost_cents': 42},
+                    'payload': {
+                        'call_id': 'call-abc123',
+                        'tool_name': 'workspace_write_file',
+                        'reason': 'destructive write',
+                        'arguments': {'path': 'foo.txt'},
+                    },
                 },
             ],
         )
+        _rewrite_index(root / '.teaagent', runs_dir)
 
-    def test_progress_run_id_shows_formatted_output(self) -> None:
-        """progress <run_id> shows Phase and Budget fields."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            runs_dir = root / '.teaagent' / 'runs'
-            self._seed_run(runs_dir, 'run-1')
-            _rewrite_index(root / '.teaagent', runs_dir)
-
-            output: list[str] = []
-            tui = TeaAgentTUI(
-                root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
-            )
-            result = tui.handle_command('progress run-1')
-            self.assertTrue(result)
-            progress_output = output[0]
-            self.assertIn('Phase:', progress_output)
-            self.assertIn('Budget:', progress_output)
-            self.assertIn('run-1', progress_output)
-
-    def test_progress_run_id_not_found(self) -> None:
-        """progress <run_id> with non-existent run returns error."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            output: list[str] = []
-            tui = TeaAgentTUI(
-                root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
-            )
-            result = tui.handle_command('progress run-does-not-exist')
-            self.assertTrue(result)
-            self.assertIn('not found', output[0])
-
-    def test_progress_on_off_toggle_still_works(self) -> None:
-        """progress on/off toggle backward compat works."""
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
-        self.assertTrue(tui.handle_command('progress on'))
-        self.assertTrue(tui.progress)
-        self.assertIn('progress: on', output[0])
+        tui = TeaAgentTUI(
+            root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
+        result = tui.handle_command('approve --selector 1')
+        assert result
+        assert 'call-abc123' in output[0]
+        assert 'via selector 1' in output[0]
 
-        self.assertTrue(tui.handle_command('progress off'))
-        self.assertFalse(tui.progress)
 
-
-class ReceiptTests(unittest.TestCase):
-    def _seed_run(self, runs_dir: Path, run_id: str) -> None:
+def test_approve_selector_out_of_range() -> None:
+    """approve --selector with out-of-range number returns error."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        runs_dir = root / '.teaagent' / 'runs'
         _seed_run_events(
             runs_dir,
-            run_id,
+            'run-1',
             [
                 {
                     'event_type': 'run_started',
-                    'run_id': run_id,
+                    'run_id': 'run-1',
                     'created_at': '2026-06-07T00:00:00Z',
-                    'payload': {
-                        'task': 'analyze code',
-                        'provider': 'gpt',
-                        'model': 'gpt-4',
-                    },
+                    'payload': {'task': 'write file'},
                 },
                 {
-                    'event_type': 'tool_call_started',
-                    'run_id': run_id,
-                    'created_at': '2026-06-07T00:00:10Z',
-                    'payload': {'tool_name': 'workspace_read_file'},
-                },
-                {
-                    'event_type': 'tool_call_completed',
-                    'run_id': run_id,
-                    'created_at': '2026-06-07T00:00:11Z',
-                    'payload': {'tool_name': 'workspace_read_file'},
-                },
-                {
-                    'event_type': 'run_completed',
-                    'run_id': run_id,
+                    'event_type': 'tool_call_pending_approval',
+                    'run_id': 'run-1',
                     'created_at': '2026-06-07T00:01:00Z',
-                    'payload': {'cost_cents': 42},
+                    'payload': {
+                        'call_id': 'call-abc123',
+                        'tool_name': 'workspace_write_file',
+                        'reason': 'destructive write',
+                        'arguments': {'path': 'foo.txt'},
+                    },
                 },
             ],
         )
+        _rewrite_index(root / '.teaagent', runs_dir)
 
-    def test_receipt_run_id_shows_formatted_receipt(self) -> None:
-        """receipt <run_id> shows goal, cost, and audit path."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            runs_dir = root / '.teaagent' / 'runs'
-            self._seed_run(runs_dir, 'run-1')
-            _rewrite_index(root / '.teaagent', runs_dir)
-
-            output: list[str] = []
-            tui = TeaAgentTUI(
-                root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
-            )
-            result = tui.handle_command('receipt run-1')
-            self.assertTrue(result)
-            receipt_output = output[0]
-            self.assertIn('Run receipt:', receipt_output)
-            self.assertIn('Goal:', receipt_output)
-            self.assertIn('Cost:', receipt_output)
-            self.assertIn('Audit log:', receipt_output)
-
-    def test_receipt_run_id_not_found(self) -> None:
-        """receipt <run_id> with non-existent run returns not-found."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            output: list[str] = []
-            tui = TeaAgentTUI(
-                root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
-            )
-            result = tui.handle_command('receipt run-does-not-exist')
-            self.assertTrue(result)
-            self.assertIn('not found', output[0])
-
-    def test_receipt_without_args(self) -> None:
-        """receipt without args returns error."""
         output: list[str] = []
-        tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
-        result = tui.handle_command('receipt')
-        self.assertTrue(result)
-        self.assertIn('requires a run id', output[0])
+        tui = TeaAgentTUI(
+            root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
+        result = tui.handle_command('approve --selector 99')
+        assert result
+        assert 'out of range' in output[0]
 
 
-class DispatchRegistrationTests(unittest.TestCase):
-    def test_receipt_in_command_dispatch(self) -> None:
-        """receipt is registered in _COMMAND_DISPATCH."""
-        self.assertIn('receipt', _COMMAND_DISPATCH)
-        self.assertTrue(callable(_COMMAND_DISPATCH['receipt']))
+def test_approve_selector_no_pending_approvals() -> None:
+    """approve --selector when no pending approvals returns error."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        runs_dir = root / '.teaagent' / 'runs'
+        _seed_run_events(
+            runs_dir,
+            'run-1',
+            [
+                {
+                    'event_type': 'run_started',
+                    'run_id': 'run-1',
+                    'created_at': '2026-06-07T00:00:00Z',
+                    'payload': {'task': 'write file'},
+                },
+                {
+                    'event_type': 'tool_call_approved',
+                    'run_id': 'run-1',
+                    'created_at': '2026-06-07T00:02:00Z',
+                    'payload': {
+                        'call_id': 'call-abc123',
+                        'tool_name': 'workspace_write_file',
+                    },
+                },
+            ],
+        )
+        _rewrite_index(root / '.teaagent', runs_dir)
 
-    def test_approve_in_command_dispatch(self) -> None:
-        """approve remains registered in _COMMAND_DISPATCH."""
-        self.assertIn('approve', _COMMAND_DISPATCH)
-        self.assertTrue(callable(_COMMAND_DISPATCH['approve']))
-
-    def test_progress_in_command_dispatch(self) -> None:
-        """progress remains registered in _COMMAND_DISPATCH."""
-        self.assertIn('progress', _COMMAND_DISPATCH)
-        self.assertTrue(callable(_COMMAND_DISPATCH['progress']))
+        output: list[str] = []
+        tui = TeaAgentTUI(
+            root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
+        result = tui.handle_command('approve --selector 1')
+        assert result
+        assert 'no pending approvals' in output[0]
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_approve_selector_non_integer() -> None:
+    """approve --selector with non-integer returns error."""
+    output: list[str] = []
+    tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+    result = tui.handle_command('approve --selector abc')
+    assert result
+    assert 'selector must be an integer' in output[0]
+
+
+def test_approve_call_id_still_works() -> None:
+    """approve <call_id> backward compat works."""
+    output: list[str] = []
+    tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+    result = tui.handle_command('approve write-1')
+    assert result
+    assert output[0] == 'approved: write-1'
+    assert 'write-1' in tui.approved_call_ids
+
+
+def _seed_progress_run(runs_dir: Path, run_id: str) -> None:
+    _seed_run_events(
+        runs_dir,
+        run_id,
+        [
+            {
+                'event_type': 'run_started',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:00:00Z',
+                'payload': {
+                    'task': 'analyze code',
+                    'max_estimated_cost_cents': 1000,
+                },
+            },
+            {
+                'event_type': 'iteration_started',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:00:10Z',
+                'payload': {'iteration': 1},
+            },
+            {
+                'event_type': 'tool_call_started',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:00:11Z',
+                'payload': {'tool_name': 'workspace_read_file'},
+            },
+            {
+                'event_type': 'tool_call_completed',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:00:12Z',
+                'payload': {'tool_name': 'workspace_read_file'},
+            },
+            {
+                'event_type': 'run_completed',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:01:00Z',
+                'payload': {'cost_cents': 42},
+            },
+        ],
+    )
+
+
+def test_progress_run_id_shows_formatted_output() -> None:
+    """progress <run_id> shows Phase and Budget fields."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        runs_dir = root / '.teaagent' / 'runs'
+        _seed_progress_run(runs_dir, 'run-1')
+        _rewrite_index(root / '.teaagent', runs_dir)
+
+        output: list[str] = []
+        tui = TeaAgentTUI(
+            root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
+        result = tui.handle_command('progress run-1')
+        assert result
+        progress_output = output[0]
+        assert 'Phase:' in progress_output
+        assert 'Budget:' in progress_output
+        assert 'run-1' in progress_output
+
+
+def test_progress_run_id_not_found() -> None:
+    """progress <run_id> with non-existent run returns error."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        output: list[str] = []
+        tui = TeaAgentTUI(
+            root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
+        result = tui.handle_command('progress run-does-not-exist')
+        assert result
+        assert 'not found' in output[0]
+
+
+def test_progress_on_off_toggle_still_works() -> None:
+    """progress on/off toggle backward compat works."""
+    output: list[str] = []
+    tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+    assert tui.handle_command('progress on')
+    assert tui.progress
+    assert 'progress: on' in output[0]
+
+    assert tui.handle_command('progress off')
+    assert not tui.progress
+
+
+def _seed_receipt_run(runs_dir: Path, run_id: str) -> None:
+    _seed_run_events(
+        runs_dir,
+        run_id,
+        [
+            {
+                'event_type': 'run_started',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:00:00Z',
+                'payload': {
+                    'task': 'analyze code',
+                    'provider': 'gpt',
+                    'model': 'gpt-4',
+                },
+            },
+            {
+                'event_type': 'tool_call_started',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:00:10Z',
+                'payload': {'tool_name': 'workspace_read_file'},
+            },
+            {
+                'event_type': 'tool_call_completed',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:00:11Z',
+                'payload': {'tool_name': 'workspace_read_file'},
+            },
+            {
+                'event_type': 'run_completed',
+                'run_id': run_id,
+                'created_at': '2026-06-07T00:01:00Z',
+                'payload': {'cost_cents': 42},
+            },
+        ],
+    )
+
+
+def test_receipt_run_id_shows_formatted_receipt() -> None:
+    """receipt <run_id> shows goal, cost, and audit path."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        runs_dir = root / '.teaagent' / 'runs'
+        _seed_receipt_run(runs_dir, 'run-1')
+        _rewrite_index(root / '.teaagent', runs_dir)
+
+        output: list[str] = []
+        tui = TeaAgentTUI(
+            root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
+        result = tui.handle_command('receipt run-1')
+        assert result
+        receipt_output = output[0]
+        assert 'Run receipt:' in receipt_output
+        assert 'Goal:' in receipt_output
+        assert 'Cost:' in receipt_output
+        assert 'Audit log:' in receipt_output
+
+
+def test_receipt_run_id_not_found() -> None:
+    """receipt <run_id> with non-existent run returns not-found."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        output: list[str] = []
+        tui = TeaAgentTUI(
+            root=root, input_fn=lambda _prompt: 'exit', output_fn=output.append
+        )
+        result = tui.handle_command('receipt run-does-not-exist')
+        assert result
+        assert 'not found' in output[0]
+
+
+def test_receipt_without_args() -> None:
+    """receipt without args returns error."""
+    output: list[str] = []
+    tui = TeaAgentTUI(input_fn=lambda _prompt: 'exit', output_fn=output.append)
+    result = tui.handle_command('receipt')
+    assert result
+    assert 'requires a run id' in output[0]
+
+
+def test_receipt_in_command_dispatch() -> None:
+    """receipt is registered in _COMMAND_DISPATCH."""
+    assert 'receipt' in _COMMAND_DISPATCH
+    assert callable(_COMMAND_DISPATCH['receipt'])
+
+
+def test_approve_in_command_dispatch() -> None:
+    """approve remains registered in _COMMAND_DISPATCH."""
+    assert 'approve' in _COMMAND_DISPATCH
+    assert callable(_COMMAND_DISPATCH['approve'])
+
+
+def test_progress_in_command_dispatch() -> None:
+    """progress remains registered in _COMMAND_DISPATCH."""
+    assert 'progress' in _COMMAND_DISPATCH
+    assert callable(_COMMAND_DISPATCH['progress'])

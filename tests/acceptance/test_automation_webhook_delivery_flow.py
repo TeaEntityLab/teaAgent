@@ -1,4 +1,37 @@
-"""delivery=webhook posts collector results to the workspace webhook URL."""
+"""Test module for automation webhook delivery.
+
+This module tests the webhook delivery mechanism for automations, which posts
+collector results to a configured webhook URL when delivery=webhook is set.
+This enables external systems to receive automation results via HTTP webhooks.
+
+Key concepts tested:
+- Webhook Delivery: delivery=webhook posts results to configured URL
+- HTTP Server: Test server receives and validates webhook payloads
+- HMAC Signature: Webhooks are signed with X-TeaAgent-Signature-256 header
+- Configuration: Webhook URL and secret are in .teaagent/config.toml
+- Collector Integration: Webhook delivery works with collector scripts
+- Skip Handling: Webhooks are delivered even when wake_agent=false
+
+Acceptance Criteria:
+- AC1: Webhook delivery posts collector results to configured URL
+- AC2: Webhook payload includes automation_id, status, and collector output
+- AC3: Webhook includes HMAC signature in X-TeaAgent-Signature-256 header
+- AC4: Webhook URL and secret are configured in .teaagent/config.toml
+- AC5: Webhook delivery works when wake_agent=false (skipped_no_wake)
+- AC6: Signature format is sha256=...
+
+Technical Details:
+- automation_webhook_url configures the webhook endpoint
+- automation_webhook_secret configures the HMAC signing key
+- Webhook payload is JSON with automation metadata and collector results
+- HMAC-SHA256 signature ensures payload integrity
+- Webhook is delivered after collector execution, regardless of wake_agent
+- HTTP POST with JSON body and signature header
+
+References:
+- Automation v2 design: /docs/architecture/automation_v2.md
+- Webhook spec: /docs/specs/automation_webhooks.md
+"""
 
 from __future__ import annotations
 

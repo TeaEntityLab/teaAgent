@@ -53,6 +53,8 @@ def test_export_non_empty_events():
 
 
 def test_export_chain_verification_with_log_path():
+    import os
+
     events = [
         {
             'event_id': 'e1',
@@ -77,7 +79,14 @@ def test_export_chain_verification_with_log_path():
         # Verify that the bundle can be verified
         assert verify_bundle_integrity(bundle) is True
     finally:
+        # Verify cleanup
+        assert os.path.exists(log_path), (
+            f'Temporary file {log_path} should still exist before cleanup'
+        )
         log_path.unlink(missing_ok=True)
+        assert not os.path.exists(log_path), (
+            f'Temporary file {log_path} was not cleaned up'
+        )
 
 
 def test_export_chain_verification_no_log_path():

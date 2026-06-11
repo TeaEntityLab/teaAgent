@@ -84,26 +84,33 @@ class AgentCard:
 class InMemoryAgentRegistry:
     def __init__(self) -> None:
         self._cards: dict[str, AgentCard] = {}
+        self._lock = threading.Lock()
 
     def register(self, card: AgentCard) -> None:
-        self._cards[card.name] = card
+        with self._lock:
+            self._cards[card.name] = card
 
     def deregister(self, name: str) -> None:
-        self._cards.pop(name, None)
+        with self._lock:
+            self._cards.pop(name, None)
 
     def get(self, name: str) -> Optional[AgentCard]:
-        return self._cards.get(name)
+        with self._lock:
+            return self._cards.get(name)
 
     def list_cards(self) -> list[AgentCard]:
-        return list(self._cards.values())
+        with self._lock:
+            return list(self._cards.values())
 
     def find_by_capability(self, capability: str) -> list[AgentCard]:
-        return [
-            card for card in self._cards.values() if capability in card.capabilities
-        ]
+        with self._lock:
+            return [
+                card for card in self._cards.values() if capability in card.capabilities
+            ]
 
     def find_by_tool(self, tool_name: str) -> list[AgentCard]:
-        return [card for card in self._cards.values() if tool_name in card.tools]
+        with self._lock:
+            return [card for card in self._cards.values() if tool_name in card.tools]
 
 
 _STANDARD_CAPABILITIES = frozenset(

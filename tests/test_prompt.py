@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import tempfile
-import unittest
 from pathlib import Path
+
+import pytest
 
 from teaagent.prompt import (
     PromptBundle,
@@ -16,243 +17,262 @@ from teaagent.types import ToolAnnotations, ToolRegistry, ToolValidationError
 from teaagent.workspace_tools import build_workspace_tool_registry
 
 
-class ExtractJSONObjectTests(unittest.TestCase):
-    def test_parses_bare_json_object(self) -> None:
-        result = extract_json_object('{"a": 1}')
-        self.assertEqual(result, {'a': 1})
+@pytest.fixture
+def registry():
+    return build_workspace_tool_registry()
 
-    def test_parses_fenced_json_with_language_tag(self) -> None:
-        result = extract_json_object('pre\n```json\n{"key":"val"}\n```\npost')
-        self.assertEqual(result, {'key': 'val'})
 
-    def test_parses_fenced_json_without_language_tag(self) -> None:
-        result = extract_json_object('```\n{"nested":{"inner":true}}\n```')
-        self.assertEqual(result, {'nested': {'inner': True}})
+def test_parses_bare_json_object() -> None:
+    result = extract_json_object('{"a": 1}')
+    assert result == {'a': 1}
 
-    def test_parses_embedded_json_between_braces(self) -> None:
-        result = extract_json_object('some text {"type":"tool"} trailing')
-        self.assertEqual(result, {'type': 'tool'})
 
-    def test_embedded_json_with_multiple_json_objects_returns_first_object(
-        self,
-    ) -> None:
-        result = extract_json_object('prefix {"x":1} suffix {"y":2}')
-        self.assertEqual(result, {'x': 1})
+def test_parses_fenced_json_with_language_tag() -> None:
+    result = extract_json_object('pre\n```json\n{"key":"val"}\n```\npost')
+    assert result == {'key': 'val'}
 
-    def test_ignores_invalid_brace_before_valid_object(self) -> None:
-        result = extract_json_object(
-            'thinking {not json} then {"type":"final","content":"ok"}'
+
+def test_parses_fenced_json_without_language_tag() -> None:
+    result = extract_json_object('```\n{"nested":{"inner":true}}\n```')
+    assert result == {'nested': {'inner': True}}
+
+
+def test_parses_embedded_json_between_braces() -> None:
+    result = extract_json_object('some text {"type":"tool"} trailing')
+    assert result == {'type': 'tool'}
+
+
+def test_embedded_json_with_multiple_json_objects_returns_first_object() -> None:
+    result = extract_json_object('prefix {"x":1} suffix {"y":2}')
+    assert result == {'x': 1}
+
+
+def test_ignores_invalid_brace_before_valid_object() -> None:
+    result = extract_json_object(
+        'thinking {not json} then {"type":"final","content":"ok"}'
+    )
+    assert result == {'type': 'final', 'content': 'ok'}
+
+
+def test_parses_nested_braces_correctly() -> None:
+    result = extract_json_object('prefix {"a":{"b":3}}')
+    assert result == {'a': {'b': 3}}
+
+
+def test_raises_on_no_json() -> None:
+    with pytest.raises(ToolValidationError) as ctx:
+        extract_json_object('just plain text')
+    assert 'JSON object' in str(ctx.value)
+
+
+def test_raises_on_bare_braces_with_invalid_json() -> None:
+    with pytest.raises(ToolValidationError):
+        extract_json_object('{invalid json}')
+
+
+def test_raises_on_fenced_block_with_invalid_json() -> None:
+    with pytest.raises(ToolValidationError):
+        extract_json_object('```json\n{not valid}\n```')
+
+
+def test_parses_json_when_prior_text_contains_braces() -> None:
+    result = extract_json_object('thinking "literal { brace" then {"ok": true}')
+    assert result == {'ok': True}
+
+
+def test_repairs_trailing_comma_and_unquoted_key() -> None:
+    result = extract_json_object('prefix {type:"final", content:"ok",} suffix')
+    assert result == {'type': 'final', 'content': 'ok'}
+
+
+def test_returns_empty_when_no_agents_md() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        result = load_project_instructions(tmp)
+        assert result == ''
+
+
+def test_returns_content_when_agents_md_exists() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / 'AGENTS.md'
+        path.write_text('Project rules here\n', encoding='utf-8')
+        result = load_project_instructions(tmp)
+        assert result == 'Project rules here\n'
+
+
+def test_loads_hierarchical_instructions_from_parent_to_child() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        child = root / 'a' / 'b'
+        child.mkdir(parents=True)
+        (root / 'AGENTS.md').write_text('root rules\n', encoding='utf-8')
+        (root / 'a' / 'AGENTS.md').write_text('a rules\n', encoding='utf-8')
+        (child / 'AGENTS.md').write_text('b rules\n', encoding='utf-8')
+
+        result = load_project_instructions(child)
+
+        assert 'root rules' in result
+        assert 'a rules' in result
+        assert 'b rules' in result
+        assert result.index('root rules') < result.index('a rules')
+        assert result.index('a rules') < result.index('b rules')
+
+
+def test_loads_fallback_instruction_filenames() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        child = root / 'repo'
+        child.mkdir(parents=True)
+        (root / 'AGENT.md').write_text('legacy root rules\n', encoding='utf-8')
+        (child / 'CLAUDE.md').write_text('child claude rules\n', encoding='utf-8')
+
+        result = load_project_instructions(child)
+
+        assert 'legacy root rules' in result
+        assert 'child claude rules' in result
+
+
+def test_returns_prompt_bundle_with_task(registry) -> None:
+    bundle = assemble_agent_prompt(task='do thing', context={}, registry=registry)
+
+    assert isinstance(bundle, PromptBundle)
+    assert 'TeaAgent' in bundle.system
+    assert 'Available tools' in bundle.system
+    assert 'do thing' in bundle.user
+    assert 'observations' in bundle.user
+
+
+def test_includes_project_instructions_in_system_prompt(registry) -> None:
+    bundle = assemble_agent_prompt(
+        task='x',
+        context={},
+        registry=registry,
+        project_instructions='Custom rules.',
+    )
+
+    assert 'Project instructions' in bundle.system
+    assert 'Custom rules.' in bundle.system
+
+
+def test_includes_task_spec_in_user_prompt(registry) -> None:
+    bundle = assemble_agent_prompt(
+        task='x',
+        context={'task_spec': 'Clarified: do X'},
+        registry=registry,
+        task_spec='Clarified: do X',
+    )
+
+    assert 'Clarified: do X' in bundle.user
+
+
+def test_includes_memories_in_user_prompt(registry) -> None:
+    bundle = assemble_agent_prompt(
+        task='x',
+        context={'memories': [{'id': 'm1', 'content': 'note'}]},
+        registry=registry,
+    )
+
+    assert 'note' in bundle.user
+
+
+def test_includes_observations_in_user_prompt(registry) -> None:
+    bundle = assemble_agent_prompt(
+        task='x',
+        context={
+            'observations': [
+                {'call_id': 'c1', 'tool_name': 't', 'result': {'ok': True}}
+            ]
+        },
+        registry=registry,
+    )
+
+    assert 'ok' in bundle.user
+
+
+def test_omits_project_instructions_when_none(registry) -> None:
+    bundle = assemble_agent_prompt(task='x', context={}, registry=registry)
+
+    assert 'Project instructions' not in bundle.system
+
+
+def test_tool_metadata_in_system_prompt() -> None:
+    registry = ToolRegistry()
+    registry.register(
+        name='say_hello',
+        description='Say hello',
+        input_schema={'type': 'object', 'properties': {}, 'required': []},
+        output_schema={'type': 'object', 'properties': {}, 'required': []},
+        annotations=ToolAnnotations(read_only=True),
+        handler=lambda args: {'message': 'hello'},
+    )
+    bundle = assemble_agent_prompt(task='greet', context={}, registry=registry)
+
+    assert 'say_hello' in bundle.system
+    assert 'readOnlyHint' in bundle.system
+
+
+def test_parses_final_decision() -> None:
+    result = parse_model_decision('{"type":"final","content":"all done"}')
+    assert isinstance(result, FinalAnswer)
+    assert result.content == 'all done'
+
+
+def test_parses_tool_decision() -> None:
+    result = parse_model_decision(
+        '{"type":"tool","tool_name":"read","arguments":{"path":"f.txt"},"call_id":"c1"}'
+    )
+    assert isinstance(result, ToolRequest)
+    assert result.tool_name == 'read'
+    assert result.arguments == {'path': 'f.txt'}
+    assert result.call_id == 'c1'
+
+
+def test_tool_without_call_id_generates_default() -> None:
+    result = parse_model_decision('{"type":"tool","tool_name":"x","arguments":{}}')
+    assert isinstance(result, ToolRequest)
+    assert result.call_id.startswith('model-x')
+
+
+def test_raises_on_unknown_type() -> None:
+    with pytest.raises(ToolValidationError) as ctx:
+        parse_model_decision('{"type":"unknown"}')
+    assert "must be 'tool' or 'final'" in str(ctx.value)
+
+
+def test_raises_on_final_without_string_content() -> None:
+    with pytest.raises(ToolValidationError) as ctx:
+        parse_model_decision('{"type":"final","content":42}')
+    assert 'string content' in str(ctx.value)
+
+
+def test_raises_on_tool_without_string_name() -> None:
+    with pytest.raises(ToolValidationError) as ctx:
+        parse_model_decision('{"type":"tool","tool_name":123,"arguments":{}}')
+    assert 'string tool_name' in str(ctx.value)
+
+
+def test_raises_on_tool_without_object_arguments() -> None:
+    with pytest.raises(ToolValidationError) as ctx:
+        parse_model_decision('{"type":"tool","tool_name":"x","arguments":"bad"}')
+    assert 'object arguments' in str(ctx.value)
+
+
+def test_raises_on_tool_with_non_string_call_id() -> None:
+    with pytest.raises(ToolValidationError) as ctx:
+        parse_model_decision(
+            '{"type":"tool","tool_name":"x","arguments":{},"call_id":123}'
         )
-        self.assertEqual(result, {'type': 'final', 'content': 'ok'})
-
-    def test_parses_nested_braces_correctly(self) -> None:
-        result = extract_json_object('prefix {"a":{"b":3}}')
-        self.assertEqual(result, {'a': {'b': 3}})
-
-    def test_raises_on_no_json(self) -> None:
-        with self.assertRaises(ToolValidationError) as ctx:
-            extract_json_object('just plain text')
-        self.assertIn('JSON object', str(ctx.exception))
-
-    def test_raises_on_bare_braces_with_invalid_json(self) -> None:
-        with self.assertRaises(ToolValidationError):
-            extract_json_object('{invalid json}')
-
-    def test_raises_on_fenced_block_with_invalid_json(self) -> None:
-        with self.assertRaises(ToolValidationError):
-            extract_json_object('```json\n{not valid}\n```')
-
-    def test_parses_json_when_prior_text_contains_braces(self) -> None:
-        result = extract_json_object('thinking "literal { brace" then {"ok": true}')
-        self.assertEqual(result, {'ok': True})
-
-    def test_repairs_trailing_comma_and_unquoted_key(self) -> None:
-        result = extract_json_object('prefix {type:"final", content:"ok",} suffix')
-        self.assertEqual(result, {'type': 'final', 'content': 'ok'})
+    assert 'call_id' in str(ctx.value)
 
 
-class LoadProjectInstructionsTests(unittest.TestCase):
-    def test_returns_empty_when_no_agents_md(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            result = load_project_instructions(tmp)
-            self.assertEqual(result, '')
-
-    def test_returns_content_when_agents_md_exists(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'AGENTS.md'
-            path.write_text('Project rules here\n', encoding='utf-8')
-            result = load_project_instructions(tmp)
-            self.assertEqual(result, 'Project rules here\n')
-
-    def test_loads_hierarchical_instructions_from_parent_to_child(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            child = root / 'a' / 'b'
-            child.mkdir(parents=True)
-            (root / 'AGENTS.md').write_text('root rules\n', encoding='utf-8')
-            (root / 'a' / 'AGENTS.md').write_text('a rules\n', encoding='utf-8')
-            (child / 'AGENTS.md').write_text('b rules\n', encoding='utf-8')
-
-            result = load_project_instructions(child)
-
-            self.assertIn('root rules', result)
-            self.assertIn('a rules', result)
-            self.assertIn('b rules', result)
-            self.assertLess(result.index('root rules'), result.index('a rules'))
-            self.assertLess(result.index('a rules'), result.index('b rules'))
-
-    def test_loads_fallback_instruction_filenames(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            child = root / 'repo'
-            child.mkdir(parents=True)
-            (root / 'AGENT.md').write_text('legacy root rules\n', encoding='utf-8')
-            (child / 'CLAUDE.md').write_text('child claude rules\n', encoding='utf-8')
-
-            result = load_project_instructions(child)
-
-            self.assertIn('legacy root rules', result)
-            self.assertIn('child claude rules', result)
+def test_parses_fenced_json_final() -> None:
+    result = parse_model_decision('```json\n{"type":"final","content":"done"}\n```')
+    assert isinstance(result, FinalAnswer)
+    assert result.content == 'done'
 
 
-class AssembleAgentPromptTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.registry = build_workspace_tool_registry()
-
-    def test_returns_prompt_bundle_with_task(self) -> None:
-        bundle = assemble_agent_prompt(
-            task='do thing', context={}, registry=self.registry
-        )
-
-        self.assertIsInstance(bundle, PromptBundle)
-        self.assertIn('TeaAgent', bundle.system)
-        self.assertIn('Available tools', bundle.system)
-        self.assertIn('do thing', bundle.user)
-        self.assertIn('observations', bundle.user)
-
-    def test_includes_project_instructions_in_system_prompt(self) -> None:
-        bundle = assemble_agent_prompt(
-            task='x',
-            context={},
-            registry=self.registry,
-            project_instructions='Custom rules.',
-        )
-
-        self.assertIn('Project instructions', bundle.system)
-        self.assertIn('Custom rules.', bundle.system)
-
-    def test_includes_task_spec_in_user_prompt(self) -> None:
-        bundle = assemble_agent_prompt(
-            task='x',
-            context={'task_spec': 'Clarified: do X'},
-            registry=self.registry,
-            task_spec='Clarified: do X',
-        )
-
-        self.assertIn('Clarified: do X', bundle.user)
-
-    def test_includes_memories_in_user_prompt(self) -> None:
-        bundle = assemble_agent_prompt(
-            task='x',
-            context={'memories': [{'id': 'm1', 'content': 'note'}]},
-            registry=self.registry,
-        )
-
-        self.assertIn('note', bundle.user)
-
-    def test_includes_observations_in_user_prompt(self) -> None:
-        bundle = assemble_agent_prompt(
-            task='x',
-            context={
-                'observations': [
-                    {'call_id': 'c1', 'tool_name': 't', 'result': {'ok': True}}
-                ]
-            },
-            registry=self.registry,
-        )
-
-        self.assertIn('ok', bundle.user)
-
-    def test_omits_project_instructions_when_none(self) -> None:
-        bundle = assemble_agent_prompt(task='x', context={}, registry=self.registry)
-
-        self.assertNotIn('Project instructions', bundle.system)
-
-    def test_tool_metadata_in_system_prompt(self) -> None:
-        registry = ToolRegistry()
-        registry.register(
-            name='say_hello',
-            description='Say hello',
-            input_schema={'type': 'object', 'properties': {}, 'required': []},
-            output_schema={'type': 'object', 'properties': {}, 'required': []},
-            annotations=ToolAnnotations(read_only=True),
-            handler=lambda args: {'message': 'hello'},
-        )
-        bundle = assemble_agent_prompt(task='greet', context={}, registry=registry)
-
-        self.assertIn('say_hello', bundle.system)
-        self.assertIn('readOnlyHint', bundle.system)
-
-
-class ParseModelDecisionTests(unittest.TestCase):
-    def test_parses_final_decision(self) -> None:
-        result = parse_model_decision('{"type":"final","content":"all done"}')
-        self.assertIsInstance(result, FinalAnswer)
-        self.assertEqual(result.content, 'all done')
-
-    def test_parses_tool_decision(self) -> None:
-        result = parse_model_decision(
-            '{"type":"tool","tool_name":"read","arguments":{"path":"f.txt"},"call_id":"c1"}'
-        )
-        self.assertIsInstance(result, ToolRequest)
-        self.assertEqual(result.tool_name, 'read')
-        self.assertEqual(result.arguments, {'path': 'f.txt'})
-        self.assertEqual(result.call_id, 'c1')
-
-    def test_tool_without_call_id_generates_default(self) -> None:
-        result = parse_model_decision('{"type":"tool","tool_name":"x","arguments":{}}')
-        self.assertIsInstance(result, ToolRequest)
-        self.assertTrue(result.call_id.startswith('model-x'))
-
-    def test_raises_on_unknown_type(self) -> None:
-        with self.assertRaises(ToolValidationError) as ctx:
-            parse_model_decision('{"type":"unknown"}')
-        self.assertIn("must be 'tool' or 'final'", str(ctx.exception))
-
-    def test_raises_on_final_without_string_content(self) -> None:
-        with self.assertRaises(ToolValidationError) as ctx:
-            parse_model_decision('{"type":"final","content":42}')
-        self.assertIn('string content', str(ctx.exception))
-
-    def test_raises_on_tool_without_string_name(self) -> None:
-        with self.assertRaises(ToolValidationError) as ctx:
-            parse_model_decision('{"type":"tool","tool_name":123,"arguments":{}}')
-        self.assertIn('string tool_name', str(ctx.exception))
-
-    def test_raises_on_tool_without_object_arguments(self) -> None:
-        with self.assertRaises(ToolValidationError) as ctx:
-            parse_model_decision('{"type":"tool","tool_name":"x","arguments":"bad"}')
-        self.assertIn('object arguments', str(ctx.exception))
-
-    def test_raises_on_tool_with_non_string_call_id(self) -> None:
-        with self.assertRaises(ToolValidationError) as ctx:
-            parse_model_decision(
-                '{"type":"tool","tool_name":"x","arguments":{},"call_id":123}'
-            )
-        self.assertIn('call_id', str(ctx.exception))
-
-    def test_parses_fenced_json_final(self) -> None:
-        result = parse_model_decision('```json\n{"type":"final","content":"done"}\n```')
-        self.assertIsInstance(result, FinalAnswer)
-        self.assertEqual(result.content, 'done')
-
-    def test_parses_embedded_json_tool(self) -> None:
-        result = parse_model_decision(
-            'thinking...\n{"type":"tool","tool_name":"y","arguments":{"a":1}}\ndone'
-        )
-        self.assertIsInstance(result, ToolRequest)
-        self.assertEqual(result.tool_name, 'y')
-
-
-if __name__ == '__main__':
-    unittest.main()
+def test_parses_embedded_json_tool() -> None:
+    result = parse_model_decision(
+        'thinking...\n{"type":"tool","tool_name":"y","arguments":{"a":1}}\ndone'
+    )
+    assert isinstance(result, ToolRequest)
+    assert result.tool_name == 'y'

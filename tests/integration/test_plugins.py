@@ -10,23 +10,10 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from teaagent.plugins import PLUGIN_GROUP, PluginLoadResult, load_plugins
-from teaagent.types import ToolAnnotations, ToolRegistry
+from teaagent.types import ToolRegistry
 
-
-def _make_registrar(name: str):
-    """Return a plugin callable that registers one tool named *name*."""
-
-    def register(registry: ToolRegistry) -> None:
-        registry.register(
-            name=name,
-            description=f'Plugin tool {name}',
-            input_schema={'type': 'object', 'properties': {}},
-            output_schema={'type': 'object', 'properties': {}},
-            annotations=ToolAnnotations(read_only=True),
-            handler=lambda _: {},
-        )
-
-    return register
+# Import shared helper from conftest
+from tests.conftest import make_plugin_registrar
 
 
 def test_no_plugins_returns_empty(tmp_path):
@@ -41,7 +28,7 @@ def test_single_plugin_registers_tool():
     registry = ToolRegistry()
     ep = MagicMock()
     ep.name = 'my_plugin'
-    ep.load.return_value = _make_registrar('plugin_echo')
+    ep.load.return_value = make_plugin_registrar('plugin_echo')
 
     with patch('teaagent.plugins._entry_points', return_value=[ep]):
         result = load_plugins(registry)
@@ -57,7 +44,7 @@ def test_multiple_plugins_all_loaded():
     for i in range(3):
         ep = MagicMock()
         ep.name = f'plugin_{i}'
-        ep.load.return_value = _make_registrar(f'tool_{i}')
+        ep.load.return_value = make_plugin_registrar(f'tool_{i}')
         eps.append(ep)
 
     with patch('teaagent.plugins._entry_points', return_value=eps):
@@ -75,7 +62,7 @@ def test_failing_plugin_isolated():
 
     ep_good = MagicMock()
     ep_good.name = 'good'
-    ep_good.load.return_value = _make_registrar('good_tool')
+    ep_good.load.return_value = make_plugin_registrar('good_tool')
 
     ep_bad = MagicMock()
     ep_bad.name = 'bad'

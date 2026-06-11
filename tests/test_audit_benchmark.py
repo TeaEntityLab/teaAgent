@@ -38,6 +38,8 @@ def test_audit_chain_verify_scales_linearly_enough():
     large = _chain(1000)
 
     def verify_list(events: list[dict]) -> bool:
+        import os
+
         with tempfile.NamedTemporaryFile(
             mode='w', suffix='.jsonl', delete=False, encoding='utf-8'
         ) as tmp:
@@ -50,7 +52,14 @@ def test_audit_chain_verify_scales_linearly_enough():
         try:
             return verify_audit_chain(tmp_path).valid
         finally:
+            # Verify cleanup
+            assert os.path.exists(tmp_path), (
+                f'Temporary file {tmp_path} should still exist before cleanup'
+            )
             tmp_path.unlink()
+            assert not os.path.exists(tmp_path), (
+                f'Temporary file {tmp_path} was not cleaned up'
+            )
 
     t0 = time.perf_counter()
     assert verify_list(small)

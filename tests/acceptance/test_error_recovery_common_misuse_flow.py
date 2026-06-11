@@ -20,17 +20,31 @@ def test_provider_missing_exits_with_setup_hint(
     monkeypatch.delenv('TEAAGENT_PROVIDER', raising=False)
     with pytest.raises(SystemExit) as exc:
         main(['agent', 'run', 'fix tests', '--root', str(tmp_path)])
-    assert 'provider required' in str(exc.value).lower()
-    assert 'teaagent setup' in str(exc.value).lower()
+    # Verify error message mentions provider requirement
+    assert 'provider required' in str(exc.value).lower(), (
+        f'Expected error to mention "provider required", got {str(exc.value)}'
+    )
+    # Verify error message provides setup hint
+    assert 'teaagent setup' in str(exc.value).lower(), (
+        f'Expected error to mention "teaagent setup" hint, got {str(exc.value)}'
+    )
 
 
 def test_budget_and_permission_errors_include_hints() -> None:
     budget = BudgetExceededError('iteration cap')
     permission = ToolPermissionError('denied by policy')
-    assert '→' in str(budget)
-    assert budget.hint
-    assert '→' in str(permission)
-    assert permission.hint
+    # Verify budget error includes arrow separator for structured message
+    assert '→' in str(budget), (
+        f'Expected budget error to include arrow separator, got {str(budget)}'
+    )
+    # Verify budget error has a hint field
+    assert budget.hint, 'Expected budget error to have a hint field'
+    # Verify permission error includes arrow separator for structured message
+    assert '→' in str(permission), (
+        f'Expected permission error to include arrow separator, got {str(permission)}'
+    )
+    # Verify permission error has a hint field
+    assert permission.hint, 'Expected permission error to have a hint field'
 
 
 def test_preflight_surfaces_actionable_validation_for_empty_task(
@@ -49,7 +63,10 @@ def test_preflight_surfaces_actionable_validation_for_empty_task(
             ]
         )
     text = out.getvalue().strip()
-    assert code != 0 or 'task' in text.lower() or 'error' in text.lower()
+    # Verify preflight either fails or surfaces task validation error
+    assert code != 0 or 'task' in text.lower() or 'error' in text.lower(), (
+        f'Expected preflight to fail or mention task/error for empty task, got code={code}, text={text}'
+    )
 
 
 def test_run_reports_adapter_failure_with_context(tmp_path: Path) -> None:
@@ -77,10 +94,13 @@ def test_run_reports_adapter_failure_with_context(tmp_path: Path) -> None:
             ]
         )
     payload_text = out.getvalue()
+    # Verify run either fails or reports adapter unavailability/error
     assert (
         code != 0
         or 'unavailable' in payload_text.lower()
         or 'error' in payload_text.lower()
+    ), (
+        f'Expected run to fail or report adapter unavailability/error, got code={code}, text={payload_text}'
     )
 
 
@@ -118,5 +138,11 @@ def test_read_only_run_blocks_workspace_write_via_cli(tmp_path: Path) -> None:
                 '3',
             ]
         )
-    assert (tmp_path / 'blocked.txt').read_text(encoding='utf-8') == 'keep\n'
-    assert code != 0 or 'permission' in out.getvalue().lower()
+    # Verify file was not modified (read-only protection)
+    assert (tmp_path / 'blocked.txt').read_text(encoding='utf-8') == 'keep\n', (
+        'Expected file to remain unchanged in read-only mode'
+    )
+    # Verify run either fails or reports permission error
+    assert code != 0 or 'permission' in out.getvalue().lower(), (
+        f'Expected run to fail or report permission error in read-only mode, got code={code}'
+    )

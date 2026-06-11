@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
-import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from typing import Any
+
+import pytest
 
 from teaagent.notify import NotifyConfig, fire_notification
 from test_support import skip_if_socket_bind_is_blocked
@@ -43,51 +44,52 @@ def _start_mock_server() -> tuple[HTTPServer, str]:
     return server, url
 
 
-class TestSlackDiscordNotifications(unittest.TestCase):
-    def setUp(self) -> None:
-        _CaptureHandler.received = []
-
-    def test_slack_webhook_sends_formatted_payload(self) -> None:
-        server, url = _start_mock_server()
-        try:
-            config = NotifyConfig(slack_webhook_url=url, timeout_seconds=2)
-            fire_notification(config, _MockWorker(), event='completed')
-            self.assertEqual(len(_CaptureHandler.received), 1)
-            payload = _CaptureHandler.received[0]
-            self.assertIn('text', payload)
-            self.assertIn('teaagent', payload['text'])
-            self.assertIn('blocks', payload)
-        finally:
-            server.shutdown()
-
-    def test_discord_webhook_sends_embed_payload(self) -> None:
-        server, url = _start_mock_server()
-        try:
-            config = NotifyConfig(discord_webhook_url=url, timeout_seconds=2)
-            fire_notification(config, _MockWorker(), event='stopped')
-            self.assertEqual(len(_CaptureHandler.received), 1)
-            payload = _CaptureHandler.received[0]
-            self.assertIn('embeds', payload)
-            self.assertEqual(len(payload['embeds']), 1)
-            self.assertIn('teaagent', payload['embeds'][0]['title'])
-        finally:
-            server.shutdown()
-
-    def test_all_notification_targets_fire(self) -> None:
-        server, url = _start_mock_server()
-        try:
-            config = NotifyConfig(
-                webhook_url=url,
-                slack_webhook_url=url,
-                discord_webhook_url=url,
-                timeout_seconds=2,
-            )
-            fire_notification(config, _MockWorker(), event='completed')
-            # All three targets should have fired
-            self.assertEqual(len(_CaptureHandler.received), 3)
-        finally:
-            server.shutdown()
+@pytest.fixture(autouse=True)
+def reset_received():
+    """Reset the received list before each test."""
+    _CaptureHandler.received = []
+    yield
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_slack_webhook_sends_formatted_payload() -> None:
+    server, url = _start_mock_server()
+    try:
+        config = NotifyConfig(slack_webhook_url=url, timeout_seconds=2)
+        fire_notification(config, _MockWorker(), event='completed')
+        assert len(_CaptureHandler.received) == 1
+        payload = _CaptureHandler.received[0]
+        assert 'text' in payload
+        assert 'teaagent' in payload['text']
+        assert 'blocks' in payload
+    finally:
+        server.shutdown()
+
+
+def test_discord_webhook_sends_embed_payload() -> None:
+    server, url = _start_mock_server()
+    try:
+        config = NotifyConfig(discord_webhook_url=url, timeout_seconds=2)
+        fire_notification(config, _MockWorker(), event='stopped')
+        assert len(_CaptureHandler.received) == 1
+        payload = _CaptureHandler.received[0]
+        assert 'embeds' in payload
+        assert len(payload['embeds']) == 1
+        assert 'teaagent' in payload['embeds'][0]['title']
+    finally:
+        server.shutdown()
+
+
+def test_all_notification_targets_fire() -> None:
+    server, url = _start_mock_server()
+    try:
+        config = NotifyConfig(
+            webhook_url=url,
+            slack_webhook_url=url,
+            discord_webhook_url=url,
+            timeout_seconds=2,
+        )
+        fire_notification(config, _MockWorker(), event='completed')
+        # All three targets should have fired
+        assert len(_CaptureHandler.received) == 3
+    finally:
+        server.shutdown()

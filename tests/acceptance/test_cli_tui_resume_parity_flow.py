@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import tempfile
-import unittest
 
 from teaagent.ergonomics.approval_store import ApprovalPresetStore
 from teaagent.integration.resume_preparation import prepare_run_resume
@@ -30,46 +29,40 @@ def _seed_pending_run(root: str, run_id: str = 'resume-parity') -> None:
     )
 
 
-class CliTuiResumeParityFlowTests(unittest.TestCase):
-    def test_prepare_run_resume_auto_grants_pending_approval(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            _seed_pending_run(tmp)
-            prepared = prepare_run_resume(tmp, 'resume-parity')
-            self.assertEqual(prepared.original_task, 'finish write')
-            self.assertEqual(prepared.auto_approved_call_id, 'write-1')
-            self.assertIsNone(prepared.pending_warning)
+def test_prepare_run_resume_auto_grants_pending_approval() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        _seed_pending_run(tmp)
+        prepared = prepare_run_resume(tmp, 'resume-parity')
+        assert prepared.original_task == 'finish write'
+        assert prepared.auto_approved_call_id == 'write-1'
+        assert prepared.pending_warning is None
 
-            store = ApprovalPresetStore(tmp)
-            from teaagent.ergonomics._approval_grants import _compute_argument_digest
+        store = ApprovalPresetStore(tmp)
+        from teaagent.ergonomics._approval_grants import _compute_argument_digest
 
-            digest = _compute_argument_digest({'path': 'a.txt', 'content': 'hi'})
-            self.assertTrue(
-                store.check_scoped_approval_digest(
-                    run_id='resume-parity',
-                    call_id='write-1',
-                    tool_name='workspace_write_file',
-                    argument_digest=digest,
-                )
-            )
-
-    def test_cli_and_tui_resume_use_same_preparation_contract(self) -> None:
-        """Both surfaces call prepare_run_resume with equivalent defaults."""
-        with tempfile.TemporaryDirectory() as tmp:
-            _seed_pending_run(tmp, 'shared-run')
-            cli_prepared = prepare_run_resume(
-                tmp,
-                'shared-run',
-                approve_call_ids=frozenset(),
-                auto_compact=True,
-            )
-            tui_prepared = prepare_run_resume(
-                tmp,
-                'shared-run',
-                approve_call_ids=frozenset(),
-                auto_compact=True,
-            )
-            self.assertEqual(cli_prepared.to_dict(), tui_prepared.to_dict())
+        digest = _compute_argument_digest({'path': 'a.txt', 'content': 'hi'})
+        assert store.check_scoped_approval_digest(
+            run_id='resume-parity',
+            call_id='write-1',
+            tool_name='workspace_write_file',
+            argument_digest=digest,
+        )
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_cli_and_tui_resume_use_same_preparation_contract() -> None:
+    """Both surfaces call prepare_run_resume with equivalent defaults."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _seed_pending_run(tmp, 'shared-run')
+        cli_prepared = prepare_run_resume(
+            tmp,
+            'shared-run',
+            approve_call_ids=frozenset(),
+            auto_compact=True,
+        )
+        tui_prepared = prepare_run_resume(
+            tmp,
+            'shared-run',
+            approve_call_ids=frozenset(),
+            auto_compact=True,
+        )
+        assert cli_prepared.to_dict() == tui_prepared.to_dict()

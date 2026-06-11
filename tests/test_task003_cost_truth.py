@@ -14,8 +14,10 @@ truth that both CLI and TUI read), independent of TUI rendering:
 
 from __future__ import annotations
 
-import unittest
+import tempfile
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from teaagent.chat_session_controller import ChatSessionController
 from teaagent.run_undo import UndoJournal
@@ -45,48 +47,62 @@ def _run(controller: ChatSessionController, tmp: str) -> None:
     )
 
 
-class CostTruthTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self._tmp = __import__('tempfile').mkdtemp()
-        self.controller = ChatSessionController(self._tmp, output_fn=lambda _m: None)
+@pytest.fixture
+def cost_truth_controller():
+    tmp = tempfile.mkdtemp()
+    controller = ChatSessionController(tmp, output_fn=lambda _m: None)
+    yield tmp, controller
+    # Verify cleanup
+    import os
+    import shutil
 
-    def test_nonzero_spend_is_reflected(self) -> None:
-        with patch(
-            'teaagent.chat_session_controller.run_chat_agent',
-            return_value=_fake_result(150.0),
-        ):
-            _run(self.controller, self._tmp)
-        self.assertEqual(self.controller.get_session_cost(), 150.0)
-
-    def test_no_fake_zero_after_real_spend(self) -> None:
-        with patch(
-            'teaagent.chat_session_controller.run_chat_agent',
-            return_value=_fake_result(1.0),
-        ):
-            _run(self.controller, self._tmp)
-        # The headline guarded behaviour: after real spend the display must not
-        # report a fake zero.
-        self.assertNotEqual(self.controller.get_session_cost_display(), '$0.00')
-        self.assertEqual(self.controller.get_session_cost_display(), '$0.01')
-
-    def test_repeated_runs_accumulate(self) -> None:
-        with patch('teaagent.chat_session_controller.run_chat_agent') as mock_run:
-            mock_run.return_value = _fake_result(75.0, 'run-1')
-            _run(self.controller, self._tmp)
-            mock_run.return_value = _fake_result(25.0, 'run-2')
-            _run(self.controller, self._tmp)
-        self.assertEqual(self.controller.get_session_cost(), 100.0)
-        self.assertEqual(self.controller.get_session_cost_display(), '$1.00')
-
-    def test_zero_cost_run_is_honest_zero(self) -> None:
-        # A genuinely free run reports $0.00 — that is honest, not a fake zero.
-        with patch(
-            'teaagent.chat_session_controller.run_chat_agent',
-            return_value=_fake_result(0.0),
-        ):
-            _run(self.controller, self._tmp)
-        self.assertEqual(self.controller.get_session_cost_display(), '$0.00')
+    assert os.path.exists(tmp), (
+        f'Temporary directory {tmp} should still exist before cleanup'
+    )
+    shutil.rmtree(tmp)
+    assert not os.path.exists(tmp), f'Temporary directory {tmp} was not cleaned up'
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_nonzero_spend_is_reflected(cost_truth_controller):
+    tmp, controller = cost_truth_controller
+    with patch(
+        'teaagent.chat_session_controller.run_chat_agent',
+        return_value=_fake_result(150.0),
+    ):
+        _run(controller, tmp)
+    assert controller.get_session_cost() == 150.0
+
+
+def test_no_fake_zero_after_real_spend(cost_truth_controller):
+    tmp, controller = cost_truth_controller
+    with patch(
+        'teaagent.chat_session_controller.run_chat_agent',
+        return_value=_fake_result(1.0),
+    ):
+        _run(controller, tmp)
+    # The headline guarded behaviour: after real spend the display must not
+    # report a fake zero.
+    assert controller.get_session_cost_display() != '$0.00'
+    assert controller.get_session_cost_display() == '$0.01'
+
+
+def test_repeated_runs_accumulate(cost_truth_controller):
+    tmp, controller = cost_truth_controller
+    with patch('teaagent.chat_session_controller.run_chat_agent') as mock_run:
+        mock_run.return_value = _fake_result(75.0, 'run-1')
+        _run(controller, tmp)
+        mock_run.return_value = _fake_result(25.0, 'run-2')
+        _run(controller, tmp)
+    assert controller.get_session_cost() == 100.0
+    assert controller.get_session_cost_display() == '$1.00'
+
+
+def test_zero_cost_run_is_honest_zero(cost_truth_controller):
+    tmp, controller = cost_truth_controller
+    # A genuinely free run reports $0.00 — that is honest, not a fake zero.
+    with patch(
+        'teaagent.chat_session_controller.run_chat_agent',
+        return_value=_fake_result(0.0),
+    ):
+        _run(controller, tmp)
+    assert controller.get_session_cost_display() == '$0.00'

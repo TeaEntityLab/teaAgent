@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import subprocess
-import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
@@ -41,136 +40,136 @@ def _init_git_repo(root: Path) -> None:
     )
 
 
-class SubagentIsolationPolicyTests(unittest.TestCase):
-    def test_resolve_defaults_to_worktree_on_git_repo(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _init_git_repo(root)
-            assert resolve_subagent_isolation(None, root=root) == 'worktree'
+def test_resolve_defaults_to_worktree_on_git_repo() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _init_git_repo(root)
+        assert resolve_subagent_isolation(None, root=root) == 'worktree'
 
-    def test_resolve_requires_explicit_shared_on_git_repo(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _init_git_repo(root)
-            assert (
-                resolve_subagent_isolation('shared', root=root)
-                == DEFAULT_SUBAGENT_ISOLATION
-            )
 
-    def test_resolve_falls_back_to_shared_without_git(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            assert resolve_subagent_isolation(None, root=root) == 'shared'
-
-    def test_manager_enforces_global_depth_limit(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            config = ChatAgentConfig(root=root, max_subagent_depth=1)
-            manager = SubagentManager(
-                root=root,
-                parent_config=config,
-                parent_adapter=MagicMock(),
-            )
-            result = manager.run_subagent(
-                task='too deep',
-                parent_run_id='parent-1',
-                depth=1,
-                isolation='shared',
-            )
-            self.assertEqual(result['status'], 'error')
-            self.assertIn('global subagent depth', result['message'])
-
-    def test_manager_caps_child_budget_to_parent(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            config = ChatAgentConfig(
-                root=root,
-                max_iterations=3,
-                max_tool_calls=4,
-                max_subagent_depth=2,
-            )
-            manager = SubagentManager(
-                root=root,
-                parent_config=config,
-                parent_adapter=MagicMock(),
-            )
-            captured: dict[str, int] = {}
-
-            def fake_run_chat_agent(cfg, *args, **kwargs):
-                captured['max_iterations'] = cfg.max_iterations
-                captured['max_tool_calls'] = cfg.max_tool_calls
-                from teaagent.runner import FinalAnswer, RunResult
-
-                return RunResult(
-                    run_id='child-1',
-                    final_answer=FinalAnswer(content='ok'),
-                    iterations=1,
-                    tool_calls=0,
-                    status='completed',
-                )
-
-            with patch('teaagent.chat_agent.run_chat_agent', fake_run_chat_agent):
-                manager.run_subagent(
-                    task='cap me',
-                    parent_run_id='parent-1',
-                    depth=0,
-                    max_iterations=99,
-                    max_tool_calls=99,
-                    isolation='shared',
-                )
-
-            self.assertEqual(captured['max_iterations'], 3)
-            self.assertEqual(captured['max_tool_calls'], 4)
-
-    def test_manager_caps_child_cost_to_parent_remaining(self) -> None:
-        from teaagent.subagent_run_context import (
-            bind_parent_session_cost_cents,
-            reset_parent_session_cost_cents,
+def test_resolve_requires_explicit_shared_on_git_repo() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _init_git_repo(root)
+        assert (
+            resolve_subagent_isolation('shared', root=root)
+            == DEFAULT_SUBAGENT_ISOLATION
         )
 
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / '.teaagent').mkdir()
-            config = ChatAgentConfig(
-                root=root,
-                max_estimated_cost_cents=1000,
-                max_subagent_depth=2,
-            )
-            manager = SubagentManager(
-                root=root,
-                parent_config=config,
-                parent_adapter=MagicMock(),
-            )
-            captured: dict[str, int | None] = {}
 
-            def fake_run_chat_agent(cfg, *args, **kwargs):
-                captured['max_estimated_cost_cents'] = cfg.max_estimated_cost_cents
-                from teaagent.runner import FinalAnswer, RunResult
+def test_resolve_falls_back_to_shared_without_git() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        assert resolve_subagent_isolation(None, root=root) == 'shared'
 
-                return RunResult(
-                    run_id='child-cost',
-                    final_answer=FinalAnswer(content='ok'),
-                    iterations=1,
-                    tool_calls=0,
-                    status='completed',
+
+def test_manager_enforces_global_depth_limit() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        config = ChatAgentConfig(root=root, max_subagent_depth=1)
+        manager = SubagentManager(
+            root=root,
+            parent_config=config,
+            parent_adapter=MagicMock(),
+        )
+        result = manager.run_subagent(
+            task='too deep',
+            parent_run_id='parent-1',
+            depth=1,
+            isolation='shared',
+        )
+        assert result['status'] == 'error'
+        assert 'global subagent depth' in result['message']
+
+
+def test_manager_caps_child_budget_to_parent() -> None:
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        config = ChatAgentConfig(
+            root=root,
+            max_iterations=3,
+            max_tool_calls=4,
+            max_subagent_depth=2,
+        )
+        manager = SubagentManager(
+            root=root,
+            parent_config=config,
+            parent_adapter=MagicMock(),
+        )
+        captured: dict[str, int] = {}
+
+        def fake_run_chat_agent(cfg, *args, **kwargs):
+            captured['max_iterations'] = cfg.max_iterations
+            captured['max_tool_calls'] = cfg.max_tool_calls
+            from teaagent.runner import FinalAnswer, RunResult
+
+            return RunResult(
+                run_id='child-1',
+                final_answer=FinalAnswer(content='ok'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
+            )
+
+        with patch('teaagent.chat_agent.run_chat_agent', fake_run_chat_agent):
+            manager.run_subagent(
+                task='cap me',
+                parent_run_id='parent-1',
+                depth=0,
+                max_iterations=99,
+                max_tool_calls=99,
+                isolation='shared',
+            )
+
+        assert captured['max_iterations'] == 3
+        assert captured['max_tool_calls'] == 4
+
+
+def test_manager_caps_child_cost_to_parent_remaining() -> None:
+    from teaagent.subagent_run_context import (
+        bind_parent_session_cost_cents,
+        reset_parent_session_cost_cents,
+    )
+
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / '.teaagent').mkdir()
+        config = ChatAgentConfig(
+            root=root,
+            max_estimated_cost_cents=1000,
+            max_subagent_depth=2,
+        )
+        manager = SubagentManager(
+            root=root,
+            parent_config=config,
+            parent_adapter=MagicMock(),
+        )
+        captured: dict[str, int | None] = {}
+
+        def fake_run_chat_agent(cfg, *args, **kwargs):
+            captured['max_estimated_cost_cents'] = cfg.max_estimated_cost_cents
+            from teaagent.runner import FinalAnswer, RunResult
+
+            return RunResult(
+                run_id='child-cost',
+                final_answer=FinalAnswer(content='ok'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
+            )
+
+        token = bind_parent_session_cost_cents(750.0)
+        try:
+            with patch('teaagent.chat_agent.run_chat_agent', fake_run_chat_agent):
+                manager.run_subagent(
+                    task='spend carefully',
+                    parent_run_id='parent-cost',
+                    depth=0,
+                    isolation='shared',
                 )
+        finally:
+            reset_parent_session_cost_cents(token)
 
-            token = bind_parent_session_cost_cents(750.0)
-            try:
-                with patch('teaagent.chat_agent.run_chat_agent', fake_run_chat_agent):
-                    manager.run_subagent(
-                        task='spend carefully',
-                        parent_run_id='parent-cost',
-                        depth=0,
-                        isolation='shared',
-                    )
-            finally:
-                reset_parent_session_cost_cents(token)
-
-            self.assertEqual(captured['max_estimated_cost_cents'], 250)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert captured['max_estimated_cost_cents'] == 250

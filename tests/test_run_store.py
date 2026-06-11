@@ -4,7 +4,6 @@ import io
 import json
 import stat
 import tempfile
-import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -19,354 +18,354 @@ def file_mode(path: Path) -> int:
     return stat.S_IMODE(path.stat().st_mode)
 
 
-class RunStoreTests(unittest.TestCase):
-    def test_run_store_persists_and_summarizes_audit_events(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-1', task='demo')
-            audit.record('run_completed', 'run-1', answer='done', metadata={})
-            result = RunResult(
-                run_id='run-1',
-                final_answer=FinalAnswer('done'),
+def test_run_store_persists_and_summarizes_audit_events() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-1', task='demo')
+        audit.record('run_completed', 'run-1', answer='done', metadata={})
+        result = RunResult(
+            run_id='run-1',
+            final_answer=FinalAnswer('done'),
+            iterations=1,
+            tool_calls=0,
+            status='completed',
+        )
+
+        store.logger_for_result(result, audit)
+        summaries = store.list_runs()
+        events = store.show_run('run-1')
+
+        assert summaries[0].run_id == 'run-1'
+        assert summaries[0].status == 'completed'
+        assert summaries[0].final_answer == 'done'
+        assert events[0]['event_type'] == 'run_started'
+        assert (Path(tmp) / '.teaagent' / 'runs' / 'run-1.jsonl').exists()
+
+
+def test_run_store_uses_owner_only_permissions() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'secure-run', task='demo')
+        store.logger_for_result(
+            RunResult(
+                run_id='secure-run',
+                final_answer=None,
                 iterations=1,
                 tool_calls=0,
                 status='completed',
-            )
+            ),
+            audit,
+        )
 
-            store.logger_for_result(result, audit)
-            summaries = store.list_runs()
-            events = store.show_run('run-1')
+        root = Path(tmp)
+        assert file_mode(root / '.teaagent') == 0o700
+        assert file_mode(root / '.teaagent' / 'runs') == 0o700
+        assert file_mode(root / '.teaagent' / 'runs' / 'secure-run.jsonl') == 0o600
 
-            self.assertEqual(summaries[0].run_id, 'run-1')
-            self.assertEqual(summaries[0].status, 'completed')
-            self.assertEqual(summaries[0].final_answer, 'done')
-            self.assertEqual(events[0]['event_type'], 'run_started')
-            self.assertTrue((Path(tmp) / '.teaagent' / 'runs' / 'run-1.jsonl').exists())
 
-    def test_run_store_uses_owner_only_permissions(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'secure-run', task='demo')
-            store.logger_for_result(
-                RunResult(
-                    run_id='secure-run',
-                    final_answer=None,
-                    iterations=1,
-                    tool_calls=0,
-                    status='completed',
-                ),
-                audit,
-            )
+def test_task_for_run_extracts_original_task() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-task', task='resume me')
+        audit.record('run_completed', 'run-task', answer='ok', metadata={})
+        store.logger_for_result(
+            RunResult(
+                run_id='run-task',
+                final_answer=FinalAnswer('ok'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
+            ),
+            audit,
+        )
 
-            root = Path(tmp)
-            self.assertEqual(file_mode(root / '.teaagent'), 0o700)
-            self.assertEqual(file_mode(root / '.teaagent' / 'runs'), 0o700)
-            self.assertEqual(
-                file_mode(root / '.teaagent' / 'runs' / 'secure-run.jsonl'), 0o600
-            )
+        assert store.task_for_run('run-task') == 'resume me'
 
-    def test_task_for_run_extracts_original_task(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-task', task='resume me')
-            audit.record('run_completed', 'run-task', answer='ok', metadata={})
-            store.logger_for_result(
-                RunResult(
-                    run_id='run-task',
-                    final_answer=FinalAnswer('ok'),
-                    iterations=1,
-                    tool_calls=0,
-                    status='completed',
-                ),
-                audit,
-            )
 
-            self.assertEqual(store.task_for_run('run-task'), 'resume me')
+def test_cli_lists_and_shows_runs() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-2', task='demo')
+        audit.record('run_failed', 'run-2', category='model_logic', message='x')
+        store.logger_for_result(
+            RunResult(
+                run_id='run-2',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
+                status='failed:model_logic',
+            ),
+            audit,
+        )
 
-    def test_cli_lists_and_shows_runs(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-2', task='demo')
-            audit.record('run_failed', 'run-2', category='model_logic', message='x')
-            store.logger_for_result(
-                RunResult(
-                    run_id='run-2',
-                    final_answer=None,
-                    iterations=1,
-                    tool_calls=0,
-                    status='failed:model_logic',
-                ),
-                audit,
-            )
+        list_output = io.StringIO()
+        show_output = io.StringIO()
+        with redirect_stdout(list_output):
+            list_code = main(['agent', 'runs', '--root', tmp])
+        with redirect_stdout(show_output):
+            show_code = main(['agent', 'show', 'run-2', '--root', tmp])
 
-            list_output = io.StringIO()
-            show_output = io.StringIO()
-            with redirect_stdout(list_output):
-                list_code = main(['agent', 'runs', '--root', tmp])
-            with redirect_stdout(show_output):
-                show_code = main(['agent', 'show', 'run-2', '--root', tmp])
+        assert list_code == 0
+        assert show_code == 0
+        assert json.loads(list_output.getvalue())[0]['run_id'] == 'run-2'
+        assert json.loads(show_output.getvalue())[1]['event_type'] == 'run_failed'
 
-            self.assertEqual(list_code, 0)
-            self.assertEqual(show_code, 0)
-            self.assertEqual(json.loads(list_output.getvalue())[0]['run_id'], 'run-2')
-            self.assertEqual(
-                json.loads(show_output.getvalue())[1]['event_type'], 'run_failed'
-            )
 
-    def test_list_runs_skips_corrupt_jsonl_files(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-ok', task='demo')
-            audit.record('run_completed', 'run-ok', answer='ok', metadata={})
-            store.logger_for_result(
-                RunResult(
-                    run_id='run-ok',
-                    final_answer=FinalAnswer('ok'),
-                    iterations=1,
-                    tool_calls=0,
-                    status='completed',
-                ),
-                audit,
-            )
-            (Path(tmp) / '.teaagent' / 'runs' / 'broken.jsonl').write_text(
-                'not json\n', encoding='utf-8'
-            )
+def test_list_runs_skips_corrupt_jsonl_files() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-ok', task='demo')
+        audit.record('run_completed', 'run-ok', answer='ok', metadata={})
+        store.logger_for_result(
+            RunResult(
+                run_id='run-ok',
+                final_answer=FinalAnswer('ok'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
+            ),
+            audit,
+        )
+        (Path(tmp) / '.teaagent' / 'runs' / 'broken.jsonl').write_text(
+            'not json\n', encoding='utf-8'
+        )
 
-            summaries = store.list_runs()
+        summaries = store.list_runs()
 
-            self.assertEqual([summary.run_id for summary in summaries], ['run-ok'])
+        assert [summary.run_id for summary in summaries] == ['run-ok']
 
-    def test_health_report_tracks_corrupt_runs(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            # Write a valid run
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-ok', task='demo')
-            audit.record('run_completed', 'run-ok', answer='ok', metadata={})
-            store.logger_for_result(
-                RunResult(
-                    run_id='run-ok',
-                    final_answer=FinalAnswer('ok'),
-                    iterations=1,
-                    tool_calls=0,
-                    status='completed',
-                ),
-                audit,
-            )
-            # Write a corrupt run file
-            (Path(tmp) / '.teaagent' / 'runs' / 'corrupt.jsonl').write_text(
-                'not json\n', encoding='utf-8'
-            )
 
-            report = store.health_report()
-            self.assertEqual(report['corrupt_runs'], 1)
-            self.assertEqual(report['total_runs'], 2)
-            self.assertFalse(report['healthy'])
+def test_health_report_tracks_corrupt_runs() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        # Write a valid run
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-ok', task='demo')
+        audit.record('run_completed', 'run-ok', answer='ok', metadata={})
+        store.logger_for_result(
+            RunResult(
+                run_id='run-ok',
+                final_answer=FinalAnswer('ok'),
+                iterations=1,
+                tool_calls=0,
+                status='completed',
+            ),
+            audit,
+        )
+        # Write a corrupt run file
+        (Path(tmp) / '.teaagent' / 'runs' / 'corrupt.jsonl').write_text(
+            'not json\n', encoding='utf-8'
+        )
 
-    def test_list_runs_skips_records_without_run_id(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            (Path(tmp) / '.teaagent' / 'runs' / 'missing-id.jsonl').write_text(
-                json.dumps({'event_type': 'run_started', 'payload': {'task': 'x'}})
-                + '\n',
-                encoding='utf-8',
-            )
+        report = store.health_report()
+        assert report['corrupt_runs'] == 1
+        assert report['total_runs'] == 2
+        assert not report['healthy']
 
-            self.assertEqual(store.list_runs(), [])
 
-    def test_run_paused_summarizes_as_pending_approval(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-paused', task='write')
-            audit.record(
-                'run_paused',
-                'run-paused',
+def test_list_runs_skips_records_without_run_id() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        (Path(tmp) / '.teaagent' / 'runs' / 'missing-id.jsonl').write_text(
+            json.dumps({'event_type': 'run_started', 'payload': {'task': 'x'}}) + '\n',
+            encoding='utf-8',
+        )
+
+        assert store.list_runs() == []
+
+
+def test_run_paused_summarizes_as_pending_approval() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-paused', task='write')
+        audit.record(
+            'run_paused',
+            'run-paused',
+            status='pending_approval',
+            approval={'call_id': 'write-1'},
+        )
+        store.logger_for_result(
+            RunResult(
+                run_id='run-paused',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
                 status='pending_approval',
-                approval={'call_id': 'write-1'},
-            )
+            ),
+            audit,
+        )
+
+        assert store.list_runs()[0].status == 'pending_approval'
+        assert store.heartbeat_for_run('run-paused')['status'] == 'pending_approval'
+
+
+def test_observations_for_run_returns_completed_tool_calls() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-obs', task='read')
+        audit.record(
+            'tool_call_completed',
+            'run-obs',
+            call_id='r1',
+            tool_name='workspace_read_file',
+            result={'path': 'a.txt', 'content': 'hi', 'truncated': False},
+        )
+        audit.record(
+            'tool_call_completed',
+            'run-obs',
+            call_id='r2',
+            tool_name='workspace_read_file',
+            result={'path': 'b.txt', 'content': 'yo', 'truncated': False},
+        )
+        store.logger_for_result(
+            RunResult(
+                run_id='run-obs',
+                final_answer=None,
+                iterations=2,
+                tool_calls=2,
+                status='pending_approval',
+            ),
+            audit,
+        )
+
+        observations = store.observations_for_run('run-obs')
+
+        assert [obs['call_id'] for obs in observations] == ['r1', 'r2']
+        assert observations[0]['result']['path'] == 'a.txt'
+        assert observations[0]['result']['content'] == AUDIT_REDACTED
+
+
+def test_pending_approval_for_run_returns_last_unresolved() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-pend', task='write')
+        audit.record(
+            'tool_call_pending_approval',
+            'run-pend',
+            call_id='write-1',
+            tool_name='workspace_write_file',
+            arguments={'path': 'x.txt', 'content': 'x'},
+        )
+        store.logger_for_result(
+            RunResult(
+                run_id='run-pend',
+                final_answer=None,
+                iterations=1,
+                tool_calls=0,
+                status='pending_approval',
+            ),
+            audit,
+        )
+
+        pending = store.pending_approval_for_run('run-pend')
+
+        assert pending is not None
+        assert pending['call_id'] == 'write-1'
+        assert pending['tool_name'] == 'workspace_write_file'
+        assert pending['arguments']['path'] == 'x.txt'
+        assert pending['arguments']['content'] == AUDIT_REDACTED
+
+
+def test_pending_approval_for_run_clears_after_resolution() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        audit = store.audit_logger()
+        audit.record('run_started', 'run-resolved', task='write')
+        audit.record(
+            'tool_call_pending_approval',
+            'run-resolved',
+            call_id='write-1',
+            tool_name='workspace_write_file',
+            arguments={'path': 'x.txt', 'content': 'x'},
+        )
+        audit.record('tool_call_approved', 'run-resolved', call_id='write-1')
+        store.logger_for_result(
+            RunResult(
+                run_id='run-resolved',
+                final_answer=None,
+                iterations=2,
+                tool_calls=1,
+                status='completed',
+            ),
+            audit,
+        )
+
+        assert store.pending_approval_for_run('run-resolved') is None
+
+
+def test_runs_index_is_created_and_used() -> None:
+    """Test that the runs index is created and used for O(1) list_runs()."""
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        # Create multiple runs
+        for i in range(5):
+            audit = store.audit_logger()
+            run_id = f'run-{i}'
+            audit.record('run_started', run_id, task=f'task-{i}')
+            audit.record('run_completed', run_id, answer=f'done-{i}', metadata={})
             store.logger_for_result(
                 RunResult(
-                    run_id='run-paused',
-                    final_answer=None,
+                    run_id=run_id,
+                    final_answer=FinalAnswer(f'done-{i}'),
                     iterations=1,
                     tool_calls=0,
-                    status='pending_approval',
-                ),
-                audit,
-            )
-
-            self.assertEqual(store.list_runs()[0].status, 'pending_approval')
-            self.assertEqual(
-                store.heartbeat_for_run('run-paused')['status'], 'pending_approval'
-            )
-
-    def test_observations_for_run_returns_completed_tool_calls(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-obs', task='read')
-            audit.record(
-                'tool_call_completed',
-                'run-obs',
-                call_id='r1',
-                tool_name='workspace_read_file',
-                result={'path': 'a.txt', 'content': 'hi', 'truncated': False},
-            )
-            audit.record(
-                'tool_call_completed',
-                'run-obs',
-                call_id='r2',
-                tool_name='workspace_read_file',
-                result={'path': 'b.txt', 'content': 'yo', 'truncated': False},
-            )
-            store.logger_for_result(
-                RunResult(
-                    run_id='run-obs',
-                    final_answer=None,
-                    iterations=2,
-                    tool_calls=2,
-                    status='pending_approval',
-                ),
-                audit,
-            )
-
-            observations = store.observations_for_run('run-obs')
-
-            self.assertEqual([obs['call_id'] for obs in observations], ['r1', 'r2'])
-            self.assertEqual(observations[0]['result']['path'], 'a.txt')
-            self.assertEqual(observations[0]['result']['content'], AUDIT_REDACTED)
-
-    def test_pending_approval_for_run_returns_last_unresolved(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-pend', task='write')
-            audit.record(
-                'tool_call_pending_approval',
-                'run-pend',
-                call_id='write-1',
-                tool_name='workspace_write_file',
-                arguments={'path': 'x.txt', 'content': 'x'},
-            )
-            store.logger_for_result(
-                RunResult(
-                    run_id='run-pend',
-                    final_answer=None,
-                    iterations=1,
-                    tool_calls=0,
-                    status='pending_approval',
-                ),
-                audit,
-            )
-
-            pending = store.pending_approval_for_run('run-pend')
-
-            self.assertIsNotNone(pending)
-            self.assertEqual(pending['call_id'], 'write-1')
-            self.assertEqual(pending['tool_name'], 'workspace_write_file')
-            self.assertEqual(pending['arguments']['path'], 'x.txt')
-            self.assertEqual(pending['arguments']['content'], AUDIT_REDACTED)
-
-    def test_pending_approval_for_run_clears_after_resolution(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            audit = store.audit_logger()
-            audit.record('run_started', 'run-resolved', task='write')
-            audit.record(
-                'tool_call_pending_approval',
-                'run-resolved',
-                call_id='write-1',
-                tool_name='workspace_write_file',
-                arguments={'path': 'x.txt', 'content': 'x'},
-            )
-            audit.record('tool_call_approved', 'run-resolved', call_id='write-1')
-            store.logger_for_result(
-                RunResult(
-                    run_id='run-resolved',
-                    final_answer=None,
-                    iterations=2,
-                    tool_calls=1,
                     status='completed',
                 ),
                 audit,
             )
 
-            self.assertIsNone(store.pending_approval_for_run('run-resolved'))
+        # Verify index file exists
+        index_path = Path(tmp) / '.teaagent' / 'runs' / 'runs-index.jsonl'
+        assert index_path.exists()
 
-    def test_runs_index_is_created_and_used(self) -> None:
-        """Test that the runs index is created and used for O(1) list_runs()."""
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            # Create multiple runs
-            for i in range(5):
-                audit = store.audit_logger()
-                run_id = f'run-{i}'
-                audit.record('run_started', run_id, task=f'task-{i}')
-                audit.record('run_completed', run_id, answer=f'done-{i}', metadata={})
-                store.logger_for_result(
-                    RunResult(
-                        run_id=run_id,
-                        final_answer=FinalAnswer(f'done-{i}'),
-                        iterations=1,
-                        tool_calls=0,
-                        status='completed',
-                    ),
-                    audit,
-                )
-
-            # Verify index file exists
-            index_path = Path(tmp) / '.teaagent' / 'runs' / 'runs-index.jsonl'
-            self.assertTrue(index_path.exists())
-
-            # Verify list_runs uses the index (should be fast and return correct data)
-            summaries = store.list_runs()
-            self.assertEqual(len(summaries), 5)
-            run_ids = [s.run_id for s in summaries]
-            self.assertIn('run-0', run_ids)
-            self.assertIn('run-4', run_ids)
-
-    def test_rebuild_index(self) -> None:
-        """Test that rebuild_index recreates the index from scratch."""
-        with tempfile.TemporaryDirectory() as tmp:
-            store = RunStore(tmp)
-            # Create runs without using logger_for_result (no index)
-            for i in range(3):
-                audit = store.audit_logger()
-                run_id = f'run-{i}'
-                audit.record('run_started', run_id, task=f'task-{i}')
-                audit.record('run_completed', run_id, answer=f'done-{i}', metadata={})
-                # Manually write the file without updating index
-                target = store.run_path(run_id)
-                from teaagent.storage import atomic_write_text
-
-                with file_lock(audit.path):
-                    content = audit.path.read_text(encoding='utf-8')
-                atomic_write_text(target, content)
-                from teaagent.audit import secure_audit_file
-
-                secure_audit_file(target)
-                audit.path.unlink(missing_ok=True)
-
-            # Index should not exist yet
-            index_path = Path(tmp) / '.teaagent' / 'runs' / 'runs-index.jsonl'
-            self.assertFalse(index_path.exists())
-
-            # Rebuild index
-            store.rebuild_index()
-
-            # Index should now exist
-            self.assertTrue(index_path.exists())
-
-            # list_runs should now use the index
-            summaries = store.list_runs()
-            self.assertEqual(len(summaries), 3)
+        # Verify list_runs uses the index (should be fast and return correct data)
+        summaries = store.list_runs()
+        assert len(summaries) == 5
+        run_ids = [s.run_id for s in summaries]
+        assert 'run-0' in run_ids
+        assert 'run-4' in run_ids
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_rebuild_index() -> None:
+    """Test that rebuild_index recreates the index from scratch."""
+    with tempfile.TemporaryDirectory() as tmp:
+        store = RunStore(tmp)
+        # Create runs without using logger_for_result (no index)
+        for i in range(3):
+            audit = store.audit_logger()
+            run_id = f'run-{i}'
+            audit.record('run_started', run_id, task=f'task-{i}')
+            audit.record('run_completed', run_id, answer=f'done-{i}', metadata={})
+            # Manually write the file without updating index
+            target = store.run_path(run_id)
+            from teaagent.storage import atomic_write_text
+
+            with file_lock(audit.path):
+                content = audit.path.read_text(encoding='utf-8')
+            atomic_write_text(target, content)
+            from teaagent.audit import secure_audit_file
+
+            secure_audit_file(target)
+            audit.path.unlink(missing_ok=True)
+
+        # Index should not exist yet
+        index_path = Path(tmp) / '.teaagent' / 'runs' / 'runs-index.jsonl'
+        assert not index_path.exists()
+
+        # Rebuild index
+        store.rebuild_index()
+
+        # Index should now exist
+        assert index_path.exists()
+
+        # list_runs should now use the index
+        summaries = store.list_runs()
+        assert len(summaries) == 3

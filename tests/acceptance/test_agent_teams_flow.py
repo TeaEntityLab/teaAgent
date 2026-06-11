@@ -1,6 +1,38 @@
-"""Acceptance test for Agent Teams / Swarm Coordination.
+"""Test module for Agent Teams / Swarm Coordination.
 
-Verifies: TeamDef loading, TeamOrchestrator, tool registration.
+This module tests the agent teams system, which enables coordinated execution
+of multiple specialized agents (a swarm) to accomplish complex tasks. Teams
+define specialists with different roles and merge strategies for combining results.
+
+Key concepts tested:
+- Team Definition Loading: TeamDef JSON files are loaded from .teaagent/teams/
+- Team Orchestrator: Manages team execution and result merging
+- Specialist Roles: Teams define specialists with specific system prompts
+- Merge Strategies: Results can be merged using strategies like concatenate
+- Tool Registration: Team-related tools are registered for agent use
+- Error Handling: Unknown teams are handled gracefully
+
+Acceptance Criteria:
+- AC1: TeamDef JSON files are loaded from .teaagent/teams/ directory
+- AC2: TeamOrchestrator can list available teams
+- AC3: TeamOrchestrator can execute teams and return results
+- AC4: Team definitions include name, description, max_concurrent, and specialists
+- AC5: Specialists have name, description, and system_prompt
+- AC6: Merge strategies (e.g., concatenate) combine specialist results
+- AC7: Unknown team names return error status
+
+Technical Details:
+- load_team_defs loads team definitions from JSON files
+- TeamOrchestrator manages team execution via subagent_manager
+- TeamDef includes metadata and specialist configurations
+- Merge strategies determine how specialist results are combined
+- Teams are stored in .teaagent/teams/*.json files
+- SubagentManager executes individual specialists
+
+References:
+- Agent teams design: /docs/architecture/agent_teams.md
+- Swarm coordination: /docs/architecture/swarm_coordination.md
+- Team definition format: /docs/specs/team_def_format.md
 """
 
 from __future__ import annotations

@@ -39,7 +39,10 @@ def test_automation_permission_mode_matrix_flows_into_background_command(
                     str(tmp_path),
                 ]
             )
-        assert add_code == 0
+        # Verify automation add command succeeds for each permission mode
+        assert add_code == 0, (
+            f'Expected automation add to succeed for mode {mode!r}, got exit code {add_code}'
+        )
         automation_id = json.loads(add_out.getvalue())['automation']['automation_id']
 
         run_out = io.StringIO()
@@ -54,9 +57,15 @@ def test_automation_permission_mode_matrix_flows_into_background_command(
                     str(tmp_path),
                 ]
             )
-        assert run_code == 0
+        # Verify automation run command succeeds
+        assert run_code == 0, (
+            f'Expected automation run to succeed for {automation_id}, got exit code {run_code}'
+        )
         payload = json.loads(run_out.getvalue())
-        assert payload['status'] in {'background_started', 'skipped_running'}
+        # Verify run status is either started or skipped (if already running)
+        assert payload['status'] in {'background_started', 'skipped_running'}, (
+            f'Expected status "background_started" or "skipped_running", got {payload["status"]!r}'
+        )
         if payload['status'] != 'background_started':
             continue
         record_path = (
@@ -64,9 +73,15 @@ def test_automation_permission_mode_matrix_flows_into_background_command(
         )
         record = json.loads(record_path.read_text(encoding='utf-8'))
         command = record['command']
-        assert '--permission-mode' in command
+        # Verify permission mode flag is present in background command
+        assert '--permission-mode' in command, (
+            f'Expected --permission-mode flag in command for mode {mode!r}'
+        )
         idx = command.index('--permission-mode')
-        assert command[idx + 1] == mode
+        # Verify the correct permission mode value is passed
+        assert command[idx + 1] == mode, (
+            f'Expected permission mode {mode!r} in command, got {command[idx + 1]!r}'
+        )
 
 
 def test_automation_auto_propose_skill_is_idempotent_for_same_run(
@@ -94,7 +109,8 @@ def test_automation_auto_propose_skill_is_idempotent_for_same_run(
                 'read-only',
             ]
         )
-    assert run_code == 0
+    # Verify agent run succeeds
+    assert run_code == 0, f'Expected agent run to succeed, got exit code {run_code}'
     run_id = json.loads(run_out.getvalue())['run_id']
 
     add_out = io.StringIO()
@@ -113,7 +129,10 @@ def test_automation_auto_propose_skill_is_idempotent_for_same_run(
                 str(tmp_path),
             ]
         )
-    assert add_code == 0
+    # Verify automation add with auto-propose-skill succeeds
+    assert add_code == 0, (
+        f'Expected automation add with auto-propose-skill to succeed, got exit code {add_code}'
+    )
     automation_id = json.loads(add_out.getvalue())['automation']['automation_id']
 
     bg_dir = tmp_path / '.teaagent' / 'background'
@@ -147,17 +166,29 @@ def test_automation_auto_propose_skill_is_idempotent_for_same_run(
     first_tick = io.StringIO()
     with redirect_stdout(first_tick):
         first_code = main(['agent', 'automation', 'tick', '--root', str(tmp_path)])
-    assert first_code == 0
+    # Verify first automation tick succeeds
+    assert first_code == 0, (
+        f'Expected first automation tick to succeed, got exit code {first_code}'
+    )
 
     second_tick = io.StringIO()
     with redirect_stdout(second_tick):
         second_code = main(['agent', 'automation', 'tick', '--root', str(tmp_path)])
-    assert second_code == 0
+    # Verify second automation tick succeeds (idempotency check)
+    assert second_code == 0, (
+        f'Expected second automation tick to succeed, got exit code {second_code}'
+    )
 
     candidates_out = io.StringIO()
     with redirect_stdout(candidates_out):
         list_code = main(['skill', 'candidate', 'list', '--root', str(tmp_path)])
-    assert list_code == 0
+    # Verify skill candidate list command succeeds
+    assert list_code == 0, (
+        f'Expected skill candidate list to succeed, got exit code {list_code}'
+    )
     rows = json.loads(candidates_out.getvalue())
     auto_rows = [row for row in rows if row['name'] == 'auto-skill-auto']
-    assert len(auto_rows) == 1
+    # Verify only one auto-skill candidate exists (idempotency: no duplicate creation)
+    assert len(auto_rows) == 1, (
+        f'Expected exactly 1 auto-skill-auto candidate (idempotency), got {len(auto_rows)}'
+    )

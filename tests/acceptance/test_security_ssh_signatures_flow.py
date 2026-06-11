@@ -20,8 +20,8 @@ from teaagent.ssh_signatures import (
 )
 
 
-def _generate_ssh_keypair() -> tuple[Path, str]:
-    """Generate a temporary SSH key pair and return (private_path, public_key_material)."""
+def _generate_ssh_keypair() -> tuple[Path, str, Path]:
+    """Generate a temporary SSH key pair and return (private_path, public_key_material, key_dir)."""
     key_dir = Path(tempfile.mkdtemp(prefix='teaagent-test-key-'))
     key_path = key_dir / 'id_ed25519'
     subprocess.run(
@@ -40,7 +40,7 @@ def _generate_ssh_keypair() -> tuple[Path, str]:
         timeout=30,
     )
     pubkey = key_path.with_suffix('.pub').read_text(encoding='utf-8').strip()
-    return key_path, pubkey
+    return key_path, pubkey, key_dir
 
 
 class TestBuildVoteSigningMessage:
@@ -70,42 +70,88 @@ class TestIsSSHSignatureBlob:
 
 class TestSignAndVerify:
     def test_round_trip_sign_and_verify(self):
-        key_path, pubkey = _generate_ssh_keypair()
-        message = build_vote_signing_message(
-            'prop-r1', 'peer-r1', 'approve', 'test task'
-        )
-        try:
-            signature = sign_message_ssh(key_path, message)
-        except (FileNotFoundError, RuntimeError) as e:
-            pytest.skip(f'ssh-keygen -Y sign not supported: {e}')
+        import os
+        import shutil
 
-        assert is_ssh_signature_blob(signature)
-        verified = verify_message_ssh(pubkey, message, signature)
-        if not verified:
-            pytest.skip('ssh-keygen -Y verify not supported on this platform')
-        assert verified
+        key_path, pubkey, key_dir = _generate_ssh_keypair()
+        try:
+            message = build_vote_signing_message(
+                'prop-r1', 'peer-r1', 'approve', 'test task'
+            )
+            try:
+                signature = sign_message_ssh(key_path, message)
+            except (FileNotFoundError, RuntimeError) as e:
+                pytest.skip(f'ssh-keygen -Y sign not supported: {e}')
+
+            assert is_ssh_signature_blob(signature)
+            verified = verify_message_ssh(pubkey, message, signature)
+            if not verified:
+                pytest.skip('ssh-keygen -Y verify not supported on this platform')
+            assert verified
+        finally:
+            # Verify cleanup
+            assert os.path.exists(key_dir), (
+                f'Temporary directory {key_dir} should still exist before cleanup'
+            )
+            shutil.rmtree(key_dir)
+            assert not os.path.exists(key_dir), (
+                f'Temporary directory {key_dir} was not cleaned up'
+            )
 
     def test_tampered_message_fails_verification(self):
-        key_path, pubkey = _generate_ssh_keypair()
-        message = build_vote_signing_message('prop-r2', 'peer-r2', 'approve', 'good')
-        tampered = build_vote_signing_message('prop-r2', 'peer-r2', 'reject', 'evil')
-        try:
-            signature = sign_message_ssh(key_path, message)
-        except (FileNotFoundError, RuntimeError) as e:
-            pytest.skip(f'ssh-keygen -Y sign not supported: {e}')
+        import os
+        import shutil
 
-        assert not verify_message_ssh(pubkey, tampered, signature)
+        key_path, pubkey, key_dir = _generate_ssh_keypair()
+        try:
+            message = build_vote_signing_message(
+                'prop-r2', 'peer-r2', 'approve', 'good'
+            )
+            tampered = build_vote_signing_message(
+                'prop-r2', 'peer-r2', 'reject', 'evil'
+            )
+            try:
+                signature = sign_message_ssh(key_path, message)
+            except (FileNotFoundError, RuntimeError) as e:
+                pytest.skip(f'ssh-keygen -Y sign not supported: {e}')
+
+            assert not verify_message_ssh(pubkey, tampered, signature)
+        finally:
+            # Verify cleanup
+            assert os.path.exists(key_dir), (
+                f'Temporary directory {key_dir} should still exist before cleanup'
+            )
+            shutil.rmtree(key_dir)
+            assert not os.path.exists(key_dir), (
+                f'Temporary directory {key_dir} was not cleaned up'
+            )
 
     def test_wrong_key_fails_verification(self):
-        key_path, pubkey = _generate_ssh_keypair()
-        _, wrong_pubkey = _generate_ssh_keypair()
-        message = build_vote_signing_message('prop-r3', 'peer-r3', 'approve', 'task')
-        try:
-            signature = sign_message_ssh(key_path, message)
-        except (FileNotFoundError, RuntimeError) as e:
-            pytest.skip(f'ssh-keygen -Y sign not supported: {e}')
+        import os
+        import shutil
 
-        assert not verify_message_ssh(wrong_pubkey, message, signature)
+        key_path, pubkey, key_dir1 = _generate_ssh_keypair()
+        _, wrong_pubkey, key_dir2 = _generate_ssh_keypair()
+        try:
+            message = build_vote_signing_message(
+                'prop-r3', 'peer-r3', 'approve', 'task'
+            )
+            try:
+                signature = sign_message_ssh(key_path, message)
+            except (FileNotFoundError, RuntimeError) as e:
+                pytest.skip(f'ssh-keygen -Y sign not supported: {e}')
+
+            assert not verify_message_ssh(wrong_pubkey, message, signature)
+        finally:
+            # Verify cleanup for both key directories
+            for key_dir in [key_dir1, key_dir2]:
+                assert os.path.exists(key_dir), (
+                    f'Temporary directory {key_dir} should still exist before cleanup'
+                )
+                shutil.rmtree(key_dir)
+                assert not os.path.exists(key_dir), (
+                    f'Temporary directory {key_dir} was not cleaned up'
+                )
 
     def test_empty_signature_fails(self):
         assert not verify_message_ssh('ssh-ed25519 AAAAC3...', 'msg', '')

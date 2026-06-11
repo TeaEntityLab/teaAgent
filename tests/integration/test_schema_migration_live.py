@@ -103,7 +103,16 @@ def test_existing_data_survives_migration(tmp_path):
 
     row = conn.execute("SELECT name FROM items WHERE name='legacy-item'").fetchone()
     assert row is not None, 'legacy data must survive migration'
+
+    # Verify cleanup: connection should be properly closed
     conn.close()
+    # Verify no temporary files left in migration state
+    migration_state_dir = tmp_path / '.teaagent' / 'migration_state'
+    if migration_state_dir.exists():
+        # If migration state directory exists, it should be empty after successful migration
+        assert not any(migration_state_dir.iterdir()), (
+            'Migration state directory should be clean after successful migration'
+        )
 
 
 def test_version_tracking_prevents_double_apply(tmp_path):

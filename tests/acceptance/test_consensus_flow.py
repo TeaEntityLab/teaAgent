@@ -1,4 +1,44 @@
-"""AC: Federated swarm consensus end-to-end flow."""
+"""Test module for federated swarm consensus end-to-end flow.
+
+This module tests the consensus system for federated swarm coordination, which
+enables distributed decision-making across multiple peers before executing
+high-risk tasks. The consensus system provides cryptographic attestation and
+voting mechanisms to ensure agreement before dangerous operations.
+
+Key concepts tested:
+- Consensus Request: Requesting consensus for a task with risk level and threshold
+- Vote Submission: Peers submit signed votes (APPROVE/REJECT) for proposals
+- Attestation Generation: Approved proposals generate cryptographic attestations
+- Pre-Approval: Tasks matching pre-approved patterns can skip consensus
+- Vote Thresholds: Different thresholds (simple majority, supermajority, etc.)
+- Async Voting: Votes can be collected asynchronously with timeout
+- Swarm Integration: SwarmManager integrates consensus for task execution
+- Peer Registry: Peer identities and public keys are managed
+
+Acceptance Criteria:
+- AC1: Consensus requests create proposals in VOTING status
+- AC2: Votes can be submitted with cryptographic signatures
+- AC3: Consensus reaches APPROVED status when threshold is met
+- AC4: Attestations are generated for approved proposals
+- AC5: Pre-approved patterns allow tasks to skip consensus
+- AC6: Tasks without consensus are filtered from execution
+- AC7: Async vote collection works with threading and timeouts
+- AC8: Swarm executes tasks only after consensus is reached
+
+Technical Details:
+- ConsensusEngine manages proposal lifecycle and vote collection
+- PeerRegistry stores peer identities and SSH public keys
+- VotingThreshold defines approval requirements (SIMPLE_MAJORITY, etc.)
+- peer_vote_signature creates cryptographic signatures for votes
+- SwarmManager integrates consensus checking before task execution
+- ConsensusConfig enables pre-approval and async vote collection
+- RiskLevel (LOW, MEDIUM, HIGH, CRITICAL) determines consensus requirements
+
+References:
+- Consensus system design: /docs/architecture/consensus_system.md
+- Swarm coordination: /docs/architecture/swarm_coordination.md
+- Cryptographic attestation: /docs/security/attestation.md
+"""
 
 from __future__ import annotations
 

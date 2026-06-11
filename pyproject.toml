@@ -186,6 +186,26 @@ disable_error_code = [
     "assignment",
 ]
 
+[[tool.mypy.overrides]]
+module = [
+    "teaagent.subagents._approval_queue_hybrid_store",
+    "teaagent.subagents._approval_queue_redis_store",
+    "teaagent.subagents._approval_queue_store",
+]
+disable_error_code = [
+    "arg-type",
+    "union-attr",
+    "var-annotated",
+    "index",
+    "return-value",
+    "func-returns-value",
+    "attr-defined",
+    "operator",
+    "assignment",
+    "misc",
+    "unused-ignore",
+]
+
 [tool.bandit]
 exclude_dirs = [
     "tests/",

@@ -1,4 +1,39 @@
-"""AC-NEW: Automation run tickets must be self-contained before scheduling."""
+"""Test module for automation run ticket self-containment validation.
+
+This module tests the validation that automation run tickets must be self-contained
+before they can be scheduled and executed. This ensures that automations have all
+necessary information (acceptance criteria, clear task, etc.) to run reliably without
+human intervention.
+
+Key concepts tested:
+- Dry-Run Validation: Automation add --dry-run validates ticket readiness
+- Acceptance Criteria: Automations must have explicit acceptance criteria
+- Task Clarity: Vague or non-self-contained tasks are rejected
+- No Auto-Skills: Background runs default to --no-auto-skills for determinism
+- Skill Preservation: Selected skills and subagent flags are preserved
+- Collector Integrity: Changed collector scripts are blocked before execution
+
+Acceptance Criteria:
+- AC1: Dry-run fails when acceptance_criteria is missing
+- AC2: Dry-run rejects vague or non-self-contained tasks
+- AC3: Background runs include --no-auto-skills by default
+- AC4: Background runs include acceptance criteria in the task
+- AC5: Background runs preserve --skill and --subagent flags
+- AC6: Changed collector scripts cause integrity_failed status
+
+Technical Details:
+- AutomationStore validates ticket.ready before allowing runs
+- Ticket validation checks: acceptance_criteria, task clarity, collector integrity
+- --no-auto-skills prevents dynamic skill loading in background runs
+- collector_command_digest is stored and verified before each run
+- Fresh-session contract is injected into background task prompts
+- Skill selection (--skill) and subagent (--requires-subagent) are preserved
+
+References:
+- Automation v2 design: /docs/architecture/automation_v2.md
+- Ticket validation spec: /docs/specs/automation_tickets.md
+- Collector integrity: /docs/security/collector_integrity.md
+"""
 
 from __future__ import annotations
 

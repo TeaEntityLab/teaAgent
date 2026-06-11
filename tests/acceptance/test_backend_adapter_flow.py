@@ -1,12 +1,39 @@
-"""AC-NEW-25: Backend adapter and fallback routing flow.
+"""Test module for backend adapter and fallback routing.
 
-As a platform engineer, I want pluggable knowledge/code backends with safe
-fallback behavior so external tools (qmd/cx/codegraph-like) can be integrated
-without hard-coding one provider.
+This module tests the pluggable backend system for knowledge and code analysis,
+which enables integration with external tools (qmd/cx/codegraph-like) without
+hard-coding a single provider. The system supports automatic fallback when the
+primary backend fails.
 
-Acceptance criteria:
-- workspace_knowledge_search supports backend=auto and falls back on primary failure.
-- workspace_code_parse routes actions to a registered CodeParseBackend.
+Key concepts tested:
+- Knowledge Backend: Pluggable backends for workspace knowledge search
+- Code Parse Backend: Pluggable backends for code analysis operations
+- Fallback Routing: backend=auto falls back to secondary on primary failure
+- Backend Registration: Backends are registered via register_knowledge_backend
+- Health Checks: Backends implement health() for availability checks
+- Tool Integration: Backends are integrated into workspace tool registry
+
+Acceptance Criteria:
+- AC1: workspace_knowledge_search supports backend=auto with fallback
+- AC2: Primary backend failure triggers fallback to secondary backend
+- AC3: Fallback result includes fallback_used=True and primary_error
+- AC4: workspace_code_parse routes actions to registered CodeParseBackend
+- AC5: Code parse backend supports actions: overview, symbols, definition, references
+- AC6: Backend health checks are called before routing
+
+Technical Details:
+- register_knowledge_backend registers a backend by name
+- register_code_parse_backend registers a code parse backend by name
+- Backend=auto routing tries primary, falls back to secondary on error
+- Knowledge backends implement: health(), index(), search(), get()
+- Code parse backends implement: health(), overview(), symbols(), definition(), references()
+- build_workspace_tool_registry includes backend-aware tools
+- Fallback preserves error information for debugging
+
+References:
+- Backend adapter design: /docs/architecture/backend_adapter.md
+- Knowledge backend spec: /docs/specs/knowledge_backend.md
+- Code parse backend spec: /docs/specs/code_parse_backend.md
 """
 
 from __future__ import annotations

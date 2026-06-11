@@ -627,13 +627,17 @@ def _cmd_approve(tui: 'TeaAgentTUI', args: list[str]) -> bool:
     from teaagent.integration.approval_parity import grant_pending_approval
 
     grant = grant_pending_approval(tui.root, call_id)
-    if grant is None:
-        tui.output_fn(f"error: call_id '{call_id}' not found in pending approvals")
+    if grant is not None:
+        tui.approved_call_ids.add(call_id)
+        tui.output_fn(f'approved: {call_id}{selector_label}')
+        if resume:
+            return _handle_tui_command(tui, f'resume {grant["run_id"]}')
         return True
+
+    # Session pre-approval: track call_id in-memory until the tool call arrives.
+    # Persisted scoped approvals still require a pending request (grant above).
     tui.approved_call_ids.add(call_id)
     tui.output_fn(f'approved: {call_id}{selector_label}')
-    if resume:
-        return _handle_tui_command(tui, f'resume {grant["run_id"]}')
     return True
 
 

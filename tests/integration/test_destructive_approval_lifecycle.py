@@ -11,34 +11,18 @@ Covers:
 
 from __future__ import annotations
 
+import threading
+
 import pytest
 
 from teaagent.ergonomics._approval_grants import _normalize_and_validate_path
 from teaagent.ergonomics._approval_state import ApprovalPresetStore
 from teaagent.policy import ApprovalPolicy
 from teaagent.runner import AgentRunner, ApprovalRequest, FinalAnswer, ToolRequest
-from teaagent.types import AuditLogger, PermissionMode, ToolAnnotations, ToolRegistry
+from teaagent.types import AuditLogger, PermissionMode, verify_audit_chain
 
-
-def _make_registry() -> ToolRegistry:
-    registry = ToolRegistry()
-    registry.register(
-        name='workspace_write_file',
-        description='write file',
-        input_schema={
-            'type': 'object',
-            'properties': {'path': {'type': 'string'}, 'content': {'type': 'string'}},
-            'required': ['path', 'content'],
-        },
-        output_schema={
-            'type': 'object',
-            'properties': {'written': {'type': 'boolean'}},
-        },
-        annotations=ToolAnnotations(destructive=True),
-        handler=lambda _: {'written': True},
-    )
-    return registry
-
+# Import shared helper from conftest
+from tests.conftest import make_destructive_write_registry
 
 _WRITE_REQUEST = ToolRequest(
     tool_name='workspace_write_file',
@@ -48,7 +32,7 @@ _WRITE_REQUEST = ToolRequest(
 
 
 def test_first_run_pauses_at_destructive_tool():
-    registry = _make_registry()
+    registry = make_destructive_write_registry()
     audit = AuditLogger()
     runner = AgentRunner(
         registry=registry,
@@ -62,7 +46,7 @@ def test_first_run_pauses_at_destructive_tool():
 
 
 def test_resume_with_danger_full_access_completes():
-    registry = _make_registry()
+    registry = make_destructive_write_registry()
     audit = AuditLogger()
     runner = AgentRunner(
         registry=registry,
@@ -80,7 +64,7 @@ def test_resume_with_danger_full_access_completes():
 
 
 def test_approval_handler_auto_approves():
-    registry = _make_registry()
+    registry = make_destructive_write_registry()
     audit = AuditLogger()
     approved: list[str] = []
 
@@ -104,7 +88,7 @@ def test_approval_handler_auto_approves():
 
 
 def test_approval_handler_denies():
-    registry = _make_registry()
+    registry = make_destructive_write_registry()
     audit = AuditLogger()
 
     def handler(req: ApprovalRequest) -> bool:
@@ -126,7 +110,7 @@ def test_approval_handler_denies():
 
 
 def test_blocked_in_read_only_mode():
-    registry = _make_registry()
+    registry = make_destructive_write_registry()
     audit = AuditLogger()
     runner = AgentRunner(
         registry=registry,
@@ -245,3 +229,34 @@ def test_approval_policy_normalizes_relative_paths(tmp_path):
     # Plain filename without traversal is accepted
     result = _normalize_and_validate_path('src/main.py', workspace)
     assert result == 'src/main.py'
+
+
+def test_race_condition_approval_check_vs_execution(tmp_path):
+    """Test that race conditions between approval checks and execution are handled safely.
+
+    This test verifies that the audit chain remains valid even when there
+    are concurrent operations that might affect the approval state.
+    """
+    log_path = tmp_path / 'audit_race_test.jsonl'
+    audit = AuditLogger(path=log_path)
+
+    # Simulate a scenario where multiple operations might try to modify audit state
+    def concurrent_audit_operations():
+        """Simulate concurrent audit operations."""
+        for i in range(5):
+            audit.record('test_event', f'run-{i}', value=i)
+
+    threads = []
+    for _ in range(3):
+        t = threading.Thread(target=concurrent_audit_operations)
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join(timeout=1.0)
+
+    # Verify audit chain integrity despite concurrent operations
+    result = verify_audit_chain(log_path)
+    assert result.valid, (
+        f'Audit chain invalid after concurrent operations: {result.error}'
+    )

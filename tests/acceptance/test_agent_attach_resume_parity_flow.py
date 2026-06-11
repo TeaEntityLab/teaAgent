@@ -5,7 +5,6 @@ from __future__ import annotations
 import io
 import json
 import tempfile
-import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
@@ -26,46 +25,60 @@ def _seed_run(root: str, run_id: str = 'attach-parity') -> None:
     audit.record('run_completed', run_id, answer='done', cost_cents=3.5)
 
 
-class AgentAttachResumeParityFlowTests(unittest.TestCase):
-    def test_build_attach_snapshot_matches_cli_attach_payload(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            _seed_run(tmp)
-            store = RunStore(tmp)
-            snapshot = build_attach_snapshot(store, 'attach-parity')
+def test_build_attach_snapshot_matches_cli_attach_payload() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        _seed_run(tmp)
+        store = RunStore(tmp)
+        snapshot = build_attach_snapshot(store, 'attach-parity')
 
-            out = io.StringIO()
-            with redirect_stdout(out):
-                code = main(['agent', 'attach', 'attach-parity', '--root', tmp])
-            self.assertEqual(code, 0)
-            cli_payload = json.loads(out.getvalue())
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main(['agent', 'attach', 'attach-parity', '--root', tmp])
+        # Verify CLI attach command succeeds
+        assert code == 0, f'Expected CLI attach to succeed, got exit code {code}'
+        cli_payload = json.loads(out.getvalue())
 
-            self.assertEqual(cli_payload, snapshot)
-            self.assertEqual(
-                cli_payload['run_state']['schema_version'], RUN_STATE_SCHEMA_VERSION
-            )
-            self.assertEqual(cli_payload['run_state']['status'], 'completed')
-            self.assertEqual(cli_payload['run_state']['cost_cents'], 3.5)
-
-    def test_agent_attach_resume_delegates_to_resume_command(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            _seed_run(tmp)
-            tea = Path(tmp) / '.teaagent'
-            tea.mkdir(parents=True, exist_ok=True)
-            (tea / 'config.toml').write_text('provider = "gpt"\n', encoding='utf-8')
-
-            with patch(
-                'teaagent.cli._handlers._agent.runs.agent_resume_command',
-                return_value=0,
-            ) as resume:
-                code = main(
-                    ['agent', 'attach', 'attach-parity', '--resume', '--root', tmp]
-                )
-            self.assertEqual(code, 0)
-            resume.assert_called_once()
-            resume_args = resume.call_args[0][0]
-            self.assertEqual(resume_args.run_id, 'attach-parity')
-            self.assertEqual(resume_args.provider, 'gpt')
+        # Verify CLI payload matches programmatic snapshot
+        assert cli_payload == snapshot, (
+            'CLI attach payload should match build_attach_snapshot output'
+        )
+        # Verify schema version is current
+        assert cli_payload['run_state']['schema_version'] == RUN_STATE_SCHEMA_VERSION, (
+            f'Expected schema version {RUN_STATE_SCHEMA_VERSION}, '
+            f'got {cli_payload["run_state"]["schema_version"]}'
+        )
+        # Verify run status is completed
+        assert cli_payload['run_state']['status'] == 'completed', (
+            f'Expected status "completed", got {cli_payload["run_state"]["status"]!r}'
+        )
+        # Verify cost is preserved from seed data
+        assert cli_payload['run_state']['cost_cents'] == 3.5, (
+            f'Expected cost_cents 3.5, got {cli_payload["run_state"]["cost_cents"]}'
+        )
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_agent_attach_resume_delegates_to_resume_command() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        _seed_run(tmp)
+        tea = Path(tmp) / '.teaagent'
+        tea.mkdir(parents=True, exist_ok=True)
+        (tea / 'config.toml').write_text('provider = "gpt"\n', encoding='utf-8')
+
+        with patch(
+            'teaagent.cli._handlers._agent.runs.agent_resume_command',
+            return_value=0,
+        ) as resume:
+            code = main(['agent', 'attach', 'attach-parity', '--resume', '--root', tmp])
+        # Verify attach --resume command succeeds
+        assert code == 0, f'Expected attach --resume to succeed, got exit code {code}'
+        # Verify resume command was called exactly once
+        resume.assert_called_once()
+        resume_args = resume.call_args[0][0]
+        # Verify run_id is passed correctly to resume command
+        assert resume_args.run_id == 'attach-parity', (
+            f'Expected run_id "attach-parity", got {resume_args.run_id!r}'
+        )
+        # Verify provider from config is passed to resume command
+        assert resume_args.provider == 'gpt', (
+            f'Expected provider "gpt", got {resume_args.provider!r}'
+        )

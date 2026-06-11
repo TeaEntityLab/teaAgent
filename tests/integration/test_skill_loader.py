@@ -240,3 +240,82 @@ def test_extended_profile_discovers_codex_dir(tmp_path, monkeypatch):
     found = [s for s in skills if s.name == 'codex-skill']
     assert len(found) == 1
     assert 'from codex' in found[0].content
+
+
+# Negative test cases for malformed SKILL.md files
+def test_malformed_skill_missing_frontmatter(tmp_path, monkeypatch):
+    """Skill without frontmatter should be skipped or handled gracefully."""
+    import teaagent.skill_loader as sl
+
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(sl, '_BUILTIN_SKILL_DIR', tmp_path / 'nonexistent_builtin')
+
+    skill_dir = tmp_path / '.opencode' / 'skill'
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = skill_dir / 'malformed' / 'SKILL.md'
+    skill_file.parent.mkdir(parents=True, exist_ok=True)
+    # Write skill without frontmatter
+    skill_file.write_text('# Just a header\nNo frontmatter here', encoding='utf-8')
+
+    skills = load_skills(tmp_path)
+    # Should either skip or handle gracefully
+    assert isinstance(skills, list)
+
+
+def test_malformed_skill_invalid_yaml_frontmatter(tmp_path, monkeypatch):
+    """Skill with invalid YAML frontmatter should be handled gracefully."""
+    import teaagent.skill_loader as sl
+
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(sl, '_BUILTIN_SKILL_DIR', tmp_path / 'nonexistent_builtin')
+
+    skill_dir = tmp_path / '.opencode' / 'skill'
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = skill_dir / 'invalid_yaml' / 'SKILL.md'
+    skill_file.parent.mkdir(parents=True, exist_ok=True)
+    # Write skill with invalid YAML
+    skill_file.write_text(
+        '---\nname: test\ninvalid: yaml: content: [unclosed\n---\n\nContent',
+        encoding='utf-8',
+    )
+
+    skills = load_skills(tmp_path)
+    # Should handle gracefully without crashing
+    assert isinstance(skills, list)
+
+
+def test_malformed_skill_empty_file(tmp_path, monkeypatch):
+    """Empty SKILL.md file should be handled gracefully."""
+    import teaagent.skill_loader as sl
+
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(sl, '_BUILTIN_SKILL_DIR', tmp_path / 'nonexistent_builtin')
+
+    skill_dir = tmp_path / '.opencode' / 'skill'
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = skill_dir / 'empty' / 'SKILL.md'
+    skill_file.parent.mkdir(parents=True, exist_ok=True)
+    skill_file.write_text('', encoding='utf-8')
+
+    skills = load_skills(tmp_path)
+    # Should handle gracefully
+    assert isinstance(skills, list)
+
+
+def test_malformed_skill_missing_name(tmp_path, monkeypatch):
+    """Skill frontmatter without name field should be handled gracefully."""
+    import teaagent.skill_loader as sl
+
+    monkeypatch.setattr(sl, '_USER_SKILL_DIRS', [])
+    monkeypatch.setattr(sl, '_BUILTIN_SKILL_DIR', tmp_path / 'nonexistent_builtin')
+
+    skill_dir = tmp_path / '.opencode' / 'skill'
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = skill_dir / 'no_name' / 'SKILL.md'
+    skill_file.parent.mkdir(parents=True, exist_ok=True)
+    # Write skill without name in frontmatter
+    skill_file.write_text('---\ndescription: test\n---\n\nContent', encoding='utf-8')
+
+    skills = load_skills(tmp_path)
+    # Should handle gracefully
+    assert isinstance(skills, list)

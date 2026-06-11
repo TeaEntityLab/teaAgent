@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import unittest
-
 from teaagent import Document, KnowledgeGraph
 from teaagent.graphqlite_production import (
     GraphQLitePersistentStore,
@@ -79,67 +77,66 @@ class FakeGraphQLiteGraph:
         return []
 
 
-class GraphQLitePersistentStoreTests(unittest.TestCase):
-    def test_sync_from_and_to_knowledge_graph(self) -> None:
-        store = GraphQLitePersistentStore(
-            GraphQLiteProductionConfig(database=':memory:'),
-            graph_factory=FakeGraphQLiteGraph,
-        )
+def test_sync_from_and_to_knowledge_graph() -> None:
+    store = GraphQLitePersistentStore(
+        GraphQLiteProductionConfig(database=':memory:'),
+        graph_factory=FakeGraphQLiteGraph,
+    )
 
-        graph = KnowledgeGraph()
-        graph.add_document(
-            Document(doc_id='doc-1', text='Alice owns Acme Inc.', source='graph')
-        )
-        store.sync_from_knowledge_graph(graph)
+    graph = KnowledgeGraph()
+    graph.add_document(
+        Document(doc_id='doc-1', text='Alice owns Acme Inc.', source='graph')
+    )
+    store.sync_from_knowledge_graph(graph)
 
-        graph2 = KnowledgeGraph()
-        store.sync_to_knowledge_graph(graph2)
-        self.assertEqual(len(graph2.all_documents()), 1)
-        self.assertEqual(graph2.all_documents()[0].doc_id, 'doc-1')
-
-    def test_graph_retrieve_from_fake_store(self) -> None:
-        store = GraphQLitePersistentStore(
-            GraphQLiteProductionConfig(database=':memory:'),
-            graph_factory=FakeGraphQLiteGraph,
-        )
-
-        results = store.graph_retrieve('alice', max_depth=2, limit=5)
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].document.doc_id, 'doc-1')
-        self.assertGreater(results[0].score, 0)
-
-    def test_migration_status_on_memory_store(self) -> None:
-        store = GraphQLitePersistentStore(
-            GraphQLiteProductionConfig(database=':memory:'),
-            graph_factory=FakeGraphQLiteGraph,
-        )
-
-        status = store.migration_status()
-        self.assertIn('applied', status)
-        self.assertIn('pending', status)
-        self.assertIn('total', status)
-
-    def test_persistent_store_skips_migrations_on_memory(self) -> None:
-        store = GraphQLitePersistentStore(
-            GraphQLiteProductionConfig(
-                database=':memory:', auto_migrate=True, auto_index=True
-            ),
-            graph_factory=FakeGraphQLiteGraph,
-        )
-
-        for query in store.graph.queries:
-            self.assertNotIn('CREATE INDEX', query)
-
-    def test_fetch_document_from_store(self) -> None:
-        store = GraphQLitePersistentStore(
-            GraphQLiteProductionConfig(database=':memory:'),
-            graph_factory=FakeGraphQLiteGraph,
-        )
-
-        doc = store._fetch_document('doc-1')
-        self.assertIsNotNone(doc)
-        self.assertEqual(doc['doc_id'], 'doc-1')
+    graph2 = KnowledgeGraph()
+    store.sync_to_knowledge_graph(graph2)
+    assert len(graph2.all_documents()) == 1
+    assert graph2.all_documents()[0].doc_id == 'doc-1'
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_graph_retrieve_from_fake_store() -> None:
+    store = GraphQLitePersistentStore(
+        GraphQLiteProductionConfig(database=':memory:'),
+        graph_factory=FakeGraphQLiteGraph,
+    )
+
+    results = store.graph_retrieve('alice', max_depth=2, limit=5)
+    assert len(results) == 1
+    assert results[0].document.doc_id == 'doc-1'
+    assert results[0].score > 0
+
+
+def test_migration_status_on_memory_store() -> None:
+    store = GraphQLitePersistentStore(
+        GraphQLiteProductionConfig(database=':memory:'),
+        graph_factory=FakeGraphQLiteGraph,
+    )
+
+    status = store.migration_status()
+    assert 'applied' in status
+    assert 'pending' in status
+    assert 'total' in status
+
+
+def test_persistent_store_skips_migrations_on_memory() -> None:
+    store = GraphQLitePersistentStore(
+        GraphQLiteProductionConfig(
+            database=':memory:', auto_migrate=True, auto_index=True
+        ),
+        graph_factory=FakeGraphQLiteGraph,
+    )
+
+    for query in store.graph.queries:
+        assert 'CREATE INDEX' not in query
+
+
+def test_fetch_document_from_store() -> None:
+    store = GraphQLitePersistentStore(
+        GraphQLiteProductionConfig(database=':memory:'),
+        graph_factory=FakeGraphQLiteGraph,
+    )
+
+    doc = store._fetch_document('doc-1')
+    assert doc is not None
+    assert doc['doc_id'] == 'doc-1'

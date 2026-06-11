@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import unittest
 from pathlib import Path
+
+import pytest
 
 from teaagent.hooks import (
     HookConfig,
@@ -40,44 +41,212 @@ def _init_repo(root: Path) -> None:
     )
 
 
-class TestHookRegistry(unittest.TestCase):
-    def test_pre_hook_can_veto(self) -> None:
+def test_pre_hook_can_veto() -> None:
+    registry = HookRegistry()
+    registry.register_pre_hook(
+        lambda tool_name, args: (_ for _ in ()).throw(HookError('blocked'))
+    )
+    with pytest.raises(HookError) as ctx:
+        registry.run_pre_hooks('test_tool', {})
+    assert 'blocked' in str(ctx.value)
+
+
+def test_post_hook_receives_result() -> None:
+    results: list[dict] = []
+    registry = HookRegistry()
+    registry.register_post_hook(lambda tool_name, args, result: results.append(result))
+    registry.run_post_hooks('test_tool', {}, {'ok': True})
+    assert results == [{'ok': True}]
+
+
+def test_disabled_hooks_do_not_fire() -> None:
+    fired = []
+    registry = HookRegistry(
+        config=HookConfig(
+            pre_hooks=[lambda *a: fired.append('pre')],
+            post_hooks=[lambda *a: fired.append('post')],
+            enabled=False,
+        )
+    )
+    registry.run_pre_hooks('x', {})
+    registry.run_post_hooks('x', {}, {})
+    assert fired == []
+
+
+def test_pre_hook_veto_blocks_tool_execution() -> None:
+    registry = HookRegistry()
+    registry.register_pre_hook(
+        lambda tool_name, args: (_ for _ in ()).throw(HookError('vetoed'))
+    )
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='echo',
+        description='echo',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(),
+        handler=lambda args: {'ok': True},
+    )
+    with pytest.raises(HookError) as ctx:
+        tool_reg.execute('echo', {})
+    assert 'vetoed' in str(ctx.value)
+
+
+def test_post_hook_receives_tool_result() -> None:
+    results: list[dict] = []
+    registry = HookRegistry()
+    registry.register_post_hook(lambda tool_name, args, result: results.append(result))
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='echo',
+        description='echo',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={
+            'type': 'object',
+            'properties': {'value': {'type': 'integer'}},
+        },
+        annotations=ToolAnnotations(),
+        handler=lambda args: {'value': 42},
+    )
+    result = tool_reg.execute('echo', {})
+    assert result == {'value': 42}
+    assert results == [{'value': 42}]
+
+
+def test_pre_hook_mutates_arguments_passed_to_handler() -> None:
+    received_args: list[dict] = []
+    registry = HookRegistry()
+    registry.register_pre_hook(lambda tool_name, args: {**args, 'injected': True})
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='echo',
+        description='echo',
+        input_schema={
+            'type': 'object',
+            'properties': {'injected': {'type': 'boolean'}},
+        },
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(),
+        handler=lambda args: received_args.append(args) or {},
+    )
+    tool_reg.execute('echo', {})
+    assert received_args == [{'injected': True}]
+
+
+def test_pre_hook_mutation_is_revalidated_before_handler() -> None:
+    registry = HookRegistry()
+    registry.register_pre_hook(lambda tool_name, args: {**args, 'unexpected': True})
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='echo',
+        description='echo',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(),
+        handler=lambda args: {},
+    )
+
+    with pytest.raises(ToolValidationError):
+        tool_reg.execute('echo', {})
+
+
+def test_pre_hook_cannot_mutate_destructive_tool_arguments() -> None:
+    registry = HookRegistry()
+    registry.register_pre_hook(lambda tool_name, args: {**args, 'path': 'other.txt'})
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='write',
+        description='write',
+        input_schema={
+            'type': 'object',
+            'properties': {'path': {'type': 'string'}},
+            'required': ['path'],
+        },
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(destructive=True),
+        handler=lambda args: {},
+    )
+
+    with pytest.raises(ToolExecutionError):
+        tool_reg.execute('write', {'path': 'allowed.txt'})
+
+
+def test_post_hook_mutates_result_returned_by_execute() -> None:
+    registry = HookRegistry()
+    registry.register_post_hook(
+        lambda tool_name, args, result: {**result, 'extra': 'added'}
+    )
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='echo',
+        description='echo',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={
+            'type': 'object',
+            'properties': {
+                'value': {'type': 'integer'},
+                'extra': {'type': 'string'},
+            },
+        },
+        annotations=ToolAnnotations(),
+        handler=lambda args: {'value': 1},
+    )
+    result = tool_reg.execute('echo', {})
+    assert result == {'value': 1, 'extra': 'added'}
+
+
+def test_hook_mutations_are_audited_when_context_is_bound() -> None:
+    from teaagent.types import AuditLogger
+
+    audit = AuditLogger(path=None)
+    token = bind_tool_call_context(
+        ToolCallContext(audit=audit, run_id='run', call_id='call')
+    )
+    try:
+        registry = HookRegistry()
+        registry.register_pre_hook(lambda tool_name, args: {**args, 'injected': 1})
+        registry.register_post_hook(
+            lambda tool_name, args, result: {**result, 'post': True}
+        )
+        tool_reg = ToolRegistry(hook_registry=registry)
+        tool_reg.register(
+            name='echo',
+            description='echo',
+            input_schema={
+                'type': 'object',
+                'properties': {'injected': {'type': 'integer'}},
+            },
+            output_schema={
+                'type': 'object',
+                'properties': {
+                    'value': {'type': 'integer'},
+                    'post': {'type': 'boolean'},
+                },
+                'required': ['value', 'post'],
+            },
+            annotations=ToolAnnotations(),
+            handler=lambda args: {'value': args.get('injected', 0)},
+        )
+        tool_reg.execute('echo', {})
+    finally:
+        reset_tool_call_context(token)
+
+    event_types = [e.event_type for e in audit.events]
+    assert 'tool_hook_pre_mutation' in event_types
+    assert 'tool_hook_post_mutation' in event_types
+
+
+def test_hook_veto_is_audited_when_context_is_bound() -> None:
+    from teaagent.types import AuditLogger
+
+    audit = AuditLogger(path=None)
+    token = bind_tool_call_context(
+        ToolCallContext(audit=audit, run_id='run', call_id='call')
+    )
+    try:
         registry = HookRegistry()
         registry.register_pre_hook(
             lambda tool_name, args: (_ for _ in ()).throw(HookError('blocked'))
-        )
-        with self.assertRaises(HookError) as ctx:
-            registry.run_pre_hooks('test_tool', {})
-        self.assertIn('blocked', str(ctx.exception))
-
-    def test_post_hook_receives_result(self) -> None:
-        results: list[dict] = []
-        registry = HookRegistry()
-        registry.register_post_hook(
-            lambda tool_name, args, result: results.append(result)
-        )
-        registry.run_post_hooks('test_tool', {}, {'ok': True})
-        self.assertEqual(results, [{'ok': True}])
-
-    def test_disabled_hooks_do_not_fire(self) -> None:
-        fired = []
-        registry = HookRegistry(
-            config=HookConfig(
-                pre_hooks=[lambda *a: fired.append('pre')],
-                post_hooks=[lambda *a: fired.append('post')],
-                enabled=False,
-            )
-        )
-        registry.run_pre_hooks('x', {})
-        registry.run_post_hooks('x', {}, {})
-        self.assertEqual(fired, [])
-
-
-class TestHookIntegration(unittest.TestCase):
-    def test_pre_hook_veto_blocks_tool_execution(self) -> None:
-        registry = HookRegistry()
-        registry.register_pre_hook(
-            lambda tool_name, args: (_ for _ in ()).throw(HookError('vetoed'))
         )
         tool_reg = ToolRegistry(hook_registry=registry)
         tool_reg.register(
@@ -88,244 +257,76 @@ class TestHookIntegration(unittest.TestCase):
             annotations=ToolAnnotations(),
             handler=lambda args: {'ok': True},
         )
-        with self.assertRaises(HookError) as ctx:
+        with pytest.raises(HookError):
             tool_reg.execute('echo', {})
-        self.assertIn('vetoed', str(ctx.exception))
+    finally:
+        reset_tool_call_context(token)
 
-    def test_post_hook_receives_tool_result(self) -> None:
-        results: list[dict] = []
-        registry = HookRegistry()
-        registry.register_post_hook(
-            lambda tool_name, args, result: results.append(result)
-        )
-        tool_reg = ToolRegistry(hook_registry=registry)
-        tool_reg.register(
-            name='echo',
-            description='echo',
-            input_schema={'type': 'object', 'properties': {}},
-            output_schema={
-                'type': 'object',
-                'properties': {'value': {'type': 'integer'}},
-            },
-            annotations=ToolAnnotations(),
-            handler=lambda args: {'value': 42},
-        )
-        result = tool_reg.execute('echo', {})
-        self.assertEqual(result, {'value': 42})
-        self.assertEqual(results, [{'value': 42}])
-
-    def test_pre_hook_mutates_arguments_passed_to_handler(self) -> None:
-        received_args: list[dict] = []
-        registry = HookRegistry()
-        registry.register_pre_hook(lambda tool_name, args: {**args, 'injected': True})
-        tool_reg = ToolRegistry(hook_registry=registry)
-        tool_reg.register(
-            name='echo',
-            description='echo',
-            input_schema={
-                'type': 'object',
-                'properties': {'injected': {'type': 'boolean'}},
-            },
-            output_schema={'type': 'object', 'properties': {}},
-            annotations=ToolAnnotations(),
-            handler=lambda args: received_args.append(args) or {},
-        )
-        tool_reg.execute('echo', {})
-        self.assertEqual(received_args, [{'injected': True}])
-
-    def test_pre_hook_mutation_is_revalidated_before_handler(self) -> None:
-        registry = HookRegistry()
-        registry.register_pre_hook(lambda tool_name, args: {**args, 'unexpected': True})
-        tool_reg = ToolRegistry(hook_registry=registry)
-        tool_reg.register(
-            name='echo',
-            description='echo',
-            input_schema={'type': 'object', 'properties': {}},
-            output_schema={'type': 'object', 'properties': {}},
-            annotations=ToolAnnotations(),
-            handler=lambda args: {},
-        )
-
-        with self.assertRaises(ToolValidationError):
-            tool_reg.execute('echo', {})
-
-    def test_pre_hook_cannot_mutate_destructive_tool_arguments(self) -> None:
-        registry = HookRegistry()
-        registry.register_pre_hook(
-            lambda tool_name, args: {**args, 'path': 'other.txt'}
-        )
-        tool_reg = ToolRegistry(hook_registry=registry)
-        tool_reg.register(
-            name='write',
-            description='write',
-            input_schema={
-                'type': 'object',
-                'properties': {'path': {'type': 'string'}},
-                'required': ['path'],
-            },
-            output_schema={'type': 'object', 'properties': {}},
-            annotations=ToolAnnotations(destructive=True),
-            handler=lambda args: {},
-        )
-
-        with self.assertRaises(ToolExecutionError):
-            tool_reg.execute('write', {'path': 'allowed.txt'})
-
-    def test_post_hook_mutates_result_returned_by_execute(self) -> None:
-        registry = HookRegistry()
-        registry.register_post_hook(
-            lambda tool_name, args, result: {**result, 'extra': 'added'}
-        )
-        tool_reg = ToolRegistry(hook_registry=registry)
-        tool_reg.register(
-            name='echo',
-            description='echo',
-            input_schema={'type': 'object', 'properties': {}},
-            output_schema={
-                'type': 'object',
-                'properties': {
-                    'value': {'type': 'integer'},
-                    'extra': {'type': 'string'},
-                },
-            },
-            annotations=ToolAnnotations(),
-            handler=lambda args: {'value': 1},
-        )
-        result = tool_reg.execute('echo', {})
-        self.assertEqual(result, {'value': 1, 'extra': 'added'})
-
-    def test_hook_mutations_are_audited_when_context_is_bound(self) -> None:
-        from teaagent.types import AuditLogger
-
-        audit = AuditLogger(path=None)
-        token = bind_tool_call_context(
-            ToolCallContext(audit=audit, run_id='run', call_id='call')
-        )
-        try:
-            registry = HookRegistry()
-            registry.register_pre_hook(lambda tool_name, args: {**args, 'injected': 1})
-            registry.register_post_hook(
-                lambda tool_name, args, result: {**result, 'post': True}
-            )
-            tool_reg = ToolRegistry(hook_registry=registry)
-            tool_reg.register(
-                name='echo',
-                description='echo',
-                input_schema={
-                    'type': 'object',
-                    'properties': {'injected': {'type': 'integer'}},
-                },
-                output_schema={
-                    'type': 'object',
-                    'properties': {
-                        'value': {'type': 'integer'},
-                        'post': {'type': 'boolean'},
-                    },
-                    'required': ['value', 'post'],
-                },
-                annotations=ToolAnnotations(),
-                handler=lambda args: {'value': args.get('injected', 0)},
-            )
-            tool_reg.execute('echo', {})
-        finally:
-            reset_tool_call_context(token)
-
-        event_types = [e.event_type for e in audit.events]
-        self.assertIn('tool_hook_pre_mutation', event_types)
-        self.assertIn('tool_hook_post_mutation', event_types)
-
-    def test_hook_veto_is_audited_when_context_is_bound(self) -> None:
-        from teaagent.types import AuditLogger
-
-        audit = AuditLogger(path=None)
-        token = bind_tool_call_context(
-            ToolCallContext(audit=audit, run_id='run', call_id='call')
-        )
-        try:
-            registry = HookRegistry()
-            registry.register_pre_hook(
-                lambda tool_name, args: (_ for _ in ()).throw(HookError('blocked'))
-            )
-            tool_reg = ToolRegistry(hook_registry=registry)
-            tool_reg.register(
-                name='echo',
-                description='echo',
-                input_schema={'type': 'object', 'properties': {}},
-                output_schema={'type': 'object', 'properties': {}},
-                annotations=ToolAnnotations(),
-                handler=lambda args: {'ok': True},
-            )
-            with self.assertRaises(HookError):
-                tool_reg.execute('echo', {})
-        finally:
-            reset_tool_call_context(token)
-
-        event_types = [e.event_type for e in audit.events]
-        self.assertIn('tool_hook_vetoed', event_types)
-
-    def test_pre_hook_returning_none_preserves_original_args(self) -> None:
-        received_args: list[dict] = []
-        registry = HookRegistry()
-        registry.register_pre_hook(lambda tool_name, args: None)
-        tool_reg = ToolRegistry(hook_registry=registry)
-        tool_reg.register(
-            name='echo',
-            description='echo',
-            input_schema={
-                'type': 'object',
-                'properties': {'x': {'type': 'integer'}},
-            },
-            output_schema={'type': 'object', 'properties': {}},
-            annotations=ToolAnnotations(),
-            handler=lambda args: received_args.append(args) or {},
-        )
-        tool_reg.execute('echo', {'x': 99})
-        self.assertEqual(received_args, [{'x': 99}])
-
-    def test_post_hook_returning_none_preserves_original_result(self) -> None:
-        registry = HookRegistry()
-        registry.register_post_hook(lambda tool_name, args, result: None)
-        tool_reg = ToolRegistry(hook_registry=registry)
-        tool_reg.register(
-            name='echo',
-            description='echo',
-            input_schema={'type': 'object', 'properties': {}},
-            output_schema={
-                'type': 'object',
-                'properties': {'value': {'type': 'integer'}},
-            },
-            annotations=ToolAnnotations(),
-            handler=lambda args: {'value': 42},
-        )
-        result = tool_reg.execute('echo', {})
-        self.assertEqual(result, {'value': 42})
+    event_types = [e.event_type for e in audit.events]
+    assert 'tool_hook_vetoed' in event_types
 
 
-class TestBuiltInHooks(unittest.TestCase):
-    def test_shell_command_hook_runs_on_matching_tool(self) -> None:
-        registry = HookRegistry()
-        registry.register_post_hook(
-            shell_command_hook('echo hook_ran', on_tools=frozenset({'my_tool'}))
-        )
-        # Should not raise
+def test_pre_hook_returning_none_preserves_original_args() -> None:
+    received_args: list[dict] = []
+    registry = HookRegistry()
+    registry.register_pre_hook(lambda tool_name, args: None)
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='echo',
+        description='echo',
+        input_schema={
+            'type': 'object',
+            'properties': {'x': {'type': 'integer'}},
+        },
+        output_schema={'type': 'object', 'properties': {}},
+        annotations=ToolAnnotations(),
+        handler=lambda args: received_args.append(args) or {},
+    )
+    tool_reg.execute('echo', {'x': 99})
+    assert received_args == [{'x': 99}]
+
+
+def test_post_hook_returning_none_preserves_original_result() -> None:
+    registry = HookRegistry()
+    registry.register_post_hook(lambda tool_name, args, result: None)
+    tool_reg = ToolRegistry(hook_registry=registry)
+    tool_reg.register(
+        name='echo',
+        description='echo',
+        input_schema={'type': 'object', 'properties': {}},
+        output_schema={
+            'type': 'object',
+            'properties': {'value': {'type': 'integer'}},
+        },
+        annotations=ToolAnnotations(),
+        handler=lambda args: {'value': 42},
+    )
+    result = tool_reg.execute('echo', {})
+    assert result == {'value': 42}
+
+
+def test_shell_command_hook_runs_on_matching_tool() -> None:
+    registry = HookRegistry()
+    registry.register_post_hook(
+        shell_command_hook('echo hook_ran', on_tools=frozenset({'my_tool'}))
+    )
+    # Should not raise
+    registry.run_post_hooks('my_tool', {}, {})
+
+
+def test_shell_command_hook_skips_non_matching_tool() -> None:
+    registry = HookRegistry()
+    registry.register_post_hook(
+        shell_command_hook('exit 1', on_tools=frozenset({'my_tool'}))
+    )
+    # Should not raise because tool name doesn't match
+    registry.run_post_hooks('other_tool', {}, {})
+
+
+def test_shell_command_hook_fails_on_bad_command() -> None:
+    registry = HookRegistry()
+    registry.register_post_hook(
+        shell_command_hook('false', on_tools=frozenset({'my_tool'}))
+    )
+    with pytest.raises(HookError):
         registry.run_post_hooks('my_tool', {}, {})
-
-    def test_shell_command_hook_skips_non_matching_tool(self) -> None:
-        registry = HookRegistry()
-        registry.register_post_hook(
-            shell_command_hook('exit 1', on_tools=frozenset({'my_tool'}))
-        )
-        # Should not raise because tool name doesn't match
-        registry.run_post_hooks('other_tool', {}, {})
-
-    def test_shell_command_hook_fails_on_bad_command(self) -> None:
-        registry = HookRegistry()
-        registry.register_post_hook(
-            shell_command_hook('false', on_tools=frozenset({'my_tool'}))
-        )
-        with self.assertRaises(HookError):
-            registry.run_post_hooks('my_tool', {}, {})
-
-
-if __name__ == '__main__':
-    unittest.main()

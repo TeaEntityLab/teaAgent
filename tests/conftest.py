@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -7,9 +8,11 @@ from typing import Optional
 
 import pytest
 
+from teaagent.chat_agent import ChatAgentConfig
 from teaagent.llm import LLMResponse
+from teaagent.policy import ApprovalPolicy
 from teaagent.run_store import RunStore
-from teaagent.types import AuditLogger, ToolRegistry
+from teaagent.types import AuditLogger, PermissionMode, ToolRegistry
 from test_support import can_bind_loopback, skip_if_socket_bind_is_blocked
 
 
@@ -139,6 +142,212 @@ def mock_llm_adapter() -> FakeAdapter:
     return FakeAdapter([])
 
 
+@pytest.fixture
+def fake_adapter_with_tool_response() -> FakeAdapter:
+    """A FakeAdapter pre-configured with a common tool response pattern."""
+    return FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"workspace_read_file","arguments":{"path":"test.txt"},"call_id":"read-1"}',
+            '{"type":"final","content":"done"}',
+        ]
+    )
+
+
+@pytest.fixture
+def fake_adapter_with_final_response() -> FakeAdapter:
+    """A FakeAdapter pre-configured with a simple final response."""
+    return FakeAdapter(['{"type":"final","content":"done"}'])
+
+
+@pytest.fixture
+def fake_adapter_with_invalid_then_final() -> FakeAdapter:
+    """A FakeAdapter that returns invalid JSON then a valid final response (for retry testing)."""
+    return FakeAdapter(['not-json', '{"type":"final","content":"done"}'])
+
+
+@pytest.fixture
+def fake_adapter_with_subagent_response() -> FakeAdapter:
+    """A FakeAdapter pre-configured with subagent tool response pattern."""
+    return FakeAdapter(
+        [
+            '{"type":"tool","tool_name":"subagent","arguments":{"task":"child task"},"call_id":"sub-1"}',
+            '{"type":"final","content":"child done"}',
+            '{"type":"final","content":"parent done"}',
+        ]
+    )
+
+
+@pytest.fixture
+def chat_agent_config(tmp_path: Path) -> ChatAgentConfig:
+    """A ChatAgentConfig for testing with default settings."""
+    return ChatAgentConfig.from_root(tmp_path)
+
+
+@pytest.fixture
+def chat_agent_config_with_limits(tmp_path: Path) -> ChatAgentConfig:
+    """A ChatAgentConfig with iteration and tool call limits for testing."""
+    return ChatAgentConfig.from_root(tmp_path, max_iterations=3, max_tool_calls=2)
+
+
+@pytest.fixture
+def chat_agent_config_with_subagent(tmp_path: Path) -> ChatAgentConfig:
+    """A ChatAgentConfig with subagent enabled for testing."""
+    return ChatAgentConfig.from_root(tmp_path, enable_subagent=True)
+
+
+@pytest.fixture
+def approval_policy_read_only() -> ApprovalPolicy:
+    """An ApprovalPolicy configured for read-only mode."""
+    return ApprovalPolicy(permission_mode=PermissionMode.READ_ONLY)
+
+
+@pytest.fixture
+def approval_policy_workspace_write() -> ApprovalPolicy:
+    """An ApprovalPolicy configured for workspace-write mode."""
+    return ApprovalPolicy(permission_mode=PermissionMode.WORKSPACE_WRITE)
+
+
+@pytest.fixture
+def approval_policy_allow() -> ApprovalPolicy:
+    """An ApprovalPolicy configured for allow mode."""
+    return ApprovalPolicy(permission_mode=PermissionMode.ALLOW)
+
+
+@pytest.fixture
+def approval_policy_danger_full_access() -> ApprovalPolicy:
+    """An ApprovalPolicy configured for danger-full-access mode."""
+    return ApprovalPolicy(permission_mode=PermissionMode.DANGER_FULL_ACCESS)
+
+
+@pytest.fixture
+def empty_tool_registry() -> ToolRegistry:
+    """An empty ToolRegistry for testing."""
+    return ToolRegistry()
+
+
+def make_minimal_registry() -> ToolRegistry:
+    """Create a minimal ToolRegistry for testing."""
+    return ToolRegistry()
+
+
+def make_noop_registry() -> ToolRegistry:
+    """Create a ToolRegistry with a noop tool for testing."""
+    registry = ToolRegistry()
+
+    def _noop(**kwargs: object) -> dict[str, object]:
+        return {'result': 'noop'}
+
+    registry.register(
+        name='noop',
+        description='A no-op tool for testing',
+        input_schema={'type': 'object', 'properties': {}, 'additionalProperties': True},
+        output_schema={'type': 'object', 'properties': {'result': {'type': 'string'}}},
+        handler=_noop,
+        annotations={'idempotent': True},
+    )
+    return registry
+
+
+def make_destructive_write_registry() -> ToolRegistry:
+    """Create a ToolRegistry with a destructive write tool for testing."""
+    from teaagent.types import ToolAnnotations
+
+    registry = ToolRegistry()
+
+    def _write_file(path: str, content: str) -> dict[str, object]:
+        with open(path, 'w') as f:
+            f.write(content)
+        return {'success': True}
+
+    registry.register(
+        name='workspace_write_file',
+        description='Write a file to disk (destructive)',
+        input_schema={
+            'type': 'object',
+            'properties': {'path': {'type': 'string'}, 'content': {'type': 'string'}},
+            'required': ['path', 'content'],
+        },
+        output_schema={
+            'type': 'object',
+            'properties': {'success': {'type': 'boolean'}},
+        },
+        handler=_write_file,
+        annotations=ToolAnnotations(destructive=True),
+    )
+    return registry
+
+
+def make_plugin_registrar(name: str):
+    """Return a plugin callable that registers one tool named *name*."""
+    from teaagent.types import ToolAnnotations
+
+    def register(registry: ToolRegistry) -> None:
+        registry.register(
+            name=name,
+            description=f'Plugin tool {name}',
+            input_schema={'type': 'object', 'properties': {}},
+            output_schema={'type': 'object', 'properties': {}},
+            annotations=ToolAnnotations(read_only=True),
+            handler=lambda _: {},
+        )
+
+    return register
+
+
+@pytest.fixture
+def git_repo_with_config(tmp_path: Path) -> Path:
+    """A git repository initialized with test user config for testing git operations."""
+    subprocess.run(['git', 'init'], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ['git', 'config', 'user.email', 'test@example.com'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'config', 'user.name', 'Test User'],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    return tmp_path
+
+
+@pytest.fixture
+def git_repo_with_commit(git_repo_with_config: Path) -> Path:
+    """A git repository with an initial commit for testing."""
+    (git_repo_with_config / 'test.txt').write_text('content')
+    subprocess.run(
+        ['git', 'add', 'test.txt'],
+        cwd=git_repo_with_config,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ['git', 'commit', '-m', 'initial'],
+        cwd=git_repo_with_config,
+        check=True,
+        capture_output=True,
+    )
+    return git_repo_with_config
+
+
+@pytest.fixture
+def test_file_in_workspace(tmp_path: Path) -> Path:
+    """A test file created in the temporary workspace."""
+    test_file = tmp_path / 'test.txt'
+    test_file.write_text('test content', encoding='utf-8')
+    return test_file
+
+
+@pytest.fixture
+def hello_file_in_workspace(tmp_path: Path) -> Path:
+    """A hello.txt file created in the temporary workspace (common pattern in tests)."""
+    hello_file = tmp_path / 'hello.txt'
+    hello_file.write_text('hello', encoding='utf-8')
+    return hello_file
+
+
 def temp_workspace(*files: tuple[str, str]) -> tempfile.TemporaryDirectory[str]:
     td = tempfile.TemporaryDirectory()
     root = Path(td.name)
@@ -181,6 +390,10 @@ __all__ = [
     'fake_adapter',
     'skip_if_socket_bind_is_blocked',
     'temp_workspace',
+    'fake_adapter_with_tool_response',
+    'fake_adapter_with_final_response',
+    'fake_adapter_with_invalid_then_final',
+    'fake_adapter_with_subagent_response',
 ]
 
 
